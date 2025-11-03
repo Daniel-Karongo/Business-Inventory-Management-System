@@ -13,6 +13,9 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     @Query("SELECT c FROM Category c") // Includes deleted and active
     List<Category> findAllIncludingDeleted();
 
+    @Query("SELECT c FROM Category c WHERE c.deleted = false")
+    List<Category> findAllActiveCategories();
+
     @Query("SELECT c FROM Category c WHERE c.deleted = true")
     List<Category> findDeletedCategories();
 }

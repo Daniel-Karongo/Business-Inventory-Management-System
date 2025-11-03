@@ -35,6 +35,12 @@ public class CategoryService {
                 .collect(Collectors.toList());
     }
 
+    public List<CategoryDTO> getAllActiveCategories() {
+        return categoryRepository.findAllActiveCategories().stream()
+                .map(categoryMapper::toDTO)
+                .collect(Collectors.toList());
+    }
+
     public List<CategoryDTO> getDeletedCategories() {
         return categoryRepository.findDeletedCategories().stream()
                 .map(categoryMapper::toDTO)

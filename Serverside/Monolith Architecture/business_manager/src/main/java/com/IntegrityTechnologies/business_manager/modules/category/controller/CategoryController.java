@@ -22,7 +22,7 @@ public class CategoryController {
     /**
      * ✅ Create or update category
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
     @PostMapping
     public ResponseEntity<CategoryDTO> saveCategory(@Valid @RequestBody CategoryDTO dto) {
         return ResponseEntity.ok(categoryService.saveCategory(dto));
@@ -39,7 +39,7 @@ public class CategoryController {
     /**
      * ✅ Soft delete (mark as deleted = true)
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> softDeleteCategory(@PathVariable Long id) {
         categoryService.softDeleteCategory(id);
@@ -49,7 +49,7 @@ public class CategoryController {
     /**
      * ✅ Hard delete (permanently remove from DB)
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('SUPERUSER')")
     @DeleteMapping("/{id}/hard")
     public ResponseEntity<Void> hardDeleteCategory(@PathVariable Long id) {
         categoryService.hardDeleteCategory(id);
@@ -59,7 +59,7 @@ public class CategoryController {
     /**
      * ✅ View all deleted categories
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERUSER')")
     @GetMapping("/deleted")
     public ResponseEntity<List<CategoryDTO>> getDeletedCategories() {
         return ResponseEntity.ok(categoryService.getDeletedCategories());
@@ -68,10 +68,15 @@ public class CategoryController {
     /**
      * ✅ View all categories (including deleted)
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('SUPERUSER')")
     @GetMapping("/all-including-deleted")
     public ResponseEntity<List<CategoryDTO>> getAllIncludingDeleted() {
         return ResponseEntity.ok(categoryService.getAllIncludingDeleted());
+    }
+
+    @GetMapping("/all-active")
+    public ResponseEntity<List<CategoryDTO>> getAllActiveCategories() {
+        return ResponseEntity.ok(categoryService.getAllActiveCategories());
     }
 
     /**

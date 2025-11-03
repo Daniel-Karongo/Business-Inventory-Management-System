@@ -44,11 +44,15 @@ public class User {
     private LocalDateTime deletedAt;
 
     private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private LocalDateTime lastModifiedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_id")
     private User createdBy;  // 👈 who created this user (nullable)
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "last_modified_by_id")
+    private User lastModifiedBy;  // 👈 who last modified this user
 
     @PrePersist
     protected void onCreate() {
@@ -56,10 +60,5 @@ public class User {
         if (this.id == null) {
             this.id = UUID.randomUUID(); // generate UUID before insert
         }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
     }
 }

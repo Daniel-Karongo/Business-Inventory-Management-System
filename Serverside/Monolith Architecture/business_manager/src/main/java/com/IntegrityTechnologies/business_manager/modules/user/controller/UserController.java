@@ -15,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -44,21 +45,30 @@ public class UserController {
         return ResponseEntity.ok(savedUser);
     }
 
-    @Operation(summary = "Update an existing user (excluding ID)")
+    // ✅ Update user profile (partial)
     @PutMapping("/{identifier}")
     public ResponseEntity<UserDTO> updateUser(
             @PathVariable String identifier,
-            @RequestBody UserDTO updatedUserData,
+            @RequestBody UserDTO updatedData,
             Authentication authentication
     ) throws IOException {
-        if (authentication == null || !(authentication.getPrincipal() instanceof UserDetails userDetails)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        String updaterUsername = userDetails.getUsername();
-        UserDTO updatedUser = userService.updateUser(identifier, updatedUserData, updaterUsername);
-        return ResponseEntity.ok(updatedUser);
+        UserDTO dto = userService.updateUser(identifier, updatedData, authentication.getName());
+        return ResponseEntity.ok(dto);
     }
+
+    // ✅ Update or delete user images
+    @PutMapping("/{identifier}/images")
+    public ResponseEntity<?> updateUserImages(
+            @PathVariable String identifier,
+            @RequestParam(value = "idImageFiles", required = false) List<MultipartFile> idImageFiles,
+            Authentication authentication
+    ) throws IOException {
+        return userService.updateUserImages(identifier, idImageFiles, authentication);
+    }
+
+    /**
+     * Helper to convert "" to null (so we don't overwrite fields unintentionally)
+     */
 
     /* ====================== GET USERS ====================== */
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPERUSER')")
@@ -79,7 +89,7 @@ public class UserController {
         return ResponseEntity.ok(userService.getAllUsersIncludingDeleted());
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERUSER')")
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
     @GetMapping("/role/{role}")
     public ResponseEntity<?> getUsersByRole(@PathVariable String role) {
         try {
@@ -91,7 +101,7 @@ public class UserController {
     }
 
     /* ====================== USER IMAGES ====================== */
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERUSER')")
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
     @GetMapping("/images/{identifier}")
     public ResponseEntity<List<String>> getUserImages(@PathVariable String identifier) {
         try {
@@ -103,14 +113,14 @@ public class UserController {
     }
 
     /* ====================== SOFT DELETE / RESTORE / HARD DELETE ====================== */
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERUSER')")
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
     @DeleteMapping("/soft/{id}")
     public ResponseEntity<Void> softDeleteUser(@PathVariable UUID id) {
         userService.softDeleteUser(id);
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERUSER')")
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
     @PutMapping("/restore/{id}")
     public ResponseEntity<Void> restoreUser(@PathVariable UUID id) throws IOException {
         userService.restoreUser(id);
