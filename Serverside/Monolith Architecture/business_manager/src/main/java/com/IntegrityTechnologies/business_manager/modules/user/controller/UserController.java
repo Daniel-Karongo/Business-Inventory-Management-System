@@ -8,11 +8,13 @@ import com.IntegrityTechnologies.business_manager.modules.user.service.UserServi
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -89,7 +91,7 @@ public class UserController {
         return ResponseEntity.ok(userService.getAllUsersIncludingDeleted());
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
     @GetMapping("/role/{role}")
     public ResponseEntity<?> getUsersByRole(@PathVariable String role) {
         try {
@@ -101,11 +103,10 @@ public class UserController {
     }
 
     /* ====================== USER IMAGES ====================== */
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
     @GetMapping("/images/{identifier}")
-    public ResponseEntity<List<String>> getUserImages(@PathVariable String identifier) {
+    public ResponseEntity<List<String>> getUserImages(@PathVariable String identifier, Authentication authentication) {
         try {
-            List<String> urls = userService.getUserImages(identifier);
+            List<String> urls = userService.getUserImages(identifier, authentication);
             return ResponseEntity.ok(urls);
         } catch (UserNotFoundException e) {
             return ResponseEntity.status(404).body(Collections.emptyList());
@@ -129,8 +130,7 @@ public class UserController {
 
     @PreAuthorize("hasRole('SUPERUSER')")
     @DeleteMapping("/permanent/{id}")
-    public ResponseEntity<Void> hardDeleteUser(@PathVariable UUID id) throws IOException {
-        userService.hardDeleteUser(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> hardDeleteUser(@PathVariable UUID id) throws IOException {
+        return userService.hardDeleteUser(id);
     }
 }

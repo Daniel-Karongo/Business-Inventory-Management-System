@@ -16,4 +16,7 @@ public class FileStorageProperties {
 
     /** Base directory for user ID images */
     private String userUploadDir;
+
+    /** Base directory for Suppliers' images */
+    private String supplierUploadDir;
 }

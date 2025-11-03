@@ -1,6 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.product.model;
 
 import com.IntegrityTechnologies.business_manager.modules.category.model.Category;
+import com.IntegrityTechnologies.business_manager.modules.supplier.model.Supplier; // optional
+import com.IntegrityTechnologies.business_manager.modules.user.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,36 +22,47 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String name;
 
     private String description;
 
+    @Column(unique = true)
+    private String sku;
+
+    @Column(unique = true)
+    private String barcode;
+
+    private String barcodeImagePath;
+
     @Column(nullable = false)
     private BigDecimal price;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", nullable = false)
-    private Category category;
+    private BigDecimal buyingPrice;
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ProductImage> images;
+    private Integer stockQuantity;
 
     private boolean deleted = false;
 
     private LocalDateTime deletedAt;
 
     private LocalDateTime createdAt;
-
     private LocalDateTime updatedAt;
 
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-    }
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
 
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
+    // Supplier is optional — mapping will be lazy and can be null until supplier module exists
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "supplier_id")
+    private Supplier supplier;
+
+    // Who last supplied this product
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "last_supplied_by_id")
+    private User lastSuppliedBy;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProductImage> images;
 }

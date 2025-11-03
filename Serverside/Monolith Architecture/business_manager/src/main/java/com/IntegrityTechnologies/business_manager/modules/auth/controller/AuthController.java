@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.auth.controller;
 import com.IntegrityTechnologies.business_manager.modules.auth.dto.AuthRequest;
 import com.IntegrityTechnologies.business_manager.modules.auth.dto.AuthResponse;
 import com.IntegrityTechnologies.business_manager.modules.auth.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,5 +22,16 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(HttpServletRequest request) {
+        final String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            authService.logout(token);
+            return ResponseEntity.ok("Successfully logged out");
+        }
+        return ResponseEntity.badRequest().body("No valid Authorization header found");
     }
 }

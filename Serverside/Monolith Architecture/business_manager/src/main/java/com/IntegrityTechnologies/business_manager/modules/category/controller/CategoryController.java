@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.category.controller;
 
+import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import com.IntegrityTechnologies.business_manager.modules.category.dto.CategoryDTO;
 import com.IntegrityTechnologies.business_manager.modules.category.service.CategoryService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,73 +20,122 @@ public class CategoryController {
 
     private final CategoryService categoryService;
 
-    /**
-     * ✅ Create or update category
-     */
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
+    // ---------------- SAVE / UPDATE ----------------
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
     @PostMapping
-    public ResponseEntity<CategoryDTO> saveCategory(@Valid @RequestBody CategoryDTO dto) {
+    public ResponseEntity<CategoryDTO> save(@Valid @RequestBody CategoryDTO dto) {
         return ResponseEntity.ok(categoryService.saveCategory(dto));
     }
 
-    /**
-     * ✅ Get single category by ID
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<CategoryDTO> getCategory(@PathVariable Long id) {
-        return ResponseEntity.ok(categoryService.getCategory(id));
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
+    @PutMapping("/{id}/recursive")
+    public ResponseEntity<CategoryDTO> updateRecursive(
+            @PathVariable Long id,
+            @Valid @RequestBody CategoryDTO dto) {
+
+        dto.setId(id);
+        CategoryDTO updated = categoryService.updateCategoryRecursive(dto);
+        return ResponseEntity.ok(updated);
     }
 
-    /**
-     * ✅ Soft delete (mark as deleted = true)
-     */
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
+    // ---------------- SINGLE CATEGORY ----------------
+    // ---------------- SINGLE CATEGORY FOR SUPERUSER ----------------
+    @PreAuthorize("hasRole('SUPERUSER')")
+    @GetMapping("/{id}/all")
+    public ResponseEntity<CategoryDTO> getCategoryActiveAndDeleted(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "tree") String mode) {
+
+        CategoryDTO dto = "flat".equalsIgnoreCase(mode)
+                ? categoryService.getCategoryFlat(id)      // includes deleted
+                : categoryService.getCategoryTree(id);     // includes deleted
+
+        return ResponseEntity.ok(dto);
+    }
+
+    // ---------------- SINGLE CATEGORY FOR OTHER USERS ----------------
+    @GetMapping("/{id}/active")
+    public ResponseEntity<CategoryDTO> getCategoryActive (
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "tree") String mode) {
+
+        CategoryDTO dto = "flat".equalsIgnoreCase(mode)
+                ? categoryService.getCategoryFlatActive(id)   // only active
+                : categoryService.getCategoryTreeActive(id);  // only active
+
+        return ResponseEntity.ok(dto);
+    }
+
+
+    // ---------------- SOFT / HARD DELETE ----------------
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> softDeleteCategory(@PathVariable Long id) {
-        categoryService.softDeleteCategory(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<ApiResponse> softDelete(@PathVariable Long id) {
+        return categoryService.softDelete(id);
     }
 
-    /**
-     * ✅ Hard delete (permanently remove from DB)
-     */
     @PreAuthorize("hasRole('SUPERUSER')")
     @DeleteMapping("/{id}/hard")
-    public ResponseEntity<Void> hardDeleteCategory(@PathVariable Long id) {
-        categoryService.hardDeleteCategory(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> hardDelete(@PathVariable Long id) {
+        return categoryService.hardDelete(id);
     }
 
-    /**
-     * ✅ View all deleted categories
-     */
-    @PreAuthorize("hasAnyRole('SUPERUSER')")
-    @GetMapping("/deleted")
-    public ResponseEntity<List<CategoryDTO>> getDeletedCategories() {
-        return ResponseEntity.ok(categoryService.getDeletedCategories());
-    }
-
-    /**
-     * ✅ View all categories (including deleted)
-     */
-    @PreAuthorize("hasRole('SUPERUSER')")
-    @GetMapping("/all-including-deleted")
-    public ResponseEntity<List<CategoryDTO>> getAllIncludingDeleted() {
-        return ResponseEntity.ok(categoryService.getAllIncludingDeleted());
-    }
-
-    @GetMapping("/all-active")
-    public ResponseEntity<List<CategoryDTO>> getAllActiveCategories() {
-        return ResponseEntity.ok(categoryService.getAllActiveCategories());
-    }
-
-    /**
-     * ✅ Restore soft-deleted category
-     */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @PutMapping("/{id}/restore")
-    public ResponseEntity<Void> restoreCategory(@PathVariable Long id) {
-        categoryService.restoreCategory(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> restore(@PathVariable Long id) {
+        return categoryService.restore(id);
+    }
+
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @PutMapping("/{id}/restore-recursive")
+    public ResponseEntity<?> restoreCategoryRecursively(@PathVariable Long id) {
+        return categoryService.restoreRecursively(id);
+    }
+
+
+    // ---------------- TREE ENDPOINTS ----------------
+    @GetMapping("/active/tree")
+    public ResponseEntity<List<CategoryDTO>> getActiveTree() {
+        return ResponseEntity.ok(categoryService.getAllActiveTree());
+    }
+
+    @GetMapping("/deleted/tree")
+    public ResponseEntity<List<CategoryDTO>> getDeletedTree() {
+        return ResponseEntity.ok(categoryService.getAllDeletedTree());
+    }
+
+    @GetMapping("/all/tree")
+    public ResponseEntity<List<CategoryDTO>> getAllTree() {
+        return ResponseEntity.ok(categoryService.getAllIncludingDeletedTree());
+    }
+
+    // ---------------- FLAT ENDPOINTS ----------------
+    @GetMapping("/active/flat")
+    public ResponseEntity<List<CategoryDTO>> getActiveFlat() {
+        return ResponseEntity.ok(categoryService.getAllActiveFlat());
+    }
+
+    @GetMapping("/deleted/flat")
+    public ResponseEntity<List<CategoryDTO>> getDeletedFlat() {
+        return ResponseEntity.ok(categoryService.getAllDeletedFlat());
+    }
+
+    @GetMapping("/all/flat")
+    public ResponseEntity<List<CategoryDTO>> getAllFlat() {
+        return ResponseEntity.ok(categoryService.getAllIncludingDeletedFlat());
+    }
+
+    // ---------------- SEARCH ----------------
+    @PreAuthorize("hasRole('SUPERUSER')")
+    @GetMapping("/all/search")
+    public ResponseEntity<List<CategoryDTO>> searchSuperuser(@RequestParam String keyword) {
+        List<CategoryDTO> results = categoryService.searchByKeyword(keyword, false); // all categories
+        return ResponseEntity.ok(results);
+    }
+
+    @GetMapping("/active/search")
+    public ResponseEntity<List<CategoryDTO>> searchForUser(@RequestParam String keyword) {
+        List<CategoryDTO> results = categoryService.searchByKeyword(keyword, true); // only active
+        return ResponseEntity.ok(results);
     }
 }

@@ -26,14 +26,35 @@ public class ProductDTO {
     @NotNull(message = "Product price is required")
     private BigDecimal price;
 
+    /** Buying / cost price */
+    private BigDecimal buyingPrice;
+
+    /** SKU */
+    private String sku;
+
+    /** Supplier placeholder (id) */
+    private Long supplierId;
+
+    /** Barcodes */
+    private List<String> barcodes;
+
     @NotNull(message = "Category ID is required")
     private Long categoryId;
 
     @Schema(description = "List of URLs to the stored images (response only)")
     @JsonProperty(access = Access.READ_ONLY)
-    private List<String> imageUrls; // ✅ only shown in responses
+    private List<String> imageUrls;
 
     @Schema(type = "array", format = "binary", description = "Product image files (upload only)")
     @JsonProperty(access = Access.WRITE_ONLY)
-    private List<MultipartFile> imageFiles; // ✅ only used during upload
+    private List<MultipartFile> imageFiles;
+
+    @JsonProperty(access = Access.READ_ONLY)
+    private boolean deleted;
+
+    @JsonProperty(access = Access.READ_ONLY)
+    private String lastSuppliedBy; // "id | username" if available
+
+    @JsonProperty(access = Access.READ_ONLY)
+    private String lastModifiedBy; // "id | username"
 }

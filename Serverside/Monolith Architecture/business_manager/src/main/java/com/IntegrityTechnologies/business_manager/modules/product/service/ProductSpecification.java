@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.modules.product.specification;
+package com.IntegrityTechnologies.business_manager.modules.product.service;
 
 import com.IntegrityTechnologies.business_manager.modules.product.model.Product;
 import jakarta.persistence.criteria.Predicate;

@@ -19,29 +19,29 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Autowired
     public AuthService(AuthenticationManager authenticationManager,
                        JwtUtil jwtUtil,
                        UserRepository userRepository,
-                       PasswordEncoder passwordEncoder) {
+                       PasswordEncoder passwordEncoder,
+                       TokenBlacklistService tokenBlacklistService) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.tokenBlacklistService = tokenBlacklistService;
     }
 
     public AuthResponse login(AuthRequest request) {
-        // Try to find user by username, email, or ID number
         User user = userRepository.findByIdentifier(request.getIdentifier())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        // Manually verify password before authentication manager
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new BadCredentialsException("Invalid password");
         }
 
-        // Authenticate through security context
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(user.getUsername(), request.getPassword())
         );
@@ -52,5 +52,13 @@ public class AuthService {
         } else {
             throw new RuntimeException("Authentication failed");
         }
+    }
+
+    public void logout(String token) {
+        tokenBlacklistService.blacklistToken(token);
+    }
+
+    public boolean isTokenBlacklisted(String token) {
+        return tokenBlacklistService.isTokenBlacklisted(token);
     }
 }

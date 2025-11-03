@@ -3,13 +3,14 @@ package com.IntegrityTechnologies.business_manager.modules.user.service;
 import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
 import com.IntegrityTechnologies.business_manager.exception.InvalidUserDataException;
-import com.IntegrityTechnologies.business_manager.exception.StorageFullException;
 import com.IntegrityTechnologies.business_manager.exception.UnauthorizedAccessException;
 import com.IntegrityTechnologies.business_manager.exception.UserNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.user.dto.UserDTO;
 import com.IntegrityTechnologies.business_manager.modules.user.model.Role;
 import com.IntegrityTechnologies.business_manager.modules.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.common.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -17,10 +18,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
-import java.nio.file.attribute.DosFileAttributeView;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -145,7 +144,11 @@ public class UserService {
          * 🧩 5. ROLE UPDATE (Admins/Managers only)
          * ---------------------------- */
         if (updatedData.getRole() != null) {
-            if(hasManagerialRole(updaterUsername)) {
+            if (user.getUsername().equals(updaterUsername)) {
+                throw new UnauthorizedAccessException("You cannot change your own role");
+            }
+
+            if (hasManagerialRole(updaterUsername)) {
                 user.setRole(Role.valueOf(updatedData.getRole().toUpperCase()));
             } else {
                 throw new UnauthorizedAccessException("You are not authorized to change user roles");
@@ -232,14 +235,26 @@ public class UserService {
     public List<User> getAllUsers() { return userRepository.findByDeletedFalse(); }
     public List<User> getDeletedUsers() { return userRepository.findByDeletedTrue(); }
     public List<User> getAllUsersIncludingDeleted() { return userRepository.findAll(); }
-    public List<User> getUsersByRole(Role role) { return userRepository.findActiveUsersByRole(role); }
+    public List<User> getUsersByRole(Role requestedRole) {
+        try {
+            Role currentUserRole = privilegesChecker.getCurrentUserRole();
+
+            if (!currentUserRole.canAccess(requestedRole)) {
+                throw new UnauthorizedAccessException("You cannot access users with a higher role than yours.");
+            }
+
+            return userRepository.findActiveUsersByRole(requestedRole);
+        } catch (IllegalArgumentException e) {
+            throw new InvalidUserDataException("Invalid role: " + requestedRole.name());
+        }
+    }
 
     public User getUserByIdentifier(String identifier) {
         return userRepository.findByIdentifier(identifier).orElseThrow(() -> new UserNotFoundException("User not found"));
     }
 
-    public List<String> getUserImages(String identifier) {
-        User user = getUserByIdentifier(identifier);
+    public List<String> getUserImages(String identifier, Authentication auth) {
+        User user = validateAccess(identifier, auth, "get the images");
         return user.getIdImageUrls();
     }
 
@@ -267,7 +282,7 @@ public class UserService {
     }
 
     /* ====================== HARD DELETE ====================== */
-    public void hardDeleteUser(UUID id) throws IOException {
+    public ResponseEntity<?> hardDeleteUser(UUID id) throws IOException {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
@@ -278,6 +293,8 @@ public class UserService {
         userImageService.deleteUserUploadDirectory(userDir);
 
         userRepository.delete(user);
+        ApiResponse response = new ApiResponse("success", "User Deleted successfully");
+        return ResponseEntity.ok(response);
     }
 
     private UserDTO mapToDTO(User user) {

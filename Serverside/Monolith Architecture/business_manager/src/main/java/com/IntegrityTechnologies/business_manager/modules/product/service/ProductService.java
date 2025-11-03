@@ -1,219 +1,326 @@
 package com.IntegrityTechnologies.business_manager.modules.product.service;
 
-import com.IntegrityTechnologies.business_manager.exception.*;
-import com.IntegrityTechnologies.business_manager.modules.category.model.Category;
-import com.IntegrityTechnologies.business_manager.modules.category.repository.CategoryRepository;
 import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
+import com.IntegrityTechnologies.business_manager.config.FileStorageService;
+import com.IntegrityTechnologies.business_manager.exception.ProductNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.product.dto.ProductDTO;
 import com.IntegrityTechnologies.business_manager.modules.product.mapper.ProductMapper;
 import com.IntegrityTechnologies.business_manager.modules.product.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.product.model.ProductImage;
 import com.IntegrityTechnologies.business_manager.modules.product.repository.ProductImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.product.repository.ProductRepository;
-import com.IntegrityTechnologies.business_manager.modules.product.specification.ProductSpecification;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.math.BigDecimal;
 import java.nio.file.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
 
+/**
+ * ProductService – full feature implementation.
+ *
+ * Delegates barcode image/PDF generation to BarcodeService and all filesystem ops to FileStorageService.
+ */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProductService {
 
     private final ProductRepository productRepository;
-    private final CategoryRepository categoryRepository;
     private final ProductImageRepository productImageRepository;
-    private final FileStorageProperties fileStorageProperties;
     private final ProductMapper productMapper;
+    private final FileStorageProperties fileStorageProperties;
+    private final FileStorageService fileStorageService;
+    private final BarcodeService barcodeService;
 
-    // Save or update product
-    public ProductDTO saveProduct(ProductDTO dto) throws IOException {
-        Product product = dto.getId() != null
-                ? productRepository.findById(dto.getId()).orElse(new Product())
-                : new Product();
-
-        // Map fields from DTO to entity (MapStruct)
-        productMapper.updateEntityFromDTO(dto, product);
-
-        // Ensure category exists
-        if (dto.getCategoryId() != null) {
-            Category category = categoryRepository.findById(dto.getCategoryId())
-                    .orElseThrow(() -> new CategoryNotFoundException("Category not found with ID: " + dto.getCategoryId()));
-            product.setCategory(category);
-        }
-
-        // Persist product first so images can reference it
-        product = productRepository.save(product);
-
-        // Save uploaded images (support multiple)
-        if (dto.getImageFiles() != null && !dto.getImageFiles().isEmpty()) {
-            saveProductImages(dto.getImageFiles(), product);
-        }
-
-        // Build response DTO and include image URLs
-        return toResponseDTO(product);
+    private Path productRoot() {
+        return Paths.get(fileStorageProperties.getProductUploadDir()).toAbsolutePath().normalize();
     }
 
-    private void saveProductImages(List<MultipartFile> imageFiles, Product product) throws IOException {
-        List<ProductImage> newImages = new ArrayList<>();
-        Path uploadPath = Paths.get(fileStorageProperties.getProductUploadDir()).toAbsolutePath().normalize();
+    /* =============================
+       BASIC READ / FILTER
+       ============================= */
+    public List<ProductDTO> getAllActiveProducts() {
+        return productRepository.findByDeletedFalse().stream()
+                .map(productMapper::toDTO)
+                .collect(Collectors.toList());
+    }
 
-        // ensure path exists
-        if (!Files.exists(uploadPath)) Files.createDirectories(uploadPath);
+    public List<ProductDTO> getAllDeletedProducts() {
+        return productRepository.findByDeletedTrue().stream()
+                .map(productMapper::toDTO)
+                .collect(Collectors.toList());
+    }
 
-        for (MultipartFile file : imageFiles) {
-            if (file.isEmpty()) continue;
+    public List<ProductDTO> getAllActiveAndDeletedProducts() {
+        return productRepository.findAll().stream()
+                .map(productMapper::toDTO)
+                .collect(Collectors.toList());
+    }
 
-            String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
-            Path filePath = uploadPath.resolve(fileName);
+    public Page<ProductDTO> getProductsAdvanced(
+            List<Long> categoryIds, String name, String description,
+            BigDecimal minPrice, BigDecimal maxPrice,
+            int page, int size, String sortBy, String direction, boolean includeDeleted
+    ) {
+        Sort sort = direction.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Specification<Product> spec = ProductSpecification.filterProducts(categoryIds, name, description, minPrice, maxPrice);
+        if (!includeDeleted) spec = spec.and((r, q, cb) -> cb.isFalse(r.get("deleted")));
+        return productRepository.findAll(spec, pageable).map(productMapper::toDTO);
+    }
 
-            try {
-                file.transferTo(filePath);
-            } catch (IOException e) {
-                // try to detect low-disk space
-                String msg = e.getMessage() == null ? "" : e.getMessage().toLowerCase();
-                if (msg.contains("no space") || msg.contains("disk full") || msg.contains("not enough space")) {
-                    throw new StorageFullException("Storage is full. Unable to upload image: " + file.getOriginalFilename());
-                }
-                throw e;
-            }
+    public ProductDTO getProductById(Long id, boolean includeDeleted) {
+        Product p = productRepository.findById(id)
+                .filter(prod -> includeDeleted || !prod.isDeleted())
+                .orElseThrow(() -> new ProductNotFoundException("Product not found: " + id));
+        return productMapper.toDTO(p);
+    }
 
-            ProductImage image = ProductImage.builder()
-                    .fileName(fileName)
-                    .filePath(filePath.toString())
-                    .product(product)
-                    .build();
-            newImages.add(image);
+    public ProductDTO getProductByBarcode(String barcode) {
+        return productRepository.findByBarcode(barcode)
+                .map(productMapper::toDTO)
+                .orElseThrow(() -> new ProductNotFoundException("Product with barcode not found: " + barcode));
+    }
+
+    /* =============================
+       CREATE / UPDATE
+       ============================= */
+    @Transactional
+    public ProductDTO createProduct(ProductDTO dto, List<MultipartFile> imageFiles) throws IOException {
+        Product product = productMapper.toEntity(dto);
+
+        // Ensure barcode exists / generate if missing
+        if (product.getBarcode() == null || product.getBarcode().isBlank()) {
+            product.setBarcode(barcodeService.autoGenerateBarcode());
+        } else if (!barcodeService.isValidBarcode(product.getBarcode())) {
+            throw new IllegalArgumentException("Provided barcode has invalid format");
         }
 
-        productImageRepository.saveAll(newImages);
+        // persist to get ID (so images dir uses id)
+        product = productRepository.save(product);
 
-        // attach to product entity in memory for immediate response
+        // generate barcode image
+        Path barcodeDir = productRoot().resolve("barcodes");
+        fileStorageService.initDirectory(barcodeDir);
+        String barcodeImagePath = barcodeService.generateBarcodeImage(product.getBarcode(), barcodeDir);
+        product.setBarcodeImagePath(barcodeImagePath);
+
+        // save product images if provided
+        if (imageFiles != null && !imageFiles.isEmpty()) {
+            saveProductImages(product, imageFiles);
+        }
+
+        product = productRepository.save(product);
+        log.info("Created product {} (id={} barcode={})", product.getName(), product.getId(), product.getBarcode());
+        return productMapper.toDTO(product);
+    }
+
+    @Transactional
+    public ProductDTO updateProduct(Long id, ProductDTO dto, List<MultipartFile> imageFiles) throws IOException {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException("Product not found: " + id));
+
+        // partial field updates
+        if (dto.getName() != null && !dto.getName().isBlank()) product.setName(dto.getName());
+        if (dto.getDescription() != null) product.setDescription(dto.getDescription());
+        if (dto.getPrice() != null) product.setPrice(dto.getPrice());
+        if (dto.getBuyingPrice() != null) product.setBuyingPrice(dto.getBuyingPrice());
+
+        if (dto.getSku() != null && !dto.getSku().isBlank() && !dto.getSku().equals(product.getSku())) {
+            if (productRepository.existsBySku(dto.getSku())) throw new IllegalArgumentException("SKU already exists");
+            product.setSku(dto.getSku());
+        }
+
+        if (dto.getBarcodes() != null && !dto.getBarcodes().isEmpty()) {
+            String newCode = dto.getBarcodes().get(0);
+            if (!newCode.equals(product.getBarcode())) {
+                if (productRepository.existsByBarcode(newCode))
+                    throw new IllegalArgumentException("Barcode already exists");
+                if (!barcodeService.isValidBarcode(newCode))
+                    throw new IllegalArgumentException("Provided barcode has invalid format");
+                product.setBarcode(newCode);
+
+                Path barcodeDir = productRoot().resolve("barcodes");
+                fileStorageService.initDirectory(barcodeDir);
+                String path = barcodeService.generateBarcodeImage(newCode, barcodeDir);
+                product.setBarcodeImagePath(path);
+            }
+        }
+
+        // Keep supplierId/categoryId handling to mapper (module integration later)
+
+        product.setUpdatedAt(LocalDateTime.now());
+
+        // replace product images if new files provided (null => keep existing; empty list => clear)
+        if (imageFiles != null) {
+            // wipe existing files and DB rows
+            deleteProductUploadDirectory(product.getId());
+            if (!imageFiles.isEmpty()) {
+                saveProductImages(product, imageFiles);
+            } else {
+                product.setImages(new ArrayList<>());
+            }
+        }
+
+        product = productRepository.save(product);
+        return productMapper.toDTO(product);
+    }
+
+    /* =============================
+       SOFT / RESTORE / HARD DELETE
+       ============================= */
+    public void softDeleteProduct(Long id) {
+        Product p = productRepository.findById(id).orElseThrow(() -> new ProductNotFoundException("Product not found"));
+        if (!p.isDeleted()) {
+            p.setDeleted(true);
+            p.setDeletedAt(LocalDateTime.now());
+            productRepository.save(p);
+        }
+    }
+
+    public void restoreProduct(Long id) {
+        Product p = productRepository.findById(id).orElseThrow(() -> new ProductNotFoundException("Product not found"));
+        if (p.isDeleted()) {
+            p.setDeleted(false);
+            p.setDeletedAt(null);
+            productRepository.save(p);
+        }
+    }
+
+    @Transactional
+    public void hardDeleteProduct(Long id) throws IOException {
+        Product p = productRepository.findById(id).orElseThrow(() -> new ProductNotFoundException("Product not found"));
+        deleteProductImages(p);
+        deleteProductUploadDirectory(p.getId());
+        productRepository.delete(p);
+    }
+
+    /* =============================
+       IMAGE HANDLING
+       ============================= */
+    @Transactional
+    public void uploadProductImages(Long productId, List<MultipartFile> files) throws IOException {
+        Product product = productRepository.findById(productId).orElseThrow(() -> new ProductNotFoundException("Product not found"));
+        Path productDir = fileStorageService.initDirectory(productRoot().resolve(product.getId().toString()));
+        saveProductImages(product, files);
+        productRepository.save(product);
+    }
+
+    @Transactional
+    public void saveProductImages(Product product, List<MultipartFile> files) throws IOException {
+        if (files == null || files.isEmpty()) return;
+        Path productDir = fileStorageService.initDirectory(productRoot().resolve(product.getId().toString()));
+
+        List<ProductImage> newImages = new ArrayList<>();
+        for (var file : files) {
+            if (file.isEmpty()) continue;
+            String fileName = System.currentTimeMillis() + "_" + UUID.randomUUID() + "_" + sanitizeFilename(file.getOriginalFilename());
+            try (InputStream in = file.getInputStream()) {
+                Path saved = fileStorageService.saveFile(productDir, fileName, in);
+                newImages.add(ProductImage.builder()
+                        .fileName(fileName)
+                        .filePath(saved.toString())
+                        .product(product)
+                        .build());
+            }
+        }
+        productImageRepository.saveAll(newImages);
         if (product.getImages() == null) product.setImages(new ArrayList<>());
         product.getImages().addAll(newImages);
     }
 
-    // Paginated & filtered products with optional includeDeleted flag
-    public Page<ProductDTO> getProductsAdvanced(
-            List<Long> categoryIds,
-            String name,
-            String description,
-            BigDecimal minPrice,
-            BigDecimal maxPrice,
-            int page,
-            int size,
-            String sortBy,
-            String direction,
-            boolean includeDeleted
-    ) {
-        Sort sort = direction.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
+    public void deleteProductImageByFilename(Long productId, String filename) throws IOException {
+        Product p = productRepository.findById(productId).orElseThrow(() -> new ProductNotFoundException("Product not found"));
+        if (p.getImages() == null) return;
+        for (ProductImage img : new ArrayList<>(p.getImages())) {
+            if (filename.equals(img.getFileName())) {
+                try { Files.deleteIfExists(Paths.get(img.getFilePath())); } catch (IOException ignored) {}
+                productImageRepository.delete(img);
+                p.getImages().remove(img);
+            }
+        }
+        productRepository.save(p);
+    }
 
-        Specification<Product> spec = ProductSpecification.filterProducts(categoryIds, name, description, minPrice, maxPrice);
+    public void deleteAllProductImages(Long productId) throws IOException {
+        Product p = productRepository.findById(productId).orElseThrow(() -> new ProductNotFoundException("Product not found"));
+        deleteProductImages(p);
+        deleteProductUploadDirectory(productId);
+        p.setImages(new ArrayList<>());
+        productRepository.save(p);
+    }
 
-        if (!includeDeleted) {
-            spec = spec.and((root, query, cb) -> cb.isFalse(root.get("deleted")));
+    public void deleteProductImages(Product product) {
+        if (product.getImages() == null) return;
+        for (ProductImage img : new ArrayList<>(product.getImages())) {
+            try { Files.deleteIfExists(Paths.get(img.getFilePath())); } catch (IOException ignored) {}
+            productImageRepository.delete(img);
+        }
+    }
+
+    public void deleteProductUploadDirectory(Long productId) throws IOException {
+        Path dir = productRoot().resolve(productId.toString());
+        fileStorageService.deleteDirectory(dir);
+    }
+
+    /* =============================
+       BARCODE & LABEL PDF
+       ============================= */
+    public File getBarcodeImageFile(String barcode) {
+        Product product = productRepository.findByBarcode(barcode)
+                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+        return (product.getBarcodeImagePath() == null) ? null : new File(product.getBarcodeImagePath());
+    }
+
+    public File getBarcodePdfSingle(String barcode) throws IOException {
+        Product p = productRepository.findByBarcode(barcode).orElseThrow(() -> new ProductNotFoundException("Product not found"));
+
+        if (p.getBarcodeImagePath() == null || !Files.exists(Paths.get(p.getBarcodeImagePath()))) {
+            Path barcodeDir = productRoot().resolve("barcodes");
+            fileStorageService.initDirectory(barcodeDir);
+            String path = barcodeService.generateBarcodeImage(p.getBarcode(), barcodeDir);
+            p.setBarcodeImagePath(path);
+            productRepository.save(p);
         }
 
-        Page<Product> products = productRepository.findAll(spec, pageable);
-        return products.map(this::toResponseDTO);
+        // Let BarcodeService produce the polished PDF (returns path)
+        String pdfPath = barcodeService.generateBarcodeLabelPDF(p.getBarcode(), p.getName(), productRoot().resolve("labels"));
+        return new File(pdfPath);
     }
 
-    // Active / Deleted lists
-    public List<ProductDTO> getActiveProducts() {
-        return productRepository.findByDeletedFalse().stream().map(this::toResponseDTO).toList();
-    }
+    public File getBarcodePdfSheet(List<Long> ids) throws IOException {
+        List<Product> products = productRepository.findAllById(ids);
+        if (products.isEmpty()) throw new ProductNotFoundException("No products found");
 
-    public List<ProductDTO> getDeletedProducts() {
-        return productRepository.findByDeletedTrue().stream().map(this::toResponseDTO).toList();
-    }
+        // Ensure barcode images exist and then delegate sheet creation to BarcodeService
+        Path barcodeDir = productRoot().resolve("barcodes");
+        fileStorageService.initDirectory(barcodeDir);
 
-    // Get single product (includeDeleted flag)
-    public ProductDTO getProduct(Long id, boolean includeDeleted) {
-        Product product = productRepository.findById(id)
-                .filter(p -> includeDeleted || !p.isDeleted())
-                .orElseThrow(() -> new ProductNotFoundException("Product not found with ID: " + id));
-
-        return toResponseDTO(product);
-    }
-
-    // Soft delete
-    public void softDeleteProduct(Long id) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found with ID: " + id));
-        product.setDeleted(true);
-        productRepository.save(product);
-    }
-
-    // Restore soft-deleted
-    public void restoreProduct(Long id) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found with ID: " + id));
-        if (!product.isDeleted()) {
-            // idempotent - nothing to do
-            return;
-        }
-        product.setDeleted(false);
-        product.setDeletedAt(null);
-        productRepository.save(product);
-    }
-
-    // Permanent delete (delete DB record and image files)
-    public void permanentDeleteProduct(Long id) throws IOException {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found with ID: " + id));
-
-        // Delete image files from disk
-        if (product.getImages() != null) {
-            for (ProductImage image : product.getImages()) {
-                try {
-                    Files.deleteIfExists(Paths.get(image.getFilePath()));
-                } catch (IOException e) {
-                    // if we cannot delete a file, bubble up or log — here we bubble up
-                    throw new IOException("Failed to remove image " + image.getFileName() + ": " + e.getMessage(), e);
-                }
+        for (Product p : products) {
+            if (p.getBarcodeImagePath() == null || !Files.exists(Paths.get(p.getBarcodeImagePath()))) {
+                String path = barcodeService.generateBarcodeImage(p.getBarcode(), barcodeDir);
+                p.setBarcodeImagePath(path);
+                productRepository.save(p);
             }
         }
 
-        // Remove image records then product
-        productImageRepository.deleteAll(product.getImages() != null ? product.getImages() : List.of());
-        productRepository.delete(product);
+        String sheetPath = barcodeService.generateBarcodeSheetPDF(products, productRoot().resolve("labels"));
+        return new File(sheetPath);
     }
 
-    // Serve image
-    public Resource loadProductImage(String filename) throws IOException {
-        Path imagePath = Paths.get(fileStorageProperties.getProductUploadDir()).resolve(filename).normalize();
-        File file = imagePath.toFile();
-
-        if (!file.exists()) {
-            throw new FileNotFoundException("Image not found: " + filename);
-        }
-
-        return new FileSystemResource(file);
-    }
-
-    // Map entity -> DTO and set image URL list
-    private ProductDTO toResponseDTO(Product product) {
-        ProductDTO dto = productMapper.toDTO(product);
-
-        // Build image URLs for API consumers. Keep path stable with controller route.
-        if (product.getImages() != null) {
-            dto.setImageUrls(product.getImages().stream()
-                    .map(img -> "/api/products/image/" + img.getFileName())
-                    .toList());
-        }
-
-        return dto;
+    /* =============================
+       UTILITIES
+       ============================= */
+    private String sanitizeFilename(String n) {
+        return (n == null) ? "file" : n.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
 }

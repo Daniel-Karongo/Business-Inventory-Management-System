@@ -7,6 +7,7 @@ import com.IntegrityTechnologies.business_manager.modules.user.repository.UserRe
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -24,8 +25,24 @@ public class PrivilegesChecker {
                 .orElseThrow(() -> new UnauthorizedAccessException("Authenticated user not found"));
     }
 
+    public Role getCurrentUserRole() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth.getAuthorities().stream()
+                .map(a -> Role.valueOf(a.getAuthority().replace("ROLE_", "")))
+                .findFirst()
+                .orElse(Role.EMPLOYEE); // default to lowest role if none found
+    }
+
     public boolean isAuthorized(User requester, User target) {
         if (requester == null) return false;
+
+        Role requesterRole = requester.getRole();
+        Role targetRole = target.getRole();
+
+        if (!requesterRole.canAccess(targetRole)) {
+            return false;
+        }
+
         return requester.getRole() == Role.SUPERUSER ||
                 requester.getRole() == Role.ADMIN ||
                 requester.getRole() == Role.MANAGER ||
