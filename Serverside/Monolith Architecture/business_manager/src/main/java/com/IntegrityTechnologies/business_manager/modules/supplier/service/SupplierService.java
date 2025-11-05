@@ -1,41 +1,40 @@
 package com.IntegrityTechnologies.business_manager.modules.supplier.service;
 
-import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
+import com.IntegrityTechnologies.business_manager.common.ApiResponse;
+import com.IntegrityTechnologies.business_manager.config.FileStorageService;
+import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
+import com.IntegrityTechnologies.business_manager.exception.CategoryNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.category.repository.CategoryRepository;
-import com.IntegrityTechnologies.business_manager.modules.supplier.dto.SupplierDTO;
+import com.IntegrityTechnologies.business_manager.modules.supplier.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.supplier.mapper.SupplierMapper;
-import com.IntegrityTechnologies.business_manager.modules.supplier.model.Supplier;
-import com.IntegrityTechnologies.business_manager.modules.supplier.model.SupplierAudit;
-import com.IntegrityTechnologies.business_manager.modules.supplier.model.SupplierImage;
-import com.IntegrityTechnologies.business_manager.modules.supplier.model.SupplierImageAudit;
-import com.IntegrityTechnologies.business_manager.modules.supplier.repository.SupplierAuditRepository;
-import com.IntegrityTechnologies.business_manager.modules.supplier.repository.SupplierImageAuditRepository;
-import com.IntegrityTechnologies.business_manager.modules.supplier.repository.SupplierImageRepository;
-import com.IntegrityTechnologies.business_manager.modules.supplier.repository.SupplierRepository;
+import com.IntegrityTechnologies.business_manager.modules.supplier.model.*;
+import com.IntegrityTechnologies.business_manager.modules.supplier.repository.*;
+import com.IntegrityTechnologies.business_manager.modules.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.domain.*;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+/**
+ * Supplier service now focuses on domain logic. All file IO is delegated to SupplierFileStorageService.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -45,17 +44,27 @@ public class SupplierService {
     private final SupplierImageRepository supplierImageRepository;
     private final CategoryRepository categoryRepository;
     private final SupplierMapper supplierMapper;
-    private final FileStorageProperties fileStorageProperties;
+    private final FileStorageService fileStorageService;
     private final SupplierImageAuditRepository supplierImageAuditRepository;
     private final SupplierAuditRepository supplierAuditRepository;
+    private final SupplierFileStorageService supplierFileStorageService;
+    private final TransactionalFileManager transactionalFileManager;
+    private final UserRepository userRepository;
 
-
-    private Path suppliersRoot() {
-        return Paths.get(fileStorageProperties.getSupplierUploadDir()).toAbsolutePath().normalize();
+    private String currentUser() {
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        return (auth != null && auth.getName() != null) ? auth.getName() : "SYSTEM";
     }
 
-    public List<Supplier> getAllSuppliers() {
-        return supplierRepository.findByDeletedFalse();
+    public List<SupplierDTO> getAllSuppliers() {
+        return supplierRepository.findByDeletedFalse().stream()
+                .map(supplierMapper::toDTO).collect(Collectors.toList());
+    }
+
+    public SupplierDTO getSupplierDto(Long id) {
+        Supplier supplier = supplierRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new EntityNotFoundException("Supplier not found"));
+        return supplierMapper.toDTO(supplier);
     }
 
     public Supplier getSupplier(Long id) {
@@ -64,10 +73,15 @@ public class SupplierService {
     }
 
     public SupplierDTO getByIdentifier(String identifier) {
-        return supplierRepository.findByEmailIgnoreCase(identifier)
-                .or(() -> supplierRepository.findByPhoneNumber(identifier))
-                .or(() -> supplierRepository.findByNameIgnoreCase(identifier))
-                .map(supplierMapper::toDTO)
+        Optional<Supplier> maybe = supplierRepository.findByEmailElementIgnoreCase(identifier);
+        if (maybe.isEmpty()) {
+            String phoneNormalized = normalizePhone(identifier);
+            maybe = supplierRepository.findByPhoneNumberElement(phoneNormalized);
+        }
+        if (maybe.isEmpty()) {
+            maybe = supplierRepository.findByNameIgnoreCaseAndDeletedFalse(identifier);
+        }
+        return maybe.map(supplierMapper::toDTO)
                 .orElseThrow(() -> new EntityNotFoundException("Supplier not found for identifier: " + identifier));
     }
 
@@ -76,235 +90,260 @@ public class SupplierService {
                                             LocalDateTime createdAfter, LocalDateTime createdBefore,
                                             int page, int size, String sortBy, String direction) {
 
-        Specification<Supplier> spec = Specification.allOf(
+        var spec = org.springframework.data.jpa.domain.Specification.allOf(
                 SupplierSpecification.inCategories(categoryIds),
                 SupplierSpecification.hasNameLike(name),
                 SupplierSpecification.hasEmail(email),
-                SupplierSpecification.hasPhone(phone),
+                SupplierSpecification.hasPhone(phone == null ? null : normalizePhone(phone)),
                 SupplierSpecification.hasMinRating(minRating),
                 SupplierSpecification.fromRegion(region),
                 SupplierSpecification.createdBetween(createdAfter, createdBefore)
         );
 
-        Pageable pageable = PageRequest.of(page, size,
+        var pageable = PageRequest.of(page, size,
                 direction.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending());
 
         return supplierRepository.findAll(spec, pageable).map(supplierMapper::toDTO);
     }
 
     public List<String> getSupplierImageUrls(Long supplierId) {
-        return supplierImageRepository.findBySupplierId(supplierId)
-                .stream().map(SupplierImage::getFilePath)
+        return supplierImageRepository.findBySupplierIdAndDeletedFalse(supplierId)
+                .stream().map(img -> "/api/suppliers/" + supplierId + "/images/" + img.getFileName())
                 .collect(Collectors.toList());
     }
 
     public Resource downloadImage(Long supplierId, String filename) {
-        SupplierImage image = supplierImageRepository.findBySupplierId(supplierId)
-                .stream().filter(img -> img.getFileName().equals(filename))
-                .findFirst()
+        SupplierImage image = Optional.ofNullable(supplierImageRepository.findBySupplierIdAndFileName(supplierId, filename))
                 .orElseThrow(() -> new EntityNotFoundException("Image not found"));
-
-        return new FileSystemResource(image.getFilePath());
+        Path path = Paths.get(image.getFilePath());
+        if (!Files.exists(path)) throw new EntityNotFoundException("Image file not found on disk");
+        return new FileSystemResource(path.toFile());
     }
 
-    public Resource downloadAllImagesAsZip(Long supplierId) throws IOException {
-        List<SupplierImage> images = supplierImageRepository.findBySupplierId(supplierId);
+    /**
+     * Stream zip of supplier images using the storage service's paths.
+     */
+    public void streamAllImagesAsZip(Long supplierId, OutputStream out) throws IOException {
+        List<SupplierImage> images = supplierImageRepository.findBySupplierIdAndDeletedFalse(supplierId);
         if (images.isEmpty()) throw new EntityNotFoundException("No images found for supplier");
 
-        Path tempZip = Files.createTempFile("supplier_" + supplierId + "_images_", ".zip");
-
-        try (ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(tempZip))) {
+        try (ZipOutputStream zos = new ZipOutputStream(out)) {
             for (SupplierImage img : images) {
                 Path imgPath = Paths.get(img.getFilePath());
-                if (Files.exists(imgPath)) {
-                    zos.putNextEntry(new ZipEntry(img.getFileName()));
-                    Files.copy(imgPath, zos);
-                    zos.closeEntry();
+                if (!Files.exists(imgPath)) continue;
+                zos.putNextEntry(new ZipEntry(img.getFileName()));
+                try (InputStream in = Files.newInputStream(imgPath)) {
+                    in.transferTo(zos);
                 }
+                zos.closeEntry();
             }
+            zos.finish();
         }
+
         supplierImageAuditRepository.save(SupplierImageAudit.builder()
                 .fileName("ALL")
                 .action("ZIP_DOWNLOADED")
                 .reason("All supplier images downloaded as ZIP")
                 .timestamp(LocalDateTime.now())
-                .supplier(supplierRepository.findById(supplierId).orElse(null))
-                .performedBy(null)
+                .supplierId(supplierId)
+                .supplierName(supplierRepository.findById(supplierId).get().getName())
+                .performedBy(currentUser())
                 .build());
-
-        return new FileSystemResource(tempZip);
     }
 
-
-    public Supplier createSupplier(Supplier supplier, List<Long> categoryIds, List<MultipartFile> images) throws IOException {
-        if (supplierRepository.existsByNameIgnoreCase(supplier.getName())) {
+    /**
+     * Create supplier and optionally store uploaded images. File IO is delegated to SupplierFileStorageService.
+     */
+    @Transactional
+    public SupplierDTO createSupplier(SupplierCreateDTO dto, String creatorUsername) throws IOException {
+        if (supplierRepository.existsByNameIgnoreCase(dto.getName())) {
             throw new IllegalArgumentException("Supplier name already exists");
         }
 
-        supplier.setCategories(new HashSet<>(categoryRepository.findAllById(categoryIds)));
+        Supplier supplier = supplierMapper.toEntity(dto);
+
+        if (supplier.getPhoneNumber() != null) {
+            supplier.setPhoneNumber(supplier.getPhoneNumber().stream().map(this::normalizePhone).collect(Collectors.toList()));
+        }
+
+        if (dto.getCategoryIds() != null && !dto.getCategoryIds().isEmpty()) {
+            var cats = categoryRepository.findAllById(dto.getCategoryIds());
+            if (cats.size() != dto.getCategoryIds().size()) {
+                Set<Long> found = cats.stream().map(c -> c.getId()).collect(Collectors.toSet());
+                dto.getCategoryIds().stream().filter(id -> !found.contains(id)).findFirst()
+                        .ifPresent(id -> { throw new CategoryNotFoundException("Category not found: " + id); });
+            }
+            supplier.setCategories(new HashSet<>(cats));
+        }
+
+        if (creatorUsername != null) {
+            userRepository.findByUsername(creatorUsername)
+                    .ifPresent(supplier::setCreatedBy);
+        }
+
         supplier.setCreatedAt(LocalDateTime.now());
-        Supplier saved = supplierRepository.save(supplier);
+        supplier = supplierRepository.save(supplier);
 
-        logSupplierAudit(saved, "CREATED", null, null, null, "New supplier added");
+        // Store images (delegated). TransactionalFileManager will delete files on rollback.
+        List<MultipartFile> images = dto.getImages();
+        if (images != null && !images.isEmpty()) {
+            List<SupplierImage> imagesToSave = supplierFileStorageService.storeImages(supplier, images);
+            supplierImageRepository.saveAll(imagesToSave);
+            supplier.getImages().addAll(imagesToSave);
+            supplierRepository.save(supplier); // persist relationship
 
-        if (images != null && !images.isEmpty()) uploadSupplierImages(saved, images);
-
-        return supplierRepository.findById(saved.getId()).orElseThrow();
-    }
-
-    public void uploadSupplierImages(Supplier supplier, List<MultipartFile> images) throws IOException {
-        Files.createDirectories(suppliersRoot());
-        List<SupplierImage> supplierImages = new ArrayList<>();
-
-        for (MultipartFile file : images) {
-            String filename = UUID.randomUUID() + "_" + file.getOriginalFilename();
-            Path filePath = suppliersRoot().resolve(filename);
-            Files.write(filePath, file.getBytes());
-            supplierImages.add(SupplierImage.builder()
-                    .fileName(filename)
-                    .filePath(filePath.toString())
-                    .supplier(supplier)
-                    .build());
+            // audits
+            for (SupplierImage im : imagesToSave) {
+                supplierImageAuditRepository.save(SupplierImageAudit.builder()
+                        .fileName(im.getFileName())
+                        .filePath(im.getFilePath())
+                        .action("UPLOADED")
+                        .timestamp(LocalDateTime.now())
+                        .supplierId(supplier.getId())
+                        .supplierName(supplier.getName())
+                        .performedBy(currentUser())
+                        .build());
+            }
         }
 
-        supplierImageRepository.saveAll(supplierImages);
-        supplier.setImages(supplierImages);
-        supplierRepository.save(supplier);
-
-// Audit log
-        for (SupplierImage image : supplierImages) {
-            SupplierImageAudit audit = SupplierImageAudit.builder()
-                    .fileName(image.getFileName())
-                    .filePath(image.getFilePath())
-                    .action("UPLOADED")
-                    .timestamp(LocalDateTime.now())
-                    .supplier(supplier)
-                    .performedBy(null) // or inject current user if available
-                    .build();
-            supplierImageAuditRepository.save(audit);
-        }
-
-
-
+        logSupplierAudit(supplier, "CREATED", null, null, null, "New supplier added");
+        return supplierMapper.toDTO(supplierRepository.findById(supplier.getId()).orElseThrow());
     }
 
-    public Supplier updateSupplier(Long id, Supplier updated, List<Long> categoryIds, List<MultipartFile> newImages) throws IOException {
+    @Transactional
+    public SupplierDTO updateSupplier(Long id, SupplierUpdateDTO dto, List<MultipartFile> newImages, String updaterUsername) throws IOException {
         Supplier existing = getSupplier(id);
 
-        // === Compare and audit field changes ===
-        if (updated.getName() != null && !updated.getName().equals(existing.getName())) {
-            logSupplierAudit(existing, "UPDATED", "name", existing.getName(), updated.getName(), "Supplier name updated");
-            existing.setName(updated.getName());
+        supplierMapper.applyUpdate(existing, dto);
+
+        if (dto.getPhoneNumber() != null) {
+            existing.setPhoneNumber(dto.getPhoneNumber().stream().map(this::normalizePhone).collect(Collectors.toList()));
         }
 
-        if (updated.getEmail() != null && !updated.getEmail().equals(existing.getEmail())) {
-            logSupplierAudit(existing, "UPDATED", "email", existing.getEmail(), updated.getEmail(), null);
-            existing.setEmail(updated.getEmail());
+        if (dto.getCategoryIds() != null && !dto.getCategoryIds().isEmpty()) {
+            var cats = categoryRepository.findAllById(dto.getCategoryIds());
+            if (cats.size() != dto.getCategoryIds().size()) {
+                Set<Long> found = cats.stream().map(c -> c.getId()).collect(Collectors.toSet());
+                dto.getCategoryIds().stream().filter(cid -> !found.contains(cid)).findFirst()
+                        .ifPresent(cid -> { throw new CategoryNotFoundException("Category not found: " + cid); });
+            }
+            existing.setCategories(new HashSet<>(cats));
+            logSupplierAudit(existing, "UPDATED", "categories", null, dto.getCategoryIds().toString(), "Updated supplier categories");
         }
 
-        if (updated.getPhoneNumber() != null && !updated.getPhoneNumber().equals(existing.getPhoneNumber())) {
-            logSupplierAudit(existing, "UPDATED", "phoneNumber", existing.getPhoneNumber(), updated.getPhoneNumber(), null);
-            existing.setPhoneNumber(updated.getPhoneNumber());
-        }
-
-        if (updated.getAddress() != null && !updated.getAddress().equals(existing.getAddress())) {
-            logSupplierAudit(existing, "UPDATED", "address", existing.getAddress(), updated.getAddress(), null);
-            existing.setAddress(updated.getAddress());
-        }
-
-        if (updated.getRegion() != null && !updated.getRegion().equals(existing.getRegion())) {
-            logSupplierAudit(existing, "UPDATED", "region", existing.getRegion(), updated.getRegion(), null);
-            existing.setRegion(updated.getRegion());
-        }
-
-        if (updated.getRating() != 0 && updated.getRating() != existing.getRating()) {
-            logSupplierAudit(existing, "UPDATED", "rating",
-                    String.valueOf(existing.getRating()),
-                    String.valueOf(updated.getRating()),
-                    null);
-            existing.setRating(updated.getRating());
-        }
-
-        // === Update categories if provided ===
-        if (categoryIds != null && !categoryIds.isEmpty()) {
-            logSupplierAudit(existing, "UPDATED", "categories", null, categoryIds.toString(), "Updated supplier categories");
-            existing.setCategories(new HashSet<>(categoryRepository.findAllById(categoryIds)));
-        }
-
-        // === Handle new images if any ===
         if (newImages != null && !newImages.isEmpty()) {
-            uploadSupplierImages(existing, newImages);
+            List<SupplierImage> saved = supplierFileStorageService.storeImages(existing, newImages);
+            supplierImageRepository.saveAll(saved);
+            existing.getImages().addAll(saved);
+            for (SupplierImage im : saved) {
+                supplierImageAuditRepository.save(SupplierImageAudit.builder()
+                        .fileName(im.getFileName())
+                        .filePath(im.getFilePath())
+                        .action("UPLOADED")
+                        .timestamp(LocalDateTime.now())
+                        .supplierId(id)
+                        .supplierName(existing.getName())
+                        .performedBy(currentUser())
+                        .build());
+            }
             logSupplierAudit(existing, "UPDATED", "images", null, "Added new images", "Supplier image(s) added");
         }
 
-        // === Update timestamps ===
+        if (updaterUsername != null) {
+            userRepository.findByUsername(updaterUsername)
+                    .ifPresent(existing::setUpdatedBy);
+        }
         existing.setUpdatedAt(LocalDateTime.now());
-
-        return supplierRepository.save(existing);
+        Supplier saved = supplierRepository.save(existing);
+        return supplierMapper.toDTO(saved);
     }
 
-
-    public void softDeleteSupplier(Long id) {
+    @Transactional
+    public ResponseEntity<ApiResponse> softDeleteSupplier(Long id) {
         Supplier supplier = getSupplier(id);
         supplier.setDeleted(true);
         supplier.setDeletedAt(LocalDateTime.now());
         supplierRepository.save(supplier);
         logSupplierAudit(supplier, "DELETED", null, null, null, "Soft deleted supplier");
+
+        // Mark images deleted
+        if (supplier.getImages() != null) {
+            for (SupplierImage img : supplier.getImages()) {
+                img.setDeleted(true);
+                supplierImageRepository.save(img);
+            }
+        }
+        ApiResponse response = new ApiResponse("success", "Supplier soft deleted successfully");
+        return ResponseEntity.ok(response);
     }
 
-    public void restoreSupplier(Long id) {
+    @Transactional
+    public ResponseEntity<ApiResponse> restoreSupplier(Long id) {
         Supplier supplier = supplierRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Supplier not found"));
         supplier.setDeleted(false);
         supplier.setDeletedAt(null);
         supplierRepository.save(supplier);
         logSupplierAudit(supplier, "RESTORED", null, null, null, "Supplier restored");
-    }
 
-    public void hardDeleteSupplier(Long id) {
-        supplierRepository.findById(id).ifPresent(supplier -> {
-            logSupplierAudit(supplier, "HARD_DELETED", null, null, null, "Permanently deleted supplier");
-
-            // Log image cascade
-            supplierImageAuditRepository.save(
-                    SupplierImageAudit.builder()
-                            .fileName("ALL")
-                            .action("CASCADE_DELETE")
-                            .reason("Supplier deleted — all associated images removed")
-                            .timestamp(LocalDateTime.now())
-                            .supplier(supplier)
-                            .build()
-            );
-
-            // Delete supplier images from disk
-            Path supplierDir = suppliersRoot();
-            try {
-                Files.walk(supplierDir)
-                        .filter(Files::isRegularFile)
-                        .filter(p -> p.getFileName().toString().contains(supplier.getId().toString()))
-                        .forEach(p -> {
-                            try { Files.deleteIfExists(p); } catch (IOException ignored) {}
-                        });
-            } catch (IOException e) {
-                log.warn("Failed to fully delete supplier images for {}", supplier.getId(), e);
+        // Mark images as not-deleted
+        if (supplier.getImages() != null) {
+            for (SupplierImage img : supplier.getImages()) {
+                img.setDeleted(false);
+                supplierImageRepository.save(img);
             }
+        }
 
-            supplierRepository.delete(supplier);
-        });
+        ApiResponse response = new ApiResponse("success", "Supplier restored successfully");
+        return ResponseEntity.ok(response);
     }
 
-    // ---------------------- IMAGE DELETION -------------------------
+    /**
+     * Deletes a supplier and its associated directory safely.
+     * If file cleanup fails, the transaction is rolled back and no DB changes are committed.
+     */
+    @Transactional
+    public ResponseEntity<ApiResponse> hardDeleteSupplier(Long supplierId) {
+        Supplier supplier = supplierRepository.findById(supplierId)
+                .orElseThrow(() -> new EntityNotFoundException("Supplier not found: " + supplierId));
 
-    public void deleteSupplierImage(Long supplierId, String filename) throws IOException {
-        SupplierImage image = supplierImageRepository.findBySupplierId(supplierId)
-                .stream().filter(img -> img.getFileName().equals(filename))
-                .findFirst()
+        // Remove dependent entities first to avoid FK constraint issues
+        supplierImageRepository.deleteAllBySupplierId(supplierId);
+        supplierRepository.delete(supplier);
+
+        log.debug("Supplier {} DB records deleted successfully. Scheduling file cleanup...", supplierId);
+
+//         ✅ Post-commit file cleanup (after DB commit succeeds)
+        transactionalFileManager.runAfterCommit(() -> {
+            try {
+                log.debug("Running post-commit cleanup for supplier {}", supplierId);
+                Path supplierDir = fileStorageService.resolveModulePath("suppliers/supplier-" + supplierId);
+                System.out.println("Hello");
+                System.out.println(supplierDir);
+                fileStorageService.deleteVisibleOrHiddenDirectory(supplierDir);
+                log.info("Supplier {} directories cleaned successfully.", supplierId);
+            } catch (Exception e) {
+                log.error("Failed to delete supplier {} directories: {}", supplierId, e.getMessage(), e);
+            }
+        });
+
+        ApiResponse response = new ApiResponse("success", "Supplier deleted permanently");
+        return ResponseEntity.ok(response);
+    }
+
+    @Transactional
+    public ResponseEntity<ApiResponse> deleteSupplierImage(Long supplierId, String filename) throws IOException {
+        SupplierImage image = Optional.ofNullable(supplierImageRepository.findBySupplierIdAndFileName(supplierId, filename))
                 .orElseThrow(() -> new EntityNotFoundException("Image not found: " + filename));
 
-        Path imgPath = Paths.get(image.getFilePath());
-        if (Files.exists(imgPath)) Files.delete(imgPath);
-
         supplierImageRepository.delete(image);
+
+        Path imgPath = Paths.get(image.getFilePath());
+        try {
+            supplierFileStorageService.deleteFile(imgPath);
+        } catch (IOException e) {
+            log.warn("Failed to delete file {}: {}", imgPath, e.getMessage());
+        }
 
         supplierImageAuditRepository.save(SupplierImageAudit.builder()
                 .fileName(image.getFileName())
@@ -312,30 +351,29 @@ public class SupplierService {
                 .action("DELETED")
                 .reason("Manual deletion")
                 .timestamp(LocalDateTime.now())
-                .supplier(image.getSupplier())
-                .performedBy(null)
+                .supplierId(supplierId)
+                .supplierName(supplierRepository.findById(supplierId).get().getName())
+                .performedBy(currentUser())
                 .build());
 
         log.info("Deleted image {} for supplier {}", filename, supplierId);
+        ApiResponse response = new ApiResponse("success", "Image deleted successfully");
+        return ResponseEntity.ok(response);
     }
 
-    public void deleteSupplierImagesBulk(Long supplierId, List<String> filenames) throws IOException {
-        if (filenames == null || filenames.isEmpty()) {
-            throw new IllegalArgumentException("No filenames provided for deletion");
-        }
-
-        List<SupplierImage> images = supplierImageRepository.findBySupplierId(supplierId);
-        List<SupplierImage> toDelete = images.stream()
-                .filter(img -> filenames.contains(img.getFileName()))
-                .collect(Collectors.toList());
-
+    @Transactional
+    public ResponseEntity<ApiResponse> deleteSupplierImagesBulk(Long supplierId, List<String> filenames) throws IOException {
+        if (filenames == null || filenames.isEmpty()) throw new IllegalArgumentException("No filenames provided for deletion");
+        List<SupplierImage> images = supplierImageRepository.findBySupplierIdAndDeletedFalse(supplierId);
+        List<SupplierImage> toDelete = images.stream().filter(i -> filenames.contains(i.getFileName())).collect(Collectors.toList());
         if (toDelete.isEmpty()) throw new EntityNotFoundException("No matching images found for deletion");
+
+        // Batch delete
+        supplierImageRepository.deleteAll(toDelete);
 
         for (SupplierImage image : toDelete) {
             Path imgPath = Paths.get(image.getFilePath());
-            if (Files.exists(imgPath)) Files.delete(imgPath);
-
-            supplierImageRepository.delete(image);
+            try { supplierFileStorageService.deleteFile(imgPath); } catch (IOException e) { log.warn("File deletion failed: {}", imgPath, e); }
 
             supplierImageAuditRepository.save(SupplierImageAudit.builder()
                     .fileName(image.getFileName())
@@ -343,12 +381,14 @@ public class SupplierService {
                     .action("DELETED")
                     .reason("Batch deletion")
                     .timestamp(LocalDateTime.now())
-                    .supplier(image.getSupplier())
-                    .performedBy(null)
+                    .supplierId(supplierId)
+                    .supplierName(supplierRepository.findById(supplierId).get().getName())
+                    .performedBy(currentUser())
                     .build());
         }
-
         log.info("Deleted {} images for supplier {}", toDelete.size(), supplierId);
+        ApiResponse response = new ApiResponse("success", "Images deleted successfully");
+        return ResponseEntity.ok(response);
     }
 
     private void logSupplierAudit(Supplier supplier, String action, String field, String oldVal, String newVal, String reason) {
@@ -359,10 +399,15 @@ public class SupplierService {
                 .newValue(newVal)
                 .reason(reason)
                 .timestamp(LocalDateTime.now())
-                .supplier(supplier)
-                .performedBy(null) // Optional: inject current authenticated user
+                .supplierId(supplier.getId())
+                .supplierName(supplier.getName())
+                .performedBy(currentUser())
                 .build();
         supplierAuditRepository.save(audit);
     }
 
+    private String normalizePhone(String phone) {
+        if (phone == null) return null;
+        return phone.replaceAll("[\\s-]", "");
+    }
 }

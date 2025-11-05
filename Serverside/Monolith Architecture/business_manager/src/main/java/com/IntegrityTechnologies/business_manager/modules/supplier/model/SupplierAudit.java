@@ -1,36 +1,31 @@
 package com.IntegrityTechnologies.business_manager.modules.supplier.model;
 
-import com.IntegrityTechnologies.business_manager.modules.user.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "supplier_audit")
+@Table(name = "supplier_audits")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class SupplierAudit {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String action; // CREATED, UPDATED, DELETED, RESTORED
-    private String fieldChanged; // optional — name, email, rating, etc.
+    private String action;
+    private String fieldChanged;
+    @Column(length = 2000)
     private String oldValue;
+    @Column(length = 2000)
     private String newValue;
-
-    private String reason; // optional
+    private String reason;
     private LocalDateTime timestamp;
+    private Long supplierId;
+    private String supplierName;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "supplier_id")
-    private Supplier supplier;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "performed_by")
-    private User performedBy;
+    private String performedBy;
 }

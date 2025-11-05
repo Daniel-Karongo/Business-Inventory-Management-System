@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.user.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,12 +22,14 @@ public class UserDTO {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private UUID id;
 
-    @NotBlank(message = "Username is required")
+    @NotBlank
     private String username;
-
     private String password;
+    @Email
     private String emailAddress;
+    @NotBlank
     private String idNumber;
+    @NotBlank
     private String role;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)

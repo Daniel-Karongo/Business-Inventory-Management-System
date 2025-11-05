@@ -10,6 +10,8 @@ import lombok.Setter;
 @Component
 @ConfigurationProperties(prefix = "file")
 public class FileStorageProperties {
+    /** Base directory for all images */
+    private String baseUploadDir;
 
     /** Base directory for product images */
     private String productUploadDir;

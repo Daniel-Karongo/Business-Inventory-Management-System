@@ -3,7 +3,6 @@ package com.IntegrityTechnologies.business_manager.modules.supplier.service;
 import com.IntegrityTechnologies.business_manager.modules.product.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.supplier.repository.SupplierRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
