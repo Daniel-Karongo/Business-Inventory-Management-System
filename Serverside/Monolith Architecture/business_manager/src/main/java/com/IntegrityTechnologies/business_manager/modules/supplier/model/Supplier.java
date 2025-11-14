@@ -1,31 +1,32 @@
 package com.IntegrityTechnologies.business_manager.modules.supplier.model;
 
 import com.IntegrityTechnologies.business_manager.modules.category.model.Category;
+import com.IntegrityTechnologies.business_manager.modules.product.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.user.model.User;
 import jakarta.persistence.*;
-import lombok.*;
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
 
+import java.sql.Types;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Entity
 @Table(name = "suppliers",
-        indexes = { @Index(name = "idx_supplier_name", columnList = "name"),
-                @Index(name = "idx_supplier_region", columnList = "region") })
+        indexes = {
+                @Index(name = "idx_supplier_name", columnList = "name"),
+                @Index(name = "idx_supplier_region", columnList = "region")
+        })
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Supplier {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue
+    @JdbcTypeCode(Types.BINARY)
+    @Column(columnDefinition = "BINARY(16)")
+    private UUID id;
 
     @Column(nullable = false, unique = true)
     private String name;
@@ -33,13 +34,11 @@ public class Supplier {
     @ElementCollection
     @CollectionTable(name = "supplier_emails", joinColumns = @JoinColumn(name = "supplier_id"))
     @Column(name = "email")
-    @Builder.Default
     private List<String> email = new ArrayList<>();
 
     @ElementCollection
     @CollectionTable(name = "supplier_phone_numbers", joinColumns = @JoinColumn(name = "supplier_id"))
     @Column(name = "phone_number")
-    @Builder.Default
     private List<String> phoneNumber = new ArrayList<>();
 
     private String address;
@@ -47,7 +46,6 @@ public class Supplier {
     private Double rating;
 
     @OneToMany(mappedBy = "supplier", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @Builder.Default
     private List<SupplierImage> images = new ArrayList<>();
 
     @ManyToMany(fetch = FetchType.LAZY)
@@ -56,8 +54,10 @@ public class Supplier {
             joinColumns = @JoinColumn(name = "supplier_id"),
             inverseJoinColumns = @JoinColumn(name = "category_id")
     )
-    @Builder.Default
     private Set<Category> categories = new HashSet<>();
+
+    @ManyToMany(mappedBy = "suppliers", fetch = FetchType.LAZY)
+    private Set<Product> products = new HashSet<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_id")
@@ -68,9 +68,11 @@ public class Supplier {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "updated_by_id")
     private User updatedBy;
+
     private LocalDateTime updatedAt;
+
     private LocalDateTime deletedAt;
-    private boolean deleted = false;
+    private Boolean deleted;
 
     @PrePersist
     public void onCreate() {

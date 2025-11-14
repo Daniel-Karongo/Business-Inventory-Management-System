@@ -2,13 +2,17 @@ package com.IntegrityTechnologies.business_manager.modules.user.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import java.sql.Types;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users",
+        indexes = {
+                @Index(name = "idx_user_username", columnList = "username"),
+                @Index(name = "idx_user_email", columnList = "email_address")
+        })
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,7 +21,8 @@ public class User {
 
     @Id
     @GeneratedValue
-    @Column(columnDefinition = "BINARY(16)") // store as binary in MySQL
+    @JdbcTypeCode(Types.BINARY)
+    @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
     @Column(nullable = false, unique = true)
@@ -26,39 +31,57 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Column(unique = true)
-    private String emailAddress;
+    @ElementCollection
+    @CollectionTable(
+            name = "user_email_addresses",
+            joinColumns = @JoinColumn(name = "user_id"),
+            indexes = {
+                    @Index(name = "idx_email_unique", columnList = "email_address")
+            }
+    )
+    @Column(name = "email_address", nullable = false)
+    private List<String> emailAddresses = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "user_phone_numbers", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "phone_number")
+    private List<String> phoneNumbers = new ArrayList<>();
 
     @Column(unique = true)
     private String idNumber;
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "user_id_images", joinColumns = @JoinColumn(name = "user_id"))
-    @Column(name = "image_url")
-    private List<String> idImageUrls = new ArrayList<>();
-
     @Enumerated(EnumType.STRING)
     private Role role;
 
-    private boolean deleted = false;
-    private LocalDateTime deletedAt;
-
-    private LocalDateTime createdAt;
-    private LocalDateTime lastModifiedAt;
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<UserImage> images = new ArrayList<>();
+    @Column(nullable = false, unique = true)
+    private String uploadFolder;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_id")
-    private User createdBy;  // 👈 who created this user (nullable)
+    private User createdBy;
+
+    private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "last_modified_by_id")
-    private User lastModifiedBy;  // 👈 who last modified this user
+    @JoinColumn(name = "updated_by_id")
+    private User updatedBy;
+
+    private LocalDateTime updatedAt;
+
+    private LocalDateTime deletedAt;
+    private Boolean deleted;
 
     @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        if (this.id == null) {
-            this.id = UUID.randomUUID(); // generate UUID before insert
-        }
+    public void onCreate() {
+        createdAt = LocalDateTime.now();
+        deleted = false;
+    }
+
+    @PreUpdate
+    public void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 }

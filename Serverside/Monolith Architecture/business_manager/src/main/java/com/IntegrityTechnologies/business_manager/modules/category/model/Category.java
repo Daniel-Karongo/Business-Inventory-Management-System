@@ -37,6 +37,7 @@ public class Category {
     private List<Product> products;
 
     @Column(nullable = false)
+    @Builder.Default
     private boolean deleted = false;
 
     private LocalDateTime deletedAt;

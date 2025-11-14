@@ -1,22 +1,19 @@
-package com.IntegrityTechnologies.business_manager.modules.supplier.model;
+package com.IntegrityTechnologies.business_manager.modules.user.model;
 
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.Where;
-
 import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "supplier_images", indexes = {@Index(name = "idx_supplier_image_supplier", columnList = "supplier_id")})
+@Table(name = "user_images", indexes = {@Index(name = "idx_user_image_user", columnList = "user_id")})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SupplierImage {
+public class UserImage {
 
     @Id
     @GeneratedValue
@@ -27,21 +24,17 @@ public class SupplierImage {
     @Column(nullable = false)
     private String fileName;
 
-    /**
-     * Internal absolute filesystem path. Do NOT expose this to clients.
-     */
     @Column(nullable = false)
     private String filePath;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "supplier_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    private Supplier supplier;
+    private User user;
 
     private LocalDateTime deletedAt;
     private Boolean deleted;
-
     private LocalDateTime uploadedAt;
 
     @PrePersist

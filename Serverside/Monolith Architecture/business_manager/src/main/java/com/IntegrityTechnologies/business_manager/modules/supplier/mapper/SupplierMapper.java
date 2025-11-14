@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.supplier.mapper;
 
+import com.IntegrityTechnologies.business_manager.modules.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.supplier.dto.SupplierCreateDTO;
 import com.IntegrityTechnologies.business_manager.modules.supplier.dto.SupplierDTO;
 import com.IntegrityTechnologies.business_manager.modules.supplier.dto.SupplierUpdateDTO;
@@ -45,14 +46,14 @@ public interface SupplierMapper {
 
     // --- Helper methods ---
 
-    default Set<Long> mapCategoryIds(Set<com.IntegrityTechnologies.business_manager.modules.category.model.Category> categories) {
+    default Set<Long> mapCategoryIds(Set<Category> categories) {
         if (categories == null || categories.isEmpty()) return Set.of();
         return categories.stream()
                 .map(c -> c.getId())
                 .collect(Collectors.toSet());
     }
 
-    default List<String> mapImageUrls(List<SupplierImage> images, Long supplierId) {
+    default List<String> mapImageUrls(List<SupplierImage> images, UUID supplierId) {
         if (images == null || images.isEmpty() || supplierId == null) return List.of();
         return images.stream()
                 .map(img -> "/api/suppliers/" + supplierId + "/images/" + img.getFileName())

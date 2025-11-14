@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "Categories", description = "Operations related to categories")
+@Tag(name = "Categories")
 @RestController
 @RequestMapping("/api/categories")
 @RequiredArgsConstructor

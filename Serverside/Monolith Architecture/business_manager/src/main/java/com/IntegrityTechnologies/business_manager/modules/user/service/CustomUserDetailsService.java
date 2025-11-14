@@ -20,8 +20,8 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String identifier) throws UsernameNotFoundException {
         // Try to find user by username, email, or ID number
         User user = userRepository.findByUsername(identifier)
-                .or(() -> userRepository.findByEmailAddress(identifier))
-                .or(() -> userRepository.findByIdNumber(identifier))
+                .or(() -> userRepository.findByEmailElementIgnoreCase(identifier))
+                .or(() -> userRepository.findByIdNumberAndDeletedFalse(identifier))
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with identifier: " + identifier));
 
         // Build Spring Security UserDetails

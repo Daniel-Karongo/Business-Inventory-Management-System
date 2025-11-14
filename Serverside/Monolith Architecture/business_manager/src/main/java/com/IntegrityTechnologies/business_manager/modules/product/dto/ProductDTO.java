@@ -1,60 +1,37 @@
 package com.IntegrityTechnologies.business_manager.modules.product.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonProperty.Access;
-import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import lombok.*;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class ProductDTO {
-    private Long id;
-
-    @NotBlank(message = "Product name is required")
+    private UUID id;
     private String name;
-
     private String description;
-
-    @NotNull(message = "Product price is required")
-    private BigDecimal price;
-
-    /** Buying / cost price */
-    private BigDecimal buyingPrice;
-
-    /** SKU */
     private String sku;
-
-    /** Supplier placeholder (id) */
-    private Long supplierId;
-
-    /** Barcodes */
-    private List<String> barcodes;
-
-    @NotNull(message = "Category ID is required")
-    private Long categoryId;
-
-    @Schema(description = "List of URLs to the stored images (response only)")
-    @JsonProperty(access = Access.READ_ONLY)
+    private String barcode;
+    private String barcodeImagePath;
+    private BigDecimal price;
+    private BigDecimal buyingPrice;
+    private Integer stockQuantity;
     private List<String> imageUrls;
-
-    @Schema(type = "array", format = "binary", description = "Product image files (upload only)")
-    @JsonProperty(access = Access.WRITE_ONLY)
-    private List<MultipartFile> imageFiles;
-
-    @JsonProperty(access = Access.READ_ONLY)
-    private boolean deleted;
-
-    @JsonProperty(access = Access.READ_ONLY)
-    private String lastSuppliedBy; // "id | username" if available
-
-    @JsonProperty(access = Access.READ_ONLY)
-    private String lastModifiedBy; // "id | username"
+    private Long categoryId;
+    private String categoryName;
+    private List<UUID> supplierIds;
+    private UUID lastSupplierId;
+    private String lastSupplierName;
+    private Boolean deleted;
+    private LocalDateTime deletedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

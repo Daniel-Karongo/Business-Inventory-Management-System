@@ -1,23 +1,19 @@
-package com.IntegrityTechnologies.business_manager.modules.supplier.model;
+package com.IntegrityTechnologies.business_manager.modules.user.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
-
 import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "supplier_audits")
+@Table(name = "user_audits")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SupplierAudit {
+public class UserAudit {
 
     @Id
     @GeneratedValue
@@ -27,21 +23,21 @@ public class SupplierAudit {
 
     @JdbcTypeCode(Types.BINARY)
     @Column(columnDefinition = "BINARY(16)")
-    private UUID supplierId;
-    private String supplierName;
+    private UUID userId;
 
-    private String name;
-    private String address;
-    private String region;
-    private Double rating;
+    private String username;
+    private String emailAddress;
+    private String idNumber;
+    private String role;
 
-    private String action;
+    private String action;       // CREATE, UPDATE, DELETE, RESTORE
     private String fieldChanged;
     @Column(length = 2000)
     private String oldValue;
     @Column(length = 2000)
     private String newValue;
     private String reason;
-    private String performedBy;
+    private UUID performedById;
+    private String performedByUsername;
     private LocalDateTime timestamp;
 }

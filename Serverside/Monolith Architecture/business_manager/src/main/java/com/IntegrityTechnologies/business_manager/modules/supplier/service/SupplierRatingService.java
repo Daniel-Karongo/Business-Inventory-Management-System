@@ -56,9 +56,9 @@ public class SupplierRatingService {
      * Simple restock-based rating update
      */
     public void onProductRestock(Product product, double qualityScore) {
-        if (product.getSupplier() == null) return;
+        if (product.getLastSuppliedBy() == null) return;
 
-        Supplier supplier = product.getSupplier();
+        Supplier supplier = product.getLastSuppliedBy();
         double oldRating = supplier.getRating() != null ? supplier.getRating() : 3.0;
 
         double newRating = (oldRating * 0.8) + (qualityScore * 0.2);

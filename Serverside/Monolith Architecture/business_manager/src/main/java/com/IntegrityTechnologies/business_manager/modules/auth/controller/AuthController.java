@@ -3,11 +3,13 @@ package com.IntegrityTechnologies.business_manager.modules.auth.controller;
 import com.IntegrityTechnologies.business_manager.modules.auth.dto.AuthRequest;
 import com.IntegrityTechnologies.business_manager.modules.auth.dto.AuthResponse;
 import com.IntegrityTechnologies.business_manager.modules.auth.service.AuthService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Auth")
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {

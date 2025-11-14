@@ -4,16 +4,15 @@ import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.exception.CategoryNotFoundException;
+import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.category.repository.CategoryRepository;
 import com.IntegrityTechnologies.business_manager.modules.supplier.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.supplier.mapper.SupplierMapper;
 import com.IntegrityTechnologies.business_manager.modules.supplier.model.*;
 import com.IntegrityTechnologies.business_manager.modules.supplier.repository.*;
 import com.IntegrityTechnologies.business_manager.modules.user.repository.UserRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataAccessException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,17 +56,27 @@ public class SupplierService {
     }
 
     public List<SupplierDTO> getAllSuppliers() {
+        return supplierRepository.findAll().stream()
+                .map(supplierMapper::toDTO).collect(Collectors.toList());
+    }
+
+    public List<SupplierDTO> getAllActiveSuppliers() {
         return supplierRepository.findByDeletedFalse().stream()
                 .map(supplierMapper::toDTO).collect(Collectors.toList());
     }
 
-    public SupplierDTO getSupplierDto(Long id) {
+    public List<SupplierDTO> getAllDeletedSuppliers() {
+        return supplierRepository.findByDeletedTrue().stream()
+                .map(supplierMapper::toDTO).collect(Collectors.toList());
+    }
+
+    public SupplierDTO getSupplierDto(UUID id) {
         Supplier supplier = supplierRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new EntityNotFoundException("Supplier not found"));
         return supplierMapper.toDTO(supplier);
     }
 
-    public Supplier getSupplier(Long id) {
+    public Supplier getSupplier(UUID id) {
         return supplierRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new EntityNotFoundException("Supplier not found"));
     }
@@ -106,13 +115,13 @@ public class SupplierService {
         return supplierRepository.findAll(spec, pageable).map(supplierMapper::toDTO);
     }
 
-    public List<String> getSupplierImageUrls(Long supplierId) {
+    public List<String> getSupplierImageUrls(UUID supplierId) {
         return supplierImageRepository.findBySupplierIdAndDeletedFalse(supplierId)
                 .stream().map(img -> "/api/suppliers/" + supplierId + "/images/" + img.getFileName())
                 .collect(Collectors.toList());
     }
 
-    public Resource downloadImage(Long supplierId, String filename) {
+    public Resource downloadImage(UUID supplierId, String filename) {
         SupplierImage image = Optional.ofNullable(supplierImageRepository.findBySupplierIdAndFileName(supplierId, filename))
                 .orElseThrow(() -> new EntityNotFoundException("Image not found"));
         Path path = Paths.get(image.getFilePath());
@@ -123,7 +132,7 @@ public class SupplierService {
     /**
      * Stream zip of supplier images using the storage service's paths.
      */
-    public void streamAllImagesAsZip(Long supplierId, OutputStream out) throws IOException {
+    public void streamAllImagesAsZip(UUID supplierId, OutputStream out) throws IOException {
         List<SupplierImage> images = supplierImageRepository.findBySupplierIdAndDeletedFalse(supplierId);
         if (images.isEmpty()) throw new EntityNotFoundException("No images found for supplier");
 
@@ -211,7 +220,7 @@ public class SupplierService {
     }
 
     @Transactional
-    public SupplierDTO updateSupplier(Long id, SupplierUpdateDTO dto, List<MultipartFile> newImages, String updaterUsername) throws IOException {
+    public SupplierDTO updateSupplier(UUID id, SupplierUpdateDTO dto, String updaterUsername) throws IOException {
         Supplier existing = getSupplier(id);
 
         supplierMapper.applyUpdate(existing, dto);
@@ -231,6 +240,19 @@ public class SupplierService {
             logSupplierAudit(existing, "UPDATED", "categories", null, dto.getCategoryIds().toString(), "Updated supplier categories");
         }
 
+        if (updaterUsername != null) {
+            userRepository.findByUsername(updaterUsername)
+                    .ifPresent(existing::setUpdatedBy);
+        }
+        existing.setUpdatedAt(LocalDateTime.now());
+        Supplier saved = supplierRepository.save(existing);
+        return supplierMapper.toDTO(saved);
+    }
+
+    @Transactional
+    public SupplierDTO updateSupplierImages(UUID id, List<MultipartFile> newImages, String updaterUsername) throws IOException {
+        Supplier existing = getSupplier(id);
+
         if (newImages != null && !newImages.isEmpty()) {
             List<SupplierImage> saved = supplierFileStorageService.storeImages(existing, newImages);
             supplierImageRepository.saveAll(saved);
@@ -243,7 +265,7 @@ public class SupplierService {
                         .timestamp(LocalDateTime.now())
                         .supplierId(id)
                         .supplierName(existing.getName())
-                        .performedBy(currentUser())
+                        .performedBy(updaterUsername)
                         .build());
             }
             logSupplierAudit(existing, "UPDATED", "images", null, "Added new images", "Supplier image(s) added");
@@ -259,7 +281,7 @@ public class SupplierService {
     }
 
     @Transactional
-    public ResponseEntity<ApiResponse> softDeleteSupplier(Long id) {
+    public ResponseEntity<ApiResponse> softDeleteSupplier(UUID id) {
         Supplier supplier = getSupplier(id);
         supplier.setDeleted(true);
         supplier.setDeletedAt(LocalDateTime.now());
@@ -278,7 +300,7 @@ public class SupplierService {
     }
 
     @Transactional
-    public ResponseEntity<ApiResponse> restoreSupplier(Long id) {
+    public ResponseEntity<ApiResponse> restoreSupplier(UUID id) {
         Supplier supplier = supplierRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Supplier not found"));
         supplier.setDeleted(false);
@@ -303,7 +325,7 @@ public class SupplierService {
      * If file cleanup fails, the transaction is rolled back and no DB changes are committed.
      */
     @Transactional
-    public ResponseEntity<ApiResponse> hardDeleteSupplier(Long supplierId) {
+    public ResponseEntity<ApiResponse> hardDeleteSupplier(UUID supplierId) {
         Supplier supplier = supplierRepository.findById(supplierId)
                 .orElseThrow(() -> new EntityNotFoundException("Supplier not found: " + supplierId));
 
@@ -327,12 +349,13 @@ public class SupplierService {
             }
         });
 
+        logSupplierAudit(supplier, "HARD DELETED", null, null, null, "Supplier deleted permanently");
         ApiResponse response = new ApiResponse("success", "Supplier deleted permanently");
         return ResponseEntity.ok(response);
     }
 
     @Transactional
-    public ResponseEntity<ApiResponse> deleteSupplierImage(Long supplierId, String filename) throws IOException {
+    public ResponseEntity<ApiResponse> deleteSupplierImage(UUID supplierId, String filename) throws IOException {
         SupplierImage image = Optional.ofNullable(supplierImageRepository.findBySupplierIdAndFileName(supplierId, filename))
                 .orElseThrow(() -> new EntityNotFoundException("Image not found: " + filename));
 
@@ -362,7 +385,7 @@ public class SupplierService {
     }
 
     @Transactional
-    public ResponseEntity<ApiResponse> deleteSupplierImagesBulk(Long supplierId, List<String> filenames) throws IOException {
+    public ResponseEntity<ApiResponse> deleteSupplierImagesBulk(UUID supplierId, List<String> filenames) throws IOException {
         if (filenames == null || filenames.isEmpty()) throw new IllegalArgumentException("No filenames provided for deletion");
         List<SupplierImage> images = supplierImageRepository.findBySupplierIdAndDeletedFalse(supplierId);
         List<SupplierImage> toDelete = images.stream().filter(i -> filenames.contains(i.getFileName())).collect(Collectors.toList());
@@ -408,6 +431,17 @@ public class SupplierService {
 
     private String normalizePhone(String phone) {
         if (phone == null) return null;
-        return phone.replaceAll("[\\s-]", "");
+
+        // 1️⃣ Remove spaces and hyphens
+        String cleaned = phone.replaceAll("[\\s-]", "");
+
+        // 2️⃣ Convert local formats to international
+        if (cleaned.matches("^07\\d{7,8}$")) {
+            cleaned = "+254" + cleaned.substring(1);
+        } else if (cleaned.matches("^01\\d{7,8}$")) {
+            cleaned = "+254" + cleaned.substring(1);
+        }
+
+        return cleaned;
     }
 }

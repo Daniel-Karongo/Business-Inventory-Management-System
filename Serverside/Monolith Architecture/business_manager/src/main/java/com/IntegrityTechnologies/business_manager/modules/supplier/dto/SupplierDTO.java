@@ -14,7 +14,7 @@ import java.util.UUID;
 @Builder
 public class SupplierDTO {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private Long id;
+    private UUID id;
 
     private String name;
     private List<String> email;

@@ -7,12 +7,15 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface SupplierRepository extends JpaRepository<Supplier, Long>, JpaSpecificationExecutor<Supplier> {
+public interface SupplierRepository extends JpaRepository<Supplier, UUID>, JpaSpecificationExecutor<Supplier> {
     List<Supplier> findByDeletedFalse();
 
-    Optional<Supplier> findByIdAndDeletedFalse(Long id);
+    List<Supplier> findByDeletedTrue();
+
+    Optional<Supplier> findByIdAndDeletedFalse(UUID id);
 
     boolean existsByNameIgnoreCase(String name);
 

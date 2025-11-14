@@ -1,23 +1,19 @@
-package com.IntegrityTechnologies.business_manager.modules.supplier.model;
+package com.IntegrityTechnologies.business_manager.modules.user.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
-
 import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "supplier_image_audits")
+@Table(name = "user_image_audits")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SupplierImageAudit {
+public class UserImageAudit {
 
     @Id
     @GeneratedValue
@@ -27,13 +23,15 @@ public class SupplierImageAudit {
 
     @JdbcTypeCode(Types.BINARY)
     @Column(columnDefinition = "BINARY(16)")
-    private UUID supplierId;
-    private String supplierName;
+    private UUID userId;
 
+    private String username;
     private String fileName;
     private String filePath;
-    private String action;
+
+    private String action;       // UPLOAD, DELETE
     private String reason;
-    private String performedBy;
+    private UUID performedById;
+    private String performedByUsername;
     private LocalDateTime timestamp;
 }

@@ -5,6 +5,7 @@ import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.modules.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.supplier.model.SupplierImage;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,17 @@ public class SupplierFileStorageService {
     /**
      * Root path for supplier uploads.
      */
+    @PostConstruct
+    public void init() {
+        try {
+            Path suppliersUploadDir = Paths.get(properties.getSupplierUploadDir()).toAbsolutePath().normalize();
+            hidePathIfSupported(suppliersUploadDir);
+            log.debug("📁 Verified and prepared supplier root directory: {}", suppliersUploadDir);
+        } catch (Exception e) {
+            log.warn("⚠️ Could not prepare supplier root directory: {}", e.getMessage());
+        }
+    }
+
     private Path root() {
         return Paths.get(properties.getSupplierUploadDir()).toAbsolutePath().normalize();
     }
@@ -47,10 +59,11 @@ public class SupplierFileStorageService {
     /**
      * Ensures supplier directory exists (hidden if possible).
      */
-    public Path getSupplierDirectory(Long supplierId) throws IOException {
+    public Path getSupplierDirectory(UUID supplierId) throws IOException {
         Path baseDir = root();
         Path supplierDir = baseDir.resolve("supplier-" + supplierId).normalize();
         Files.createDirectories(supplierDir);
+
 
         hidePathIfSupported(supplierDir);
         log.debug("📁 Supplier directory initialized: {}", supplierDir);

@@ -5,8 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.UUID;
 
 @Repository
-public interface SupplierImageAuditRepository extends JpaRepository<SupplierImageAudit, Long> {
-    List<SupplierImageAudit> findBySupplierId(Long supplierId);
+public interface SupplierImageAuditRepository extends JpaRepository<SupplierImageAudit, UUID> {
+    List<SupplierImageAudit> findBySupplierId(UUID supplierId);
 }
