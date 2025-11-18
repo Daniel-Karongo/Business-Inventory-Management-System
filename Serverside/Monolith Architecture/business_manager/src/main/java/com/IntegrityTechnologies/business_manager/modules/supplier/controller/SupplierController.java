@@ -3,10 +3,13 @@ package com.IntegrityTechnologies.business_manager.modules.supplier.controller;
 import com.IntegrityTechnologies.business_manager.common.PageWrapper;
 import com.IntegrityTechnologies.business_manager.modules.supplier.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.supplier.model.SupplierAudit;
+import com.IntegrityTechnologies.business_manager.modules.supplier.model.SupplierBulkWithFilesDTO;
 import com.IntegrityTechnologies.business_manager.modules.supplier.model.SupplierImageAudit;
 import com.IntegrityTechnologies.business_manager.modules.supplier.repository.SupplierImageAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.supplier.repository.SupplierAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.supplier.service.SupplierService;
+import com.IntegrityTechnologies.business_manager.modules.user.dto.UserDTO;
+import com.IntegrityTechnologies.business_manager.modules.user.model.UserBulkWithFilesDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -137,7 +141,7 @@ public class SupplierController {
     /* ====================== CREATE / UPDATE / DELETE ====================== */
 
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value="/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
             summary = "Create new supplier with optional images",
             responses = @ApiResponse(responseCode = "201", description = "Supplier created successfully",
@@ -153,6 +157,44 @@ public class SupplierController {
 
         SupplierDTO created = supplierService.createSupplier(supplierDTO, creatorUsername);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PostMapping(
+            value = "/register/bulk",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<List<SupplierDTO>> registerSuppliersInBulk(
+            @ModelAttribute SupplierBulkWithFilesDTO bulkDTO,
+            Authentication authentication
+    ) throws IOException {
+
+        String creatorUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails ud)
+                ? ud.getUsername()
+                : null;
+
+        List<SupplierDTO> savedSupplierDTOs = new ArrayList<>();
+        for (SupplierCreateDTO supplierCreateDTO : bulkDTO.getSuppliers()) {
+            savedSupplierDTOs.add(supplierService.createSupplier(supplierCreateDTO, creatorUsername));
+        }
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedSupplierDTOs);
+    }
+    @PostMapping(value="/register/bulk")
+    public ResponseEntity<List<SupplierDTO>> registerSuppliersInBulk(
+            @RequestBody List<SupplierCreateDTO> supplierDTOs,
+            Authentication authentication
+    ) throws IOException {
+        String creatorUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails)
+                ? userDetails.getUsername()
+                : null;
+
+        List<SupplierDTO> savedSupplierDTOs = new ArrayList<>();
+        for(SupplierCreateDTO supplierDTO: supplierDTOs) {
+            savedSupplierDTOs.add(supplierService.createSupplier(supplierDTO, creatorUsername));
+        }
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedSupplierDTOs);
     }
 
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")

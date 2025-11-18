@@ -26,8 +26,6 @@ public class UserAudit {
     private UUID userId;
 
     private String username;
-    private String emailAddress;
-    private String idNumber;
     private String role;
 
     private String action;       // CREATE, UPDATE, DELETE, RESTORE

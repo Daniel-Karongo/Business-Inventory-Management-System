@@ -10,8 +10,7 @@ import java.util.*;
 @Entity
 @Table(name = "users",
         indexes = {
-                @Index(name = "idx_user_username", columnList = "username"),
-                @Index(name = "idx_user_email", columnList = "email_address")
+                @Index(name = "idx_user_username", columnList = "username")
         })
 @Data
 @NoArgsConstructor
@@ -39,7 +38,7 @@ public class User {
                     @Index(name = "idx_email_unique", columnList = "email_address")
             }
     )
-    @Column(name = "email_address", nullable = false)
+    @Column(name = "email_address")
     private List<String> emailAddresses = new ArrayList<>();
 
     @ElementCollection

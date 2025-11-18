@@ -7,6 +7,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface UserImageAuditRepository extends JpaRepository<UserImageAudit, UUID> {
-    List<UserImageAudit> findByUserId(UUID userId);
-    List<UserImageAudit> findByPerformedById(UUID performedById);
+    List<UserImageAudit> findByUserIdOrderByTimestampDesc(UUID userId);
+    List<UserImageAudit> findByPerformedByIdOrderByTimestampDesc(UUID performedById);
 }

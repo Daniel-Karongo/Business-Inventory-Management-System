@@ -40,9 +40,9 @@ public class FileStorageService {
 
         try {
             Files.createDirectories(baseUploadDir);
-            log.info("📦 FileStorageService initialized base dir: {}", baseUploadDir);
+//            log.info("📦 FileStorageService initialized base dir: {}", baseUploadDir);
         } catch (IOException e) {
-            log.error("❌ Failed to initialize upload base directory: {}", e.getMessage(), e);
+//            log.error("❌ Failed to initialize upload base directory: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to initialize upload directory", e);
         }
     }
@@ -54,7 +54,7 @@ public class FileStorageService {
         Objects.requireNonNull(dir, "dir must not be null");
         Path normalized = dir.toAbsolutePath().normalize();
         Files.createDirectories(normalized);
-        log.debug("📁 Initialized directory: {}", normalized);
+//        log.debug("📁 Initialized directory: {}", normalized);
         return normalized;
     }
 
@@ -89,7 +89,7 @@ public class FileStorageService {
             Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
         }
 
-        log.info("💾 Saved file to {}", target);
+//        log.info("💾 Saved file to {}", target);
         return target;
     }
 
@@ -100,9 +100,9 @@ public class FileStorageService {
         if (file == null) return;
         try {
             Files.deleteIfExists(file);
-            log.info("🗑️ Deleted file {}", file);
+            // log.info("🗑️ Deleted file {}", file);
         } catch (IOException e) {
-            log.warn("⚠️ Failed to delete file {}", file, e);
+            // log.warn("⚠️ Failed to delete file {}", file, e);
             throw e;
         }
     }
@@ -129,10 +129,10 @@ public class FileStorageService {
                 return;
             }
 
-            log.debug("No visible or hidden directory found for {}", dir);
+            // log.debug("No visible or hidden directory found for {}", dir);
 
         } catch (IOException e) {
-            log.error("Failed to delete directory {}: {}", dir, e.getMessage(), e);
+            // log.error("Failed to delete directory {}: {}", dir, e.getMessage(), e);
         }
     }
 
@@ -143,10 +143,10 @@ public class FileStorageService {
 
         try {
             Files.move(hiddenDir, visibleDir, StandardCopyOption.ATOMIC_MOVE);
-            log.debug("Unhid directory {} → {}", hiddenDir, visibleDir);
+            // log.debug("Unhid directory {} → {}", hiddenDir, visibleDir);
             deleteDirectory(visibleDir);
         } catch (IOException e) {
-            log.warn("Could not unhide {} (deleting as hidden): {}", hiddenDir, e.getMessage());
+            // log.warn("Could not unhide {} (deleting as hidden): {}", hiddenDir, e.getMessage());
             deleteDirectory(hiddenDir);
         }
     }
@@ -159,10 +159,10 @@ public class FileStorageService {
                     try {
                         Files.deleteIfExists(path);
                     } catch (IOException e) {
-                        log.warn("Failed to delete file {}: {}", path, e.getMessage());
+                        // log.warn("Failed to delete file {}: {}", path, e.getMessage());
                     }
                 });
-        log.info("🧹 Deleted directory: {}", dir);
+        // log.info("🧹 Deleted directory: {}", dir);
     }
 
     public void deleteDirectoryAfterCommit(Path dir, String module) {
@@ -170,10 +170,10 @@ public class FileStorageService {
             try {
                 if (Files.exists(dir)) {
                     deleteVisibleOrHiddenDirectory(dir);
-                    log.info("🧾 [{}] Directory deleted post-commit: {}", module, dir);
+                    // log.info("🧾 [{}] Directory deleted post-commit: {}", module, dir);
                 }
             } catch (Exception e) {
-                log.error("Failed to delete directory {} after commit: {}", dir, e.getMessage(), e);
+                // log.error("Failed to delete directory {} after commit: {}", dir, e.getMessage(), e);
             }
         });
     }

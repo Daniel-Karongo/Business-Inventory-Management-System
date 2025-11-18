@@ -2,6 +2,8 @@ package com.IntegrityTechnologies.business_manager.modules.user.service;
 
 import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
+import com.IntegrityTechnologies.business_manager.config.FileStorageService;
+import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.exception.*;
 import com.IntegrityTechnologies.business_manager.modules.user.dto.UserDTO;
 import com.IntegrityTechnologies.business_manager.modules.user.model.*;
@@ -22,6 +24,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static org.hibernate.query.sqm.tree.SqmNode.log;
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -34,125 +38,78 @@ public class UserService {
     private final FileStorageProperties fileStorageProperties;
     private final UserImageService userImageService;
     private final PrivilegesChecker privilegesChecker;
+    private final FileStorageService fileStorageService;
+    private final TransactionalFileManager transactionalFileManager;
 
     /* ====================== REGISTER USER ====================== */
     @Transactional
     public UserDTO registerUser(UserDTO dto, String creatorUsername) throws IOException {
-        // Null-safety for lists
-        List<String> inputEmails = dto.getEmailAddresses() != null ? dto.getEmailAddresses() : List.of();
-        List<String> inputPhones = dto.getPhoneNumbers() != null ? dto.getPhoneNumbers() : List.of();
 
-        // 1) Normalize & dedupe emails (trim + lower-case)
-        Set<String> normalizedEmails = inputEmails.stream()
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .map(String::toLowerCase)
-                .filter(s -> !s.isBlank())
-                .collect(Collectors.toCollection(LinkedHashSet::new)); // keep order
+        // 0️⃣ Normalize input
+        Set<String> emails = normalizeEmails(dto.getEmailAddresses());
+        Set<String> phones = normalizePhones(dto.getPhoneNumbers());
 
-        if (normalizedEmails.isEmpty()) {
-            throw new InvalidUserDataException("At least one email address is required");
-        }
+//        if (emails.isEmpty()) throw new InvalidUserDataException("At least one email address is required");
 
-        // 2) Normalize & dedupe phones
-        Set<String> normalizedPhones = inputPhones.stream()
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .map(this::normalizePhone)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+        // 1️⃣ Validate uniqueness
+        checkEmailUniqueness(emails);
+        checkPhoneUniqueness(phones);
 
-        // optional: you may require at least one phone — adjust as needed
-        // if (normalizedPhones.isEmpty()) { throw new InvalidUserDataException("At least one phone required"); }
-
-        // 3) Check uniqueness (Option A: reject if any user in DB has any of these)
-        for (String email : normalizedEmails) {
-            if (userRepository.existsByEmailAddress(email)) {
-                throw new InvalidUserDataException("Email already in use: " + email);
-            }
-        }
-        for (String phone : normalizedPhones) {
-            if (userRepository.existsByPhoneNumber(phone)) {
-                throw new InvalidUserDataException("Phone number already in use: " + phone);
-            }
-        }
-
-        // 4) Username / ID validations
-        if (userRepository.existsByUsername(dto.getUsername())) {
+        if (userRepository.existsByUsername(dto.getUsername()))
             throw new InvalidUserDataException("Username already in use");
-        }
-        if (dto.getIdNumber() != null && userRepository.existsByIdNumber(dto.getIdNumber())) {
+
+        if (dto.getIdNumber() != null && userRepository.existsByIdNumber(dto.getIdNumber()))
             throw new InvalidUserDataException("ID number already in use");
-        }
 
-        // 5) Create upload folder
-        String uploadFolder = UUID.randomUUID().toString() + "_" + System.currentTimeMillis();
+        // 2️⃣ Resolve creator
+        User creator = userRepository.findByUsername(creatorUsername).orElse(null);
 
-        // 6) Build user entity (store lists as List from Set to keep DB predictable)
+        // 3️⃣ Generate upload folder upfront
+        String uploadFolder = UUID.randomUUID() + "_" + System.currentTimeMillis();
+
+        // 4️⃣ Build & save user
         User user = User.builder()
                 .username(dto.getUsername())
-                .password(passwordEncoder.encode(dto.getPassword()))
-                .emailAddresses(new ArrayList<>(normalizedEmails))
-                .phoneNumbers(new ArrayList<>(normalizedPhones))
+                .password(dto.getPassword() != null ? passwordEncoder.encode(dto.getPassword()) : passwordEncoder.encode(""))
+                .emailAddresses(new ArrayList<>(emails))
+                .phoneNumbers(new ArrayList<>(phones))
                 .idNumber(dto.getIdNumber())
-                .role(Role.valueOf(dto.getRole().toUpperCase()))
-                .uploadFolder(uploadFolder)
+                .role(Role.valueOf(dto.getRole().trim().toUpperCase()))
+                .deleted(false)
+                .uploadFolder(uploadFolder) // ✅ set before save
+                .createdBy(creator)
                 .build();
 
-        if (creatorUsername != null) {
-            userRepository.findByUsername(creatorUsername).ifPresent(user::setCreatedBy);
-        }
-
-        // 7) Handle image uploads (unchanged logic)
-        if (dto.getIdImageFiles() != null && !dto.getIdImageFiles().isEmpty()) {
-            List<String> urls = userImageService.saveFiles(dto.getIdImageFiles(), uploadFolder, fileStorageProperties.getUserUploadDir());
-            for (String url : urls) {
-                UserImage image = UserImage.builder()
-                    .fileName(Paths.get(url).getFileName().toString())
-                    .filePath(url)
-                    .user(user)
-                    .uploadedAt(LocalDateTime.now())
-                    .deleted(false)
-                    .build();
-                user.getImages().add(image);
-
-                // image audit (performedBy may be null if creatorUsername null; guard accordingly)
-                userImageAuditRepository.save(UserImageAudit.builder()
-                    .userId(user.getId()) // null until user saved
-                    .username(user.getUsername())
-                    .fileName(image.getFileName())
-                    .filePath(image.getFilePath())
-                    .action("UPLOAD")
-                    .performedById(userRepository.findByUsername(creatorUsername).get().getId())
-                    .performedByUsername(creatorUsername)
-                    .timestamp(LocalDateTime.now())
-                    .build());
-            }
-        }
-
-        // 8) Save user (cascade saves images)
         user = userRepository.save(user);
 
-        // 9) Audit creation for each email and phone
-        UUID performedById = null;
-        if (creatorUsername != null && userRepository.findByUsername(creatorUsername).isPresent()) {
-            performedById = userRepository.findByUsername(creatorUsername).get().getId();
-        }
+        // 5️⃣ Create actual folder on disk
+        Path baseUserUploadDir = Paths.get(fileStorageProperties.getUserUploadDir());
+        Path userFolderPath = baseUserUploadDir.resolve(uploadFolder);
+        // Create directories if they don't exist
+        if (!Files.exists(userFolderPath)) Files.createDirectories(userFolderPath);
+        userImageService.hidePath(userFolderPath);
+        // Track folder for rollback cleanup
+        transactionalFileManager.track(userFolderPath);
 
+
+        // 6️⃣ Upload images
+        uploadUserImages(dto.getIdImageFiles(), uploadFolder, user,
+                creator != null ? creator.getId() : null,
+                creatorUsername);
+
+        // 7️⃣ Audit creation
         userAuditRepository.save(UserAudit.builder()
-            .userId(user.getId())
-            .username(user.getUsername())
-            .fieldChanged(null)
-            .oldValue(null)
-            .newValue(null)
-            .action("CREATE")
-            .performedById(performedById)
-            .performedByUsername(creatorUsername)
-            .timestamp(LocalDateTime.now())
-            .build());
+                .userId(user.getId())
+                .username(user.getUsername())
+                .action("CREATE")
+                .performedById(creator != null ? creator.getId() : null)
+                .performedByUsername(creatorUsername)
+                .timestamp(LocalDateTime.now())
+                .build());
 
         return mapToDTO(user);
     }
+
 
     /* ====================== UPDATE USER ====================== */
     @Transactional
@@ -160,252 +117,93 @@ public class UserService {
         User user = userRepository.findByIdentifier(identifier)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        // Access check: self or managerial
-        if (!updaterUsername.equals(user.getUsername()) && !hasManagerialRole(updaterUsername)) {
+        if (!updaterUsername.equals(user.getUsername()) && !hasManagerialRole(updaterUsername))
             throw new AccessDeniedException("You are not authorized to update this user.");
-        }
 
         Map<String, String[]> changes = new HashMap<>();
 
-        // 1) USERNAME
-        String oldUsername = user.getUsername();
+        // 1️⃣ Username
         if (updatedData.getUsername() != null && !updatedData.getUsername().isBlank()
-                && !updatedData.getUsername().equals(oldUsername)) {
-            if (userRepository.existsByUsername(updatedData.getUsername())) {
+                && !updatedData.getUsername().equals(user.getUsername())) {
+            if (userRepository.existsByUsername(updatedData.getUsername()))
                 throw new InvalidUserDataException("Username already in use");
-            }
-            changes.put("username", new String[]{oldUsername, updatedData.getUsername()});
+            changes.put("username", new String[]{user.getUsername(), updatedData.getUsername()});
             user.setUsername(updatedData.getUsername());
         }
 
-        // 2) EMAILS - normalize (lowercase), dedupe and check uniqueness vs other users
-        List<String> oldEmails = user.getEmailAddresses() != null
-                ? user.getEmailAddresses()
-                : List.of();
+        // 2️⃣ Emails
+        List<String> oldEmails = user.getEmailAddresses() != null ? user.getEmailAddresses() : List.of();
+        Set<String> newEmailsSet = normalizeEmails(updatedData.getEmailAddresses());
+        List<String> newEmails = new ArrayList<>(newEmailsSet);
+        checkEmailUniqueness(newEmails, user.getId(), oldEmails);
+        updateEmailsAndAudit(user, oldEmails, newEmails, updaterUsername);
 
-        Set<String> newEmailSet = (updatedData.getEmailAddresses() != null)
-                ? updatedData.getEmailAddresses().stream()
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .map(String::toLowerCase)
-                .filter(s -> !s.isBlank())
-                .collect(Collectors.toCollection(LinkedHashSet::new))
-                : new LinkedHashSet<>();
-
-        // (If running older JDK: use new LinkedHashSet<>() and addAll)
-        if (newEmailSet.isEmpty() && updatedData.getEmailAddresses() != null && !updatedData.getEmailAddresses().isEmpty()) {
-            // fallback for environments without LinkedHashSet.of
-            newEmailSet = new LinkedHashSet<>();
-            for (String e : updatedData.getEmailAddresses()) {
-                if (e != null && !e.isBlank()) newEmailSet.add(e.trim().toLowerCase());
-            }
-        }
-
-        List<String> newEmails = new ArrayList<>(newEmailSet);
-
-        // uniqueness check per email (Option A: any user blocks it) — but allow if same user already owns it
-        for (String email : newEmails) {
-            if (!oldEmails.contains(email)) {
-                Optional<User> owner = userRepository.findByEmailElementIgnoreCase(email);
-                if (owner.isPresent() && !owner.get().getId().equals(user.getId())) {
-                    throw new InvalidUserDataException("Email already in use: " + email);
-                }
-            }
-        }
-
-        List<String> addedEmails = newEmails.stream().filter(e -> !oldEmails.contains(e)).toList();
-        List<String> removedEmails = oldEmails.stream().filter(e -> !newEmails.contains(e)).toList();
-
-        if (!addedEmails.isEmpty() || !removedEmails.isEmpty()) {
-            user.setEmailAddresses(newEmails);
-        }
-
-        // 3) PHONES - normalize + dedupe + check uniqueness vs other users
+        // 3️⃣ Phones
         List<String> oldPhones = user.getPhoneNumbers() != null ? user.getPhoneNumbers() : List.of();
+        Set<String> newPhonesSet = normalizePhones(updatedData.getPhoneNumbers());
+        List<String> newPhones = new ArrayList<>(newPhonesSet);
+        checkPhoneUniqueness(newPhones, user.getId(), oldPhones);
+        updatePhonesAndAudit(user, oldPhones, newPhones, updaterUsername);
 
-        Set<String> newPhoneSet = (updatedData.getPhoneNumbers() != null)
-                ? updatedData.getPhoneNumbers().stream()
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .map(this::normalizePhone)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toCollection(LinkedHashSet::new))
-                : new LinkedHashSet<>();
-
-        // fallback if needed (same as emails)
-        List<String> newPhones = new ArrayList<>(newPhoneSet);
-
-        for (String phone : newPhones) {
-            if (!oldPhones.contains(phone)) {
-                Optional<User> owner = userRepository.findByPhoneNumberElement(phone);
-                if (owner.isPresent() && !owner.get().getId().equals(user.getId())) {
-                    throw new InvalidUserDataException("Phone number already in use: " + phone);
-                }
-            }
-        }
-
-        List<String> addedPhones = newPhones.stream().filter(p -> !oldPhones.contains(p)).toList();
-        List<String> removedPhones = oldPhones.stream().filter(p -> !newPhones.contains(p)).toList();
-
-        if (!addedPhones.isEmpty() || !removedPhones.isEmpty()) {
-            user.setPhoneNumbers(newPhones);
-        }
-
-        // 4) ID number
+        // 4️⃣ ID Number
         if (updatedData.getIdNumber() != null && !updatedData.getIdNumber().isBlank()
                 && !updatedData.getIdNumber().equals(user.getIdNumber())) {
-            if (userRepository.existsByIdNumber(updatedData.getIdNumber())) {
+            if (userRepository.existsByIdNumber(updatedData.getIdNumber()))
                 throw new InvalidUserDataException("ID number already in use");
-            }
             changes.put("idNumber", new String[]{user.getIdNumber(), updatedData.getIdNumber()});
             user.setIdNumber(updatedData.getIdNumber());
         }
 
-        // 5) PASSWORD
-        if (updatedData.getPassword() != null && !updatedData.getPassword().isBlank()) {
+        // 5️⃣ Password
+        if (updatedData.getPassword() != null && !updatedData.getPassword().isBlank())
             user.setPassword(passwordEncoder.encode(updatedData.getPassword()));
-        }
 
-        // 6) ROLE (only managerial can change)
+        // 6️⃣ Role
         if (updatedData.getRole() != null) {
-            if (user.getUsername().equals(updaterUsername)) {
+            if (user.getUsername().equals(updaterUsername))
                 throw new UnauthorizedAccessException("You cannot change your own role");
-            }
             if (hasManagerialRole(updaterUsername)) {
                 changes.put("role", new String[]{user.getRole().name(), updatedData.getRole().toUpperCase()});
                 user.setRole(Role.valueOf(updatedData.getRole().toUpperCase()));
-            } else {
-                throw new UnauthorizedAccessException("You are not authorized to change user roles");
-            }
+            } else throw new UnauthorizedAccessException("You are not authorized to change user roles");
         }
 
-        // 7) Save
         user = userRepository.save(user);
-
-        // 8) Audit changes
-        UUID updaterId = userRepository.findByUsername(updaterUsername).map(User::getId).orElse(null);
-
-        for (var entry : changes.entrySet()) {
-            userAuditRepository.save(UserAudit.builder()
-                    .userId(user.getId())
-                    .username(user.getUsername())
-                    .fieldChanged(entry.getKey())
-                    .oldValue(entry.getValue()[0])
-                    .newValue(entry.getValue()[1])
-                    .action("UPDATE")
-                    .performedById(updaterId)
-                    .performedByUsername(updaterUsername)
-                    .timestamp(LocalDateTime.now())
-                    .build());
-        }
-
-        for (String added : addedEmails) {
-            userAuditRepository.save(UserAudit.builder()
-                    .userId(user.getId())
-                    .username(user.getUsername())
-                    .fieldChanged("email_add")
-                    .oldValue(null)
-                    .newValue(added)
-                    .action("UPDATE")
-                    .performedById(updaterId)
-                    .performedByUsername(updaterUsername)
-                    .timestamp(LocalDateTime.now())
-                    .build());
-        }
-        for (String removed : removedEmails) {
-            userAuditRepository.save(UserAudit.builder()
-                    .userId(user.getId())
-                    .username(user.getUsername())
-                    .fieldChanged("email_remove")
-                    .oldValue(removed)
-                    .newValue(null)
-                    .action("UPDATE")
-                    .performedById(updaterId)
-                    .performedByUsername(updaterUsername)
-                    .timestamp(LocalDateTime.now())
-                    .build());
-        }
-
-        for (String added : addedPhones) {
-            userAuditRepository.save(UserAudit.builder()
-                    .userId(user.getId())
-                    .username(user.getUsername())
-                    .fieldChanged("phone_add")
-                    .oldValue(null)
-                    .newValue(added)
-                    .action("UPDATE")
-                    .performedById(updaterId)
-                    .performedByUsername(updaterUsername)
-                    .timestamp(LocalDateTime.now())
-                    .build());
-        }
-        for (String removed : removedPhones) {
-            userAuditRepository.save(UserAudit.builder()
-                    .userId(user.getId())
-                    .username(user.getUsername())
-                    .fieldChanged("phone_remove")
-                    .oldValue(removed)
-                    .newValue(null)
-                    .action("UPDATE")
-                    .performedById(updaterId)
-                    .performedByUsername(updaterUsername)
-                    .timestamp(LocalDateTime.now())
-                    .build());
-        }
+        auditChanges(user, changes, updaterUsername);
 
         return mapToDTO(user);
     }
 
-    /* ====================== USER IMAGE UPDATE ====================== */
     @Transactional
-    public ResponseEntity<?> updateUserImages(String identifier, List<MultipartFile> newFiles, Authentication auth) throws IOException {
+    public ResponseEntity<?> updateUserImages(
+            String identifier,
+            List<MultipartFile> newFiles,
+            Authentication auth,
+            Boolean deleteOldImages
+    ) throws IOException {
+
         User target = validateAccess(identifier, auth, "update images");
-        Path userDir = Paths.get(fileStorageProperties.getUserUploadDir(), target.getUploadFolder()).toAbsolutePath().normalize();
 
-        // Delete old images and records
-        userImageService.deleteUserUploadDirectory(userDir);
-        userImageRepository.deleteAll(userImageRepository.findByUser(target));
-        userImageAuditRepository.save(UserImageAudit.builder()
-            .userId(target.getId())
-            .username(target.getUsername())
-            .fileName("all user's images")
-            .filePath(userDir.toString())
-            .action("DELETE_ALL")
-            .performedById(privilegesChecker.getAuthenticatedUser(auth).getId())
-            .performedByUsername(privilegesChecker.getAuthenticatedUser(auth).getUsername())
-            .timestamp(LocalDateTime.now())
-            .build());
+        Path userDir = Paths.get(
+                fileStorageProperties.getUserUploadDir(),
+                target.getUploadFolder()
+        ).toAbsolutePath().normalize();
 
+    /* =====================================================
+       1) Optionally soft-delete existing images
+       ===================================================== */
+        if (Boolean.TRUE.equals(deleteOldImages)) {
+            softDeleteAllUserImages(target, userDir, auth);
+        }
 
-
+    /* =====================================================
+       2) Save new uploaded files
+       ===================================================== */
         if (newFiles != null && !newFiles.isEmpty()) {
-            List<String> newUrls = userImageService.saveFiles(newFiles, target.getUploadFolder(), fileStorageProperties.getUserUploadDir());
-
-            for (String url : newUrls) {
-                UserImage image = UserImage.builder()
-                        .fileName(Paths.get(url).getFileName().toString())
-                        .filePath(Paths.get(fileStorageProperties.getUserUploadDir(), target.getUsername(), Paths.get(url).getFileName().toString()).toString())
-                        .user(target)
-                        .uploadedAt(LocalDateTime.now())
-                        .deleted(false)
-                        .build();
-                userImageRepository.save(image);
-
-                userImageAuditRepository.save(UserImageAudit.builder()
-                        .userId(target.getId())
-                        .username(target.getUsername())
-                        .fileName(image.getFileName())
-                        .filePath(image.getFilePath())
-                        .action("UPLOAD")
-                        .performedById(privilegesChecker.getAuthenticatedUser(auth).getId())
-                        .performedByUsername(privilegesChecker.getAuthenticatedUser(auth).getUsername())
-                        .timestamp(LocalDateTime.now())
-                        .build());
-            }
+            saveNewUserImages(target, newFiles, auth);
         }
 
         userRepository.save(target);
-
         return ResponseEntity.ok(mapToDTO(target));
     }
 
@@ -423,11 +221,24 @@ public class UserService {
 
     private boolean hasManagerialRole(String username) {
         return userRepository.findByUsername(username)
-                .map(user -> user.getRole() == Role.ADMIN || user.getRole() == Role.MANAGER)
+                .map(user -> user.getRole() == Role.SUPERUSER ||user.getRole() == Role.ADMIN || user.getRole() == Role.MANAGER)
                 .orElse(false);
     }
 
     /* ====================== GET USERS ====================== */
+
+    public UserDTO getActiveUser(String identifier)  {
+        User user = userRepository.findByIdentifier(identifier)
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + identifier));
+        return mapToDTO(user);
+    }
+
+    public UserDTO getActiveOrDeletedUser(String identifier) throws UserNotFoundException {
+        User user = userRepository.findByIdentifierForAudits(identifier)
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + identifier));
+        return mapToDTO(user);
+    }
+
     public List<UserDTO> getAllActiveUsers() {
         List<User> users = userRepository.findByDeletedFalse();
         return users.stream()
@@ -471,17 +282,17 @@ public class UserService {
     }
 
     public List<UserAudit> getUserAuditsTarget(UUID userId) {
-        return userAuditRepository.findByUserId(userId);
+        return userAuditRepository.findByUserIdOrderByTimestampDesc(userId);
     }
     public List<UserAudit> getUserAuditsPerpetrated(UUID userId) {
-        return userAuditRepository.findByPerformedById(userId);
+        return userAuditRepository.findByPerformedByIdOrderByTimestampDesc(userId);
     }
 
     public List<UserImageAudit> getUserImageAuditsTarget(UUID userId) {
-        return userImageAuditRepository.findByUserId(userId);
+        return userImageAuditRepository.findByUserIdOrderByTimestampDesc(userId);
     }
     public List<UserImageAudit> getUserImageAuditsPerpetrated(UUID userId) {
-        return userImageAuditRepository.findByPerformedById(userId);
+        return userImageAuditRepository.findByPerformedByIdOrderByTimestampDesc(userId);
     }
 
 
@@ -501,8 +312,6 @@ public class UserService {
         userAuditRepository.save(UserAudit.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
-                .emailAddress(user.getEmailAddresses().get(0))
-                .idNumber(user.getIdNumber())
                 .role(user.getRole() != null ? user.getRole().name() : null)
                 .action("SOFT_DELETE")
                 .reason("Soft deletion of user")
@@ -556,8 +365,6 @@ public class UserService {
         userAuditRepository.save(UserAudit.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
-                .emailAddress(user.getEmailAddresses().get(0))
-                .idNumber(user.getIdNumber())
                 .role(user.getRole() != null ? user.getRole().name() : null)
                 .action("RESTORE")
                 .reason("Restoring a previously soft-deleted user")
@@ -626,8 +433,6 @@ public class UserService {
         userAuditRepository.save(UserAudit.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
-                .emailAddress(user.getEmailAddresses().get(0))
-                .idNumber(user.getIdNumber())
                 .role(user.getRole() != null ? user.getRole().name() : null)
                 .action("HARD_DELETE")
                 .reason("Permanent deletion of user")
@@ -669,6 +474,244 @@ public class UserService {
         return ResponseEntity.ok(new ApiResponse("success", "User deleted successfully"));
     }
 
+
+    /* ====================== HELPER METHODS ====================== */
+
+    /* =====================================================
+   SOFT DELETE OLD IMAGES
+   ===================================================== */
+    private void softDeleteAllUserImages(User target, Path userDir, Authentication auth) {
+
+        List<UserImage> images = target.getImages();
+        if (images == null || images.isEmpty()) return;
+
+        // soft delete each image
+        for (UserImage img : images) {
+            img.setDeleted(true);
+            userImageRepository.save(img);
+        }
+
+        // single audit entry for all deletions
+        userImageAuditRepository.save(UserImageAudit.builder()
+                .userId(target.getId())
+                .username(target.getUsername())
+                .fileName("ALL")
+                .filePath(userDir.toString())
+                .action("SOFT_DELETED_ALL")
+                .reason("Inactivated during user update")
+                .performedById(privilegesChecker.getAuthenticatedUser(auth).getId())
+                .performedByUsername(privilegesChecker.getAuthenticatedUser(auth).getUsername())
+                .timestamp(LocalDateTime.now())
+                .build());
+    }
+
+    /* =====================================================
+   SAVE NEW IMAGES
+   ===================================================== */
+    private void saveNewUserImages(User target,
+                                   List<MultipartFile> newFiles,
+                                   Authentication auth) throws IOException {
+
+        List<String> uploadedUrls = userImageService.saveFiles(
+                newFiles,
+                target.getUploadFolder(),
+                fileStorageProperties.getUserUploadDir()
+        );
+
+        for (String url : uploadedUrls) {
+            UserImage img = UserImage.builder()
+                    .fileName(Paths.get(url).getFileName().toString())
+                    .filePath(url)
+                    .user(target)
+                    .uploadedAt(LocalDateTime.now())
+                    .deleted(false)
+                    .build();
+
+            userImageRepository.save(img);
+
+            // audit per image
+            userImageAuditRepository.save(UserImageAudit.builder()
+                    .userId(target.getId())
+                    .username(target.getUsername())
+                    .fileName(img.getFileName())
+                    .filePath(img.getFilePath())
+                    .action("UPLOAD")
+                    .performedById(privilegesChecker.getAuthenticatedUser(auth).getId())
+                    .performedByUsername(privilegesChecker.getAuthenticatedUser(auth).getUsername())
+                    .timestamp(LocalDateTime.now())
+                    .build());
+        }
+    }
+
+    private Set<String> normalizeEmails(List<String> emails) {
+        return emails != null ? emails.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .map(String::toLowerCase)
+                .filter(s -> !s.isBlank())
+                .collect(Collectors.toCollection(LinkedHashSet::new)) : new LinkedHashSet<>();
+    }
+
+    private Set<String> normalizePhones(List<String> phones) {
+        return phones != null ? phones.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .map(this::normalizePhone)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new)) : new LinkedHashSet<>();
+    }
+
+    private void checkEmailUniqueness(Set<String> emails) {
+        for (String email : emails) {
+            if (userRepository.existsByEmailAddress(email))
+                throw new InvalidUserDataException("Email already in use: " + email);
+        }
+    }
+
+    private void checkEmailUniqueness(List<String> emails, UUID currentUserId, List<String> oldEmails) {
+        for (String email : emails) {
+            if (!oldEmails.contains(email)) {
+                userRepository.findByEmailElementIgnoreCase(email)
+                        .filter(u -> !u.getId().equals(currentUserId))
+                        .ifPresent(u -> { throw new InvalidUserDataException("Email already in use: " + email); });
+            }
+        }
+    }
+
+    private void checkPhoneUniqueness(Set<String> phones) {
+        for (String phone : phones) {
+            if (userRepository.existsByPhoneNumber(phone))
+                throw new InvalidUserDataException("Phone number already in use: " + phone);
+        }
+    }
+
+    private void checkPhoneUniqueness(List<String> phones, UUID currentUserId, List<String> oldPhones) {
+        for (String phone : phones) {
+            if (!oldPhones.contains(phone)) {
+                userRepository.findByPhoneNumberElement(phone)
+                        .filter(u -> !u.getId().equals(currentUserId))
+                        .ifPresent(u -> { throw new InvalidUserDataException("Phone number already in use: " + phone); });
+            }
+        }
+    }
+
+    private void uploadUserImages(List<MultipartFile> files, String uploadFolder, User user,
+                                  UUID creatorId, String creatorUsername) throws IOException {
+        if (files == null || files.isEmpty()) return;
+
+        // Base upload directory on disk
+        Path baseDir = Paths.get(fileStorageProperties.getUserUploadDir()).toAbsolutePath().normalize();
+        Path userUploadDir = baseDir.resolve(uploadFolder);
+
+        // Track folder for rollback
+        transactionalFileManager.track(userUploadDir);
+
+        // Save files via UserImageService (returns secure API paths)
+        List<String> apiUrls = userImageService.saveFiles(files, uploadFolder, fileStorageProperties.getUserUploadDir());
+
+        for (String apiUrl : apiUrls) {
+            // Extract the filename from API URL
+            String fileName = Paths.get(apiUrl).getFileName().toString();
+
+            // Track physical file for rollback
+            Path physicalFile = userUploadDir.resolve(fileName);
+            transactionalFileManager.track(physicalFile);
+
+            // Persist UserImage in DB with API-friendly URL
+            UserImage image = UserImage.builder()
+                    .fileName(fileName)
+                    .filePath(apiUrl)       // ✅ store API URL, not disk path
+                    .user(user)
+                    .uploadedAt(LocalDateTime.now())
+                    .deleted(false)
+                    .build();
+            userImageRepository.save(image);
+
+            // Audit image upload
+            userImageAuditRepository.save(UserImageAudit.builder()
+                    .userId(user.getId())
+                    .username(user.getUsername())
+                    .fileName(fileName)
+                    .filePath(apiUrl)
+                    .action("UPLOAD")
+                    .performedById(creatorId)
+                    .performedByUsername(creatorUsername)
+                    .timestamp(LocalDateTime.now())
+                    .build());
+        }
+    }
+
+    private void auditChanges(User user, Map<String, String[]> changes, String updaterUsername) {
+        UUID updaterId = userRepository.findByUsername(updaterUsername)
+                .map(User::getId).orElse(null);
+
+        for (var entry : changes.entrySet()) {
+            userAuditRepository.save(UserAudit.builder()
+                    .userId(user.getId())
+                    .username(user.getUsername())
+                    .fieldChanged(entry.getKey())
+                    .oldValue(entry.getValue()[0])
+                    .newValue(entry.getValue()[1])
+                    .action("UPDATE")
+                    .performedById(updaterId)
+                    .performedByUsername(updaterUsername)
+                    .timestamp(LocalDateTime.now())
+                    .build());
+        }
+    }
+
+    private void updateEmailsAndAudit(User user, List<String> oldEmails, List<String> newEmails, String updaterUsername) {
+        List<String> added = newEmails.stream().filter(e -> !oldEmails.contains(e)).toList();
+        List<String> removed = oldEmails.stream().filter(e -> !newEmails.contains(e)).toList();
+
+        if (!added.isEmpty() || !removed.isEmpty()) user.setEmailAddresses(newEmails);
+
+        UUID updaterId = userRepository.findByUsername(updaterUsername).map(User::getId).orElse(null);
+
+        for (String a : added) auditEmailChange(user, "email_add", null, a, updaterId, updaterUsername);
+        for (String r : removed) auditEmailChange(user, "email_remove", r, null, updaterId, updaterUsername);
+    }
+
+    private void updatePhonesAndAudit(User user, List<String> oldPhones, List<String> newPhones, String updaterUsername) {
+        List<String> added = newPhones.stream().filter(p -> !oldPhones.contains(p)).toList();
+        List<String> removed = oldPhones.stream().filter(p -> !newPhones.contains(p)).toList();
+
+        if (!added.isEmpty() || !removed.isEmpty()) user.setPhoneNumbers(newPhones);
+
+        UUID updaterId = userRepository.findByUsername(updaterUsername).map(User::getId).orElse(null);
+
+        for (String a : added) auditPhoneChange(user, "phone_add", null, a, updaterId, updaterUsername);
+        for (String r : removed) auditPhoneChange(user, "phone_remove", r, null, updaterId, updaterUsername);
+    }
+
+    private void auditEmailChange(User user, String field, String oldValue, String newValue, UUID updaterId, String updaterUsername) {
+        userAuditRepository.save(UserAudit.builder()
+                .userId(user.getId())
+                .username(user.getUsername())
+                .fieldChanged(field)
+                .oldValue(oldValue)
+                .newValue(newValue)
+                .action("UPDATE")
+                .performedById(updaterId)
+                .performedByUsername(updaterUsername)
+                .timestamp(LocalDateTime.now())
+                .build());
+    }
+
+    private void auditPhoneChange(User user, String field, String oldValue, String newValue, UUID updaterId, String updaterUsername) {
+        userAuditRepository.save(UserAudit.builder()
+                .userId(user.getId())
+                .username(user.getUsername())
+                .fieldChanged(field)
+                .oldValue(oldValue)
+                .newValue(newValue)
+                .action("UPDATE")
+                .performedById(updaterId)
+                .performedByUsername(updaterUsername)
+                .timestamp(LocalDateTime.now())
+                .build());
+    }
+
     private String normalizePhone(String phone) {
         if (phone == null) return null;
 
@@ -689,8 +732,8 @@ public class UserService {
         return UserDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
-                .emailAddresses(user.getEmailAddresses())       // ✅ now a list
-                .phoneNumbers(user.getPhoneNumbers())           // ✅ now a list
+                .emailAddresses(user.getEmailAddresses())
+                .phoneNumbers(user.getPhoneNumbers())
                 .idNumber(user.getIdNumber())
                 .role(user.getRole() != null ? user.getRole().name() : null)
                 .createdBy(user.getCreatedBy() != null
@@ -704,7 +747,8 @@ public class UserService {
                 .deleted(Boolean.TRUE.equals(user.getDeleted()))
                 .idImageUrls(user.getImages() != null
                         ? user.getImages().stream()
-                        .map(UserImage::getFilePath)
+                        .filter(img -> !img.getDeleted())          // optional: only return non-deleted images
+                        .map(UserImage::getFilePath)              // ✅ API URL, not disk path
                         .toList()
                         : List.of())
                 .build();

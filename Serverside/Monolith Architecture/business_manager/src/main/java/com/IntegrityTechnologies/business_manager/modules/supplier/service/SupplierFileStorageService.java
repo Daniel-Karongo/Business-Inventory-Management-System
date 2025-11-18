@@ -46,9 +46,9 @@ public class SupplierFileStorageService {
         try {
             Path suppliersUploadDir = Paths.get(properties.getSupplierUploadDir()).toAbsolutePath().normalize();
             hidePathIfSupported(suppliersUploadDir);
-            log.debug("📁 Verified and prepared supplier root directory: {}", suppliersUploadDir);
+            // log.debug("📁 Verified and prepared supplier root directory: {}", suppliersUploadDir);
         } catch (Exception e) {
-            log.warn("⚠️ Could not prepare supplier root directory: {}", e.getMessage());
+            // log.warn("⚠️ Could not prepare supplier root directory: {}", e.getMessage());
         }
     }
 
@@ -66,7 +66,7 @@ public class SupplierFileStorageService {
 
 
         hidePathIfSupported(supplierDir);
-        log.debug("📁 Supplier directory initialized: {}", supplierDir);
+        // log.debug("📁 Supplier directory initialized: {}", supplierDir);
         return supplierDir;
     }
 
@@ -97,7 +97,7 @@ public class SupplierFileStorageService {
                         .supplier(supplier)
                         .build());
 
-                log.debug("✅ Saved supplier image: {}", filename);
+                // log.debug("✅ Saved supplier image: {}", filename);
             }
         }
         return result;
@@ -136,13 +136,13 @@ public class SupplierFileStorageService {
         Path hidden = baseDir.resolve(".supplier-" + supplierId);
 
         if (Files.exists(hidden)) {
-            log.debug("🧹 Cleaning hidden supplier directory: {}", hidden);
+            // log.debug("🧹 Cleaning hidden supplier directory: {}", hidden);
             fileStorageService.deleteVisibleOrHiddenDirectory(hidden);
         } else if (Files.exists(visible)) {
-            log.debug("🧹 Cleaning visible supplier directory: {}", visible);
+            // log.debug("🧹 Cleaning visible supplier directory: {}", visible);
             fileStorageService.deleteVisibleOrHiddenDirectory(visible);
         } else {
-            log.info("ℹ️ No directory found for supplier {}", supplierId);
+            // log.info("ℹ️ No directory found for supplier {}", supplierId);
         }
     }
 
@@ -168,13 +168,13 @@ public class SupplierFileStorageService {
                         Path hiddenPath = parent.resolve("." + name);
                         if (!Files.exists(hiddenPath)) {
                             Files.move(path, hiddenPath, StandardCopyOption.REPLACE_EXISTING);
-                            log.debug("👻 Renamed {} → {}", name, hiddenPath.getFileName());
+                            // log.debug("👻 Renamed {} → {}", name, hiddenPath.getFileName());
                         }
                     }
                 }
             }
         } catch (IOException e) {
-            log.warn("⚠️ Could not hide path {}: {}", path, e.getMessage());
+            // log.warn("⚠️ Could not hide path {}: {}", path, e.getMessage());
         }
     }
 }

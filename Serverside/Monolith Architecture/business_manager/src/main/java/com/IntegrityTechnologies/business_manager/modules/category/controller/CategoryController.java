@@ -6,10 +6,13 @@ import com.IntegrityTechnologies.business_manager.modules.category.service.Categ
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Tag(name = "Categories")
@@ -21,6 +24,20 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     // ---------------- SAVE / UPDATE ----------------
+
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
+    @PostMapping("/bulk")
+    @Transactional
+    public ResponseEntity<List<CategoryDTO>> saveCategoriesBulk(
+            @Valid @RequestBody List<CategoryDTO> categories
+    ) {
+        List<CategoryDTO> savedCategories = new ArrayList<>();
+        for (CategoryDTO dto : categories) {
+            savedCategories.add(categoryService.saveCategory(dto));
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedCategories);
+    }
+
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
     @PostMapping
     public ResponseEntity<CategoryDTO> save(@Valid @RequestBody CategoryDTO dto) {

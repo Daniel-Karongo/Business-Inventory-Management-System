@@ -27,7 +27,6 @@ public class UserDTO {
     private String password;
     private List<@Email String> emailAddresses;
     private List<String> phoneNumbers;
-    @NotBlank
     private String idNumber;
     @NotBlank
     private String role;
