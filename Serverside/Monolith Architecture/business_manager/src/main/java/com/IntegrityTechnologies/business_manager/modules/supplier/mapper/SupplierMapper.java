@@ -1,6 +1,5 @@
 package com.IntegrityTechnologies.business_manager.modules.supplier.mapper;
 
-import com.IntegrityTechnologies.business_manager.modules.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.supplier.dto.SupplierCreateDTO;
 import com.IntegrityTechnologies.business_manager.modules.supplier.dto.SupplierDTO;
 import com.IntegrityTechnologies.business_manager.modules.supplier.dto.SupplierUpdateDTO;
@@ -17,50 +16,41 @@ import java.util.stream.Collectors;
 @Mapper(componentModel = "spring")
 public interface SupplierMapper {
 
-    // ✅ Map nested entities to flattened fields
-    @Mapping(target = "categoryIds", expression = "java(mapCategoryIds(supplier.getCategories()))")
-    @Mapping(target = "imageUrls", expression = "java(mapImageUrls(supplier.getImages(), supplier.getId()))")
-
-    // ✅ Created By
+    // ===== ENTITY → DTO =====
+    @Mapping(target = "imageUrls", expression = "java(mapImageUrls(supplier.getImages(), supplier.getUploadFolder()))")
     @Mapping(target = "createdById", expression = "java(mapUserId(supplier.getCreatedBy()))")
     @Mapping(target = "createdByUsername", expression = "java(mapUsername(supplier.getCreatedBy()))")
-
-    // ✅ Updated By
     @Mapping(target = "lastUpdatedById", expression = "java(mapUserId(supplier.getUpdatedBy()))")
     @Mapping(target = "lastUpdatedByUsername", expression = "java(mapUsername(supplier.getUpdatedBy()))")
     SupplierDTO toDTO(Supplier supplier);
 
-    List<SupplierDTO> toDTOList(List<Supplier> suppliers);
+    default List<SupplierDTO> toDTOList(List<Supplier> suppliers) {
+        if (suppliers == null || suppliers.isEmpty()) return List.of();
+        return suppliers.stream().map(this::toDTO).collect(Collectors.toList());
+    }
 
-    // ✅ Create DTO → entity (ignore relationships)
-    @Mapping(target = "images", ignore = true)
+    // ===== CREATE DTO → ENTITY =====
+    @Mapping(target = "images", ignore = true)  // handled separately
+    @Mapping(target = "uploadFolder", ignore = true) // set in service
     Supplier toEntity(SupplierCreateDTO dto);
 
-    // ✅ Partial update
+    // ===== UPDATE DTO → ENTITY =====
     @Mapping(target = "images", ignore = true)
-    @Mapping(target = "categories", ignore = true)
+    @Mapping(target = "uploadFolder", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "updatedBy", ignore = true)
     Supplier applyUpdate(@MappingTarget Supplier existing, SupplierUpdateDTO dto);
 
-    // --- Helper methods ---
+    // ===== Helper Methods =====
 
-    default Set<Long> mapCategoryIds(Set<Category> categories) {
-        if (categories == null || categories.isEmpty()) return Set.of();
-        return categories.stream()
-                .map(c -> c.getId())
+    default Set<String> mapImageUrls(Set<SupplierImage> images, String uploadFolder) {
+        if (images == null || images.isEmpty() || uploadFolder == null) return Set.of();
+        return images.stream()
+                .map(img -> "/api/suppliers/images/" + uploadFolder + "/" + img.getFileName())
                 .collect(Collectors.toSet());
     }
 
-    default List<String> mapImageUrls(List<SupplierImage> images, UUID supplierId) {
-        if (images == null || images.isEmpty() || supplierId == null) return List.of();
-        return images.stream()
-                .map(img -> "/api/suppliers/" + supplierId + "/images/" + img.getFileName())
-                .collect(Collectors.toList());
-    }
-
-    // ✅ User helpers
     default UUID mapUserId(User user) {
         return (user != null) ? user.getId() : null;
     }

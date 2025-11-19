@@ -17,8 +17,8 @@ public class SupplierDTO {
     private UUID id;
 
     private String name;
-    private List<String> email;
-    private List<String> phoneNumber;
+    private Set<String> email;
+    private Set<String> phoneNumber;
     private String address;
     private String region;
 
@@ -26,10 +26,7 @@ public class SupplierDTO {
     private Double rating;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private List<String> imageUrls;
-
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private Set<Long> categoryIds;
+    private Set<String> imageUrls;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private boolean deleted;

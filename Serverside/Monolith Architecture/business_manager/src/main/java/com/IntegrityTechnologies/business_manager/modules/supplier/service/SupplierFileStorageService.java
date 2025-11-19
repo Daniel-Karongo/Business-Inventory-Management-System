@@ -5,29 +5,26 @@ import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.modules.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.supplier.model.SupplierImage;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.*;
 import java.util.*;
 
 /**
- * =====================================================================
  * SupplierFileStorageService
- * ---------------------------------------------------------------------
- * Handles supplier-specific file operations, delegating low-level file
- * logic to FileStorageService for consistency and reusability.
  *
- * Features:
- *  - Each supplier gets its own directory under supplier uploads
- *  - Files saved transactionally, rolled back on failure
- *  - Hidden/visible directory cleanup (cross-platform)
- * =====================================================================
+ * Responsibilities:
+ *  - Save supplier image files onto disk under: {supplierUploadRoot}/{uploadFolder}/{fileName}
+ *  - Provide helper to resolve disk path from uploadFolder + filename
+ *  - Create public URL stored in SupplierImage.filePath as:
+ *        /api/suppliers/images/{uploadFolder}/{fileName}
+ *  - Track saved files with TransactionalFileManager to allow cleanup on rollback
  */
 @Slf4j
 @Service
@@ -38,17 +35,14 @@ public class SupplierFileStorageService {
     private final FileStorageProperties properties;
     private final TransactionalFileManager transactionalFileManager;
 
-    /**
-     * Root path for supplier uploads.
-     */
     @PostConstruct
     public void init() {
         try {
             Path suppliersUploadDir = Paths.get(properties.getSupplierUploadDir()).toAbsolutePath().normalize();
+            // best-effort to prepare or hide dir; FileStorageService may also do its own checks
             hidePathIfSupported(suppliersUploadDir);
-            // log.debug("📁 Verified and prepared supplier root directory: {}", suppliersUploadDir);
         } catch (Exception e) {
-            // log.warn("⚠️ Could not prepare supplier root directory: {}", e.getMessage());
+            log.debug("Could not initialize supplier upload root: {}", e.getMessage());
         }
     }
 
@@ -57,98 +51,86 @@ public class SupplierFileStorageService {
     }
 
     /**
-     * Ensures supplier directory exists (hidden if possible).
+     * Ensure supplier directory exists and return it.
      */
-    public Path getSupplierDirectory(UUID supplierId) throws IOException {
-        Path baseDir = root();
-        Path supplierDir = baseDir.resolve("supplier-" + supplierId).normalize();
+    public Path getSupplierDirectory(String uploadFolder) throws IOException {
+        Path supplierDir = root().resolve(uploadFolder).normalize();
         Files.createDirectories(supplierDir);
-
-
         hidePathIfSupported(supplierDir);
-        // log.debug("📁 Supplier directory initialized: {}", supplierDir);
         return supplierDir;
     }
 
     /**
-     * Stores supplier images and returns a list of SupplierImage entities.
-     * Automatically tracks files for rollback.
+     * Store provided multipart files for the supplier.
+     * Returns SupplierImage entities with fileName and public filePath.
+     *
+     * Public URL format set in SupplierImage.filePath:
+     *   /api/suppliers/images/{uploadFolder}/{fileName}
      */
-    public List<SupplierImage> storeImages(Supplier supplier, List<MultipartFile> files) throws IOException {
-        if (files == null || files.isEmpty()) return List.of();
+    public Set<SupplierImage> storeImages(Supplier supplier, Set<MultipartFile> files) throws IOException {
+        if (files == null || files.isEmpty()) return Set.of();
 
-        Path dir = getSupplierDirectory(supplier.getId());
-        List<SupplierImage> result = new ArrayList<>();
+        Path dir = getSupplierDirectory(supplier.getUploadFolder());
+        Set<SupplierImage> result = new HashSet<>();
 
         for (MultipartFile mf : files) {
-            if (mf.isEmpty()) continue;
+            if (mf == null || mf.isEmpty()) continue;
 
             String original = sanitizeOriginalFileName(mf.getOriginalFilename());
-            String filename = UUID.randomUUID() + "_" + System.currentTimeMillis() + "_" + original;
+            String fileName = UUID.randomUUID() + "_" + System.currentTimeMillis() + "_" + original;
 
             try (InputStream in = mf.getInputStream()) {
-                Path saved = fileStorageService.saveFile(dir, filename, in);
-                transactionalFileManager.track(saved); // rollback safety
+                Path saved = fileStorageService.saveFile(dir, fileName, in);
+                transactionalFileManager.track(saved); // for rollback cleanup
                 hidePathIfSupported(saved);
 
+                String publicUrl = "/api/suppliers/images/" + supplier.getUploadFolder() + "/" + fileName;
+
                 result.add(SupplierImage.builder()
-                        .fileName(filename)
-                        .filePath(saved.toString())
+                        .fileName(fileName)
+                        .filePath(publicUrl)
                         .supplier(supplier)
                         .build());
-
-                // log.debug("✅ Saved supplier image: {}", filename);
             }
         }
         return result;
     }
 
     /**
-     * Deletes all files belonging to a supplier.
-     * Uses transactional safety — deletes only after successful commit.
+     * Resolve actual disk Path for an image given uploadFolder and filename.
      */
-    public void deleteSupplierDirectoryAfterCommit(Long supplierId) {
-        Path supplierDir = root().resolve("supplier-" + supplierId).normalize();
-        fileStorageService.deleteDirectoryAfterCommit(supplierDir, "supplier");
+    public Path resolveImagePath(String uploadFolder, String filename) throws IOException {
+        Path dir = getSupplierDirectory(uploadFolder);
+        return dir.resolve(filename).normalize();
     }
 
     /**
-     * Immediate deletion (no transaction deferral).
+     * Delete a single file immediately (no transactional deferral).
      */
-    public void deleteSupplierDirectory(Long supplierId) throws IOException {
-        Path dir = root().resolve("supplier-" + supplierId).normalize();
+    public void deleteFile(String uploadFolder, String filename) throws IOException {
+        Path pathToDelete = resolveImagePath(uploadFolder, filename);
+        fileStorageService.deleteFile(pathToDelete);
+    }
+
+    /**
+     * Delete a supplier directory immediately.
+     */
+    public void deleteSupplierDirectory(String uploadDir) throws IOException {
+        Path dir = root().resolve(uploadDir).normalize();
         fileStorageService.deleteVisibleOrHiddenDirectory(dir);
     }
 
     /**
-     * Deletes a single file (directly).
+     * Schedule supplier directory deletion after successful DB commit.
      */
-    public void deleteFile(Path path) throws IOException {
-        fileStorageService.deleteFile(path);
+    public void deleteSupplierDirectoryAfterCommit(String uploadDir) {
+        Path supplierDir = root().resolve(uploadDir).normalize();
+        fileStorageService.deleteDirectoryAfterCommit(supplierDir, "supplier");
     }
 
-    /**
-     * Cleans up hidden or visible supplier directories (manual maintenance).
-     */
-    public void cleanupSupplierDirectory(Long supplierId) throws IOException {
-        Path baseDir = root();
-        Path visible = baseDir.resolve("supplier-" + supplierId);
-        Path hidden = baseDir.resolve(".supplier-" + supplierId);
-
-        if (Files.exists(hidden)) {
-            // log.debug("🧹 Cleaning hidden supplier directory: {}", hidden);
-            fileStorageService.deleteVisibleOrHiddenDirectory(hidden);
-        } else if (Files.exists(visible)) {
-            // log.debug("🧹 Cleaning visible supplier directory: {}", visible);
-            fileStorageService.deleteVisibleOrHiddenDirectory(visible);
-        } else {
-            // log.info("ℹ️ No directory found for supplier {}", supplierId);
-        }
-    }
-
-    /* ================================================================
-       UTILITIES
-       ================================================================ */
+    /* ====================
+       Utilities
+       ==================== */
 
     private String sanitizeOriginalFileName(String original) {
         if (original == null || original.isBlank()) return "file";
@@ -159,22 +141,23 @@ public class SupplierFileStorageService {
     private void hidePathIfSupported(Path path) {
         try {
             if (System.getProperty("os.name").toLowerCase().contains("win")) {
-                Files.setAttribute(path, "dos:hidden", true, LinkOption.NOFOLLOW_LINKS);
+                if (Files.exists(path)) {
+                    Files.setAttribute(path, "dos:hidden", true, LinkOption.NOFOLLOW_LINKS);
+                }
             } else {
                 Path parent = path.getParent();
                 if (parent != null) {
                     String name = path.getFileName().toString();
                     if (!name.startsWith(".")) {
                         Path hiddenPath = parent.resolve("." + name);
-                        if (!Files.exists(hiddenPath)) {
+                        if (!Files.exists(hiddenPath) && Files.exists(path)) {
                             Files.move(path, hiddenPath, StandardCopyOption.REPLACE_EXISTING);
-                            // log.debug("👻 Renamed {} → {}", name, hiddenPath.getFileName());
                         }
                     }
                 }
             }
         } catch (IOException e) {
-            // log.warn("⚠️ Could not hide path {}: {}", path, e.getMessage());
+            log.debug("Failed to hide path {}: {}", path, e.getMessage());
         }
     }
 }

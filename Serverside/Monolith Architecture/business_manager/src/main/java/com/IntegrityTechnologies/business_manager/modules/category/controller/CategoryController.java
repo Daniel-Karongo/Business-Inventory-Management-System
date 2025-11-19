@@ -56,6 +56,7 @@ public class CategoryController {
     }
 
     // ---------------- SINGLE CATEGORY ----------------
+
     // ---------------- SINGLE CATEGORY FOR SUPERUSER ----------------
     @PreAuthorize("hasRole('SUPERUSER')")
     @GetMapping("/{id}/all")
@@ -86,27 +87,51 @@ public class CategoryController {
 
     // ---------------- SOFT / HARD DELETE ----------------
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id}/soft")
     public ResponseEntity<ApiResponse> softDelete(@PathVariable Long id) {
         return categoryService.softDelete(id);
     }
 
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @DeleteMapping("/bulk/soft")
+    public ResponseEntity<ApiResponse> softDeleteInBulk(@RequestBody List<Long> categoryIds) {
+        return categoryService.softDeleteInBulk(categoryIds);
+    }
+
     @PreAuthorize("hasRole('SUPERUSER')")
     @DeleteMapping("/{id}/hard")
-    public ResponseEntity<?> hardDelete(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse> hardDelete(@PathVariable Long id) {
         return categoryService.hardDelete(id);
+    }
+
+    @PreAuthorize("hasRole('SUPERUSER')")
+    @DeleteMapping("/bulk/hard")
+    public ResponseEntity<ApiResponse> hardDeleteInBulk(@RequestBody List<Long> categoryIds) {
+        return categoryService.hardDeleteInBulk(categoryIds);
     }
 
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @PutMapping("/{id}/restore")
-    public ResponseEntity<?> restore(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse> restore(@PathVariable Long id) {
         return categoryService.restore(id);
     }
 
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @PutMapping("/restore/bulk")
+    public ResponseEntity<ApiResponse> restoreInBulk(@RequestBody List<Long> categoryIds) {
+        return categoryService.restoreInBulk(categoryIds);
+    }
+
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @PutMapping("/{id}/restore-recursive")
-    public ResponseEntity<?> restoreCategoryRecursively(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse> restoreCategoryRecursively(@PathVariable Long id) {
         return categoryService.restoreRecursively(id);
+    }
+
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @PutMapping("/restore-recursive/bulk")
+    public ResponseEntity<ApiResponse> restoreCategoriesRecursivelyInBulk(@RequestBody List<Long> categoryIds) {
+        return categoryService.restoreCategoriesRecursivelyInBulk(categoryIds);
     }
 
 

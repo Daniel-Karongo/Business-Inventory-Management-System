@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.category.repository;
 
 import com.IntegrityTechnologies.business_manager.modules.category.model.Category;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -61,4 +62,23 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
         OR LOWER(c.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
         """)
     List<Category> searchAll(@Param("keyword") String keyword);
+
+    // Detach all suppliers from category
+    @Modifying
+    @Query(value = "DELETE FROM supplier_categories WHERE category_id = :categoryId", nativeQuery = true)
+    void detachSuppliers(@Param("categoryId") Long categoryId);
+
+    // Detach all products from category
+    @Modifying
+    @Query(value = "UPDATE products SET category_id = NULL WHERE category_id = :categoryId", nativeQuery = true)
+    void detachProducts(@Param("categoryId") Long categoryId);
+
+    // Get direct subcategory IDs
+    @Query(value = "SELECT id FROM categories WHERE parent_id = :categoryId", nativeQuery = true)
+    List<Long> findSubcategoryIds(@Param("categoryId") Long categoryId);
+
+    // Delete category by ID
+    @Modifying
+    @Query(value = "DELETE FROM categories WHERE id = :categoryId", nativeQuery = true)
+    void deleteCategoryById(@Param("categoryId") Long categoryId);
 }

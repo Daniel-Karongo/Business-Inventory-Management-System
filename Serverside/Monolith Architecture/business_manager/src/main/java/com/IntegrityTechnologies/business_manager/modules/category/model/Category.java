@@ -1,12 +1,15 @@
 package com.IntegrityTechnologies.business_manager.modules.category.model;
 
 import com.IntegrityTechnologies.business_manager.modules.product.model.Product;
+import com.IntegrityTechnologies.business_manager.modules.supplier.model.Supplier;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "categories")
@@ -14,7 +17,6 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@SQLDelete(sql = "UPDATE categories SET deleted = true, deleted_at = NOW() WHERE id = ?")
 public class Category {
 
     @Id
@@ -35,6 +37,10 @@ public class Category {
 
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = false)
     private List<Product> products;
+
+    @ManyToMany(mappedBy = "categories", fetch = FetchType.LAZY)
+    private Set<Supplier> suppliers = new HashSet<>();
+
 
     @Column(nullable = false)
     @Builder.Default

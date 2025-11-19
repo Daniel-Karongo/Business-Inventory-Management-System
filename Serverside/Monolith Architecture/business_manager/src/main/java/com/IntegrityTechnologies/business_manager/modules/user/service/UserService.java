@@ -297,18 +297,47 @@ public class UserService {
 
 
     /* ====================== SOFT DELETE / RESTORE ====================== */
-    @Transactional
-    public ResponseEntity<?> softDeleteUser(UUID id, Authentication authentication) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+    // ====================== SOFT DELETE ======================
 
-        // Get currently authenticated user for audit
+    @Transactional
+    public ResponseEntity<ApiResponse> softDeleteUser(UUID id, Authentication authentication) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
+
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
         String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
 
-        // ----------------------
-        // 1️⃣ Audit user record
-        // ----------------------
+        Map<String, Object> modified = softDeleteUserInternal(user, performedById, performedByUsername);
+
+        return ResponseEntity.ok(new ApiResponse(
+                "success",
+                "User soft deleted successfully",
+                List.of(modified)
+        ));
+    }
+
+    @Transactional
+    public ResponseEntity<ApiResponse> softDeleteUsersInBulk(List<UUID> userIds, Authentication authentication) {
+        UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
+        String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
+
+        List<Map<String, Object>> modifiedUsers = new ArrayList<>();
+        for (UUID id : userIds) {
+            User user = userRepository.findById(id)
+                    .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
+            modifiedUsers.add(softDeleteUserInternal(user, performedById, performedByUsername));
+        }
+
+        return ResponseEntity.ok(new ApiResponse(
+                "success",
+                "Users soft deleted successfully",
+                modifiedUsers
+        ));
+    }
+
+    /** Internal helper for soft delete */
+    private Map<String, Object> softDeleteUserInternal(User user, UUID performedById, String performedByUsername) {
+        // Audit user
         userAuditRepository.save(UserAudit.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
@@ -320,13 +349,10 @@ public class UserService {
                 .timestamp(LocalDateTime.now())
                 .build());
 
-        // ----------------------
-        // 2️⃣ Soft delete images & audit each
-        // ----------------------
+        // Soft delete images and audit
         if (user.getImages() != null) {
             user.getImages().forEach(image -> {
                 image.setDeleted(true);
-
                 userImageAuditRepository.save(UserImageAudit.builder()
                         .userId(user.getId())
                         .username(user.getUsername())
@@ -341,65 +367,85 @@ public class UserService {
             });
         }
 
-        // ----------------------
-        // 3️⃣ Mark user as deleted and save
-        // ----------------------
+        // Mark deleted
         user.setDeleted(true);
         userRepository.save(user);
 
-        return ResponseEntity.ok(new ApiResponse("success", "User deleted successfully"));
+        return Map.of("username", user.getUsername());
     }
 
-    @Transactional
-    public ResponseEntity<?> restoreUser(UUID id, Authentication authentication) throws IOException {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+// ====================== RESTORE ======================
 
-        // Get the current user for audit
+    @Transactional
+    public ResponseEntity<ApiResponse> restoreUser(UUID id, Authentication authentication) throws IOException {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
+
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
         String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
 
-        // ----------------------
-        // 1️⃣ Audit the restore action
-        // ----------------------
+        Map<String, Object> restored = restoreUserInternal(user, performedById, performedByUsername);
+
+        return ResponseEntity.ok(new ApiResponse(
+                "success",
+                "User restored successfully",
+                List.of(restored)
+        ));
+    }
+
+    @Transactional
+    public ResponseEntity<ApiResponse> restoreUsersInBulk(List<UUID> userIds, Authentication authentication) throws IOException {
+        UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
+        String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
+
+        List<Map<String, Object>> restoredUsers = new ArrayList<>();
+        for (UUID id : userIds) {
+            User user = userRepository.findById(id)
+                    .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
+            restoredUsers.add(restoreUserInternal(user, performedById, performedByUsername));
+        }
+
+        return ResponseEntity.ok(new ApiResponse(
+                "success",
+                "Users restored successfully",
+                restoredUsers
+        ));
+    }
+
+    /** Internal helper for restore */
+    private Map<String, Object> restoreUserInternal(User user, UUID performedById, String performedByUsername) throws IOException {
+        // Audit restore
         userAuditRepository.save(UserAudit.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
                 .role(user.getRole() != null ? user.getRole().name() : null)
                 .action("RESTORE")
-                .reason("Restoring a previously soft-deleted user")
+                .reason("Restoring user")
                 .performedById(performedById)
                 .performedByUsername(performedByUsername)
                 .timestamp(LocalDateTime.now())
                 .build());
 
-        // ----------------------
-        // 2️⃣ Restore the user
-        // ----------------------
+        // Restore user
         user.setDeleted(false);
         userRepository.save(user);
 
-        // ----------------------
-        // 3️⃣ Unhide images on disk
-        // ----------------------
-        Path userDir = Paths.get(fileStorageProperties.getUserUploadDir(), user.getUploadFolder()).toAbsolutePath().normalize();
-
+        // Unhide images
+        Path userDir = Paths.get(fileStorageProperties.getUserUploadDir(), user.getUploadFolder())
+                .toAbsolutePath().normalize();
         if (Files.exists(userDir)) {
             Files.walk(userDir)
                     .filter(Files::isRegularFile)
                     .forEach(path -> {
-                        try { userImageService.hidePath(path); } catch (IOException e) { e.printStackTrace(); }
+                        try { userImageService.hidePath(path); } catch (IOException e) { log.warn("Failed to unhide file: {}", path, e); }
                     });
             userImageService.hidePath(userDir);
         }
 
-        // ----------------------
-        // 4️⃣ Restore images in DB & audit each
-        // ----------------------
+        // Restore images in DB & audit
         if (user.getImages() != null) {
             user.getImages().forEach(image -> {
                 image.setDeleted(false);
-
                 userImageAuditRepository.save(UserImageAudit.builder()
                         .userId(user.getId())
                         .username(user.getUsername())
@@ -414,22 +460,50 @@ public class UserService {
             });
         }
 
-        return ResponseEntity.ok(new ApiResponse("success", "User restored successfully"));
+        return Map.of("username", user.getUsername());
     }
 
+// ====================== HARD DELETE ======================
 
     @Transactional
-    public ResponseEntity<?> hardDeleteUser(UUID id, Authentication authentication) throws IOException {
+    public ResponseEntity<ApiResponse> hardDeleteUser(UUID id, Authentication authentication) throws IOException {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
 
-        // Get current user for audit
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
         String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
 
-        // ----------------------
-        // 1️⃣ Audit the user hard delete
-        // ----------------------
+        Map<String, Object> deleted = hardDeleteUserInternal(user, performedById, performedByUsername);
+
+        return ResponseEntity.ok(new ApiResponse(
+                "success",
+                "User permanently deleted",
+                List.of(deleted)
+        ));
+    }
+
+    @Transactional
+    public ResponseEntity<ApiResponse> hardDeleteUsersInBulk(List<UUID> userIds, Authentication authentication) throws IOException {
+        UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
+        String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
+
+        List<Map<String, Object>> deletedUsers = new ArrayList<>();
+        for (UUID id : userIds) {
+            User user = userRepository.findById(id)
+                    .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
+            deletedUsers.add(hardDeleteUserInternal(user, performedById, performedByUsername));
+        }
+
+        return ResponseEntity.ok(new ApiResponse(
+                "success",
+                "Users permanently deleted",
+                deletedUsers
+        ));
+    }
+
+    /** Internal helper for hard delete */
+    private Map<String, Object> hardDeleteUserInternal(User user, UUID performedById, String performedByUsername) throws IOException {
+        // Audit hard delete
         userAuditRepository.save(UserAudit.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
@@ -441,9 +515,7 @@ public class UserService {
                 .timestamp(LocalDateTime.now())
                 .build());
 
-        // ----------------------
-        // 2️⃣ Audit & delete each image
-        // ----------------------
+        // Audit images
         if (user.getImages() != null) {
             user.getImages().forEach(image -> {
                 userImageAuditRepository.save(UserImageAudit.builder()
@@ -460,18 +532,15 @@ public class UserService {
             });
         }
 
-        // ----------------------
-        // 3️⃣ Delete files from disk
-        // ----------------------
-        Path userDir = Paths.get(fileStorageProperties.getUserUploadDir(), user.getUploadFolder()).toAbsolutePath().normalize();
+        // Delete files from disk
+        Path userDir = Paths.get(fileStorageProperties.getUserUploadDir(), user.getUploadFolder())
+                .toAbsolutePath().normalize();
         userImageService.deleteUserUploadDirectory(userDir);
 
-        // ----------------------
-        // 4️⃣ Delete the user
-        // ----------------------
+        // Delete the user
         userRepository.delete(user);
 
-        return ResponseEntity.ok(new ApiResponse("success", "User deleted successfully"));
+        return Map.of("username", user.getUsername());
     }
 
 

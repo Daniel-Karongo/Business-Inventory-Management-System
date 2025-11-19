@@ -18,4 +18,8 @@ public interface SupplierImageRepository extends JpaRepository<SupplierImage, UU
     @Modifying
     @Query("DELETE FROM SupplierImage si WHERE si.supplier.id = :supplierId")
     void deleteAllBySupplierId(@Param("supplierId") UUID supplierId);
+
+    @Modifying
+    @Query("DELETE FROM SupplierImage si WHERE si.supplier.id IN :supplierIds")
+    void deleteAllBySupplierIds(@Param("supplierIds") List<UUID> supplierIds);
 }

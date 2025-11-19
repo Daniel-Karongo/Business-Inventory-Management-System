@@ -30,4 +30,22 @@ public interface SupplierRepository extends JpaRepository<Supplier, UUID>, JpaSp
     // Search name case-insensitive
     Optional<Supplier> findByNameIgnoreCase(String name);
     Optional<Supplier> findByNameIgnoreCaseAndDeletedFalse(String name);
+
+    // Fetch suppliers with categories, images, emails, phone numbers in one query
+    List<Supplier> findAll();
+
+    // Bulk detach suppliers from categories
+    @Modifying
+    @Query(value = "DELETE FROM supplier_categories WHERE supplier_id IN :supplierIds", nativeQuery = true)
+    void detachFromCategoriesBulk(@Param("supplierIds") List<UUID> supplierIds);
+
+    // Bulk detach suppliers from products
+    @Modifying
+    @Query(value = "DELETE FROM products_suppliers WHERE supplier_id IN :supplierIds", nativeQuery = true)
+    void detachFromProductsBulk(@Param("supplierIds") List<UUID> supplierIds);
+
+    // Bulk delete suppliers
+    @Modifying
+    @Query("DELETE FROM Supplier s WHERE s.id IN :supplierIds")
+    void deleteSuppliersByIds(@Param("supplierIds") List<UUID> supplierIds);
 }

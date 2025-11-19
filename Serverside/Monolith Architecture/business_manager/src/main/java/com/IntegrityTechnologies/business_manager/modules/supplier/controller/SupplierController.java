@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Tag(name = "Suppliers")
@@ -168,32 +169,13 @@ public class SupplierController {
             @ModelAttribute SupplierBulkWithFilesDTO bulkDTO,
             Authentication authentication
     ) throws IOException {
-
         String creatorUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails ud)
                 ? ud.getUsername()
                 : null;
-
         List<SupplierDTO> savedSupplierDTOs = new ArrayList<>();
         for (SupplierCreateDTO supplierCreateDTO : bulkDTO.getSuppliers()) {
             savedSupplierDTOs.add(supplierService.createSupplier(supplierCreateDTO, creatorUsername));
         }
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedSupplierDTOs);
-    }
-    @PostMapping(value="/register/bulk")
-    public ResponseEntity<List<SupplierDTO>> registerSuppliersInBulk(
-            @RequestBody List<SupplierCreateDTO> supplierDTOs,
-            Authentication authentication
-    ) throws IOException {
-        String creatorUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails)
-                ? userDetails.getUsername()
-                : null;
-
-        List<SupplierDTO> savedSupplierDTOs = new ArrayList<>();
-        for(SupplierCreateDTO supplierDTO: supplierDTOs) {
-            savedSupplierDTOs.add(supplierService.createSupplier(supplierDTO, creatorUsername));
-        }
-
         return ResponseEntity.status(HttpStatus.CREATED).body(savedSupplierDTOs);
     }
 
@@ -217,7 +199,7 @@ public class SupplierController {
     @Operation(summary = "Update supplier images")
     public ResponseEntity<SupplierDTO> updateSupplierImages (
             @PathVariable UUID id,
-            @RequestParam("newImages") @Valid  List<MultipartFile> newImages,
+            @RequestParam("newImages") @Valid Set<MultipartFile> newImages,
             Authentication authentication
     ) throws IOException {
         String updaterUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails)
@@ -228,10 +210,17 @@ public class SupplierController {
     }
 
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
-    @DeleteMapping("/soft/{id}")
+    @DeleteMapping("/{id}/soft")
     @Operation(summary = "Soft delete a supplier (mark as inactive)")
     public ResponseEntity<?> softDelete(@PathVariable UUID id) {
         return supplierService.softDeleteSupplier(id);
+    }
+
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @DeleteMapping("/bulk/soft")
+    @Operation(summary = "Soft delete multiple suppliers (mark as inactive)")
+    public ResponseEntity<?> softDeleteInBulk(@RequestBody List<UUID> supplierIds) {
+        return supplierService.softDeleteSuppliersInBulk(supplierIds);
     }
 
     @PreAuthorize("hasRole('SUPERUSER')")
@@ -242,10 +231,24 @@ public class SupplierController {
     }
 
     @PreAuthorize("hasRole('SUPERUSER')")
-    @DeleteMapping("/hard/{id}")
+    @PatchMapping("/restore/bulk")
+    @Operation(summary = "Restore soft-deleted suppliers")
+    public ResponseEntity<?> restoreInBulk(@RequestBody List<UUID> supplierIds) {
+        return supplierService.restoreSuppliersInBulk(supplierIds);
+    }
+
+    @PreAuthorize("hasRole('SUPERUSER')")
+    @DeleteMapping("/{id}/hard")
     @Operation(summary = "Permanently delete a supplier and its data")
     public ResponseEntity<?> hardDelete(@PathVariable UUID id) {
         return supplierService.hardDeleteSupplier(id);
+    }
+
+    @PreAuthorize("hasRole('SUPERUSER')")
+    @DeleteMapping("/bulk/hard")
+    @Operation(summary = "Permanently delete multiple suppliers and their data")
+    public ResponseEntity<?> hardDeleteInBulk(@RequestBody List<UUID> supplierIds) {
+        return supplierService.hardDeleteSuppliersInBulk(supplierIds);
     }
 
     @DeleteMapping("/{id}/images/{filename}")

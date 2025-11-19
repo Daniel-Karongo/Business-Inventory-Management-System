@@ -6,6 +6,8 @@ import com.IntegrityTechnologies.business_manager.modules.category.dto.CategoryD
 import com.IntegrityTechnologies.business_manager.modules.category.mapper.CategoryMapper;
 import com.IntegrityTechnologies.business_manager.modules.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.category.repository.CategoryRepository;
+import com.IntegrityTechnologies.business_manager.modules.product.model.Product;
+import com.IntegrityTechnologies.business_manager.modules.supplier.model.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -268,62 +270,188 @@ public class CategoryService {
 
 
     // ---------------- DELETE / RESTORE ----------------
+
+    // --------------------- SOFT DELETE ---------------------
+
+    /** Internal helper: collect category + all subcategories */
+    private void collectCategoryAndChildren(Category category, List<Category> collector) {
+        collector.add(category);
+        if (category.getSubcategories() != null) {
+            category.getSubcategories().forEach(sub -> collectCategoryAndChildren(sub, collector));
+        }
+    }
+
+    /** Soft delete a single category */
+    @Transactional
     public ResponseEntity<ApiResponse> softDelete(Long id) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
-        category.setDeleted(true);
-        category.setDeletedAt(LocalDateTime.now());
-        categoryRepository.save(category);
+                .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
-        if (category.getSubcategories() != null)
-            category.getSubcategories().forEach(sub -> softDelete(sub.getId()));
+        List<Map<String, Object>> modified = new ArrayList<>();
+        List<Category> allCategories = new ArrayList<>();
+        collectCategoryAndChildren(category, allCategories);
 
-        ApiResponse response = new ApiResponse("success", "Category deleted successfully");
-        return ResponseEntity.ok(response);
-    }
-
-    public ResponseEntity<?> hardDelete(Long id) {
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
-        categoryRepository.delete(category);
-
-        ApiResponse response = new ApiResponse("success", "Category deleted successfully");
-        return ResponseEntity.ok(response);
-    }
-
-
-    // ---------------- RESTORE ----------------
-    public ResponseEntity<?> restore(Long id) {
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
-        category.setDeleted(false);
-        category.setDeletedAt(null);
-        categoryRepository.save(category);
-
-        ApiResponse response = new ApiResponse("success", "Category restored successfully");
-        return ResponseEntity.ok(response);
-    }
-
-    public ResponseEntity<?> restoreRecursively(Long id) {
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
-
-        restoreCategoryAndChildren(category);
-        ApiResponse response = new ApiResponse("success", "Category, and all its sub-categories, restored successfully");
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * Helper method to recursively restore a category and all its subcategories.
-     */
-    private void restoreCategoryAndChildren(Category category) {
-        category.setDeleted(false);
-        category.setDeletedAt(null);
-        categoryRepository.save(category);
-
-        if (category.getSubcategories() != null) {
-            category.getSubcategories().forEach(this::restoreCategoryAndChildren);
+        for (Category cat : allCategories) {
+            cat.setDeleted(true);
+            cat.setDeletedAt(LocalDateTime.now());
+            categoryRepository.save(cat);
+            modified.add(Map.of("id", cat.getId(), "name", cat.getName()));
         }
+
+        return ResponseEntity.ok(new ApiResponse("success", "Category soft deleted", modified));
+    }
+
+    /** Soft delete categories in bulk */
+    @Transactional
+    public ResponseEntity<ApiResponse> softDeleteInBulk(List<Long> ids) {
+        List<Map<String, Object>> modifiedCategories = new ArrayList<>();
+
+        for (Long id : ids) {
+            Category category = categoryRepository.findById(id)
+                    .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
+
+            List<Category> allCategories = new ArrayList<>();
+            collectCategoryAndChildren(category, allCategories);
+
+            for (Category cat : allCategories) {
+                cat.setDeleted(true);
+                cat.setDeletedAt(LocalDateTime.now());
+                categoryRepository.save(cat);
+                modifiedCategories.add(Map.of("id", cat.getId(), "name", cat.getName()));
+            }
+        }
+
+        return ResponseEntity.ok(new ApiResponse("success", "Categories soft deleted", modifiedCategories));
+    }
+
+    /** ====================== HARD DELETE ====================== */
+
+    /** Internal recursive hard delete helper using native SQL */
+    @Transactional
+    public void hardDeleteCategoryInternalOptimized(Long categoryId, List<Map<String, Object>> deleted) {
+        deleted.add(Map.of("id", categoryId));
+
+        // Detach suppliers & products in bulk
+        categoryRepository.detachSuppliers(categoryId);
+        categoryRepository.detachProducts(categoryId);
+
+        // Recursively delete subcategories
+        List<Long> subIds = categoryRepository.findSubcategoryIds(categoryId);
+        for (Long subId : subIds) {
+            hardDeleteCategoryInternalOptimized(subId, deleted);
+        }
+
+        // Delete category itself
+        categoryRepository.deleteCategoryById(categoryId);
+    }
+
+    /** Single-category hard delete */
+    @Transactional
+    public ResponseEntity<ApiResponse> hardDelete(Long id) {
+        List<Map<String, Object>> deleted = new ArrayList<>();
+        hardDeleteCategoryInternalOptimized(id, deleted);
+
+        return ResponseEntity.ok(new ApiResponse(
+                "success",
+                "Category permanently deleted",
+                deleted
+        ));
+    }
+
+    /** Bulk hard delete */
+    @Transactional
+    public ResponseEntity<ApiResponse> hardDeleteInBulk(List<Long> ids) {
+        List<Map<String, Object>> deletedCategories = new ArrayList<>();
+        for (Long id : ids) {
+            hardDeleteCategoryInternalOptimized(id, deletedCategories);
+        }
+
+        return ResponseEntity.ok(new ApiResponse(
+                "success",
+                "Categories permanently deleted",
+                deletedCategories
+        ));
+    }
+
+
+    // --------------------- RESTORE ---------------------
+
+    /** Restore single category (non-recursive) */
+    @Transactional
+    public ResponseEntity<ApiResponse> restore(Long id) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
+
+        category.setDeleted(false);
+        category.setDeletedAt(null);
+        categoryRepository.save(category);
+
+        Map<String, Object> restored = Map.of("id", category.getId(), "name", category.getName());
+        return ResponseEntity.ok(new ApiResponse("success", "Category restored", restored));
+    }
+
+    /** Restore categories in bulk (non-recursive) */
+    @Transactional
+    public ResponseEntity<ApiResponse> restoreInBulk(List<Long> ids) {
+        List<Map<String, Object>> restoredCategories = new ArrayList<>();
+
+        for (Long id : ids) {
+            Category category = categoryRepository.findById(id)
+                    .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
+
+            category.setDeleted(false);
+            category.setDeletedAt(null);
+            categoryRepository.save(category);
+
+            restoredCategories.add(Map.of("id", category.getId(), "name", category.getName()));
+        }
+
+        return ResponseEntity.ok(new ApiResponse("success", "Categories restored", restoredCategories));
+    }
+
+    // --------------------- RECURSIVE RESTORE ---------------------
+
+    /** Restore category + all subcategories recursively */
+    @Transactional
+    public ResponseEntity<ApiResponse> restoreRecursively(Long id) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
+
+        List<Category> allCategories = new ArrayList<>();
+        collectCategoryAndChildren(category, allCategories);
+
+        List<Map<String, Object>> restoredCategories = new ArrayList<>();
+        for (Category cat : allCategories) {
+            cat.setDeleted(false);
+            cat.setDeletedAt(null);
+            categoryRepository.save(cat);
+            restoredCategories.add(Map.of("id", cat.getId(), "name", cat.getName()));
+        }
+
+        return ResponseEntity.ok(new ApiResponse("success", "Category and subcategories restored", restoredCategories));
+    }
+
+    /** Bulk recursive restore */
+    @Transactional
+    public ResponseEntity<ApiResponse> restoreCategoriesRecursivelyInBulk(List<Long> ids) {
+        List<Map<String, Object>> restoredCategories = new ArrayList<>();
+
+        for (Long id : ids) {
+            Category category = categoryRepository.findById(id)
+                    .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
+
+            List<Category> allCategories = new ArrayList<>();
+            collectCategoryAndChildren(category, allCategories);
+
+            for (Category cat : allCategories) {
+                cat.setDeleted(false);
+                cat.setDeletedAt(null);
+                categoryRepository.save(cat);
+                restoredCategories.add(Map.of("id", cat.getId(), "name", cat.getName()));
+            }
+        }
+
+        return ResponseEntity.ok(new ApiResponse("success", "Categories and subcategories restored", restoredCategories));
     }
 
     // ---------------- SEARCH ----------------

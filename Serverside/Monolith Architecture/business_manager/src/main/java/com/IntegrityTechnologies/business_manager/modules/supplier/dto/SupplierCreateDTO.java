@@ -21,16 +21,16 @@ public class SupplierCreateDTO {
 
     @Schema(description = "List of supplier email addresses")
     @NotEmpty(message = "At least one email address is required.")
-    private List<@Email(message = "Invalid email address format.") String> email;
+    private Set<@Email(message = "Invalid email address format.") String> email;
 
     @Schema(description = "List of supplier phone numbers")
     @NotEmpty(message = "At least one phone number is required.")
-    private List<@NotBlank(message = "Phone number cannot be blank.") String> phoneNumber;
+    private Set<@NotBlank(message = "Phone number cannot be blank.") String> phoneNumber;
 
     private String address;
     private String region;
 
     private Set<Long> categoryIds;
     @Schema(type = "array")
-    private List<MultipartFile> images;
+    private Set<MultipartFile> images;
 }

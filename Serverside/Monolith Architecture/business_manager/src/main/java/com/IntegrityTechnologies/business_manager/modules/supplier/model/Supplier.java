@@ -34,19 +34,22 @@ public class Supplier {
     @ElementCollection
     @CollectionTable(name = "supplier_emails", joinColumns = @JoinColumn(name = "supplier_id"))
     @Column(name = "email")
-    private List<String> email = new ArrayList<>();
+    private Set<String> email = new HashSet<>();
 
     @ElementCollection
     @CollectionTable(name = "supplier_phone_numbers", joinColumns = @JoinColumn(name = "supplier_id"))
     @Column(name = "phone_number")
-    private List<String> phoneNumber = new ArrayList<>();
+    private Set<String> phoneNumber = new HashSet<>();
 
     private String address;
     private String region;
     private Double rating;
 
     @OneToMany(mappedBy = "supplier", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<SupplierImage> images = new ArrayList<>();
+    private Set<SupplierImage> images = new HashSet<>();
+
+    @Column(nullable = false, unique = true)
+    private String uploadFolder;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

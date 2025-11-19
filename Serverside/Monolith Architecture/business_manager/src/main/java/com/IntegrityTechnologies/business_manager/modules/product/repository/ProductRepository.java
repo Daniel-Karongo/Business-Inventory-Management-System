@@ -24,4 +24,6 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
 
     List<Product> findByDeletedFalse();
     List<Product> findByDeletedTrue();
+    List<Product> findAllBySuppliers_Id(UUID supplierId);
+
 }

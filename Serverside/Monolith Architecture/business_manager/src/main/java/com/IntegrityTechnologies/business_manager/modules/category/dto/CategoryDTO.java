@@ -1,10 +1,13 @@
 package com.IntegrityTechnologies.business_manager.modules.category.dto;
 
+import com.IntegrityTechnologies.business_manager.modules.supplier.dto.SupplierDTO;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import jakarta.validation.constraints.NotBlank;
 
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -24,4 +27,9 @@ public class CategoryDTO {
     private Long parentId; // parent category
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private List<CategoryDTO> subcategories; // optional nested DTOs
+
+    private Set<UUID> suppliersIds; // optional nested DTOs
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private List<SupplierDTO> suppliers; // optional nested DTOs
 }
