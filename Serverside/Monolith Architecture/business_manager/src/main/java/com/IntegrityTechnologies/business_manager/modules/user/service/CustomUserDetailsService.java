@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
 
@@ -18,17 +20,31 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String identifier) throws UsernameNotFoundException {
-        // Try to find user by username, email, or ID number
-        User user = userRepository.findByUsername(identifier)
-                .or(() -> userRepository.findByEmailElementIgnoreCase(identifier))
-                .or(() -> userRepository.findByIdNumberAndDeletedFalse(identifier))
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with identifier: " + identifier));
+        // Attempt to find an active (non-deleted) user first
+        Optional<User> activeOpt = userRepository.findByUsernameAndDeletedFalse(identifier)
+                .or(() -> userRepository.findByEmailElementIgnoreCaseAndDeletedFalse(identifier))
+                .or(() -> userRepository.findByIdNumberAndDeletedFalse(identifier));
 
-        // Build Spring Security UserDetails
-        return org.springframework.security.core.userdetails.User.builder()
-                .username(user.getUsername())
-                .password(user.getPassword())
-                .roles(user.getRole() != null ? user.getRole().name() : "USER")
-                .build();
+        if (activeOpt.isPresent()) {
+            User activeUser = activeOpt.get();
+            return org.springframework.security.core.userdetails.User.builder()
+                    .username(activeUser.getUsername())
+                    .password(activeUser.getPassword())
+                    .roles(activeUser.getRole() != null ? activeUser.getRole().name() : "USER")
+                    .build();
+        }
+
+        // If no active user found, check if a general user exists (may be deleted)
+        Optional<User> generalOpt = userRepository.findByUsername(identifier)
+                .or(() -> userRepository.findByEmailElementIgnoreCase(identifier))
+                .or(() -> userRepository.findByIdNumber(identifier));
+
+        if (generalOpt.isPresent()) {
+            throw new UsernameNotFoundException(
+                    "User identifier: " + identifier + " found but user is deleted"
+            );
+        }
+
+        throw new UsernameNotFoundException("User not found with identifier: " + identifier);
     }
 }

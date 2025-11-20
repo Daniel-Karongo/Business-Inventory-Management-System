@@ -71,6 +71,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 
+    @ExceptionHandler(ImageAccessDeniedException.class)
+    public ResponseEntity<?> handleImageAccessDenied(ImageAccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
+    }
+
     /* ====================== DOMAIN / ENTITY NOT FOUND ====================== */
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
@@ -140,6 +145,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleEntityNotFound(EntityNotFoundException ex) {
         return buildResponse(ex.getMessage(), HttpStatus.NOT_FOUND);
     }
+
+    @ExceptionHandler(ImageNotFoundException.class)
+    public ResponseEntity<?> handleImageNotFound(ImageNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+    }
+
 
     /* ====================== BUSINESS LOGIC ERRORS ====================== */
 

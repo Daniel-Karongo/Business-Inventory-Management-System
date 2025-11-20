@@ -85,6 +85,12 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query("SELECT u FROM User u WHERE u.deleted = false AND u.role = :role")
     List<User> findActiveUsersByRole(@Param("role") Role role);
 
+    @Query("SELECT u FROM User u WHERE u.deleted = true AND u.role = :role")
+    List<User> findDeletedUsersByRole(@Param("role") Role role);
+
+    @Query("SELECT u FROM User u WHERE u.role = :role")
+    List<User> findAllUsersByRole(@Param("role") Role role);
+
 
     /* ====================== IDENTIFIER LOOKUP ====================== */
     /**

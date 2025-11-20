@@ -104,7 +104,7 @@ public class UserController {
 
     /* ====================== GET USERS ====================== */
 
-    @GetMapping("/user/{identifier}")
+    @GetMapping("/user/{identifier}/active")
     public ResponseEntity<UserDTO> getActiveUser(@PathVariable String identifier) {
         return ResponseEntity.ok(userService.getActiveUser(identifier));
     }
@@ -116,28 +116,42 @@ public class UserController {
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPERUSER')")
-    @GetMapping("/active")
+    @GetMapping("all/active")
     public ResponseEntity<List<UserDTO>> getAllActiveUsers() {
         return ResponseEntity.ok(userService.getAllActiveUsers());
     }
 
     @PreAuthorize("hasRole('SUPERUSER')")
-    @GetMapping("/deleted")
-    public ResponseEntity<List<UserDTO>> getDeletedUsers() {
-        return ResponseEntity.ok(userService.getDeletedUsers());
+    @GetMapping("all/deleted")
+    public ResponseEntity<List<UserDTO>> getAllDeletedUsers() {
+        return ResponseEntity.ok(userService.getAllDeletedUsers());
     }
 
     @PreAuthorize("hasRole('SUPERUSER')")
-    @GetMapping("/all-including-deleted")
+    @GetMapping("/all")
     public ResponseEntity<List<UserDTO>> getAllIncludingDeleted() {
         return ResponseEntity.ok(userService.getAllUsersIncludingDeleted());
     }
 
     @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
-    @GetMapping("/role/{role}")
+    @GetMapping("/role/{role}/active")
+    public ResponseEntity<List<UserDTO>> getActiveUsersByRole(@PathVariable String role) {
+        Role parsedRole = Role.valueOf(role.toUpperCase());
+        return ResponseEntity.ok(userService.getUsersByRole(parsedRole, false));
+    }
+
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
+    @GetMapping("/role/{role}/deleted")
+    public ResponseEntity<List<UserDTO>> getDeletedUsersByRole(@PathVariable String role) {
+        Role parsedRole = Role.valueOf(role.toUpperCase());
+        return ResponseEntity.ok(userService.getUsersByRole(parsedRole, true));
+    }
+
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
+    @GetMapping("/role/{role}/all")
     public ResponseEntity<List<UserDTO>> getUsersByRole(@PathVariable String role) {
         Role parsedRole = Role.valueOf(role.toUpperCase());
-        return ResponseEntity.ok(userService.getUsersByRole(parsedRole));
+        return ResponseEntity.ok(userService.getUsersByRole(parsedRole, null));
     }
 
 
@@ -192,31 +206,126 @@ public class UserController {
 
 
     /* ====================== USER IMAGES ====================== */
-    @GetMapping("/images/all/{identifier}")
+
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
+    @GetMapping("/images/all/active")
+    public ResponseEntity<List<String>> getAllActiveImages(Authentication authentication) {
+        return ResponseEntity.ok(userImageService.getAllUsersImages(false, authentication));
+    }
+
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
+    @GetMapping("/images/all/soft-deleted")
+    public ResponseEntity<List<String>> getAllSoftDeletedImages(Authentication authentication) {
+        return ResponseEntity.ok(userImageService.getAllUsersImages(true, authentication));
+    }
+
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
+    @GetMapping("/images/all/any")
+    public ResponseEntity<List<String>> getAllImages(Authentication authentication) {
+        return ResponseEntity.ok(userImageService.getAllUsersImages(null, authentication));
+    }
+
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
+    @GetMapping("/images/all/download/active")
+    public ResponseEntity<Resource> downloadAllActiveImages(Authentication authentication) throws IOException {
+        return userImageService.downloadAllUsersImages(false, authentication);
+    }
+
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
+    @GetMapping("/images/all/download/soft-deleted")
+    public ResponseEntity<Resource> downloadAllSoftDeletedImages(Authentication authentication) throws IOException {
+        return userImageService.downloadAllUsersImages(true, authentication);
+    }
+
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
+    @GetMapping("/images/all/download/all")
+    public ResponseEntity<Resource> downloadAllImages(Authentication authentication) throws IOException {
+        return userImageService.downloadAllUsersImages(null, authentication);
+    }
+
+
+
+
+
+    @GetMapping("/images/all/{identifier}/active")
+    public ResponseEntity<List<String>> getAllActiveUserImages(@PathVariable String identifier, Authentication authentication) {
+        return ResponseEntity.ok(userImageService.getAllUserImagesForAUser(identifier, authentication, false));
+    }
+
+    @GetMapping("/images/all/{identifier}/soft-deleted")
+    public ResponseEntity<List<String>> getAllSoftDeletedUserImages(@PathVariable String identifier, Authentication authentication) {
+        return ResponseEntity.ok(userImageService.getAllUserImagesForAUser(identifier, authentication, true));
+    }
+
+    @GetMapping("/images/all/{identifier}/all")
     public ResponseEntity<List<String>> getAllUserImages(@PathVariable String identifier, Authentication authentication) {
-        return ResponseEntity.ok(userImageService.getAllUserImages(identifier, authentication));
+        return ResponseEntity.ok(userImageService.getAllUserImagesForAUser(identifier, authentication, null));
     }
 
-    @GetMapping("/images/all/download/{identifier}")
+    @GetMapping("/images/all/download/{identifier}/active")
+    public ResponseEntity<Resource> downloadAllActiveUserImages(@PathVariable String identifier, Authentication authentication) throws IOException {
+        return userImageService.downloadAllUserImages(identifier, authentication, false);
+    }
+
+    @GetMapping("/images/all/download/{identifier}/soft-deleted")
+    public ResponseEntity<Resource> downloadAllSoftDeletedUserImages(@PathVariable String identifier, Authentication authentication) throws IOException {
+        return userImageService.downloadAllUserImages(identifier, authentication, true);
+    }
+
+    @GetMapping("/images/all/download/{identifier}/all")
     public ResponseEntity<Resource> downloadAllUserImages(@PathVariable String identifier, Authentication authentication) throws IOException {
-        return userImageService.downloadAllUserImages(identifier, authentication);
+        return userImageService.downloadAllUserImages(identifier, authentication, null);
     }
 
-    @GetMapping("/images/{identifier}/{filename:.+}")
+    @GetMapping("/images/{identifier}/{filename:.+}/active")
+    public ResponseEntity<Resource> getUserActiveImage(@PathVariable String identifier, @PathVariable String filename, Authentication authentication) throws IOException {
+        return userImageService.getUserImage(identifier, filename, authentication, false);
+    }
+
+    @GetMapping("/images/{identifier}/{filename:.+}/soft-deleted")
+    public ResponseEntity<Resource> getUserSoftDeletedImage(@PathVariable String identifier, @PathVariable String filename, Authentication authentication) throws IOException {
+        return userImageService.getUserImage(identifier, filename, authentication, true);
+    }
+
+    @GetMapping("/images/{identifier}/{filename:.+}/any")
     public ResponseEntity<Resource> getUserImage(@PathVariable String identifier, @PathVariable String filename, Authentication authentication) throws IOException {
-        return userImageService.getUserImage(identifier, filename, authentication);
+        return userImageService.getUserImage(identifier, filename, authentication, null);
     }
 
-    @DeleteMapping("/images/{identifier}/{filename:.+}")
-    public ResponseEntity<?> deleteUserImage(@PathVariable String identifier, @PathVariable String filename, Authentication authentication) throws IOException {
-        return userImageService.deleteUserImage(identifier, filename, authentication);
+    @DeleteMapping("/images/{identifier}/{filename:.+}/soft")
+    public ResponseEntity<?> softdeleteUserImage(@PathVariable String identifier, @PathVariable String filename, Authentication authentication) throws IOException {
+        return userImageService.softdeleteUserImage(identifier, filename, authentication);
     }
 
-    @DeleteMapping("/images/all/{identifier}")
-    public ResponseEntity<?> deleteAllUserImages(@PathVariable String identifier, Authentication authentication) throws IOException {
-        return userImageService.deleteAllUserImages(identifier, authentication);
+    @DeleteMapping("/images/all/{identifier}/soft")
+    public ResponseEntity<?> softdeleteAllUserImages(@PathVariable String identifier, Authentication authentication) throws IOException {
+        return userImageService.softdeleteAllUserImages(identifier, authentication);
     }
 
+    @PatchMapping("/images/{identifier}/{filename:.+}/restore")
+    public ResponseEntity<?> restoreUserImage(
+            @PathVariable String identifier,
+            @PathVariable String filename,
+            Authentication authentication) throws IOException {
+        return userImageService.restoreUserImage(identifier, filename, authentication);
+    }
+
+    @PatchMapping("/images/all/{identifier}/restore")
+    public ResponseEntity<?> restoreAllUserImages(
+            @PathVariable String identifier,
+            Authentication authentication) throws IOException {
+        return userImageService.restoreAllUserImages(identifier, authentication);
+    }
+
+    @DeleteMapping("/images/{identifier}/{filename:.+}/hard")
+    public ResponseEntity<?> harddeleteUserImage(@PathVariable String identifier, @PathVariable String filename, Authentication authentication) throws IOException {
+        return userImageService.harddeleteUserImage(identifier, filename, authentication);
+    }
+
+    @DeleteMapping("/images/all/{identifier}/hard")
+    public ResponseEntity<?> harddeleteAllUserImages(@PathVariable String identifier, Authentication authentication) throws IOException {
+        return userImageService.harddeleteAllUserImages(identifier, authentication);
+    }
 
 
 

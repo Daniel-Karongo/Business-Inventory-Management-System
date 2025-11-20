@@ -8,13 +8,20 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface SupplierImageRepository extends JpaRepository<SupplierImage, UUID> {
     List<SupplierImage> findBySupplierId(UUID supplierId);
     List<SupplierImage> findBySupplierIdAndDeletedFalse(UUID supplierId);
-    SupplierImage findBySupplierIdAndFileName(UUID supplierId, String fileName);
+    List<SupplierImage> findBySupplierIdAndDeletedTrue(UUID supplierId);
+    Optional<SupplierImage> findBySupplierIdAndFileName(UUID supplierId, String fileName);
+
+    Optional<SupplierImage> findBySupplierIdAndFileNameAndDeletedFalse(UUID supplierId, String fileName);
+
+    Optional<SupplierImage> findBySupplierIdAndFileNameAndDeletedTrue(UUID supplierId, String fileName);
+
     @Modifying
     @Query("DELETE FROM SupplierImage si WHERE si.supplier.id = :supplierId")
     void deleteAllBySupplierId(@Param("supplierId") UUID supplierId);

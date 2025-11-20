@@ -107,22 +107,31 @@ public class UserService {
                 .timestamp(LocalDateTime.now())
                 .build());
 
-        return mapToDTO(user);
+        return mapToDTO(user, false);
     }
 
 
     /* ====================== UPDATE USER ====================== */
     @Transactional
     public UserDTO updateUser(String identifier, UserDTO updatedData, String updaterUsername) throws IOException {
+        // 1️⃣ Lookup target user
         User user = userRepository.findByIdentifier(identifier)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        if (!updaterUsername.equals(user.getUsername()) && !hasManagerialRole(updaterUsername))
-            throw new AccessDeniedException("You are not authorized to update this user.");
+        // 2️⃣ Lookup updater
+        User updater = userRepository.findByIdentifier(updaterUsername)
+                .orElseThrow(() -> new UserNotFoundException("Updater not found"));
+
+        // 3️⃣ Validate access using centralized method
+        if (!privilegesChecker.isAuthorized(updater, user)) {
+            throw new UnauthorizedAccessException(
+                    "You are not authorized to update user: " + user.getUsername()
+            );
+        }
 
         Map<String, String[]> changes = new HashMap<>();
 
-        // 1️⃣ Username
+        // 4️⃣ Username
         if (updatedData.getUsername() != null && !updatedData.getUsername().isBlank()
                 && !updatedData.getUsername().equals(user.getUsername())) {
             if (userRepository.existsByUsername(updatedData.getUsername()))
@@ -131,21 +140,25 @@ public class UserService {
             user.setUsername(updatedData.getUsername());
         }
 
-        // 2️⃣ Emails
-        List<String> oldEmails = user.getEmailAddresses() != null ? user.getEmailAddresses() : List.of();
-        Set<String> newEmailsSet = normalizeEmails(updatedData.getEmailAddresses());
-        List<String> newEmails = new ArrayList<>(newEmailsSet);
-        checkEmailUniqueness(newEmails, user.getId(), oldEmails);
-        updateEmailsAndAudit(user, oldEmails, newEmails, updaterUsername);
+        // 5️⃣ Emails
+        if (updatedData.getEmailAddresses() != null) {
+            List<String> oldEmails = user.getEmailAddresses() != null ? user.getEmailAddresses() : List.of();
+            Set<String> newEmailsSet = normalizeEmails(updatedData.getEmailAddresses());
+            List<String> newEmails = new ArrayList<>(newEmailsSet);
+            checkEmailUniqueness(newEmails, user.getId(), oldEmails);
+            updateEmailsAndAudit(user, oldEmails, newEmails, updaterUsername);
+        }
 
-        // 3️⃣ Phones
-        List<String> oldPhones = user.getPhoneNumbers() != null ? user.getPhoneNumbers() : List.of();
-        Set<String> newPhonesSet = normalizePhones(updatedData.getPhoneNumbers());
-        List<String> newPhones = new ArrayList<>(newPhonesSet);
-        checkPhoneUniqueness(newPhones, user.getId(), oldPhones);
-        updatePhonesAndAudit(user, oldPhones, newPhones, updaterUsername);
+        // 6️⃣ Phones
+        if (updatedData.getPhoneNumbers() != null) {
+            List<String> oldPhones = user.getPhoneNumbers() != null ? user.getPhoneNumbers() : List.of();
+            Set<String> newPhonesSet = normalizePhones(updatedData.getPhoneNumbers());
+            List<String> newPhones = new ArrayList<>(newPhonesSet);
+            checkPhoneUniqueness(newPhones, user.getId(), oldPhones);
+            updatePhonesAndAudit(user, oldPhones, newPhones, updaterUsername);
+        }
 
-        // 4️⃣ ID Number
+        // 7️⃣ ID Number
         if (updatedData.getIdNumber() != null && !updatedData.getIdNumber().isBlank()
                 && !updatedData.getIdNumber().equals(user.getIdNumber())) {
             if (userRepository.existsByIdNumber(updatedData.getIdNumber()))
@@ -154,24 +167,30 @@ public class UserService {
             user.setIdNumber(updatedData.getIdNumber());
         }
 
-        // 5️⃣ Password
-        if (updatedData.getPassword() != null && !updatedData.getPassword().isBlank())
+        // 8️⃣ Password
+        if (updatedData.getPassword() != null && !updatedData.getPassword().isBlank()) {
             user.setPassword(passwordEncoder.encode(updatedData.getPassword()));
+        }
 
-        // 6️⃣ Role
+        // 9️⃣ Role
         if (updatedData.getRole() != null) {
             if (user.getUsername().equals(updaterUsername))
                 throw new UnauthorizedAccessException("You cannot change your own role");
-            if (hasManagerialRole(updaterUsername)) {
-                changes.put("role", new String[]{user.getRole().name(), updatedData.getRole().toUpperCase()});
-                user.setRole(Role.valueOf(updatedData.getRole().toUpperCase()));
-            } else throw new UnauthorizedAccessException("You are not authorized to change user roles");
+
+            Role newRole = Role.valueOf(updatedData.getRole().toUpperCase());
+            if (!updater.getRole().canAccess(newRole)) {
+                throw new UnauthorizedAccessException("You are not authorized to assign this role");
+            }
+
+            changes.put("role", new String[]{user.getRole().name(), newRole.name()});
+            user.setRole(newRole);
         }
 
+        // 1️⃣0️⃣ Save and audit
         user = userRepository.save(user);
         auditChanges(user, changes, updaterUsername);
 
-        return mapToDTO(user);
+        return mapToDTO(user, false);
     }
 
     @Transactional
@@ -204,7 +223,7 @@ public class UserService {
         }
 
         userRepository.save(target);
-        return ResponseEntity.ok(mapToDTO(target));
+        return ResponseEntity.ok(mapToDTO(target, false));
     }
 
     /* ====================== IMAGE & USER ACCESS VALIDATION ====================== */
@@ -230,45 +249,52 @@ public class UserService {
     public UserDTO getActiveUser(String identifier)  {
         User user = userRepository.findByIdentifier(identifier)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + identifier));
-        return mapToDTO(user);
+        return mapToDTO(user, false);
     }
 
     public UserDTO getActiveOrDeletedUser(String identifier) throws UserNotFoundException {
         User user = userRepository.findByIdentifierForAudits(identifier)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + identifier));
-        return mapToDTO(user);
+        return mapToDTO(user, null);
     }
 
     public List<UserDTO> getAllActiveUsers() {
         List<User> users = userRepository.findByDeletedFalse();
         return users.stream()
-                .map(this::mapToDTO)
+                .map(user -> mapToDTO(user, false)) // false = only active images
                 .toList();
-
     }
-    public List<UserDTO> getDeletedUsers() {
+
+    public List<UserDTO> getAllDeletedUsers() {
         List<User> users = userRepository.findByDeletedTrue();
         return users.stream()
-                .map(this::mapToDTO)
-                .toList();
-    }
-    public List<UserDTO> getAllUsersIncludingDeleted() {
-        List<User> users = userRepository.findAll();
-        return  users.stream()
-                .map(this::mapToDTO)
+                .map(user -> mapToDTO(user, false))
                 .toList();
     }
 
-    public List<UserDTO> getUsersByRole(Role requestedRole) {
+    public List<UserDTO> getAllUsersIncludingDeleted() {
+        List<User> users = userRepository.findAll();
+        return users.stream()
+                .map(user -> mapToDTO(user, null))
+                .toList();
+    }
+
+    public List<UserDTO> getUsersByRole(Role requestedRole, Boolean deleted) {
         try {
             Role currentUserRole = privilegesChecker.getCurrentUserRole();
             if (!currentUserRole.canAccess(requestedRole)) {
-                throw new UnauthorizedAccessException("You cannot access users with a higher role than yours.");
+                throw new UnauthorizedAccessException("You cannot access users of this role.");
             }
-            List<User> users = userRepository.findActiveUsersByRole(requestedRole);
+            List<User> users = new ArrayList<>();
+            if(Boolean.FALSE.equals(deleted))
+                users = userRepository.findActiveUsersByRole(requestedRole);
+            else if(Boolean.TRUE.equals(deleted))
+                users = userRepository.findDeletedUsersByRole(requestedRole);
+            else
+                users = userRepository.findAllUsersByRole(requestedRole);
 
             List<UserDTO> dtos = users.stream()
-                    .map(this::mapToDTO)
+                    .map(user -> mapToDTO(user, false))
                     .toList();
             return dtos;
         } catch (IllegalArgumentException e) {
@@ -797,7 +823,7 @@ public class UserService {
         return cleaned;
     }
 
-    private UserDTO mapToDTO(User user) {
+    private UserDTO mapToDTO(User user, Boolean deleted) {
         return UserDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -816,8 +842,12 @@ public class UserService {
                 .deleted(Boolean.TRUE.equals(user.getDeleted()))
                 .idImageUrls(user.getImages() != null
                         ? user.getImages().stream()
-                        .filter(img -> !img.getDeleted())          // optional: only return non-deleted images
-                        .map(UserImage::getFilePath)              // ✅ API URL, not disk path
+                        .filter(img -> {
+                            if (deleted == null) return true;               // return all
+                            if (deleted) return Boolean.TRUE.equals(img.getDeleted()); // only deleted
+                            return !Boolean.TRUE.equals(img.getDeleted());  // only active
+                        })
+                        .map(UserImage::getFilePath)
                         .toList()
                         : List.of())
                 .build();

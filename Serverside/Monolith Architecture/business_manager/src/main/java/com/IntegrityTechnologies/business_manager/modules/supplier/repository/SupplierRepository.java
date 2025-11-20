@@ -16,19 +16,30 @@ public interface SupplierRepository extends JpaRepository<Supplier, UUID>, JpaSp
     List<Supplier> findByDeletedTrue();
 
     Optional<Supplier> findByIdAndDeletedFalse(UUID id);
+    Optional<Supplier> findByIdAndDeletedTrue(UUID id);
+    Optional<Supplier> findById(UUID id);
 
     boolean existsByNameIgnoreCase(String name);
 
     // Search the element collection table for email
-    @Query("select s from Supplier s join s.email e where lower(e) = lower(:email) and s.deleted = false")
+    @Query("select s from Supplier s join s.email e where lower(e) = lower(:email)")
     Optional<Supplier> findByEmailElementIgnoreCase(@Param("email") String email);
+    @Query("select s from Supplier s join s.email e where lower(e) = lower(:email) and s.deleted = false")
+    Optional<Supplier> findByEmailElementIgnoreCaseAndDeletedFalse(@Param("email") String email);
+    @Query("select s from Supplier s join s.email e where lower(e) = lower(:email) and s.deleted = true")
+    Optional<Supplier> findByEmailElementIgnoreCaseAndDeletedTrue(@Param("email") String email);
 
     // Search phone numbers (element collection)
-    @Query("select s from Supplier s join s.phoneNumber p where p = :phone and s.deleted = false")
+    @Query("select s from Supplier s join s.phoneNumber p where p = :phone")
     Optional<Supplier> findByPhoneNumberElement(@Param("phone") String phone);
+    @Query("select s from Supplier s join s.phoneNumber p where p = :phone and s.deleted = false")
+    Optional<Supplier> findByPhoneNumberElementAndDeletedFalse(@Param("phone") String phone);
+    @Query("select s from Supplier s join s.phoneNumber p where p = :phone and s.deleted = true")
+    Optional<Supplier> findByPhoneNumberElementAndDeletedTrue(@Param("phone") String phone);
 
     // Search name case-insensitive
     Optional<Supplier> findByNameIgnoreCase(String name);
+    Optional<Supplier> findByNameIgnoreCaseAndDeletedTrue(String name);
     Optional<Supplier> findByNameIgnoreCaseAndDeletedFalse(String name);
 
     // Fetch suppliers with categories, images, emails, phone numbers in one query

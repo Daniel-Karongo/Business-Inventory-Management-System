@@ -21,7 +21,7 @@ public class PrivilegesChecker {
             throw new UnauthorizedAccessException("You must be logged in to access this resource");
         }
 
-        return userRepository.findByUsername(userDetails.getUsername())
+        return userRepository.findByUsernameAndDeletedFalse(userDetails.getUsername())
                 .orElseThrow(() -> new UnauthorizedAccessException("Authenticated user not found"));
     }
 
@@ -34,18 +34,23 @@ public class PrivilegesChecker {
     }
 
     public boolean isAuthorized(User requester, User target) {
-        if (requester == null) return false;
+        if (requester == null || target == null) return false;
 
         Role requesterRole = requester.getRole();
         Role targetRole = target.getRole();
 
-        if (!requesterRole.canAccess(targetRole)) {
-            return false;
+        // 1️⃣ Self-access is always allowed
+        if (requester.getUsername().equalsIgnoreCase(target.getUsername())) {
+            return true;
         }
 
-        return requester.getRole() == Role.SUPERUSER ||
-                requester.getRole() == Role.ADMIN ||
-                requester.getRole() == Role.MANAGER ||
-                requester.getUsername().equalsIgnoreCase(target.getUsername());
+        // 2️⃣ Only managerial roles can access others
+        boolean isManagerial = requesterRole == Role.SUPERUSER ||
+                requesterRole == Role.ADMIN ||
+                requesterRole == Role.MANAGER;
+        if (!isManagerial) return false;
+
+        // 3️⃣ Managerial roles can only access users with lower or equal role levels
+        return requesterRole.canAccess(targetRole);
     }
 }
