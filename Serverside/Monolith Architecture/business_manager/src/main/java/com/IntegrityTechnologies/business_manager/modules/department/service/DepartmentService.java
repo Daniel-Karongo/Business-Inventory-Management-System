@@ -5,6 +5,7 @@ import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.category.controller.CategoryController;
 import com.IntegrityTechnologies.business_manager.modules.department.dto.DepartmentDTO;
+import com.IntegrityTechnologies.business_manager.modules.department.dto.DepartmentMinimalDTO;
 import com.IntegrityTechnologies.business_manager.modules.department.dto.DepartmentUserDTO;
 import com.IntegrityTechnologies.business_manager.modules.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.department.model.DepartmentAudit;
@@ -150,6 +151,10 @@ public class DepartmentService {
 
 
 
+    public List<DepartmentMinimalDTO> getAllDepartmentsForUser(UUID userId) {
+        List<Department> departments = departmentRepository.findDepartmentsByUserId(userId);
+        return departments.stream().map(department -> DepartmentMinimalDTO.from(department)).toList();
+    }
 
     public Department getById(UUID id) {
         return departmentRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Department not found"));

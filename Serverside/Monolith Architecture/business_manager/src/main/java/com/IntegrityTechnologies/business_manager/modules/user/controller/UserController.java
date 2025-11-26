@@ -106,12 +106,12 @@ public class UserController {
     }
 
     @PreAuthorize("""
-    #deleted == false and hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')
+    (#deleted == false || #deleted == null) and hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')
     or 
     ( #deleted == true and hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER') )""")
-    @GetMapping("all/active")
+    @GetMapping("all")
     public ResponseEntity<List<UserDTO>> getAllUsers(
-            @RequestParam Boolean deleted
+            @RequestParam(required = false) Boolean deleted
     ) {
         return ResponseEntity.ok(userService.getAllUsers(deleted));
     }

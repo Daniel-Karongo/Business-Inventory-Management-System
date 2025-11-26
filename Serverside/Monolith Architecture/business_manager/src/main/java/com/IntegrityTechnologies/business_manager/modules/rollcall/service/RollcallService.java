@@ -39,7 +39,7 @@ public class RollcallService {
     private final NotificationService notificationService; // interface to send emails / push
 
     @Transactional
-    public Rollcall recordBiometricRollcall(UUID userId, UUID departmentId, BiometricType type, byte[] rawTemplate, String performedByUsername) {
+    public Rollcall recordBiometricRollcall(UUID userId, UUID departmentId, BiometricType type, byte[] rawTemplate) {
         User user = userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("User not found"));
         Department dept = departmentRepository.findById(departmentId).orElseThrow(() -> new EntityNotFoundException("Department not found"));
 
@@ -58,7 +58,7 @@ public class RollcallService {
                         .departmentId(departmentId)
                         .action("BIOMETRIC_VERIFY_FAILED")
                         .reason("Biometric did not match")
-                        .performedBy(performedByUsername)
+                        .performedBy(userId.toString())
                         .timestamp(LocalDateTime.now())
                         .build());
                 throw new BiometricException("Biometric verification failed");
@@ -75,7 +75,7 @@ public class RollcallService {
                 .status(status)
                 .method(RollcallMethod.BIOMETRIC)
                 .biometricRecordId(matched.map(BiometricRecord::getId).orElse(null))
-                .performedBy(performedByUsername)
+                .performedBy(userId.toString())
                 .build();
 
         Rollcall saved = rollcallRepository.save(r);
@@ -86,7 +86,7 @@ public class RollcallService {
                 .departmentId(dept.getId())
                 .action("RECORD")
                 .reason("Biometric rollcall recorded: " + status)
-                .performedBy(performedByUsername)
+                .performedBy(userId.toString())
                 .timestamp(LocalDateTime.now())
                 .build());
 
@@ -94,7 +94,7 @@ public class RollcallService {
     }
 
     @Transactional
-    public Rollcall recordLoginRollcall(UUID userId, UUID departmentId, String performedByUsername) {
+    public Rollcall recordLoginRollcall(UUID userId, UUID departmentId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("User not found"));
         Department dept = departmentRepository.findById(departmentId).orElseThrow(() -> new EntityNotFoundException("Department not found"));
 
@@ -106,7 +106,7 @@ public class RollcallService {
                 .timestamp(LocalDateTime.now())
                 .status(status)
                 .method(RollcallMethod.LOGIN)
-                .performedBy(performedByUsername)
+                .performedBy(user.getUsername())
                 .build();
 
         Rollcall saved = rollcallRepository.save(r);
@@ -117,7 +117,7 @@ public class RollcallService {
                 .departmentId(dept.getId())
                 .action("RECORD")
                 .reason("Login rollcall recorded: " + status)
-                .performedBy(performedByUsername)
+                .performedBy(user.getUsername())
                 .timestamp(LocalDateTime.now())
                 .build());
 

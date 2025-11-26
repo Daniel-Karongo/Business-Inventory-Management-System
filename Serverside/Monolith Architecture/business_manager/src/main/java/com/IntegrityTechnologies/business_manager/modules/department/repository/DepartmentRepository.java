@@ -35,4 +35,18 @@ public interface DepartmentRepository extends JpaRepository<Department, UUID> {
     @Query("SELECT h FROM Department d JOIN d.heads h " +
             "WHERE d.id = :deptId AND h.deleted = false")
     List<User> findHeadsByDepartmentId(@Param("deptId") UUID deptId);
+
+    @Query("""
+    SELECT DISTINCT d 
+    FROM Department d
+    LEFT JOIN d.heads h
+    LEFT JOIN d.members m
+    WHERE d.deleted = false
+      AND (
+            (h IS NOT NULL AND h.id = :userId AND h.deleted = false)
+         OR (m IS NOT NULL AND m.id = :userId AND m.deleted = false)
+      )
+    """)
+    List<Department> findDepartmentsByUserId(@Param("userId") UUID userId);
+
 }

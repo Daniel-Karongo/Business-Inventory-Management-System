@@ -32,9 +32,8 @@ public class RollcallController {
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR','EMPLOYEE')")
     public ResponseEntity<Rollcall> biometricRollcall(@RequestBody BiometricRollcallRequest req, Authentication auth) {
         // ensure user or kiosk has rights to record
-        String performedBy = SecurityUtils.currentUsername();
         byte[] template = Base64.getDecoder().decode(req.getTemplateBase64());
-        Rollcall r = rollcallService.recordBiometricRollcall(req.getUserId(), req.getDepartmentId(), req.getType(), template, performedBy);
+        Rollcall r = rollcallService.recordBiometricRollcall(req.getUserId(), req.getDepartmentId(), req.getType(), template);
         return ResponseEntity.ok(r);
     }
 
@@ -42,8 +41,7 @@ public class RollcallController {
     @PostMapping("/login")
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR','EMPLOYEE')")
     public ResponseEntity<Rollcall> loginRollcall(@RequestBody LoginRollcallRequest req) {
-        String performedBy = SecurityUtils.currentUsername();
-        Rollcall r = rollcallService.recordLoginRollcall(req.getUserId(), req.getDepartmentId(), performedBy);
+        Rollcall r = rollcallService.recordLoginRollcall(req.getUserId(), req.getDepartmentId());
         return ResponseEntity.ok(r);
     }
 

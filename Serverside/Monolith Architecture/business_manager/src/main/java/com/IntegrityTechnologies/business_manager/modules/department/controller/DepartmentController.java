@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.department.controller
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.modules.department.dto.DepartmentDTO;
+import com.IntegrityTechnologies.business_manager.modules.department.dto.DepartmentMinimalDTO;
 import com.IntegrityTechnologies.business_manager.modules.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.department.model.DepartmentAudit;
 import com.IntegrityTechnologies.business_manager.modules.department.service.DepartmentService;
@@ -80,6 +81,14 @@ public class DepartmentController {
             @RequestParam(required = false) Boolean deleted
     ) {
         return ResponseEntity.ok(departmentService.getAllDepartments(deleted));
+    }
+
+    @GetMapping("/user/{userId}")
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    public ResponseEntity<List<DepartmentMinimalDTO>> getUserDepartments(
+            @PathVariable UUID userId
+    ) {
+        return ResponseEntity.ok(departmentService.getAllDepartmentsForUser(userId));
     }
 
     @GetMapping("/{id}/audits")
