@@ -40,11 +40,7 @@ public class UserController {
             @ModelAttribute UserDTO userDTO,
             Authentication authentication
     ) throws IOException {
-        String creatorUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails)
-                ? userDetails.getUsername()
-                : null;
-
-        UserDTO savedUser = userService.registerUser(userDTO, creatorUsername);
+        UserDTO savedUser = userService.registerUser(userDTO, authentication);
         return ResponseEntity.ok(savedUser);
     }
 
@@ -58,14 +54,9 @@ public class UserController {
             @ModelAttribute UserBulkWithFilesDTO bulkDTO,
             Authentication authentication
     ) throws IOException {
-
-        String creatorUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails ud)
-                ? ud.getUsername()
-                : null;
-
         List<UserDTO> savedUsers = new ArrayList<>();
         for (UserDTO userDto : bulkDTO.getUsers()) {
-            savedUsers.add(userService.registerUser(userDto, creatorUsername));
+            savedUsers.add(userService.registerUser(userDto, authentication));
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(savedUsers);
@@ -77,7 +68,7 @@ public class UserController {
             @RequestBody UserDTO updatedData,
             Authentication authentication
     ) throws IOException {
-        UserDTO dto = userService.updateUser(identifier, updatedData, authentication.getName());
+        UserDTO dto = userService.updateUser(identifier, updatedData, authentication);
         return ResponseEntity.ok(dto);
     }
 

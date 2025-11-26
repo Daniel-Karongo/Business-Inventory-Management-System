@@ -1,5 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.user.model;
 
+import com.IntegrityTechnologies.business_manager.modules.department.model.Department;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;

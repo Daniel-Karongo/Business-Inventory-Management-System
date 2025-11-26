@@ -53,4 +53,19 @@ public class PrivilegesChecker {
         // 3️⃣ Managerial roles can only access users with lower or equal role levels
         return requesterRole.canAccess(targetRole);
     }
+
+    public boolean isAuthorizedToBeHead(User requester) {
+        if (requester == null) return false;
+
+        Role requesterRole = requester.getRole();
+
+        boolean isManagerial = requesterRole == Role.SUPERUSER ||
+                requesterRole == Role.ADMIN ||
+                requesterRole == Role.MANAGER ||
+                requesterRole == Role.SUPERVISOR;
+
+        if (!isManagerial) return false;
+
+        return true;
+    }
 }

@@ -1,5 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.user.dto;
 
+import com.IntegrityTechnologies.business_manager.modules.department.dto.DepartmentMinimalDTO;
+import com.IntegrityTechnologies.business_manager.modules.department.dto.DepartmentAssignmentDTO;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
@@ -9,8 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Data
 @NoArgsConstructor
@@ -30,6 +31,12 @@ public class UserDTO {
     private String idNumber;
     @NotBlank
     private String role;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private List<DepartmentAssignmentDTO> departmentsAndPositions;
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private Set<DepartmentMinimalDTO> departments = new HashSet<>();
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private String createdBy;

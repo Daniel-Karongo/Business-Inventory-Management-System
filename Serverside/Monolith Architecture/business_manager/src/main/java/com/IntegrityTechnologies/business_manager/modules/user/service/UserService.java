@@ -5,6 +5,11 @@ import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
 import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.exception.*;
+import com.IntegrityTechnologies.business_manager.modules.department.dto.DepartmentAssignmentDTO;
+import com.IntegrityTechnologies.business_manager.modules.department.dto.DepartmentMinimalDTO;
+import com.IntegrityTechnologies.business_manager.modules.department.model.Department;
+import com.IntegrityTechnologies.business_manager.modules.department.repository.DepartmentRepository;
+import com.IntegrityTechnologies.business_manager.modules.department.service.DepartmentService;
 import com.IntegrityTechnologies.business_manager.modules.user.dto.UserDTO;
 import com.IntegrityTechnologies.business_manager.modules.user.model.*;
 import com.IntegrityTechnologies.business_manager.modules.user.repository.*;
@@ -13,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,10 +46,16 @@ public class UserService {
     private final PrivilegesChecker privilegesChecker;
     private final FileStorageService fileStorageService;
     private final TransactionalFileManager transactionalFileManager;
+    private final DepartmentRepository departmentRepository;
+    private final DepartmentService departmentService;
 
     /* ====================== REGISTER USER ====================== */
     @Transactional
-    public UserDTO registerUser(UserDTO dto, String creatorUsername) throws IOException {
+    public UserDTO registerUser(UserDTO dto, Authentication authentication) throws IOException {
+
+        String creatorUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails)
+                ? userDetails.getUsername()
+                : null;
 
         // 0️⃣ Normalize input
         Set<String> emails = normalizeEmails(dto.getEmailAddresses());
@@ -94,6 +106,8 @@ public class UserService {
 
         user = userRepository.save(user);
 
+        updateUserDepartment(dto, user, authentication);
+
         // 5️⃣ Create actual folder on disk
         Path baseUserUploadDir = Paths.get(fileStorageProperties.getUserUploadDir());
         Path userFolderPath = baseUserUploadDir.resolve(uploadFolder);
@@ -125,7 +139,11 @@ public class UserService {
 
     /* ====================== UPDATE USER ====================== */
     @Transactional
-    public UserDTO updateUser(String identifier, UserDTO updatedData, String updaterUsername) throws IOException {
+    public UserDTO updateUser(String identifier, UserDTO updatedData, Authentication authentication) throws IOException {
+        String updaterUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails)
+                ? userDetails.getUsername()
+                : null;
+
         // 1️⃣ Lookup target user
         User user = userRepository.findByIdentifier(identifier)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
@@ -200,6 +218,8 @@ public class UserService {
 
         // 1️⃣0️⃣ Save and audit
         user = userRepository.save(user);
+
+        updateUserDepartment(updatedData, user, authentication);
         auditChanges(user, changes, updaterUsername);
 
         return mapToDTO(user, false);
@@ -700,6 +720,74 @@ public class UserService {
                 userRepository.findByPhoneNumberElement(phone)
                         .filter(u -> !u.getId().equals(currentUserId))
                         .ifPresent(u -> { throw new InvalidUserDataException("Phone number already in use: " + phone); });
+            }
+        }
+    }
+
+    private void updateUserDepartment(UserDTO dto, User user, Authentication authentication) {
+
+        // Step 1 — Track requested positions per department
+        Map<UUID, Set<String>> departmentRolesMap = new HashMap<>();
+
+        for (DepartmentAssignmentDTO assignment : dto.getDepartmentsAndPositions()) {
+            UUID deptId = assignment.getDepartmentId();
+            String position = assignment.getPosition().toLowerCase();
+
+            departmentRolesMap
+                    .computeIfAbsent(deptId, k -> new HashSet<>())
+                    .add(position);
+        }
+
+        // Step 2 — Validate: user cannot be both "head" and "member" in any department
+        for (Map.Entry<UUID, Set<String>> entry : departmentRolesMap.entrySet()) {
+            Set<String> roles = entry.getValue();
+            if (roles.contains("head") && roles.contains("member")) {
+                Department d = departmentRepository.findById(entry.getKey())
+                        .orElse(null);
+
+                String deptName = (d != null) ? d.getName() : entry.getKey().toString();
+
+                throw new IllegalArgumentException(
+                        "User cannot be both head and member in department: " + deptName
+                );
+            }
+        }
+
+        // Step 3 — Proceed with normal assignment after validation passes
+        for (DepartmentAssignmentDTO assignment : dto.getDepartmentsAndPositions()) {
+
+            Department d = departmentRepository.findByIdAndDeletedFalse(assignment.getDepartmentId())
+                    .orElseThrow(() -> new EntityNotFoundException("Department not found"));
+
+            String position = assignment.getPosition().toLowerCase();
+
+            switch (position) {
+                case "member" -> {
+                    d.addMember(user);
+                    departmentService.logAudit(
+                            d, "ADD_MEMBER", null, user.getUsername(), authentication,
+                            "User added as member"
+                    );
+                }
+
+                case "head" -> {
+                    d.addHead(user);
+
+                    // Auto-upgrade EMPLOYEE → SUPERVISOR if assigned as head
+                    if (user.getRole() == Role.EMPLOYEE) {
+                        user.setRole(Role.SUPERVISOR);
+                        userRepository.save(user);
+                    }
+
+                    departmentService.logAudit(
+                            d, "ADD_HEAD", null, user.getUsername(), authentication,
+                            "User added as head"
+                    );
+                }
+
+                default -> throw new IllegalArgumentException(
+                        "Invalid department position: " + position
+                );
             }
         }
     }
