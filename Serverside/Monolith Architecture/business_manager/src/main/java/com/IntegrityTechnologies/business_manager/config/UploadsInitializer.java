@@ -2,29 +2,38 @@ package com.IntegrityTechnologies.business_manager.config;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.DosFileAttributeView;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class UploadsInitializer {
 
     private final FileStorageProperties props;
+    private final FileStorageService fileStorageService;
 
     @PostConstruct
-    public void init() throws IOException {
-        Path uploadsRoot = Paths.get(props.getUserUploadDir()).getParent();
-        if (uploadsRoot != null && !Files.exists(uploadsRoot)) {
-            Files.createDirectories(uploadsRoot);
-        }
+    public void init() {
+        createAndHide(props.getBaseUploadDir(), "Base");
+        createAndHide(props.getUserUploadDir(), "User");
+        createAndHide(props.getSupplierUploadDir(), "Supplier");
+        createAndHide(props.getProductUploadDir(), "Product");
+    }
 
-        // Hide it immediately
-        if (System.getProperty("os.name").toLowerCase().contains("win")) {
-            DosFileAttributeView attr = Files.getFileAttributeView(uploadsRoot, DosFileAttributeView.class);
-            if (attr != null) attr.setHidden(true);
+    private void createAndHide(String dir, String label) {
+        try {
+            Path path = Paths.get(dir).toAbsolutePath().normalize();
+            Files.createDirectories(path); // ensures existence
+            fileStorageService.hidePathIfSupported(path);
+            log.info("{} directory initialized: {}", label, path);
+        } catch (Exception e) {
+            log.warn("Failed to initialize {} directory: {}", label, e.getMessage());
         }
     }
+
 }

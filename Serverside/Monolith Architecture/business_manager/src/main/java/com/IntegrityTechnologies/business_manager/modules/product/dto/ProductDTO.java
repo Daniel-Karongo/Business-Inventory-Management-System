@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import com.IntegrityTechnologies.business_manager.modules.supplier.dto.SupplierMinimalDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,7 +28,7 @@ public class ProductDTO {
     private List<String> imageUrls;
     private Long categoryId;
     private String categoryName;
-    private List<UUID> supplierIds;
+    private List<SupplierMinimalDTO> suppliers;
     private UUID lastSupplierId;
     private String lastSupplierName;
     private Boolean deleted;

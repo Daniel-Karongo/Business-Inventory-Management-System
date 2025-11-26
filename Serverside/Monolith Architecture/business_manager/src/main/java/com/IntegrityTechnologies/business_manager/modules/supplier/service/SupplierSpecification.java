@@ -44,6 +44,14 @@ public class SupplierSpecification {
         return (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("rating"), minRating);
     }
 
+    public static Specification<Supplier> hasDeletedFlag(Boolean deleted) {
+        if (deleted == null) {
+            // Return everything → no filter added
+            return null;
+        }
+        return (root, query, cb) -> cb.equal(root.get("deleted"), deleted);
+    }
+
     public static Specification<Supplier> fromRegion(String region) {
         if (region == null || region.isBlank()) return null;
         return (root, query, cb) -> cb.equal(cb.lower(root.get("region")), region.toLowerCase());

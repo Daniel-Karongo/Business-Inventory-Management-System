@@ -18,12 +18,19 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
     Page<Product> findByNameContainingIgnoreCase(String name, Pageable pageable);
 
     Optional<Product> findBySku(String sku);
+    List<Product> findAllByIdInAndDeletedFalse(List<UUID> ids);
     Optional<Product> findByBarcode(String barcode);
+    Optional<Product> findByBarcodeAndDeletedFalse(String barcode);
     boolean existsBySku(String sku);
     boolean existsByBarcode(String barcode);
+    boolean existsByName(String name);
 
     List<Product> findByDeletedFalse();
     List<Product> findByDeletedTrue();
     List<Product> findAllBySuppliers_Id(UUID supplierId);
+    List<Product> findAllByCategory_Id(Long categoryId);
+    List<Product> findAllByCategory_IdIn(List<Long> categoryIds);
+
+
 
 }

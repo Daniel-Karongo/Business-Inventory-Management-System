@@ -13,6 +13,7 @@ import com.IntegrityTechnologies.business_manager.modules.supplier.repository.Su
 import com.IntegrityTechnologies.business_manager.modules.supplier.repository.SupplierImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
@@ -59,17 +60,9 @@ public class SupplierImageService {
             supplierImageRepository.saveAll(saved);
             existing.getImages().addAll(saved);
             for (SupplierImage im : saved) {
-                supplierImageAuditRepository.save(SupplierImageAudit.builder()
-                        .fileName(im.getFileName())
-                        .filePath(im.getFilePath())
-                        .action("UPLOADED")
-                        .timestamp(LocalDateTime.now())
-                        .supplierId(id)
-                        .supplierName(existing.getName())
-                        .performedBy(updaterUsername)
-                        .build());
+                logSupplierImageAudit(im, "Supplier's images updated", "UPLOADED", existing);
             }
-            supplierService.logSupplierAudit(existing, "UPDATED", "images", null, "Added new images", "Supplier image(s) added");
+            supplierService.logSupplierAuditAsync(existing, "UPDATED", "images", null, "Added new images", "Supplier image(s) added");
         }
 
         if (updaterUsername != null) {
@@ -81,56 +74,60 @@ public class SupplierImageService {
         return supplierMapper.toDTO(saved);
     }
 
-    public List<String> getAllSuppliersImages(Boolean deleted) {
-        List<SupplierImage> images;
+    public List<String> getAllSuppliersImages(Boolean deletedSupplier, Boolean deletedImage) {
+        List<SupplierImage> images = supplierImageRepository.findAll().stream()
+                .filter(img -> {
+                    Supplier supplier = img.getSupplier();
+                    boolean keepSupplier = deletedSupplier == null
+                            ? true
+                            : deletedSupplier
+                            ? Boolean.TRUE.equals(supplier.getDeleted())
+                            : !Boolean.TRUE.equals(supplier.getDeleted());
 
-        if (deleted == null) {
-            images = supplierImageRepository.findAll();
-        } else if (deleted) {
-            images = supplierImageRepository.findAll().stream()
-                    .filter(SupplierImage::getDeleted)
-                    .toList();
-        } else {
-            images = supplierImageRepository.findAll().stream()
-                    .filter(i -> !Boolean.TRUE.equals(i.getDeleted()))
-                    .toList();
-        }
+                    boolean keepImage = deletedImage == null
+                            ? true
+                            : deletedImage
+                            ? Boolean.TRUE.equals(img.getDeleted())
+                            : !Boolean.TRUE.equals(img.getDeleted());
+
+                    return keepSupplier && keepImage;
+                })
+                .toList();
 
         if (images.isEmpty()) {
-            throw new ImageNotFoundException("No supplier images found matching deleted=" + deleted);
+            throw new ImageNotFoundException("No supplier images found matching criteria");
         }
 
         // Audit
-        supplierImageAuditRepository.save(SupplierImageAudit.builder()
-                .fileName("ALL")
-                .action("RETRIEVE")
-                .reason("Retrieved list of supplier images")
-                .timestamp(LocalDateTime.now())
-                .performedBy(supplierService.currentUser())
-                .build());
+        logSupplierImageAudit(null, "Retrieved list of supplier images", "RETRIEVE", null);
 
         return images.stream()
                 .map(SupplierImage::getFilePath)
                 .toList();
     }
 
-    public ResponseEntity<Resource> downloadAllSuppliersImages(Boolean deleted) throws IOException {
-        List<SupplierImage> images;
+    public ResponseEntity<Resource> downloadAllSuppliersImages(Boolean deletedSupplier, Boolean deletedImage) throws IOException {
+        List<SupplierImage> images = supplierImageRepository.findAll().stream()
+                .filter(img -> {
+                    Supplier supplier = img.getSupplier();
+                    boolean keepSupplier = deletedSupplier == null
+                            ? true
+                            : deletedSupplier
+                            ? Boolean.TRUE.equals(supplier.getDeleted())
+                            : !Boolean.TRUE.equals(supplier.getDeleted());
 
-        if (deleted == null) {
-            images = supplierImageRepository.findAll();
-        } else if (deleted) {
-            images = supplierImageRepository.findAll().stream()
-                    .filter(SupplierImage::getDeleted)
-                    .toList();
-        } else {
-            images = supplierImageRepository.findAll().stream()
-                    .filter(i -> !Boolean.TRUE.equals(i.getDeleted()))
-                    .toList();
-        }
+                    boolean keepImage = deletedImage == null
+                            ? true
+                            : deletedImage
+                            ? Boolean.TRUE.equals(img.getDeleted())
+                            : !Boolean.TRUE.equals(img.getDeleted());
+
+                    return keepSupplier && keepImage;
+                })
+                .toList();
 
         if (images.isEmpty()) {
-            throw new ImageNotFoundException("No supplier images found matching deleted=" + deleted);
+            throw new ImageNotFoundException("No supplier images found matching criteria");
         }
 
         // Create temp ZIP
@@ -143,7 +140,8 @@ public class SupplierImageService {
 
                 if (!Files.exists(imgPath) || !Files.isRegularFile(imgPath)) continue;
 
-                zos.putNextEntry(new ZipEntry(img.getFileName()));
+                String entryName = supplier.getId() + "/" + imgPath.getFileName();
+                zos.putNextEntry(new ZipEntry(entryName));
                 Files.copy(imgPath, zos);
                 zos.closeEntry();
             }
@@ -151,13 +149,7 @@ public class SupplierImageService {
         }
 
         // Audit ZIP download
-        supplierImageAuditRepository.save(SupplierImageAudit.builder()
-                .fileName("ALL")
-                .action("ZIP_DOWNLOADED")
-                .reason("All supplier images downloaded as ZIP")
-                .timestamp(LocalDateTime.now())
-                .performedBy(supplierService.currentUser())
-                .build());
+        logSupplierImageAudit(null, "All suppliers' images downloaded as ZIP", "ZIP_DOWNLOADED", null);
 
         InputStreamResource resource = new InputStreamResource(new FileInputStream(tempZip));
 
@@ -170,16 +162,16 @@ public class SupplierImageService {
     /**
      * Returns the public URLs stored in SupplierImage.filePath (already in the desired format)
      */
-    public List<String> getSupplierImageUrls(String supplierId, Boolean deleted) {
+    public List<String> getSupplierImageUrls(UUID supplierId, Boolean deleted) {
 
         List<SupplierImage> images;
 
         if (deleted == null) {
-            images = supplierImageRepository.findBySupplierId(UUID.fromString(supplierId));
+            images = supplierImageRepository.findBySupplierId(supplierId);
         } else if (deleted) {
-            images = supplierImageRepository.findBySupplierIdAndDeletedTrue(UUID.fromString(supplierId));
+            images = supplierImageRepository.findBySupplierIdAndDeletedTrue(supplierId);
         } else {
-            images = supplierImageRepository.findBySupplierIdAndDeletedFalse(UUID.fromString(supplierId));
+            images = supplierImageRepository.findBySupplierIdAndDeletedFalse(supplierId);
         }
 
         return images.stream()
@@ -192,55 +184,65 @@ public class SupplierImageService {
      * Download a single image by supplierId + filename.
      * The SupplierImage.filePath contains the public URL only; resolve disk path via uploadFolder.
      */
-    public Resource downloadImage(String supplierId, String filename, Boolean deleted) throws IOException {
+    public Resource downloadImage(UUID supplierId, String filename, Boolean deleted) throws IOException {
+        SupplierImage image = getImage(supplierId, filename, deleted);
+        Path path = resolveImagePath(supplierId, filename);
+        return loadImageAsResource(path);
+    }
 
-        SupplierImage image;
-
+    public SupplierImage getImage(UUID supplierId, String filename, Boolean deleted) {
         if (deleted == null) {
-            image = supplierImageRepository.findBySupplierIdAndFileName(UUID.fromString(supplierId), filename)
+            return supplierImageRepository.findBySupplierIdAndFileName(supplierId, filename)
                     .orElseThrow(() -> new EntityNotFoundException("Image not found"));
-        } else if (deleted) {
-            image = supplierImageRepository.findBySupplierIdAndFileNameAndDeletedTrue(UUID.fromString(supplierId), filename)
-                    .orElseThrow(() -> new EntityNotFoundException("Deleted image not found"));
-        } else {
-            image = supplierImageRepository.findBySupplierIdAndFileNameAndDeletedFalse(UUID.fromString(supplierId), filename)
-                    .orElseThrow(() -> new EntityNotFoundException("Active image not found"));
         }
+        return deleted
+                ? supplierImageRepository.findBySupplierIdAndFileNameAndDeletedTrue(supplierId, filename)
+                .orElseThrow(() -> new EntityNotFoundException("Deleted image not found"))
+                : supplierImageRepository.findBySupplierIdAndFileNameAndDeletedFalse(supplierId, filename)
+                .orElseThrow(() -> new EntityNotFoundException("Active image not found"));
+    }
 
-        Supplier supplier = supplierRepository.findById(UUID.fromString(supplierId))
+    public Path resolveImagePath(UUID supplierId, String filename) throws IOException {
+        Supplier supplier = supplierRepository.findById(supplierId)
                 .orElseThrow(() -> new EntityNotFoundException("Supplier not found"));
 
-        Path path = supplierFileStorageService.resolveImagePath(supplier.getUploadFolder(), filename);
+        return supplierFileStorageService.resolveImagePath(supplier.getUploadFolder(), filename);
+    }
 
-        if (!Files.exists(path)) throw new EntityNotFoundException("Image file not found on disk");
+    public Resource loadImageAsResource(Path path) {
+        if (!Files.exists(path))
+            throw new EntityNotFoundException("Image file not found on disk");
 
         return new FileSystemResource(path.toFile());
     }
 
+
     /**
      * Stream zip of supplier images using the supplier.uploadFolder to resolve disk paths.
      */
-    public void streamAllImagesAsZip(String supplierId, OutputStream out, Boolean deleted) throws IOException {
-
-        List<SupplierImage> images;
-
-        if (deleted == null) {
-            images = supplierImageRepository.findBySupplierId(UUID.fromString(supplierId));
-        } else if (deleted) {
-            images = supplierImageRepository.findBySupplierIdAndDeletedTrue(UUID.fromString(supplierId));
-        } else {
-            images = supplierImageRepository.findBySupplierIdAndDeletedFalse(UUID.fromString(supplierId));
-        }
+    public List<SupplierImage> getImages(UUID supplierId, Boolean deleted) {
+        List<SupplierImage> images = deleted == null
+                ? supplierImageRepository.findBySupplierId(supplierId)
+                : deleted
+                ? supplierImageRepository.findBySupplierIdAndDeletedTrue(supplierId)
+                : supplierImageRepository.findBySupplierIdAndDeletedFalse(supplierId);
 
         if (images.isEmpty())
-            throw new EntityNotFoundException("No images found for supplier");
+            throw new ImageNotFoundException("No images found for supplier");
 
-        Supplier supplier = supplierRepository.findById(UUID.fromString(supplierId))
+        return images;
+    }
+
+    public Supplier getSupplier(UUID supplierId) {
+        return supplierRepository.findById(supplierId)
                 .orElseThrow(() -> new EntityNotFoundException("Supplier not found"));
+    }
 
+    public void writeImagesToZip(List<SupplierImage> images, Supplier supplier, OutputStream out) throws IOException {
         try (ZipOutputStream zos = new ZipOutputStream(out)) {
             for (SupplierImage img : images) {
-                Path imgPath = supplierFileStorageService.resolveImagePath(supplier.getUploadFolder(), img.getFileName());
+                Path imgPath = supplierFileStorageService.resolveImagePath(
+                        supplier.getUploadFolder(), img.getFileName());
 
                 if (!Files.exists(imgPath)) continue;
 
@@ -248,20 +250,9 @@ public class SupplierImageService {
                 Files.copy(imgPath, zos);
                 zos.closeEntry();
             }
-            zos.finish();
         }
-
-        supplierImageAuditRepository.save(SupplierImageAudit.builder()
-                .fileName("ALL")
-                .action("ZIP_DOWNLOADED")
-                .reason("All supplier images downloaded as ZIP")
-                .timestamp(LocalDateTime.now())
-                .supplierId(UUID.fromString(supplierId))
-                .supplierName(supplierRepository.findById(UUID.fromString(supplierId)).map(Supplier::getName).orElse(null))
-                .performedBy(supplierService.currentUser())
-                .build());
+        logSupplierImageAudit(null, "All supplier images downloaded as ZIP", "ZIP_DOWNLOADED", supplier);
     }
-
 
     @Transactional
     public ResponseEntity<ApiResponse> softDeleteSupplierImage(UUID supplierId, String filename) throws IOException {
@@ -278,16 +269,7 @@ public class SupplierImageService {
         supplierImageRepository.save(image);
 
         // Audit
-        supplierImageAuditRepository.save(SupplierImageAudit.builder()
-                .fileName(image.getFileName())
-                .filePath(image.getFilePath())
-                .action("SOFT_DELETED")
-                .reason("Manual deletion")
-                .timestamp(LocalDateTime.now())
-                .supplierId(supplierId)
-                .supplierName(supplier.getName())
-                .performedBy(supplierService.currentUser())
-                .build());
+        logSupplierImageAudit(image, "Manual deletion", "SOFT_DELETED", supplier);
 
         return ResponseEntity.ok(new ApiResponse("success", "Image soft-deleted successfully"));
     }
@@ -315,16 +297,7 @@ public class SupplierImageService {
             img.setDeletedAt(LocalDateTime.now());
             supplierImageRepository.save(img);
 
-            supplierImageAuditRepository.save(SupplierImageAudit.builder()
-                    .fileName(img.getFileName())
-                    .filePath(img.getFilePath())
-                    .action("SOFT_DELETED")
-                    .reason("Batch deletion")
-                    .timestamp(LocalDateTime.now())
-                    .supplierId(supplierId)
-                    .supplierName(supplier.getName())
-                    .performedBy(supplierService.currentUser())
-                    .build());
+            logSupplierImageAudit(img, "Batch deletion", "SOFT_DELETED", supplier);
         });
 
         return ResponseEntity.ok(new ApiResponse("success", "Images soft deleted successfully"));
@@ -349,16 +322,7 @@ public class SupplierImageService {
         }
 
         // Audit
-        supplierImageAuditRepository.save(SupplierImageAudit.builder()
-                .fileName(image.getFileName())
-                .filePath(image.getFilePath())
-                .action("DELETED")
-                .reason("Manual deletion")
-                .timestamp(LocalDateTime.now())
-                .supplierId(supplierId)
-                .supplierName(supplier.getName())
-                .performedBy(supplierService.currentUser())
-                .build());
+        logSupplierImageAudit(image, "Manual deletion", "DELETED", supplier);
 
         return ResponseEntity.ok(new ApiResponse("success", "Image deleted successfully"));
     }
@@ -383,16 +347,7 @@ public class SupplierImageService {
                 log.warn("File deletion failed: {} for supplier {}: {}", image.getFileName(), supplierId, e.getMessage());
             }
 
-            supplierImageAuditRepository.save(SupplierImageAudit.builder()
-                    .fileName(image.getFileName())
-                    .filePath(image.getFilePath())
-                    .action("DELETED")
-                    .reason("Batch deletion")
-                    .timestamp(LocalDateTime.now())
-                    .supplierId(supplierId)
-                    .supplierName(supplier.getName())
-                    .performedBy(supplierService.currentUser())
-                    .build());
+            logSupplierImageAudit(image, "Batch deletion", "DELETED", supplier);
         }
         log.info("Deleted {} images for supplier {}", toDelete.size(), supplierId);
         ApiResponse response = new ApiResponse("success", "Images deleted successfully");
@@ -401,15 +356,30 @@ public class SupplierImageService {
 
     @Transactional
     public ResponseEntity<ApiResponse> restoreSupplierImage(UUID supplierId, String filename) {
+
+        // Find the soft-deleted image
         SupplierImage image = supplierImageRepository
                 .findBySupplierIdAndFileNameAndDeletedTrue(supplierId, filename)
                 .orElseThrow(() -> new ImageNotFoundException("Soft deleted image not found"));
 
+        // Restore
         image.setDeleted(false);
         image.setDeletedAt(null);
         supplierImageRepository.save(image);
 
-        return ResponseEntity.ok(new ApiResponse("success", "Image restored successfully"));
+        // Get supplier name directly (no unnecessary SupplierDTO mapping)
+        Supplier supplier = supplierRepository.findById(supplierId).orElse(null);
+
+        // Audit record
+        if(supplier != null) {
+            logSupplierImageAudit(image, "Image Restored", "RESTORE", supplier);
+
+            return ResponseEntity.ok(
+                    new ApiResponse("success", "Image restored successfully")
+            );
+        } else {
+            return ResponseEntity.ok(new ApiResponse("Failed", "No such supplier found"));
+        }
     }
 
     @Transactional
@@ -421,12 +391,46 @@ public class SupplierImageService {
         if (toRestore.isEmpty())
             throw new ImageNotFoundException("No soft-deleted images found");
 
-        toRestore.forEach(img -> {
-            img.setDeleted(false);
-            img.setDeletedAt(null);
-            supplierImageRepository.save(img);
-        });
+        Supplier supplier = supplierRepository.findById(supplierId).orElse(null);
 
-        return ResponseEntity.ok(new ApiResponse("success", "Images restored successfully"));
+        if(supplier != null) {
+            toRestore.forEach(img -> {
+                img.setDeleted(false);
+                img.setDeletedAt(null);
+                supplierImageRepository.save(img);
+
+                logSupplierImageAudit(img, "Image Restored", "RESTORE", supplier);
+            });
+            return ResponseEntity.ok(new ApiResponse("success", "Images restored successfully"));
+        } else {
+            return ResponseEntity.ok(new ApiResponse("Failed", "No such supplier found"));
+        }
+    }
+
+
+    @Transactional
+    public ResponseEntity<List<SupplierImageAudit>> getIndividualSupplierImageAudit(String identifier, Boolean deleted) {
+        SupplierDTO supplier = supplierService.getByIdentifier(identifier, deleted);
+        return ResponseEntity.ok(supplierImageAuditRepository.findBySupplierIdOrderByTimestampDesc(supplier.getId()));
+    }
+
+    @Transactional
+    public ResponseEntity<List<SupplierImageAudit>> getAllSuppliersImagesAudits() {
+        return ResponseEntity.ok(supplierImageAuditRepository.findAllByOrderByTimestampDesc());
+    }
+
+    private void logSupplierImageAudit(SupplierImage image, String reason, String action, Supplier supplier) {
+        supplierImageAuditRepository.save(
+                SupplierImageAudit.builder()
+                        .fileName(image != null ? image.getFileName() : "ALL")
+                        .filePath(image.getFilePath())
+                        .action(action)
+                        .reason(reason)
+                        .timestamp(LocalDateTime.now())
+                        .supplierId(supplier != null ? supplier.getId() : null)
+                        .supplierName(supplier != null ? supplier.getName() : "ALL SUPPLIERS")
+                        .performedBy(SecurityUtils.currentUsername())
+                        .build()
+        );
     }
 }

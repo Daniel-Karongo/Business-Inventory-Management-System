@@ -5,6 +5,7 @@ import com.IntegrityTechnologies.business_manager.modules.product.dto.ProductDTO
 import com.IntegrityTechnologies.business_manager.modules.product.dto.ProductUpdateDTO;
 import com.IntegrityTechnologies.business_manager.modules.product.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.product.model.ProductImage;
+import com.IntegrityTechnologies.business_manager.modules.supplier.dto.SupplierMinimalDTO;
 import com.IntegrityTechnologies.business_manager.modules.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.user.UserMapper.UserMapper;
 import org.mapstruct.*;
@@ -22,8 +23,8 @@ public interface ProductMapper {
             expression = "java(product.getCategory() != null ? product.getCategory().getId() : null)")
     @Mapping(target = "categoryName",
             expression = "java(product.getCategory() != null ? product.getCategory().getName() : null)")
-    @Mapping(target = "supplierIds",
-            expression = "java(mapSuppliersToListOfUUIDIds(product.getSuppliers()))")
+    @Mapping(target = "suppliers",
+            expression = "java(mapSuppliersMinimal(product.getSuppliers()))")
     @Mapping(target = "lastSupplierId",
             expression = "java(product.getLastSuppliedBy() != null ? product.getLastSuppliedBy().getId() : null)")
     @Mapping(target = "lastSupplierName",
@@ -55,10 +56,10 @@ public interface ProductMapper {
                 .collect(Collectors.toList());
     }
 
-    default List<UUID> mapSuppliersToListOfUUIDIds(Set<Supplier> suppliers) {
+    default List<SupplierMinimalDTO> mapSuppliersMinimal(Set<Supplier> suppliers) {
         if (suppliers == null || suppliers.isEmpty()) return List.of();
         return suppliers.stream()
-                .map(Supplier::getId)
-                .collect(Collectors.toList());
+                .map(s -> new SupplierMinimalDTO(s.getId(), s.getName()))
+                .toList();
     }
 }

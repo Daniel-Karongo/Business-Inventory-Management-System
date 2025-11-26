@@ -63,6 +63,18 @@ public class UserService {
 
         // 2️⃣ Resolve creator
         User creator = userRepository.findByUsername(creatorUsername).orElse(null);
+        Role newUserRole = Role.valueOf(dto.getRole().trim().toUpperCase());
+
+        if (creator != null) {
+            Role creatorRole = creator.getRole();
+
+            if (!creatorRole.canAccess(newUserRole)) {
+                throw new UnauthorizedAccessException(
+                        "You cannot create a user with role " + newUserRole +
+                                " because your role is " + creatorRole
+                );
+            }
+        }
 
         // 3️⃣ Generate upload folder upfront
         String uploadFolder = UUID.randomUUID() + "_" + System.currentTimeMillis();
@@ -87,7 +99,7 @@ public class UserService {
         Path userFolderPath = baseUserUploadDir.resolve(uploadFolder);
         // Create directories if they don't exist
         if (!Files.exists(userFolderPath)) Files.createDirectories(userFolderPath);
-        userImageService.hidePath(userFolderPath);
+        fileStorageService.hidePath(userFolderPath);
         // Track folder for rollback cleanup
         transactionalFileManager.track(userFolderPath);
 
@@ -246,37 +258,39 @@ public class UserService {
 
     /* ====================== GET USERS ====================== */
 
-    public UserDTO getActiveUser(String identifier)  {
-        User user = userRepository.findByIdentifier(identifier)
-                .orElseThrow(() -> new UserNotFoundException("User not found: " + identifier));
-        return mapToDTO(user, false);
+    public UserDTO getUser(String identifier, Boolean deleted)  {
+        User user;
+
+        if(Boolean.FALSE.equals(deleted)) {
+             user = userRepository.findByIdentifier(identifier)
+                    .orElseThrow(() -> new UserNotFoundException("User not found: " + identifier));
+            return mapToDTO(user, false);
+        } else {
+            user = userRepository.findByIdentifierForAudits(identifier)
+                    .orElseThrow(() -> new UserNotFoundException("User not found: " + identifier));
+            return mapToDTO(user, null);
+        }
+
     }
 
-    public UserDTO getActiveOrDeletedUser(String identifier) throws UserNotFoundException {
-        User user = userRepository.findByIdentifierForAudits(identifier)
-                .orElseThrow(() -> new UserNotFoundException("User not found: " + identifier));
-        return mapToDTO(user, null);
-    }
-
-    public List<UserDTO> getAllActiveUsers() {
-        List<User> users = userRepository.findByDeletedFalse();
-        return users.stream()
-                .map(user -> mapToDTO(user, false)) // false = only active images
-                .toList();
-    }
-
-    public List<UserDTO> getAllDeletedUsers() {
-        List<User> users = userRepository.findByDeletedTrue();
-        return users.stream()
-                .map(user -> mapToDTO(user, false))
-                .toList();
-    }
-
-    public List<UserDTO> getAllUsersIncludingDeleted() {
-        List<User> users = userRepository.findAll();
-        return users.stream()
-                .map(user -> mapToDTO(user, null))
-                .toList();
+    public List<UserDTO> getAllUsers(Boolean deleted) {
+        List<User> users = new ArrayList<>();
+        if(Boolean.FALSE.equals(deleted)) {
+            users = userRepository.findByDeletedFalse();
+            return users.stream()
+                    .map(user -> mapToDTO(user, false)) // false = only active images
+                    .toList();
+        } else if(Boolean.TRUE.equals(deleted)) {
+            users = userRepository.findByDeletedTrue();
+            return users.stream()
+                    .map(user -> mapToDTO(user, false))
+                    .toList();
+        } else {
+            users = userRepository.findAll();
+            return users.stream()
+                    .map(user -> mapToDTO(user, null))
+                    .toList();
+        }
     }
 
     public List<UserDTO> getUsersByRole(Role requestedRole, Boolean deleted) {
@@ -456,16 +470,16 @@ public class UserService {
         user.setDeleted(false);
         userRepository.save(user);
 
-        // Unhide images
+        // Hide images
         Path userDir = Paths.get(fileStorageProperties.getUserUploadDir(), user.getUploadFolder())
                 .toAbsolutePath().normalize();
         if (Files.exists(userDir)) {
             Files.walk(userDir)
                     .filter(Files::isRegularFile)
                     .forEach(path -> {
-                        try { userImageService.hidePath(path); } catch (IOException e) { log.warn("Failed to unhide file: {}", path, e); }
+                        try { fileStorageService.hidePath(path); } catch (IOException e) { log.warn("Failed to unhide file: {}", path, e); }
                     });
-            userImageService.hidePath(userDir);
+            fileStorageService.hidePath(userDir);
         }
 
         // Restore images in DB & audit

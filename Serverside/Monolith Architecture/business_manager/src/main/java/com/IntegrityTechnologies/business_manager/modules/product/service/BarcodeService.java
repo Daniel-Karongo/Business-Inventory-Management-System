@@ -1,9 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.product.service;
 
+import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.oned.Code128Writer;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.pdmodel.*;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
@@ -26,11 +28,14 @@ import java.util.UUID;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class BarcodeService {
 
+    private final FileStorageService fileStorageService;
+
     /* ================================
-       BARCODE GENERATION / VALIDATION
-       ================================ */
+           BARCODE GENERATION / VALIDATION
+           ================================ */
     public String autoGenerateBarcode() {
         return UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();
     }
@@ -45,11 +50,17 @@ public class BarcodeService {
     public String generateBarcodeImage(String barcode, Path outputDir) throws IOException {
         try {
             Files.createDirectories(outputDir);
+            fileStorageService.hidePathIfSupported(outputDir);
             Path outputFile = outputDir.resolve(barcode + ".png");
 
             Code128Writer writer = new Code128Writer();
             BitMatrix bitMatrix = writer.encode(barcode, BarcodeFormat.CODE_128, 400, 120);
             MatrixToImageWriter.writeToPath(bitMatrix, "PNG", outputFile);
+
+            System.out.println("Hello");
+            System.out.println(outputFile);
+            fileStorageService.hidePath(outputFile);
+            System.out.println(outputFile);
 
             log.info("✅ Barcode image generated at {}", outputFile);
             return outputFile.toString();
@@ -175,7 +186,6 @@ public class BarcodeService {
             throw new IOException("Failed to generate barcode sheet PDF", e);
         }
 
-        log.info("📄 Barcode sheet PDF generated: {}", pdfPath);
         return pdfPath.toString();
     }
 }

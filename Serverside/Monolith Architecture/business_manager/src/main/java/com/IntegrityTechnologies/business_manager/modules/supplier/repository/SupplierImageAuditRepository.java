@@ -9,5 +9,7 @@ import java.util.UUID;
 
 @Repository
 public interface SupplierImageAuditRepository extends JpaRepository<SupplierImageAudit, UUID> {
-    List<SupplierImageAudit> findBySupplierId(UUID supplierId);
+    List<SupplierImageAudit> findBySupplierIdOrderByTimestampDesc(UUID supplierId);
+    List<SupplierImageAudit> findAllByOrderByTimestampDesc();
+
 }

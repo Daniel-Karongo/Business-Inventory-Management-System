@@ -35,17 +35,6 @@ public class SupplierFileStorageService {
     private final FileStorageProperties properties;
     private final TransactionalFileManager transactionalFileManager;
 
-    @PostConstruct
-    public void init() {
-        try {
-            Path suppliersUploadDir = Paths.get(properties.getSupplierUploadDir()).toAbsolutePath().normalize();
-            // best-effort to prepare or hide dir; FileStorageService may also do its own checks
-            hidePathIfSupported(suppliersUploadDir);
-        } catch (Exception e) {
-            log.debug("Could not initialize supplier upload root: {}", e.getMessage());
-        }
-    }
-
     private Path root() {
         return Paths.get(properties.getSupplierUploadDir()).toAbsolutePath().normalize();
     }
@@ -56,7 +45,7 @@ public class SupplierFileStorageService {
     public Path getSupplierDirectory(String uploadFolder) throws IOException {
         Path supplierDir = root().resolve(uploadFolder).normalize();
         Files.createDirectories(supplierDir);
-        hidePathIfSupported(supplierDir);
+        fileStorageService.hidePathIfSupported(supplierDir);
         return supplierDir;
     }
 
@@ -82,7 +71,7 @@ public class SupplierFileStorageService {
             try (InputStream in = mf.getInputStream()) {
                 Path saved = fileStorageService.saveFile(dir, fileName, in);
                 transactionalFileManager.track(saved); // for rollback cleanup
-                hidePathIfSupported(saved);
+                fileStorageService.hidePath(saved);
 
                 String publicUrl = "/api/suppliers/images/" + supplier.getUploadFolder() + "/" + fileName;
 
@@ -136,28 +125,5 @@ public class SupplierFileStorageService {
         if (original == null || original.isBlank()) return "file";
         String cleaned = Path.of(original).getFileName().toString();
         return cleaned.replaceAll("[^A-Za-z0-9._-]", "_");
-    }
-
-    private void hidePathIfSupported(Path path) {
-        try {
-            if (System.getProperty("os.name").toLowerCase().contains("win")) {
-                if (Files.exists(path)) {
-                    Files.setAttribute(path, "dos:hidden", true, LinkOption.NOFOLLOW_LINKS);
-                }
-            } else {
-                Path parent = path.getParent();
-                if (parent != null) {
-                    String name = path.getFileName().toString();
-                    if (!name.startsWith(".")) {
-                        Path hiddenPath = parent.resolve("." + name);
-                        if (!Files.exists(hiddenPath) && Files.exists(path)) {
-                            Files.move(path, hiddenPath, StandardCopyOption.REPLACE_EXISTING);
-                        }
-                    }
-                }
-            }
-        } catch (IOException e) {
-            log.debug("Failed to hide path {}: {}", path, e.getMessage());
-        }
     }
 }

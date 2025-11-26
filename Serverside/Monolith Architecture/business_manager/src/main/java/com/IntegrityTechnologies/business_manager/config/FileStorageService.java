@@ -188,4 +188,43 @@ public class FileStorageService {
         }
         return resolved;
     }
+
+    public void hidePathIfSupported(Path path) {
+        try {
+            Files.createDirectories(path); // ensure it exists
+
+            if (System.getProperty("os.name").toLowerCase().contains("win")) {
+                Files.setAttribute(path, "dos:hidden", true, LinkOption.NOFOLLOW_LINKS);
+            } else {
+                Path parent = path.getParent();
+                String name = path.getFileName().toString();
+                Path hiddenPath = parent.resolve("." + name);
+
+                if (!name.startsWith(".")) {
+                    // Move and/or create hidden folder
+                    if (Files.exists(path) && !Files.exists(hiddenPath)) {
+                        Files.move(path, hiddenPath, StandardCopyOption.REPLACE_EXISTING);
+                    } else if (!Files.exists(hiddenPath)) {
+                        Files.createDirectories(hiddenPath);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            log.debug("Failed to hide path {}: {}", path, e.getMessage());
+        }
+    }
+
+    public void hidePath(Path path) throws IOException {
+        if (System.getProperty("os.name").toLowerCase().contains("win")) {
+            DosFileAttributeView attr = Files.getFileAttributeView(path, DosFileAttributeView.class);
+            if (attr != null) attr.setHidden(true);
+        } else {
+            Path parent = path.getParent();
+            String name = path.getFileName().toString();
+            if (!name.startsWith(".")) {
+                Path hiddenPath = parent.resolve("." + name);
+                if (!Files.exists(hiddenPath)) Files.move(path, hiddenPath, StandardCopyOption.REPLACE_EXISTING);
+            }
+        }
+    }
 }

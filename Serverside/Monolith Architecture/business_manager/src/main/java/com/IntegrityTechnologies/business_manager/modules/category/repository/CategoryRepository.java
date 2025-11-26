@@ -31,6 +31,9 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     @Query("SELECT c FROM Category c LEFT JOIN FETCH c.subcategories WHERE c.deleted = false AND c.id = :id")
     Optional<Category> findByIdWithSubcategoriesAndActive(@Param("id") Long id);
 
+    @Query("SELECT c FROM Category c LEFT JOIN FETCH c.subcategories WHERE c.deleted = true AND c.id = :id")
+    Optional<Category> findByIdWithSubcategoriesAndDeleted(@Param("id") Long id);
+
 
     // FLAT QUERIES
     @Query("SELECT c FROM Category c WHERE c.deleted = false")
@@ -43,6 +46,7 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findAllIncludingDeletedFlat();
 
     Optional<Category> findByIdAndDeletedFalse(Long id);
+    Optional<Category> findByIdAndDeletedTrue(Long id);
 
 
     // SEARCH

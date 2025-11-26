@@ -38,7 +38,12 @@ public class Category {
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = false)
     private List<Product> products;
 
-    @ManyToMany(mappedBy = "categories", fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "supplier_categories",
+            joinColumns = @JoinColumn(name = "category_id"),
+            inverseJoinColumns = @JoinColumn(name = "supplier_id")
+    )
     private Set<Supplier> suppliers = new HashSet<>();
 
 

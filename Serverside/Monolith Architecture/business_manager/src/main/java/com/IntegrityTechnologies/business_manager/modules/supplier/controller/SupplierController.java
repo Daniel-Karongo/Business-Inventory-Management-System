@@ -2,9 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.supplier.controller;
 
 import com.IntegrityTechnologies.business_manager.common.PageWrapper;
 import com.IntegrityTechnologies.business_manager.modules.supplier.dto.*;
-import com.IntegrityTechnologies.business_manager.modules.supplier.model.SupplierAudit;
-import com.IntegrityTechnologies.business_manager.modules.supplier.model.SupplierBulkWithFilesDTO;
-import com.IntegrityTechnologies.business_manager.modules.supplier.model.SupplierImageAudit;
+import com.IntegrityTechnologies.business_manager.modules.supplier.model.*;
 import com.IntegrityTechnologies.business_manager.modules.supplier.repository.SupplierImageAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.supplier.repository.SupplierAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.supplier.service.SupplierImageService;
@@ -65,6 +63,7 @@ public class SupplierController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @PostMapping(
             value = "/register/bulk",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
@@ -120,42 +119,28 @@ public class SupplierController {
 
     /* ====================== READ OPERATIONS ====================== */
 
-    //    All Suppliers
+    // ✅ Unified endpoint for fetching all suppliers
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER', 'SUPERVISOR')")
     @GetMapping(value = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get all suppliers")
-    public ResponseEntity<List<SupplierDTO>> getAllSuppliers() {
-        return ResponseEntity.ok(supplierService.getAllSuppliers());
+    @Operation(summary = "Get suppliers (active, deleted, or any)")
+    public ResponseEntity<List<SupplierDTO>> getSuppliers(
+            @RequestParam(required = false) Boolean deleted // null = all, true = deleted, false = active
+    ) {
+        return ResponseEntity.ok(supplierService.getSuppliers(deleted));
     }
 
-    @GetMapping(value = "/all/active", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get all active suppliers")
-    public ResponseEntity<List<SupplierDTO>> getAllActiveSuppliers() {
-        return ResponseEntity.ok(supplierService.getAllActiveSuppliers());
+    // ✅ Unified endpoint for fetching a supplier by identifier
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER', 'SUPERVISOR')")
+    @GetMapping(value = "/identifier/{identifier}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Find supplier by UUID, name, email, or phone (active, deleted, or any)")
+    public ResponseEntity<SupplierDTO> getSupplierByIdentifier(
+            @PathVariable String identifier,
+            @RequestParam(required = false) Boolean deleted
+    ) {
+        return ResponseEntity.ok(supplierService.getByIdentifier(identifier, deleted));
     }
 
-    @GetMapping(value = "/all/deleted", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get all deleted suppliers")
-    public ResponseEntity<List<SupplierDTO>> getAllDeletedSuppliers() {
-        return ResponseEntity.ok(supplierService.getAllDeletedSuppliers());
-    }
-
-    //    IndividuaL Supplier
-    @GetMapping(value = "/identifier/{identifier}/active", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<SupplierDTO> getActiveByIdentifier(@PathVariable String identifier) {
-        return ResponseEntity.ok(supplierService.getByIdentifier(identifier, false));
-    }
-
-    @GetMapping(value = "/identifier/{identifier}/deleted", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<SupplierDTO> getDeletedByIdentifier(@PathVariable String identifier) {
-        return ResponseEntity.ok(supplierService.getByIdentifier(identifier, true));
-    }
-
-    @GetMapping(value = "/identifier/{identifier}/any", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Find ANY supplier by name, email, or phone")
-    public ResponseEntity<SupplierDTO> getActiveOrDeletedByIdentifier(@PathVariable String identifier) {
-        return ResponseEntity.ok(supplierService.getByIdentifier(identifier, null));
-    }
-
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER', 'SUPERVISOR')")
     @GetMapping(value = "/advanced", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Advanced supplier search and filtering")
     public ResponseEntity<PageWrapper<SupplierDTO>> advancedSearch(
@@ -170,12 +155,13 @@ public class SupplierController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "asc") String direction
+            @RequestParam(defaultValue = "asc") String direction,
+            @RequestParam(required = false) Boolean deleted
     ) {
         var result = supplierService.advancedSearch(
                 categoryIds, name, email, phone, region,
                 minRating, createdAfter, createdBefore,
-                page, size, sortBy, direction
+                page, size, sortBy, direction, deleted
         );
         return ResponseEntity.ok(new PageWrapper<>(result));
     }
@@ -190,132 +176,87 @@ public class SupplierController {
     /* ====================== IMAGE MANAGEMENT ====================== */
 
     /* ====================== IMAGE URLS ====================== */
-    @GetMapping(value = "/{identifier}/images/all", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get all image URLs for a supplier")
-    public ResponseEntity<List<String>> getAllSupplierImages(@PathVariable String id) {
-        return ResponseEntity.ok(supplierImageService.getSupplierImageUrls(id, null));
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER', 'SUPERVISOR')")
+    @GetMapping(value = "/{id}/images", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get all URLs for supplier images (active, deleted, or any)")
+    public ResponseEntity<List<String>> getSupplierImages(
+            @PathVariable UUID id,
+            @RequestParam(required = false) Boolean deleted // null = any, true = deleted, false = active
+    ) {
+        return ResponseEntity.ok(supplierImageService.getSupplierImageUrls(id, deleted));
     }
 
-    @GetMapping(value = "/{identifier}/images/soft-deleted", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get all image URLs for a supplier")
-    public ResponseEntity<List<String>> getActiveSupplierImages(@PathVariable String id) {
-        return ResponseEntity.ok(supplierImageService.getSupplierImageUrls(id, false));
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
+    @GetMapping("/images/all")
+    public ResponseEntity<List<String>> getAllImages(
+            @RequestParam(required = false) Boolean deletedSupplier,
+            @RequestParam(required = false) Boolean deletedImage
+    ) {
+        return ResponseEntity.ok(supplierImageService.getAllSuppliersImages(deletedSupplier, deletedImage));
     }
-
-    @GetMapping(value = "/{identifier}/images/deleted", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get all image URLs for a supplier")
-    public ResponseEntity<List<String>> getDeletedSupplierImages(@PathVariable String id) {
-        return ResponseEntity.ok(supplierImageService.getSupplierImageUrls(id, true));
-    }
-
-
 
 
     /* ====================== IMAGES DOWNLOADS ====================== */
 
     @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
-    @GetMapping("/images/all/active")
-    public ResponseEntity<List<String>> getAllActiveImages() {
-        return ResponseEntity.ok(supplierImageService.getAllSuppliersImages(false));
-    }
+    @GetMapping("/{id}/images/{filename}")
+    @Operation(summary = "Download supplier image (active, deleted, or any)")
+    public ResponseEntity<Resource> downloadSupplierImage(
+            @PathVariable UUID id,
+            @PathVariable String filename,
+            @RequestParam(required = false) Boolean deleted // null = any, true = deleted, false = active
+    ) throws IOException {
 
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
-    @GetMapping("/images/all/soft-deleted")
-    public ResponseEntity<List<String>> getAllSoftDeletedImages() {
-        return ResponseEntity.ok(supplierImageService.getAllSuppliersImages(true));
-    }
+        Resource file = supplierImageService.downloadImage(id, filename, deleted);
 
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
-    @GetMapping("/images/all/any")
-    public ResponseEntity<List<String>> getAllImages() {
-        return ResponseEntity.ok(supplierImageService.getAllSuppliersImages(null));
-    }
-
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
-    @GetMapping("/images/all/download/active")
-    public ResponseEntity<Resource> downloadAllActiveImages() throws IOException {
-        return supplierImageService.downloadAllSuppliersImages(false);
-    }
-
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
-    @GetMapping("/images/all/download/soft-deleted")
-    public ResponseEntity<Resource> downloadAllSoftDeletedImages() throws IOException {
-        return supplierImageService.downloadAllSuppliersImages(true);
-    }
-
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
-    @GetMapping("/images/all/download/all")
-    public ResponseEntity<Resource> downloadAllImages() throws IOException {
-        return supplierImageService.downloadAllSuppliersImages(null);
-    }
-
-
-
-
-    @GetMapping("/{identifier}/images/{filename}/active")
-    @Operation(summary = "Download a specific supplier image")
-    public ResponseEntity<Resource> downloadSupplierActiveImage(@PathVariable String id, @PathVariable String filename) throws IOException {
-        Resource file = supplierImageService.downloadImage(id, filename, false);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + filename + "\"")
                 .body(file);
     }
 
-    @GetMapping("/{identifier}/images/{filename}/soft-deleted")
-    @Operation(summary = "Download a specific supplier image")
-    public ResponseEntity<Resource> downloadSupplierSoftDeletedImage(@PathVariable String id, @PathVariable String filename) throws IOException {
-        Resource file = supplierImageService.downloadImage(id, filename, true);
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                .body(file);
-    }
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
+    @GetMapping("/{id}/images/zip")
+    @Operation(summary = "Download supplier images as ZIP")
+    public void downloadSupplierImagesZip(
+            @PathVariable UUID id,
+            @RequestParam(required = false) Boolean deleted, // null = any, true = deleted, false = active
+            HttpServletResponse response
+    ) throws IOException {
 
-    @GetMapping("/{identifier}/images/{filename}/any")
-    @Operation(summary = "Download a specific supplier image")
-    public ResponseEntity<Resource> downloadSupplierAnyImage(@PathVariable String id, @PathVariable String filename) throws IOException {
-        Resource file = supplierImageService.downloadImage(id, filename, null);
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                .body(file);
-    }
+        List<SupplierImage> images = supplierImageService.getImages(id, deleted);
+        Supplier supplier = supplierImageService.getSupplier(id);
 
-    @GetMapping("/{identifier}/images/zip/all")
-    @Operation(summary = "Download all supplier images as a ZIP")
-    public void downloadSupplierAllImagesZip(@PathVariable String id, HttpServletResponse response) throws IOException {
         response.setContentType("application/zip");
-        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"supplier_" + id + "_images.zip\"");
-        supplierImageService.streamAllImagesAsZip(id, response.getOutputStream(), null);
+        String state = deleted == null ? "all" : deleted ? "deleted" : "active";
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"supplier_" + id + "_" + state + "_images.zip\"");
+
+        supplierImageService.writeImagesToZip(images, supplier, response.getOutputStream());
     }
 
-    @GetMapping("/{identifier}/images/zip/active")
-    @Operation(summary = "Download all supplier images as a ZIP")
-    public void downloadSupplierAllActiveImagesZip(@PathVariable String id, HttpServletResponse response) throws IOException {
-        response.setContentType("application/zip");
-        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"supplier_" + id + "_images.zip\"");
-        supplierImageService.streamAllImagesAsZip(id, response.getOutputStream(), false);
-    }
-
-    @GetMapping("/{identifier}/images/zip/deleted")
-    @Operation(summary = "Download all supplier images as a ZIP")
-    public void downloadSupplierAllDeletedImagesZip(@PathVariable String id, HttpServletResponse response) throws IOException {
-        response.setContentType("application/zip");
-        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"supplier_" + id + "_images.zip\"");
-        supplierImageService.streamAllImagesAsZip(id, response.getOutputStream(), false);
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
+    @GetMapping("/images/all/download")
+    public ResponseEntity<Resource> downloadAllImages(
+            @RequestParam(required = false) Boolean deletedSupplier,
+            @RequestParam(required = false) Boolean deletedImage
+    ) throws IOException {
+        return supplierImageService.downloadAllSuppliersImages(deletedSupplier, deletedImage);
     }
 
 
 
 
 
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @DeleteMapping("/{id}/images/{filename}/soft")
     public ResponseEntity<?> softDeleteSupplierImage(@PathVariable UUID id, @PathVariable String filename)
             throws IOException {
         return supplierImageService.softDeleteSupplierImage(id, filename);
     }
 
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @DeleteMapping("/{id}/images/soft")
     public ResponseEntity<?> softDeleteSupplierImagesBulk(
             @PathVariable UUID id,
@@ -324,12 +265,14 @@ public class SupplierController {
         return supplierImageService.softDeleteSupplierImagesBulk(id, filenames);
     }
 
+    @PreAuthorize("hasAnyRole('SUPERUSER')")
     @DeleteMapping("/{id}/images/{filename}/hard")
     public ResponseEntity<?> deleteSupplierImage(@PathVariable UUID id, @PathVariable String filename)
             throws IOException {
         return supplierImageService.deleteSupplierImage(id, filename);
     }
 
+    @PreAuthorize("hasAnyRole('SUPERUSER')")
     @DeleteMapping("/{id}/images/hard")
     public ResponseEntity<?> deleteSupplierImagesBulk(
             @PathVariable UUID id,
@@ -338,12 +281,14 @@ public class SupplierController {
         return supplierImageService.deleteSupplierImagesBulk(id, filenames);
     }
 
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @PatchMapping("/{id}/images/{filename}/restore")
     @Operation(summary = "Restore a soft-deleted supplier image")
     public ResponseEntity<?> restoreSupplierImage(@PathVariable UUID id, @PathVariable String filename) {
         return supplierImageService.restoreSupplierImage(id, filename);
     }
 
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @PatchMapping("/{id}/images/restore")
     @Operation(summary = "Restore multiple soft-deleted supplier images")
     public ResponseEntity<?> restoreSupplierImagesBulk(
@@ -374,14 +319,14 @@ public class SupplierController {
         return supplierService.softDeleteSuppliersInBulk(supplierIds);
     }
 
-    @PreAuthorize("hasRole('SUPERUSER')")
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @PatchMapping("/restore/{id}")
     @Operation(summary = "Restore a soft-deleted supplier")
     public ResponseEntity<?> restore(@PathVariable UUID id) {
         return supplierService.restoreSupplier(id);
     }
 
-    @PreAuthorize("hasRole('SUPERUSER')")
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @PatchMapping("/restore/bulk")
     @Operation(summary = "Restore soft-deleted suppliers")
     public ResponseEntity<?> restoreInBulk(@RequestBody List<UUID> supplierIds) {
@@ -411,15 +356,33 @@ public class SupplierController {
 
     /* ====================== AUDIT ====================== */
 
-    @GetMapping(value = "/{id}/images/audit", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @GetMapping(value = "/{identifier}/images/audit", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get supplier image audit history")
-    public ResponseEntity<List<SupplierImageAudit>> getSupplierImageAudit(@PathVariable UUID id) {
-        return ResponseEntity.ok(supplierImageAuditRepository.findBySupplierId(id));
+    public ResponseEntity<List<SupplierImageAudit>> getIndividualSupplierImageAudit(@PathVariable String identifier) {
+        return supplierImageService.getIndividualSupplierImageAudit(identifier, null);
     }
 
-    @GetMapping(value = "/{id}/audit", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @GetMapping(value = "/all/images/audit", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get all the suppliers' images audit history")
+    public ResponseEntity<List<SupplierImageAudit>> getAllSuppliersImagesAudits() {
+        return supplierImageService.getAllSuppliersImagesAudits();
+    }
+
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @GetMapping(value = "/{identifier}/audit", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get supplier audit history")
-    public ResponseEntity<List<SupplierAudit>> getSupplierAudit(@PathVariable UUID id) {
-        return ResponseEntity.ok(supplierAuditRepository.findBySupplierIdOrderByTimestampDesc(id));
+    public ResponseEntity<List<SupplierAudit>> getIndividualSupplierAudit(@PathVariable String identifier) {
+        return supplierService.getIndividualSupplierAudit(identifier, null);
+
+    }
+
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @GetMapping(value = "all/audit", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get all the suppliers' audit history")
+    public ResponseEntity<List<SupplierAudit>> getAllSuppliersAudits() {
+        return supplierService.getAllSuppliersAudits();
+
     }
 }

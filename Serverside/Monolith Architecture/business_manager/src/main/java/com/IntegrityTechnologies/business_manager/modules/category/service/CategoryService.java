@@ -7,7 +7,11 @@ import com.IntegrityTechnologies.business_manager.modules.category.mapper.Catego
 import com.IntegrityTechnologies.business_manager.modules.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.category.repository.CategoryRepository;
 import com.IntegrityTechnologies.business_manager.modules.product.model.Product;
+import com.IntegrityTechnologies.business_manager.modules.supplier.dto.SupplierDTO;
+import com.IntegrityTechnologies.business_manager.modules.supplier.mapper.SupplierMapper;
 import com.IntegrityTechnologies.business_manager.modules.supplier.model.Supplier;
+import com.IntegrityTechnologies.business_manager.modules.user.model.Role;
+import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -24,6 +28,7 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
+    private final SupplierMapper supplierMapper;
 
     // ---------------- SAVE / UPDATE ----------------
     public CategoryDTO saveCategory(CategoryDTO dto) {
@@ -163,6 +168,14 @@ public class CategoryService {
         return isChildOf(potentialParent.getParent(), category);
     }
 
+
+
+
+
+
+
+
+
     // ---------------- TREE MODE ----------------
     private CategoryDTO buildCategoryTree(Category category) {
         CategoryDTO dto = categoryMapper.toDTO(category);
@@ -196,61 +209,110 @@ public class CategoryService {
                 .toList();
     }
 
-    public List<CategoryDTO> getAllActiveTree() {
-        return buildTree(categoryRepository.findAllActiveWithSubcategories());
+    public List<CategoryDTO> getAllCategories(String mode, Boolean deleted) {
+        if("tree".equals(mode))
+            return getAllCategoriesTree(deleted);
+        else
+            return getAllCategoriesFlat(deleted);
     }
 
-    public List<CategoryDTO> getAllDeletedTree() {
-        List<Category> allDeleted = categoryRepository.findAllDeleted();
-        return buildTree(allDeleted);
+    public List<CategoryDTO> getAllCategoriesTree(Boolean deleted) {
+        if(Boolean.FALSE.equals(deleted))
+            return buildTree(categoryRepository.findAllActiveWithSubcategories());
+        else if(Boolean.TRUE.equals(deleted))
+            return buildTree(categoryRepository.findAllDeleted());
+        else
+            return buildTree(categoryRepository.findAllIncludingDeletedWithSubcategories());
     }
 
-    public List<CategoryDTO> getAllIncludingDeletedTree() {
-        return buildTree(categoryRepository.findAllIncludingDeletedWithSubcategories());
-    }
-
-    // ---------------- FLAT MODE ----------------
-    public List<CategoryDTO> getAllActiveFlat() {
-        return categoryRepository.findAllActiveFlat().stream().map(categoryMapper::toDTO).collect(Collectors.toList());
-    }
-
-    public List<CategoryDTO> getAllDeletedFlat() {
-        return categoryRepository.findAllDeletedFlat().stream().map(categoryMapper::toDTO).collect(Collectors.toList());
-    }
-
-    public List<CategoryDTO> getAllIncludingDeletedFlat() {
-        return categoryRepository.findAllIncludingDeletedFlat().stream().map(categoryMapper::toDTO).collect(Collectors.toList());
+    public List<CategoryDTO> getAllCategoriesFlat(Boolean deleted) {
+        if(Boolean.FALSE.equals(deleted))
+            return categoryRepository.findAllActiveFlat().stream().map(categoryMapper::toDTO).collect(Collectors.toList());
+        else if(Boolean.TRUE.equals(deleted))
+            return categoryRepository.findAllDeletedFlat().stream().map(categoryMapper::toDTO).collect(Collectors.toList());
+        else
+            return categoryRepository.findAllIncludingDeletedFlat().stream().map(categoryMapper::toDTO).collect(Collectors.toList());
     }
 
     // ---------------- SINGLE CATEGORY ----------------
-    public CategoryDTO getCategoryTree(Long id) {
-        Category category = categoryRepository.findByIdWithSubcategories(id)
-                .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
-        return buildCategoryTree(category);
-    }
 
-    public CategoryDTO getCategoryFlat(Long id) {
+    public List<SupplierDTO> getCategorySuppliers(Long id, Boolean deleted, Boolean strict) {
+
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
-        CategoryDTO dto = categoryMapper.toDTO(category);
-        dto.setSubcategories(null);
-        return dto;
+                .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
+
+        // Collect suppliers (strict OR including parents)
+        Set<Supplier> suppliers = new HashSet<>();
+
+        if (Boolean.TRUE.equals(strict)) {
+            // Strict → only this category
+            suppliers.addAll(category.getSuppliers());
+        } else {
+            // Not strict → include all parent categories' suppliers as well
+            Category current = category;
+            while (current != null) {
+                suppliers.addAll(current.getSuppliers());
+                current = current.getParent();
+            }
+        }
+
+        // Apply deleted filter
+        List<Supplier> filtered = suppliers.stream()
+                .filter(s ->
+                        deleted == null
+                                ? true
+                                : deleted
+                                ? Boolean.TRUE.equals(s.getDeleted())
+                                : Boolean.FALSE.equals(s.getDeleted())
+                )
+                .toList();
+
+        return supplierMapper.toDTOList(filtered);
     }
 
-    // Flat active version
-    public CategoryDTO getCategoryFlatActive(Long id) {
-        Category category = categoryRepository.findByIdAndDeletedFalse(id)
-                .orElseThrow(() -> new CategoryNotFoundException("Category not found or inactive"));
-        CategoryDTO dto = categoryMapper.toDTO(category);
-        dto.setSubcategories(null); // flat
-        return dto;
+    public CategoryDTO getCategory(Long id, String mode, Boolean deleted) {
+        if("tree".equals(mode))
+            return getCategoryTree(id, deleted);
+        else
+            return getCategoryFlat(id, deleted);
     }
 
-    // Tree active version
-    public CategoryDTO getCategoryTreeActive(Long id) {
-        Category category = categoryRepository.findByIdWithSubcategoriesAndActive(id)
-                .orElseThrow(() -> new CategoryNotFoundException("Category not found or inactive"));
-        return buildActiveCategoryTree(category);
+    public CategoryDTO getCategoryTree(Long id, Boolean deleted) {
+        if(Boolean.FALSE.equals(deleted)) {
+            Category category = categoryRepository.findByIdWithSubcategoriesAndActive(id)
+                    .orElseThrow(() -> new CategoryNotFoundException("Category not found or inactive"));
+            return buildActiveCategoryTree(category);
+        } else if(Boolean.TRUE.equals(deleted)) {
+            Category category = categoryRepository.findByIdWithSubcategoriesAndDeleted(id)
+                    .orElseThrow(() -> new CategoryNotFoundException("Category not found or inactive"));
+            return buildActiveCategoryTree(category);
+        }else {
+            Category category = categoryRepository.findByIdWithSubcategories(id)
+                    .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
+            return buildCategoryTree(category);
+        }
+    }
+
+    public CategoryDTO getCategoryFlat(Long id, Boolean deleted) {
+        if(Boolean.FALSE.equals(deleted)) {
+            Category category = categoryRepository.findByIdAndDeletedFalse(id)
+                    .orElseThrow(() -> new CategoryNotFoundException("Category not found or inactive"));
+            CategoryDTO dto = categoryMapper.toDTO(category);
+            dto.setSubcategories(null); // flat
+            return dto;
+        } else if(Boolean.TRUE.equals(deleted)) {
+            Category category = categoryRepository.findByIdAndDeletedTrue(id)
+                    .orElseThrow(() -> new CategoryNotFoundException("Category not found or inactive"));
+            CategoryDTO dto = categoryMapper.toDTO(category);
+            dto.setSubcategories(null);
+            return dto;
+        } else {
+            Category category = categoryRepository.findById(id)
+                    .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
+            CategoryDTO dto = categoryMapper.toDTO(category);
+            dto.setSubcategories(null);
+            return dto;
+        }
     }
 
     // Recursive helper for active categories only
@@ -267,6 +329,12 @@ public class CategoryService {
         }
         return dto;
     }
+
+
+
+
+
+
 
 
     // ---------------- DELETE / RESTORE ----------------
@@ -460,8 +528,8 @@ public class CategoryService {
      * Search and return a hierarchical tree of matching categories.
      * Active only if activeOnly=true, otherwise all categories.
      */
-    public List<CategoryDTO> searchByKeyword(String keyword, boolean activeOnly) {
-        List<Category> matching = activeOnly
+    public List<CategoryDTO> searchByKeyword(String keyword, boolean deleted) {
+        List<Category> matching = deleted == false
                 ? categoryRepository.searchActive(keyword)
                 : categoryRepository.searchAll(keyword);
 
@@ -497,5 +565,28 @@ public class CategoryService {
         List<CategoryDTO> children = childrenMap.getOrDefault(parent.getId(), new ArrayList<>());
         parent.setSubcategories(children);
         children.forEach(child -> attachChildren(child, childrenMap));
+    }
+
+    public List<Long> getAllCategoryIdsRecursive(Long categoryId) {
+        Category root = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + categoryId));
+
+        List<Long> ids = new ArrayList<>();
+        collectCategoryIds(root, ids);
+        return ids;
+    }
+
+    private void collectCategoryIds(Category category, List<Long> ids) {
+        ids.add(category.getId());
+        if (category.getSubcategories() != null) {
+            for (Category sub : category.getSubcategories()) {
+                collectCategoryIds(sub, ids);
+            }
+        }
+    }
+
+    public void validateAccess() {
+        Role role = SecurityUtils.currentRole();
+
     }
 }

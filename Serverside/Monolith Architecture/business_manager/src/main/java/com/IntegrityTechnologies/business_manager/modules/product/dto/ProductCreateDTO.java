@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -42,5 +43,5 @@ public class ProductCreateDTO {
     private List<UUID> supplierIds;
 
     @Schema(type = "array")
-    private List<ProductImage> images;
+    private List<MultipartFile> images;
 }

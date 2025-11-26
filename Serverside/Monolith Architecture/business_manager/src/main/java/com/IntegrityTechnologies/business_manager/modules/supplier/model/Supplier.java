@@ -1,9 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.supplier.model;
 
-import com.IntegrityTechnologies.business_manager.modules.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.product.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.user.model.User;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -20,6 +21,8 @@ import java.util.*;
         })
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Supplier {
 
     @Id
@@ -46,21 +49,11 @@ public class Supplier {
     private Double rating;
 
     @OneToMany(mappedBy = "supplier", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
     private Set<SupplierImage> images = new HashSet<>();
 
     @Column(nullable = false, unique = true)
     private String uploadFolder;
-
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "supplier_categories",
-            joinColumns = @JoinColumn(name = "supplier_id"),
-            inverseJoinColumns = @JoinColumn(name = "category_id")
-    )
-    private Set<Category> categories = new HashSet<>();
-
-    @ManyToMany(mappedBy = "suppliers", fetch = FetchType.LAZY)
-    private Set<Product> products = new HashSet<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_id")

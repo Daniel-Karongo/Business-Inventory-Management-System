@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.user.service;
 
 import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
+import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.exception.*;
 import com.IntegrityTechnologies.business_manager.modules.user.model.*;
 import com.IntegrityTechnologies.business_manager.modules.user.repository.*;
@@ -16,7 +17,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.nio.file.*;
-import java.nio.file.attribute.DosFileAttributeView;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.Comparator;
@@ -32,6 +32,7 @@ public class UserImageService {
     private final UserImageRepository userImageRepository;
     private final UserImageAuditRepository userImageAuditRepository;
     private final FileStorageProperties fileStorageProperties;
+    private final FileStorageService fileStorageService;
     private final PrivilegesChecker privilegesChecker;
 
     /* ====================== VALIDATE ACCESS ====================== */
@@ -54,7 +55,7 @@ public class UserImageService {
         // Create and hide folders
         createAndHideBaseFolders(baseDir);
         if (!Files.exists(userDir)) Files.createDirectories(userDir);
-        hidePath(userDir);
+        fileStorageService.hidePath(userDir);
 
         for (MultipartFile file : files) {
             if (file.isEmpty()) continue;
@@ -63,7 +64,7 @@ public class UserImageService {
             String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
             Path filePath = userDir.resolve(fileName);
             file.transferTo(filePath.toFile());
-            hidePath(filePath);
+            fileStorageService.hidePath(filePath);
 
             // Use secure API path, not physical path
             urls.add("/api/users/images/" + folderName + "/" + fileName);
@@ -78,28 +79,16 @@ public class UserImageService {
 
         if (uploadsFolder != null && !Files.exists(uploadsFolder)) {
             Files.createDirectories(uploadsFolder);
-            hidePath(uploadsFolder);
+            fileStorageService.hidePath(uploadsFolder);
         }
 
         if (!Files.exists(basePath)) {
             Files.createDirectories(basePath);
         }
-        hidePath(basePath);
+        fileStorageService.hidePath(basePath);
     }
 
-    void hidePath(Path path) throws IOException {
-        if (System.getProperty("os.name").toLowerCase().contains("win")) {
-            DosFileAttributeView attr = Files.getFileAttributeView(path, DosFileAttributeView.class);
-            if (attr != null) attr.setHidden(true);
-        } else {
-            Path parent = path.getParent();
-            String name = path.getFileName().toString();
-            if (!name.startsWith(".")) {
-                Path hiddenPath = parent.resolve("." + name);
-                if (!Files.exists(hiddenPath)) Files.move(path, hiddenPath, StandardCopyOption.REPLACE_EXISTING);
-            }
-        }
-    }
+
 
     private void checkDiskSpace(Path path, long fileSize) {
         if (path.toFile().getFreeSpace() < fileSize) throw new StorageFullException("Not enough disk space to save file");
@@ -107,22 +96,37 @@ public class UserImageService {
 
     /* ====================== RETRIEVE / DOWNLOAD / DELETE ====================== */
 
-    public List<String> getAllUsersImages(Boolean deleted, Authentication authentication) {
+    public List<String> getAllUsersImages(Boolean deletedImages,
+                                          Boolean deletedUsers,
+                                          Authentication authentication) {
+
         User performedBy = privilegesChecker.getAuthenticatedUser(authentication);
 
+        // Fetch all images *once*
         List<UserImage> allImages = userImageRepository.findAll();
 
-        // Filter images by authorization
         List<UserImage> authorizedImages = allImages.stream()
-                .filter(image -> privilegesChecker.isAuthorized(performedBy, image.getUser())) // only images of users you can access
-                .filter(image -> {
-                    if (deleted == null) return true;
-                    return Boolean.TRUE.equals(image.getDeleted()) == deleted;
+                // 1️⃣ User-level filter: only images of users requester is allowed to access
+                .filter(img -> privilegesChecker.isAuthorized(performedBy, img.getUser()))
+
+                // 2️⃣ Filter by user deleted flag
+                .filter(img -> {
+                    if (deletedUsers == null) return true;
+                    Boolean isUserDeleted = Boolean.TRUE.equals(img.getUser().getDeleted());
+                    return isUserDeleted.equals(deletedUsers);
                 })
+
+                // 3️⃣ Filter by image deleted flag
+                .filter(img -> {
+                    if (deletedImages == null) return true;
+                    Boolean isImageDeleted = Boolean.TRUE.equals(img.getDeleted());
+                    return isImageDeleted.equals(deletedImages);
+                })
+
                 .toList();
 
         if (authorizedImages.isEmpty()) {
-            throw new ImageNotFoundException("No accessible images found for your account.");
+            throw new ImageNotFoundException("No accessible images found matching your filters.");
         }
 
         // Audit retrieval
@@ -142,34 +146,53 @@ public class UserImageService {
                 .toList();
     }
 
-    public ResponseEntity<Resource> downloadAllUsersImages(Boolean deleted, Authentication authentication) throws IOException {
+    public ResponseEntity<Resource> downloadAllUsersImages(
+            Boolean deletedUsers,
+            Boolean deletedImages,
+            Authentication authentication
+    ) throws IOException {
+
         User performedBy = privilegesChecker.getAuthenticatedUser(authentication);
 
+        // 1️⃣ Load images once
         List<UserImage> allImages = userImageRepository.findAll();
 
-        // Filter images by authorization + deleted flag
-        List<UserImage> filteredImages = allImages.stream()
-                .filter(image -> privilegesChecker.isAuthorized(performedBy, image.getUser()))
-                .filter(image -> {
-                    if (deleted == null) return true;
-                    return Boolean.TRUE.equals(image.getDeleted()) == deleted;
+        List<UserImage> authorizedImages = allImages.stream()
+                // 2️⃣ Filter by role hierarchy (cannot access images of higher-role users)
+                .filter(img -> privilegesChecker.isAuthorized(performedBy, img.getUser()))
+
+                // 3️⃣ Filter by *user* deleted flag
+                .filter(img -> {
+                    if (deletedUsers == null) return true;
+                    Boolean isUserDeleted = Boolean.TRUE.equals(img.getUser().getDeleted());
+                    return isUserDeleted.equals(deletedUsers);
                 })
+
+                // 4️⃣ Filter by *image* deleted flag
+                .filter(img -> {
+                    if (deletedImages == null) return true;
+                    Boolean isImageDeleted = Boolean.TRUE.equals(img.getDeleted());
+                    return isImageDeleted.equals(deletedImages);
+                })
+
                 .toList();
 
-        if (filteredImages.isEmpty()) {
-            throw new ImageNotFoundException("No accessible images found for your account.");
+        if (authorizedImages.isEmpty()) {
+            throw new ImageNotFoundException("No accessible images found matching your filters.");
         }
 
-        // Create temporary ZIP file
+        // 5️⃣ Create ZIP file
         File tempZip = File.createTempFile("all-images-", ".zip");
 
         try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(tempZip))) {
-            for (UserImage image : filteredImages) {
+
+            for (UserImage image : authorizedImages) {
+
                 Path filePath = Paths.get(fileStorageProperties.getUserUploadDir(), image.getFileName())
                         .toAbsolutePath().normalize();
 
                 if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
-                    log.warn("Skipping missing image file: {}", image.getFileName());
+                    log.warn("Missing image file: {}", image.getFileName());
                     continue;
                 }
 
@@ -179,7 +202,7 @@ public class UserImageService {
                 }
                 zos.closeEntry();
 
-                // Audit each image retrieval/download
+                // 6️⃣ Audit each DOWNLOAD
                 userImageAuditRepository.save(UserImageAudit.builder()
                         .userId(image.getUser().getId())
                         .username(image.getUser().getUsername())
@@ -191,9 +214,11 @@ public class UserImageService {
                         .timestamp(LocalDateTime.now())
                         .build());
             }
+
             zos.finish();
         }
 
+        // 7️⃣ Prepare ZIP resource
         InputStreamResource resource = new InputStreamResource(new FileInputStream(tempZip));
 
         return ResponseEntity.ok()

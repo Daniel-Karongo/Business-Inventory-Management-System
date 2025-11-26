@@ -16,6 +16,7 @@ import java.util.UUID;
 public class ProductUpdateDTO {
     private String name;
     private String description;
+    private String sku;
     private String barcode;
     private BigDecimal price;
     private BigDecimal buyingPrice;
