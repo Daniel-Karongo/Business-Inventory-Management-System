@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="receipt" pageWidth="300" pageHeight="800" columnWidth="260"
+              leftMargin="20" rightMargin="20" topMargin="10" bottomMargin="10" uuid="r222">
+    <parameter name="SALE_ID" class="java.lang.String"/>
+    <parameter name="DATE" class="java.lang.String"/>
+    <parameter name="CASHIER" class="java.lang.String"/>
+    <parameter name="CUSTOMER" class="java.lang.String"/>
+    <field name="productName" class="java.lang.String"/>
+    <field name="qty" class="java.lang.Integer"/>
+    <field name="unitPrice" class="java.math.BigDecimal"/>
+    <field name="lineTotal" class="java.math.BigDecimal"/>
+
+    <title>
+        <band height="60">
+            <staticText>
+                <reportElement x="0" y="0" width="260" height="20"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="12" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Business Inventory Ltd]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="0" y="22" width="260" height="14"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA["Receipt #: " + $P{SALE_ID}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="0" y="38" width="260" height="12"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA[$P{DATE}]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <columnHeader>
+        <band height="16">
+            <staticText>
+                <reportElement x="0" y="0" width="140" height="16"/>
+                <textElement><font isBold="true" size="9"/></textElement>
+                <text><![CDATA[Item]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="140" y="0" width="40" height="16"/>
+                <textElement><font isBold="true" size="9"/></textElement>
+                <text><![CDATA[Qty]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="180" y="0" width="80" height="16"/>
+                <textElement><font isBold="true" size="9"/></textElement>
+                <text><![CDATA[Total]]></text>
+            </staticText>
+        </band>
+    </columnHeader>
+
+    <detail>
+        <band height="14">
+            <textField>
+                <reportElement x="0" y="0" width="140" height="14"/>
+                <textFieldExpression><![CDATA[$F{productName}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="140" y="0" width="40" height="14"/>
+                <textFieldExpression><![CDATA[$F{qty}]]></textFieldExpression>
+            </textField>
+            <textField pattern="#,##0.00">
+                <reportElement x="180" y="0" width="80" height="14"/>
+                <textFieldExpression><![CDATA[$F{lineTotal}]]></textFieldExpression>
+            </textField>
+        </band>
+    </detail>
+
+    <summary>
+        <band height="40">
+            <staticText>
+                <reportElement x="0" y="0" width="120" height="16"/>
+                <text><![CDATA[Thank you for your business!]]></text>
+            </staticText>
+        </band>
+    </summary>
+</jasperReport>

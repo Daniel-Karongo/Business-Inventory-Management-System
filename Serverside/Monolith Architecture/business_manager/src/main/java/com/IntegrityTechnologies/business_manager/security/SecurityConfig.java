@@ -1,7 +1,7 @@
 package com.IntegrityTechnologies.business_manager.security;
 
-import com.IntegrityTechnologies.business_manager.modules.auth.filter.JwtAuthenticationFilter;
-import com.IntegrityTechnologies.business_manager.modules.auth.filter.JwtExceptionHandlerFilter;
+import com.IntegrityTechnologies.business_manager.modules.person.function.auth.filter.JwtAuthenticationFilter;
+import com.IntegrityTechnologies.business_manager.modules.person.function.auth.filter.JwtExceptionHandlerFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;

@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security;
 
-import com.IntegrityTechnologies.business_manager.modules.user.model.Role;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;

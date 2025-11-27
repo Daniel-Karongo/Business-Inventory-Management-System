@@ -1,11 +1,10 @@
 package com.IntegrityTechnologies.business_manager.common;
 
 import com.IntegrityTechnologies.business_manager.exception.UnauthorizedAccessException;
-import com.IntegrityTechnologies.business_manager.modules.user.model.Role;
-import com.IntegrityTechnologies.business_manager.modules.user.model.User;
-import com.IntegrityTechnologies.business_manager.modules.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
