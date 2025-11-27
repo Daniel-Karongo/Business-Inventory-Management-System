@@ -37,6 +37,18 @@ public interface DepartmentRepository extends JpaRepository<Department, UUID> {
     List<User> findHeadsByDepartmentId(@Param("deptId") UUID deptId);
 
     @Query("""
+    SELECT DISTINCT u
+    FROM Department d
+    LEFT JOIN d.members m
+    LEFT JOIN d.heads h
+    LEFT JOIN User u ON u.id = m.id OR u.id = h.id
+    WHERE d.id = :deptId
+      AND d.deleted = false
+      AND u.deleted = false
+    """)
+    List<User> findAllUsersInDepartment(@Param("deptId") UUID deptId);
+
+    @Query("""
     SELECT DISTINCT d 
     FROM Department d
     LEFT JOIN d.heads h

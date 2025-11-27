@@ -164,6 +164,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(507).body(response);
     }
 
+    @ExceptionHandler(OutOfStockException.class)
+    public ResponseEntity<Map<String, Object>> handleOutOfStock(OutOfStockException ex) {
+        return buildResponse(ex.getMessage(), HttpStatus.CONFLICT);
+    }
+
     /* ====================== FALLBACK HANDLER ====================== */
 
     @ExceptionHandler(Exception.class)
