@@ -15,8 +15,6 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.rep
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserImageAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
-import com.IntegrityTechnologies.business_manager.modules.user.model.*;
-import com.IntegrityTechnologies.business_manager.modules.user.repository.*;
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

@@ -7,6 +7,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounts.model
 import com.IntegrityTechnologies.business_manager.modules.finance.accounts.service.AccountService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounts.service.JournalService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounts.service.PartTransactionService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,6 +17,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "Accounts")
 @RestController
 @RequestMapping("/api/accounts")
 @RequiredArgsConstructor

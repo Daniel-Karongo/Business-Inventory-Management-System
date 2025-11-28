@@ -8,6 +8,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.function.biomet
 import com.IntegrityTechnologies.business_manager.modules.person.function.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.function.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.service.NotificationService;
+import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.dto.RollcallDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.RollcallAudit;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.RollcallMethod;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.RollcallStatus;
@@ -39,7 +40,7 @@ public class RollcallService {
     private final NotificationService notificationService; // interface to send emails / push
 
     @Transactional
-    public Rollcall recordBiometricRollcall(UUID userId, UUID departmentId, BiometricType type, byte[] rawTemplate) {
+    public RollcallDTO recordBiometricRollcall(UUID userId, UUID departmentId, BiometricType type, byte[] rawTemplate) {
         User user = userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("User not found"));
         Department dept = departmentRepository.findById(departmentId).orElseThrow(() -> new EntityNotFoundException("Department not found"));
 
@@ -58,7 +59,7 @@ public class RollcallService {
                         .departmentId(departmentId)
                         .action("BIOMETRIC_VERIFY_FAILED")
                         .reason("Biometric did not match")
-                        .performedBy(userId.toString())
+                        .performedBy("SYSTEM")
                         .timestamp(LocalDateTime.now())
                         .build());
                 throw new BiometricException("Biometric verification failed");
@@ -75,7 +76,7 @@ public class RollcallService {
                 .status(status)
                 .method(RollcallMethod.BIOMETRIC)
                 .biometricRecordId(matched.map(BiometricRecord::getId).orElse(null))
-                .performedBy(userId.toString())
+                .performedBy("SYSTEM")
                 .build();
 
         Rollcall saved = rollcallRepository.save(r);
@@ -86,15 +87,15 @@ public class RollcallService {
                 .departmentId(dept.getId())
                 .action("RECORD")
                 .reason("Biometric rollcall recorded: " + status)
-                .performedBy(userId.toString())
+                .performedBy("SYSTEM")
                 .timestamp(LocalDateTime.now())
                 .build());
 
-        return saved;
+        return RollcallDTO.from(saved);
     }
 
     @Transactional
-    public Rollcall recordLoginRollcall(UUID userId, UUID departmentId) {
+    public RollcallDTO recordLoginRollcall(UUID userId, UUID departmentId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("User not found"));
         Department dept = departmentRepository.findById(departmentId).orElseThrow(() -> new EntityNotFoundException("Department not found"));
 
@@ -106,7 +107,7 @@ public class RollcallService {
                 .timestamp(LocalDateTime.now())
                 .status(status)
                 .method(RollcallMethod.LOGIN)
-                .performedBy(user.getUsername())
+                .performedBy("SYSTEM")
                 .build();
 
         Rollcall saved = rollcallRepository.save(r);
@@ -117,11 +118,11 @@ public class RollcallService {
                 .departmentId(dept.getId())
                 .action("RECORD")
                 .reason("Login rollcall recorded: " + status)
-                .performedBy(user.getUsername())
+                .performedBy("SYSTEM")
                 .timestamp(LocalDateTime.now())
                 .build());
 
-        return saved;
+        return RollcallDTO.from(saved);
     }
 
     private RollcallStatus computeStatusForDepartment(Department dept, LocalDateTime now) {
@@ -155,7 +156,7 @@ public class RollcallService {
                 // skip if user already has a rollcall today
                 LocalDateTime dayStart = cutoff.toLocalDate().atStartOfDay();
                 LocalDateTime dayEnd = dayStart.plusDays(1);
-                boolean has = !rollcallRepository.findByUserIdAndTimestampBetween(user.getId(), dayStart, dayEnd).isEmpty();
+                boolean has = !rollcallRepository.findByUserIdAndTimestampBetweenOrderByTimestampDesc(user.getId(), dayStart, dayEnd).isEmpty();
                 if (!has) {
                     Rollcall absent = Rollcall.builder()
                             .user(user)
@@ -184,12 +185,14 @@ public class RollcallService {
     }
 
     // query methods
-    public List<Rollcall> getRollcallsForUser(UUID userId, LocalDateTime from, LocalDateTime to) {
-        return rollcallRepository.findByUserIdAndTimestampBetween(userId, from, to);
+    public List<RollcallDTO> getRollcallsForUser(UUID userId, LocalDateTime from, LocalDateTime to) {
+        List<Rollcall> rollcalls = rollcallRepository.findByUserIdAndTimestampBetweenOrderByTimestampDesc(userId, from, to);
+        return rollcalls.stream().map(rollcall -> RollcallDTO.from(rollcall)).toList();
     }
 
-    public List<Rollcall> getRollcallsForDepartment(UUID deptId, LocalDateTime from, LocalDateTime to) {
-        return rollcallRepository.findByDepartmentIdAndTimestampBetween(deptId, from, to);
+    public List<RollcallDTO> getRollcallsForDepartment(UUID deptId, LocalDateTime from, LocalDateTime to) {
+        List<Rollcall> rollcalls = rollcallRepository.findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(deptId, from, to);
+        return rollcalls.stream().map(rollcall -> RollcallDTO.from(rollcall)).toList();
     }
 }
 

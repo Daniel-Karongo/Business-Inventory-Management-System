@@ -8,6 +8,7 @@ import java.util.UUID;
 @Data
 public class SaleLineDto {
     private UUID productId;
+    private UUID branchId;
     private Integer quantity;
     private BigDecimal unitPrice; // optional, service can look up product price
 }

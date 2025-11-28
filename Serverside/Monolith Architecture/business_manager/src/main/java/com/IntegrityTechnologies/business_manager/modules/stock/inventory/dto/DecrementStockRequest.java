@@ -1,15 +1,12 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto;
 
 import lombok.Data;
-
-import java.util.List;
 import java.util.UUID;
 
 @Data
-public class ReceiveStockRequest {
+public class DecrementStockRequest {
     private UUID productId;
-    private UUID branchId; // REQUIRED for per-branch inventory
-    private List<SupplierUnit> suppliers;
+    private UUID BranchId;
+    private Integer quantity;
     private String reference;
-    private String note;
 }

@@ -2,19 +2,24 @@ package com.IntegrityTechnologies.business_manager.modules.person.function.rollc
 
 import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.modules.person.function.biometric.model.BiometricRollcallRequest;
-import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.service.RollcallService;
+import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.dto.RollcallDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.LoginRollcallRequest;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.Rollcall;
+import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.service.RollcallService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
+
 
 @RestController
 @RequestMapping("/api/rollcall")
@@ -27,35 +32,38 @@ public class RollcallController {
 
     // Biometric rollcall (kiosk or mobile) - raw template bytes expected as base64
     @PostMapping("/biometric")
-    public ResponseEntity<Rollcall> biometricRollcall(@RequestBody BiometricRollcallRequest req, Authentication auth) {
+    public ResponseEntity<RollcallDTO> biometricRollcall(@RequestBody BiometricRollcallRequest req, Authentication auth) {
         // ensure user or kiosk has rights to record
         byte[] template = Base64.getDecoder().decode(req.getTemplateBase64());
-        Rollcall r = rollcallService.recordBiometricRollcall(req.getUserId(), req.getDepartmentId(), req.getType(), template);
+        RollcallDTO r = rollcallService.recordBiometricRollcall(req.getUserId(), req.getDepartmentId(), req.getType(), template);
         return ResponseEntity.ok(r);
     }
 
     // Login-based rollcall (user logs in)
     @PostMapping("/login")
-    public ResponseEntity<Rollcall> loginRollcall(@RequestBody LoginRollcallRequest req) {
-        Rollcall r = rollcallService.recordLoginRollcall(req.getUserId(), req.getDepartmentId());
+    public ResponseEntity<RollcallDTO> loginRollcall(@RequestBody LoginRollcallRequest req) {
+        RollcallDTO r = rollcallService.recordLoginRollcall(req.getUserId(), req.getDepartmentId());
         return ResponseEntity.ok(r);
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Rollcall>> getUserRollcalls(@PathVariable UUID userId,
-                                                           @RequestParam(required = false) String from,
-                                                           @RequestParam(required = false) String to) {
-        LocalDateTime f = from == null ? LocalDateTime.now().minusMonths(1) : LocalDateTime.parse(from);
-        LocalDateTime t = to == null ? LocalDateTime.now() : LocalDateTime.parse(to);
+    public ResponseEntity<List<RollcallDTO>> getUserRollcalls(
+            @PathVariable UUID userId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        LocalDateTime f = from == null ? LocalDateTime.now().minusMonths(1) : from.atStartOfDay();
+        LocalDateTime t = to == null ? LocalDateTime.now() : to.atTime(LocalTime.MAX);
         return ResponseEntity.ok(rollcallService.getRollcallsForUser(userId, f, t));
     }
 
     @GetMapping("/department/{deptId}")
-    public ResponseEntity<List<Rollcall>> getDeptRollcalls(@PathVariable UUID deptId,
-                                                           @RequestParam(required = false) String from,
-                                                           @RequestParam(required = false) String to) {
-        LocalDateTime f = from == null ? LocalDateTime.now().minusMonths(1) : LocalDateTime.parse(from);
-        LocalDateTime t = to == null ? LocalDateTime.now() : LocalDateTime.parse(to);
+    public ResponseEntity<List<RollcallDTO>> getDeptRollcalls(
+            @PathVariable UUID deptId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
+    ) {
+        LocalDateTime f = from == null ? LocalDateTime.now().minusMonths(1) : from.atStartOfDay();
+        LocalDateTime t = to == null ? LocalDateTime.now() : to.atTime(LocalTime.MAX);
         return ResponseEntity.ok(rollcallService.getRollcallsForDepartment(deptId, f, t));
     }
 }

@@ -10,4 +10,6 @@ import java.util.UUID;
 @Repository
 public interface StockTransactionRepository extends JpaRepository<StockTransaction, UUID> {
     List<StockTransaction> findByProductIdOrderByTimestampDesc(UUID productId);
+    List<StockTransaction> findByProductId(UUID productId);
+
 }

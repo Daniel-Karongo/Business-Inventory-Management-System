@@ -7,7 +7,6 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.Sale
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineItem;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
-import com.IntegrityTechnologies.business_manager.modules.sales.model.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.repository.ProductRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
@@ -45,6 +44,7 @@ public class SalesService {
             SaleLineItem line = SaleLineItem.builder()
                     .productId(li.getProductId())
                     .productName(p.getName())
+                    .branchId(li.getBranchId())
                     .unitPrice(unitPrice)
                     .quantity(li.getQuantity())
                     .lineTotal(lineTotal)
@@ -92,7 +92,7 @@ public class SalesService {
         // decrement inventory for each line (this is where we integrate inventory)
         for (SaleLineItem li : lines) {
             // InventoryService must provide this method; will throw if insufficient stock
-            inventoryService.decrementStock(li.getProductId(), li.getQuantity(), "SALE:" + saleId.toString());
+            inventoryService.decrementStock(li.getProductId(), li.getBranchId(), li.getQuantity(), "SALE:" + saleId.toString());
         }
 
         return SaleResponse.builder()

@@ -10,8 +10,6 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.mod
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserImageAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
-import com.IntegrityTechnologies.business_manager.modules.user.model.*;
-import com.IntegrityTechnologies.business_manager.modules.user.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;

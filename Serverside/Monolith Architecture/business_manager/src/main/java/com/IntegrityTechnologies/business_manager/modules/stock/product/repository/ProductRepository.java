@@ -30,7 +30,5 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
     List<Product> findAllBySuppliers_Id(UUID supplierId);
     List<Product> findAllByCategory_Id(Long categoryId);
     List<Product> findAllByCategory_IdIn(List<Long> categoryIds);
-
-
-
+    Optional<Product> findByIdAndDeletedFalse(UUID productId);
 }

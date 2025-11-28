@@ -32,10 +32,6 @@ public class ProductCreateDTO {
     @NotNull(message = "Buying price is required.")
     private BigDecimal buyingPrice;
 
-    @NotNull(message = "The stock quantity is required.")
-    @PositiveOrZero(message = "Stock quantity cannot be negative.")
-    private Integer stockQuantity;
-
     @NotNull(message = "The category is required.")
     private Long categoryId;
 

@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.communication.reports.controller;
 
 import com.IntegrityTechnologies.business_manager.modules.communication.reports.service.ReportingService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
@@ -12,6 +13,7 @@ import java.io.ByteArrayOutputStream;
 import java.time.LocalDate;
 import java.util.UUID;
 
+@Tag(name = "Reports")
 @RestController
 @RequestMapping("/api/reports")
 @RequiredArgsConstructor

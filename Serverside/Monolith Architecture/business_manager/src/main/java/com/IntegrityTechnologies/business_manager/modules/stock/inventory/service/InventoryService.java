@@ -1,9 +1,13 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.service;
 
+import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import com.IntegrityTechnologies.business_manager.exception.OutOfStockException;
+import com.IntegrityTechnologies.business_manager.modules.person.function.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.person.function.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.AdjustStockRequest;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.InventoryResponse;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.ReceiveStockRequest;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.SupplierUnit;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryItem;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.StockTransaction;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
@@ -19,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -28,63 +33,86 @@ public class InventoryService {
     private final InventoryItemRepository inventoryItemRepository;
     private final StockTransactionRepository stockTransactionRepository;
     private final ProductRepository productRepository;
+    private final BranchRepository branchRepository;
 
     private static final int MAX_RETRIES = 5;
 
     /** --------------------------------------------
-     *  CREATE / RECEIVE STOCK
+     *  RECEIVE STOCK (per branch)
      *  -------------------------------------------- */
     @Transactional
-    public InventoryResponse receiveStock(ReceiveStockRequest req) {
-        var product = productRepository.findById(req.getProductId())
+    public ApiResponse receiveStock(ReceiveStockRequest req) {
+
+        var product = productRepository.findByIdAndDeletedFalse(req.getProductId())
                 .orElseThrow(() -> new IllegalArgumentException("Product not found"));
 
-        InventoryItem item = inventoryItemRepository.findByProductId(req.getProductId())
+        Branch branch = branchRepository.findById(req.getBranchId())
+                .orElseThrow(() -> new IllegalArgumentException("Branch not found"));
+
+        InventoryItem item = inventoryItemRepository.findByProductIdAndBranchId(
+                        req.getProductId(), req.getBranchId())
                 .orElse(InventoryItem.builder()
                         .product(product)
+                        .branch(branch)
                         .quantityOnHand(0L)
                         .quantityReserved(0L)
-                        .location(req.getLocation() != null ? req.getLocation() : "MAIN")
-                        .build());
+                        .build()
+                );
 
-        item.setQuantityOnHand(item.getQuantityOnHand() + req.getQuantity());
+        if (req.getSuppliers() == null || req.getSuppliers().isEmpty()) {
+            throw new IllegalArgumentException("At least one supplier must be provided");
+        }
+
+        Long quantityStocked = 0L;
+        for (SupplierUnit supplierUnit: req.getSuppliers()) {
+            quantityStocked += supplierUnit.getUnitsSupplied();
+
+            stockTransactionRepository.save(StockTransaction.builder()
+                    .productId(req.getProductId())
+                    .branchId(req.getBranchId())
+                    .type(StockTransaction.TransactionType.RECEIPT)
+                    .quantityDelta(supplierUnit.getUnitsSupplied())
+                    .reference(req.getReference())
+                    .supplierId(supplierUnit.getSupplierId())
+                    .note(req.getNote())
+                    .timestamp(LocalDateTime.now())
+                    .performedBy(getCurrentUsername())
+                    .build()
+            );
+        }
+
+        item.setQuantityOnHand(item.getQuantityOnHand() + quantityStocked);
         item.setLastUpdatedAt(LocalDateTime.now());
         item.setLastUpdatedBy(getCurrentUsername());
         inventoryItemRepository.save(item);
 
-        stockTransactionRepository.save(StockTransaction.builder()
-                .productId(req.getProductId())
-                .type(StockTransaction.TransactionType.RECEIPT)
-                .quantityDelta(req.getQuantity())
-                .reference(req.getReference())
-                .note(req.getNote())
-                .timestamp(LocalDateTime.now())
-                .performedBy(getCurrentUsername())
-                .build()
-        );
-
-        return buildResponse(item);
+        return new ApiResponse("success", "Stock received", buildResponse(item));
     }
 
     /** --------------------------------------------
-     *  ADJUST STOCK
+     *  ADJUST STOCK (per branch)
      *  -------------------------------------------- */
     @Transactional
-    public InventoryResponse adjustStock(AdjustStockRequest req) {
+    public ApiResponse adjustStock(AdjustStockRequest req) {
+
         var product = productRepository.findById(req.getProductId())
                 .orElseThrow(() -> new IllegalArgumentException("Product not found"));
 
-        InventoryItem item = inventoryItemRepository.findByProductId(req.getProductId())
+        Branch branch = branchRepository.findById(req.getBranchId())
+                .orElseThrow(() -> new IllegalArgumentException("Branch not found"));
+
+        InventoryItem item = inventoryItemRepository.findByProductIdAndBranchId(
+                        req.getProductId(), req.getBranchId())
                 .orElseThrow(() -> new IllegalArgumentException("Inventory item not found"));
 
-        long newQty = item.getQuantityOnHand() + req.getQuantityDelta();
-        item.setQuantityOnHand(Math.max(0, newQty));
+        item.setQuantityOnHand(Math.max(0, item.getQuantityOnHand() + req.getQuantityDelta()));
         item.setLastUpdatedAt(LocalDateTime.now());
         item.setLastUpdatedBy(getCurrentUsername());
         inventoryItemRepository.save(item);
 
         stockTransactionRepository.save(StockTransaction.builder()
                 .productId(req.getProductId())
+                .branchId(req.getBranchId())
                 .type(StockTransaction.TransactionType.ADJUSTMENT)
                 .quantityDelta(req.getQuantityDelta())
                 .note(req.getReason())
@@ -93,83 +121,104 @@ public class InventoryService {
                 .build()
         );
 
-        return buildResponse(item);
+        return new ApiResponse("success", "Stock updated", buildResponse(item));
     }
 
     /** --------------------------------------------
-     *  GET INVENTORY
+     *  GET INVENTORY PER PRODUCT & BRANCH
      *  -------------------------------------------- */
-    public InventoryResponse getInventoryForProduct(UUID productId) {
-        return inventoryItemRepository.findByProductId(productId)
+
+    public List<InventoryResponse> getAllInventory() {
+        return inventoryItemRepository.findAll()
+                .stream()
                 .map(this::buildResponse)
-                .orElse(null);
+                .toList();
     }
 
-    /** --------------------------------------------
-     *  NEW — Optimistic-Lock Safe Stock Decrement
-     *  -------------------------------------------- */
-    @Transactional
-    public void decrementStock(UUID productId, int quantity, String reference) {
-        if (quantity <= 0) {
-            throw new IllegalArgumentException("Quantity must be > 0");
+    public List<InventoryResponse> getInventoryByBranch(UUID branchId) {
+        return inventoryItemRepository
+                    .findByBranchId(branchId)
+                    .stream()
+                    .map(this::buildResponse)
+                    .toList();
+    }
+
+    public ApiResponse getInventoryForBranchProduct(UUID productId, UUID branchId) {
+        Object res ;
+        if(branchId != null) {
+            res = inventoryItemRepository
+                    .findByProductIdAndBranchId(productId, branchId)
+                    .map(this::buildResponse)
+                    .orElse(null);
+        } else {
+            res = inventoryItemRepository
+                    .findByProductId(productId)
+                    .stream()
+                    .map(item -> buildResponse(item))
+                    .toList();
         }
 
+        return new ApiResponse("success", "Inventory result", res);
+    }
+
+    /** --------------------------------------------
+     *  DECREMENT STOCK (branch-aware + optimistic lock)
+     *  -------------------------------------------- */
+    @Transactional
+    public void decrementStock(UUID productId, UUID branchId, int quantity, String reference) {
+        if (quantity <= 0) throw new IllegalArgumentException("Quantity must be > 0");
+
         int attempts = 0;
+
         while (true) {
             try {
-                processStockDecrement(productId, quantity, reference);
-                return; // success
+                processStockDecrement(productId, branchId, quantity, reference);
+                return;
             } catch (OptimisticLockException e) {
                 attempts++;
                 if (attempts >= MAX_RETRIES) {
-                    throw new RuntimeException("Failed to decrement stock due to concurrent updates. Please retry.");
+                    throw new RuntimeException("Concurrent stock update conflict. Try again.");
                 }
             }
         }
     }
 
-    private void processStockDecrement(UUID productId, long quantity, String reference) {
-        productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+    private void processStockDecrement(UUID productId, UUID branchId, long qty, String reference) {
 
-        InventoryItem item = inventoryItemRepository.findByProductId(productId)
-                .orElseThrow(() -> new OutOfStockException("No inventory record found"));
+        InventoryItem item = inventoryItemRepository.findByProductIdAndBranchId(productId, branchId)
+                .orElseThrow(() -> new OutOfStockException("Inventory record not found"));
 
         long available = item.getQuantityOnHand() - item.getQuantityReserved();
-        if (available < quantity) {
-            throw new OutOfStockException("Insufficient stock. Available: " + available + ", required: " + quantity);
+        if (available < qty) {
+            throw new OutOfStockException("Insufficient stock in this branch");
         }
 
-        item.setQuantityOnHand(item.getQuantityOnHand() - quantity);
+        item.setQuantityOnHand(item.getQuantityOnHand() - qty);
         item.setLastUpdatedAt(LocalDateTime.now());
         item.setLastUpdatedBy(getCurrentUsername());
-
         inventoryItemRepository.save(item);
 
         stockTransactionRepository.save(StockTransaction.builder()
                 .productId(productId)
+                .branchId(branchId)
                 .type(StockTransaction.TransactionType.SALE)
-                .quantityDelta(-Math.abs(quantity))
+                .quantityDelta(-qty)
                 .reference(reference)
-                .note("Sale consumption")
+                .note("Sale decrement")
                 .timestamp(LocalDateTime.now())
                 .performedBy(getCurrentUsername())
                 .build()
         );
     }
 
-    /** --------------------------------------------
-     *  OPTIONAL: RESERVATION / RELEASE
-     *  -------------------------------------------- */
-
     @Transactional
-    public void reserveStock(UUID productId, int quantity, String reference) {
+    public void reserveStock(UUID productId, UUID branchId, int quantity, String reference) {
         if (quantity <= 0) throw new IllegalArgumentException("Quantity must be > 0");
 
         int attempts = 0;
         while (true) {
             try {
-                processReservation(productId, quantity, reference);
+                processReservation(productId, branchId, quantity, reference);
                 return;
             } catch (OptimisticLockException e) {
                 attempts++;
@@ -180,8 +229,8 @@ public class InventoryService {
         }
     }
 
-    private void processReservation(UUID productId, long quantity, String reference) {
-        InventoryItem item = inventoryItemRepository.findByProductId(productId)
+    private void processReservation(UUID productId, UUID branchId, long quantity, String reference) {
+        InventoryItem item = inventoryItemRepository.findByProductIdAndBranchId(productId, branchId)
                 .orElseThrow(() -> new IllegalArgumentException("Inventory item not found"));
 
         long available = item.getQuantityOnHand() - item.getQuantityReserved();
@@ -196,6 +245,7 @@ public class InventoryService {
 
         stockTransactionRepository.save(StockTransaction.builder()
                 .productId(productId)
+                .branchId(branchId)
                 .type(StockTransaction.TransactionType.RESERVATION)
                 .quantityDelta(quantity)
                 .reference(reference)
@@ -207,13 +257,17 @@ public class InventoryService {
     }
 
     @Transactional
-    public void releaseReservation(UUID productId, int quantity, String reference) {
+    public void releaseReservation(UUID productId, UUID branchId, int quantity, String reference) {
         if (quantity <= 0) throw new IllegalArgumentException("Quantity must be > 0");
 
-        InventoryItem item = inventoryItemRepository.findByProductId(productId)
+        InventoryItem item = inventoryItemRepository.findByProductIdAndBranchId(productId, branchId)
                 .orElseThrow(() -> new IllegalArgumentException("Inventory item not found"));
 
         long releaseQty = Math.min(quantity, item.getQuantityReserved());
+
+        if(((item.getQuantityReserved() - releaseQty) < 0) || (item.getQuantityReserved() == 0)) {
+            throw new IllegalArgumentException("You cannot release more than you have reserved, which is " + item.getQuantityReserved());
+        }
 
         item.setQuantityReserved(item.getQuantityReserved() - releaseQty);
         item.setLastUpdatedAt(LocalDateTime.now());
@@ -222,6 +276,7 @@ public class InventoryService {
 
         stockTransactionRepository.save(StockTransaction.builder()
                 .productId(productId)
+                        .branchId(branchId)
                 .type(StockTransaction.TransactionType.RELEASE)
                 .quantityDelta(-releaseQty)
                 .reference(reference)
@@ -235,19 +290,20 @@ public class InventoryService {
     /** --------------------------------------------
      *  Helpers
      *  -------------------------------------------- */
-
     private InventoryResponse buildResponse(InventoryItem item) {
         return InventoryResponse.builder()
                 .productId(item.getProduct().getId())
+                .productName(item.getProduct().getName())
+                .branchId(item.getBranch().getId())
+                .branchName(item.getBranch().getName())
                 .quantityOnHand(item.getQuantityOnHand())
                 .quantityReserved(item.getQuantityReserved())
-                .location(item.getLocation())
                 .lastUpdatedAt(item.getLastUpdatedAt() != null ? item.getLastUpdatedAt().toString() : null)
                 .build();
     }
 
     private String getCurrentUsername() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        return (auth != null && auth.getName() != null) ? auth.getName() : "SYSTEM";
+        return auth != null ? auth.getName() : "SYSTEM";
     }
 }

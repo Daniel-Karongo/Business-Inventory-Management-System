@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.communication.purchas
 
 import com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.model.PurchaseOrder;
 import com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.service.PurchaseOrderService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.UUID;
 
+@Tag(name = "Purchase Orders")
 @RestController
 @RequestMapping("/api/purchase-orders")
 @RequiredArgsConstructor

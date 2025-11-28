@@ -19,9 +19,6 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierImageAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
-import com.IntegrityTechnologies.business_manager.modules.supplier.dto.*;
-import com.IntegrityTechnologies.business_manager.modules.supplier.model.*;
-import com.IntegrityTechnologies.business_manager.modules.supplier.repository.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;

@@ -23,6 +23,9 @@ public class SaleLineItem {
 
     private String productName;
 
+    @Column(name = "branch_id", columnDefinition = "BINARY(16)", nullable = false)
+    private UUID branchId;
+
     private BigDecimal unitPrice;
 
     private Integer quantity;

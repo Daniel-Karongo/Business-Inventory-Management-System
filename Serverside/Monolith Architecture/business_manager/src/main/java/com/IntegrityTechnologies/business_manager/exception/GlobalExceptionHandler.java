@@ -4,9 +4,12 @@ import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.SignatureException;
+import jakarta.persistence.OptimisticLockException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -14,6 +17,7 @@ import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -167,6 +171,24 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(OutOfStockException.class)
     public ResponseEntity<Map<String, Object>> handleOutOfStock(OutOfStockException ex) {
         return buildResponse(ex.getMessage(), HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(AccountingException.class)
+    public ResponseEntity<Map<String, Object>> handleAccountingExceptions(AccountingException ex) {
+        return buildResponse(ex.getMessage(), HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler({
+            OptimisticLockException.class,
+            ObjectOptimisticLockingFailureException.class,
+            OptimisticLockingFailureException.class
+    })
+    public ApiResponse handleOptimisticLockConflict(Exception ex, WebRequest request) {
+        return new ApiResponse(
+                "error",
+                "Another user/process updated this record moments ago. Please retry.",
+                null
+        );
     }
 
     /* ====================== FALLBACK HANDLER ====================== */

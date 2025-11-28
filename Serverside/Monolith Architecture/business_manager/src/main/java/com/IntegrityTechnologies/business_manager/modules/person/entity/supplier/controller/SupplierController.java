@@ -5,8 +5,6 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierUpdateDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.*;
-import com.IntegrityTechnologies.business_manager.modules.supplier.dto.*;
-import com.IntegrityTechnologies.business_manager.modules.supplier.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierImageAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.service.SupplierImageService;

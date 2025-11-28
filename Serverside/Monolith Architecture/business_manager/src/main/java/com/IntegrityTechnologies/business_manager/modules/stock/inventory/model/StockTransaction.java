@@ -26,9 +26,15 @@ public class StockTransaction {
     @Column(name = "product_id", nullable = false)
     private UUID productId;
 
+    @Column(name = "branch_id", nullable = false)
+    private UUID branchId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TransactionType type;
+
+    @Column(name = "supplier_id")
+    private UUID supplierId;
 
     @Column(nullable = false)
     private Long quantityDelta; // positive for receipts, negative for consumption

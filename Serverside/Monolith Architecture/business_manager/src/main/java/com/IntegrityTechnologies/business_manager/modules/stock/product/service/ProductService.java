@@ -13,8 +13,6 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.dto.Prod
 import com.IntegrityTechnologies.business_manager.modules.stock.product.dto.ProductDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.dto.ProductUpdateDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.mapper.ProductMapper;
-import com.IntegrityTechnologies.business_manager.modules.product.model.*;
-import com.IntegrityTechnologies.business_manager.modules.product.repository.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.model.Product;
@@ -274,9 +272,6 @@ public class ProductService {
         }
         if (dto.getBuyingPrice() == null) {
             throw new IllegalArgumentException("Buying price is required.");
-        }
-        if (dto.getStockQuantity() == null || dto.getStockQuantity() < 0) {
-            throw new IllegalArgumentException("Stock quantity cannot be null or negative.");
         }
         if (dto.getCategoryId() == null) {
             throw new IllegalArgumentException("Category is required.");

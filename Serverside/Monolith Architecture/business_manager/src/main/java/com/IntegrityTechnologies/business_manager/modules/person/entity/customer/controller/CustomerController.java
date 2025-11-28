@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.custome
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerRequest;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerResponse;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service.CustomerService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.UUID;
 
+@Tag(name = "Customers")
 @RestController
 @RequestMapping("/api/customers")
 @RequiredArgsConstructor

@@ -11,7 +11,7 @@ import java.util.UUID;
 
 @Repository
 public interface RollcallRepository extends JpaRepository<Rollcall, UUID> {
-    List<Rollcall> findByUserIdAndTimestampBetween(UUID userId, LocalDateTime from, LocalDateTime to);
-    List<Rollcall> findByDepartmentIdAndTimestampBetween(UUID departmentId, LocalDateTime from, LocalDateTime to);
-    List<Rollcall> findByDepartmentIdAndTimestampBetweenAndStatus(UUID departmentId, LocalDateTime from, LocalDateTime to, RollcallStatus status);
+    List<Rollcall> findByUserIdAndTimestampBetweenOrderByTimestampDesc(UUID userId, LocalDateTime from, LocalDateTime to);
+    List<Rollcall> findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(UUID departmentId, LocalDateTime from, LocalDateTime to);
+    List<Rollcall> findByDepartmentIdAndTimestampBetweenAndStatusOrderByTimestampDesc(UUID departmentId, LocalDateTime from, LocalDateTime to, RollcallStatus status);
 }

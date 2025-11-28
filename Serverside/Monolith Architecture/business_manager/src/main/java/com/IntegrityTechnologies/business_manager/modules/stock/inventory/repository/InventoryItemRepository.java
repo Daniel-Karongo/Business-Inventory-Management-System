@@ -2,12 +2,16 @@ package com.IntegrityTechnologies.business_manager.modules.stock.inventory.repos
 
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryItem;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-@Repository
 public interface InventoryItemRepository extends JpaRepository<InventoryItem, UUID> {
-    Optional<InventoryItem> findByProductId(UUID productId);
+
+    Optional<InventoryItem> findByProductIdAndBranchId(UUID productId, UUID branchId);
+
+    List<InventoryItem> findByBranchId(UUID branchId);
+
+    List<InventoryItem> findByProductId(UUID productId);
 }

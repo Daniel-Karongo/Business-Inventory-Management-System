@@ -20,7 +20,6 @@ public class ProductUpdateDTO {
     private String barcode;
     private BigDecimal price;
     private BigDecimal buyingPrice;
-    private Integer stockQuantity;
     private Long categoryId;
     private List<UUID> supplierIds;
 }

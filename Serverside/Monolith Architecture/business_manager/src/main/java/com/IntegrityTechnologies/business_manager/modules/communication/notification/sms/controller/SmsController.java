@@ -4,6 +4,7 @@ import com.IntegrityTechnologies.business_manager.modules.communication.notifica
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.dto.SmsRequest;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.model.SmsMessage;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.service.SmsService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "Smss")
 @RestController
 @RequestMapping("/api/notification/sms")
 @RequiredArgsConstructor

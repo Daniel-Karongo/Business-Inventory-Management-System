@@ -24,7 +24,6 @@ public class ProductDTO {
     private String barcodeImagePath;
     private BigDecimal price;
     private BigDecimal buyingPrice;
-    private Integer stockQuantity;
     private List<String> imageUrls;
     private Long categoryId;
     private String categoryName;

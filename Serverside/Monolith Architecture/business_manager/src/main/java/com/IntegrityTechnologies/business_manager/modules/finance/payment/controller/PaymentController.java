@@ -4,6 +4,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.Pa
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentResponse;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.service.PaymentService;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@Tag(name = "Payments")
 @RestController
 @RequestMapping("/api/payments")
 @RequiredArgsConstructor

@@ -7,7 +7,7 @@ import java.util.UUID;
 @Data
 public class AdjustStockRequest {
     private UUID productId;
-    private Long quantityDelta; // positive or negative
+    private UUID branchId;
+    private Long quantityDelta;
     private String reason;
-    private String location;
 }

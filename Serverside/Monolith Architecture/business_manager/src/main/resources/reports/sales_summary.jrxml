@@ -6,7 +6,8 @@
               http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
               name="sales_summary"
               pageWidth="595" pageHeight="842" columnWidth="515"
-              leftMargin="40" rightMargin="40" topMargin="50" bottomMargin="50" uuid="a111">
+              leftMargin="40" rightMargin="40" topMargin="50" bottomMargin="50" uuid="550e8400-e29b-41d4-a716-446655440000
+">
     <parameter name="REPORT_TITLE" class="java.lang.String"/>
     <parameter name="FROM_DATE" class="java.lang.String"/>
     <parameter name="TO_DATE" class="java.lang.String"/>

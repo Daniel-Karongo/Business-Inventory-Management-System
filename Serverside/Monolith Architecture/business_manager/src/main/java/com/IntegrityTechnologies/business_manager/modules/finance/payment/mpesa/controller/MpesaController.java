@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.payment.mpesa
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.mpesa.model.MpesaTransaction;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.mpesa.repository.MpesaTransactionRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.mpesa.service.MpesaService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,6 +12,7 @@ import java.math.BigDecimal;
 import java.util.Map;
 import java.util.UUID;
 
+@Tag(name = "Mpesa")
 @RestController
 @RequestMapping("/api/payments/mpesa")
 @RequiredArgsConstructor

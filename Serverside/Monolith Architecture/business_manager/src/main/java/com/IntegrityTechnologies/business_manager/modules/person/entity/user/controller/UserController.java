@@ -5,7 +5,6 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.service.UserImageService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.service.UserService;
-import com.IntegrityTechnologies.business_manager.modules.user.model.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;

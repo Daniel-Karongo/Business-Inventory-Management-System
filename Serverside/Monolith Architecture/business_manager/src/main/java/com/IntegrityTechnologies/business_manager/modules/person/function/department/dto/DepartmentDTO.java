@@ -21,6 +21,7 @@ public class DepartmentDTO {
     private Set<DepartmentUserDTO> members;
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private boolean deleted = false;
+
     public static DepartmentDTO from(Department d) {
         DepartmentDTO dto = new DepartmentDTO();
         dto.setId(d.getId());
