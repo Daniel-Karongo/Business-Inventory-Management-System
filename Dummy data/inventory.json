@@ -1,0 +1,424 @@
+{
+  "items": [
+    {
+      "productId": "88acd47d-c24b-4f6c-a1cd-27219cdf3405",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        {
+          "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69",
+          "unitsSupplied": 30
+        },
+        {
+          "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d",
+          "unitsSupplied": 20
+        }
+      ],
+      "reference": "PO-2025-001",
+      "note": "Samsung Galaxy A15 supplied by Supplier 1 and Supplier 2 to Branch Main"
+    },
+    {
+      "productId": "88acd47d-c24b-4f6c-a1cd-27219cdf3405",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        {
+          "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869",
+          "unitsSupplied": 25
+        },
+        {
+          "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a",
+          "unitsSupplied": 15
+        }
+      ],
+      "reference": "PO-2025-002",
+      "note": "Samsung Galaxy A15 supplied by Supplier 3 and Supplier 4 to Branch One"
+    },
+    {
+      "productId": "f9d44c85-3bf3-4962-a23a-75f9748060a2",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        {
+          "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818",
+          "unitsSupplied": 40
+        }
+      ],
+      "reference": "PO-2025-003",
+      "note": "Tecno Spark 10 supplied by Supplier 5 to Branch Main"
+    },
+    {
+      "productId": "f9d44c85-3bf3-4962-a23a-75f9748060a2",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        {
+          "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69",
+          "unitsSupplied": 30
+        }
+      ],
+      "reference": "PO-2025-004",
+      "note": "Tecno Spark 10 supplied by Supplier 1 to Branch One"
+    },
+    {
+      "productId": "0f01961d-688a-4c14-8ab9-6980b19fe3f3",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        {
+          "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d",
+          "unitsSupplied": 35
+        }
+      ],
+      "reference": "PO-2025-005",
+      "note": "Infinix Hot 12 supplied by Supplier 2 to Branch Main"
+    },
+    {
+      "productId": "0f01961d-688a-4c14-8ab9-6980b19fe3f3",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        {
+          "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869",
+          "unitsSupplied": 25
+        }
+      ],
+      "reference": "PO-2025-006",
+      "note": "Infinix Hot 12 supplied by Supplier 3 to Branch One"
+    },
+    {
+      "productId": "980847b6-3e76-405e-9712-108dbdd28721",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 20 },
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 15 }
+      ],
+      "reference": "PO-2025-007",
+      "note": "HP EliteBook 840 G5 supplied by Supplier 1 and Supplier 4 to Branch Main"
+    },
+    {
+      "productId": "980847b6-3e76-405e-9712-108dbdd28721",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 25 },
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 10 }
+      ],
+      "reference": "PO-2025-008",
+      "note": "HP EliteBook 840 G5 supplied by Supplier 2 and Supplier 3 to Branch One"
+    },
+    {
+      "productId": "3b6d95e3-bc60-4b9e-9ea1-c9cf3d60cdce",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 30 },
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 20 }
+      ],
+      "reference": "PO-2025-009",
+      "note": "Lenovo ThinkPad T480 supplied by Supplier 5 and Supplier 1 to Branch Main"
+    },
+    {
+      "productId": "3b6d95e3-bc60-4b9e-9ea1-c9cf3d60cdce",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 15 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10 }
+      ],
+      "reference": "PO-2025-010",
+      "note": "Lenovo ThinkPad T480 supplied by Supplier 4 and Supplier 2 to Branch One"
+    },
+    {
+      "productId": "d2a6a972-d97e-4af9-8282-6cceb5e6ad0a",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 50 },
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 30 }
+      ],
+      "reference": "PO-2025-011",
+      "note": "Oraimo Fast Charger 18W supplied by Supplier 3 and Supplier 5 to Branch Main"
+    },
+    {
+      "productId": "d2a6a972-d97e-4af9-8282-6cceb5e6ad0a",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 25 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 20 }
+      ],
+      "reference": "PO-2025-012",
+      "note": "Oraimo Fast Charger 18W supplied by Supplier 1 and Supplier 2 to Branch One"
+    },
+    {
+      "productId": "c5d9c9f3-0163-483a-90ea-c406b10ed871",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 20 },
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 25 }
+      ],
+      "reference": "PO-2025-013",
+      "note": "JBL Tune 510BT supplied by Supplier 4 and Supplier 3 to Branch Main"
+    },
+    {
+      "productId": "c5d9c9f3-0163-483a-90ea-c406b10ed871",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 15 },
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 20 }
+      ],
+      "reference": "PO-2025-014",
+      "note": "JBL Tune 510BT supplied by Supplier 1 and Supplier 5 to Branch One"
+    },
+    {
+      "productId": "85f69e6b-8246-4c05-9d65-e7403646ab57",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 20 },
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 15 }
+      ],
+      "reference": "PO-2025-015",
+      "note": "Samsung 43-inch Smart TV supplied by Supplier 2 and Supplier 3 to Branch Main"
+    },
+    {
+      "productId": "85f69e6b-8246-4c05-9d65-e7403646ab57",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 15 },
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 10 }
+      ],
+      "reference": "PO-2025-016",
+      "note": "Samsung 43-inch Smart TV supplied by Supplier 4 and Supplier 1 to Branch One"
+    },
+    {
+      "productId": "f3da1f3e-2c93-4e16-944b-5d1aa9879135",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 25 },
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 15 }
+      ],
+      "reference": "PO-2025-017",
+      "note": "Hisense 32-inch Digital TV supplied by Supplier 5 and Supplier 3 to Branch Main"
+    },
+    {
+      "productId": "f3da1f3e-2c93-4e16-944b-5d1aa9879135",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 20 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10 }
+      ],
+      "reference": "PO-2025-018",
+      "note": "Hisense 32-inch Digital TV supplied by Supplier 1 and Supplier 2 to Branch One"
+    },
+    {
+      "productId": "e17b4567-089b-427e-aadd-f92bba5cdba3",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 15 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10 }
+      ],
+      "reference": "PO-2025-019",
+      "note": "Ramtons 90L Single Door Fridge supplied by Supplier 1 and Supplier 2 to Branch Main"
+    },
+    {
+      "productId": "e17b4567-089b-427e-aadd-f92bba5cdba3",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 12 },
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 8 }
+      ],
+      "reference": "PO-2025-020",
+      "note": "Ramtons 90L Single Door Fridge supplied by Supplier 3 and Supplier 4 to Branch One"
+    },
+    {
+      "productId": "32576b29-8d91-46c1-9ed7-bafbd68d1504",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 18 },
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 12 }
+      ],
+      "reference": "PO-2025-021",
+      "note": "Vanilla Microwave 20L supplied by Supplier 5 and Supplier 1 to Branch Main"
+    },
+    {
+      "productId": "32576b29-8d91-46c1-9ed7-bafbd68d1504",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10 },
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 8 }
+      ],
+      "reference": "PO-2025-022",
+      "note": "Vanilla Microwave 20L supplied by Supplier 2 and Supplier 3 to Branch One"
+    },
+    {
+      "productId": "f8c4b4a2-0be5-47a0-94bb-43321f1c0b72",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 25 },
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 15 }
+      ],
+      "reference": "PO-2025-023",
+      "note": "Ramtons Electric Kettle supplied by Supplier 4 and Supplier 5 to Branch Main"
+    },
+    {
+      "productId": "f8c4b4a2-0be5-47a0-94bb-43321f1c0b72",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 12 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10 }
+      ],
+      "reference": "PO-2025-024",
+      "note": "Ramtons Electric Kettle supplied by Supplier 1 and Supplier 2 to Branch One"
+    },
+    {
+      "productId": "73fab8fa-3efb-4d20-af0a-709f71bd2530",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 30 },
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 20 }
+      ],
+      "reference": "PO-2025-025",
+      "note": "Men's Hooded Sweatshirt supplied by Supplier 3 and Supplier 4 to Branch Main"
+    },
+    {
+      "productId": "73fab8fa-3efb-4d20-af0a-709f71bd2530",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 15 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10 }
+      ],
+      "reference": "PO-2025-026",
+      "note": "Men's Hooded Sweatshirt supplied by Supplier 1 and Supplier 2 to Branch One"
+    },
+    {
+      "productId": "b260d597-fda0-4f96-9c77-cc87f5a5cba4",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 40 },
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 25 }
+      ],
+      "reference": "PO-2025-027",
+      "note": "Men’s Leather Belt supplied by Supplier 5 and Supplier 3 to Branch Main"
+    },
+    {
+      "productId": "b260d597-fda0-4f96-9c77-cc87f5a5cba4",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 20 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 15 }
+      ],
+      "reference": "PO-2025-028",
+      "note": "Men’s Leather Belt supplied by Supplier 1 and Supplier 2 to Branch One"
+    },
+    {
+      "productId": "7d3272b4-e2eb-4f1a-9ec7-9610a7071270",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 18 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 12 }
+      ],
+      "reference": "PO-2025-029",
+      "note": "Women’s Handbag supplied by Supplier 4 and Supplier 2 to Branch Main"
+    },
+    {
+      "productId": "7d3272b4-e2eb-4f1a-9ec7-9610a7071270",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 10 },
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 8 }
+      ],
+      "reference": "PO-2025-030",
+      "note": "Women’s Handbag supplied by Supplier 1 and Supplier 5 to Branch One"
+    },
+    {
+      "productId": "dd52ac3c-b986-44b4-b8f2-7aab7a361e66",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 22 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 18 }
+      ],
+      "reference": "PO-2025-031",
+      "note": "Women’s Sneakers supplied by Supplier 3 and Supplier 2 to Branch Main"
+    },
+    {
+      "productId": "dd52ac3c-b986-44b4-b8f2-7aab7a361e66",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 15 },
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 10 }
+      ],
+      "reference": "PO-2025-032",
+      "note": "Women’s Sneakers supplied by Supplier 4 and Supplier 1 to Branch One"
+    },
+    {
+      "productId": "f8072277-acdd-4e0d-b747-ec744e6d61bc",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 28 },
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 20 }
+      ],
+      "reference": "PO-2025-033",
+      "note": "Oraimo Power Bank 20,000mAh supplied by Supplier 2 and Supplier 5 to Branch Main"
+    },
+    {
+      "productId": "f8072277-acdd-4e0d-b747-ec744e6d61bc",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 15 },
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 10 }
+      ],
+      "reference": "PO-2025-034",
+      "note": "Oraimo Power Bank 20,000mAh supplied by Supplier 3 and Supplier 1 to Branch One"
+    },
+    {
+      "productId": "74bee9a2-b819-4d13-bbc6-b55b4906a138",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 20 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 15 }
+      ],
+      "reference": "PO-2025-035",
+      "note": "Electric Blender 1.5L supplied by Supplier 4 and Supplier 2 to Branch Main"
+    },
+    {
+      "productId": "74bee9a2-b819-4d13-bbc6-b55b4906a138",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 12 },
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 10 }
+      ],
+      "reference": "PO-2025-036",
+      "note": "Electric Blender 1.5L supplied by Supplier 1 and Supplier 5 to Branch One"
+    },
+    {
+      "productId": "b76cf1d0-0732-4490-9522-1b57d573ab72",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 30 },
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 20 }
+      ],
+      "reference": "PO-2025-037",
+      "note": "Flash Drive 64GB supplied by Supplier 3 and Supplier 4 to Branch Main"
+    },
+    {
+      "productId": "b76cf1d0-0732-4490-9522-1b57d573ab72",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 15 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10 }
+      ],
+      "reference": "PO-2025-038",
+      "note": "Flash Drive 64GB supplied by Supplier 1 and Supplier 2 to Branch One"
+    },
+    {
+      "productId": "d8d2da08-78ac-4ea5-a27c-7bfbc8970630",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 22 },
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 18 }
+      ],
+      "reference": "PO-2025-039",
+      "note": "Bluetooth Portable Speaker supplied by Supplier 5 and Supplier 3 to Branch Main"
+    },
+    {
+      "productId": "d8d2da08-78ac-4ea5-a27c-7bfbc8970630",
+      "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+      "suppliers": [
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 15 },
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 12 }
+      ],
+      "reference": "PO-2025-040",
+      "note": "Bluetooth Portable Speaker supplied by Supplier 4 and Supplier 1 to Branch One"
+    }
+  ]
+}

@@ -16,12 +16,14 @@ import java.util.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString
 public class User {
 
     @Id
     @GeneratedValue
     @JdbcTypeCode(Types.BINARY)
     @Column(columnDefinition = "BINARY(16)")
+    @ToString.Exclude
     private UUID id;
 
     @Column(nullable = false, unique = true)

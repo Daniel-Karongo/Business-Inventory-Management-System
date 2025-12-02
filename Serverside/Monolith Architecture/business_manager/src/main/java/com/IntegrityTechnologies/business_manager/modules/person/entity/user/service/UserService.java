@@ -5,10 +5,16 @@ import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
 import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.exception.*;
-import com.IntegrityTechnologies.business_manager.modules.person.function.department.dto.DepartmentAssignmentDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.function.department.model.Department;
-import com.IntegrityTechnologies.business_manager.modules.person.function.department.repository.DepartmentRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.function.department.service.DepartmentService;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.dto.BranchHierarchyDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentPositionDTO;
+import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.service.BranchService;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentAssignmentDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.service.DepartmentService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.UserDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserAuditRepository;
@@ -17,13 +23,13 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.rep
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -31,10 +37,9 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.hibernate.query.sqm.tree.SqmNode.log;
-
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserService {
 
     private final UserRepository userRepository;
@@ -49,10 +54,14 @@ public class UserService {
     private final TransactionalFileManager transactionalFileManager;
     private final DepartmentRepository departmentRepository;
     private final DepartmentService departmentService;
+    private final BranchRepository branchRepository;
+    private final BranchService branchService;
 
     /* ====================== REGISTER USER ====================== */
     @Transactional
     public UserDTO registerUser(UserDTO dto, Authentication authentication) throws IOException {
+        System.out.println("Hello");
+        System.out.println(dto);
 
         String creatorUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails)
                 ? userDetails.getUsername()
@@ -107,7 +116,12 @@ public class UserService {
 
         user = userRepository.save(user);
 
-        updateUserDepartment(dto, user, authentication);
+        boolean assignedDefaults = applyDefaultBranchAndDepartmentIfMissing(dto, user);
+
+        if (!assignedDefaults) {
+            // Only apply admin assignments when defaults were NOT used
+            applyDepartmentAndBranchAssignments(dto, user, authentication);
+        }
 
         // 5️⃣ Create actual folder on disk
         Path baseUserUploadDir = Paths.get(fileStorageProperties.getUserUploadDir());
@@ -120,7 +134,7 @@ public class UserService {
 
 
         // 6️⃣ Upload images
-        uploadUserImages(dto.getIdImageFiles(), uploadFolder, user,
+        uploadUserImages(dto.getUserFiles(), uploadFolder, user,
                 creator != null ? creator.getId() : null,
                 creatorUsername);
 
@@ -220,7 +234,8 @@ public class UserService {
         // 1️⃣0️⃣ Save and audit
         user = userRepository.save(user);
 
-        updateUserDepartment(updatedData, user, authentication);
+        applyDepartmentAndBranchAssignments(updatedData, user, authentication);
+
         auditChanges(user, changes, updaterUsername);
 
         return mapToDTO(user, false);
@@ -229,7 +244,7 @@ public class UserService {
     @Transactional
     public ResponseEntity<?> updateUserImages(
             String identifier,
-            List<MultipartFile> newFiles,
+            List<FIleUploadDTO> newFiles,
             Authentication auth,
             Boolean deleteOldImages
     ) throws IOException {
@@ -639,19 +654,20 @@ public class UserService {
    SAVE NEW IMAGES
    ===================================================== */
     private void saveNewUserImages(User target,
-                                   List<MultipartFile> newFiles,
+                                   List<FIleUploadDTO> newFiles,
                                    Authentication auth) throws IOException {
 
-        List<String> uploadedUrls = userImageService.saveFiles(
+        Map<String, String> uploadedUrls = userImageService.saveFiles(
                 newFiles,
                 target.getUploadFolder(),
                 fileStorageProperties.getUserUploadDir()
         );
 
-        for (String url : uploadedUrls) {
+        for (String url : uploadedUrls.keySet()) {
             UserImage img = UserImage.builder()
                     .fileName(Paths.get(url).getFileName().toString())
                     .filePath(url)
+                    .fileDescription(uploadedUrls.get(url))
                     .user(target)
                     .uploadedAt(LocalDateTime.now())
                     .deleted(false)
@@ -725,75 +741,162 @@ public class UserService {
         }
     }
 
-    private void updateUserDepartment(UserDTO dto, User user, Authentication authentication) {
+    /**
+     * Apply default MAIN branch + GENERAL department if the user was created without assignments.
+     */
+    /**
+     * Applies MAIN + GENERAL ONLY if the DTO contains NO assignments.
+     */
+    private boolean applyDefaultBranchAndDepartmentIfMissing(UserDTO dto, User user) {
 
-        // Step 1 — Track requested positions per department
-        Map<UUID, Set<String>> departmentRolesMap = new HashMap<>();
+        boolean noAssignments =
+                dto.getDepartmentsAndPositions() == null ||
+                        dto.getDepartmentsAndPositions().isEmpty();
 
-        for (DepartmentAssignmentDTO assignment : dto.getDepartmentsAndPositions()) {
-            UUID deptId = assignment.getDepartmentId();
-            String position = assignment.getPosition().toLowerCase();
-
-            departmentRolesMap
-                    .computeIfAbsent(deptId, k -> new HashSet<>())
-                    .add(position);
+        if (!noAssignments) {
+            // Admin provided assignments → do NOT apply defaults
+            return false;
         }
 
-        // Step 2 — Validate: user cannot be both "head" and "member" in any department
+        // --- Load defaults ---
+        Branch main = branchRepository.findByBranchCode("MAIN")
+                .orElseThrow(() -> new RuntimeException("Default MAIN branch missing"));
+
+        Department general = departmentRepository.findByNameIgnoreCase("GENERAL")
+                .orElseThrow(() -> new RuntimeException("Default GENERAL department missing"));
+
+        // --- Link GENERAL to MAIN if needed ---
+        if (!main.getDepartments().contains(general)) {
+            main.getDepartments().add(general);
+            branchRepository.save(main);
+        }
+
+        // --- Assign user to MAIN branch ---
+        if (!main.getUsers().contains(user)) {
+            main.getUsers().add(user);
+            branchRepository.save(main);
+        }
+
+        // --- Assign user to GENERAL department (as MEMBER) ---
+        if (!general.getMembers().contains(user)) {
+            general.addMember(user);
+            departmentRepository.save(general);
+        }
+
+        log.info("User '{}' automatically assigned to MAIN → GENERAL", user.getUsername());
+        return true;  // <--- important
+    }
+
+    private void applyDepartmentAndBranchAssignments(UserDTO dto, User user, Authentication authentication) {
+
+        if (dto.getDepartmentsAndPositions() == null || dto.getDepartmentsAndPositions().isEmpty()) {
+            return;
+        }
+
+        // 1️⃣ Validate head/member conflicts per department
+        Map<UUID, Set<String>> departmentRolesMap = new HashMap<>();
+
+        for (DepartmentAssignmentDTO a : dto.getDepartmentsAndPositions()) {
+            departmentRolesMap
+                    .computeIfAbsent(a.getDepartmentId(), k -> new HashSet<>())
+                    .add(a.getPosition().toLowerCase());
+        }
+
         for (Map.Entry<UUID, Set<String>> entry : departmentRolesMap.entrySet()) {
             Set<String> roles = entry.getValue();
             if (roles.contains("head") && roles.contains("member")) {
-                Department d = departmentRepository.findById(entry.getKey())
-                        .orElse(null);
-
-                String deptName = (d != null) ? d.getName() : entry.getKey().toString();
-
-                throw new IllegalArgumentException(
-                        "User cannot be both head and member in department: " + deptName
-                );
+                Department d = departmentRepository.findById(entry.getKey()).orElse(null);
+                String name = d != null ? d.getName() : entry.getKey().toString();
+                throw new IllegalArgumentException("User cannot be both head and member in department: " + name);
             }
         }
 
-        // Step 3 — Proceed with normal assignment after validation passes
+        // 2️⃣ Process each assignment
         for (DepartmentAssignmentDTO assignment : dto.getDepartmentsAndPositions()) {
 
-            Department d = departmentRepository.findByIdAndDeletedFalse(assignment.getDepartmentId())
-                    .orElseThrow(() -> new EntityNotFoundException("Department not found"));
+            UUID branchId = assignment.getBranchId();
+            UUID deptId = assignment.getDepartmentId();
 
+            // 2.1 Validate branch exists
+            Branch branch = branchRepository.findByIdAndDeletedFalse(branchId)
+                    .orElseThrow(() ->
+                            new EntityNotFoundException("Branch not found: " + branchId));
+
+            // 2.2 Validate department exists
+            Department department = departmentRepository.findByIdAndDeletedFalse(deptId)
+                    .orElseThrow(() ->
+                            new EntityNotFoundException("Department not found: " + deptId));
+
+            // 2.3 Validate that department belongs to branch
+            boolean valid = branchRepository.branchContainsDepartment(branchId, deptId);
+            if (!valid) {
+                throw new IllegalArgumentException(
+                        "Department '" + department.getName() + "' does NOT belong to branch '" + branch.getName() + "'"
+                );
+            }
+
+            // 3️⃣ Ensure user is added to branch if not already there
+            if (!branch.getUsers().contains(user)) {
+                Set<User> oldUsers = branch.getUsers();
+                branch.getUsers().add(user);
+                branchRepository.save(branch);
+
+                branchService.recordBranchAudit(
+                        branch,
+                        "ADD_USER",
+                        "users",
+                        null,
+                        user.getUsername(),
+                        authentication,
+                        "User added due to department assignment"
+                );
+            }
+
+            // 4️⃣ Assign department role
             String position = assignment.getPosition().toLowerCase();
 
             switch (position) {
                 case "member" -> {
-                    d.addMember(user);
+                    department.addMember(user);
                     departmentService.logAudit(
-                            d, "ADD_MEMBER", null, user.getUsername(), authentication,
+                            department,
+                            "ADD_MEMBER",
+                            null,
+                            user.getUsername(),
+                            authentication,
                             "User added as member"
                     );
                 }
 
                 case "head" -> {
-                    d.addHead(user);
+                    department.addHead(user);
 
-                    // Auto-upgrade EMPLOYEE → SUPERVISOR if assigned as head
+                    // Auto promote EMPLOYEE → SUPERVISOR
                     if (user.getRole() == Role.EMPLOYEE) {
                         user.setRole(Role.SUPERVISOR);
                         userRepository.save(user);
                     }
 
                     departmentService.logAudit(
-                            d, "ADD_HEAD", null, user.getUsername(), authentication,
-                            "User added as head"
+                            department,
+                            "ADD_HEAD",
+                            null,
+                            user.getUsername(),
+                            authentication,
+                            "User added as department head"
                     );
                 }
 
                 default -> throw new IllegalArgumentException(
-                        "Invalid department position: " + position
+                        "Invalid position: " + position + " (must be 'head' or 'member')"
                 );
             }
+
+            departmentRepository.save(department);
         }
     }
 
-    private void uploadUserImages(List<MultipartFile> files, String uploadFolder, User user,
+    private void uploadUserImages(List<FIleUploadDTO> files, String uploadFolder, User user,
                                   UUID creatorId, String creatorUsername) throws IOException {
         if (files == null || files.isEmpty()) return;
 
@@ -805,9 +908,9 @@ public class UserService {
         transactionalFileManager.track(userUploadDir);
 
         // Save files via UserImageService (returns secure API paths)
-        List<String> apiUrls = userImageService.saveFiles(files, uploadFolder, fileStorageProperties.getUserUploadDir());
+        Map<String, String> apiUrls = userImageService.saveFiles(files, uploadFolder, fileStorageProperties.getUserUploadDir());
 
-        for (String apiUrl : apiUrls) {
+        for (String apiUrl : apiUrls.keySet()) {
             // Extract the filename from API URL
             String fileName = Paths.get(apiUrl).getFileName().toString();
 
@@ -819,6 +922,7 @@ public class UserService {
             UserImage image = UserImage.builder()
                     .fileName(fileName)
                     .filePath(apiUrl)       // ✅ store API URL, not disk path
+                    .fileDescription(apiUrls.get(apiUrl))
                     .user(user)
                     .uploadedAt(LocalDateTime.now())
                     .deleted(false)
@@ -927,7 +1031,8 @@ public class UserService {
     }
 
     private UserDTO mapToDTO(User user, Boolean deleted) {
-        return UserDTO.builder()
+
+        UserDTO dto = UserDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
                 .emailAddresses(user.getEmailAddresses())
@@ -946,13 +1051,43 @@ public class UserService {
                 .idImageUrls(user.getImages() != null
                         ? user.getImages().stream()
                         .filter(img -> {
-                            if (deleted == null) return true;               // return all
-                            if (deleted) return Boolean.TRUE.equals(img.getDeleted()); // only deleted
-                            return !Boolean.TRUE.equals(img.getDeleted());  // only active
+                            if (deleted == null) return true;
+                            if (deleted) return Boolean.TRUE.equals(img.getDeleted());
+                            return !Boolean.TRUE.equals(img.getDeleted());
                         })
                         .map(UserImage::getFilePath)
                         .toList()
                         : List.of())
                 .build();
+
+        // --- Build branch hierarchy ---
+        List<Branch> branches = branchRepository.findBranchesByUserId(user.getId());
+        List<BranchHierarchyDTO> branchHierarchy = branches.stream().map(branch -> {
+            List<DepartmentPositionDTO> deptPositions = new ArrayList<>();
+
+            for (Department dept : branch.getDepartments()) {
+                String position = null;
+                if (dept.getHeads().contains(user)) position = "head";
+                else if (dept.getMembers().contains(user)) position = "member";
+                else continue; // skip if user is not in this department
+
+                DepartmentPositionDTO deptDto = DepartmentPositionDTO.builder()
+                        .departmentId(dept.getId())
+                        .departmentName(dept.getName())
+                        .position(position)
+                        .build();
+                deptPositions.add(deptDto);
+            }
+
+            return BranchHierarchyDTO.builder()
+                    .branchId(branch.getId())
+                    .branchName(branch.getName())
+                    .departments(deptPositions)
+                    .build();
+        }).toList();
+
+        dto.setBranchHierarchy(branchHierarchy);
+
+        return dto;
     }
 }

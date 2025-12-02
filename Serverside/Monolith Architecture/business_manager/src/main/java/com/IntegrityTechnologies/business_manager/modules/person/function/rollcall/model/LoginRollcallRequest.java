@@ -7,4 +7,5 @@ import java.util.UUID;
 public class LoginRollcallRequest {
     private UUID userId;
     private UUID departmentId;
+    private UUID branchId;
 }

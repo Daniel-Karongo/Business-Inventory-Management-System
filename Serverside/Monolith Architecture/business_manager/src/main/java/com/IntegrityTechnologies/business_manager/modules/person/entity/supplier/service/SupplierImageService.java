@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.service;
 
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
+import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.exception.ImageNotFoundException;
@@ -52,7 +53,7 @@ public class SupplierImageService {
     private final UserRepository userRepository;
 
     @Transactional
-    public SupplierDTO updateSupplierImages(UUID id, Set<MultipartFile> newImages, String updaterUsername) throws IOException {
+    public SupplierDTO updateSupplierImages(UUID id, List<FIleUploadDTO> newImages, String updaterUsername) throws IOException {
         Supplier existing = supplierService.getSupplier(id);
 
         if (newImages != null && !newImages.isEmpty()) {

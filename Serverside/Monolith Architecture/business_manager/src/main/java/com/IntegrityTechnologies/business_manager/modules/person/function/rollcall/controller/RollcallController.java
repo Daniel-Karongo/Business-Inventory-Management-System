@@ -32,17 +32,17 @@ public class RollcallController {
 
     // Biometric rollcall (kiosk or mobile) - raw template bytes expected as base64
     @PostMapping("/biometric")
-    public ResponseEntity<RollcallDTO> biometricRollcall(@RequestBody BiometricRollcallRequest req, Authentication auth) {
+    public ResponseEntity<RollcallDTO> biometricRollcall(@RequestBody BiometricRollcallRequest req) {
         // ensure user or kiosk has rights to record
         byte[] template = Base64.getDecoder().decode(req.getTemplateBase64());
-        RollcallDTO r = rollcallService.recordBiometricRollcall(req.getUserId(), req.getDepartmentId(), req.getType(), template);
+        RollcallDTO r = rollcallService.recordBiometricRollcall(req.getUserId(), req.getDepartmentId(), req.getBranchId(), req.getType(), template);
         return ResponseEntity.ok(r);
     }
 
     // Login-based rollcall (user logs in)
     @PostMapping("/login")
     public ResponseEntity<RollcallDTO> loginRollcall(@RequestBody LoginRollcallRequest req) {
-        RollcallDTO r = rollcallService.recordLoginRollcall(req.getUserId(), req.getDepartmentId());
+        RollcallDTO r = rollcallService.recordLoginRollcall(req.getUserId(), req.getDepartmentId(), req.getBranchId());
         return ResponseEntity.ok(r);
     }
 
@@ -54,6 +54,17 @@ public class RollcallController {
         LocalDateTime f = from == null ? LocalDateTime.now().minusMonths(1) : from.atStartOfDay();
         LocalDateTime t = to == null ? LocalDateTime.now() : to.atTime(LocalTime.MAX);
         return ResponseEntity.ok(rollcallService.getRollcallsForUser(userId, f, t));
+    }
+
+    @GetMapping("/branch/{branchId}")
+    public ResponseEntity<List<RollcallDTO>> getBranchRollcalls(
+            @PathVariable UUID branchId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
+    ) {
+        LocalDateTime f = from == null ? LocalDateTime.now().minusMonths(1) : from.atStartOfDay();
+        LocalDateTime t = to == null ? LocalDateTime.now() : to.atTime(LocalTime.MAX);
+        return ResponseEntity.ok(rollcallService.getRollcallsForBranch(branchId, f, t));
     }
 
     @GetMapping("/department/{deptId}")

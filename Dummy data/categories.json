@@ -1,0 +1,52 @@
+[
+  {
+    "name": "Electronics",
+    "description": "All electronic gadgets and devices",
+    "parentId": null
+  },
+  {
+    "name": "Smartphones",
+    "description": "All kinds of smartphones",
+    "parentId": 1
+  },
+  {
+    "name": "Laptops",
+    "description": "Portable computers",
+    "parentId": 1
+  },
+  {
+    "name": "Accessories",
+    "description": "Electronic accessories like chargers, cables, and headphones",
+    "parentId": 1
+  },
+  {
+    "name": "Home Appliances",
+    "description": "Appliances for home use",
+    "parentId": null
+  },
+  {
+    "name": "Refrigerators",
+    "description": "All types of refrigerators",
+    "parentId": 5
+  },
+  {
+    "name": "Microwaves",
+    "description": "Microwave ovens and convection ovens",
+    "parentId": 5
+  },
+  {
+    "name": "Fashion",
+    "description": "Clothing, footwear, and accessories",
+    "parentId": null
+  },
+  {
+    "name": "Men",
+    "description": "Men's fashion",
+    "parentId": 8
+  },
+  {
+    "name": "Women",
+    "description": "Women's fashion",
+    "parentId": 8
+  }
+]

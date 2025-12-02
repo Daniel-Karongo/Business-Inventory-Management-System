@@ -1,46 +1,63 @@
 package com.IntegrityTechnologies.business_manager.modules.person.function.auth.util;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
 @Component
+@RequiredArgsConstructor
 public class JwtUtil {
 
-    private static final String SECRET_KEY = "AReallyLongSecretKeyForJWTThatShouldBeAtLeast32Characters";
+    @Value("${jwt.secret}")
+    private String secretKey;
 
-    public String generateToken(String username) {
+    @Value("${jwt.expiration}")
+    private long jwtExpirationMillis;
+
+    public String generateToken(UUID userId, String username, String role) {
         return Jwts.builder()
+                .setClaims(Map.of(
+                        "userId", userId.toString(),
+                        "role", role
+                ))
                 .setSubject(username)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // 10 hours
+                .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMillis))
                 .signWith(getSignKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
     public boolean validateToken(String token, String username) {
-        String tokenUsername = extractUsername(token);
-        return (username.equals(tokenUsername) && !isTokenExpired(token));
+        return extractUsername(token).equals(username) && !isTokenExpired(token);
     }
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
+    public UUID extractUserId(String token) {
+        return UUID.fromString(extractAllClaims(token).get("userId", String.class));
+    }
+
+    public String extractUserRole(String token) {
+        return extractAllClaims(token).get("role", String.class);
+    }
+
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
 
-    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = extractAllClaims(token);
-        return claimsResolver.apply(claims);
+    public <T> T extractClaim(String token, Function<Claims, T> resolver) {
+        return resolver.apply(extractAllClaims(token));
     }
 
     private Claims extractAllClaims(String token) {
@@ -56,7 +73,7 @@ public class JwtUtil {
     }
 
     private Key getSignKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
-        return Keys.hmacShaKeyFor(keyBytes);
+        byte[] decodedKey = Decoders.BASE64.decode(secretKey);
+        return Keys.hmacShaKeyFor(decodedKey);
     }
 }

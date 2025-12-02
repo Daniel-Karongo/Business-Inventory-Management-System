@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.service;
 
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
+import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.exception.CategoryNotFoundException;
@@ -230,7 +231,7 @@ public class SupplierService {
         }
 
         // 8️⃣ Handle images
-        Set<MultipartFile> images = dto.getImages();
+        List<FIleUploadDTO> images = dto.getSupplierFiles();
         if (images != null && !images.isEmpty()) {
             Set<SupplierImage> imagesToSave = supplierFileStorageService.storeImages(supplier, images);
             supplierImageRepository.saveAll(imagesToSave);

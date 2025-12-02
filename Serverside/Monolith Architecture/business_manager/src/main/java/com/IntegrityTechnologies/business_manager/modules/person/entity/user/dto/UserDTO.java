@@ -1,13 +1,14 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto;
 
-import com.IntegrityTechnologies.business_manager.modules.person.function.department.dto.DepartmentMinimalDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.function.department.dto.DepartmentAssignmentDTO;
+import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.dto.BranchHierarchyDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentMinimalDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentAssignmentDTO;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
-import org.springframework.web.multipart.MultipartFile;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.LocalDateTime;
@@ -32,6 +33,8 @@ public class UserDTO {
     @NotBlank
     private String role;
 
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private List<BranchHierarchyDTO> branchHierarchy;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private List<DepartmentAssignmentDTO> departmentsAndPositions;
 
@@ -55,7 +58,7 @@ public class UserDTO {
 
     @Schema(description = "List of ID images (upload only)", type = "array")
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private List<MultipartFile> idImageFiles;
+    private List<FIleUploadDTO> userFiles;
 
     @Schema(description = "List of stored ID image URLs (response only)")
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)

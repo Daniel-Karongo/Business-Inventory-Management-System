@@ -24,6 +24,7 @@ public class RollcallAudit {
     private UUID rollcallId;
     private UUID userId;
     private UUID departmentId;
+    private UUID branchId;
     private String action; // e.g. RECORD, MODIFY, AUTO_ABSENT_MARK
     private String reason;
     private LocalDateTime timestamp;

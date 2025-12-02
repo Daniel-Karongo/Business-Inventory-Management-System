@@ -9,6 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Tag(name = "Auth")
 @RestController
 @RequestMapping("/api/auth")
@@ -24,6 +27,15 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/login/bulk")
+    public ResponseEntity<List<AuthResponse>> bulkLogin(@RequestBody List<AuthRequest> requests) {
+        List<AuthResponse> responses = new ArrayList<>();
+        for(AuthRequest request: requests) {
+            responses.add(authService.login(request));
+        }
+        return ResponseEntity.ok(responses);
     }
 
     @PostMapping("/logout")

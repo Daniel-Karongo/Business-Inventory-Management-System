@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.controller;
 
+import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.common.PageWrapper;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierCreateDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierDTO;
@@ -98,7 +99,7 @@ public class SupplierController {
     @PatchMapping(value="/{id}/images")
     public ResponseEntity<SupplierDTO> updateSupplierImages (
             @PathVariable UUID id,
-            @RequestParam("newImages") @Valid Set<MultipartFile> newImages,
+            @RequestParam("newImages") @Valid List<FIleUploadDTO> newImages,
             Authentication authentication
     ) throws IOException {
         String updaterUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails)

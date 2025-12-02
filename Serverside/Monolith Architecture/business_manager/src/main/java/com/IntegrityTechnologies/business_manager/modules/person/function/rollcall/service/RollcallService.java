@@ -5,27 +5,27 @@ import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundExcept
 import com.IntegrityTechnologies.business_manager.modules.person.function.biometric.model.BiometricRecord;
 import com.IntegrityTechnologies.business_manager.modules.person.function.biometric.model.BiometricType;
 import com.IntegrityTechnologies.business_manager.modules.person.function.biometric.service.BiometricService;
-import com.IntegrityTechnologies.business_manager.modules.person.function.department.model.Department;
-import com.IntegrityTechnologies.business_manager.modules.person.function.department.repository.DepartmentRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.service.NotificationService;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.dto.RollcallDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.RollcallAudit;
-import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.RollcallMethod;
-import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.RollcallStatus;
+import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.RollcallAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.RollcallRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.Rollcall;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -38,11 +38,25 @@ public class RollcallService {
     private final UserRepository userRepository;
     private final BiometricService biometricService;
     private final NotificationService notificationService; // interface to send emails / push
+    private final BranchRepository branchRepository;
+    private final UserSessionRepository userSessionRepository;
 
     @Transactional
-    public RollcallDTO recordBiometricRollcall(UUID userId, UUID departmentId, BiometricType type, byte[] rawTemplate) {
-        User user = userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("User not found"));
-        Department dept = departmentRepository.findById(departmentId).orElseThrow(() -> new EntityNotFoundException("Department not found"));
+    public RollcallDTO recordBiometricRollcall(UUID userId, UUID departmentId, UUID branchId, BiometricType type, byte[] rawTemplate) {
+        User user = userRepository.findByIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        Department dept = null;
+        if (departmentId != null) {
+            dept = departmentRepository.findByIdAndDeletedFalse(departmentId)
+                    .orElseThrow(() -> new EntityNotFoundException("Department not found"));
+        }
+
+        Branch branch = null;
+        if (branchId != null) {
+            branch = branchRepository.findByIdAndDeletedFalse(branchId)
+                    .orElseThrow(() -> new EntityNotFoundException("Branch not found"));
+        }
 
         Optional<BiometricRecord> matched = biometricService.verify(userId, type, rawTemplate);
 
@@ -57,6 +71,7 @@ public class RollcallService {
                 rollcallAuditRepository.save(RollcallAudit.builder()
                         .userId(userId)
                         .departmentId(departmentId)
+                        .branchId(branchId)
                         .action("BIOMETRIC_VERIFY_FAILED")
                         .reason("Biometric did not match")
                         .performedBy("SYSTEM")
@@ -72,6 +87,7 @@ public class RollcallService {
         Rollcall r = Rollcall.builder()
                 .user(user)
                 .department(dept)
+                .branch(branch)
                 .timestamp(LocalDateTime.now())
                 .status(status)
                 .method(RollcallMethod.BIOMETRIC)
@@ -85,6 +101,7 @@ public class RollcallService {
                 .rollcallId(saved.getId())
                 .userId(user.getId())
                 .departmentId(dept.getId())
+                .branchId(branch.getId())
                 .action("RECORD")
                 .reason("Biometric rollcall recorded: " + status)
                 .performedBy("SYSTEM")
@@ -95,45 +112,103 @@ public class RollcallService {
     }
 
     @Transactional
-    public RollcallDTO recordLoginRollcall(UUID userId, UUID departmentId) {
-        User user = userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("User not found"));
-        Department dept = departmentRepository.findById(departmentId).orElseThrow(() -> new EntityNotFoundException("Department not found"));
+    public RollcallDTO recordLoginRollcall(UUID userId, UUID departmentId, UUID branchId) {
+
+        User user = userRepository.findByIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        Department dept = departmentId == null ? null :
+                departmentRepository.findByIdAndDeletedFalse(departmentId)
+                        .orElseThrow(() -> new EntityNotFoundException("Department not found"));
+
+        Branch branch = branchId == null ? null :
+                branchRepository.findByIdAndDeletedFalse(branchId)
+                        .orElseThrow(() -> new EntityNotFoundException("Branch not found"));
 
         RollcallStatus status = computeStatusForDepartment(dept, LocalDateTime.now());
+        Rollcall saved = rollcallRepository.save(
+                Rollcall.builder()
+                        .user(user)
+                        .department(dept)
+                        .branch(branch)
+                        .timestamp(LocalDateTime.now())
+                        .status(status)
+                        .method(RollcallMethod.LOGIN)
+                        .performedBy("SYSTEM")
+                        .build()
+        );
+        return RollcallDTO.from(saved);
+    }
 
-        Rollcall r = Rollcall.builder()
-                .user(user)
-                .department(dept)
-                .timestamp(LocalDateTime.now())
-                .status(status)
-                .method(RollcallMethod.LOGIN)
-                .performedBy("SYSTEM")
-                .build();
+    @Transactional
+    public RollcallDTO recordLogoutRollcall(UUID userId, UUID departmentId, UUID branchId) {
 
-        Rollcall saved = rollcallRepository.save(r);
+        User user = userRepository.findByIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-        rollcallAuditRepository.save(RollcallAudit.builder()
-                .rollcallId(saved.getId())
-                .userId(user.getId())
-                .departmentId(dept.getId())
-                .action("RECORD")
-                .reason("Login rollcall recorded: " + status)
-                .performedBy("SYSTEM")
-                .timestamp(LocalDateTime.now())
-                .build());
+        Department dept = departmentId == null ? null :
+                departmentRepository.findByIdAndDeletedFalse(departmentId)
+                        .orElseThrow(() -> new EntityNotFoundException("Department not found"));
+
+        Branch branch = branchId == null ? null :
+                branchRepository.findByIdAndDeletedFalse(branchId)
+                        .orElseThrow(() -> new EntityNotFoundException("Branch not found"));
+
+        Rollcall saved = rollcallRepository.save(
+                Rollcall.builder()
+                        .user(user)
+                        .department(dept)
+                        .branch(branch)
+                        .timestamp(LocalDateTime.now())
+                        .status(RollcallStatus.PRESENT)
+                        .method(RollcallMethod.LOGOUT)
+                        .performedBy("SYSTEM")
+                        .build()
+        );
 
         return RollcallDTO.from(saved);
     }
 
     private RollcallStatus computeStatusForDepartment(Department dept, LocalDateTime now) {
-        if (dept == null || dept.getRollcallStartTime() == null) return RollcallStatus.PRESENT;
+        if (dept == null || dept.getRollcallStartTime() == null)
+            return RollcallStatus.PRESENT;
 
-        LocalTime start = dept.getRollcallStartTime();
+        LocalDateTime start = now.toLocalDate().atTime(dept.getRollcallStartTime());
         int grace = dept.getGracePeriodMinutes() == null ? 15 : dept.getGracePeriodMinutes();
 
-        LocalDateTime startDateTime = LocalDateTime.of(now.toLocalDate(), start);
-        if (now.isBefore(startDateTime.plusMinutes(grace))) return RollcallStatus.PRESENT;
-        return RollcallStatus.LATE;
+        return now.isBefore(start.plusMinutes(grace)) ?
+                RollcallStatus.PRESENT : RollcallStatus.LATE;
+    }
+
+    @Scheduled(cron = "0 */10 * * * *")
+    @Transactional
+    public void autoLogoutMissingUsers() {
+        LocalDateTime now = LocalDateTime.now();
+
+        List<UserSession> sessions = userSessionRepository.findAllByLogoutTimeIsNull();
+
+        for (UserSession s : sessions) {
+            if (s.getLoginTime().plusHours(12).isBefore(now)) {
+
+                s.setLogoutTime(now);
+                s.setAutoLoggedOut(true);
+                userSessionRepository.save(s);
+
+                UUID userId = s.getUserId();
+
+                Set<Department> deps = departmentRepository.findDepartmentsByUserId(userId);
+
+                if (deps.isEmpty()) {
+                    recordLogoutRollcall(userId, null, null);
+                } else {
+                    for (Department d : deps) {
+                        Branch b = branchRepository.findBranchForUserAndDepartment(userId, d.getId());
+                        UUID branchId = b == null ? null : b.getId();
+                        recordLogoutRollcall(userId, d.getId(), branchId);
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -158,7 +233,8 @@ public class RollcallService {
                 LocalDateTime dayEnd = dayStart.plusDays(1);
                 boolean has = !rollcallRepository.findByUserIdAndTimestampBetweenOrderByTimestampDesc(user.getId(), dayStart, dayEnd).isEmpty();
                 if (!has) {
-                    Rollcall absent = Rollcall.builder()
+                    for(Branch branch: branchRepository.findBranchesByUserId(user.getId())) {
+                        Rollcall absent = Rollcall.builder()
                             .user(user)
                             .department(d)
                             .timestamp(cutoff)
@@ -166,23 +242,26 @@ public class RollcallService {
                             .method(null)
                             .performedBy("system")
                             .build();
-                    Rollcall saved = rollcallRepository.save(absent);
-                    rollcallAuditRepository.save(RollcallAudit.builder()
-                            .rollcallId(saved.getId())
-                            .userId(user.getId())
-                            .departmentId(d.getId())
-                            .action("AUTO_ABSENT")
-                            .reason("No rollcall by cutoff")
-                            .performedBy("system")
-                            .timestamp(LocalDateTime.now())
-                            .build());
-
-                    // send notification to heads
-                    notificationService.notifyAbsent(d, user, saved);
+                        Rollcall saved = rollcallRepository.save(absent);
+                        rollcallAuditRepository.save(RollcallAudit.builder()
+                                .rollcallId(saved.getId())
+                                .userId(user.getId())
+                                .departmentId(d.getId())
+                                .branchId(branch.getId())
+                                .action("AUTO_ABSENT")
+                                .reason("No rollcall by cutoff")
+                                .performedBy("system")
+                                .timestamp(LocalDateTime.now())
+                                .build());
+                        // send notification to heads
+                        notificationService.notifyAbsent(d, user, saved);
+                    }
                 }
             }
         }
     }
+
+
 
     // query methods
     public List<RollcallDTO> getRollcallsForUser(UUID userId, LocalDateTime from, LocalDateTime to) {
@@ -192,6 +271,11 @@ public class RollcallService {
 
     public List<RollcallDTO> getRollcallsForDepartment(UUID deptId, LocalDateTime from, LocalDateTime to) {
         List<Rollcall> rollcalls = rollcallRepository.findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(deptId, from, to);
+        return rollcalls.stream().map(rollcall -> RollcallDTO.from(rollcall)).toList();
+    }
+
+    public List<RollcallDTO> getRollcallsForBranch(UUID branchId, LocalDateTime from, LocalDateTime to) {
+        List<Rollcall> rollcalls = rollcallRepository.findByBranchIdAndTimestampBetweenOrderByTimestampDesc(branchId, from, to);
         return rollcalls.stream().map(rollcall -> RollcallDTO.from(rollcall)).toList();
     }
 }

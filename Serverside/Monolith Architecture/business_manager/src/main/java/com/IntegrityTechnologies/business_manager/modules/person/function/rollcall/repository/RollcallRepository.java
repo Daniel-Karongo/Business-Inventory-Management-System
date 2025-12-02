@@ -14,4 +14,6 @@ public interface RollcallRepository extends JpaRepository<Rollcall, UUID> {
     List<Rollcall> findByUserIdAndTimestampBetweenOrderByTimestampDesc(UUID userId, LocalDateTime from, LocalDateTime to);
     List<Rollcall> findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(UUID departmentId, LocalDateTime from, LocalDateTime to);
     List<Rollcall> findByDepartmentIdAndTimestampBetweenAndStatusOrderByTimestampDesc(UUID departmentId, LocalDateTime from, LocalDateTime to, RollcallStatus status);
+    List<Rollcall> findByBranchIdAndTimestampBetweenOrderByTimestampDesc(UUID branchId, LocalDateTime from, LocalDateTime to);
+    List<Rollcall> findByBranchIdAndTimestampBetweenAndStatusOrderByTimestampDesc(UUID branchId, LocalDateTime from, LocalDateTime to, RollcallStatus status);
 }

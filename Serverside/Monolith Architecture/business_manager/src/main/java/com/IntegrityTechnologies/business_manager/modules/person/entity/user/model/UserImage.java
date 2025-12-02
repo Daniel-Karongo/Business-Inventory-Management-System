@@ -27,6 +27,9 @@ public class UserImage {
     @Column(nullable = false)
     private String filePath;
 
+    @Column(nullable = false)
+    private String fileDescription;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @ToString.Exclude

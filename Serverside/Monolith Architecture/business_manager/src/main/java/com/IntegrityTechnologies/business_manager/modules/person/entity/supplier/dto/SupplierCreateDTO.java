@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto;
 
+import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -33,5 +34,5 @@ public class SupplierCreateDTO {
     private Set<Long> categoryIds = Set.of();
 
     @Schema(type = "array")
-    private Set<MultipartFile> images = Set.of();
+    private List<FIleUploadDTO> supplierFiles;
 }

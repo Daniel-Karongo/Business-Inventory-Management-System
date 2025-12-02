@@ -1,0 +1,784 @@
+products[0].name:Samsung Galaxy A15
+products[0].description:Affordable Samsung smartphone popular in Kenya
+products[0].barcode:1000000000001
+products[0].price:24000
+products[0].buyingPrice:21000
+products[0].categoryId:2
+products[0].images[0]:
+
+products[1].name:Tecno Spark 10
+products[1].description:Mid-range Tecno phone widely sold in Kenya
+products[1].barcode:1000000000002
+products[1].price:16500
+products[1].buyingPrice:14500
+products[1].categoryId:2
+products[1].images[0]:
+
+products[2].name:Infinix Hot 12
+products[2].description:Popular budget Infinix smartphone
+products[2].barcode:1000000000003
+products[2].price:18500
+products[2].buyingPrice:16000
+products[2].categoryId:2
+products[2].images[0]:
+
+products[3].name:HP EliteBook 840 G5
+products[3].description:Refurbished business laptop, popular in CBD shops
+products[3].barcode:1000000000004
+products[3].price:38000
+products[3].buyingPrice:32000
+products[3].categoryId:3
+products[3].images[0]:
+
+products[4].name:Lenovo ThinkPad T480
+products[4].description:Durable refurbished laptop
+products[4].barcode:1000000000005
+products[4].price:42000
+products[4].buyingPrice:36000
+products[4].categoryId:3
+products[4].images[0]:
+
+products[5].name:Oraimo Fast Charger 18W
+products[5].description:High-quality fast charger for Android devices
+products[5].barcode:1000000000006
+products[5].price:1500
+products[5].buyingPrice:900
+products[5].categoryId:5
+products[5].images[0]:
+
+products[0].name:JBL Tune 510BT
+products[0].description:Wireless Bluetooth headphones
+products[0].barcode:1000000000007
+products[0].price:7500
+products[0].buyingPrice:6000
+products[0].categoryId:5
+products[0].images[0]:
+
+products[1].name:Samsung 43-inch Smart TV
+products[1].description:Full HD LED Smart TV
+products[1].barcode:1000000000008
+products[1].price:38000
+products[1].buyingPrice:34000
+products[1].categoryId:1
+products[1].images[0]:
+
+products[2].name:Hisense 32-inch Digital TV
+products[2].description:Affordable digital TV
+products[2].barcode:1000000000009
+products[2].price:16500
+products[2].buyingPrice:14500
+products[2].categoryId:1
+products[2].images[0]:
+
+products[3].name:Ramtons 90L Single Door Fridge
+products[3].description:Energy-efficient compact refrigerator
+products[3].barcode:1000000000010
+products[3].price:24500
+products[3].buyingPrice:21500
+products[3].categoryId:6
+products[3].images[0]:
+
+products[4].name:Vanilla Microwave 20L
+products[4].description:Budget microwave oven
+products[4].barcode:1000000000011
+products[4].price:8500
+products[4].buyingPrice:7200
+products[4].categoryId:7
+products[4].images[0]:
+
+products[5].name:Ramtons Electric Kettle
+products[5].description:1.7L cordless electric kettle
+products[5].barcode:1000000000012
+products[5].price:2500
+products[5].buyingPrice:1800
+products[5].categoryId:7
+products[5].images[0]:
+
+products[0].name:Men's Hooded Sweatshirt
+products[0].description:Quality hoodie for men
+products[0].barcode:1000000000013
+products[0].price:1800
+products[0].buyingPrice:1200
+products[0].categoryId:9
+products[0].images[0]:
+
+products[1].name:Men’s Leather Belt
+products[1].description:Classic Kenyan men's belt
+products[1].barcode:1000000000014
+products[1].price:600
+products[1].buyingPrice:350
+products[1].categoryId:9
+products[1].images[0]:
+
+products[2].name:Women’s Handbag
+products[2].description:Stylish women's handbag for daily use
+products[2].barcode:1000000000015
+products[2].price:2500
+products[2].buyingPrice:1800
+products[2].categoryId:10
+products[2].images[0]:
+
+products[3].name:Women’s Sneakers
+products[3].description:Lightweight casual sneakers
+products[3].barcode:1000000000016
+products[3].price:2800
+products[3].buyingPrice:2000
+products[3].categoryId:10
+products[3].images[0]:
+
+products[4].name:Oraimo Power Bank 20,000mAh
+products[4].description:Fast charging power bank
+products[4].barcode:1000000000017
+products[4].price:3000
+products[4].buyingPrice:2200
+products[4].categoryId:5
+products[4].images[0]:
+
+products[5].name:Electric Blender 1.5L
+products[5].description:Household blender ideal for juices and smoothies
+products[5].barcode:1000000000018
+products[5].price:3200
+products[5].buyingPrice:2500
+products[5].categoryId:7
+products[5].images[0]:
+
+products[0].name:Flash Drive 64GB
+products[0].description:High-speed USB storage
+products[0].barcode:1000000000019
+products[0].price:1200
+products[0].buyingPrice:800
+products[0].categoryId:5
+products[0].images[0]:
+
+products[1].name:Bluetooth Portable Speaker
+products[1].description:Rechargeable wireless speaker
+products[1].barcode:1000000000020
+products[1].price:3500
+products[1].buyingPrice:2700
+products[1].categoryId:5
+products[1].images[0]:
+
+
+
+
+
+
+
+
+[
+  {
+    "name": "Samsung Galaxy A15",
+    "description": "Affordable Samsung smartphone popular in Kenya",
+    "barcode": "1000000000001",
+    "price": 24000,
+    "buyingPrice": 21000,
+    "categoryId": 2,
+  },
+  {
+    "name": "Tecno Spark 10",
+    "description": "Mid-range Tecno phone widely sold in Kenya",
+    "barcode": "1000000000002",
+    "price": 16500,
+    "buyingPrice": 14500,
+    "categoryId": 2,
+  },
+  {
+    "name": "Infinix Hot 12",
+    "description": "Popular budget Infinix smartphone",
+    "barcode": "1000000000003",
+    "price": 18500,
+    "buyingPrice": 16000,
+    "categoryId": 2
+  },
+  {
+    "name": "HP EliteBook 840 G5",
+    "description": "Refurbished business laptop, popular in CBD shops",
+    "barcode": "1000000000004",
+    "price": 38000,
+    "buyingPrice": 32000,
+    "categoryId": 3
+  },
+  {
+    "name": "Lenovo ThinkPad T480",
+    "description": "Durable refurbished laptop",
+    "barcode": "1000000000005",
+    "price": 42000,
+    "buyingPrice": 36000,
+    "categoryId": 3
+  },
+  {
+    "name": "Oraimo Fast Charger 18W",
+    "description": "High-quality fast charger for Android devices",
+    "barcode": "1000000000006",
+    "price": 1500,
+    "buyingPrice": 900,
+    "categoryId": 5
+  },
+  {
+    "name": "JBL Tune 510BT",
+    "description": "Wireless Bluetooth headphones",
+    "barcode": "1000000000007",
+    "price": 7500,
+    "buyingPrice": 6000,
+    "categoryId": 5
+  },
+  {
+    "name": "Samsung 43-inch Smart TV",
+    "description": "Full HD LED Smart TV",
+    "barcode": "1000000000008",
+    "price": 38000,
+    "buyingPrice": 34000,
+    "categoryId": 1
+  },
+  {
+    "name": "Hisense 32-inch Digital TV",
+    "description": "Affordable digital TV",
+    "barcode": "1000000000009",
+    "price": 16500,
+    "buyingPrice": 14500,
+    "categoryId": 1
+  },
+  {
+    "name": "Ramtons 90L Single Door Fridge",
+    "description": "Energy-efficient compact refrigerator",
+    "barcode": "1000000000010",
+    "price": 24500,
+    "buyingPrice": 21500,
+    "categoryId": 6
+  },
+  {
+    "name": "Vanilla Microwave 20L",
+    "description": "Budget microwave oven",
+    "barcode": "1000000000011",
+    "price": 8500,
+    "buyingPrice": 7200,
+    "categoryId": 7
+  },
+  {
+    "name": "Ramtons Electric Kettle",
+    "description": "1.7L cordless electric kettle",
+    "barcode": "1000000000012",
+    "price": 2500,
+    "buyingPrice": 1800,
+    "categoryId": 7
+  },
+  {
+    "name": "Men's Hooded Sweatshirt",
+    "description": "Quality hoodie for men",
+    "barcode": "1000000000013",
+    "price": 1800,
+    "buyingPrice": 1200,
+    "categoryId": 9
+  },
+  {
+    "name": "Men’s Leather Belt",
+    "description": "Classic Kenyan men's belt",
+    "barcode": "1000000000014",
+    "price": 600,
+    "buyingPrice": 350,
+    "categoryId": 9
+  },
+  {
+    "name": "Women’s Handbag",
+    "description": "Stylish women's handbag for daily use",
+    "barcode": "1000000000015",
+    "price": 2500,
+    "buyingPrice": 1800,
+    "categoryId": 10
+  },
+  {
+    "name": "Women’s Sneakers",
+    "description": "Lightweight casual sneakers",
+    "barcode": "1000000000016",
+    "price": 2800,
+    "buyingPrice": 2000,
+    "categoryId": 10
+  },
+  {
+    "name": "Oraimo Power Bank 20,000mAh",
+    "description": "Fast charging power bank",
+    "barcode": "1000000000017",
+    "price": 3000,
+    "buyingPrice": 2200,
+    "categoryId": 5
+  },
+  {
+    "name": "Electric Blender 1.5L",
+    "description": "Household blender ideal for juices and smoothies",
+    "barcode": "1000000000018",
+    "price": 3200,
+    "buyingPrice": 2500,
+    "categoryId": 7
+  },
+  {
+    "name": "Flash Drive 64GB",
+    "description": "High-speed USB storage",
+    "barcode": "1000000000019",
+    "price": 1200,
+    "buyingPrice": 800,
+    "categoryId": 5
+  },
+  {
+    "name": "Bluetooth Portable Speaker",
+    "description": "Rechargeable wireless speaker",
+    "barcode": "1000000000020",
+    "price": 3500,
+    "buyingPrice": 2700,
+    "categoryId": 5
+  }
+]
+
+
+
+
+
+
+
+
+
+__________________________________________________________________________________________________________________________________
+
+
+
+[
+    {
+        "id": "88acd47d-c24b-4f6c-a1cd-27219cdf3405",
+        "name": "Samsung Galaxy A15",
+        "description": "Affordable Samsung smartphone popular in Kenya",
+        "sku": "SMA-000001",
+        "barcode": "1000000000001",
+        "barcodeImagePath": "/api/products/barcodes/1000000000001.png",
+        "price": 24000,
+        "buyingPrice": 21000,
+        "imageUrls": [
+            "/api/products/images/88acd47d-c24b-4f6c-a1cd-27219cdf3405/1764674074805_524d9563-f36e-4410-a8c7-b9e5e30a4116_cover__2_.png"
+        ],
+        "categoryId": 2,
+        "categoryName": "Smartphones",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:14:34.3972506",
+        "updatedAt": null
+    },
+    {
+        "id": "f9d44c85-3bf3-4962-a23a-75f9748060a2",
+        "name": "Tecno Spark 10",
+        "description": "Mid-range Tecno phone widely sold in Kenya",
+        "sku": "SMA-000002",
+        "barcode": "1000000000002",
+        "barcodeImagePath": "/api/products/barcodes/1000000000002.png",
+        "price": 16500,
+        "buyingPrice": 14500,
+        "imageUrls": [
+            "/api/products/images/f9d44c85-3bf3-4962-a23a-75f9748060a2/1764674074924_bc007a1c-a485-4543-bcbe-cb9ae3dddc73_cover__3_.png"
+        ],
+        "categoryId": 2,
+        "categoryName": "Smartphones",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:14:34.9084484",
+        "updatedAt": null
+    },
+    {
+        "id": "0f01961d-688a-4c14-8ab9-6980b19fe3f3",
+        "name": "Infinix Hot 12",
+        "description": "Popular budget Infinix smartphone",
+        "sku": "SMA-000003",
+        "barcode": "1000000000003",
+        "barcodeImagePath": "/api/products/barcodes/1000000000003.png",
+        "price": 18500,
+        "buyingPrice": 16000,
+        "imageUrls": [
+            "/api/products/images/0f01961d-688a-4c14-8ab9-6980b19fe3f3/1764674074974_8fc2b30e-cc06-4a69-b132-bc7534e8a2d1_cover__4_.png"
+        ],
+        "categoryId": 2,
+        "categoryName": "Smartphones",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:14:34.9653235",
+        "updatedAt": null
+    },
+    {
+        "id": "980847b6-3e76-405e-9712-108dbdd28721",
+        "name": "HP EliteBook 840 G5",
+        "description": "Refurbished business laptop, popular in CBD shops",
+        "sku": "LAP-000001",
+        "barcode": "1000000000004",
+        "barcodeImagePath": "/api/products/barcodes/1000000000004.png",
+        "price": 38000,
+        "buyingPrice": 32000,
+        "imageUrls": [
+            "/api/products/images/980847b6-3e76-405e-9712-108dbdd28721/1764674075030_e18c8840-1419-4795-8dfb-761ad7859738_cover__5_.png"
+        ],
+        "categoryId": 3,
+        "categoryName": "Laptops",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:14:35.0183248",
+        "updatedAt": null
+    },
+    {
+        "id": "3b6d95e3-bc60-4b9e-9ea1-c9cf3d60cdce",
+        "name": "Lenovo ThinkPad T480",
+        "description": "Durable refurbished laptop",
+        "sku": "LAP-000002",
+        "barcode": "1000000000005",
+        "barcodeImagePath": "/api/products/barcodes/1000000000005.png",
+        "price": 42000,
+        "buyingPrice": 36000,
+        "imageUrls": [
+            "/api/products/images/3b6d95e3-bc60-4b9e-9ea1-c9cf3d60cdce/1764674075078_c6b3a505-5d97-4a93-b426-23b2a964134b_cover__6_.png"
+        ],
+        "categoryId": 3,
+        "categoryName": "Laptops",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:14:35.0713223",
+        "updatedAt": null
+    },
+    {
+        "id": "d2a6a972-d97e-4af9-8282-6cceb5e6ad0a",
+        "name": "Oraimo Fast Charger 18W",
+        "description": "High-quality fast charger for Android devices",
+        "sku": "HOM-000001",
+        "barcode": "1000000000006",
+        "barcodeImagePath": "/api/products/barcodes/1000000000006.png",
+        "price": 1500,
+        "buyingPrice": 900,
+        "imageUrls": [
+            "/api/products/images/d2a6a972-d97e-4af9-8282-6cceb5e6ad0a/1764674075132_68135987-2e43-4078-be1b-f840c8e9ffd7_default__3_.png"
+        ],
+        "categoryId": 5,
+        "categoryName": "Home Appliances",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:14:35.1243219",
+        "updatedAt": null
+    },
+    {
+        "id": "c5d9c9f3-0163-483a-90ea-c406b10ed871",
+        "name": "JBL Tune 510BT",
+        "description": "Wireless Bluetooth headphones",
+        "sku": "HOM-000002",
+        "barcode": "1000000000007",
+        "barcodeImagePath": "/api/products/barcodes/1000000000007.png",
+        "price": 7500,
+        "buyingPrice": 6000,
+        "imageUrls": [
+            "/api/products/images/c5d9c9f3-0163-483a-90ea-c406b10ed871/1764674427139_07eb488d-35fa-478a-8536-d198100039cf_cover__2_.png"
+        ],
+        "categoryId": 5,
+        "categoryName": "Home Appliances",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:20:27.1291668",
+        "updatedAt": null
+    },
+    {
+        "id": "85f69e6b-8246-4c05-9d65-e7403646ab57",
+        "name": "Samsung 43-inch Smart TV",
+        "description": "Full HD LED Smart TV",
+        "sku": "ELE-000001",
+        "barcode": "1000000000008",
+        "barcodeImagePath": "/api/products/barcodes/1000000000008.png",
+        "price": 38000,
+        "buyingPrice": 34000,
+        "imageUrls": [
+            "/api/products/images/85f69e6b-8246-4c05-9d65-e7403646ab57/1764674427192_663426ad-a5cd-4f45-b849-84dcd55cbdf1_cover__3_.png"
+        ],
+        "categoryId": 1,
+        "categoryName": "Electronics",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:20:27.1814191",
+        "updatedAt": null
+    },
+    {
+        "id": "f3da1f3e-2c93-4e16-944b-5d1aa9879135",
+        "name": "Hisense 32-inch Digital TV",
+        "description": "Affordable digital TV",
+        "sku": "ELE-000002",
+        "barcode": "1000000000009",
+        "barcodeImagePath": "/api/products/barcodes/1000000000009.png",
+        "price": 16500,
+        "buyingPrice": 14500,
+        "imageUrls": [
+            "/api/products/images/f3da1f3e-2c93-4e16-944b-5d1aa9879135/1764674427292_0b0214f0-1469-4e01-9c50-71446ccf751b_cover__4_.png"
+        ],
+        "categoryId": 1,
+        "categoryName": "Electronics",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:20:27.227616",
+        "updatedAt": null
+    },
+    {
+        "id": "e17b4567-089b-427e-aadd-f92bba5cdba3",
+        "name": "Ramtons 90L Single Door Fridge",
+        "description": "Energy-efficient compact refrigerator",
+        "sku": "REF-000001",
+        "barcode": "1000000000010",
+        "barcodeImagePath": "/api/products/barcodes/1000000000010.png",
+        "price": 24500,
+        "buyingPrice": 21500,
+        "imageUrls": [
+            "/api/products/images/e17b4567-089b-427e-aadd-f92bba5cdba3/1764674427356_7ca4e286-4354-4681-a058-e416863fc8eb_cover__5_.png"
+        ],
+        "categoryId": 6,
+        "categoryName": "Refrigerators",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:20:27.3471311",
+        "updatedAt": null
+    },
+    {
+        "id": "32576b29-8d91-46c1-9ed7-bafbd68d1504",
+        "name": "Vanilla Microwave 20L",
+        "description": "Budget microwave oven",
+        "sku": "MIC-000001",
+        "barcode": "1000000000011",
+        "barcodeImagePath": "/api/products/barcodes/1000000000011.png",
+        "price": 8500,
+        "buyingPrice": 7200,
+        "imageUrls": [
+            "/api/products/images/32576b29-8d91-46c1-9ed7-bafbd68d1504/1764674427407_93dba8dd-3d5c-48b9-a1c7-c7e291b5a4cc_cover__6_.png"
+        ],
+        "categoryId": 7,
+        "categoryName": "Microwaves",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:20:27.3978069",
+        "updatedAt": null
+    },
+    {
+        "id": "f8c4b4a2-0be5-47a0-94bb-43321f1c0b72",
+        "name": "Ramtons Electric Kettle",
+        "description": "1.7L cordless electric kettle",
+        "sku": "MIC-000002",
+        "barcode": "1000000000012",
+        "barcodeImagePath": "/api/products/barcodes/1000000000012.png",
+        "price": 2500,
+        "buyingPrice": 1800,
+        "imageUrls": [
+            "/api/products/images/f8c4b4a2-0be5-47a0-94bb-43321f1c0b72/1764674427461_ec3f083e-cc04-418f-aa3f-03e1d45ae788_cover__7_.png"
+        ],
+        "categoryId": 7,
+        "categoryName": "Microwaves",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:20:27.4523306",
+        "updatedAt": null
+    },
+    {
+        "id": "73fab8fa-3efb-4d20-af0a-709f71bd2530",
+        "name": "Men's Hooded Sweatshirt",
+        "description": "Quality hoodie for men",
+        "sku": "MEN-000001",
+        "barcode": "1000000000013",
+        "barcodeImagePath": "/api/products/barcodes/1000000000013.png",
+        "price": 1800,
+        "buyingPrice": 1200,
+        "imageUrls": [
+            "/api/products/images/73fab8fa-3efb-4d20-af0a-709f71bd2530/1764674561796_492d4058-081a-43fa-8df2-79ae3f2d344a_cover__2_.png"
+        ],
+        "categoryId": 9,
+        "categoryName": "Men",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:22:41.784045",
+        "updatedAt": null
+    },
+    {
+        "id": "b260d597-fda0-4f96-9c77-cc87f5a5cba4",
+        "name": "Men’s Leather Belt",
+        "description": "Classic Kenyan men's belt",
+        "sku": "MEN-000002",
+        "barcode": "1000000000014",
+        "barcodeImagePath": "/api/products/barcodes/1000000000014.png",
+        "price": 600,
+        "buyingPrice": 350,
+        "imageUrls": [
+            "/api/products/images/b260d597-fda0-4f96-9c77-cc87f5a5cba4/1764674561850_37d8abb7-b76f-4b4f-b1a3-9d1b63ff0886_cover__3_.png"
+        ],
+        "categoryId": 9,
+        "categoryName": "Men",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:22:41.8407243",
+        "updatedAt": null
+    },
+    {
+        "id": "7d3272b4-e2eb-4f1a-9ec7-9610a7071270",
+        "name": "Women’s Handbag",
+        "description": "Stylish women's handbag for daily use",
+        "sku": "WOM-000001",
+        "barcode": "1000000000015",
+        "barcodeImagePath": "/api/products/barcodes/1000000000015.png",
+        "price": 2500,
+        "buyingPrice": 1800,
+        "imageUrls": [
+            "/api/products/images/7d3272b4-e2eb-4f1a-9ec7-9610a7071270/1764674561957_a13e4dd9-611b-42b8-9b03-11421fd3391d_cover__4_.png"
+        ],
+        "categoryId": 10,
+        "categoryName": "Women",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:22:41.9477181",
+        "updatedAt": null
+    },
+    {
+        "id": "dd52ac3c-b986-44b4-b8f2-7aab7a361e66",
+        "name": "Women’s Sneakers",
+        "description": "Lightweight casual sneakers",
+        "sku": "WOM-000002",
+        "barcode": "1000000000016",
+        "barcodeImagePath": "/api/products/barcodes/1000000000016.png",
+        "price": 2800,
+        "buyingPrice": 2000,
+        "imageUrls": [
+            "/api/products/images/dd52ac3c-b986-44b4-b8f2-7aab7a361e66/1764674562020_8568da54-f47e-4992-856f-a41eed0abc9d_cover__5_.png"
+        ],
+        "categoryId": 10,
+        "categoryName": "Women",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:22:42.0099628",
+        "updatedAt": null
+    },
+    {
+        "id": "f8072277-acdd-4e0d-b747-ec744e6d61bc",
+        "name": "Oraimo Power Bank 20,000mAh",
+        "description": "Fast charging power bank",
+        "sku": "HOM-000003",
+        "barcode": "1000000000017",
+        "barcodeImagePath": "/api/products/barcodes/1000000000017.png",
+        "price": 3000,
+        "buyingPrice": 2200,
+        "imageUrls": [
+            "/api/products/images/f8072277-acdd-4e0d-b747-ec744e6d61bc/1764674562069_7837cc88-2e8d-4a54-830e-55dbf41abc5a_cover__6_.png"
+        ],
+        "categoryId": 5,
+        "categoryName": "Home Appliances",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:22:42.0599591",
+        "updatedAt": null
+    },
+    {
+        "id": "74bee9a2-b819-4d13-bbc6-b55b4906a138",
+        "name": "Electric Blender 1.5L",
+        "description": "Household blender ideal for juices and smoothies",
+        "sku": "MIC-000003",
+        "barcode": "1000000000018",
+        "barcodeImagePath": "/api/products/barcodes/1000000000018.png",
+        "price": 3200,
+        "buyingPrice": 2500,
+        "imageUrls": [
+            "/api/products/images/74bee9a2-b819-4d13-bbc6-b55b4906a138/1764674562109_6873f570-8be9-46e9-9fd7-dcdf412058d9_cover__7_.png"
+        ],
+        "categoryId": 7,
+        "categoryName": "Microwaves",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:22:42.100569",
+        "updatedAt": null
+    },
+    {
+        "id": "b76cf1d0-0732-4490-9522-1b57d573ab72",
+        "name": "Flash Drive 64GB",
+        "description": "High-speed USB storage",
+        "sku": "HOM-000004",
+        "barcode": "1000000000019",
+        "barcodeImagePath": "/api/products/barcodes/1000000000019.png",
+        "price": 1200,
+        "buyingPrice": 800,
+        "imageUrls": [
+            "/api/products/images/b76cf1d0-0732-4490-9522-1b57d573ab72/1764674695740_405c19ba-ebe6-4054-8ae7-aff83a098c15_cover__2_.png"
+        ],
+        "categoryId": 5,
+        "categoryName": "Home Appliances",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:24:55.7339471",
+        "updatedAt": null
+    },
+    {
+        "id": "d8d2da08-78ac-4ea5-a27c-7bfbc8970630",
+        "name": "Bluetooth Portable Speaker",
+        "description": "Rechargeable wireless speaker",
+        "sku": "HOM-000005",
+        "barcode": "1000000000020",
+        "barcodeImagePath": "/api/products/barcodes/1000000000020.png",
+        "price": 3500,
+        "buyingPrice": 2700,
+        "imageUrls": [
+            "/api/products/images/d8d2da08-78ac-4ea5-a27c-7bfbc8970630/1764674695781_5d705125-3fc2-4865-a640-3f6a3fd42a70_cover__3_.png"
+        ],
+        "categoryId": 5,
+        "categoryName": "Home Appliances",
+        "suppliers": [],
+        "lastSupplierId": null,
+        "lastSupplierName": null,
+        "deleted": false,
+        "deletedAt": null,
+        "createdAt": "2025-12-02T14:24:55.7705923",
+        "updatedAt": null
+    }
+]

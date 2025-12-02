@@ -13,6 +13,7 @@ public class RollcallDTO {
     private UUID rollCallId;
     private UUID userId;
     private UUID departmentId;
+    private UUID branchId;
     private LocalDateTime timestamp;
     private RollcallStatus status;
     private RollcallMethod method;
@@ -23,7 +24,12 @@ public class RollcallDTO {
         RollcallDTO dto = new RollcallDTO();
         dto.setRollCallId(rollcall.getId());
         dto.setUserId(rollcall.getUser().getId());
-        dto.setDepartmentId(rollcall.getDepartment().getId());
+        dto.setDepartmentId(
+                rollcall.getDepartment() == null ? null : rollcall.getDepartment().getId()
+        );
+        dto.setBranchId(
+                rollcall.getBranch() == null ? null : rollcall.getBranch().getId()
+        );
         dto.setTimestamp(rollcall.getTimestamp());
         dto.setStatus(rollcall.getStatus());
         dto.setMethod(rollcall.getMethod());

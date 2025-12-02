@@ -1,0 +1,240 @@
+[
+  {
+    "branchCode": "MAIN",
+    "name": "Main Warehouse",
+    "location": "Nairobi",
+    "phone": "+254700000001",
+    "email": "main@business.com"
+  },
+  {
+    "branchCode": "BR001",
+    "name": "Branch One",
+    "location": "Mombasa",
+    "phone": "+254700000002",
+    "email": "branch1@business.com"
+  }
+]
+
+
+
+
+
+
+
+
+
+
+
+[
+  {
+    "name": "Management",
+    "description": "Cash handling, budgeting, payroll, and financial records",
+    "rollcallStartTime": "09:00",
+    "gracePeriodMinutes": 15,
+    "branchIds": [
+      "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "ba8f46ab-ef8f-437d-a591-f48ece53dc04"
+    ]
+  },
+  {
+    "name": "Customer Relations",
+    "description": "Help desk and customer inquiries",
+    "rollcallStartTime": "09:00",
+    "gracePeriodMinutes": 15,
+    "branchIds": [
+      "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "ba8f46ab-ef8f-437d-a591-f48ece53dc04"
+    ]
+  },
+  {
+    "name": "Human Resources",
+    "description": "Staff management, hiring, training, and welfare",
+    "rollcallStartTime": "09:00",
+    "gracePeriodMinutes": 15,
+    "branchIds": [
+      "0c951da7-6f90-491b-8a90-dec3eccd5cd9"
+    ]
+  },
+  {
+    "name": "Warehouse & Logistics",
+    "description": "Storage, loading/unloading, and movement of goods within the facility",
+    "rollcallStartTime": "09:00",
+    "gracePeriodMinutes": 15,
+    "branchIds": [
+      "0c951da7-6f90-491b-8a90-dec3eccd5cd9"
+    ]
+  },
+  {
+    "name": "Security",
+    "description": "Loss prevention, surveillance, and safety enforcement",
+    "rollcallStartTime": "08:00",
+    "gracePeriodMinutes": 15,
+    "branchIds": [
+      "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "ba8f46ab-ef8f-437d-a591-f48ece53dc04"
+    ]
+  },
+  {
+    "name": "Point of Sale",
+    "description": "System support, network maintenance, POS management",
+    "rollcallStartTime": "09:00",
+    "gracePeriodMinutes": 15,
+    "branchIds": [
+      "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "ba8f46ab-ef8f-437d-a591-f48ece53dc04"
+    ]
+  }
+]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+["0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+"ba8f46ab-ef8f-437d-a591-f48ece53dc04"]
+
+
+[
+  {
+    "id": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+    "branchCode": "BR001",
+    "name": "Branch One",
+    "location": "Mombasa",
+    "phone": "+254700000002",
+    "email": "branch1@business.com",
+    "users": [
+      {
+        "id": "cacef2d7-27c4-4ee8-9125-27fc81b70276",
+        "username": "Samuel Kimani"
+      },
+      {
+        "id": "e24e443a-cc39-4e67-a22f-9d3a535f1967",
+        "username": "Linda Chebet"
+      },
+      {
+        "id": "52786938-5c4a-45aa-93be-0cbbb8230370",
+        "username": "Catherine Wairimu"
+      },
+      {
+        "id": "f154d9df-ad95-48aa-a474-40d06a4c939a",
+        "username": "Faith Achieng"
+      },
+      {
+        "id": "9104161a-49d1-46ec-a196-1044c37f198f",
+        "username": "Joyce Njeri"
+      },
+      {
+        "id": "e8d56e33-2d30-490c-957f-7a227c0226b3",
+        "username": "Mary Wanjiku"
+      },
+      {
+        "id": "58d96b2f-2f02-4612-a076-e6be307d0f67",
+        "username": "Isaac Kungu"
+      }
+    ],
+    "departments": [
+      {
+        "id": "ea40ebdf-8233-42f3-bef1-f66a9fb5e2a3",
+        "name": "Point of Sale"
+      },
+      {
+        "id": "b4b19f78-9239-41d2-bdbe-e715bbe0973f",
+        "name": "Customer Relations"
+      },
+      {
+        "id": "3d9a4ae7-05e3-46a3-a833-66dd4cb9df65",
+        "name": "Human Resources"
+      },
+      {
+        "id": "8b8fa4fa-6c36-498a-964a-a1814f869344",
+        "name": "Security"
+      },
+      {
+        "id": "717c0390-418e-4d76-bd27-74c904e6640d",
+        "name": "Warehouse & Logistics"
+      },
+      {
+        "id": "2418e260-4324-4de6-8e7d-61488b493a7f",
+        "name": "Management"
+      }
+    ],
+    "deleted": false
+  },
+  {
+    "id": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+    "branchCode": "MAIN",
+    "name": "Main Branch",
+    "location": "Default Location",
+    "phone": "+0000000000",
+    "email": "main@default.com",
+    "users": [
+      {
+        "id": "74fe29fa-72a5-4843-90c4-b1659f44572c",
+        "username": "Peter Otieno"
+      },
+      {
+        "id": "cacef2d7-27c4-4ee8-9125-27fc81b70276",
+        "username": "Samuel Kimani"
+      },
+      {
+        "id": "cf09671b-c8cd-4d41-a225-895f8eba26ba",
+        "username": "Daniel Karongo"
+      },
+      {
+        "id": "c4bfb652-17f8-4392-ba6f-dda333ffd530",
+        "username": "Brian Mwangi"
+      },
+      {
+        "id": "623b5f2f-6f43-4fdd-9fd2-b05edcb821c6",
+        "username": "Kevin Oduor"
+      },
+      {
+        "id": "58d96b2f-2f02-4612-a076-e6be307d0f67",
+        "username": "Isaac Kungu"
+      }
+    ],
+    "departments": [
+      {
+        "id": "ea40ebdf-8233-42f3-bef1-f66a9fb5e2a3",
+        "name": "Point of Sale"
+      },
+      {
+        "id": "b4b19f78-9239-41d2-bdbe-e715bbe0973f",
+        "name": "Customer Relations"
+      },
+      {
+        "id": "8b8fa4fa-6c36-498a-964a-a1814f869344",
+        "name": "Security"
+      },
+      {
+        "id": "c625867c-1c09-479f-9c7e-7ecdc20dcaa9",
+        "name": "GENERAL"
+      },
+      {
+        "id": "2418e260-4324-4de6-8e7d-61488b493a7f",
+        "name": "Management"
+      }
+    ],
+    "deleted": false
+  }
+]

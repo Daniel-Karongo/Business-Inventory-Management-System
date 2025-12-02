@@ -1,0 +1,583 @@
+username:Daniel Karongo
+password:Karongo@123
+role:SUPERUSER
+emailAddresses:karongodaniel022@gmail.com,danieltorrent001@gmail.com
+phoneNumbers:0782645342,0743879003
+idNumber:38290198
+departmentsAndPositions[0].branchId:0c951da7-6f90-491b-8a90-dec3eccd5cd9
+departmentsAndPositions[0].departmentId:2418e260-4324-4de6-8e7d-61488b493a7f
+departmentsAndPositions[0].position:head
+departmentsAndPositions[1].branchId:ba8f46ab-ef8f-437d-a591-f48ece53dc04
+departmentsAndPositions[1].departmentId:2418e260-4324-4de6-8e7d-61488b493a7f
+departmentsAndPositions[1].position:head
+userFiles[0].file:
+userFiles[0].description:id scanned image
+userFiles[1].file:
+userFiles[1].description:signature scanned image
+
+users[0].username:Isaac Kungu
+users[0].password:Isaac@123
+users[0].role:ADMIN
+users[0].emailAddresses:i.kungu.ik@gmail.com
+users[0].phoneNumbers:0723715225
+users[0].idNumber:98278992
+users[0].departmentsAndPositions[0].branchId:0c951da7-6f90-491b-8a90-dec3eccd5cd9
+users[0].departmentsAndPositions[0].departmentId:717c0390-418e-4d76-bd27-74c904e6640d
+users[0].departmentsAndPositions[0].position:head
+users[0].departmentsAndPositions[1].branchId:ba8f46ab-ef8f-437d-a591-f48ece53dc04
+users[0].departmentsAndPositions[1].departmentId:ea40ebdf-8233-42f3-bef1-f66a9fb5e2a3
+users[0].departmentsAndPositions[1].position:member
+users[0].userFiles[0].file:
+users[0].userFiles[0].description:id scanned image
+users[0].userFiles[1].file:
+users[0].userFiles[1].description:signature scanned image
+
+users[1].username:Mary Wanjiku
+users[1].password:Mary@123
+users[1].role:MANAGER
+users[1].emailAddresses:m.wanjiku@gmail.com
+users[1].phoneNumbers:0712345678
+users[1].idNumber:98765432
+users[1].departmentsAndPositions[0].branchId:0c951da7-6f90-491b-8a90-dec3eccd5cd9
+users[1].departmentsAndPositions[0].departmentId:2418e260-4324-4de6-8e7d-61488b493a7f
+users[1].departmentsAndPositions[0].position:head
+users[1].userFiles[0].file:
+users[1].userFiles[0].description:id scanned image
+users[1].userFiles[1].file:
+users[1].userFiles[1].description:signature scanned image
+
+users[0].username:Peter Otieno
+users[0].password:Peter@123
+users[0].role:SUPERVISOR
+users[0].emailAddresses:p.otieno@gmail.com
+users[0].phoneNumbers:0700123456
+users[0].idNumber:87654321
+users[0].departmentsAndPositions[0].branchId:ba8f46ab-ef8f-437d-a591-f48ece53dc04
+users[0].departmentsAndPositions[0].departmentId:b4b19f78-9239-41d2-bdbe-e715bbe0973f
+users[0].departmentsAndPositions[0].position:member
+users[0].userFiles[0].file:
+users[0].userFiles[0].description:id scanned image
+users[0].userFiles[1].file:
+users[0].userFiles[1].description:signature scanned image
+
+users[1].username:Joyce Njeri
+users[1].password:Joyce@123
+users[1].role:EMPLOYEE
+users[1].emailAddresses:j.njeri@gmail.com
+users[1].phoneNumbers:0722001234
+users[1].idNumber:76543210
+users[1].departmentsAndPositions[0].branchId:0c951da7-6f90-491b-8a90-dec3eccd5cd9
+users[1].departmentsAndPositions[0].departmentId:3d9a4ae7-05e3-46a3-a833-66dd4cb9df65
+users[1].departmentsAndPositions[0].position:member
+users[1].userFiles[0].file:
+users[1].userFiles[0].description:id scanned image
+users[1].userFiles[1].file:
+users[1].userFiles[1].description:signature scanned image
+
+users[2].username:Samuel Kimani
+users[2].password:Samuel@123
+users[2].role:MANAGER
+users[2].emailAddresses:s.kimani@gmail.com
+users[2].phoneNumbers:0711223344
+users[2].idNumber:65432109
+users[2].departmentsAndPositions[0].branchId:ba8f46ab-ef8f-437d-a591-f48ece53dc04
+users[2].departmentsAndPositions[0].departmentId:2418e260-4324-4de6-8e7d-61488b493a7f
+users[2].departmentsAndPositions[0].position:head
+users[2].departmentsAndPositions[1].branchId:0c951da7-6f90-491b-8a90-dec3eccd5cd9
+users[2].departmentsAndPositions[1].departmentId:b4b19f78-9239-41d2-bdbe-e715bbe0973f
+users[2].departmentsAndPositions[1].position:member
+users[2].userFiles[0].file:
+users[2].userFiles[0].description:id scanned image
+users[2].userFiles[1].file:
+users[2].userFiles[1].description:signature scanned image
+
+users[0].username:Faith Achieng
+users[0].password:Faith@123
+users[0].role:SUPERVISOR
+users[0].emailAddresses:f.achieng@gmail.com
+users[0].phoneNumbers:0722556677
+users[0].idNumber:54321098
+users[0].departmentsAndPositions[0].branchId:0c951da7-6f90-491b-8a90-dec3eccd5cd9
+users[0].departmentsAndPositions[0].departmentId:8b8fa4fa-6c36-498a-964a-a1814f869344
+users[0].departmentsAndPositions[0].position:head
+users[0].userFiles[0].file:
+users[0].userFiles[0].description:id scanned image
+users[0].userFiles[1].file:
+users[0].userFiles[1].description:signature scanned image
+
+users[1].username:Brian Mwangi
+users[1].password:Brian@123
+users[1].role:EMPLOYEE
+users[1].emailAddresses:b.mwangi@gmail.com
+users[1].phoneNumbers:0700998877
+users[1].idNumber:43210987
+users[1].departmentsAndPositions[0].branchId:ba8f46ab-ef8f-437d-a591-f48ece53dc04
+users[1].departmentsAndPositions[0].departmentId:ea40ebdf-8233-42f3-bef1-f66a9fb5e2a3
+users[1].departmentsAndPositions[0].position:member
+users[1].userFiles[0].file:
+users[1].userFiles[0].description:id scanned image
+users[1].userFiles[1].file:
+users[1].userFiles[1].description:signature scanned image
+
+users[2].username:Catherine Wairimu
+users[2].password:Catherine@123
+users[2].role:MANAGER
+users[2].emailAddresses:c.wairimu@gmail.com
+users[2].phoneNumbers:0711992233
+users[2].idNumber:32109876
+users[2].departmentsAndPositions[0].branchId:0c951da7-6f90-491b-8a90-dec3eccd5cd9
+users[2].departmentsAndPositions[0].departmentId:2418e260-4324-4de6-8e7d-61488b493a7f
+users[2].departmentsAndPositions[0].position:member
+users[2].departmentsAndPositions[1].branchId:0c951da7-6f90-491b-8a90-dec3eccd5cd9
+users[2].departmentsAndPositions[1].departmentId:3d9a4ae7-05e3-46a3-a833-66dd4cb9df65
+users[2].departmentsAndPositions[1].position:head
+users[2].userFiles[0].file:
+users[2].userFiles[0].description:id scanned image
+users[2].userFiles[1].file:
+users[2].userFiles[1].description:signature scanned image
+
+users[0].username:Kevin Oduor
+users[0].password:Kevin@123
+users[0].role:SUPERVISOR
+users[0].emailAddresses:k.odour@gmail.com
+users[0].phoneNumbers:0723445566
+users[0].idNumber:21098765
+users[0].departmentsAndPositions[0].branchId:ba8f46ab-ef8f-437d-a591-f48ece53dc04
+users[0].departmentsAndPositions[0].departmentId:b4b19f78-9239-41d2-bdbe-e715bbe0973f
+users[0].departmentsAndPositions[0].position:head
+users[0].userFiles[0].file:
+users[0].userFiles[0].description:id scanned image
+users[0].userFiles[1].file:
+users[0].userFiles[1].description:signature scanned image
+
+users[1].username:Linda Chebet
+users[1].password:Linda@123
+users[1].role:EMPLOYEE
+users[1].emailAddresses:l.chebet@gmail.com
+users[1].phoneNumbers:0712334455
+users[1].idNumber:10987654
+users[1].departmentsAndPositions[0].branchId:0c951da7-6f90-491b-8a90-dec3eccd5cd9
+users[1].departmentsAndPositions[0].departmentId:b4b19f78-9239-41d2-bdbe-e715bbe0973f
+users[1].departmentsAndPositions[0].position:member
+users[1].userFiles[0].file:
+users[1].userFiles[0].description:id scanned image
+users[1].userFiles[1].file:
+users[1].userFiles[1].description:signature scanned image
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[
+  {
+    "id": "52786938-5c4a-45aa-93be-0cbbb8230370",
+    "username": "Catherine Wairimu",
+    "emailAddresses": [
+      "c.wairimu@gmail.com"
+    ],
+    "phoneNumbers": [
+      "+254711992233"
+    ],
+    "idNumber": "32109876",
+    "role": "MANAGER",
+    "branchHierarchy": [
+      {
+        "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+        "branchName": "Branch One",
+        "departments": [
+          {
+            "departmentId": "2418e260-4324-4de6-8e7d-61488b493a7f",
+            "departmentName": "Management",
+            "position": "member"
+          },
+          {
+            "departmentId": "3d9a4ae7-05e3-46a3-a833-66dd4cb9df65",
+            "departmentName": "Human Resources",
+            "position": "head"
+          }
+        ]
+      }
+    ],
+    "createdBy": "cf09671b-c8cd-4d41-a225-895f8eba26ba | Daniel Karongo",
+    "createdAt": "2025-12-02T12:19:48.124282",
+    "deleted": false,
+    "idImageUrls": [
+      "/api/users/images/db684ee5-aa54-4843-9215-d96e50e73cf7_1764667188004/1764667188175_Busbar 1.png",
+      "/api/users/images/db684ee5-aa54-4843-9215-d96e50e73cf7_1764667188004/1764667188171_Fuse 5.png"
+    ]
+  },
+  {
+    "id": "58d96b2f-2f02-4612-a076-e6be307d0f67",
+    "username": "Isaac Kungu",
+    "emailAddresses": [
+      "i.kungu.ik@gmail.com"
+    ],
+    "phoneNumbers": [
+      "+254723715225"
+    ],
+    "idNumber": "98278992",
+    "role": "ADMIN",
+    "branchHierarchy": [
+      {
+        "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+        "branchName": "Branch One",
+        "departments": [
+          {
+            "departmentId": "717c0390-418e-4d76-bd27-74c904e6640d",
+            "departmentName": "Warehouse & Logistics",
+            "position": "head"
+          },
+          {
+            "departmentId": "ea40ebdf-8233-42f3-bef1-f66a9fb5e2a3",
+            "departmentName": "Point of Sale",
+            "position": "member"
+          }
+        ]
+      },
+      {
+        "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+        "branchName": "Main Branch",
+        "departments": [
+          {
+            "departmentId": "ea40ebdf-8233-42f3-bef1-f66a9fb5e2a3",
+            "departmentName": "Point of Sale",
+            "position": "member"
+          }
+        ]
+      }
+    ],
+    "createdBy": "cf09671b-c8cd-4d41-a225-895f8eba26ba | Daniel Karongo",
+    "createdAt": "2025-12-02T12:17:54.224569",
+    "deleted": false,
+    "idImageUrls": [
+      "/api/users/images/88cb3bf3-ab30-466f-9fae-1ab8c02e3969_1764667074088/1764667074285_Fuse 2.png",
+      "/api/users/images/88cb3bf3-ab30-466f-9fae-1ab8c02e3969_1764667074088/1764667074279_Fuse 1.png"
+    ]
+  },
+  {
+    "id": "623b5f2f-6f43-4fdd-9fd2-b05edcb821c6",
+    "username": "Kevin Oduor",
+    "emailAddresses": [
+      "k.odour@gmail.com"
+    ],
+    "phoneNumbers": [
+      "+254723445566"
+    ],
+    "idNumber": "21098765",
+    "role": "SUPERVISOR",
+    "branchHierarchy": [
+      {
+        "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+        "branchName": "Main Branch",
+        "departments": [
+          {
+            "departmentId": "b4b19f78-9239-41d2-bdbe-e715bbe0973f",
+            "departmentName": "Customer Relations",
+            "position": "head"
+          }
+        ]
+      }
+    ],
+    "createdBy": "cf09671b-c8cd-4d41-a225-895f8eba26ba | Daniel Karongo",
+    "createdAt": "2025-12-02T12:20:35.432668",
+    "deleted": false,
+    "idImageUrls": [
+      "/api/users/images/0bdca465-9566-4c7e-973b-9f4036f024bb_1764667235225/1764667235467_Fuse 1.png",
+      "/api/users/images/0bdca465-9566-4c7e-973b-9f4036f024bb_1764667235225/1764667235471_Fuse 2.png"
+    ]
+  },
+  {
+    "id": "74fe29fa-72a5-4843-90c4-b1659f44572c",
+    "username": "Peter Otieno",
+    "emailAddresses": [
+      "p.otieno@gmail.com"
+    ],
+    "phoneNumbers": [
+      "+254700123456"
+    ],
+    "idNumber": "87654321",
+    "role": "SUPERVISOR",
+    "branchHierarchy": [
+      {
+        "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+        "branchName": "Main Branch",
+        "departments": [
+          {
+            "departmentId": "b4b19f78-9239-41d2-bdbe-e715bbe0973f",
+            "departmentName": "Customer Relations",
+            "position": "member"
+          }
+        ]
+      }
+    ],
+    "createdBy": "cf09671b-c8cd-4d41-a225-895f8eba26ba | Daniel Karongo",
+    "createdAt": "2025-12-02T12:18:53.521329",
+    "deleted": false,
+    "idImageUrls": [
+      "/api/users/images/cca4317b-6583-4989-bea6-71d683ce45a3_1764667133384/1764667133564_Fuse 1.png",
+      "/api/users/images/cca4317b-6583-4989-bea6-71d683ce45a3_1764667133384/1764667133573_Fuse 2.png"
+    ]
+  },
+  {
+    "id": "9104161a-49d1-46ec-a196-1044c37f198f",
+    "username": "Joyce Njeri",
+    "emailAddresses": [
+      "j.njeri@gmail.com"
+    ],
+    "phoneNumbers": [
+      "+254722001234"
+    ],
+    "idNumber": "76543210",
+    "role": "EMPLOYEE",
+    "branchHierarchy": [
+      {
+        "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+        "branchName": "Branch One",
+        "departments": [
+          {
+            "departmentId": "3d9a4ae7-05e3-46a3-a833-66dd4cb9df65",
+            "departmentName": "Human Resources",
+            "position": "member"
+          }
+        ]
+      }
+    ],
+    "createdBy": "cf09671b-c8cd-4d41-a225-895f8eba26ba | Daniel Karongo",
+    "createdAt": "2025-12-02T12:18:53.818807",
+    "deleted": false,
+    "idImageUrls": [
+      "/api/users/images/efb8fd28-ca4e-4f45-9c3c-bc5f6cc1cfbd_1764667133692/1764667133854_Fuse 3.png",
+      "/api/users/images/efb8fd28-ca4e-4f45-9c3c-bc5f6cc1cfbd_1764667133692/1764667133859_Fuse 4.png"
+    ]
+  },
+  {
+    "id": "c4bfb652-17f8-4392-ba6f-dda333ffd530",
+    "username": "Brian Mwangi",
+    "emailAddresses": [
+      "b.mwangi@gmail.com"
+    ],
+    "phoneNumbers": [
+      "+254700998877"
+    ],
+    "idNumber": "43210987",
+    "role": "EMPLOYEE",
+    "branchHierarchy": [
+      {
+        "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+        "branchName": "Main Branch",
+        "departments": [
+          {
+            "departmentId": "ea40ebdf-8233-42f3-bef1-f66a9fb5e2a3",
+            "departmentName": "Point of Sale",
+            "position": "member"
+          }
+        ]
+      }
+    ],
+    "createdBy": "cf09671b-c8cd-4d41-a225-895f8eba26ba | Daniel Karongo",
+    "createdAt": "2025-12-02T12:19:47.909071",
+    "deleted": false,
+    "idImageUrls": [
+      "/api/users/images/d9cd14ee-1e35-4e0e-a3b1-b4411074314b_1764667187643/1764667187945_Fuse 3.png",
+      "/api/users/images/d9cd14ee-1e35-4e0e-a3b1-b4411074314b_1764667187643/1764667187950_Fuse 4.png"
+    ]
+  },
+  {
+    "id": "cacef2d7-27c4-4ee8-9125-27fc81b70276",
+    "username": "Samuel Kimani",
+    "emailAddresses": [
+      "s.kimani@gmail.com"
+    ],
+    "phoneNumbers": [
+      "+254711223344"
+    ],
+    "idNumber": "65432109",
+    "role": "MANAGER",
+    "branchHierarchy": [
+      {
+        "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+        "branchName": "Branch One",
+        "departments": [
+          {
+            "departmentId": "2418e260-4324-4de6-8e7d-61488b493a7f",
+            "departmentName": "Management",
+            "position": "head"
+          },
+          {
+            "departmentId": "b4b19f78-9239-41d2-bdbe-e715bbe0973f",
+            "departmentName": "Customer Relations",
+            "position": "member"
+          }
+        ]
+      },
+      {
+        "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+        "branchName": "Main Branch",
+        "departments": [
+          {
+            "departmentId": "2418e260-4324-4de6-8e7d-61488b493a7f",
+            "departmentName": "Management",
+            "position": "head"
+          },
+          {
+            "departmentId": "b4b19f78-9239-41d2-bdbe-e715bbe0973f",
+            "departmentName": "Customer Relations",
+            "position": "member"
+          }
+        ]
+      }
+    ],
+    "createdBy": "cf09671b-c8cd-4d41-a225-895f8eba26ba | Daniel Karongo",
+    "createdAt": "2025-12-02T12:18:54.166163",
+    "deleted": false,
+    "idImageUrls": [
+      "/api/users/images/863dd0b2-13db-4522-a5f0-c598aa557fcb_1764667133924/1764667134223_Busbar 1.png",
+      "/api/users/images/863dd0b2-13db-4522-a5f0-c598aa557fcb_1764667133924/1764667134219_Fuse 5.png"
+    ]
+  },
+  {
+    "id": "cf09671b-c8cd-4d41-a225-895f8eba26ba",
+    "username": "Daniel Karongo",
+    "emailAddresses": [
+      "karongodaniel022@gmail.com",
+      "danieltorrent001@gmail.com"
+    ],
+    "phoneNumbers": [
+      "+254782645342",
+      "+254743879003"
+    ],
+    "idNumber": "38290198",
+    "role": "SUPERUSER",
+    "branchHierarchy": [
+      {
+        "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+        "branchName": "Main Branch",
+        "departments": [
+          {
+            "departmentId": "c625867c-1c09-479f-9c7e-7ecdc20dcaa9",
+            "departmentName": "GENERAL",
+            "position": "member"
+          }
+        ]
+      }
+    ],
+    "createdAt": "2025-12-02T11:49:44.63065",
+    "deleted": false,
+    "idImageUrls": [
+      "/api/users/images/edfdf462-6cd4-44c3-9b50-df9a7ff5460b_1764665384491/1764665384658_Actuator 1.png",
+      "/api/users/images/edfdf462-6cd4-44c3-9b50-df9a7ff5460b_1764665384491/1764665384664_Actuator 2.png"
+    ]
+  },
+  {
+    "id": "e24e443a-cc39-4e67-a22f-9d3a535f1967",
+    "username": "Linda Chebet",
+    "emailAddresses": [
+      "l.chebet@gmail.com"
+    ],
+    "phoneNumbers": [
+      "+254712334455"
+    ],
+    "idNumber": "10987654",
+    "role": "EMPLOYEE",
+    "branchHierarchy": [
+      {
+        "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+        "branchName": "Branch One",
+        "departments": [
+          {
+            "departmentId": "b4b19f78-9239-41d2-bdbe-e715bbe0973f",
+            "departmentName": "Customer Relations",
+            "position": "member"
+          }
+        ]
+      }
+    ],
+    "createdBy": "cf09671b-c8cd-4d41-a225-895f8eba26ba | Daniel Karongo",
+    "createdAt": "2025-12-02T12:20:35.705311",
+    "deleted": false,
+    "idImageUrls": [
+      "/api/users/images/40403ead-38b3-4e42-b39c-fbc665d02333_1764667235537/1764667235737_Fuse 4.png",
+      "/api/users/images/40403ead-38b3-4e42-b39c-fbc665d02333_1764667235537/1764667235733_Fuse 3.png"
+    ]
+  },
+  {
+    "id": "e8d56e33-2d30-490c-957f-7a227c0226b3",
+    "username": "Mary Wanjiku",
+    "emailAddresses": [
+      "m.wanjiku@gmail.com"
+    ],
+    "phoneNumbers": [
+      "+254712345678"
+    ],
+    "idNumber": "98765432",
+    "role": "MANAGER",
+    "branchHierarchy": [
+      {
+        "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+        "branchName": "Branch One",
+        "departments": [
+          {
+            "departmentId": "2418e260-4324-4de6-8e7d-61488b493a7f",
+            "departmentName": "Management",
+            "position": "head"
+          }
+        ]
+      }
+    ],
+    "createdBy": "cf09671b-c8cd-4d41-a225-895f8eba26ba | Daniel Karongo",
+    "createdAt": "2025-12-02T12:17:54.525497",
+    "deleted": false,
+    "idImageUrls": [
+      "/api/users/images/de273adc-0874-4708-be8a-c51f07f155dc_1764667074365/1764667074581_Fuse 3.png",
+      "/api/users/images/de273adc-0874-4708-be8a-c51f07f155dc_1764667074365/1764667074596_Fuse 4.png"
+    ]
+  },
+  {
+    "id": "f154d9df-ad95-48aa-a474-40d06a4c939a",
+    "username": "Faith Achieng",
+    "emailAddresses": [
+      "f.achieng@gmail.com"
+    ],
+    "phoneNumbers": [
+      "+254722556677"
+    ],
+    "idNumber": "54321098",
+    "role": "SUPERVISOR",
+    "branchHierarchy": [
+      {
+        "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+        "branchName": "Branch One",
+        "departments": [
+          {
+            "departmentId": "8b8fa4fa-6c36-498a-964a-a1814f869344",
+            "departmentName": "Security",
+            "position": "head"
+          }
+        ]
+      }
+    ],
+    "createdBy": "cf09671b-c8cd-4d41-a225-895f8eba26ba | Daniel Karongo",
+    "createdAt": "2025-12-02T12:19:47.547489",
+    "deleted": false,
+    "idImageUrls": [
+      "/api/users/images/1a3623f7-f5ae-4aa1-b5de-e8649f4dd0cb_1764667187429/1764667187578_Fuse 2.png",
+      "/api/users/images/1a3623f7-f5ae-4aa1-b5de-e8649f4dd0cb_1764667187429/1764667187574_Fuse 1.png"
+    ]
+  }
+]

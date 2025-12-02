@@ -1,0 +1,164 @@
+suppliers[0].name:Evercomps Technologies
+suppliers[0].email:evercomps@gmail.com
+suppliers[0].phoneNumber:0756475765
+suppliers[0].address:Kimathi Street
+suppliers[0].region:Nairobi
+suppliers[0].supplierFiles[0].description:id scanned image
+
+suppliers[1].name:Tyjim Company Limited
+suppliers[1].email:tyjim@gmail.com
+suppliers[1].phoneNumber:0723715234
+suppliers[1].address:Arcade
+suppliers[1].region:Thika
+suppliers[1].supplierFiles[0].description:id scanned image
+
+suppliers[2].name:Lertech Co Limited
+suppliers[2].email:lertechltd@gmail.com,info@lertech.co.ke
+suppliers[2].phoneNumber:0787654321,0723121332
+suppliers[2].address:Showbe plaza, Pangani
+suppliers[2].region:Nairobi
+suppliers[2].supplierFiles[0].description:id scanned image
+
+suppliers[3].name:Kagwe
+suppliers[3].email:
+suppliers[3].phoneNumber:0723715225
+suppliers[3].address:Shade plaza
+suppliers[3].region:Witeithie
+suppliers[3].supplierFiles[0].description:id scanned image
+
+suppliers[4].name:Admark Enterprises Limited
+suppliers[4].email:admarkentltd@gmail.com
+suppliers[4].phoneNumber:0723121332,0712345678
+suppliers[4].address:Cool breeze gardens, Muthaiga
+suppliers[4].region:Nairobi
+suppliers[4].supplierFiles[0].description:id scanned image
+suppliers[4].supplierFiles[1].description:id image photo
+
+
+
+
+
+
+
+[
+  "9c79f457-84aa-4584-982c-9765b9f56f69",
+  "4fecf3f4-1c99-4550-a0b2-085249f0a35d",
+  "36937245-da3a-4b38-9162-7c2e245ff869",
+  "38188117-07c9-42f9-9745-03089c0d2e6a",
+  "ae79af50-6b14-4189-9950-2ba8b6505818"
+]
+
+[
+    {
+        "id": "9c79f457-84aa-4584-982c-9765b9f56f69",
+        "name": "Evercomps Technologies",
+        "email": [
+            "evercomps@gmail.com"
+        ],
+        "phoneNumber": [
+            "+254756475765"
+        ],
+        "address": "Kimathi Street",
+        "region": "Nairobi",
+        "rating": null,
+        "imageUrls": [
+            "/api/suppliers/images/bc6067d4-1129-4c28-8227-77e5f89e0791_1764670922992/f7bcfb27-8062-4de7-8753-5af94b047bb0_1764670923021_71Jy3q8SDgL._AC_SL1500_.jpg"
+        ],
+        "deleted": false,
+        "createdAt": "2025-12-02T13:22:03.0052371",
+        "createdById": "cf09671b-c8cd-4d41-a225-895f8eba26ba",
+        "createdByUsername": "Daniel Karongo",
+        "lastUpdatedById": null,
+        "lastUpdatedByUsername": null
+    },
+    {
+        "id": "4fecf3f4-1c99-4550-a0b2-085249f0a35d",
+        "name": "Tyjim Company Limited",
+        "email": [
+            "tyjim@gmail.com"
+        ],
+        "phoneNumber": [
+            "+254723715234"
+        ],
+        "address": "Arcade",
+        "region": "Thika",
+        "rating": null,
+        "imageUrls": [
+            "/api/suppliers/images/ec51b848-832c-42c8-a6a3-6b329eb62e53_1764670923209/2a9a31d1-a57f-4464-9a03-30a75013e2f7_1764670923211_150-ss316-flange-end-ball-valve-1a-png_2.png"
+        ],
+        "deleted": false,
+        "createdAt": "2025-12-02T13:22:03.2108881",
+        "createdById": "cf09671b-c8cd-4d41-a225-895f8eba26ba",
+        "createdByUsername": "Daniel Karongo",
+        "lastUpdatedById": null,
+        "lastUpdatedByUsername": null
+    },
+    {
+        "id": "36937245-da3a-4b38-9162-7c2e245ff869",
+        "name": "Lertech Co Limited",
+        "email": [
+            "lertechltd@gmail.com",
+            "info@lertech.co.ke"
+        ],
+        "phoneNumber": [
+            "+254787654321",
+            "+254723121332"
+        ],
+        "address": "Showbe plaza, Pangani",
+        "region": "Nairobi",
+        "rating": null,
+        "imageUrls": [
+            "/api/suppliers/images/f9cb2e88-3ad7-47ab-a82f-659acebf4021_1764670923255/a1b49cf1-6001-4944-82b8-67d4b1494a44_1764670923257_71Jy3q8SDgL._AC_SL1500_.jpg"
+        ],
+        "deleted": false,
+        "createdAt": "2025-12-02T13:22:03.2551138",
+        "createdById": "cf09671b-c8cd-4d41-a225-895f8eba26ba",
+        "createdByUsername": "Daniel Karongo",
+        "lastUpdatedById": null,
+        "lastUpdatedByUsername": null
+    },
+    {
+        "id": "38188117-07c9-42f9-9745-03089c0d2e6a",
+        "name": "Kagwe",
+        "email": [],
+        "phoneNumber": [
+            "+254723715225"
+        ],
+        "address": "Shade plaza",
+        "region": "Witeithie",
+        "rating": null,
+        "imageUrls": [
+            "/api/suppliers/images/4b9aaadc-084d-4fb1-bd07-4730e52ca714_1764670923299/8e79ecc4-7dd5-4235-9a16-91101804d46c_1764670923301_150-ss316-flange-end-ball-valve-1a-png_2.png"
+        ],
+        "deleted": false,
+        "createdAt": "2025-12-02T13:22:03.3000218",
+        "createdById": "cf09671b-c8cd-4d41-a225-895f8eba26ba",
+        "createdByUsername": "Daniel Karongo",
+        "lastUpdatedById": null,
+        "lastUpdatedByUsername": null
+    },
+    {
+        "id": "ae79af50-6b14-4189-9950-2ba8b6505818",
+        "name": "Admark Enterprises Limited",
+        "email": [
+            "admarkentltd@gmail.com"
+        ],
+        "phoneNumber": [
+            "+254723121332",
+            "+254712345678"
+        ],
+        "address": "Cool breeze gardens, Muthaiga",
+        "region": "Nairobi",
+        "rating": null,
+        "imageUrls": [
+            "/api/suppliers/images/f7a151f0-27a3-4dbf-a6b2-5a44f44037cf_1764670923340/63e947e3-b8f0-4e80-be3c-79693958c109_1764670923344_ID.jpg",
+            "/api/suppliers/images/f7a151f0-27a3-4dbf-a6b2-5a44f44037cf_1764670923340/ab2ee194-f2f0-437a-b8f3-62eb08b3f915_1764670923341_signature.pdf"
+        ],
+        "deleted": false,
+        "createdAt": "2025-12-02T13:22:03.3408218",
+        "createdById": "cf09671b-c8cd-4d41-a225-895f8eba26ba",
+        "createdByUsername": "Daniel Karongo",
+        "lastUpdatedById": null,
+        "lastUpdatedByUsername": null
+    }
+]

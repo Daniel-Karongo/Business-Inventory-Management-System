@@ -4,6 +4,7 @@ import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
 import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.exception.*;
+import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserImage;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserImageAudit;
@@ -52,8 +53,9 @@ public class UserImageService {
     }
 
     /* ====================== SAVE FILES ====================== */
-    public List<String> saveFiles(List<MultipartFile> files, String folderName, String baseDir) throws IOException {
-        List<String> urls = new ArrayList<>();
+    public Map<String, String> saveFiles(List<FIleUploadDTO> fileDTOs, String folderName, String baseDir) throws IOException {
+
+        Map<String, String> urls = new HashMap<>();
         Path userDir = Paths.get(baseDir, folderName).toAbsolutePath().normalize();
 
         // Create and hide folders
@@ -61,17 +63,18 @@ public class UserImageService {
         if (!Files.exists(userDir)) Files.createDirectories(userDir);
         fileStorageService.hidePath(userDir);
 
-        for (MultipartFile file : files) {
-            if (file.isEmpty()) continue;
-            checkDiskSpace(userDir, file.getSize());
+        for (FIleUploadDTO fileDTO : fileDTOs) {
+            MultipartFile actualFile = fileDTO.getFile();
+            if (actualFile.isEmpty()) continue;
+            checkDiskSpace(userDir, actualFile.getSize());
 
-            String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
+            String fileName = System.currentTimeMillis() + "_" + actualFile.getOriginalFilename();
             Path filePath = userDir.resolve(fileName);
-            file.transferTo(filePath.toFile());
+            actualFile.transferTo(filePath.toFile());
             fileStorageService.hidePath(filePath);
 
             // Use secure API path, not physical path
-            urls.add("/api/users/images/" + folderName + "/" + fileName);
+            urls.put("/api/users/images/" + folderName + "/" + fileName, fileDTO.getDescription());
         }
 
         return urls;

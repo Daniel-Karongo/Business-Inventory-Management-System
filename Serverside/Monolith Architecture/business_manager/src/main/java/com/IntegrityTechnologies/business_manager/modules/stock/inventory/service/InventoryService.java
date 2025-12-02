@@ -2,8 +2,13 @@ package com.IntegrityTechnologies.business_manager.modules.stock.inventory.servi
 
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import com.IntegrityTechnologies.business_manager.exception.OutOfStockException;
-import com.IntegrityTechnologies.business_manager.modules.person.function.branch.model.Branch;
-import com.IntegrityTechnologies.business_manager.modules.person.function.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.controller.CategoryController;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.AdjustStockRequest;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.InventoryResponse;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.ReceiveStockRequest;
@@ -12,8 +17,12 @@ import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.StockTransaction;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.model.Product;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.model.ProductAudit;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.repository.ProductAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.repository.ProductRepository;
 
+import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import jakarta.persistence.OptimisticLockException;
 
 import lombok.RequiredArgsConstructor;
@@ -23,8 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -33,7 +41,10 @@ public class InventoryService {
     private final InventoryItemRepository inventoryItemRepository;
     private final StockTransactionRepository stockTransactionRepository;
     private final ProductRepository productRepository;
+    private final SupplierRepository supplierRepository;
     private final BranchRepository branchRepository;
+    private final ProductAuditRepository productAuditRepository;
+    private final CategoryRepository categoryRepository;
 
     private static final int MAX_RETRIES = 5;
 
@@ -64,6 +75,7 @@ public class InventoryService {
         }
 
         Long quantityStocked = 0L;
+        Set<Supplier> productSuppliers = new HashSet<>();
         for (SupplierUnit supplierUnit: req.getSuppliers()) {
             quantityStocked += supplierUnit.getUnitsSupplied();
 
@@ -79,12 +91,34 @@ public class InventoryService {
                     .performedBy(getCurrentUsername())
                     .build()
             );
+
+            productSuppliers.add(supplierRepository.findByIdAndDeletedFalse(supplierUnit.getSupplierId()).get());
         }
+        Set<Supplier> addedProductSuppliers = new HashSet<>();
+        Category productCategory = product.getCategory();
+        productSuppliers.forEach(supplier -> {
+            if(!product.getSuppliers().contains(supplier)) {
+                product.getSuppliers().add(supplier);
+                addedProductSuppliers.add(supplier);
+            }
+
+
+            if(!productCategory.getSuppliers().contains(supplier)) {
+                productCategory.getSuppliers().add(supplier);
+            }
+        });
+        productRepository.save(product);
+        createProductAudit(product, "UPDATE", "suppliers", null, addedProductSuppliers.stream().map(supplier -> {
+            return supplier.getId().toString() + " - " + supplier.getName().toString();
+        }).toString());
+        categoryRepository.save(productCategory);
 
         item.setQuantityOnHand(item.getQuantityOnHand() + quantityStocked);
         item.setLastUpdatedAt(LocalDateTime.now());
         item.setLastUpdatedBy(getCurrentUsername());
         inventoryItemRepository.save(item);
+
+
 
         return new ApiResponse("success", "Stock received", buildResponse(item));
     }
@@ -305,5 +339,18 @@ public class InventoryService {
     private String getCurrentUsername() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null ? auth.getName() : "SYSTEM";
+    }
+
+    private void createProductAudit(Product product, String action, String fieldChanged, String oldValue, String newValue) {
+        ProductAudit createAudit = new ProductAudit();
+        createAudit.setAction(action);
+        createAudit.setFieldChanged(fieldChanged);
+        createAudit.setOldValue(oldValue);
+        createAudit.setNewValue(newValue);
+        createAudit.setProductId(product.getId());
+        createAudit.setProductName(product.getName());
+        createAudit.setTimestamp(LocalDateTime.now());
+        createAudit.setPerformedBy(SecurityUtils.currentUsername());
+        productAuditRepository.save(createAudit);
     }
 }

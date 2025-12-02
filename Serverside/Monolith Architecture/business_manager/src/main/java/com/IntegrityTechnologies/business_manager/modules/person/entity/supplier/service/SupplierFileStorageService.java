@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.service;
 
+import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
 import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
@@ -55,19 +56,21 @@ public class SupplierFileStorageService {
      * Public URL format set in SupplierImage.filePath:
      *   /api/suppliers/images/{uploadFolder}/{fileName}
      */
-    public Set<SupplierImage> storeImages(Supplier supplier, Set<MultipartFile> files) throws IOException {
+    public Set<SupplierImage> storeImages(Supplier supplier, List<FIleUploadDTO> files) throws IOException {
         if (files == null || files.isEmpty()) return Set.of();
 
         Path dir = getSupplierDirectory(supplier.getUploadFolder());
         Set<SupplierImage> result = new HashSet<>();
 
-        for (MultipartFile mf : files) {
-            if (mf == null || mf.isEmpty()) continue;
+        for (FIleUploadDTO fileDTO : files) {
+            if (fileDTO == null || fileDTO.getFile().isEmpty()) continue;
 
-            String original = sanitizeOriginalFileName(mf.getOriginalFilename());
+            MultipartFile file = fileDTO.getFile();
+
+            String original = sanitizeOriginalFileName(file.getOriginalFilename());
             String fileName = UUID.randomUUID() + "_" + System.currentTimeMillis() + "_" + original;
 
-            try (InputStream in = mf.getInputStream()) {
+            try (InputStream in = file.getInputStream()) {
                 Path saved = fileStorageService.saveFile(dir, fileName, in);
                 transactionalFileManager.track(saved); // for rollback cleanup
                 fileStorageService.hidePath(saved);
@@ -77,6 +80,7 @@ public class SupplierFileStorageService {
                 result.add(SupplierImage.builder()
                         .fileName(fileName)
                         .filePath(publicUrl)
+                        .fileDescription(fileDTO.getDescription())
                         .supplier(supplier)
                         .build());
             }

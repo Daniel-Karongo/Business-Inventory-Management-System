@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.model;
 
-import com.IntegrityTechnologies.business_manager.modules.person.function.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.model.Product;
 import jakarta.persistence.*;
 import lombok.*;

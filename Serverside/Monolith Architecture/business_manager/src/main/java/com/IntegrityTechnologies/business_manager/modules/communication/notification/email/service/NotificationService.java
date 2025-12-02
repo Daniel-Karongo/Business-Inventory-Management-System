@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.communication.notification.email.service;
 
-import com.IntegrityTechnologies.business_manager.modules.person.function.department.model.Department;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.Rollcall;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 

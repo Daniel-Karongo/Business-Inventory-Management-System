@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.user.controller;
 
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
+import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.UserDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.service.UserImageService;
@@ -14,7 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -74,7 +74,7 @@ public class UserController {
     @PatchMapping("/{identifier}/images")
     public ResponseEntity<?> updateUserImages(
             @PathVariable String identifier,
-            @RequestParam(value = "userImagesFiles", required = false) List<MultipartFile> userImagesFiles,
+            @RequestParam(value = "userImagesFiles", required = false) List<FIleUploadDTO> userImagesFiles,
             @RequestParam(value = "deleteOldImages") Boolean deleteOldImages,
             Authentication authentication
     ) throws IOException {

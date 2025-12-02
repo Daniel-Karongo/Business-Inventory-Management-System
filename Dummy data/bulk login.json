@@ -1,0 +1,89 @@
+[
+  {
+    "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+    "identifier": "Isaac Kungu",
+    "password": "Isaac@123"
+  },
+  {
+    "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+    "identifier": "Peter Otieno",
+    "password": "Peter@123"
+  },
+  {
+    "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+    "identifier": "Joyce Njeri",
+    "password": "Joyce@123"
+  },
+  {
+    "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+    "identifier": "Samuel Kimani",
+    "password": "Samuel@123"
+  },
+  {
+    "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+    "identifier": "Faith Achieng",
+    "password": "Faith@123"
+  },
+  {
+    "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+    "identifier": "Brian Mwangi",
+    "password": "Brian@123"
+  },
+  {
+    "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+    "identifier": "Catherine Wairimu",
+    "password": "Catherine@123"
+  },
+  {
+    "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
+    "identifier": "Kevin Oduor",
+    "password": "Kevin@123"
+  },
+  {
+    "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+    "identifier": "Linda Chebet",
+    "password": "Linda@123"
+  }
+]
+
+
+
+
+[
+  {
+    "userName": "Isaac Kungu",
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiI1OGQ5NmIyZi0yZjAyLTQ2MTItYTA3Ni1lNmJlMzA3ZDBmNjciLCJyb2xlIjoiQURNSU4iLCJzdWIiOiJJc2FhYyBLdW5ndSIsImlhdCI6MTc2NDY2NzgwMiwiZXhwIjoxNzY0NzU0MjAyfQ.1xVJO2BNzAGweDiD4jcdn7jj8_B3x9lwHLBmntJQBHo"
+  },
+  {
+    "userName": "Peter Otieno",
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiI3NGZlMjlmYS03MmE1LTQ4NDMtOTBjNC1iMTY1OWY0NDU3MmMiLCJyb2xlIjoiU1VQRVJWSVNPUiIsInN1YiI6IlBldGVyIE90aWVubyIsImlhdCI6MTc2NDY2NzgwMywiZXhwIjoxNzY0NzU0MjAzfQ.n1DcoXEcta1chRqiOERhh4QR9XYYaXG9cP_6SkymWtU"
+  },
+  {
+    "userName": "Joyce Njeri",
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiI5MTA0MTYxYS00OWQxLTQ2ZWMtYTE5Ni0xMDQ0YzM3ZjE5OGYiLCJyb2xlIjoiRU1QTE9ZRUUiLCJzdWIiOiJKb3ljZSBOamVyaSIsImlhdCI6MTc2NDY2NzgwMywiZXhwIjoxNzY0NzU0MjAzfQ.4R539IwKjaUaORtFrC4q0jqVjWqJG_-F8NrJwIntA8Q"
+  },
+  {
+    "userName": "Samuel Kimani",
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJjYWNlZjJkNy0yN2M0LTRlZTgtOTEyNS0yN2ZjODFiNzAyNzYiLCJyb2xlIjoiTUFOQUdFUiIsInN1YiI6IlNhbXVlbCBLaW1hbmkiLCJpYXQiOjE3NjQ2Njc4MDMsImV4cCI6MTc2NDc1NDIwM30.N2s_Wq5KK_MKQ43ZVk0ex4zpC8AiwclpNwLKcn6uWQY"
+  },
+  {
+    "userName": "Faith Achieng",
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJmMTU0ZDlkZi1hZDk1LTQ4YWEtYTQ3NC00MGQwNmE0YzkzOWEiLCJyb2xlIjoiU1VQRVJWSVNPUiIsInN1YiI6IkZhaXRoIEFjaGllbmciLCJpYXQiOjE3NjQ2Njc4MDQsImV4cCI6MTc2NDc1NDIwNH0.7AFu7OkQDUoY_I5iJnlV1WD4ppLUHRrRaaCKb1F4x-s"
+  },
+  {
+    "userName": "Brian Mwangi",
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJjNGJmYjY1Mi0xN2Y4LTQzOTItYmE2Zi1kZGEzMzNmZmQ1MzAiLCJyb2xlIjoiRU1QTE9ZRUUiLCJzdWIiOiJCcmlhbiBNd2FuZ2kiLCJpYXQiOjE3NjQ2Njc4MDQsImV4cCI6MTc2NDc1NDIwNH0.HjQqkiyL3hoa7Savj22ubKSIhsv2NwfL4T0YYNUHHvY"
+  },
+  {
+    "userName": "Catherine Wairimu",
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiI1Mjc4NjkzOC01YzRhLTQ1YWEtOTNiZS0wY2JiYjgyMzAzNzAiLCJyb2xlIjoiTUFOQUdFUiIsInN1YiI6IkNhdGhlcmluZSBXYWlyaW11IiwiaWF0IjoxNzY0NjY3ODA0LCJleHAiOjE3NjQ3NTQyMDR9.a_6X9u_McfQUSrEN1jG6fzJOV-7OGLBWEsoU2NG6DAs"
+  },
+  {
+    "userName": "Kevin Oduor",
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiI2MjNiNWYyZi02ZjQzLTRmZGQtOWZkMi1iMDVlZGNiODIxYzYiLCJyb2xlIjoiU1VQRVJWSVNPUiIsInN1YiI6IktldmluIE9kdW9yIiwiaWF0IjoxNzY0NjY3ODA1LCJleHAiOjE3NjQ3NTQyMDV9.10LbswPTToQtLyVUa5nb29iC_eEDzOd6zLRfQLaIp5o"
+  },
+  {
+    "userName": "Linda Chebet",
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJlMjRlNDQzYS1jYzM5LTRlNjctYTIyZi05ZDNhNTM1ZjE5NjciLCJyb2xlIjoiRU1QTE9ZRUUiLCJzdWIiOiJMaW5kYSBDaGViZXQiLCJpYXQiOjE3NjQ2Njc4MDUsImV4cCI6MTc2NDc1NDIwNX0.3sgMGt9TbUrfLKeaHBSs0nSiKzgvxbvdB13PCd1LuF0"
+  }
+]
