@@ -14,16 +14,15 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class JournalEntry {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
     @Column(nullable = false)
-    private String reference; // e.g., SALE-2025-0001
+    private String reference;
 
     private String description;
 
@@ -33,4 +32,7 @@ public class JournalEntry {
 
     @OneToMany(mappedBy = "journalEntry", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<EntryLine> lines;
+
+    @Version
+    private Long version;
 }

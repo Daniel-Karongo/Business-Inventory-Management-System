@@ -1,7 +1,8 @@
-package com.IntegrityTechnologies.business_manager.modules.finance.accounts.service;
+package com.IntegrityTechnologies.business_manager.modules.finance.accounts.service.impl;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounts.model.PartTransaction;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounts.repository.PartTransactionRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounts.service.PartTransactionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +21,6 @@ public class PartTransactionServiceImpl implements PartTransactionService {
     @Transactional
     public PartTransaction record(PartTransaction tx) {
         if (tx.getTransactionDate() == null) tx.setTransactionDate(LocalDateTime.now());
-        if (tx.getId() == null) tx.setId(UUID.randomUUID());
         return repo.save(tx);
     }
 

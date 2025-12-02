@@ -52,28 +52,11 @@ public class SalesService {
             lines.add(line);
         }
 
-        // total validation/compute
         BigDecimal computedTotal = lines.stream()
                 .map(SaleLineItem::getLineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // create payments
-        List<Payment> payments = Optional.ofNullable(req.getPayments()).orElse(Collections.emptyList())
-                .stream()
-                .map(pd -> {
-                    Payment r = Payment.builder()
-                            .id(UUID.randomUUID())
-                            .timestamp(LocalDateTime.now())
-                            .amount(pd.getAmount())
-                            .method(pd.getMethod())
-                            .providerReference(pd.getReference())
-                            .status("COMPLETED") // adapter can update this if external
-                            .build();
-                    paymentRepository.save(r);
-                    return r;
-                }).collect(Collectors.toList());
-
-        // create sale record
+        // create sale record in CREATED status (no payments yet)
         Sale sale = Sale.builder()
                 .id(saleId)
                 .createdAt(LocalDateTime.now())
@@ -82,16 +65,14 @@ public class SalesService {
                 .totalDiscount(Optional.ofNullable(req.getTotalDiscount()).orElse(BigDecimal.ZERO))
                 .totalTax(Optional.ofNullable(req.getTotalTax()).orElse(BigDecimal.ZERO))
                 .lineItems(lines)
-                .payments(payments)
-                .status(Sale.SaleStatus.COMPLETED)
+                .payments(new ArrayList<>())
+                .status(Sale.SaleStatus.CREATED)
                 .build();
 
-        // persist sale
         Sale saved = saleRepository.save(sale);
 
-        // decrement inventory for each line (this is where we integrate inventory)
+        // Decrement inventory now (will throw OutOfStockException if insufficient)
         for (SaleLineItem li : lines) {
-            // InventoryService must provide this method; will throw if insufficient stock
             inventoryService.decrementStock(li.getProductId(), li.getBranchId(), li.getQuantity(), "SALE:" + saleId.toString());
         }
 

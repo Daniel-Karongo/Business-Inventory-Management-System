@@ -4,12 +4,16 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.customer
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerResponse;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.Customer;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.CustomerPaymentHistory;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.repository.CustomerPaymentHistoryRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -17,6 +21,7 @@ import java.util.UUID;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final CustomerPaymentHistoryRepository cphRepo; // add to constructor args
 
     public CustomerResponse createCustomer(CustomerRequest req) {
         Customer c = Customer.builder()
@@ -82,5 +87,24 @@ public class CustomerService {
                 .createdAt(c.getCreatedAt())
                 .updatedAt(c.getUpdatedAt())
                 .build();
+    }
+
+
+
+    @Transactional
+    public void recordPayment(UUID customerId, UUID paymentId, BigDecimal amount, LocalDateTime timestamp) {
+        // silent no-op if customer missing
+        if (customerId == null) return;
+        Customer c = customerRepository.findById(customerId).orElse(null);
+        if (c == null) return;
+        CustomerPaymentHistory hist = CustomerPaymentHistory.builder()
+                .id(UUID.randomUUID())
+                .customerId(customerId)
+                .paymentId(paymentId)
+                .amount(amount)
+                .timestamp(timestamp != null ? timestamp : LocalDateTime.now())
+                .note("Recorded payment for sale")
+                .build();
+        cphRepo.save(hist);
     }
 }

@@ -37,9 +37,14 @@ public class Sale {
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Payment> payments;
 
-    // status: CREATED, COMPLETED, CANCELLED, REFUNDED
+    @Column(columnDefinition = "BINARY(16)")
+    private UUID customerId;
+
     @Enumerated(EnumType.STRING)
     private SaleStatus status;
+
+    @Version
+    private Long version;
 
     public enum SaleStatus {
         CREATED, COMPLETED, CANCELLED, REFUNDED

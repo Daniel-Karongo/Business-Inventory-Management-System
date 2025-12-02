@@ -17,7 +17,6 @@ public class SalesController {
 
     private final SalesService salesService;
 
-    @PreAuthorize("hasAnyRole('ADMIN','CASHIER','MANAGER')")
     @PostMapping
     public ResponseEntity<SaleResponse> createSale(@RequestBody SaleRequest req) {
         return ResponseEntity.ok(salesService.createSale(req));

@@ -13,11 +13,10 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Account {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
@@ -34,6 +33,9 @@ public class Account {
     private BigDecimal balance; // running balance
 
     private boolean active;
+
+    @Version
+    private Long version;
 
     public enum AccountType {
         ASSET, LIABILITY, EQUITY, INCOME, EXPENSE

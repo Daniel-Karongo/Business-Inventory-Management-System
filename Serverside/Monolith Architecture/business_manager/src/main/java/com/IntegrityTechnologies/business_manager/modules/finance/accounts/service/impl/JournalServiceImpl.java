@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.modules.finance.accounts.service;
+package com.IntegrityTechnologies.business_manager.modules.finance.accounts.service.impl;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounts.dto.EntryLineRequest;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounts.dto.JournalEntryRequest;
@@ -10,6 +10,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounts.model
 import com.IntegrityTechnologies.business_manager.modules.finance.accounts.repository.AccountRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounts.repository.EntryLineRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounts.repository.JournalEntryRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounts.service.JournalService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,13 +48,11 @@ public class JournalServiceImpl implements JournalService {
         }
 
         // Build journal entry
-        JournalEntry je = JournalEntry.builder()
-                .id(UUID.randomUUID())
-                .reference(req.getReference() != null ? req.getReference() : "AUTO-" + UUID.randomUUID())
-                .description(req.getDescription())
-                .timestamp(LocalDateTime.now())
-                .createdBy(performedBy)
-                .build();
+        JournalEntry je = new JournalEntry();
+        je.setReference(req.getReference() != null ? req.getReference() : "AUTO-" + UUID.randomUUID());
+        je.setDescription(req.getDescription());
+        je.setTimestamp(LocalDateTime.now());
+        je.setCreatedBy(performedBy);
 
         List<EntryLine> persistedLines = new ArrayList<>();
 
@@ -65,15 +64,13 @@ public class JournalServiceImpl implements JournalService {
             BigDecimal debit = reqLine.getDebit() == null ? BigDecimal.ZERO : reqLine.getDebit();
             BigDecimal credit = reqLine.getCredit() == null ? BigDecimal.ZERO : reqLine.getCredit();
 
-            EntryLine line = EntryLine.builder()
-                    .id(UUID.randomUUID())
-                    .journalEntry(je)
-                    .account(account)
-                    .debit(debit)
-                    .credit(credit)
-                    .note(reqLine.getNote())
-                    .transactionType(reqLine.getTransactionType())
-                    .build();
+            EntryLine line = new EntryLine();
+            line.setJournalEntry(je);
+            line.setAccount(account);
+            line.setDebit(debit);
+            line.setCredit(credit);
+            line.setNote(reqLine.getNote());
+            line.setTransactionType(reqLine.getTransactionType());
 
             // update account balance:
             // Simplified: balance = balance + (debit - credit)

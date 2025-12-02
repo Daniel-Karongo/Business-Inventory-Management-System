@@ -6,7 +6,10 @@ import java.util.List;
 import java.util.UUID;
 
 public interface AccountService {
+
     Account createAccount(Account account);
+
     Account getAccount(UUID id);
+
     List<Account> listAccounts();
 }

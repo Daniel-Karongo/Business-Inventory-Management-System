@@ -11,7 +11,6 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class EntryLine {
 
     @Id
@@ -35,6 +34,8 @@ public class EntryLine {
 
     private String note;
 
-    // convenience (denormalized)
-    private String transactionType; // SALE, PURCHASE, PAYMENT, ADJUSTMENT
+    private String transactionType;
+
+    @Version
+    private Long version;
 }

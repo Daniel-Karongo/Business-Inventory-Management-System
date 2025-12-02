@@ -15,19 +15,18 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class PartTransaction {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
     @Column(nullable = false)
-    private String relatedModule; // e.g., SALE, PURCHASE, PAYMENT, STOCK_ADJUSTMENT
+    private String relatedModule;
 
     @Column(columnDefinition = "BINARY(16)")
-    private UUID referenceId; // e.g., saleId, purchaseOrderId, paymentId
+    private UUID referenceId;
 
     @Column(columnDefinition = "BINARY(16)")
     private UUID productId;
@@ -45,4 +44,7 @@ public class PartTransaction {
     private String createdBy;
 
     private String note;
+
+    @Version
+    private Long version;
 }

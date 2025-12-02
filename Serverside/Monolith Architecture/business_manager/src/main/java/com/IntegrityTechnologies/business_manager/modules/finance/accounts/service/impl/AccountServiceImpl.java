@@ -1,7 +1,8 @@
-package com.IntegrityTechnologies.business_manager.modules.finance.accounts.service;
+package com.IntegrityTechnologies.business_manager.modules.finance.accounts.service.impl;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounts.model.Account;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounts.repository.AccountRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounts.service.AccountService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

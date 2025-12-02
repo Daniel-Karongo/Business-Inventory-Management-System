@@ -12,11 +12,10 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Payment {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
@@ -24,19 +23,22 @@ public class Payment {
     @JoinColumn(name = "sale_id", nullable = false)
     private Sale sale;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 
     @Column(nullable = false)
-    private String method; // e.g. CASH, MPESA, CARD, EFT
+    private String method;
 
-    private String providerReference; // e.g. transaction id from MPESA or card gateway
+    private String providerReference;
 
     @Column(nullable = false)
     private LocalDateTime timestamp;
 
     @Column(nullable = false)
-    private String status; // e.g. PENDING, SUCCESS, FAILED
+    private String status;
 
     private String note;
+
+    @Version
+    private Long version;
 }

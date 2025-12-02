@@ -2,10 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.supplie
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 
 import java.sql.Types;
@@ -22,12 +19,14 @@ import java.util.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString
 public class Supplier {
 
     @Id
     @GeneratedValue
     @JdbcTypeCode(Types.BINARY)
     @Column(columnDefinition = "BINARY(16)")
+    @ToString.Exclude
     private UUID id;
 
     @Column(nullable = false, unique = true)

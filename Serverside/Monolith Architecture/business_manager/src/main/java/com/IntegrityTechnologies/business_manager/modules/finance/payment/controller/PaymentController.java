@@ -20,14 +20,12 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
-    @PreAuthorize("hasAnyRole('ADMIN','CASHIER','MANAGER')")
     @PostMapping
     public ResponseEntity<PaymentResponse> makePayment(@RequestBody PaymentRequest req) {
         PaymentResponse resp = paymentService.processPayment(req);
         return ResponseEntity.ok(resp);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','CASHIER','MANAGER')")
     @GetMapping("/{id}")
     public ResponseEntity<PaymentResponse> getPayment(@PathVariable UUID id) {
         return ResponseEntity.ok(paymentService.getPayment(id));
