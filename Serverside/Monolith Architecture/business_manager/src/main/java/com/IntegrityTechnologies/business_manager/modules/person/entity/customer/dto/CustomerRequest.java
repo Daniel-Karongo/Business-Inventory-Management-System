@@ -4,19 +4,15 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import java.util.List;
+import java.util.UUID;
+
 @Data
 public class CustomerRequest {
-
-    @NotBlank(message = "Name is required")
+    private UUID customerId;
     private String name;
-
-    // optional but usually useful
-    private String phone;
-
-    @Email(message = "Email should be valid")
-    private String email;
-
+    private List<String> phoneNumbers;
+    private List<@Email String> emailAddresses;
     private String address;
-
     private String notes;
 }

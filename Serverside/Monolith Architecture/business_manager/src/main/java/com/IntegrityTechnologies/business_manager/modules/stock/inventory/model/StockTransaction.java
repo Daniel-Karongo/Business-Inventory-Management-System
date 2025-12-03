@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 
+import java.math.BigDecimal;
 import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -26,8 +27,15 @@ public class StockTransaction {
     @Column(name = "product_id", nullable = false)
     private UUID productId;
 
+    @Column(name = "product_variant_id", nullable = false)
+    private UUID productVariantId;
+
+
     @Column(name = "branch_id", nullable = false)
     private UUID branchId;
+
+    @Column(precision = 18, scale = 2)
+    private BigDecimal unitCost;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

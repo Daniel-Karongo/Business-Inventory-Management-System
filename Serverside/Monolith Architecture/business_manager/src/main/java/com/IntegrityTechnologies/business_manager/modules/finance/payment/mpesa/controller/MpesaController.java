@@ -5,6 +5,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.payment.mpesa.
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.mpesa.service.MpesaService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,39 +22,42 @@ public class MpesaController {
     private final MpesaService mpesaService;
     private final MpesaTransactionRepository repo;
 
+    /** 1. Initiate STK Push */
     @PostMapping("/stk/initiate")
     public ResponseEntity<MpesaTransaction> initStk(@RequestParam UUID saleId,
                                                     @RequestParam String phone,
                                                     @RequestParam BigDecimal amount) {
-        MpesaTransaction tx = mpesaService.initiateStk(saleId, phone, amount);
-        return ResponseEntity.ok(tx);
+        return ResponseEntity.ok(
+                mpesaService.initiateStk(saleId, phone, amount)
+        );
     }
 
+    /** 2. Handle STK Callback */
     @PostMapping("/stk/callback")
     public ResponseEntity<String> stkCallback(@RequestBody Map payload) {
-        // called by Safaricom — process and return 200
         mpesaService.handleStkCallback(payload);
         return ResponseEntity.ok("{\"ResultCode\":0,\"ResultDesc\":\"Accepted\"}");
     }
 
-    // C2B endpoints for confirm & validate (Safaricom will POST here)
+    /** 3. C2B Confirm */
     @PostMapping("/c2b/confirm")
     public ResponseEntity<String> c2bConfirm(@RequestBody Map payload) {
-        // implement logic: create payment, mark sale paid etc.
-        // For now just log and respond with success body expected by Daraja
-        // e.g., {"ResultCode":0,"ResultDesc":"Accepted"}
-        System.out.println("C2B confirm: " + payload);
+        mpesaService.handleC2BConfirm(payload); // <-- optionally implement
         return ResponseEntity.ok("{\"ResultCode\":0,\"ResultDesc\":\"Accepted\"}");
     }
 
+    /** 4. C2B Validate */
     @PostMapping("/c2b/validate")
     public ResponseEntity<String> c2bValidate(@RequestBody Map payload) {
-        System.out.println("C2B validate: " + payload);
+        mpesaService.handleC2BValidate(payload); // <-- optionally implement
         return ResponseEntity.ok("{\"ResultCode\":0,\"ResultDesc\":\"Accepted\"}");
     }
 
+    /** 5. Get Transaction */
     @GetMapping("/{id}")
     public ResponseEntity<MpesaTransaction> get(@PathVariable UUID id) {
-        return repo.findById(id).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        return repo.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }

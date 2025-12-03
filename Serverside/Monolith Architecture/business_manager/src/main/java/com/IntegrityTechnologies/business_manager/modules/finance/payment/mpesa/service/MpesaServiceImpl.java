@@ -23,8 +23,8 @@ public class MpesaServiceImpl implements MpesaService {
     private final MpesaClient client;
     private final MpesaTransactionRepository repo;
     private final MpesaProperties props;
-    private final PaymentService paymentService; // add bean
-    private final PaymentRepository paymentRepository; // to check duplicates
+    private final PaymentService paymentService;
+    private final PaymentRepository paymentRepository;
 
     @Override
     @Transactional
@@ -43,7 +43,6 @@ public class MpesaServiceImpl implements MpesaService {
 
         if (resp != null) {
             Object checkoutRequestId = resp.get("CheckoutRequestID");
-            if (checkoutRequestId == null) checkoutRequestId = resp.get("CheckoutRequestID"); // sometimes different case
             tx.setCheckoutRequestId(checkoutRequestId != null ? checkoutRequestId.toString() : null);
             tx.setMerchantRequestId(resp.getOrDefault("MerchantRequestID", "").toString());
         }
@@ -52,7 +51,8 @@ public class MpesaServiceImpl implements MpesaService {
 
     @Override
     @Transactional
-    public void handleStkCallback(Map callback) {
+    public void handleStkCallback(Map<String, Object> callback) {
+        // your existing logic with idempotent payment creation (keeps behavior)
         try {
             Map body = (Map) callback.get("Body");
             Map stkCallback = (Map) body.get("stkCallback");
@@ -66,7 +66,6 @@ public class MpesaServiceImpl implements MpesaService {
             }
 
             if (resultCode == 0) {
-                // success
                 String receipt = "";
                 String amountStr = null;
                 if (callbackMetadata != null && callbackMetadata.get("Item") instanceof java.util.List) {
@@ -85,7 +84,7 @@ public class MpesaServiceImpl implements MpesaService {
                 }
                 tx.setMpesaReceiptNumber(receipt);
                 tx.setStatus("SUCCESS");
-                if (amountStr != null) tx.setAmount(new java.math.BigDecimal(amountStr));
+                if (amountStr != null) tx.setAmount(new BigDecimal(amountStr));
                 tx.setTimestamp(LocalDateTime.now());
             } else {
                 tx.setStatus("FAILED");
@@ -93,43 +92,71 @@ public class MpesaServiceImpl implements MpesaService {
             tx.setRawResponse(callback.toString());
             repo.save(tx);
 
-            // If success and linked to a sale -> create payment (idempotent: check providerReference)
             if ("SUCCESS".equalsIgnoreCase(tx.getStatus()) && tx.getSaleId() != null && tx.getMpesaReceiptNumber() != null) {
-                // check existing payment with same providerReference
                 var existing = paymentRepository.findByProviderReference(tx.getMpesaReceiptNumber());
-                if (existing != null && !existing.isEmpty()) {
-                    return; // already processed
-                }
-
-                PaymentRequest pr = new PaymentRequest();
-                pr.setSaleId(tx.getSaleId());
-                pr.setAmount(tx.getAmount() == null ? java.math.BigDecimal.ZERO : tx.getAmount());
-                pr.setMethod("MPESA");
-                pr.setProviderReference(tx.getMpesaReceiptNumber());
-                pr.setNote("Mpesa STK callback");
-
-                try {
-                    paymentService.processPayment(pr);
-                } catch (Exception ex) {
-                    // log but do not fail the whole callback
-                    System.err.println("Failed to create payment from mpesa callback: " + ex.getMessage());
+                if (existing == null || existing.isEmpty()) {
+                    PaymentRequest pr = new PaymentRequest();
+                    pr.setSaleId(tx.getSaleId());
+                    pr.setAmount(tx.getAmount() == null ? BigDecimal.ZERO : tx.getAmount());
+                    pr.setMethod("MPESA");
+                    pr.setProviderReference(tx.getMpesaReceiptNumber());
+                    pr.setNote("Mpesa STK callback");
+                    try {
+                        paymentService.processPayment(pr);
+                    } catch (Exception ex) {
+                        System.err.println("Failed to create payment from mpesa callback: " + ex.getMessage());
+                    }
                 }
             }
-
         } catch (Exception ex) {
             throw new RuntimeException("Failed to process STK callback: " + ex.getMessage(), ex);
         }
     }
 
+    @Override
+    @Transactional
+    public void handleC2BConfirm(Map payload) {
+        // Safaricom C2B confirm: parse payload and create payment where appropriate
+        try {
+            // parsing according to expected c2b payload keys
+            String msisdn = String.valueOf(payload.getOrDefault("MSISDN", payload.getOrDefault("msisdn", "")));
+            String receipt = String.valueOf(payload.getOrDefault("TransID", payload.getOrDefault("TransID", payload.get("TransactionReceipt"))));
+            BigDecimal amount = new BigDecimal(String.valueOf(payload.getOrDefault("Amount", "0")));
+            String accountRef = String.valueOf(payload.getOrDefault("AccountReference", payload.getOrDefault("accountReference", "")));
+            // attempt to map accountRef to saleId (if you encode saleId in accountRef)
+            UUID saleId = null;
+            try {
+                saleId = UUID.fromString(accountRef);
+            } catch (Exception ignored) {}
+
+            // idempotent create payment (if receipt not already present)
+            var existing = paymentRepository.findByProviderReference(receipt);
+            if (existing == null || existing.isEmpty()) {
+                PaymentRequest pr = new PaymentRequest();
+                pr.setSaleId(saleId);
+                pr.setAmount(amount);
+                pr.setMethod("MPESA");
+                pr.setProviderReference(receipt);
+                pr.setNote("C2B confirm");
+                paymentService.processPayment(pr);
+            }
+        } catch (Exception ex) {
+            System.err.println("Failed to process C2B confirm: " + ex.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void handleC2BValidate(Map payload) {
+        // basic accept/validate; you can implement business rules here
+        System.out.println("C2B validation payload: " + payload);
+    }
+
     private String normalizePhone(String p) {
         if (p == null) return null;
         String phone = p.trim();
-        if (phone.startsWith("0")) {
-            return "254" + phone.substring(1);
-        }
-        if (phone.startsWith("+")) {
-            return phone.substring(1);
-        }
+        if (phone.startsWith("0")) return "254" + phone.substring(1);
+        if (phone.startsWith("+")) return phone.substring(1);
         return phone;
     }
 }

@@ -14,7 +14,7 @@ import java.util.UUID;
 public class EntryLine {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
@@ -35,6 +35,9 @@ public class EntryLine {
     private String note;
 
     private String transactionType;
+
+    @Column(nullable = false)
+    private String transactionCode;
 
     @Version
     private Long version;

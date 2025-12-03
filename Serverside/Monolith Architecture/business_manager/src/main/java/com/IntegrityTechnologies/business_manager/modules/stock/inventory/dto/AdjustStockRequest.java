@@ -6,8 +6,9 @@ import java.util.UUID;
 
 @Data
 public class AdjustStockRequest {
-    private UUID productId;
+    private UUID productVariantId; // changed from productId
     private UUID branchId;
-    private Long quantityDelta;
+    private long quantityDelta;
     private String reason;
+    private String reference;
 }

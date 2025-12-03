@@ -10,7 +10,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "part_transactions", indexes = {
         @Index(name = "idx_parttrans_ref", columnList = "referenceId"),
-        @Index(name = "idx_parttrans_module", columnList = "relatedModule")
+        @Index(name = "idx_parttrans_module", columnList = "relatedModule"),
+        @Index(name = "idx_parttrans_txcode", columnList = "transactionCode")
 })
 @Data
 @NoArgsConstructor
@@ -44,6 +45,9 @@ public class PartTransaction {
     private String createdBy;
 
     private String note;
+
+    @Column(nullable = false)
+    private String transactionCode;
 
     @Version
     private Long version;

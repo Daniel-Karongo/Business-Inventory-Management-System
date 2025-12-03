@@ -6,8 +6,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.payment.servic
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -22,12 +23,39 @@ public class PaymentController {
 
     @PostMapping
     public ResponseEntity<PaymentResponse> makePayment(@RequestBody PaymentRequest req) {
-        PaymentResponse resp = paymentService.processPayment(req);
-        return ResponseEntity.ok(resp);
+        return ResponseEntity.ok(paymentService.processPayment(req));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<PaymentResponse> getPayment(@PathVariable UUID id) {
         return ResponseEntity.ok(paymentService.getPayment(id));
+    }
+
+    /** NEW — List payments */
+    @GetMapping
+    public ResponseEntity<Page<PaymentResponse>> listPayments(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String method,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) UUID saleId
+    ) {
+        return ResponseEntity.ok(
+                paymentService.listPayments(page, size, method, status, saleId));
+    }
+
+    /** NEW — Refund payment */
+    @PostMapping("/{id}/refund")
+    public ResponseEntity<PaymentResponse> refundPayment(@PathVariable UUID id) {
+        return ResponseEntity.ok(paymentService.refundPayment(id));
+    }
+
+    /** NEW — Reconciliation */
+    @GetMapping("/reconcile")
+    public ResponseEntity<Object> reconcilePayments(
+            @RequestParam String from,
+            @RequestParam String to
+    ) {
+        return ResponseEntity.ok(paymentService.reconcile(from, to));
     }
 }

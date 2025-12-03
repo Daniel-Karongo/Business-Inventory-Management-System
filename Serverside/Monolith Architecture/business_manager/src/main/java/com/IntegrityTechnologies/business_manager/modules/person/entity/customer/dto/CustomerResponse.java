@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -11,8 +12,8 @@ import java.util.UUID;
 public class CustomerResponse {
     private UUID id;
     private String name;
-    private String phone;
-    private String email;
+    private List<String> phoneNumbers;
+    private List<String> email;
     private String address;
     private String notes;
     private LocalDateTime createdAt;

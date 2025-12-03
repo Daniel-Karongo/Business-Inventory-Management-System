@@ -4,13 +4,15 @@ import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.service.InventoryValuationService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -23,9 +25,10 @@ public class InventoryController {
 
     private final InventoryService inventoryService;
     private final StockTransactionRepository stockTransactionRepository;
+    private final InventoryValuationService valuationService;
 
     /** -------------------------
-     * EXISTING ENDPOINTS
+     * RECEIVE
      * ------------------------- */
 
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
@@ -36,70 +39,75 @@ public class InventoryController {
 
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
     @PostMapping("/receive/bulk")
+    @Transactional
     public ResponseEntity<ApiResponse> bulkReceiveStock(@RequestBody BulkReceiveStockRequest req) {
         List<ReceiveStockRequest> stockRequests = req.getItems();
-        List<InventoryResponse> responses = new ArrayList<>();
-        for(ReceiveStockRequest stockRequest: stockRequests) {
-            responses.add((InventoryResponse) inventoryService.receiveStock(stockRequest).getData());
+        List<Object> responses = new ArrayList<>();
+        for (ReceiveStockRequest stockRequest : stockRequests) {
+            responses.add(inventoryService.receiveStock(stockRequest).getData());
         }
         return ResponseEntity.ok(new ApiResponse("success", "Inventory Updated successfully", responses));
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
-    @PostMapping("/adjust")
-    public ResponseEntity<ApiResponse> adjustStock(@RequestBody AdjustStockRequest req) {
-        return ResponseEntity.ok(inventoryService.adjustStock(req));
-    }
-
-    @GetMapping("/product")
-    public ResponseEntity<ApiResponse> getInventory(
-            @RequestParam UUID productId,
-            @RequestParam(required = false) UUID branchtId
-    ) {
-        return ResponseEntity.ok(inventoryService.getInventoryForBranchProduct(productId, branchtId));
-    }
-
     /** -------------------------
-     *  NEW — DECREMENT STOCK
-     * ------------------------- */
-    @PostMapping("/decrement")
-    public ResponseEntity<ApiResponse> decrementStock(@RequestBody DecrementStockRequest req) {
-        inventoryService.decrementStock(req.getProductId(), req.getBranchId(), req.getQuantity(), req.getReference());
-        return ResponseEntity.ok(new ApiResponse("success", "Stock decremented"));
-    }
-
-    /** -------------------------
-     *  NEW — RESERVE STOCK
+     * ADJUST
      * ------------------------- */
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
-    @PostMapping("/reserve")
-    public ResponseEntity<ApiResponse> reserveStock(@RequestBody ReserveStockRequest req) {
-        inventoryService.reserveStock(req.getProductId(), req.getBranchId(), req.getQuantity(), req.getReference());
-        return ResponseEntity.ok(new ApiResponse("success", "Stock reserved"));
+    @PostMapping("/adjust/variant")
+    public ResponseEntity<ApiResponse> adjustStockVariant(@RequestBody AdjustStockRequest req) {
+        return ResponseEntity.ok(inventoryService.adjustStockVariant(req));
     }
 
     /** -------------------------
-     *  NEW — RELEASE RESERVED STOCK
+     * DECREMENT / RESERVE / RELEASE (variant-first)
      * ------------------------- */
+    @PostMapping("/variant/decrement")
+    public ResponseEntity<ApiResponse> decrementVariantStock(@RequestBody DecrementStockRequest req) {
+        // expects productVariantId in request
+        inventoryService.decrementVariantStock(req.getProductVariantId(), req.getBranchId(), req.getQuantity(), req.getReference());
+        return ResponseEntity.ok(new ApiResponse("success", "Variant stock decremented"));
+    }
+
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
-    @PostMapping("/release")
-    public ResponseEntity<ApiResponse> releaseReservation(@RequestBody ReleaseStockRequest req) {
-        inventoryService.releaseReservation(req.getProductId(), req.getBranchId(), req.getQuantity(), req.getReference());
-        return ResponseEntity.ok(new ApiResponse("success", "Reserved stock released"));
+    @PostMapping("/variant/reserve")
+    public ResponseEntity<ApiResponse> reserveVariantStock(@RequestBody ReserveStockRequest req) {
+        inventoryService.reserveStockVariant(req.getProductVariantId(), req.getBranchId(), req.getQuantity(), req.getReference());
+        return ResponseEntity.ok(new ApiResponse("success", "Variant stock reserved"));
+    }
+
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
+    @PostMapping("/variant/release")
+    public ResponseEntity<ApiResponse> releaseVariantReservation(@RequestBody ReleaseStockRequest req) {
+        inventoryService.releaseReservationVariant(req.getProductVariantId(), req.getBranchId(), req.getQuantity(), req.getReference());
+        return ResponseEntity.ok(new ApiResponse("success", "Variant reservation released"));
     }
 
     /** -------------------------
-     *  NEW — LIST ALL INVENTORY
+     * READS — variant and product
      * ------------------------- */
+
+    @GetMapping("/variant/{variantId}")
+    public ResponseEntity<ApiResponse> getVariantInventoryAcrossBranches(@PathVariable UUID variantId) {
+        return ResponseEntity.ok(inventoryService.getInventoryForVariantBranch(variantId, null));
+    }
+
+    @GetMapping("/variant/{variantId}/branch/{branchId}")
+    public ResponseEntity<ApiResponse> getVariantInventoryForBranch(@PathVariable UUID variantId, @PathVariable UUID branchId) {
+        return ResponseEntity.ok(inventoryService.getInventoryForVariantBranch(variantId, branchId));
+    }
+
+    @GetMapping("/product/{productId}")
+    public ResponseEntity<ApiResponse> getProductInventory(@PathVariable UUID productId) {
+        return ResponseEntity.ok(inventoryService.getInventoryForProduct(productId));
+    }
+
+    /** legacy-style list endpoints but variant-aware */
     @GetMapping
     public ResponseEntity<ApiResponse> listAllInventory() {
         var items = inventoryService.getAllInventory();
         return ResponseEntity.ok(new ApiResponse("success", "Inventory list", items));
     }
 
-    /** -------------------------
-     *  NEW — LIST INVENTORY BY LOCATION
-     * ------------------------- */
     @GetMapping("/branch/{branchId}")
     public ResponseEntity<ApiResponse> listByBranch(@PathVariable UUID branchId) {
         var items = inventoryService.getInventoryByBranch(branchId);
@@ -107,26 +115,77 @@ public class InventoryController {
     }
 
     /** -------------------------
-     *  NEW — STOCK TRANSACTION HISTORY (ALL)
+     * Reports & misc
      * ------------------------- */
-    @GetMapping("/transactions")
-    public ResponseEntity<ApiResponse> listTransactions() {
-        return ResponseEntity.ok(
-                new ApiResponse("success",
-                        "Transaction list",
-                        stockTransactionRepository.findAll())
-        );
+
+    @GetMapping("/product/stock-across-branches/{productId}")
+    public ResponseEntity<ApiResponse> stockAcrossBranches(@PathVariable UUID productId) {
+        return ResponseEntity.ok(new ApiResponse("success", "Stock across branches", inventoryService.getStockAcrossBranches(productId)));
     }
 
-    /** -------------------------
-     *  NEW — STOCK TRANSACTION HISTORY FOR ONE PRODUCT
-     * ------------------------- */
-    @GetMapping("/transactions/{productId}")
+    @GetMapping("/low-stock")
+    public ResponseEntity<ApiResponse> lowStock(@RequestParam(defaultValue = "10") Long threshold) {
+        return ResponseEntity.ok(new ApiResponse("success", "Low stock items", inventoryService.getLowStock(threshold)));
+    }
+
+    @GetMapping("/out-of-stock")
+    public ResponseEntity<ApiResponse> outOfStock() {
+        return ResponseEntity.ok(new ApiResponse("success", "Out of stock items", inventoryService.getOutOfStock()));
+    }
+
+    @GetMapping("/transactions")
+    public ResponseEntity<ApiResponse> listTransactions() {
+        return ResponseEntity.ok(new ApiResponse("success", "Transaction list", stockTransactionRepository.findAll()));
+    }
+
+    @GetMapping("/transactions/product/{productId}")
     public ResponseEntity<ApiResponse> listTransactionsForProduct(@PathVariable UUID productId) {
-        return ResponseEntity.ok(
-                new ApiResponse("success",
-                        "Transaction list for product",
-                        stockTransactionRepository.findByProductId(productId))
-        );
+        return ResponseEntity.ok(new ApiResponse("success", "Transaction list for product", stockTransactionRepository.findByProductId(productId)));
+    }
+
+    @GetMapping("/valuation")
+    public ResponseEntity<ApiResponse> valuation() {
+        return ResponseEntity.ok(new ApiResponse("success", "Inventory valuation", valuationService.getTotalValuation()));
+    }
+
+    @GetMapping("/valuation/product/{productId}")
+    public ResponseEntity<ApiResponse> valuationByProduct(@PathVariable UUID productId) {
+        return ResponseEntity.ok(new ApiResponse("success", "Product valuation", valuationService.getProductValuation(productId)));
+    }
+
+    @GetMapping("/valuation/branch/{branchId}")
+    public ResponseEntity<ApiResponse> valuationByBranch(@PathVariable UUID branchId) {
+        return ResponseEntity.ok(new ApiResponse("success", "Branch valuation", valuationService.getBranchValuation(branchId)));
+    }
+
+    @GetMapping("/valuation/history")
+    public ResponseEntity<ApiResponse> valuationAsOf(
+            @RequestParam(required = false) LocalDate date,
+            @RequestParam(required = false) String method
+    ) {
+        LocalDate d = (date == null) ? LocalDate.now() : date;
+        return ResponseEntity.ok(new ApiResponse("success", "Historical valuation for " + d, valuationService.getHistoricalValuation(d, method)));
+    }
+
+    @GetMapping("/valuation/categories")
+    public ResponseEntity<ApiResponse> valuationByCategory() {
+        return ResponseEntity.ok(new ApiResponse("success", "Category-level valuation", valuationService.getCategoryValuation()));
+    }
+
+    @PostMapping("/snapshot/take")
+    public ResponseEntity<ApiResponse> takeSnapshot(@RequestParam(required = false) LocalDate date) {
+        LocalDate d = (date == null) ? LocalDate.now() : date;
+        inventoryService.takeSnapshot(d);
+        return ResponseEntity.ok(new ApiResponse("success", "Snapshot taken"));
+    }
+
+    @GetMapping("/snapshot")
+    public ResponseEntity<ApiResponse> getSnapshot(@RequestParam LocalDate date) {
+        return ResponseEntity.ok(new ApiResponse("success", "Snapshot for " + date, inventoryService.getSnapshot(date)));
+    }
+
+    @GetMapping("/audit/{productId}")
+    public ResponseEntity<ApiResponse> audit(@PathVariable UUID productId) {
+        return ResponseEntity.ok(new ApiResponse("success", "Inventory audit trail", inventoryService.getAuditTrail(productId)));
     }
 }

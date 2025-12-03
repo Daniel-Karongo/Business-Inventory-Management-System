@@ -58,11 +58,22 @@ public class CustomerController {
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','CASHIER')")
-    @GetMapping("/by-phone")
-    public ResponseEntity<CustomerResponse> byPhone(@RequestParam String phone) {
-        CustomerResponse resp = customerService.findByPhone(phone);
-        if (resp == null) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(resp);
+    @GetMapping("/search")
+    public ResponseEntity<Page<CustomerResponse>> search(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(customerService.search(q, page, size));
+    }
+
+    @GetMapping("/{id}/payments")
+    public ResponseEntity<Object> customerPayments(@PathVariable UUID id) {
+        return ResponseEntity.ok(customerService.getCustomerPayments(id));
+    }
+
+    @GetMapping("/{id}/sales")
+    public ResponseEntity<Object> customerSales(@PathVariable UUID id) {
+        return ResponseEntity.ok(customerService.getCustomerSales(id));
     }
 }

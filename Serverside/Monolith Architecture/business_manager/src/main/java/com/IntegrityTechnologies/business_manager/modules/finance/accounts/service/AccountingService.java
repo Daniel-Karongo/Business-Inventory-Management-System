@@ -7,30 +7,24 @@ import java.util.UUID;
 
 public interface AccountingService {
 
-    /**
-     * Record a payment into the accounting ledger.
-     * In DOUBLE_ENTRY mode -> create balanced journal entry.
-     * In SINGLE_ENTRY mode -> update wallet account.
-     */
     void recordPayment(UUID paymentId,
                        UUID saleId,
                        BigDecimal amount,
                        String method,
                        String reference,
-                       String performedBy);
+                       String performedBy,
+                       String transactionCode);
 
-    /**
-     * Record a PO receipt:
-     * DOUBLE_ENTRY: Debit Inventory, Credit Payables
-     * SINGLE_ENTRY: Log as PartTransaction
-     */
+    void recordRefund(UUID paymentId,
+                      UUID saleId,
+                      BigDecimal amount,
+                      String method,
+                      String performedBy);
+
     void recordPurchaseReceipt(UUID purchaseOrderId,
                                UUID supplierId,
                                BigDecimal amount,
                                String performedBy);
 
-    /**
-     * Convenience wrapper to record miscellaneous ledger part-transactions.
-     */
     void recordPartTransaction(PartTransaction pt);
 }

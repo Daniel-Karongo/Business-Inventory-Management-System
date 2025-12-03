@@ -5,8 +5,8 @@ import java.util.UUID;
 
 @Data
 public class ReleaseStockRequest {
-    private UUID productId;
+    private UUID productVariantId;
     private UUID branchId;
-    private Integer quantity;
+    private int quantity;
     private String reference;
 }

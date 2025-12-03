@@ -49,7 +49,8 @@ public class JournalServiceImpl implements JournalService {
 
         // Build journal entry
         JournalEntry je = new JournalEntry();
-        je.setReference(req.getReference() != null ? req.getReference() : "AUTO-" + UUID.randomUUID());
+        je.setReference(req.getReference());
+        je.setTransactionCode(req.getTransactionCode());
         je.setDescription(req.getDescription());
         je.setTimestamp(LocalDateTime.now());
         je.setCreatedBy(performedBy);
@@ -71,6 +72,7 @@ public class JournalServiceImpl implements JournalService {
             line.setCredit(credit);
             line.setNote(reqLine.getNote());
             line.setTransactionType(reqLine.getTransactionType());
+            line.setTransactionCode(reqLine.getTransactionCode());
 
             // update account balance:
             // Simplified: balance = balance + (debit - credit)
@@ -111,6 +113,7 @@ public class JournalServiceImpl implements JournalService {
                     .id(l.getId())
                     .accountId(l.getAccount().getId())
                     .accountName(l.getAccount().getName())
+                    .transactionCode(l.getTransactionCode())
                     .debit(l.getDebit())
                     .credit(l.getCredit())
                     .note(l.getNote())
@@ -119,6 +122,7 @@ public class JournalServiceImpl implements JournalService {
 
         return JournalEntryResponse.builder()
                 .id(je.getId())
+                .transactionCode(je.getTransactionCode())
                 .reference(je.getReference())
                 .description(je.getDescription())
                 .timestamp(je.getTimestamp())

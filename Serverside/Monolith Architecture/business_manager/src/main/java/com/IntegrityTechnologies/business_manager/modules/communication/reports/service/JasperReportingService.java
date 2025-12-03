@@ -4,8 +4,10 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.reposito
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineItem;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.model.Product;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.repository.ProductRepository;
-
+import com.IntegrityTechnologies.business_manager.modules.stock.product.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
@@ -26,45 +28,61 @@ public class JasperReportingService implements ReportingService {
 
     private final SaleRepository saleRepository;
     private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
     private final StockTransactionRepository stockTransactionRepository;
 
+    /* ========================================================
+       SALES SUMMARY PDF (variant-aware)
+       ======================================================== */
     @Override
     public void generateSalesSummaryPdf(LocalDate from, LocalDate to, OutputStream out) throws Exception {
-        // For simplicity: build an aggregated list of products with qty and total sales between dates
-        // In production, write a custom JPQL/SQL query that groups by product_id to avoid pulling many records
+
         List<Map<String, Object>> rows = new ArrayList<>();
 
-        // naive approach: iterate sales in date range
-        List<Sale> sales = saleRepository.findAll(); // you should implement findByCreatedAtBetween for efficiency
+        List<Sale> sales = saleRepository.findAll();
+
+        // aggregate by variantId
         Map<UUID, Long> qtyMap = new HashMap<>();
         Map<UUID, BigDecimal> salesMap = new HashMap<>();
 
         for (Sale s : sales) {
             if (s.getCreatedAt() == null) continue;
-            boolean inRange = !s.getCreatedAt().toLocalDate().isBefore(from) && !s.getCreatedAt().toLocalDate().isAfter(to);
-            if (!inRange) continue;
+            LocalDate d = s.getCreatedAt().toLocalDate();
+            if (d.isBefore(from) || d.isAfter(to)) continue;
+
             for (SaleLineItem li : s.getLineItems()) {
-                qtyMap.put(li.getProductId(), qtyMap.getOrDefault(li.getProductId(), 0L) + li.getQuantity());
-                salesMap.put(li.getProductId(), salesMap.getOrDefault(li.getProductId(), BigDecimal.ZERO).add(li.getLineTotal()));
+                UUID variantId = li.getProductVariantId();
+                qtyMap.put(variantId, qtyMap.getOrDefault(variantId, 0L) + li.getQuantity());
+                salesMap.put(variantId, salesMap.getOrDefault(variantId, BigDecimal.ZERO).add(li.getLineTotal()));
             }
         }
 
-        for (UUID pid : qtyMap.keySet()) {
-            String name = productRepository.findById(pid).map(p -> p.getName()).orElse("Unknown");
+        for (UUID variantId : qtyMap.keySet()) {
+            ProductVariant variant = productVariantRepository.findById(variantId).orElse(null);
+            String productName = "Unknown Product";
+            String classification = "";
+
+            if (variant != null) {
+                Product p = variant.getProduct();
+                if (p != null) productName = p.getName();
+                classification = variant.getClassification() != null ? variant.getClassification() : "";
+            }
+
             Map<String, Object> r = new HashMap<>();
-            r.put("productName", name);
-            r.put("quantitySold", qtyMap.get(pid));
-            r.put("totalSales", salesMap.get(pid));
+            r.put("productName", productName);
+            r.put("variantClassification", classification);
+            r.put("quantitySold", qtyMap.get(variantId));
+            r.put("totalSales", salesMap.get(variantId));
             rows.add(r);
         }
 
-        // Compile jrxml and fill
         InputStream jrxml = new ClassPathResource("reports/sales_summary.jrxml").getInputStream();
         JasperReport jr = JasperCompileManager.compileReport(jrxml);
+
         JRBeanCollectionDataSource ds = new JRBeanCollectionDataSource(rows);
 
         Map<String, Object> params = new HashMap<>();
-        params.put("REPORT_TITLE", "Sales Summary");
+        params.put("REPORT_TITLE", "Sales Summary (Variant-Aware)");
         params.put("FROM_DATE", from.toString());
         params.put("TO_DATE", to.toString());
 
@@ -72,18 +90,33 @@ public class JasperReportingService implements ReportingService {
         JasperExportManager.exportReportToPdfStream(jp, out);
     }
 
+
+    /* ========================================================
+       SALE RECEIPT PDF (variant-aware)
+       ======================================================== */
     @Override
     public void generateSaleReceiptPdf(UUID saleId, OutputStream out) throws Exception {
-        Sale sale = saleRepository.findById(saleId).orElseThrow(() -> new IllegalArgumentException("Sale not found: " + saleId));
+        Sale sale = saleRepository.findById(saleId)
+                .orElseThrow(() -> new IllegalArgumentException("Sale not found: " + saleId));
 
-        List<Map<String, Object>> lines = sale.getLineItems().stream().map(li -> {
-            Map<String, Object> m = new HashMap<>();
-            m.put("productName", li.getProductName());
-            m.put("qty", li.getQuantity());
-            m.put("unitPrice", li.getUnitPrice());
-            m.put("lineTotal", li.getLineTotal());
-            return m;
-        }).collect(Collectors.toList());
+        List<Map<String, Object>> lines = sale.getLineItems().stream()
+                .map(li -> {
+                    Map<String, Object> m = new HashMap<>();
+
+                    ProductVariant variant =
+                            productVariantRepository.findById(li.getProductVariantId()).orElse(null);
+
+                    String classification = variant != null ? variant.getClassification() : "";
+                    String productName = li.getProductName();
+
+                    m.put("productName", productName);
+                    m.put("variantClassification", classification);
+                    m.put("qty", li.getQuantity());
+                    m.put("unitPrice", li.getUnitPrice());
+                    m.put("lineTotal", li.getLineTotal());
+                    return m;
+                })
+                .collect(Collectors.toList());
 
         InputStream jrxml = new ClassPathResource("reports/receipt.jrxml").getInputStream();
         JasperReport jr = JasperCompileManager.compileReport(jrxml);
@@ -93,20 +126,24 @@ public class JasperReportingService implements ReportingService {
         params.put("SALE_ID", sale.getId().toString());
         params.put("DATE", sale.getCreatedAt() != null ? sale.getCreatedAt().toString() : "");
         params.put("CASHIER", sale.getCreatedBy());
-        params.put("CUSTOMER", ""); // if sale has link to customer, set here
+        params.put("CUSTOMER", "");
 
         JasperPrint jp = JasperFillManager.fillReport(jr, params, ds);
         JasperExportManager.exportReportToPdfStream(jp, out);
     }
 
+
+    /* ========================================================
+       PURCHASE ORDER PDF
+       ======================================================== */
     @Override
     public void generatePurchaseOrderPdf(UUID purchaseOrderId, OutputStream out) throws Exception {
-        // Minimal implementation: load PO model, build lines, fill jrxml
-        // You must implement PurchaseOrder model/repo; I'll leave sample behavior
+
         InputStream jrxml = new ClassPathResource("reports/purchase_order.jrxml").getInputStream();
         JasperReport jr = JasperCompileManager.compileReport(jrxml);
-        // create empty data source for sample
+
         JRBeanCollectionDataSource ds = new JRBeanCollectionDataSource(Collections.emptyList());
+
         Map<String, Object> params = new HashMap<>();
         params.put("PO_NUMBER", purchaseOrderId.toString());
         params.put("SUPPLIER_NAME", "Supplier");

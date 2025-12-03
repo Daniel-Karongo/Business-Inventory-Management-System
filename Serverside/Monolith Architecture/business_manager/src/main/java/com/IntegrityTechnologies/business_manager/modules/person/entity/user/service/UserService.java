@@ -1,17 +1,22 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.user.service;
 
+import com.IntegrityTechnologies.business_manager.common.ApiResponse;
+import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
+import com.IntegrityTechnologies.business_manager.common.PhoneAndEmailNormalizer;
 import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
 import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
-import com.IntegrityTechnologies.business_manager.exception.*;
+import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
+import com.IntegrityTechnologies.business_manager.exception.InvalidUserDataException;
+import com.IntegrityTechnologies.business_manager.exception.UnauthorizedAccessException;
+import com.IntegrityTechnologies.business_manager.exception.UserNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.dto.BranchHierarchyDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentPositionDTO;
-import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.service.BranchService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentAssignmentDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentPositionDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.service.DepartmentService;
@@ -21,7 +26,6 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.rep
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserImageAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
-import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -32,10 +36,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -68,8 +73,8 @@ public class UserService {
                 : null;
 
         // 0️⃣ Normalize input
-        Set<String> emails = normalizeEmails(dto.getEmailAddresses());
-        Set<String> phones = normalizePhones(dto.getPhoneNumbers());
+        Set<String> emails = PhoneAndEmailNormalizer.normalizeEmails(dto.getEmailAddresses());
+        Set<String> phones = PhoneAndEmailNormalizer.normalizePhones(dto.getPhoneNumbers());
 
 //        if (emails.isEmpty()) throw new InvalidUserDataException("At least one email address is required");
 
@@ -188,7 +193,7 @@ public class UserService {
         // 5️⃣ Emails
         if (updatedData.getEmailAddresses() != null) {
             List<String> oldEmails = user.getEmailAddresses() != null ? user.getEmailAddresses() : List.of();
-            Set<String> newEmailsSet = normalizeEmails(updatedData.getEmailAddresses());
+            Set<String> newEmailsSet = PhoneAndEmailNormalizer.normalizeEmails(updatedData.getEmailAddresses());
             List<String> newEmails = new ArrayList<>(newEmailsSet);
             checkEmailUniqueness(newEmails, user.getId(), oldEmails);
             updateEmailsAndAudit(user, oldEmails, newEmails, updaterUsername);
@@ -197,7 +202,7 @@ public class UserService {
         // 6️⃣ Phones
         if (updatedData.getPhoneNumbers() != null) {
             List<String> oldPhones = user.getPhoneNumbers() != null ? user.getPhoneNumbers() : List.of();
-            Set<String> newPhonesSet = normalizePhones(updatedData.getPhoneNumbers());
+            Set<String> newPhonesSet = PhoneAndEmailNormalizer.normalizePhones(updatedData.getPhoneNumbers());
             List<String> newPhones = new ArrayList<>(newPhonesSet);
             checkPhoneUniqueness(newPhones, user.getId(), oldPhones);
             updatePhonesAndAudit(user, oldPhones, newPhones, updaterUsername);
@@ -689,23 +694,7 @@ public class UserService {
         }
     }
 
-    private Set<String> normalizeEmails(List<String> emails) {
-        return emails != null ? emails.stream()
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .map(String::toLowerCase)
-                .filter(s -> !s.isBlank())
-                .collect(Collectors.toCollection(LinkedHashSet::new)) : new LinkedHashSet<>();
-    }
 
-    private Set<String> normalizePhones(List<String> phones) {
-        return phones != null ? phones.stream()
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .map(this::normalizePhone)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toCollection(LinkedHashSet::new)) : new LinkedHashSet<>();
-    }
 
     private void checkEmailUniqueness(Set<String> emails) {
         for (String email : emails) {
@@ -1012,22 +1001,6 @@ public class UserService {
                 .performedByUsername(updaterUsername)
                 .timestamp(LocalDateTime.now())
                 .build());
-    }
-
-    private String normalizePhone(String phone) {
-        if (phone == null) return null;
-
-        // 1️⃣ Remove spaces and hyphens
-        String cleaned = phone.replaceAll("[\\s-]", "");
-
-        // 2️⃣ Convert local formats to international
-        if (cleaned.matches("^07\\d{7,8}$")) {
-            cleaned = "+254" + cleaned.substring(1);
-        } else if (cleaned.matches("^01\\d{7,8}$")) {
-            cleaned = "+254" + cleaned.substring(1);
-        }
-
-        return cleaned;
     }
 
     private UserDTO mapToDTO(User user, Boolean deleted) {

@@ -32,41 +32,47 @@ public class DoubleEntryAccountingService implements AccountingService {
     private static final String INVENTORY_CODE = "1200"; // inventory
 
     @Override
-    public void recordPayment(UUID paymentId, UUID saleId, BigDecimal amount, String method, String reference, String performedBy) {
+    public void recordPayment(UUID paymentId, UUID saleId, BigDecimal amount,
+                              String method, String reference, String performedBy,
+                              String transactionCode) {
 
         OptimisticRetryRunner.runWithRetry(() -> {
-            // Build journal entry request (example — adapt to your DTO)
+
             JournalEntryRequest req = new JournalEntryRequest();
             req.setReference("PAYMENT-" + paymentId);
-            req.setDescription("Payment " + reference + " for sale " + saleId);
+            req.setTransactionCode(transactionCode);
+            req.setDescription("Payment " + transactionCode + " for sale " + saleId);
 
-            // create debit line -> Cash or Wallet
-            EntryLineRequest cashLine = new EntryLineRequest();
-            cashLine.setAccountId(resolveAccountIdForMethod(method)); // implement helper
-            cashLine.setDebit(amount);
-            cashLine.setCredit(null);
-            cashLine.setNote("Payment received, method=" + method);
-            cashLine.setTransactionType("PAYMENT");
+            // Debit (Cash or Mpesa)
+            EntryLineRequest debit = new EntryLineRequest();
+            debit.setAccountId(resolveAccountIdForMethod(method));
+            debit.setDebit(amount);
+            debit.setTransactionType("PAYMENT");
+            debit.setTransactionCode(transactionCode);
 
-            // create credit line -> Revenue
-            EntryLineRequest revenueLine = new EntryLineRequest();
-            revenueLine.setAccountId(accountRepository.findByCode("4000").orElseThrow(() -> new IllegalStateException("Revenue account missing")).getId());
-            revenueLine.setDebit(null);
-            revenueLine.setCredit(amount);
-            revenueLine.setNote("Sales revenue");
-            revenueLine.setTransactionType("PAYMENT");
+            // Credit (Revenue)
+            EntryLineRequest credit = new EntryLineRequest();
+            credit.setAccountId(
+                    accountRepository.findByCode("4000")
+                            .orElseThrow(() -> new IllegalStateException("Revenue account MISSING"))
+                            .getId()
+            );
+            credit.setCredit(amount);
+            credit.setTransactionType("PAYMENT");
+            credit.setTransactionCode(transactionCode);
 
-            req.setLines(Arrays.asList(cashLine, revenueLine));
+            req.setLines(Arrays.asList(debit, credit));
 
             journalService.createJournalEntry(req, performedBy);
 
-            // record a part transaction pointing to the payment (optional)
+            // PartTransaction (only one)
             PartTransaction pt = new PartTransaction();
             pt.setRelatedModule("PAYMENT");
             pt.setReferenceId(paymentId);
             pt.setTransactionTotal(amount);
-            pt.setCreatedBy(performedBy);
             pt.setTransactionDate(LocalDateTime.now());
+            pt.setCreatedBy(performedBy);
+            pt.setTransactionCode(transactionCode);
 
             partTransactionService.record(pt);
 
@@ -130,5 +136,57 @@ public class DoubleEntryAccountingService implements AccountingService {
     @Override
     public void recordPartTransaction(PartTransaction pt) {
         partTransactionService.record(pt);
+    }
+
+    @Override
+    public void recordRefund(UUID paymentId,
+                             UUID saleId,
+                             BigDecimal amount,
+                             String method,
+                             String performedBy) {
+
+        OptimisticRetryRunner.runWithRetry(() -> {
+
+            String transactionCode = "RFND-" + paymentId.toString().substring(0, 6);
+
+            JournalEntryRequest req = new JournalEntryRequest();
+            req.setReference("REFUND-" + paymentId);
+            req.setTransactionCode(transactionCode);
+            req.setDescription("Refund for payment " + paymentId);
+
+            // Reverse debit → credit cash
+            EntryLineRequest creditCash = new EntryLineRequest();
+            creditCash.setAccountId(resolveAccountIdForMethod(method));
+            creditCash.setCredit(amount);
+            creditCash.setTransactionType("REFUND");
+            creditCash.setTransactionCode(transactionCode);
+
+            // Reverse credit → debit revenue
+            EntryLineRequest debitRevenue = new EntryLineRequest();
+            debitRevenue.setAccountId(
+                    accountRepository.findByCode("4000")
+                            .orElseThrow(() -> new IllegalStateException("Revenue account missing"))
+                            .getId()
+            );
+            debitRevenue.setDebit(amount);
+            debitRevenue.setTransactionType("REFUND");
+            debitRevenue.setTransactionCode(transactionCode);
+
+            req.setLines(Arrays.asList(creditCash, debitRevenue));
+            journalService.createJournalEntry(req, performedBy);
+
+            // PartTransaction
+            PartTransaction pt = new PartTransaction();
+            pt.setRelatedModule("REFUND");
+            pt.setReferenceId(paymentId);
+            pt.setTransactionTotal(amount.negate()); // refunds are negative
+            pt.setTransactionDate(LocalDateTime.now());
+            pt.setCreatedBy(performedBy);
+            pt.setTransactionCode(transactionCode);
+
+            partTransactionService.record(pt);
+
+            return null;
+        });
     }
 }

@@ -18,8 +18,8 @@ public class SaleLineItem {
     private Long id;
 
     // link to product by UUID (denormalized)
-    @Column(name = "product_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID productId;
+    @Column(name = "product_variant_id", columnDefinition = "BINARY(16)", nullable = false)
+    private UUID productVariantId;
 
     private String productName;
 

@@ -23,7 +23,7 @@ public class SingleEntryAccountingService implements AccountingService {
     private static final String WALLET_CODE = "WALLET";
 
     @Override
-    public void recordPayment(UUID paymentId, UUID saleId, BigDecimal amount, String method, String reference, String performedBy) {
+    public void recordPayment(UUID paymentId, UUID saleId, BigDecimal amount, String method, String reference, String performedBy, String transactionCode) {
         OptimisticRetryRunner.runWithRetry(() -> {
             Account wallet = accountRepository.findByCode("WALLET")
                     .orElseThrow(() -> new IllegalStateException("Wallet account missing"));
@@ -38,6 +38,7 @@ public class SingleEntryAccountingService implements AccountingService {
             pt.setTransactionTotal(amount);
             pt.setCreatedBy(performedBy);
             pt.setTransactionDate(LocalDateTime.now());
+            pt.setTransactionCode(transactionCode);
 
             partTransactionService.record(pt);
             return null;
@@ -61,5 +62,35 @@ public class SingleEntryAccountingService implements AccountingService {
     @Override
     public void recordPartTransaction(PartTransaction pt) {
         partTransactionService.record(pt);
+    }
+
+    @Override
+    public void recordRefund(UUID paymentId,
+                             UUID saleId,
+                             BigDecimal amount,
+                             String method,
+                             String performedBy) {
+
+        OptimisticRetryRunner.runWithRetry(() -> {
+
+            Account wallet = accountRepository.findByCode("WALLET")
+                    .orElseThrow(() -> new IllegalStateException("Wallet account missing"));
+
+            // Decrease wallet balance
+            wallet.setBalance(wallet.getBalance().subtract(amount));
+            accountRepository.save(wallet);
+
+            PartTransaction pt = new PartTransaction();
+            pt.setRelatedModule("REFUND");
+            pt.setReferenceId(paymentId);
+            pt.setTransactionTotal(amount.negate());
+            pt.setTransactionDate(LocalDateTime.now());
+            pt.setCreatedBy(performedBy);
+            pt.setTransactionCode("RFND-" + paymentId.toString().substring(0, 6));
+
+            partTransactionService.record(pt);
+
+            return null;
+        });
     }
 }

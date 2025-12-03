@@ -3,11 +3,13 @@ package com.IntegrityTechnologies.business_manager.modules.communication.purchas
 import com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.model.PurchaseOrder;
 import com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.repository.PurchaseOrderRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounts.service.AccountingService;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.ReceiveStockRequest;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -53,7 +55,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
         // Build ReceiveStockRequest for each line (re-using your DTO)
         for (var line : po.getLines()) {
-            com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.ReceiveStockRequest req = new com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.ReceiveStockRequest();
+            ReceiveStockRequest req = new ReceiveStockRequest();
             req.setProductId(line.getProductId());
             req.setBranchId(receivingBranchId);
             com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.SupplierUnit su = new com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.SupplierUnit();
@@ -62,6 +64,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 su.setSupplierId(po.getSupplier().getId());
             }
             su.setUnitsSupplied(line.getQuantity().longValue());
+            su.setUnitCost(line.getUnitPrice() != null ? line.getUnitPrice() : BigDecimal.ZERO);
             req.setSuppliers(java.util.List.of(su));
             req.setReference("PO:" + po.getId());
             req.setNote("Received via PO " + po.getPoNumber());

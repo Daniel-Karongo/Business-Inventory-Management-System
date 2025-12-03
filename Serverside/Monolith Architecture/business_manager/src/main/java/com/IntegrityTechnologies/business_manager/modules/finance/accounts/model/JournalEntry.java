@@ -9,7 +9,8 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "journal_entries", indexes = {
-        @Index(name = "idx_journal_ref", columnList = "reference")
+        @Index(name = "idx_journal_ref", columnList = "reference"),
+        @Index(name = "idx_journal_txcode", columnList = "transactionCode")
 })
 @Data
 @NoArgsConstructor
@@ -23,6 +24,9 @@ public class JournalEntry {
 
     @Column(nullable = false)
     private String reference;
+
+    @Column(nullable = false)
+    private String transactionCode;
 
     private String description;
 

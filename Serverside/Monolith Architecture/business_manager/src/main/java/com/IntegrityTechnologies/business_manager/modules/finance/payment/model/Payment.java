@@ -12,6 +12,7 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Payment {
 
     @Id
@@ -38,6 +39,9 @@ public class Payment {
     private String status;
 
     private String note;
+
+    @Column(nullable = false, unique = true)
+    private String transactionCode;
 
     @Version
     private Long version;

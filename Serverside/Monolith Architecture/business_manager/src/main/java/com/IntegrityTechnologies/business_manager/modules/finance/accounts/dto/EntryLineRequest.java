@@ -8,8 +8,9 @@ import java.util.UUID;
 @Data
 public class EntryLineRequest {
     private UUID accountId;
-    private BigDecimal debit;   // null treated as zero
-    private BigDecimal credit;  // null treated as zero
+    private BigDecimal debit;
+    private BigDecimal credit;
     private String note;
     private String transactionType;
+    private String transactionCode;
 }

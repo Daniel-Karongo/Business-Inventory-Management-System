@@ -8,7 +8,10 @@ import java.util.UUID;
 @Data
 public class ReceiveStockRequest {
     private UUID productId;
-    private UUID branchId; // REQUIRED for per-branch inventory
+    private UUID productVariantId;   // optional: if provided, use it
+    private String classification;   // optional: if variantId not provided
+    private String newVariantSku;    // optional
+    private UUID branchId;
     private List<SupplierUnit> suppliers;
     private String reference;
     private String note;

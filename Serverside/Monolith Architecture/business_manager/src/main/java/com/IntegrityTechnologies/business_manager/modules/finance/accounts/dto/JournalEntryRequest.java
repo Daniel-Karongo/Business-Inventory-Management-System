@@ -8,5 +8,6 @@ import java.util.List;
 public class JournalEntryRequest {
     private String reference;
     private String description;
+    private String transactionCode;
     private List<EntryLineRequest> lines;
 }

@@ -2,423 +2,499 @@
   "items": [
     {
       "productId": "88acd47d-c24b-4f6c-a1cd-27219cdf3405",
+      "classification": "ORIGINAL",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        {
-          "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69",
-          "unitsSupplied": 30
-        },
-        {
-          "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d",
-          "unitsSupplied": 20
-        }
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 30, "unitCost": 18500 }
       ],
       "reference": "PO-2025-001",
-      "note": "Samsung Galaxy A15 supplied by Supplier 1 and Supplier 2 to Branch Main"
+      "note": "Auto-split from: Samsung Galaxy A15 suppliers: Original + Generic",
+      "newVariantSku": "SKU-88AC-ORIGINAL"
     },
     {
       "productId": "88acd47d-c24b-4f6c-a1cd-27219cdf3405",
+      "classification": "GENERIC",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 20, "unitCost": 17900 }
+      ],
+      "reference": "PO-2025-001",
+      "note": "Auto-split from: Samsung Galaxy A15 suppliers: Original + Generic",
+      "newVariantSku": "SKU-88AC-GENERIC"
+    },
+    {
+      "productId": "88acd47d-c24b-4f6c-a1cd-27219cdf3405",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        {
-          "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869",
-          "unitsSupplied": 25
-        },
-        {
-          "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a",
-          "unitsSupplied": 15
-        }
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 25, "unitCost": 18300 },
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 15, "unitCost": 17600 }
       ],
       "reference": "PO-2025-002",
-      "note": "Samsung Galaxy A15 supplied by Supplier 3 and Supplier 4 to Branch One"
+      "note": "Samsung Galaxy A15 suppliers: Mixed",
+      "newVariantSku": "SKU-88AC-STANDARD"
     },
     {
       "productId": "f9d44c85-3bf3-4962-a23a-75f9748060a2",
+      "classification": "STANDARD",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        {
-          "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818",
-          "unitsSupplied": 40
-        }
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 40, "unitCost": 14800 }
       ],
       "reference": "PO-2025-003",
-      "note": "Tecno Spark 10 supplied by Supplier 5 to Branch Main"
+      "note": "Tecno Spark 10",
+      "newVariantSku": "SKU-F9D4-STANDARD"
     },
     {
       "productId": "f9d44c85-3bf3-4962-a23a-75f9748060a2",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        {
-          "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69",
-          "unitsSupplied": 30
-        }
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 30, "unitCost": 15000 }
       ],
       "reference": "PO-2025-004",
-      "note": "Tecno Spark 10 supplied by Supplier 1 to Branch One"
+      "note": "Tecno Spark 10",
+      "newVariantSku": "SKU-F9D4-STANDARD"
     },
     {
       "productId": "0f01961d-688a-4c14-8ab9-6980b19fe3f3",
+      "classification": "STANDARD",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        {
-          "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d",
-          "unitsSupplied": 35
-        }
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 35, "unitCost": 16200 }
       ],
       "reference": "PO-2025-005",
-      "note": "Infinix Hot 12 supplied by Supplier 2 to Branch Main"
+      "note": "Infinix Hot 12",
+      "newVariantSku": "SKU-0F01-STANDARD"
     },
     {
       "productId": "0f01961d-688a-4c14-8ab9-6980b19fe3f3",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        {
-          "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869",
-          "unitsSupplied": 25
-        }
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 25, "unitCost": 15800 }
       ],
       "reference": "PO-2025-006",
-      "note": "Infinix Hot 12 supplied by Supplier 3 to Branch One"
+      "note": "Infinix Hot 12",
+      "newVariantSku": "SKU-0F01-STANDARD"
     },
     {
       "productId": "980847b6-3e76-405e-9712-108dbdd28721",
+      "classification": "ORIGINAL",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 20 },
-        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 15 }
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 20, "unitCost": 42500 }
       ],
       "reference": "PO-2025-007",
-      "note": "HP EliteBook 840 G5 supplied by Supplier 1 and Supplier 4 to Branch Main"
+      "note": "Auto-split from: HP EliteBook 840 G5 (Original + Generic)",
+      "newVariantSku": "SKU-9808-ORIGINAL"
     },
     {
       "productId": "980847b6-3e76-405e-9712-108dbdd28721",
+      "classification": "GENERIC",
+      "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
+      "suppliers": [
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 15, "unitCost": 39800 }
+      ],
+      "reference": "PO-2025-007",
+      "note": "Auto-split from: HP EliteBook 840 G5 (Original + Generic)",
+      "newVariantSku": "SKU-9808-GENERIC"
+    },
+    {
+      "productId": "980847b6-3e76-405e-9712-108dbdd28721",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 25 },
-        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 10 }
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 25, "unitCost": 41200 },
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 10, "unitCost": 39000 }
       ],
       "reference": "PO-2025-008",
-      "note": "HP EliteBook 840 G5 supplied by Supplier 2 and Supplier 3 to Branch One"
+      "note": "HP EliteBook 840 G5",
+      "newVariantSku": "SKU-9808-STANDARD"
     },
     {
       "productId": "3b6d95e3-bc60-4b9e-9ea1-c9cf3d60cdce",
+      "classification": "STANDARD",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 30 },
-        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 20 }
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 30, "unitCost": 39000 },
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 20, "unitCost": 36000 }
       ],
       "reference": "PO-2025-009",
-      "note": "Lenovo ThinkPad T480 supplied by Supplier 5 and Supplier 1 to Branch Main"
+      "note": "Lenovo ThinkPad T480",
+      "newVariantSku": "SKU-3B6D-STANDARD"
     },
     {
       "productId": "3b6d95e3-bc60-4b9e-9ea1-c9cf3d60cdce",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 15 },
-        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10 }
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 15, "unitCost": 35500 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10, "unitCost": 35000 }
       ],
       "reference": "PO-2025-010",
-      "note": "Lenovo ThinkPad T480 supplied by Supplier 4 and Supplier 2 to Branch One"
+      "note": "Lenovo ThinkPad T480 Alt Suppliers",
+      "newVariantSku": "SKU-3B6D-STANDARD"
     },
     {
       "productId": "d2a6a972-d97e-4af9-8282-6cceb5e6ad0a",
+      "classification": "STANDARD",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 50 },
-        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 30 }
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 50, "unitCost": 650 },
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 30, "unitCost": 620 }
       ],
       "reference": "PO-2025-011",
-      "note": "Oraimo Fast Charger 18W supplied by Supplier 3 and Supplier 5 to Branch Main"
+      "note": "Oraimo Fast Charger 18W",
+      "newVariantSku": "SKU-D2A6-STANDARD"
     },
     {
       "productId": "d2a6a972-d97e-4af9-8282-6cceb5e6ad0a",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 25 },
-        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 20 }
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 25, "unitCost": 640 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 20, "unitCost": 600 }
       ],
       "reference": "PO-2025-012",
-      "note": "Oraimo Fast Charger 18W supplied by Supplier 1 and Supplier 2 to Branch One"
+      "note": "Oraimo Fast Charger 18W",
+      "newVariantSku": "SKU-D2A6-STANDARD"
     },
     {
       "productId": "c5d9c9f3-0163-483a-90ea-c406b10ed871",
+      "classification": "STANDARD",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 20 },
-        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 25 }
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 20, "unitCost": 6200 },
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 25, "unitCost": 5800 }
       ],
       "reference": "PO-2025-013",
-      "note": "JBL Tune 510BT supplied by Supplier 4 and Supplier 3 to Branch Main"
+      "note": "JBL Tune 510BT",
+      "newVariantSku": "SKU-C5D9-STANDARD"
     },
     {
       "productId": "c5d9c9f3-0163-483a-90ea-c406b10ed871",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 15 },
-        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 20 }
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 15, "unitCost": 6000 },
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 20, "unitCost": 5900 }
       ],
       "reference": "PO-2025-014",
-      "note": "JBL Tune 510BT supplied by Supplier 1 and Supplier 5 to Branch One"
+      "note": "JBL Tune 510BT",
+      "newVariantSku": "SKU-C5D9-STANDARD"
     },
     {
       "productId": "85f69e6b-8246-4c05-9d65-e7403646ab57",
+      "classification": "STANDARD",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 20 },
-        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 15 }
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 20, "unitCost": 28500 },
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 15, "unitCost": 27200 }
       ],
       "reference": "PO-2025-015",
-      "note": "Samsung 43-inch Smart TV supplied by Supplier 2 and Supplier 3 to Branch Main"
+      "note": "Samsung 43-inch Smart TV",
+      "newVariantSku": "SKU-85F6-STANDARD"
     },
     {
       "productId": "85f69e6b-8246-4c05-9d65-e7403646ab57",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 15 },
-        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 10 }
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 15, "unitCost": 29000 },
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 10, "unitCost": 27500 }
       ],
       "reference": "PO-2025-016",
-      "note": "Samsung 43-inch Smart TV supplied by Supplier 4 and Supplier 1 to Branch One"
+      "note": "Samsung 43-inch Smart TV",
+      "newVariantSku": "SKU-85F6-STANDARD"
     },
     {
       "productId": "f3da1f3e-2c93-4e16-944b-5d1aa9879135",
+      "classification": "STANDARD",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 25 },
-        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 15 }
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 25, "unitCost": 11400 },
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 15, "unitCost": 10800 }
       ],
       "reference": "PO-2025-017",
-      "note": "Hisense 32-inch Digital TV supplied by Supplier 5 and Supplier 3 to Branch Main"
+      "note": "Hisense 32-inch TV",
+      "newVariantSku": "SKU-F3DA-STANDARD"
     },
     {
       "productId": "f3da1f3e-2c93-4e16-944b-5d1aa9879135",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 20 },
-        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10 }
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 20, "unitCost": 11200 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10, "unitCost": 10900 }
       ],
       "reference": "PO-2025-018",
-      "note": "Hisense 32-inch Digital TV supplied by Supplier 1 and Supplier 2 to Branch One"
+      "note": "Hisense 32-inch TV",
+      "newVariantSku": "SKU-F3DA-STANDARD"
     },
     {
       "productId": "e17b4567-089b-427e-aadd-f92bba5cdba3",
+      "classification": "STANDARD",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 15 },
-        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10 }
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 15, "unitCost": 8200 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10, "unitCost": 7800 }
       ],
       "reference": "PO-2025-019",
-      "note": "Ramtons 90L Single Door Fridge supplied by Supplier 1 and Supplier 2 to Branch Main"
+      "note": "Ramtons 90L Fridge",
+      "newVariantSku": "SKU-E17B-STANDARD"
     },
     {
       "productId": "e17b4567-089b-427e-aadd-f92bba5cdba3",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 12 },
-        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 8 }
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 12, "unitCost": 8150 },
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 8, "unitCost": 7700 }
       ],
       "reference": "PO-2025-020",
-      "note": "Ramtons 90L Single Door Fridge supplied by Supplier 3 and Supplier 4 to Branch One"
+      "note": "Ramtons 90L Fridge Alt Suppliers",
+      "newVariantSku": "SKU-E17B-STANDARD"
     },
     {
       "productId": "32576b29-8d91-46c1-9ed7-bafbd68d1504",
+      "classification": "STANDARD",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 18 },
-        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 12 }
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 18, "unitCost": 5200 },
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 12, "unitCost": 4800 }
       ],
       "reference": "PO-2025-021",
-      "note": "Vanilla Microwave 20L supplied by Supplier 5 and Supplier 1 to Branch Main"
+      "note": "Vanilla Microwave 20L",
+      "newVariantSku": "SKU-3257-STANDARD"
     },
     {
       "productId": "32576b29-8d91-46c1-9ed7-bafbd68d1504",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10 },
-        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 8 }
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10, "unitCost": 5100 },
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 8, "unitCost": 4950 }
       ],
       "reference": "PO-2025-022",
-      "note": "Vanilla Microwave 20L supplied by Supplier 2 and Supplier 3 to Branch One"
+      "note": "Vanilla Microwave 20L",
+      "newVariantSku": "SKU-3257-STANDARD"
     },
     {
       "productId": "f8c4b4a2-0be5-47a0-94bb-43321f1c0b72",
+      "classification": "STANDARD",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 25 },
-        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 15 }
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 25, "unitCost": 1450 },
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 15, "unitCost": 1350 }
       ],
       "reference": "PO-2025-023",
-      "note": "Ramtons Electric Kettle supplied by Supplier 4 and Supplier 5 to Branch Main"
+      "note": "Ramtons Electric Kettle",
+      "newVariantSku": "SKU-F8C4-STANDARD"
     },
     {
       "productId": "f8c4b4a2-0be5-47a0-94bb-43321f1c0b72",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 12 },
-        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10 }
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 12, "unitCost": 1420 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10, "unitCost": 1300 }
       ],
       "reference": "PO-2025-024",
-      "note": "Ramtons Electric Kettle supplied by Supplier 1 and Supplier 2 to Branch One"
+      "note": "Ramtons Electric Kettle",
+      "newVariantSku": "SKU-F8C4-STANDARD"
     },
     {
       "productId": "73fab8fa-3efb-4d20-af0a-709f71bd2530",
+      "classification": "STANDARD",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 30 },
-        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 20 }
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 30, "unitCost": 950 },
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 20, "unitCost": 900 }
       ],
       "reference": "PO-2025-025",
-      "note": "Men's Hooded Sweatshirt supplied by Supplier 3 and Supplier 4 to Branch Main"
+      "note": "Men's Hooded Sweatshirt",
+      "newVariantSku": "SKU-73FA-STANDARD"
     },
     {
       "productId": "73fab8fa-3efb-4d20-af0a-709f71bd2530",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 15 },
-        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10 }
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 15, "unitCost": 980 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10, "unitCost": 920 }
       ],
       "reference": "PO-2025-026",
-      "note": "Men's Hooded Sweatshirt supplied by Supplier 1 and Supplier 2 to Branch One"
+      "note": "Men's Hooded Sweatshirt",
+      "newVariantSku": "SKU-73FA-STANDARD"
     },
     {
       "productId": "b260d597-fda0-4f96-9c77-cc87f5a5cba4",
+      "classification": "STANDARD",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 40 },
-        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 25 }
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 40, "unitCost": 480 },
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 25, "unitCost": 430 }
       ],
       "reference": "PO-2025-027",
-      "note": "Men’s Leather Belt supplied by Supplier 5 and Supplier 3 to Branch Main"
+      "note": "Men’s Leather Belt",
+      "newVariantSku": "SKU-B260-STANDARD"
     },
     {
       "productId": "b260d597-fda0-4f96-9c77-cc87f5a5cba4",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 20 },
-        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 15 }
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 20, "unitCost": 495 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 15, "unitCost": 460 }
       ],
       "reference": "PO-2025-028",
-      "note": "Men’s Leather Belt supplied by Supplier 1 and Supplier 2 to Branch One"
+      "note": "Men’s Leather Belt",
+      "newVariantSku": "SKU-B260-STANDARD"
     },
     {
       "productId": "7d3272b4-e2eb-4f1a-9ec7-9610a7071270",
+      "classification": "STANDARD",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 18 },
-        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 12 }
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 18, "unitCost": 1250 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 12, "unitCost": 1180 }
       ],
       "reference": "PO-2025-029",
-      "note": "Women’s Handbag supplied by Supplier 4 and Supplier 2 to Branch Main"
+      "note": "Women’s Handbag",
+      "newVariantSku": "SKU-7D32-STANDARD"
     },
     {
       "productId": "7d3272b4-e2eb-4f1a-9ec7-9610a7071270",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 10 },
-        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 8 }
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 10, "unitCost": 1300 },
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 8, "unitCost": 1200 }
       ],
       "reference": "PO-2025-030",
-      "note": "Women’s Handbag supplied by Supplier 1 and Supplier 5 to Branch One"
+      "note": "Women’s Handbag",
+      "newVariantSku": "SKU-7D32-STANDARD"
     },
     {
       "productId": "dd52ac3c-b986-44b4-b8f2-7aab7a361e66",
+      "classification": "STANDARD",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 22 },
-        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 18 }
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 22, "unitCost": 1550 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 18, "unitCost": 1450 }
       ],
       "reference": "PO-2025-031",
-      "note": "Women’s Sneakers supplied by Supplier 3 and Supplier 2 to Branch Main"
+      "note": "Women’s Sneakers",
+      "newVariantSku": "SKU-DD52-STANDARD"
     },
     {
       "productId": "dd52ac3c-b986-44b4-b8f2-7aab7a361e66",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 15 },
-        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 10 }
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 15, "unitCost": 1600 },
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 10, "unitCost": 1500 }
       ],
       "reference": "PO-2025-032",
-      "note": "Women’s Sneakers supplied by Supplier 4 and Supplier 1 to Branch One"
+      "note": "Women’s Sneakers",
+      "newVariantSku": "SKU-DD52-STANDARD"
     },
     {
       "productId": "f8072277-acdd-4e0d-b747-ec744e6d61bc",
+      "classification": "STANDARD",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 28 },
-        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 20 }
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 28, "unitCost": 1800 },
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 20, "unitCost": 1700 }
       ],
       "reference": "PO-2025-033",
-      "note": "Oraimo Power Bank 20,000mAh supplied by Supplier 2 and Supplier 5 to Branch Main"
+      "note": "Oraimo Power Bank 20,000mAh",
+      "newVariantSku": "SKU-F807-STANDARD"
     },
     {
       "productId": "f8072277-acdd-4e0d-b747-ec744e6d61bc",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 15 },
-        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 10 }
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 15, "unitCost": 1780 },
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 10, "unitCost": 1650 }
       ],
       "reference": "PO-2025-034",
-      "note": "Oraimo Power Bank 20,000mAh supplied by Supplier 3 and Supplier 1 to Branch One"
+      "note": "Oraimo Power Bank 20,000mAh",
+      "newVariantSku": "SKU-F807-STANDARD"
     },
     {
       "productId": "74bee9a2-b819-4d13-bbc6-b55b4906a138",
+      "classification": "STANDARD",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 20 },
-        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 15 }
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 20, "unitCost": 2600 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 15, "unitCost": 2400 }
       ],
       "reference": "PO-2025-035",
-      "note": "Electric Blender 1.5L supplied by Supplier 4 and Supplier 2 to Branch Main"
+      "note": "Electric Blender 1.5L",
+      "newVariantSku": "SKU-74BE-STANDARD"
     },
     {
       "productId": "74bee9a2-b819-4d13-bbc6-b55b4906a138",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 12 },
-        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 10 }
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 12, "unitCost": 2700 },
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 10, "unitCost": 2550 }
       ],
       "reference": "PO-2025-036",
-      "note": "Electric Blender 1.5L supplied by Supplier 1 and Supplier 5 to Branch One"
+      "note": "Electric Blender 1.5L",
+      "newVariantSku": "SKU-74BE-STANDARD"
     },
     {
       "productId": "b76cf1d0-0732-4490-9522-1b57d573ab72",
+      "classification": "STANDARD",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 30 },
-        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 20 }
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 30, "unitCost": 450 },
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 20, "unitCost": 420 }
       ],
       "reference": "PO-2025-037",
-      "note": "Flash Drive 64GB supplied by Supplier 3 and Supplier 4 to Branch Main"
+      "note": "Flash Drive 64GB",
+      "newVariantSku": "SKU-B76C-STANDARD"
     },
     {
       "productId": "b76cf1d0-0732-4490-9522-1b57d573ab72",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 15 },
-        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10 }
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 15, "unitCost": 460 },
+        { "supplierId": "4fecf3f4-1c99-4550-a0b2-085249f0a35d", "unitsSupplied": 10, "unitCost": 410 }
       ],
       "reference": "PO-2025-038",
-      "note": "Flash Drive 64GB supplied by Supplier 1 and Supplier 2 to Branch One"
+      "note": "Flash Drive 64GB",
+      "newVariantSku": "SKU-B76C-STANDARD"
     },
     {
       "productId": "d8d2da08-78ac-4ea5-a27c-7bfbc8970630",
+      "classification": "STANDARD",
       "branchId": "0c951da7-6f90-491b-8a90-dec3eccd5cd9",
       "suppliers": [
-        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 22 },
-        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 18 }
+        { "supplierId": "ae79af50-6b14-4189-9950-2ba8b6505818", "unitsSupplied": 22, "unitCost": 3100 },
+        { "supplierId": "36937245-da3a-4b38-9162-7c2e245ff869", "unitsSupplied": 18, "unitCost": 2900 }
       ],
       "reference": "PO-2025-039",
-      "note": "Bluetooth Portable Speaker supplied by Supplier 5 and Supplier 3 to Branch Main"
+      "note": "Bluetooth Portable Speaker",
+      "newVariantSku": "SKU-D8D2-STANDARD"
     },
     {
       "productId": "d8d2da08-78ac-4ea5-a27c-7bfbc8970630",
+      "classification": "STANDARD",
       "branchId": "ba8f46ab-ef8f-437d-a591-f48ece53dc04",
       "suppliers": [
-        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 15 },
-        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 12 }
+        { "supplierId": "38188117-07c9-42f9-9745-03089c0d2e6a", "unitsSupplied": 15, "unitCost": 3200 },
+        { "supplierId": "9c79f457-84aa-4584-982c-9765b9f56f69", "unitsSupplied": 12, "unitCost": 3000 }
       ],
       "reference": "PO-2025-040",
-      "note": "Bluetooth Portable Speaker supplied by Supplier 4 and Supplier 1 to Branch One"
+      "note": "Bluetooth Portable Speaker",
+      "newVariantSku": "SKU-D8D2-STANDARD"
     }
   ]
 }

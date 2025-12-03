@@ -5,7 +5,7 @@ import java.util.UUID;
 
 @Data
 public class ReserveStockRequest {
-    private UUID productId;
+    private UUID productVariantId;
     private UUID branchId;
     private Integer quantity;
     private String reference;

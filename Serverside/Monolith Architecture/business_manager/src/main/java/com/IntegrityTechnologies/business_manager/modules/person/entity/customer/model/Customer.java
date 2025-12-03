@@ -4,14 +4,12 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "customers",
-        indexes = {
-                @Index(name = "idx_customer_phone", columnList = "phone"),
-                @Index(name = "idx_customer_email", columnList = "email")
-        })
+@Table(name = "customers")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -26,11 +24,29 @@ public class Customer {
     @Column(nullable = false)
     private String name;
 
-    @Column(unique = true)
-    private String phone;
+    @ElementCollection
+    @CollectionTable(
+            name = "customer_phone_numbers",
+            joinColumns = @JoinColumn(name = "customer_id"),
+            indexes = {
+                    @Index(name = "idx_customer_phone_number", columnList = "phone_number")
+            }
+    )
+    @Column(name = "phone_number")
+    @Builder.Default
+    private List<String> phoneNumbers = new ArrayList<>();
 
-    @Column(unique = true)
-    private String email;
+    @ElementCollection
+    @CollectionTable(
+            name = "customer_email_addresses",
+            joinColumns = @JoinColumn(name = "customer_id"),
+            indexes = {
+                    @Index(name = "idx_customer_email_address", columnList = "email_address")
+            }
+    )
+    @Column(name = "email_address")
+    @Builder.Default
+    private List<String> emailAddresses = new ArrayList<>();
 
     @Column(length = 2000)
     private String address;

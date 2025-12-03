@@ -15,6 +15,7 @@ public class JournalEntryResponse {
     private String description;
     private LocalDateTime timestamp;
     private String createdBy;
+    private String transactionCode;
     private List<EntryLineResponse> lines;
 
     @Data
@@ -23,6 +24,7 @@ public class JournalEntryResponse {
         private UUID id;
         private UUID accountId;
         private String accountName;
+        private String transactionCode;
         private java.math.BigDecimal debit;
         private java.math.BigDecimal credit;
         private String note;

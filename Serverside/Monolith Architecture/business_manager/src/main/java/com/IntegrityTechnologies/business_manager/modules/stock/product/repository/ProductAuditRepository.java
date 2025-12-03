@@ -9,5 +9,5 @@ import java.util.UUID;
 
 @Repository
 public interface ProductAuditRepository extends JpaRepository<ProductAudit, UUID> {
-        List<ProductAudit> findByProductIdOrderByTimestampDesc(UUID productId);
+    List<ProductAudit> findByProductIdOrderByTimestampDesc(UUID productId);
 }
