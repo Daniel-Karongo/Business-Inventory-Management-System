@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.category.model;
 
-import com.IntegrityTechnologies.business_manager.modules.stock.product.model.Product;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import jakarta.persistence.*;
 import lombok.*;

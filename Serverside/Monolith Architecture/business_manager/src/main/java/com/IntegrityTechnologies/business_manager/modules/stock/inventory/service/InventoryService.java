@@ -18,11 +18,14 @@ import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventorySnapshotRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.model.Product;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.model.ProductVariant;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.repository.ProductAuditRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.repository.ProductRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.repository.ProductVariantRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductAudit;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.service.ProductService;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service.ProductVariantService;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
@@ -49,8 +52,10 @@ public class InventoryService {
     private final ProductAuditRepository productAuditRepository;
     private final CategoryRepository categoryRepository;
     private final InventorySnapshotRepository inventorySnapshotRepository;
+    private final ProductService productService;
 
     private static final int MAX_RETRIES = 5;
+    private final ProductVariantService productVariantService;
 
     // ------------------------
     // EXISTING / CORE METHODS
@@ -58,141 +63,226 @@ public class InventoryService {
 
     @Transactional
     public ApiResponse receiveStock(ReceiveStockRequest req) {
-        ProductVariant variant;
 
-        if (req.getProductVariantId() != null) {
-            // Use provided variant
-            variant = productVariantRepository.findById(req.getProductVariantId())
-                    .orElseThrow(() -> new IllegalArgumentException("ProductVariant not found"));
-        } else {
-            // Variant not provided -> require classification
-            if (req.getClassification() == null || req.getClassification().isBlank()) {
-                throw new IllegalArgumentException("Either productVariantId or classification must be provided");
-            }
+        // -------------------------------------------------------------
+        // 0. VALIDATION
+        // -------------------------------------------------------------
+        if (req.getProductId() == null)
+            throw new IllegalArgumentException("productId is required");
 
-            // Does this classification exist already?
-            variant = productVariantRepository
-                    .findByProductIdAndClassification(req.getProductId(), req.getClassification())
-                    .orElse(null);
+        if (req.getBranchId() == null)
+            throw new IllegalArgumentException("branchId is required");
 
-            if (variant == null) {
-                // Auto-create new variant
-                Product product = productRepository.findById(req.getProductId())
-                        .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+        if (req.getSuppliers() == null || req.getSuppliers().isEmpty())
+            throw new IllegalArgumentException("At least one supplier must be provided");
 
-                variant = new ProductVariant();
-                variant.setProduct(product);
-                variant.setClassification(req.getClassification());
-                variant.setDefaultSellingPrice(product.getPrice()); // default
-                variant.setSku(req.getNewVariantSku() != null ? req.getNewVariantSku() : generateVariantSku(product));
 
-                variant = productVariantRepository.save(variant);
-            }
-        }
-
-        Product product = variant.getProduct();
-        if (product == null) throw new IllegalArgumentException("Variant's product not found");
+        // -------------------------------------------------------------
+        // 1. RESOLVE PRODUCT + BRANCH
+        // -------------------------------------------------------------
+        Product product = productRepository.findById(req.getProductId())
+                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
 
         Branch branch = branchRepository.findById(req.getBranchId())
                 .orElseThrow(() -> new IllegalArgumentException("Branch not found"));
 
-        InventoryItem item = inventoryItemRepository.findByProductVariantIdAndBranchId(req.getProductVariantId(), req.getBranchId())
-                .orElse(InventoryItem.builder()
-                        .productVariant(variant)
-                        .branch(branch)
-                        .quantityOnHand(0L)
-                        .quantityReserved(0L)
-                        .averageCost(BigDecimal.ZERO)
-                        .build()
+
+        // -------------------------------------------------------------
+        // 2. RESOLVE OR CREATE VARIANT
+        // -------------------------------------------------------------
+        ProductVariant variant;
+
+        if (req.getProductVariantId() != null) {
+            variant = productVariantRepository.findById(req.getProductVariantId())
+                    .orElseThrow(() -> new IllegalArgumentException("Variant not found"));
+        } else {
+            if (req.getClassification() == null || req.getClassification().isBlank())
+                throw new IllegalArgumentException("classification is required when no productVariantId provided");
+
+            variant = productVariantRepository.findByProductIdAndClassification(
+                    req.getProductId(), req.getClassification()
+            ).orElse(null);
+
+            if (variant == null) {
+                variant = new ProductVariant();
+                variant.setProduct(product);
+                variant.setClassification(req.getClassification());
+                variant.setSku(
+                        req.getNewVariantSku() != null ?
+                                req.getNewVariantSku() :
+                                productService.generateVariantSku(product, req.getClassification())
                 );
 
-        if (req.getSuppliers() == null || req.getSuppliers().isEmpty()) {
-            throw new IllegalArgumentException("At least one supplier must be provided");
+                // IMPORTANT: MUST SAVE NOW TO AVOID TRANSIENT ERRORS
+                variant = productVariantRepository.save(variant);
+            }
         }
 
-        long quantityStocked = 0L;
-        BigDecimal totalReceivedValue = BigDecimal.ZERO;
-        Set<Supplier> productSuppliers = new HashSet<>();
+        // Ensure variant is saved even if previously found but unsaved
+        if (variant.getId() == null) {
+            variant = productVariantRepository.save(variant);
+        }
 
-        for (SupplierUnit supplierUnit : req.getSuppliers()) {
 
-            if (supplierUnit.getUnitsSupplied() == null || supplierUnit.getUnitsSupplied() <= 0) {
+        // -------------------------------------------------------------
+        // 3. COMPUTE INCOMING COST + UNITS
+        // -------------------------------------------------------------
+        long incomingUnits = 0;
+        BigDecimal incomingCostTotal = BigDecimal.ZERO;
+
+        Set<Supplier> suppliersUsed = new HashSet<>();
+
+        for (SupplierUnit su : req.getSuppliers()) {
+
+            if (su.getUnitsSupplied() == null || su.getUnitsSupplied() <= 0)
                 throw new IllegalArgumentException("unitsSupplied must be > 0");
-            }
 
-            if (supplierUnit.getUnitCost() == null) {
-                throw new IllegalArgumentException("unitCost must be provided for supplier " + supplierUnit.getSupplierId());
-            }
+            if (su.getUnitCost() == null)
+                throw new IllegalArgumentException("unitCost must be provided");
 
-            long units = supplierUnit.getUnitsSupplied();
-            BigDecimal unitCost = supplierUnit.getUnitCost();
+            incomingUnits += su.getUnitsSupplied();
+            incomingCostTotal = incomingCostTotal.add(
+                    su.getUnitCost().multiply(BigDecimal.valueOf(su.getUnitsSupplied()))
+            );
 
+            supplierRepository.findByIdAndDeletedFalse(su.getSupplierId())
+                    .ifPresent(suppliersUsed::add);
+        }
+
+        if (incomingUnits == 0)
+            throw new IllegalArgumentException("Total units supplied must be > 0");
+
+        BigDecimal incomingAvgCost = incomingCostTotal.divide(
+                BigDecimal.valueOf(incomingUnits),
+                6, RoundingMode.HALF_UP
+        );
+
+
+        // -------------------------------------------------------------
+        // 4. LOAD OR CREATE INVENTORY ITEM
+        // -------------------------------------------------------------
+        InventoryItem item = inventoryItemRepository
+                .findByProductVariant_IdAndBranchId(variant.getId(), req.getBranchId())
+                .orElse(null);
+
+        if (item == null) {
+            item = InventoryItem.builder()
+                    .productId(product.getId())
+                    .productVariant(variant)
+                    .branch(branch)
+                    .quantityOnHand(0L)
+                    .quantityReserved(0L)
+                    .averageCost(BigDecimal.ZERO)
+                    .build();
+        }
+
+        long oldQty = item.getQuantityOnHand();
+        BigDecimal oldAvgCost = item.getAverageCost() == null ? BigDecimal.ZERO : item.getAverageCost();
+
+
+        // -------------------------------------------------------------
+        // 5. COMPUTE NEW WEIGHTED AVERAGE COST
+        // -------------------------------------------------------------
+        long newQty = oldQty + incomingUnits;
+        BigDecimal newAvgCost;
+
+        if (newQty == 0) {
+            newAvgCost = BigDecimal.ZERO;
+        } else {
+            BigDecimal totalOldValue = oldAvgCost.multiply(BigDecimal.valueOf(oldQty));
+            BigDecimal totalIncomingValue = incomingAvgCost.multiply(BigDecimal.valueOf(incomingUnits));
+
+            newAvgCost = totalOldValue.add(totalIncomingValue)
+                    .divide(BigDecimal.valueOf(newQty), 6, RoundingMode.HALF_UP);
+        }
+
+        item.setQuantityOnHand(newQty);
+        item.setAverageCost(newAvgCost);
+        item.setLastUpdatedAt(LocalDateTime.now());
+        item.setLastUpdatedBy(getCurrentUsername());
+
+        inventoryItemRepository.save(item);
+
+
+        // -------------------------------------------------------------
+        // 6. UPDATE VARIANT PRICING (NEW RULE)
+        //     newMinSell = newAvgCost × (1 + minimumPercentageProfit)
+        // -------------------------------------------------------------
+        double marginPercent = product.getMinimumPercentageProfit() == null
+                ? 0
+                : product.getMinimumPercentageProfit();
+
+        BigDecimal marginMultiplier = BigDecimal.valueOf(1 + marginPercent);
+
+        variant.setAverageBuyingPrice(newAvgCost);
+        variant.setMinimumSellingPrice(
+                productVariantService.computeMinSelling(newAvgCost, product.getMinimumPercentageProfit())
+        );
+
+        productVariantRepository.save(variant);
+
+
+        // -------------------------------------------------------------
+        // 7. RECORD STOCK TRANSACTIONS
+        // -------------------------------------------------------------
+        for (SupplierUnit su : req.getSuppliers()) {
             StockTransaction txn = StockTransaction.builder()
                     .productId(product.getId())
                     .productVariantId(variant.getId())
                     .branchId(req.getBranchId())
                     .type(StockTransaction.TransactionType.RECEIPT)
-                    .quantityDelta(units)
-                    .unitCost(unitCost)
+                    .quantityDelta(su.getUnitsSupplied())
+                    .unitCost(su.getUnitCost())
                     .reference(req.getReference())
-                    .supplierId(supplierUnit.getSupplierId())
+                    .supplierId(su.getSupplierId())
                     .note(req.getNote())
                     .timestamp(LocalDateTime.now())
                     .performedBy(getCurrentUsername())
                     .build();
 
             stockTransactionRepository.save(txn);
-
-            quantityStocked += units;
-            totalReceivedValue = totalReceivedValue.add(unitCost.multiply(BigDecimal.valueOf(units)));
-
-            supplierRepository.findByIdAndDeletedFalse(supplierUnit.getSupplierId())
-                    .ifPresent(productSuppliers::add);
         }
 
-        // update supplier links/audit
-        Set<Supplier> addedProductSuppliers = new HashSet<>();
-        Category productCategory = product.getCategory();
-        productSuppliers.forEach(supplier -> {
-            if (!product.getSuppliers().contains(supplier)) {
-                product.getSuppliers().add(supplier);
-                addedProductSuppliers.add(supplier);
+
+        // -------------------------------------------------------------
+        // 8. UPDATE PRODUCT SUPPLIERS & AUDIT
+        // -------------------------------------------------------------
+        Category category = product.getCategory();
+        Set<Supplier> addedSuppliers = new HashSet<>();
+
+        for (Supplier s : suppliersUsed) {
+            if (!product.getSuppliers().contains(s)) {
+                product.getSuppliers().add(s);
+                addedSuppliers.add(s);
             }
-            if (productCategory != null && !productCategory.getSuppliers().contains(supplier)) {
-                productCategory.getSuppliers().add(supplier);
+
+            if (category != null && !category.getSuppliers().contains(s)) {
+                category.getSuppliers().add(s);
             }
-        });
-        productRepository.save(product);
-        createProductAudit(product, "UPDATE", "suppliers", null, addedProductSuppliers.stream().map(s -> s.getId().toString() + " - " + s.getName()).toString());
-        if (productCategory != null) categoryRepository.save(productCategory);
-
-        // update inventory item quantities & average cost (weighted avg on receive)
-        long oldQty = item.getQuantityOnHand() != null ? item.getQuantityOnHand() : 0L;
-        BigDecimal oldAvgCost = item.getAverageCost() != null ? item.getAverageCost() : BigDecimal.ZERO;
-
-        long newQty = oldQty + quantityStocked;
-        item.setQuantityOnHand(newQty);
-        item.setLastUpdatedAt(LocalDateTime.now());
-        item.setLastUpdatedBy(getCurrentUsername());
-
-        if (quantityStocked > 0) {
-            BigDecimal totalOldValue = oldAvgCost.multiply(BigDecimal.valueOf(oldQty));
-            BigDecimal totalNewValue = totalOldValue.add(totalReceivedValue);
-
-            BigDecimal newAvg = BigDecimal.ZERO;
-            if (newQty > 0) {
-                newAvg = totalNewValue.divide(BigDecimal.valueOf(newQty), 6, RoundingMode.HALF_UP);
-            }
-            item.setAverageCost(newAvg);
         }
 
-        inventoryItemRepository.save(item);
-
-        BigDecimal lastUnitCost = req.getSuppliers().get(req.getSuppliers().size() - 1).getUnitCost();
-        product.setBuyingPrice(lastUnitCost);
         productRepository.save(product);
+        if (category != null)
+            categoryRepository.save(category);
 
-        return new ApiResponse("success", "Stock received", buildResponse(item));
+        if (!addedSuppliers.isEmpty()) {
+            createProductAudit(
+                    product,
+                    "UPDATE",
+                    "suppliers",
+                    null,
+                    addedSuppliers.stream()
+                            .map(s -> s.getId() + " - " + s.getName())
+                            .toList()
+                            .toString()
+            );
+        }
+
+
+        // -------------------------------------------------------------
+        // 9. RETURN RESPONSE
+        // -------------------------------------------------------------
+        return new ApiResponse("success", "Stock received successfully", buildResponse(item));
     }
 
     // ------------------------
@@ -217,7 +307,7 @@ public class InventoryService {
     }
 
     private void processReservationVariant(UUID productVariantId, UUID branchId, long quantity, String reference) {
-        InventoryItem item = inventoryItemRepository.findByProductVariantIdAndBranchId(productVariantId, branchId)
+        InventoryItem item = inventoryItemRepository.findByProductVariant_IdAndBranchId(productVariantId, branchId)
                 .orElseThrow(() -> new IllegalArgumentException("Inventory item not found"));
 
         long available = item.getQuantityOnHand() - item.getQuantityReserved();
@@ -248,7 +338,7 @@ public class InventoryService {
     public void releaseReservationVariant(UUID productVariantId, UUID branchId, int quantity, String reference) {
         if (quantity <= 0) throw new IllegalArgumentException("Quantity must be > 0");
 
-        InventoryItem item = inventoryItemRepository.findByProductVariantIdAndBranchId(productVariantId, branchId)
+        InventoryItem item = inventoryItemRepository.findByProductVariant_IdAndBranchId(productVariantId, branchId)
                 .orElseThrow(() -> new IllegalArgumentException("Inventory item not found"));
 
         long releaseQty = Math.min(quantity, item.getQuantityReserved());
@@ -296,7 +386,7 @@ public class InventoryService {
 
     private void processStockDecrementVariant(UUID productVariantId, UUID branchId, long qty, String reference) {
 
-        InventoryItem item = inventoryItemRepository.findByProductVariantIdAndBranchId(productVariantId, branchId)
+        InventoryItem item = inventoryItemRepository.findByProductVariant_IdAndBranchId(productVariantId, branchId)
                 .orElseThrow(() -> new OutOfStockException("Inventory record not found"));
 
         long available = item.getQuantityOnHand() - item.getQuantityReserved();
@@ -343,7 +433,7 @@ public class InventoryService {
         Branch branch = branchRepository.findById(req.getBranchId())
                 .orElseThrow(() -> new IllegalArgumentException("Branch not found"));
 
-        InventoryItem item = inventoryItemRepository.findByProductVariantIdAndBranchId(req.getProductVariantId(), req.getBranchId())
+        InventoryItem item = inventoryItemRepository.findByProductVariant_IdAndBranchId(req.getProductVariantId(), req.getBranchId())
                 .orElseThrow(() -> new IllegalArgumentException("Inventory item not found for variant/branch"));
 
         long delta = req.getQuantityDelta();
@@ -402,7 +492,7 @@ public class InventoryService {
         }
 
         if (branchId != null) {
-            Optional<InventoryItem> itemOpt = inventoryItemRepository.findByProductVariantIdAndBranchId(productVariantId, branchId);
+            Optional<InventoryItem> itemOpt = inventoryItemRepository.findByProductVariant_IdAndBranchId(productVariantId, branchId);
             if (itemOpt.isPresent()) {
                 return new ApiResponse("success", "Inventory for variant+branch", buildResponse(itemOpt.get()));
             } else {
@@ -415,113 +505,62 @@ public class InventoryService {
                     .filter(it -> it.getProductVariant() != null && productVariantId.equals(it.getProductVariant().getId()))
                     .toList();
 
-            List<Map<String, Object>> aggregated = items.stream().map(it -> {
-                Map<String, Object> m = new HashMap<>();
-                m.put("variantId", it.getProductVariant().getId());
-                m.put("productId", it.getProductVariant().getProduct().getId());
-                m.put("variantClassification", it.getProductVariant().getClassification());
-                m.put("branchId", it.getBranch().getId());
-                m.put("branchName", it.getBranch().getName());
-                m.put("quantityOnHand", it.getQuantityOnHand());
-                m.put("quantityReserved", it.getQuantityReserved());
-                m.put("averageCost", it.getAverageCost());
-                return m;
-            }).toList();
+            List<InventoryResponse> aggregated = items.stream().map(item -> buildResponse(item)).toList();
 
             return new ApiResponse("success", "Inventory for variant across branches", aggregated);
         }
     }
 
     /**
-     * Return inventory for all variants of a product across branches.
-     */
-    public ApiResponse getInventoryForProduct(UUID productId) {
-        if (productId == null) throw new IllegalArgumentException("productId is required");
-
-        List<InventoryItem> items = inventoryItemRepository.findAll()
-                .stream()
-                .filter(it -> it.getProductVariant() != null &&
-                        it.getProductVariant().getProduct() != null &&
-                        productId.equals(it.getProductVariant().getProduct().getId()))
-                .toList();
-
-        List<Map<String, Object>> out = items.stream().map(it -> {
-            Map<String, Object> m = new HashMap<>();
-            m.put("productId", it.getProductVariant().getProduct().getId());
-            m.put("productName", it.getProductVariant().getProduct().getName());
-            m.put("variantId", it.getProductVariant().getId());
-            m.put("variantClassification", it.getProductVariant().getClassification());
-            m.put("branchId", it.getBranch().getId());
-            m.put("branchName", it.getBranch().getName());
-            m.put("quantityOnHand", it.getQuantityOnHand());
-            m.put("quantityReserved", it.getQuantityReserved());
-            m.put("averageCost", it.getAverageCost());
-            return m;
-        }).toList();
-
-        return new ApiResponse("success", "Inventory for product (variants across branches)", out);
-    }
-
-    /**
      * Return stock across branches aggregated by variant for a product.
      */
-    public List<Map<String, Object>> getStockAcrossBranches(UUID productId) {
+    public ApiResponse getProductStockAcrossBranches(UUID productId) {
         List<InventoryItem> items = inventoryItemRepository.findAll()
                 .stream()
                 .filter(it -> it.getProductVariant() != null &&
-                        it.getProductVariant().getProduct() != null &&
-                        productId.equals(it.getProductVariant().getProduct().getId()))
+                        it.getProductId() != null &&
+                        productId.equals(it.getProductId()))
                 .toList();
 
-        List<Map<String, Object>> res = new ArrayList<>();
+        List<InventoryResponse> res = new ArrayList<>();
         for (InventoryItem it : items) {
-            Map<String, Object> m = new HashMap<>();
-            m.put("productId", it.getProductVariant().getProduct().getId());
-            m.put("variantId", it.getProductVariant().getId());
-            m.put("variantClassification", it.getProductVariant().getClassification());
-            m.put("branchId", it.getBranch().getId());
-            m.put("branchName", it.getBranch().getName());
-            m.put("quantityOnHand", it.getQuantityOnHand());
-            m.put("quantityReserved", it.getQuantityReserved());
-            res.add(m);
+            res.add(buildResponse(it));
         }
-        return res;
+        return new ApiResponse("success", "Inventory for product " + productId.toString() + " across branches", res);
     }
 
-    public List<Map<String, Object>> getLowStock(Long threshold) {
+    public ApiResponse getProductStockInBranch(UUID productId, UUID branchId) {
+        List<InventoryItem> items = inventoryItemRepository.findAll()
+                .stream()
+                .filter(it -> it.getProductVariant() != null &&
+                        it.getProductId() != null &&
+                        productId.equals(it.getProductId()) && branchId.equals(it.getBranch().getId()))
+                .toList();
+
+        List<InventoryResponse> res = new ArrayList<>();
+        for (InventoryItem it : items) {
+            res.add(buildResponse(it));
+        }
+        return new ApiResponse("success", "Inventory for product " + productId.toString() + " in branch " + branchId, res);
+    }
+
+    public ApiResponse getLowStock(Long threshold) {
         var items = inventoryItemRepository.findAll();
-        return items.stream()
+        List<InventoryResponse> response = items.stream()
                 .filter(i -> (i.getQuantityOnHand() - i.getQuantityReserved()) <= threshold)
-                .map(i -> {
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("productId", i.getProductVariant().getProduct().getId());
-                    m.put("productName", i.getProductVariant().getProduct().getName());
-                    m.put("variantId", i.getProductVariant().getId());
-                    m.put("variantClassification", i.getProductVariant().getClassification());
-                    m.put("branchId", i.getBranch().getId());
-                    m.put("quantityOnHand", i.getQuantityOnHand());
-                    m.put("quantityReserved", i.getQuantityReserved());
-                    m.put("averageCost", i.getAverageCost());
-                    return m;
-                }).toList();
+                .map(i -> buildResponse(i)).toList();
+        return new ApiResponse("success", "Product under " + threshold + " in stock", response);
     }
 
-    public List<Map<String, Object>> getOutOfStock() {
+    public ApiResponse getOutOfStock() {
         var items = inventoryItemRepository.findAll();
-        return items.stream()
+        List<InventoryResponse> response = items.stream()
                 .filter(i -> (i.getQuantityOnHand() - i.getQuantityReserved()) <= 0)
-                .map(i -> {
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("productId", i.getProductVariant().getProduct().getId());
-                    m.put("productName", i.getProductVariant().getProduct().getName());
-                    m.put("variantId", i.getProductVariant().getId());
-                    m.put("branchId", i.getBranch().getId());
-                    m.put("quantityOnHand", i.getQuantityOnHand());
-                    return m;
-                }).toList();
+                .map(i -> buildResponse(i)).toList();
+        return new ApiResponse("success", "Out of stock products", response);
     }
 
-    public List<com.IntegrityTechnologies.business_manager.modules.stock.product.model.ProductAudit> getAuditTrail(UUID productId) {
+    public List<ProductAudit> getAuditTrail(UUID productId) {
         return productAuditRepository.findByProductIdOrderByTimestampDesc(productId);
     }
 
@@ -531,13 +570,38 @@ public class InventoryService {
         List<InventoryItem> items = inventoryItemRepository.findAll();
 
         for (InventoryItem i : items) {
-            BigDecimal valuationUnit = Optional.ofNullable(i.getAverageCost()).orElse(i.getProductVariant().getProduct().getPrice() != null ? i.getProductVariant().getProduct().getPrice() : BigDecimal.ZERO);
-            var snap = InventorySnapshot.builder()
-                    .productId(i.getProductVariant().getProduct().getId())
+
+            ProductVariant variant = i.getProductVariant();
+
+            // -----------------------------
+            // Determine valuation unit
+            // -----------------------------
+            // Priority:
+            // 1. inventory averageCost
+            // 2. variant averageBuyingPrice
+            // 3. zero
+            BigDecimal valuationUnit =
+                    Optional.ofNullable(i.getAverageCost())
+                            .filter(cost -> cost.compareTo(BigDecimal.ZERO) > 0)
+                            .orElse(
+                                    Optional.ofNullable(variant.getAverageBuyingPrice())
+                                            .orElse(BigDecimal.ZERO)
+                            );
+
+            // -----------------------------
+            // Build snapshot
+            // -----------------------------
+            InventorySnapshot snap = InventorySnapshot.builder()
+                    .productId(variant.getProduct().getId())
+                    .productVariantId(variant.getId())
                     .branchId(i.getBranch().getId())
+
                     .quantityOnHand(i.getQuantityOnHand())
                     .quantityReserved(i.getQuantityReserved())
+
+                    // valuation = unit valuation × quantity
                     .valuation(valuationUnit.multiply(BigDecimal.valueOf(i.getQuantityOnHand())))
+
                     .snapshotDate(date)
                     .createdAt(LocalDateTime.now())
                     .build();
@@ -555,13 +619,11 @@ public class InventoryService {
         List<InventoryItem> allItems = inventoryItemRepository.findAll();
 
         for (InventoryItem item : allItems) {
-
+            UUID pvid = item.getProductVariant().getId();
             UUID pid = item.getProductVariant().getProduct().getId();
             UUID bid = item.getBranch().getId();
 
-            var last = inventorySnapshotRepository.findTopByProductIdAndBranchIdAndSnapshotDateLessThanEqualOrderBySnapshotDateDesc(
-                    pid, bid, date
-            );
+            var last = inventorySnapshotRepository.findTopByProductVariantIdAndBranchIdAndSnapshotDateLessThanEqualOrderBySnapshotDateDesc(pvid, bid, date);
 
             long baseOnHand = last.map(InventorySnapshot::getQuantityOnHand).orElse(0L);
             long baseReserved = last.map(InventorySnapshot::getQuantityReserved).orElse(0L);
@@ -570,7 +632,7 @@ public class InventoryService {
             LocalDateTime baseDateTime = baseDate.atStartOfDay();
 
             List<StockTransaction> txns =
-                    stockTransactionRepository.findBetween(pid, bid, baseDateTime, toDate);
+                    stockTransactionRepository.findBetweenVariant(pvid, bid, baseDateTime, toDate);
 
             long deltaOnHand = 0;
             long deltaReserved = 0;
@@ -604,29 +666,20 @@ public class InventoryService {
         return result;
     }
 
-    public Map<String, Object> getInventoryValuation() {
-        BigDecimal total = BigDecimal.ZERO;
-        for (var item : inventoryItemRepository.findAll()) {
-            BigDecimal price = Optional.ofNullable(item.getProductVariant().getProduct().getPrice()).orElse(BigDecimal.ZERO);
-            total = total.add(price.multiply(BigDecimal.valueOf(item.getQuantityOnHand())));
-        }
-        Map<String, Object> out = new HashMap<>();
-        out.put("totalValuation", total);
-        return out;
-    }
-
     // ------------------------
     // Helpers
     // ------------------------
 
-    private String generateVariantSku(Product product) {
-        return product.getSku() + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
-    }
+
 
     private InventoryResponse buildResponse(InventoryItem item) {
         return InventoryResponse.builder()
                 .productId(item.getProductVariant().getProduct().getId())
                 .productName(item.getProductVariant().getProduct().getName())
+                .productSKU(item.getProductVariant().getProduct().getSku())
+                .productVariantId(item.getProductVariant().getId())
+                .productClassification(item.getProductVariant().getClassification())
+                .productVariantSKU(item.getProductVariant().getSku())
                 .branchId(item.getBranch().getId())
                 .branchName(item.getBranch().getName())
                 .quantityOnHand(item.getQuantityOnHand())
@@ -641,7 +694,7 @@ public class InventoryService {
     }
 
     private void createProductAudit(Product product, String action, String fieldChanged, String oldValue, String newValue) {
-        var createAudit = new com.IntegrityTechnologies.business_manager.modules.stock.product.model.ProductAudit();
+        var createAudit = new ProductAudit();
         createAudit.setAction(action);
         createAudit.setFieldChanged(fieldChanged);
         createAudit.setOldValue(oldValue);

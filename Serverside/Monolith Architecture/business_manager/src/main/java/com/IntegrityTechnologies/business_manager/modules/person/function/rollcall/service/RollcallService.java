@@ -17,12 +17,15 @@ import com.IntegrityTechnologies.business_manager.modules.person.function.rollca
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -180,42 +183,11 @@ public class RollcallService {
                 RollcallStatus.PRESENT : RollcallStatus.LATE;
     }
 
-    @Scheduled(cron = "0 */10 * * * *")
-    @Transactional
-    public void autoLogoutMissingUsers() {
-        LocalDateTime now = LocalDateTime.now();
-
-        List<UserSession> sessions = userSessionRepository.findAllByLogoutTimeIsNull();
-
-        for (UserSession s : sessions) {
-            if (s.getLoginTime().plusHours(12).isBefore(now)) {
-
-                s.setLogoutTime(now);
-                s.setAutoLoggedOut(true);
-                userSessionRepository.save(s);
-
-                UUID userId = s.getUserId();
-
-                Set<Department> deps = departmentRepository.findDepartmentsByUserId(userId);
-
-                if (deps.isEmpty()) {
-                    recordLogoutRollcall(userId, null, null);
-                } else {
-                    for (Department d : deps) {
-                        Branch b = branchRepository.findBranchForUserAndDepartment(userId, d.getId());
-                        UUID branchId = b == null ? null : b.getId();
-                        recordLogoutRollcall(userId, d.getId(), branchId);
-                    }
-                }
-            }
-        }
-    }
-
     /**
      * Scheduled job to mark ABSENT for users who didn't rollcall by cutoff.
      * This will be called (for example) every day at department.rollcallStartTime + some buffer.
      */
-    @Scheduled(cron = "0 30 9 * * ?") // example: 09:30 daily; you can schedule per-department by more advanced scheduler
+    @Scheduled(cron = "${inventory.snapshot.cron}") // example: 09:30 daily; you can schedule per-department by more advanced scheduler
     @Transactional
     public void markAbsenteesAndNotify() {
         List<Department> departments = departmentRepository.findAllActive();

@@ -1,8 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.model;
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.model.Product;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,6 +19,7 @@ import java.util.UUID;
                 )
         },
         indexes = {
+                @Index(name = "idx_inventory_product", columnList = "product_id"),
                 @Index(name = "idx_inventory_variant", columnList = "product_variant_id"),
                 @Index(name = "idx_inventory_branch", columnList = "branch_id")
         }
@@ -34,6 +34,9 @@ public class InventoryItem {
     @GeneratedValue
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
+
+    @Column(name="product_id", nullable=false)
+    private UUID productId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "product_variant_id", nullable = false)
@@ -53,7 +56,6 @@ public class InventoryItem {
     private BigDecimal averageCost = BigDecimal.ZERO;
 
     private LocalDateTime lastUpdatedAt;
-
     private String lastUpdatedBy;
 
     @Version

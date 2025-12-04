@@ -4,7 +4,7 @@ import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.service.InventoryValuationService;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryValuationService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -13,9 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Tag(name = "Inventory")
 @RestController
@@ -96,11 +94,6 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.getInventoryForVariantBranch(variantId, branchId));
     }
 
-    @GetMapping("/product/{productId}")
-    public ResponseEntity<ApiResponse> getProductInventory(@PathVariable UUID productId) {
-        return ResponseEntity.ok(inventoryService.getInventoryForProduct(productId));
-    }
-
     /** legacy-style list endpoints but variant-aware */
     @GetMapping
     public ResponseEntity<ApiResponse> listAllInventory() {
@@ -119,8 +112,16 @@ public class InventoryController {
      * ------------------------- */
 
     @GetMapping("/product/stock-across-branches/{productId}")
-    public ResponseEntity<ApiResponse> stockAcrossBranches(@PathVariable UUID productId) {
-        return ResponseEntity.ok(new ApiResponse("success", "Stock across branches", inventoryService.getStockAcrossBranches(productId)));
+    public ResponseEntity<ApiResponse> productStockAcrossBranches(@PathVariable UUID productId) {
+        return ResponseEntity.ok(new ApiResponse("success", "Stock across branches", inventoryService.getProductStockAcrossBranches(productId)));
+    }
+
+    @GetMapping("/product/{productId}/branch/{branchId}")
+    public ResponseEntity<ApiResponse> productStockInBranch(
+            @PathVariable UUID productId,
+            @PathVariable UUID branchId
+    ) {
+        return ResponseEntity.ok(new ApiResponse("success", "Stock across branches", inventoryService.getProductStockInBranch(productId, branchId)));
     }
 
     @GetMapping("/low-stock")
@@ -141,6 +142,21 @@ public class InventoryController {
     @GetMapping("/transactions/product/{productId}")
     public ResponseEntity<ApiResponse> listTransactionsForProduct(@PathVariable UUID productId) {
         return ResponseEntity.ok(new ApiResponse("success", "Transaction list for product", stockTransactionRepository.findByProductId(productId)));
+    }
+
+    @GetMapping("/valuation/dashboard")
+    public ResponseEntity<ApiResponse> valuationDashboard() {
+
+        Map<String, Object> response = new HashMap<>();
+
+        response.put("valuationMethod", valuationService.resolveCurrentMethod());
+
+        response.put("totalValuation", valuationService.getTotalValuation().get("totalValuation"));
+        response.put("branchValuation", valuationService.getAllBranchesValuation());
+        response.put("categoryValuation", valuationService.getCategoryValuation());
+        response.put("topProducts", valuationService.getTopValuedProducts(10));
+
+        return ResponseEntity.ok(new ApiResponse("success", "Valuation dashboard", response));
     }
 
     @GetMapping("/valuation")

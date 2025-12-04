@@ -7,10 +7,10 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sa
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service.CustomerService;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.model.Product;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.model.ProductVariant;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.repository.ProductRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.repository.ProductVariantRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -51,7 +51,9 @@ public class SalesService {
                     .orElseThrow(() -> new IllegalArgumentException("ProductVariant not found: " + li.getProductVariantId()));
 
             Product p = v.getProduct();
-            BigDecimal unitPrice = li.getUnitPrice() != null ? li.getUnitPrice() : (v.getDefaultSellingPrice() != null ? v.getDefaultSellingPrice() : p.getPrice());
+            BigDecimal unitPrice = Optional.ofNullable(li.getUnitPrice())
+                    .orElseGet(() -> Optional.ofNullable(v.getMinimumSellingPrice())
+                            .orElse(BigDecimal.ZERO));
             BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(li.getQuantity()));
 
             SaleLineItem line = SaleLineItem.builder()
@@ -188,17 +190,15 @@ public class SalesService {
 
             Product product = variant.getProduct();
 
-            BigDecimal unitPrice = (li.getUnitPrice() != null)
+            BigDecimal unitPrice = li.getUnitPrice() != null
                     ? li.getUnitPrice()
-                    : variant.getDefaultSellingPrice() != null
-                    ? variant.getDefaultSellingPrice()
-                    : product.getPrice();
+                    : variant.getMinimumSellingPrice();
 
             BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(li.getQuantity()));
 
             SaleLineItem line = SaleLineItem.builder()
                     .productVariantId(variant.getId())
-                    .productName(product.getName() + " (" + variant.getClassification() + ")")
+                    .productName(variant.getClassification() != null ? variant.getClassification() : "UNCLASSIFIED")
                     .branchId(li.getBranchId())
                     .unitPrice(unitPrice)
                     .quantity(li.getQuantity())

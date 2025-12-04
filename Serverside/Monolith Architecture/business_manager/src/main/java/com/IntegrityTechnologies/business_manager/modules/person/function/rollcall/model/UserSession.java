@@ -23,9 +23,11 @@ public class UserSession {
     @Column(nullable = false)
     private UUID userId;
 
+    @Column(nullable = false)
+    private UUID branchId;   // ✅ add this
+
     private LocalDateTime loginTime;
     private LocalDateTime logoutTime;
 
-    // For detecting missing logout
     private Boolean autoLoggedOut = false;
 }

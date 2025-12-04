@@ -112,11 +112,11 @@ public class AuthService {
          * 7️⃣ SAVE SESSION
          * ----------------------------------------------------------- */
         userSessionRepository.save(
-                UserSession.builder()
-                        .userId(userId)
-                        .loginTime(LocalDateTime.now())
-                        .autoLoggedOut(false)
-                        .build()
+            UserSession.builder()
+                    .userId(userId)
+                    .branchId(branchId)
+                    .loginTime(LocalDateTime.now())
+                    .build()
         );
 
         /* -----------------------------------------------------------
@@ -133,19 +133,20 @@ public class AuthService {
                 .findTopByUserIdAndLogoutTimeIsNullOrderByLoginTimeDesc(userId)
                 .orElse(null);
 
+        UUID branchId = null;
         if (session != null) {
             session.setLogoutTime(LocalDateTime.now());
             userSessionRepository.save(session);
+
+            branchId = session.getBranchId();  // ✅ Use the logged-in branch
         }
 
         Set<Department> departments = departmentRepository.findDepartmentsByUserId(userId);
 
         if (departments.isEmpty()) {
-            rollcallService.recordLogoutRollcall(userId, null, null);
+            rollcallService.recordLogoutRollcall(userId, null, branchId);
         } else {
             for (Department d : departments) {
-                Branch b = branchRepository.findBranchForUserAndDepartment(userId, d.getId());
-                UUID branchId = b == null ? null : b.getId();
                 rollcallService.recordLogoutRollcall(userId, d.getId(), branchId);
             }
         }

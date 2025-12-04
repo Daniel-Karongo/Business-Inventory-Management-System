@@ -16,7 +16,7 @@ import java.util.UUID;
 @Table(
         name = "inventory_snapshots",
         uniqueConstraints = @UniqueConstraint(
-                columnNames = {"product_id", "branch_id", "snapshot_date"}
+                columnNames = {"product_id", "product_variant_id", "branch_id", "snapshot_date"}
         )
 )
 @Getter
@@ -31,6 +31,7 @@ public class InventorySnapshot {
     private UUID id;
 
     private UUID productId;
+    private UUID productVariantId;
     private UUID branchId;
 
     private Long quantityOnHand;

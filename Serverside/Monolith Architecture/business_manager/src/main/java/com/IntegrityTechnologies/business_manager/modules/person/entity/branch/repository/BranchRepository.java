@@ -26,14 +26,16 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
     List<Branch> findBranchesByUserId(@Param("userId") UUID userId);
 
     @Query("""
-    SELECT b
-    FROM Branch b
-    JOIN b.users u
-    JOIN b.departments d
-    WHERE u.id = :userId AND d.id = :deptId
-""")
-    Branch findBranchForUserAndDepartment(@Param("userId") UUID userId,
-                                          @Param("deptId") UUID deptId);
+        SELECT DISTINCT b
+        FROM Branch b
+        JOIN b.users u
+        JOIN b.departments d
+        WHERE u.id = :userId
+          AND d.id = :deptId
+    """)
+    List<Branch> findBranchesForUserAndDepartment(@Param("userId") UUID userId,
+                                                  @Param("deptId") UUID deptId);
+
 
     @Query("""
     SELECT CASE WHEN COUNT(b) > 0 THEN TRUE ELSE FALSE END

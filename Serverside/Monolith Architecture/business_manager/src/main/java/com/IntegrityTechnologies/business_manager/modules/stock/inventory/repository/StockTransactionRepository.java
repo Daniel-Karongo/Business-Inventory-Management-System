@@ -28,6 +28,15 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
     List<StockTransaction> findBetween(UUID pid, UUID bid, LocalDateTime from, LocalDateTime to);
 
     // variant-aware between
-    @Query("SELECT t FROM StockTransaction t WHERE t.productVariantId = :vid AND t.branchId = :bid AND t.timestamp >= :from AND t.timestamp <= :to ORDER BY t.timestamp ASC")
-    List<StockTransaction> findBetweenByVariant(UUID vid, UUID bid, LocalDateTime from, LocalDateTime to);
+    @Query("SELECT s FROM StockTransaction s " +
+            "WHERE s.productVariantId = :variantId " +
+            "AND s.branchId = :branchId " +
+            "AND s.timestamp BETWEEN :from AND :to " +
+            "ORDER BY s.timestamp ASC")
+    List<StockTransaction> findBetweenVariant(
+            UUID variantId,
+            UUID branchId,
+            LocalDateTime from,
+            LocalDateTime to
+    );
 }

@@ -9,11 +9,11 @@ import java.util.UUID;
 
 public interface InventoryItemRepository extends JpaRepository<InventoryItem, UUID> {
 
-    Optional<InventoryItem> findByProductVariantIdAndBranchId(UUID productVariantId, UUID branchId);
+    Optional<InventoryItem> findByProductVariant_IdAndBranchId(UUID variantId, UUID branchId);
+
+    List<InventoryItem> findByProductVariant_Id(UUID variantId);
 
     List<InventoryItem> findByBranchId(UUID branchId);
 
     List<InventoryItem> findByProductVariant_Product_Id(UUID productId);
-
-    List<InventoryItem> findByProductVariantId(UUID productId);
 }

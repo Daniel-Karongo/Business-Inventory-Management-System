@@ -4,10 +4,10 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.reposito
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineItem;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.model.Product;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.model.ProductVariant;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.repository.ProductRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.repository.ProductVariantRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;

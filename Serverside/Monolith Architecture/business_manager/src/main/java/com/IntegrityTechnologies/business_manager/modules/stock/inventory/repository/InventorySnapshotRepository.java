@@ -14,9 +14,13 @@ public interface InventorySnapshotRepository extends JpaRepository<InventorySnap
 
     List<InventorySnapshot> findBySnapshotDate(LocalDate date);
 
-    List<InventorySnapshot> findByProductIdAndBranchIdOrderBySnapshotDateDesc(
-            UUID productId, UUID branchId);
+    List<InventorySnapshot> findByProductVariantIdAndBranchIdOrderBySnapshotDateDesc(
+            UUID productVariantId, UUID branchId);
 
-    Optional<InventorySnapshot> findTopByProductIdAndBranchIdAndSnapshotDateLessThanEqualOrderBySnapshotDateDesc(
-            UUID productId, UUID branchId, LocalDate date);
+    Optional<InventorySnapshot>
+    findTopByProductVariantIdAndBranchIdAndSnapshotDateLessThanEqualOrderBySnapshotDateDesc(
+            UUID productVariantId,
+            UUID branchId,
+            LocalDate date
+    );
 }

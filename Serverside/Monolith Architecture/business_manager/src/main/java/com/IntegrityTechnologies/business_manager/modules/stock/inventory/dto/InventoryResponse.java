@@ -11,6 +11,10 @@ import java.util.UUID;
 public class InventoryResponse {
     private UUID productId;
     private String productName;
+    private String productSKU;
+    private UUID productVariantId;
+    private String productClassification;
+    private String productVariantSKU;
     private UUID branchId;
     private String branchName;
     private Long quantityOnHand;
