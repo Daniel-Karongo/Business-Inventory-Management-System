@@ -1,7 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.payment.controller;
 
+import com.IntegrityTechnologies.business_manager.config.OptimisticRetryRunner;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentRequest;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentResponse;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.service.PaymentService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,19 +22,29 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
+    /* ============================================================
+       MAKE PAYMENT
+       ============================================================ */
     @PostMapping
-    public ResponseEntity<PaymentResponse> makePayment(@RequestBody PaymentRequest req) {
-        return ResponseEntity.ok(paymentService.processPayment(req));
+    public ResponseEntity<PaymentDTO> makePayment(@RequestBody PaymentRequest req) {
+        return ResponseEntity.ok(
+                OptimisticRetryRunner.runWithRetry(() -> paymentService.processPayment(req))
+        );
     }
 
+    /* ============================================================
+       GET PAYMENT BY ID
+       ============================================================ */
     @GetMapping("/{id}")
-    public ResponseEntity<PaymentResponse> getPayment(@PathVariable UUID id) {
+    public ResponseEntity<PaymentDTO> getPayment(@PathVariable UUID id) {
         return ResponseEntity.ok(paymentService.getPayment(id));
     }
 
-    /** NEW — List payments */
+    /* ============================================================
+       LIST PAYMENTS
+       ============================================================ */
     @GetMapping
-    public ResponseEntity<Page<PaymentResponse>> listPayments(
+    public ResponseEntity<Page<PaymentDTO>> listPayments(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String method,
@@ -41,16 +52,36 @@ public class PaymentController {
             @RequestParam(required = false) UUID saleId
     ) {
         return ResponseEntity.ok(
-                paymentService.listPayments(page, size, method, status, saleId));
+                paymentService.listPayments(page, size, method, status, saleId)
+        );
     }
 
-    /** NEW — Refund payment */
+    /* ============================================================
+       REFUND PAYMENT (SUCCESS only)
+       ============================================================ */
     @PostMapping("/{id}/refund")
-    public ResponseEntity<PaymentResponse> refundPayment(@PathVariable UUID id) {
-        return ResponseEntity.ok(paymentService.refundPayment(id));
+    public ResponseEntity<PaymentDTO> refundPayment(@PathVariable UUID id) {
+        return ResponseEntity.ok(
+                OptimisticRetryRunner.runWithRetry(() -> paymentService.refundPayment(id))
+        );
     }
 
-    /** NEW — Reconciliation */
+    /* ============================================================
+       REVERSE PAYMENT (undo, accounting + customer ledger)
+       ============================================================ */
+    @PostMapping("/{id}/reverse")
+    public ResponseEntity<PaymentDTO> reversePayment(
+            @PathVariable UUID id,
+            @RequestParam(required = false) String note
+    ) {
+        return ResponseEntity.ok(
+                OptimisticRetryRunner.runWithRetry(() -> paymentService.reversePayment(id, note))
+        );
+    }
+
+    /* ============================================================
+       PAYMENT RECONCILIATION
+       ============================================================ */
     @GetMapping("/reconcile")
     public ResponseEntity<Object> reconcilePayments(
             @RequestParam String from,

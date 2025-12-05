@@ -62,6 +62,11 @@ public class StockTransaction {
         TRANSFER_IN,
         TRANSFER_OUT,
         RESERVATION, // reserved for order
-        RELEASE // release reservation
+        RELEASE, // release reservation
+        RETURN
     }
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
 }

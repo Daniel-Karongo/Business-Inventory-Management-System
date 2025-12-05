@@ -39,4 +39,15 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
             LocalDateTime from,
             LocalDateTime to
     );
+
+    List<StockTransaction> findByProductVariantIdOrderByTimestampDesc(UUID variantId);
+
+    List<StockTransaction> findByBranchIdOrderByTimestampDesc(UUID branchId);
+
+    List<StockTransaction> findByProductIdAndBranchIdOrderByTimestampDesc(UUID productId, UUID branchId);
+
+    List<StockTransaction> findByProductVariantIdAndBranchIdOrderByTimestampDesc(UUID variantId, UUID branchId);
+
+    List<StockTransaction> findByTimestampBetween(LocalDateTime from, LocalDateTime to);
+
 }

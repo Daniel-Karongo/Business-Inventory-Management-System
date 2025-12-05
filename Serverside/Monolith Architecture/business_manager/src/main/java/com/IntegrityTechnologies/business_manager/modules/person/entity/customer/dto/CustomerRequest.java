@@ -9,10 +9,17 @@ import java.util.UUID;
 
 @Data
 public class CustomerRequest {
+
     private UUID customerId;
+
     private String name;
+
+    private String phone;                 // NEW
     private List<String> phoneNumbers;
-    private List<@Email String> emailAddresses;
+
+    private String email;                 // NEW
+    private List<String> emailAddresses;
+
     private String address;
     private String notes;
 }

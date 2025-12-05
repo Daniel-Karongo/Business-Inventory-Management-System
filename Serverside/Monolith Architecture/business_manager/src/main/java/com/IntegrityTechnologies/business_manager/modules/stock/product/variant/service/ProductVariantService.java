@@ -43,7 +43,9 @@ public class ProductVariantService {
         if (buying == null) buying = BigDecimal.ZERO;
         if (pct == null) pct = 0D;
 
-        double multiplier = 1 + pct / 100.0;
+        // pct is a DECIMAL FRACTION, not percent (e.g., 0.2 = 20%)
+        double multiplier = 1 + pct;
+
         return buying.multiply(BigDecimal.valueOf(multiplier));
     }
 

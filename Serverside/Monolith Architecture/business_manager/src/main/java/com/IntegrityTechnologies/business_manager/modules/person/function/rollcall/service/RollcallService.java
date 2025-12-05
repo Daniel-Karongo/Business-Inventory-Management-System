@@ -187,7 +187,7 @@ public class RollcallService {
      * Scheduled job to mark ABSENT for users who didn't rollcall by cutoff.
      * This will be called (for example) every day at department.rollcallStartTime + some buffer.
      */
-    @Scheduled(cron = "${inventory.snapshot.cron}") // example: 09:30 daily; you can schedule per-department by more advanced scheduler
+    @Scheduled(cron = "${rollcall.absentees.mark.cron}") // example: 09:30 daily; you can schedule per-department by more advanced scheduler
     @Transactional
     public void markAbsenteesAndNotify() {
         List<Department> departments = departmentRepository.findAllActive();

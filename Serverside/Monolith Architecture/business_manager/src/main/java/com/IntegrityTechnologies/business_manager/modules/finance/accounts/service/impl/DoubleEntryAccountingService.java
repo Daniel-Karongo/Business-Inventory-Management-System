@@ -189,4 +189,57 @@ public class DoubleEntryAccountingService implements AccountingService {
             return null;
         });
     }
+
+    @Override
+    public void reverseSalePayment(UUID saleId, BigDecimal amount, String reference) {
+
+        OptimisticRetryRunner.runWithRetry(() -> {
+
+            String txnCode = "SALE-RFND-" + saleId.toString().substring(0, 6);
+
+            JournalEntryRequest req = new JournalEntryRequest();
+            req.setReference(reference);
+            req.setDescription("Reverse entire sale " + saleId);
+            req.setTransactionCode(txnCode);
+
+            // Debit Revenue (reverse the sale)
+            EntryLineRequest debitRevenue = new EntryLineRequest();
+            debitRevenue.setAccountId(
+                    accountRepository.findByCode("4000")
+                            .orElseThrow(() -> new IllegalStateException("Revenue account missing"))
+                            .getId()
+            );
+            debitRevenue.setDebit(amount);
+            debitRevenue.setTransactionType("SALE_REVERSAL");
+            debitRevenue.setTransactionCode(txnCode);
+
+            // Credit Cash (refund money)
+            EntryLineRequest creditCash = new EntryLineRequest();
+            creditCash.setAccountId(
+                    accountRepository.findByCode("1000")
+                            .orElseThrow(() -> new IllegalStateException("Cash account missing"))
+                            .getId()
+            );
+            creditCash.setCredit(amount);
+            creditCash.setTransactionType("SALE_REVERSAL");
+            creditCash.setTransactionCode(txnCode);
+
+            req.setLines(Arrays.asList(debitRevenue, creditCash));
+
+            journalService.createJournalEntry(req, "SYSTEM");
+
+            // part transaction
+            PartTransaction pt = new PartTransaction();
+            pt.setRelatedModule("SALE_REVERSAL");
+            pt.setReferenceId(saleId);
+            pt.setTransactionCode(txnCode);
+            pt.setTransactionTotal(amount.negate());
+            pt.setTransactionDate(LocalDateTime.now());
+            pt.setCreatedBy("SYSTEM");
+            partTransactionService.record(pt);
+
+            return null;
+        });
+    }
+
 }

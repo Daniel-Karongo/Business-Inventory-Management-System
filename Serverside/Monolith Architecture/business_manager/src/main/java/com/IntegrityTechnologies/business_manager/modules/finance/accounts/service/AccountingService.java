@@ -21,6 +21,10 @@ public interface AccountingService {
                       String method,
                       String performedBy);
 
+    void reverseSalePayment(UUID saleId,
+                            BigDecimal amount,
+                            String reference);
+
     void recordPurchaseReceipt(UUID purchaseOrderId,
                                UUID supplierId,
                                BigDecimal amount,
@@ -28,3 +32,4 @@ public interface AccountingService {
 
     void recordPartTransaction(PartTransaction pt);
 }
+

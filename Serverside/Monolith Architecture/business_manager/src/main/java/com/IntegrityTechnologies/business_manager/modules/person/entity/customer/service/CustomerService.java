@@ -1,11 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service;
 
 import com.IntegrityTechnologies.business_manager.common.PhoneAndEmailNormalizer;
+import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerRequest;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerResponse;
-import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.Customer;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.CustomerPaymentHistory;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.repository.CustomerPaymentHistoryRepository;
@@ -13,81 +13,82 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.customer
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
-    private final CustomerPaymentHistoryRepository cphRepo; // add to constructor args
+    private final CustomerPaymentHistoryRepository cphRepo;
     private final SaleRepository saleRepository;
 
     @Transactional
     public UUID findOrCreateCustomer(List<CustomerRequest> identifiers) {
 
         if (identifiers == null || identifiers.isEmpty()) {
-            return null; // sale may not have a customer
+            return null;
         }
 
         for (CustomerRequest req : identifiers) {
+            if (req == null) continue;
 
-            // 1️⃣ If customerId provided → load that customer first
             if (req.getCustomerId() != null) {
                 return customerRepository.findById(req.getCustomerId())
                         .orElseThrow(() -> new EntityNotFoundException("Customer not found: " + req.getCustomerId()))
                         .getId();
             }
 
-            // Prepare normalized lists
-            List<String> phones = req.getPhoneNumbers() != null
-                    ? PhoneAndEmailNormalizer.normalizePhones(req.getPhoneNumbers()).stream().toList()
-                    : List.of();
+            // normalize phones + emails
+            Set<String> phones = new HashSet<>();
+            if (req.getPhone() != null) phones.addAll(PhoneAndEmailNormalizer.normalizePhones(List.of(req.getPhone())));
+            if (req.getPhoneNumbers() != null) phones.addAll(PhoneAndEmailNormalizer.normalizePhones(req.getPhoneNumbers()));
 
-            List<String> emails = req.getEmailAddresses() != null
-                    ? PhoneAndEmailNormalizer.normalizeEmails(req.getEmailAddresses()).stream().toList()
-                    : List.of();
+            Set<String> emails = new HashSet<>();
+            if (req.getEmail() != null) emails.addAll(PhoneAndEmailNormalizer.normalizeEmails(List.of(req.getEmail())));
+            if (req.getEmailAddresses() != null) emails.addAll(PhoneAndEmailNormalizer.normalizeEmails(req.getEmailAddresses()));
 
-            // 2️⃣ Match by phone numbers
+            // match by phone
             for (String p : phones) {
                 var found = customerRepository.findByPhoneNumberElement(p);
                 if (found.isPresent()) return found.get().getId();
             }
 
-            // 3️⃣ Match by email
+            // match by email
             for (String e : emails) {
                 var found = customerRepository.findByEmailElementIgnoreCase(e);
                 if (found.isPresent()) return found.get().getId();
             }
 
-            // 4️⃣ Match by exact name
+            // match by name
             if (req.getName() != null) {
                 var found = customerRepository.findByNameIgnoreCase(req.getName());
                 if (found.isPresent()) return found.get().getId();
             }
         }
 
-        // 5️⃣ If none matched, create a new customer
-        CustomerRequest best = identifiers.get(0); // take the first
+        // create a new customer using the first identifier
+        CustomerRequest best = identifiers.get(0);
+        Set<String> phones = new HashSet<>();
+        if (best.getPhone() != null) phones.addAll(PhoneAndEmailNormalizer.normalizePhones(List.of(best.getPhone())));
+        if (best.getPhoneNumbers() != null) phones.addAll(PhoneAndEmailNormalizer.normalizePhones(best.getPhoneNumbers()));
+
+        Set<String> emails = new HashSet<>();
+        if (best.getEmail() != null) emails.addAll(PhoneAndEmailNormalizer.normalizeEmails(List.of(best.getEmail())));
+        if (best.getEmailAddresses() != null) emails.addAll(PhoneAndEmailNormalizer.normalizeEmails(best.getEmailAddresses()));
+
         Customer created = Customer.builder()
                 .name(best.getName() != null ? best.getName() : "Walk-in Customer")
-                .phoneNumbers(
-                        best.getPhoneNumbers() != null ?
-                                PhoneAndEmailNormalizer.normalizePhones(best.getPhoneNumbers()).stream().toList() : List.of()
-                )
-                .emailAddresses(
-                        best.getEmailAddresses() != null ?
-                                PhoneAndEmailNormalizer.normalizeEmails(best.getEmailAddresses()).stream().toList() : List.of()
-                )
+                .phoneNumbers(new ArrayList<>(phones))
+                .emailAddresses(new ArrayList<>(emails))
                 .address(best.getAddress())
                 .notes(best.getNotes())
+                .createdAt(LocalDateTime.now())
                 .build();
 
         Customer saved = customerRepository.save(created);
@@ -118,15 +119,13 @@ public class CustomerService {
     }
 
     public CustomerResponse getCustomer(UUID id) {
-        Customer c = customerRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Customer not found: " + id));
+        Customer c = customerRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Customer not found: " + id));
         return toResponse(c);
     }
 
     @Transactional
     public CustomerResponse updateCustomer(UUID id, CustomerRequest req) {
-        Customer c = customerRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Customer not found: " + id));
+        Customer c = customerRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Customer not found: " + id));
         c.setName(req.getName());
         c.setPhoneNumbers(PhoneAndEmailNormalizer.normalizePhones(req.getPhoneNumbers()).stream().toList());
         c.setEmailAddresses(PhoneAndEmailNormalizer.normalizeEmails(req.getEmailAddresses()).stream().toList());
@@ -138,8 +137,7 @@ public class CustomerService {
 
     @Transactional
     public void deleteCustomer(UUID id) {
-        Customer c = customerRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Customer not found: " + id));
+        Customer c = customerRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Customer not found: " + id));
         customerRepository.delete(c);
     }
 
@@ -151,7 +149,6 @@ public class CustomerService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getCustomerPayments(UUID customerId) {
-        // assume CustomerPaymentHistory entity and repo exists
         var list = cphRepo.findByCustomerId(customerId);
         return list.stream().map(h -> {
             Map<String, Object> m = new HashMap<>();
@@ -189,14 +186,10 @@ public class CustomerService {
                 .build();
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordPayment(UUID customerId, UUID paymentId, BigDecimal amount, LocalDateTime timestamp) {
-        // silent no-op if customer missing
         if (customerId == null) return;
-        Customer c = customerRepository.findById(customerId).orElse(null);
-        if (c == null) return;
         CustomerPaymentHistory hist = CustomerPaymentHistory.builder()
-                .id(UUID.randomUUID())
                 .customerId(customerId)
                 .paymentId(paymentId)
                 .amount(amount)
@@ -204,5 +197,18 @@ public class CustomerService {
                 .note("Recorded payment for sale")
                 .build();
         cphRepo.save(hist);
+    }
+
+    @Transactional
+    public void recordRefund(UUID customerId, UUID saleId, BigDecimal amount, String note) {
+        if (customerId == null) return;
+        CustomerPaymentHistory h = CustomerPaymentHistory.builder()
+                .customerId(customerId)
+                .paymentId(saleId)
+                .amount(amount.negate())
+                .timestamp(LocalDateTime.now())
+                .note(note != null ? note : "Refund applied")
+                .build();
+        cphRepo.save(h);
     }
 }

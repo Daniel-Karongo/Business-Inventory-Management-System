@@ -16,7 +16,7 @@ public class InventorySnapshotScheduler {
     private final InventoryService inventoryService;
     private final Environment env;
 
-    @Scheduled(cron = "${rollcall.absentees.mark.cron}")
+    @Scheduled(cron = "${inventory.snapshot.cron}")
     public void scheduledSnapshot() {
         if (!Boolean.parseBoolean(env.getProperty("inventory.snapshot.enabled"))) return;
 

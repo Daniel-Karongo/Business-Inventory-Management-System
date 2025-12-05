@@ -93,4 +93,30 @@ public class SingleEntryAccountingService implements AccountingService {
             return null;
         });
     }
+
+    @Override
+    public void reverseSalePayment(UUID saleId, BigDecimal amount, String reference) {
+
+        OptimisticRetryRunner.runWithRetry(() -> {
+
+            Account wallet = accountRepository.findByCode("WALLET")
+                    .orElseThrow(() -> new IllegalStateException("Wallet account missing"));
+
+            wallet.setBalance(wallet.getBalance().subtract(amount));
+            accountRepository.save(wallet);
+
+            PartTransaction pt = new PartTransaction();
+            pt.setRelatedModule("SALE_REVERSAL");
+            pt.setReferenceId(saleId);
+            pt.setTransactionTotal(amount.negate());
+            pt.setTransactionDate(LocalDateTime.now());
+            pt.setCreatedBy("SYSTEM");
+            pt.setTransactionCode("SALE-RFND-" + saleId.toString().substring(0, 6));
+
+            partTransactionService.record(pt);
+
+            return null;
+        });
+    }
+
 }

@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.controller;
 
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
+import com.IntegrityTechnologies.business_manager.config.OptimisticRetryRunner;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
@@ -32,7 +33,9 @@ public class InventoryController {
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
     @PostMapping("/receive")
     public ResponseEntity<ApiResponse> receiveStock(@RequestBody ReceiveStockRequest req) {
-        return ResponseEntity.ok(inventoryService.receiveStock(req));
+        return ResponseEntity.ok(
+                OptimisticRetryRunner.runWithRetry(() -> inventoryService.receiveStock(req))
+        );
     }
 
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
@@ -42,7 +45,7 @@ public class InventoryController {
         List<ReceiveStockRequest> stockRequests = req.getItems();
         List<Object> responses = new ArrayList<>();
         for (ReceiveStockRequest stockRequest : stockRequests) {
-            responses.add(inventoryService.receiveStock(stockRequest).getData());
+            OptimisticRetryRunner.runWithRetry(() -> responses.add(inventoryService.receiveStock(stockRequest).getData()));
         }
         return ResponseEntity.ok(new ApiResponse("success", "Inventory Updated successfully", responses));
     }

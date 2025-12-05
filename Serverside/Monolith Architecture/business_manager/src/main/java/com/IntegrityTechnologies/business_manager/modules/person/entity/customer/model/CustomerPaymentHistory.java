@@ -32,4 +32,8 @@ public class CustomerPaymentHistory {
     private LocalDateTime timestamp;
 
     private String note;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
 }

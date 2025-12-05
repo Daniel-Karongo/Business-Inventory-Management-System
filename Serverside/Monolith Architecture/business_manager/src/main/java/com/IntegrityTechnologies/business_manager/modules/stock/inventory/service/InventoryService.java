@@ -20,17 +20,18 @@ import com.IntegrityTechnologies.business_manager.modules.stock.inventory.reposi
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductAudit;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.service.ProductService;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service.ProductVariantService;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -96,6 +97,7 @@ public class InventoryService {
             variant = productVariantRepository.findById(req.getProductVariantId())
                     .orElseThrow(() -> new IllegalArgumentException("Variant not found"));
         } else {
+
             if (req.getClassification() == null || req.getClassification().isBlank())
                 throw new IllegalArgumentException("classification is required when no productVariantId provided");
 
@@ -107,18 +109,17 @@ public class InventoryService {
                 variant = new ProductVariant();
                 variant.setProduct(product);
                 variant.setClassification(req.getClassification());
+
                 variant.setSku(
                         req.getNewVariantSku() != null ?
                                 req.getNewVariantSku() :
                                 productService.generateVariantSku(product, req.getClassification())
                 );
 
-                // IMPORTANT: MUST SAVE NOW TO AVOID TRANSIENT ERRORS
-                variant = productVariantRepository.save(variant);
+                variant = productVariantRepository.save(variant); // persist immediately
             }
         }
 
-        // Ensure variant is saved even if previously found but unsaved
         if (variant.getId() == null) {
             variant = productVariantRepository.save(variant);
         }
@@ -205,18 +206,15 @@ public class InventoryService {
 
 
         // -------------------------------------------------------------
-        // 6. UPDATE VARIANT PRICING (NEW RULE)
-        //     newMinSell = newAvgCost × (1 + minimumPercentageProfit)
+        // 6. UPDATE VARIANT PRICING (NEW CORRECT RULE)
+        //     minSelling = newAvgCost × (1 + minPercentageProfit)
         // -------------------------------------------------------------
-        double marginPercent = product.getMinimumPercentageProfit() == null
-                ? 0
-                : product.getMinimumPercentageProfit();
-
-        BigDecimal marginMultiplier = BigDecimal.valueOf(1 + marginPercent);
+        Double margin = product.getMinimumPercentageProfit(); // e.g. 0.20 for 20%
+        if (margin == null) margin = 0D;
 
         variant.setAverageBuyingPrice(newAvgCost);
         variant.setMinimumSellingPrice(
-                productVariantService.computeMinSelling(newAvgCost, product.getMinimumPercentageProfit())
+                productVariantService.computeMinSelling(newAvgCost, margin) // now correct
         );
 
         productVariantRepository.save(variant);
@@ -262,8 +260,7 @@ public class InventoryService {
         }
 
         productRepository.save(product);
-        if (category != null)
-            categoryRepository.save(category);
+        if (category != null) categoryRepository.save(category);
 
         if (!addedSuppliers.isEmpty()) {
             createProductAudit(
@@ -338,13 +335,29 @@ public class InventoryService {
     public void releaseReservationVariant(UUID productVariantId, UUID branchId, int quantity, String reference) {
         if (quantity <= 0) throw new IllegalArgumentException("Quantity must be > 0");
 
+        int attempts = 0;
+
+        while (true) {
+            try {
+                processReleaseReservation(productVariantId, branchId, quantity, reference);
+                return;
+            } catch (OptimisticLockException ex) {
+                attempts++;
+                if (attempts >= MAX_RETRIES) {
+                    throw new RuntimeException("Failed to release reservation due to concurrent modification.", ex);
+                }
+            }
+        }
+    }
+
+    private void processReleaseReservation(UUID productVariantId, UUID branchId, int quantity, String reference) {
         InventoryItem item = inventoryItemRepository.findByProductVariant_IdAndBranchId(productVariantId, branchId)
                 .orElseThrow(() -> new IllegalArgumentException("Inventory item not found"));
 
         long releaseQty = Math.min(quantity, item.getQuantityReserved());
 
-        if (((item.getQuantityReserved() - releaseQty) < 0) || (item.getQuantityReserved() == 0)) {
-            throw new IllegalArgumentException("You cannot release more than you have reserved, which is " + item.getQuantityReserved());
+        if (releaseQty <= 0) {
+            throw new IllegalArgumentException("Nothing to release (reserved=" + item.getQuantityReserved() + ")");
         }
 
         item.setQuantityReserved(item.getQuantityReserved() - releaseQty);
@@ -352,17 +365,19 @@ public class InventoryService {
         item.setLastUpdatedBy(getCurrentUsername());
         inventoryItemRepository.save(item);
 
-        stockTransactionRepository.save(StockTransaction.builder()
-                .productId(item.getProductVariant().getProduct().getId())
-                .productVariantId(productVariantId)
-                .branchId(branchId)
-                .type(StockTransaction.TransactionType.RELEASE)
-                .quantityDelta(-releaseQty)
-                .reference(reference)
-                .note("Release reservation")
-                .timestamp(LocalDateTime.now())
-                .performedBy(getCurrentUsername())
-                .build()
+        // StockTransaction insert also versioned → must be inside retry wrapper
+        stockTransactionRepository.save(
+                StockTransaction.builder()
+                        .productId(item.getProductId())
+                        .productVariantId(productVariantId)
+                        .branchId(branchId)
+                        .type(StockTransaction.TransactionType.RELEASE)
+                        .quantityDelta(-releaseQty)
+                        .reference(reference)
+                        .note("Release reservation")
+                        .timestamp(LocalDateTime.now())
+                        .performedBy(getCurrentUsername())
+                        .build()
         );
     }
 
@@ -418,45 +433,107 @@ public class InventoryService {
     // ------------------------
     @Transactional
     public ApiResponse adjustStockVariant(AdjustStockRequest req) {
-        if (req.getProductVariantId() == null) {
+        if (req.getProductVariantId() == null)
             throw new IllegalArgumentException("productVariantId is required");
-        }
-        if (req.getBranchId() == null) {
+        if (req.getBranchId() == null)
             throw new IllegalArgumentException("branchId is required");
-        }
 
+        int attempts = 0;
+
+        while (true) {
+            try {
+                return processAdjustStockVariant(req);
+            } catch (OptimisticLockException ex) {
+                attempts++;
+                if (attempts >= MAX_RETRIES) {
+                    throw new RuntimeException("Failed to adjust stock due to concurrent modification.", ex);
+                }
+            }
+        }
+    }
+
+    private ApiResponse processAdjustStockVariant(AdjustStockRequest req) {
         ProductVariant variant = productVariantRepository.findById(req.getProductVariantId())
-                .orElseThrow(() -> new IllegalArgumentException("ProductVariant not found"));
-        Product product = variant.getProduct();
-        if (product == null) throw new IllegalArgumentException("Variant's product not found");
+                .orElseThrow(() -> new IllegalArgumentException("Variant not found"));
 
         Branch branch = branchRepository.findById(req.getBranchId())
                 .orElseThrow(() -> new IllegalArgumentException("Branch not found"));
 
-        InventoryItem item = inventoryItemRepository.findByProductVariant_IdAndBranchId(req.getProductVariantId(), req.getBranchId())
-                .orElseThrow(() -> new IllegalArgumentException("Inventory item not found for variant/branch"));
+        InventoryItem item = inventoryItemRepository.findByProductVariant_IdAndBranchId(
+                        req.getProductVariantId(), req.getBranchId())
+                .orElseThrow(() -> new IllegalArgumentException("Inventory item not found"));
 
         long delta = req.getQuantityDelta();
         long newQty = Math.max(0L, item.getQuantityOnHand() + delta);
+
         item.setQuantityOnHand(newQty);
         item.setLastUpdatedAt(LocalDateTime.now());
         item.setLastUpdatedBy(getCurrentUsername());
         inventoryItemRepository.save(item);
 
-        StockTransaction txn = StockTransaction.builder()
-                .productId(product.getId())
-                .productVariantId(variant.getId())
-                .branchId(branch.getId())
-                .type(StockTransaction.TransactionType.ADJUSTMENT)
-                .quantityDelta(delta)
-                .note(req.getReason())
-                .reference(req.getReference())
-                .timestamp(LocalDateTime.now())
-                .performedBy(getCurrentUsername())
-                .build();
-        stockTransactionRepository.save(txn);
+        stockTransactionRepository.save(
+                StockTransaction.builder()
+                        .productId(variant.getProduct().getId())
+                        .productVariantId(variant.getId())
+                        .branchId(branch.getId())
+                        .type(StockTransaction.TransactionType.ADJUSTMENT)
+                        .quantityDelta(delta)
+                        .reference(req.getReference())
+                        .note(req.getReason())
+                        .timestamp(LocalDateTime.now())
+                        .performedBy(getCurrentUsername())
+                        .build()
+        );
 
         return new ApiResponse("success", "Stock adjusted", buildResponse(item));
+    }
+
+    @Transactional
+    public void incrementVariantStock(UUID variantId, UUID branchId, long qty, String reference) {
+        if (qty <= 0) throw new IllegalArgumentException("Quantity must be > 0");
+
+        int attempts = 0;
+
+        while (true) {
+            try {
+                processIncrementVariantStock(variantId, branchId, qty, reference);
+                return;
+            } catch (OptimisticLockException ex) {
+                attempts++;
+                if (attempts >= MAX_RETRIES) {
+                    throw new RuntimeException("Failed to increment stock due to concurrent modification.", ex);
+                }
+            }
+        }
+    }
+
+    private void processIncrementVariantStock(UUID variantId, UUID branchId, long qty, String reference) {
+
+        InventoryItem item = inventoryItemRepository
+                .findByProductVariant_IdAndBranchId(variantId, branchId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Inventory entry not found for variant=" + variantId + " branch=" + branchId));
+
+        long newQty = item.getQuantityOnHand() + qty;
+        item.setQuantityOnHand(newQty);
+        item.setLastUpdatedAt(LocalDateTime.now());
+        item.setLastUpdatedBy(getCurrentUsername());
+
+        inventoryItemRepository.save(item);
+
+        stockTransactionRepository.save(
+                StockTransaction.builder()
+                        .productVariantId(variantId)
+                        .productId(item.getProductId())
+                        .branchId(branchId)
+                        .quantityDelta(qty)
+                        .unitCost(item.getAverageCost())
+                        .type(StockTransaction.TransactionType.RETURN)
+                        .reference(reference)
+                        .timestamp(LocalDateTime.now())
+                        .performedBy(getCurrentUsername())
+                        .build()
+        );
     }
 
     // ------------------------

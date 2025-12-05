@@ -1,22 +1,24 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.payment.service;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentRequest;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentResponse;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
 public interface PaymentService {
-    PaymentResponse processPayment(PaymentRequest request);
-    PaymentResponse getPayment(UUID paymentId);
+    PaymentDTO processPayment(PaymentRequest request);
+    PaymentDTO getPayment(UUID paymentId);
 
     @Transactional(readOnly = true)
-    Page<PaymentResponse> listPayments(int page, int size, String method, String status, UUID saleId);
+    Page<PaymentDTO> listPayments(int page, int size, String method, String status, UUID saleId);
 
     @Transactional
-    PaymentResponse refundPayment(UUID paymentId);
+    PaymentDTO refundPayment(UUID paymentId);
 
     @Transactional(readOnly = true)
     Object reconcile(String fromIso, String toIso);
+
+    PaymentDTO reversePayment(UUID id, String note);
 }

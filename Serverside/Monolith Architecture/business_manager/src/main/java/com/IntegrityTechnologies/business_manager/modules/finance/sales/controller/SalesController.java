@@ -1,8 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.sales.controller;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentResponse;
+import com.IntegrityTechnologies.business_manager.config.OptimisticRetryRunner;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.SaleDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.SaleRequest;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.SaleResponse;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.service.SalesService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -21,20 +22,27 @@ public class SalesController {
 
     private final SalesService salesService;
 
+    /* ============================================================
+       CREATE SALE
+       ============================================================ */
     @PostMapping
-    public ResponseEntity<SaleResponse> createSale(@RequestBody SaleRequest req) {
+    public ResponseEntity<SaleDTO> createSale(@RequestBody SaleRequest req) {
         return ResponseEntity.ok(salesService.createSale(req));
     }
 
-    /** NEW — Get sale by ID */
+    /* ============================================================
+       GET SALE SUMMARY
+       ============================================================ */
     @GetMapping("/{id}")
-    public ResponseEntity<SaleResponse> getSale(@PathVariable UUID id) {
+    public ResponseEntity<SaleDTO> getSale(@PathVariable UUID id) {
         return ResponseEntity.ok(salesService.getSale(id));
     }
 
-    /** NEW — List sales with filters */
+    /* ============================================================
+       LIST SALES
+       ============================================================ */
     @GetMapping
-    public ResponseEntity<Page<SaleResponse>> listSales(
+    public ResponseEntity<Page<SaleDTO>> listSales(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String status,
@@ -44,33 +52,67 @@ public class SalesController {
             @RequestParam(required = false) LocalDate to
     ) {
         return ResponseEntity.ok(
-                salesService.listSales(page, size, status, customer, branchId, from, to));
+                salesService.listSales(page, size, status, customer, branchId, from, to)
+        );
     }
 
-    /** NEW — Cancel sale */
-    @PostMapping("/{id}/cancel")
-    public ResponseEntity<SaleResponse> cancelSale(@PathVariable UUID id) {
-        return ResponseEntity.ok(salesService.cancelSale(id));
-    }
-
-    /** NEW — Update sale (before payment) */
+    /* ============================================================
+       UPDATE SALE (only in CREATED state)
+       ============================================================ */
     @PutMapping("/{id}")
-    public ResponseEntity<SaleResponse> updateSale(
+    public ResponseEntity<SaleDTO> updateSale(
             @PathVariable UUID id,
             @RequestBody SaleRequest req
     ) {
-        return ResponseEntity.ok(salesService.updateSale(id, req));
+
+        return ResponseEntity.ok(
+                OptimisticRetryRunner.runWithRetry(() -> salesService.updateSale(id, req))
+        );
     }
 
-    /** NEW — Get payments for a sale */
+    /* ============================================================
+       CANCEL SALE (no refund, only if CREATED)
+       ============================================================ */
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<SaleDTO> cancelSale(@PathVariable UUID id) {
+        return ResponseEntity.ok(
+                OptimisticRetryRunner.runWithRetry(() -> salesService.cancelSale(id))
+        );
+    }
+
+    /* ============================================================
+       REFUND SALE (FULL REFUND)
+       ============================================================ */
+    @PostMapping("/{id}/refund")
+    public ResponseEntity<SaleDTO> refundSale(@PathVariable UUID id) {
+        return ResponseEntity.ok(
+                OptimisticRetryRunner.runWithRetry(() -> salesService.refundSale(id))
+        );
+    }
+
+    /* ============================================================
+       CANCEL + REFUND (FULL WORKFLOW)
+       ============================================================ */
+    @PostMapping("/{id}/cancel-refund")
+    public ResponseEntity<SaleDTO> cancelAndRefundSale(@PathVariable UUID id) {
+        return ResponseEntity.ok(
+                OptimisticRetryRunner.runWithRetry(() -> salesService.cancelAndRefundSale(id))
+        );
+    }
+
+    /* ============================================================
+       LIST PAYMENTS FOR THIS SALE
+       ============================================================ */
     @GetMapping("/{id}/payments")
-    public ResponseEntity<Iterable<PaymentResponse>> getSalePayments(@PathVariable UUID id) {
+    public ResponseEntity<Iterable<PaymentDTO>> getSalePayments(@PathVariable UUID id) {
         return ResponseEntity.ok(salesService.getSalePayments(id));
     }
 
-    /** NEW — Receipt endpoint */
+    /* ============================================================
+       RECEIPT ENDPOINT
+       ============================================================ */
     @GetMapping("/{id}/receipt")
-    public ResponseEntity<SaleResponse> getReceipt(@PathVariable UUID id) {
+    public ResponseEntity<SaleDTO> getReceipt(@PathVariable UUID id) {
         return ResponseEntity.ok(salesService.getReceipt(id));
     }
 }
