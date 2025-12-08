@@ -7,7 +7,7 @@ import java.util.UUID;
 
 @Data
 @Builder
-public class BranchMInimalDTO {
+public class BranchMinimalDTO {
     private UUID id;
     private String branchCode;
     private String name;

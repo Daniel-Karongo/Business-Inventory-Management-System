@@ -41,9 +41,9 @@ public class AuthService {
     @Transactional
     public AuthResponse login(AuthRequest request) {
 
-        /* -----------------------------------------------------------
-         * 1️⃣ VALIDATE USER CREDENTIALS
-         * ----------------------------------------------------------- */
+        // ------------------------
+        // 1️⃣ Validate credentials
+        // ------------------------
         User user = userRepository.findByIdentifier(request.getIdentifier())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
@@ -57,9 +57,9 @@ public class AuthService {
                 )
         );
 
-        /* -----------------------------------------------------------
-         * 2️⃣ GENERATE JWT TOKEN
-         * ----------------------------------------------------------- */
+        // ------------------------
+        // 2️⃣ Generate JWT Token
+        // ------------------------
         String token = jwtUtil.generateToken(
                 user.getId(),
                 user.getUsername(),
@@ -69,15 +69,15 @@ public class AuthService {
         UUID userId = user.getId();
         UUID branchId = request.getBranchId();
 
-        /* -----------------------------------------------------------
-         * 3️⃣ VALIDATE BRANCH EXISTS
-         * ----------------------------------------------------------- */
-        Branch branch = branchRepository.findByIdAndDeletedFalse(branchId)
+        // ------------------------
+        // 3️⃣ Validate branch
+        // ------------------------
+        branchRepository.findByIdAndDeletedFalse(branchId)
                 .orElseThrow(() -> new RuntimeException("Selected branch does not exist"));
 
-        /* -----------------------------------------------------------
-         * 4️⃣ VALIDATE USER BELONGS TO BRANCH
-         * ----------------------------------------------------------- */
+        // ------------------------
+        // 4️⃣ Check user belongs to branch
+        // ------------------------
         boolean userBelongs = branchRepository.findBranchesByUserId(userId)
                 .stream()
                 .anyMatch(b -> b.getId().equals(branchId));
@@ -86,17 +86,20 @@ public class AuthService {
             throw new RuntimeException("User is not assigned to this branch");
         }
 
-        /* -----------------------------------------------------------
-         * 5️⃣ GET DEPARTMENTS IN THIS BRANCH THAT USER BELONGS TO
-         * ----------------------------------------------------------- */
+        // ------------------------
+        // 5️⃣ Get departments the user is assigned to in this branch
+        // ------------------------
         List<Department> departments =
                 departmentRepository.findDepartmentsForUserInBranch(userId, branchId);
 
-        /* -----------------------------------------------------------
-         * 6️⃣ RECORD LOGIN ROLLCALL
-         * ----------------------------------------------------------- */
+        List<UUID> departmentIds = departments.stream()
+                .map(Department::getId)
+                .toList();
+
+        // ------------------------
+        // 6️⃣ Record login rollcall
+        // ------------------------
         if (departments.isEmpty()) {
-            // User has no departments in this branch
             rollcallService.recordLoginRollcall(userId, null, branchId);
         } else {
             for (Department department : departments) {
@@ -108,21 +111,31 @@ public class AuthService {
             }
         }
 
-        /* -----------------------------------------------------------
-         * 7️⃣ SAVE SESSION
-         * ----------------------------------------------------------- */
+        // ------------------------
+        // 7️⃣ Save session info
+        // ------------------------
         userSessionRepository.save(
-            UserSession.builder()
-                    .userId(userId)
-                    .branchId(branchId)
-                    .loginTime(LocalDateTime.now())
-                    .build()
+                UserSession.builder()
+                        .userId(userId)
+                        .branchId(branchId)
+                        .loginTime(LocalDateTime.now())
+                        .build()
         );
 
-        /* -----------------------------------------------------------
-         * 8️⃣ RETURN TOKEN
-         * ----------------------------------------------------------- */
-        return new AuthResponse(user.getUsername(), token);
+        // ------------------------
+        // 8️⃣ Build improved AuthResponse
+        // ------------------------
+        long expiresAt = jwtUtil.extractExpiration(token).getTime();
+
+        return new AuthResponse(
+                user.getId(),                  // userId
+                user.getUsername(),            // userName
+                user.getRole().name(),         // role
+                branchId,                      // branchId
+                departmentIds,                 // departments
+                expiresAt,                     // expiry timestamp
+                token                          // JWT
+        );
     }
 
     public void logout(String token) {

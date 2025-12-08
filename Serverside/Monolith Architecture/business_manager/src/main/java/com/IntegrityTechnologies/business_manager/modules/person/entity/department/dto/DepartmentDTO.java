@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto;
 
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.dto.BranchMInimalDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.dto.BranchMinimalDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.MinimalUserDTO;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -30,7 +30,7 @@ public class DepartmentDTO {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Set<UUID> branchIds;
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private Set<BranchMInimalDTO> branches;
+    private Set<BranchMinimalDTO> branches;
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private boolean deleted = false;
 
