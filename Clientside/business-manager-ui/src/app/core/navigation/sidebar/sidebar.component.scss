@@ -1,0 +1,60 @@
+/* ============================================================================
+   SIDEBAR BASE CONTAINER
+   ============================================================================ */
+
+:host {
+  @apply block h-full;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+/* ============================================================================
+   NAV ITEM
+   ============================================================================ */
+
+.nav-item {
+  @apply flex items-center px-4 py-2 rounded-md cursor-pointer transition-all;
+  color: var(--text-primary);
+}
+
+.nav-item:hover {
+  background: var(--surface-hover);
+}
+
+.nav-item.active {
+  background: rgba(59,130,246,0.15);
+  color: #60a5fa;
+}
+
+/* ============================================================================
+   SVG ICON (MatIcon)
+   ============================================================================ */
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 12px;
+  color: var(--text-primary); // MatIcon uses this for stroke="currentColor"
+}
+
+.dark .nav-icon {
+  color: #e5e7eb;
+}
+
+/* ============================================================================
+   COLLAPSED SIDEBAR LABEL
+   ============================================================================ */
+
+.collapsed-label {
+  @apply ml-3 transition-all whitespace-nowrap;
+}
+
+:host-context(.sidebar-collapsed) .collapsed-label {
+  @apply opacity-0 ml-0 w-0 overflow-hidden;
+}
+
+.sidebar-tooltip {
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 6px;
+}

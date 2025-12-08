@@ -1,0 +1,15 @@
+<!-- outer wrapper used for positioning -->
+<div class="notif" role="group" aria-label="Notifications">
+  <!-- accessible button -->
+  <button
+    class="icon-btn"
+    type="button"
+    aria-label="Open notifications"
+    (click)="onClick()"
+  >
+    <mat-icon aria-hidden="true">notifications</mat-icon>
+  </button>
+
+  <!-- custom badge -->
+  <span *ngIf="count > 0" class="badge" aria-hidden="true">{{ count }}</span>
+</div>

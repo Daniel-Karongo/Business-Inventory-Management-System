@@ -1,0 +1,145 @@
+/* ================================
+   ROOT
+================================ */
+
+.login-root {
+  background: var(--app-bg);
+  color: var(--text-primary);
+}
+
+/* ================================
+   CARD
+================================ */
+
+.login-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  color: var(--text-primary);
+}
+
+/* Branding block */
+.logo {
+  box-shadow: 0 6px 18px rgba(59,130,246,0.15);
+}
+
+/* ================================
+   LABELS
+================================ */
+
+.input-label {
+  display: block;
+  margin-bottom: .4rem;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+}
+
+/* ================================
+   INPUT FIELDS
+================================ */
+
+.input-field {
+  width: 100%;
+  padding: .75rem 1rem;
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: .75rem;
+  font-size: var(--text-base);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.input-field:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.25);
+  outline: none;
+}
+
+/* Select dropdown styling */
+select.input-field {
+  appearance: none;
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 16px;
+
+  background-image: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%239ca3af'><path d='M5 7l5 5 5-5'/></svg>");
+}
+
+/* ================================
+   ERRORS
+================================ */
+
+.input-error {
+  margin-top: .3rem;
+  font-size: var(--text-xs);
+  color: #dc2626;
+}
+
+/* ================================
+   BUTTON
+================================ */
+
+.login-button {
+  width: 100%;
+  padding: .8rem;
+  border-radius: .75rem;
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  background: #2563eb !important;
+  color: white !important;
+  transition: all .2s ease;
+}
+
+.login-button:hover:not([disabled]) {
+  background: #1d4ed8 !important;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, .25);
+}
+
+/* Disable state */
+.login-button[disabled] {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+/* ================================
+   FORGOT PASSWORD
+================================ */
+
+.forgot-link {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
+
+/* ================================
+   DARK MODE
+================================ */
+
+:host-context(.dark) .login-card,
+:host-context(.dark) .input-field {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+
+:host-context(.dark) .input-label {
+  color: var(--text-secondary);
+}
+
+/* ================================
+   SNACKBAR OVERRIDE (LOCAL)
+================================ */
+
+.mat-mdc-snack-bar-container {
+  background: #1f2937 !important;
+  color: white !important;
+}
+
+.mat-mdc-snack-bar-action .mdc-button__label {
+  color: #60a5fa !important;
+}

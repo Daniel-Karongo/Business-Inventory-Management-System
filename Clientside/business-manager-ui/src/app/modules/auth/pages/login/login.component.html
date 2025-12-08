@@ -1,0 +1,88 @@
+<div class="login-root animate-fade-in min-h-screen flex items-center justify-center px-4">
+  <mat-card class="login-card w-full max-w-lg p-10 rounded-2xl shadow-xl border">
+
+    <!-- Branding -->
+    <div class="flex flex-col items-center mb-8">
+      <div class="logo w-16 h-16 rounded-2xl bg-sky-600 text-white flex items-center justify-center text-3xl font-bold shadow">
+        BM
+      </div>
+      <h2 class="mt-4 text-2xl font-semibold">Business Manager</h2>
+      <p class="text-sm text-[var(--text-secondary)] mt-1">Sign in to continue</p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-6">
+
+      <!-- Username -->
+      <div>
+        <label class="input-label">Username / Email / Phone</label>
+        <input
+          type="text"
+          formControlName="identifier"
+          class="input-field"
+          autocomplete="username"
+        />
+        <p class="input-error" *ngIf="form.controls.identifier.touched && form.controls.identifier.invalid">
+          Username / Email / Phone is required.
+        </p>
+      </div>
+
+      <!-- Password -->
+      <div>
+        <label class="input-label">Password</label>
+        <div class="input-field flex items-center pr-3">
+          <input
+            [type]="hide ? 'password' : 'text'"
+            formControlName="password"
+            class="bg-transparent flex-1 outline-none"
+            autocomplete="current-password"
+          />
+          <mat-icon class="cursor-pointer" (click)="hide = !hide">
+            {{ hide ? 'visibility_off' : 'visibility' }}
+          </mat-icon>
+        </div>
+        <p class="input-error" *ngIf="form.controls.password.touched && form.controls.password.invalid">
+          Password is required.
+        </p>
+      </div>
+
+      <!-- Branch -->
+      <div>
+        <label class="input-label">Select Branch</label>
+        <select formControlName="branchId" class="input-field cursor-pointer">
+          <option value="" disabled>Select Branch</option>
+          <option *ngFor="let b of branches" [value]="b.id">
+            {{ b.name }}
+          </option>
+        </select>
+        <p class="input-error" *ngIf="form.controls.branchId.touched && form.controls.branchId.invalid">
+          Please select a branch.
+        </p>
+      </div>
+
+      <!-- Forgot Password -->
+      <div class="flex justify-end -mt-2">
+        <a class="forgot-link" (click)="onForgot()">Forgot password?</a>
+      </div>
+
+      <!-- Login Button -->
+      <button
+        mat-flat-button
+        color="primary"
+        class="w-full py-3 text-base font-semibold rounded-lg login-button"
+        type="submit"
+        [disabled]="loading || form.invalid">
+
+        <ng-container *ngIf="!loading">Login</ng-container>
+        <ng-container *ngIf="loading">
+          <mat-progress-spinner diameter="20" strokeWidth="3" mode="indeterminate"></mat-progress-spinner>
+        </ng-container>
+
+      </button>
+
+    </form>
+
+    <p class="text-center text-xs text-[var(--text-secondary)] mt-8">
+      © {{ currentYear }} Integrity Technologies
+    </p>
+  </mat-card>
+</div>
