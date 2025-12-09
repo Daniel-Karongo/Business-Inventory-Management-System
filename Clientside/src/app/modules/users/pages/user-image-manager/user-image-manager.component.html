@@ -1,0 +1,25 @@
+<div class="p-4">
+  <h3 class="text-lg font-semibold mb-3">Images</h3>
+
+  <div class="flex items-center gap-3 mb-4">
+    <input #fileInput type="file" (change)="onFileSelected($event)" hidden>
+
+    <button mat-flat-button color="primary" (click)="triggerFile()" [disabled]="uploading">
+      <mat-icon>upload</mat-icon>
+      Upload Image
+    </button>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div *ngFor="let img of images" class="relative group">
+      <img [src]="img" class="w-full h-32 object-cover rounded border">
+
+      <button
+        (click)="deleteImage(img)"
+        class="absolute top-2 right-2 bg-black/60 rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
+      >
+        <mat-icon class="text-white text-sm">delete</mat-icon>
+      </button>
+    </div>
+  </div>
+</div>

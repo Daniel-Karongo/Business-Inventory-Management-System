@@ -1,0 +1,9 @@
+<nav class="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2">
+  <ng-container *ngFor="let s of segments; let last = last">
+    <a [routerLink]="s.url" class="hover:underline" [class.font-semibold]="last">
+      {{ s.label }}
+    </a>
+
+    <span *ngIf="!last">/</span>
+  </ng-container>
+</nav>

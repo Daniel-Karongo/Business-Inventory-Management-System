@@ -1,0 +1,300 @@
+<div class="page-container p-4">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header flex items-center justify-between mb-6">
+    <h2 class="text-xl font-semibold">Users</h2>
+
+    <div class="flex items-center gap-2">
+      <button mat-flat-button color="primary" (click)="goCreate()" [attr.aria-label]="'Create a new user'">
+        Create User
+      </button>
+
+      <button mat-stroked-button (click)="router.navigate(['/users/roles'])" [attr.aria-label]="'Manage user roles'">
+        Roles
+      </button>
+    </div>
+  </div>
+
+  <!-- BULK ACTION BAR -->
+  <div class="flex items-center gap-3 mb-4" *ngIf="selection.selected.length > 0">
+    <span class="font-medium text-blue-500">
+      {{ selection.selected.length }} selected
+    </span>
+
+    <button
+      mat-stroked-button
+      color="warn"
+      (click)="bulkDisable()"
+      [attr.aria-label]="'Disable selected users'">
+      Disable Selected
+    </button>
+
+    <button
+      mat-stroked-button
+      color="primary"
+      (click)="bulkRestore()"
+      [attr.aria-label]="'Restore selected users'">
+      Restore Selected
+    </button>
+  </div>
+
+  <!-- SEARCH + SHOW DELETED -->
+  <div class="flex items-center gap-4 mb-4">
+
+    <input
+      class="search-input px-3 py-2 rounded border"
+      placeholder="Search username, email or phone number"
+      [(ngModel)]="q"
+      (input)="applyFilters()"
+      [attr.aria-label]="'Search users'"
+    />
+
+    <mat-checkbox
+      *ngIf="allowShowDeleted"
+      [(ngModel)]="showDeleted"
+      (change)="applyFilters()"
+      [attr.aria-label]="'Toggle visibility of deleted users'">
+      Show deleted users
+    </mat-checkbox>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filters grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+    <!-- Branch -->
+    <mat-form-field appearance="fill">
+      <mat-label>Branch</mat-label>
+      <mat-select [(ngModel)]="filterBranch" (selectionChange)="applyFilters()" [attr.aria-label]="'Filter users by branch'">
+        <mat-option value="">All</mat-option>
+        <mat-option *ngFor="let b of branches" [value]="b.id">
+          {{ b.name }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <!-- Department -->
+    <mat-form-field appearance="fill">
+      <mat-label>Department</mat-label>
+      <mat-select [(ngModel)]="filterDepartment" (selectionChange)="applyFilters()" [attr.aria-label]="'Filter users by department'">
+        <mat-option value="">All</mat-option>
+        <mat-option *ngFor="let d of departments" [value]="d.id">
+          {{ d.name }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <!-- Role -->
+    <mat-form-field appearance="fill">
+      <mat-label>Role</mat-label>
+      <mat-select [(ngModel)]="filterRole" (selectionChange)="applyFilters()" [attr.aria-label]="'Filter users by role'">
+        <mat-option value="">All</mat-option>
+        <mat-option *ngFor="let r of roles" [value]="r.name">
+          {{ r.name }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+  </div>
+
+  <!-- LOADING-->
+  <div *ngIf="loading" class="py-8 text-center text-gray-400">
+    Loading…
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrapper">
+    <mat-table
+      *ngIf="!loading"
+      [dataSource]="users"
+      class="mat-elevation-z1 rounded bg-[var(--surface)]"
+    >
+
+      <!-- SELECT (checkbox) -->
+      <ng-container matColumnDef="select">
+        <mat-header-cell *matHeaderCellDef>
+          <mat-checkbox
+            [attr.aria-label]="'Select all users'"
+            [checked]="isAllSelected()"
+            [indeterminate]="selection.selected.length > 0 && !isAllSelected()"
+            (change)="masterToggle()">
+          </mat-checkbox>
+        </mat-header-cell>
+
+        <mat-cell *matCellDef="let row">
+          <mat-checkbox
+            [attr.aria-label]="'Select user {{ row.username }}'"
+            (click)="$event.stopPropagation()"
+            (change)="selection.toggle(row)"
+            [checked]="selection.isSelected(row)">
+          </mat-checkbox>
+        </mat-cell>
+      </ng-container>
+
+      <!-- Username -->
+      <ng-container matColumnDef="username">
+        <mat-header-cell *matHeaderCellDef (click)="sortBy('username')" class="sortable" [attr.aria-label]="'Sort by username'">
+          Username
+          <mat-icon class="sort-icon">
+            {{ sortField === 'username'
+              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+              : 'unfold_more' }}
+          </mat-icon>
+        </mat-header-cell>
+
+        <mat-cell *matCellDef="let u">
+          {{ u.username }}
+        </mat-cell>
+      </ng-container>
+
+      <!-- Emails -->
+      <ng-container matColumnDef="emails">
+        <mat-header-cell *matHeaderCellDef [attr.aria-label]="'User email addresses'"> Emails </mat-header-cell>
+        <mat-cell *matCellDef="let u">
+          <div class="email-grid">
+            <div *ngFor="let e of u.emailAddresses" class="email-item">{{ e }}</div>
+          </div>
+        </mat-cell>
+      </ng-container>
+
+      <!-- Phones -->
+      <ng-container matColumnDef="phones">
+        <mat-header-cell *matHeaderCellDef [attr.aria-label]="'User phone numbers'"> Phones </mat-header-cell>
+
+        <mat-cell *matCellDef="let u">
+          <div class="phone-grid">
+            <div *ngFor="let p of u.phoneNumbers" class="phone-item">
+              {{ p }}
+            </div>
+          </div>
+        </mat-cell>
+      </ng-container>
+
+      <!-- Branch + Department Grid -->
+      <ng-container matColumnDef="branches_depts">
+        <mat-header-cell *matHeaderCellDef (click)="sortBy('branch')" [attr.aria-label]="'Sort by branch or department'" class="sortable">
+          Branches / Departments
+          <mat-icon class="sort-icon">
+            {{ sortField === 'branch' || sortField === 'department'
+              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+              : 'unfold_more' }}
+          </mat-icon>
+        </mat-header-cell>
+
+        <mat-cell *matCellDef="let u">
+            <div class="branch-dept-table">
+              <div class="bd-heading">Branch</div>
+              <div class="bd-heading">Department</div>
+              <div class="bd-heading">Position</div>
+
+              <ng-container *ngFor="let row of branchDeptRows(u)">
+                <div class="bd-row bd-row-name">{{ row.branchName }}</div>
+                <div class="bd-row bd-row-department">{{ row.departmentName }}</div>
+                <div class="bd-row bd-row-position">{{ row.position || '—' }}</div>
+              </ng-container>
+            </div>
+        </mat-cell>
+      </ng-container>
+
+      <!-- Role -->
+      <ng-container matColumnDef="role">
+        <mat-header-cell *matHeaderCellDef (click)="sortBy('role')" class="sortable" [attr.aria-label]="'Sort by role'">
+          Role
+          <mat-icon class="sort-icon">
+            {{ sortField === 'role'
+              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+              : 'unfold_more' }}
+          </mat-icon>
+        </mat-header-cell>
+
+        <mat-cell *matCellDef="let u">
+          {{ u.role }}
+        </mat-cell>
+      </ng-container>
+
+      <!-- Status -->
+      <ng-container matColumnDef="status">
+        <mat-header-cell *matHeaderCellDef [attr.aria-label]="'User status'"> Status </mat-header-cell>
+
+        <mat-cell *matCellDef="let u">
+          <span [ngClass]="{ 'text-green-400': !u.deleted, 'text-red-400': u.deleted }">
+            {{ u.deleted ? 'Disabled' : 'Active' }}
+          </span>
+        </mat-cell>
+      </ng-container>
+
+      <!-- CreatedAt -->
+      <ng-container matColumnDef="createdAt">
+        <mat-header-cell *matHeaderCellDef (click)="sortBy('createdAt')" class="sortable" [attr.aria-label]="'Sort by date created'">
+          Created
+          <mat-icon class="sort-icon">
+            {{ sortField === 'createdAt'
+              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+              : 'unfold_more' }}
+          </mat-icon>
+        </mat-header-cell>
+
+        <mat-cell *matCellDef="let u">
+          {{ u.createdAt | date:'medium' }}
+        </mat-cell>
+      </ng-container>
+
+      <!-- Actions -->
+      <ng-container matColumnDef="actions">
+        <mat-header-cell *matHeaderCellDef [attr.aria-label]="'User actions'"> Actions </mat-header-cell>
+
+        <mat-cell *matCellDef="let u" class="action-cell">
+
+          <!-- View -->
+          <button
+            mat-icon-button
+            matTooltip="View User Details"
+            matTooltipClass="user-tooltip"
+            matTooltipPosition="above"
+            [attr.aria-label]="'View user {{ u.username }}'"
+            (click)="view(u)">
+            <mat-icon>visibility</mat-icon>
+          </button>
+
+          <!-- Edit -->
+          <button
+            mat-icon-button
+            matTooltip="Edit User"
+            matTooltipClass="user-tooltip"
+            matTooltipPosition="above"
+            [attr.aria-label]="'Edit user {{ u.username }}'"
+            (click)="edit(u)">
+            <mat-icon>edit</mat-icon>
+          </button>
+
+          <!-- Toggle -->
+          <button
+            mat-icon-button
+            matTooltip="{{ u.deleted ? 'Restore User' : 'Disable User' }}"
+            matTooltipClass="user-tooltip"
+            matTooltipPosition="above"
+            [attr.aria-label]="(u.deleted ? 'Restore user ' : 'Disable user ') + u.username"
+            (click)="toggleActive(u)">
+            <mat-icon>{{ u.deleted ? 'toggle_off' : 'toggle_on' }}</mat-icon>
+          </button>
+
+
+        </mat-cell>
+      </ng-container>
+
+      <!-- Rows -->
+      <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+      <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+
+    </mat-table>
+  </div>
+
+  <!-- PAGINATOR ONLY WHEN NEEDED -->
+  <mat-paginator
+    *ngIf="total > size"
+    [length]="total"
+    [pageSize]="size"
+    [attr.aria-label]="'Users pagination'"
+    (page)="changePage($event)">
+  </mat-paginator>
+
+</div>

@@ -2,9 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { Observable } from 'rxjs';
-import { DepartmentDTO } from '../models/department.model';
+import { DepartmentDTO, DepartmentMinimalDTO } from '../models/department.model';
 import { ApiResponse } from '../../../core/models/api-response.model';
-import { DepartmentMinimalDTO } from '../models/department-minimal.model';
 
 @Injectable({ providedIn: 'root' })
 export class DepartmentService {

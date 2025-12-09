@@ -1,0 +1,225 @@
+/* page-wide */
+.page-container, mat-table, mat-cell, mat-header-cell {
+  font-family: 'Inter', system-ui, sans-serif !important;
+  letter-spacing: 0.2px;
+  font-size: 14px;
+}
+
+.page-container {
+  overflow-x: hidden;
+}
+
+mat-header-cell {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+mat-cell {
+  font-weight: 400;
+}
+
+mat-cell div {
+  white-space: nowrap;
+}
+
+.branch-grid, .dept-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* search input */
+.search-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  width: 48%;
+  min-width: 220px;
+  padding-left: 12px;
+  padding-right: 12px;
+  border-radius: 6px;
+}
+
+/* ensure mat form fields behave responsively */
+mat-form-field {
+  width: 100%;
+}
+
+/* reduce spacing on header rows and cells for compact table */
+mat-table {
+  width: 100%;
+  border-radius: 6px;
+  overflow-x: scroll !important;
+}
+
+/* Apply natural width to headers + rows together */
+.mat-column-username,
+.mat-header-cell.mat-column-username,
+
+.mat-column-emails,
+.mat-header-cell.mat-column-emails,
+
+.mat-column-phones,
+.mat-header-cell.mat-column-phones,
+
+.mat-column-branches_depts,
+.mat-header-cell.mat-column-branches_depts,
+
+.mat-column-role,
+.mat-header-cell.mat-column-role,
+
+.mat-column-status,
+.mat-header-cell.mat-column-status,
+
+.mat-column-createdAt,
+.mat-header-cell.mat-column-createdAt,
+
+.mat-column-actions,
+.mat-header-cell.mat-column-actions,
+
+.mat-column-select,
+.mat-header-cell.mat-column-select {
+  flex: 0 0 auto !important;   /* forces natural width */
+  width: auto !important;
+  max-width: none !important;
+}
+
+.mat-column-username { min-width: 160px; }
+.mat-column-emails { min-width: 250px; }
+.mat-column-phones { min-width: 140px; }
+.mat-column-branches_depts { min-width: 450px; }
+.bd-row-name { min-width: 100px !important;}
+.bd-row-department { min-width: 155px !important;}
+.bd-row-position { min-width: 100px !important;}
+.mat-column-role { min-width: 120px; }
+.mat-column-status { min-width: 110px; }
+.mat-column-createdAt { min-width: 230px; }
+.mat-column-actions { min-width: 150px; text-align: center; }
+
+/* header cells */
+.mat-header-cell {
+  font-weight: 700;
+  color: var(--text-secondary);
+  padding: 12px 16px;
+}
+
+/* normal cells */
+.mat-cell {
+  padding: 12px 16px;
+  vertical-align: middle;
+  word-break: break-word;
+}
+
+/* selection column (checkbox) */
+.mat-column-select {
+  width: 48px;
+  text-align: center;
+}
+
+/* actions column narrower */
+.mat-column-actions {
+  width: 120px;
+  text-align: center;
+}
+
+/* createdAt column */
+.mat-column-createdAt {
+  width: 160px;
+  text-align: left;
+}
+
+/* compact list items inside email / phone columns */
+.email-grid, .phone-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: fit-content;
+}
+
+.email-item, .phone-item {
+  font-size: 0.9rem;
+}
+
+/* Branch / Department grid inside a cell - multi-row table */
+.branch-dept-table {
+  display: grid;
+  grid-template-columns: 0.6fr 1fr 120px; /* Branch | Department | Position */
+  gap: 10px 15px;
+  align-items: start;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.branch-dept-table .bd-heading {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.branch-dept-table .bd-row {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+/* Tooltip styling for action icons (stand out like sidebar style) */
+// .action-tooltip {
+//   font-size: 13px !important;
+//   padding: 6px 10px !important;
+//   border-radius: 6px !important;
+//   background: #0f172a !important; /* dark slate for both modes */
+//   color: #fff !important;
+//   border: 1px solid rgba(255,255,255,0.08);
+//   box-shadow: 0 6px 18px rgba(2,6,23,0.45);
+// }
+
+// /* Ensure tooltip legible on dark & light backgrounds */
+// .dark .action-tooltip {
+//   background: rgba(17,24,39,0.98) !important;
+//   color: #e6eef8 !important;
+// }
+
+/* hover behavior on rows */
+.mat-row:hover {
+  background: var(--surface-hover);
+}
+
+/* paginator spacing */
+mat-paginator {
+  margin-top: 12px;
+}
+
+.table-wrapper {
+  display: block;
+  border-radius: 6px;
+}
+
+.user-tooltip {
+  background: #0f172a !important;          /* darker than table */
+  color: #e2e8f0 !important;               /* bright blue-gray */
+  border: 1px solid rgba(255,255,255,0.12);
+  font-size: 13px !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+  letter-spacing: 0.2px;
+
+  box-shadow:
+    0 4px 8px rgba(0,0,0,0.35),
+    0 0 0 1px rgba(255,255,255,0.05);
+}
+
+/* responsive tweaks */
+@media (max-width: 900px) {
+  .search-input { width: 100%; }
+  .branch-dept-table { grid-template-columns: 1fr 1fr; }
+}
+
+/* minor visual polish for checkbox column */
+.mat-checkbox {
+  margin: 0;
+}
+
+/* dark mode adjustments for select/filter boxes so they don't stick out */
+.dark mat-form-field .mat-mdc-form-field-flex {
+  background: var(--surface-darker);
+  border-radius: 6px;
+}

@@ -1,0 +1,60 @@
+<div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+  <mat-card class="col-span-1 p-4">
+    <div class="flex flex-col items-center gap-3">
+      <div class="w-24 h-24 rounded-full bg-sky-500 text-white flex items-center justify-center text-2xl font-bold">
+        {{ user?.username?.charAt(0) || 'U' }}
+      </div>
+      <div class="text-lg font-semibold">{{ user?.username }}</div>
+      <div class="text-sm text-gray-500">{{ user?.id }}</div>
+      <div class="flex gap-2 mt-3">
+        <button mat-stroked-button (click)="openImageManager()">Manage Images</button>
+      </div>
+    </div>
+  </mat-card>
+
+  <div class="col-span-2 space-y-4">
+    <mat-card>
+      <h3 class="text-sm font-semibold mb-2">Profile</h3>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <strong>ID Number</strong>
+          <div>{{ user?.idNumber || '—' }}</div>
+        </div>
+        <div>
+          <strong>Role</strong>
+          <div>{{ user?.role || '—' }}</div>
+        </div>
+
+        <div>
+          <strong>Emails</strong>
+          <div *ngFor="let e of user?.emailAddresses">{{ e }}</div>
+        </div>
+
+        <div>
+          <strong>Phones</strong>
+          <div *ngFor="let p of user?.phoneNumbers">{{ p }}</div>
+        </div>
+
+        <div>
+          <strong>Branches</strong>
+          <div>{{ branchNames() }}</div>
+        </div>
+
+        <div>
+          <strong>Departments</strong>
+          <div *ngFor="let d of user?.departments">{{ d.name }}</div>
+        </div>
+      </div>
+    </mat-card>
+
+    <mat-card>
+      <h3 class="text-sm font-semibold mb-2">Recent Audits</h3>
+      <div *ngFor="let a of audits" class="py-2 border-b last:border-b-0">
+        <div class="text-xs text-gray-500">{{ a.timestamp | date: 'medium' }}</div>
+        <div class="text-sm font-medium">{{ a.action }} — {{ a.fieldChanged }}</div>
+        <div class="text-sm">From: {{ a.oldValue }} → To: {{ a.newValue }}</div>
+        <div class="text-xs text-gray-500">By: {{ a.performedByUsername }}</div>
+      </div>
+    </mat-card>
+  </div>
+</div>

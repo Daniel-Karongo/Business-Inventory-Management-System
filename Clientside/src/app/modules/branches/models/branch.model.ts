@@ -7,3 +7,13 @@ export interface BranchDTO {
   address?: string;
   deleted?: boolean;
 }
+
+export interface BranchHierarchyDTO {
+  branchId: string;
+  branchName: string;
+  departments?: {
+    departmentId: string;
+    departmentName: string;   // <-- ADD THIS
+    position?: string;        // head | member
+  }[];
+}

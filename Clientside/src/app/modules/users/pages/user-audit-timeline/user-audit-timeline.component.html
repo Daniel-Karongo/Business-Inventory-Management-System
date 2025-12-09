@@ -1,0 +1,16 @@
+<div class="space-y-4 p-4">
+  <h3 class="text-lg font-semibold">Activity Timeline</h3>
+
+  <div *ngFor="let a of audits" class="flex items-start gap-3">
+    <div>
+      <mat-icon class="text-gray-500">history</mat-icon>
+    </div>
+
+    <div>
+      <div class="text-sm font-medium">{{ a.action }}</div>
+      <div class="text-xs text-gray-500">{{ a.timestamp | date: 'medium' }} — by {{ a.performedByUsername }}</div>
+      <div class="text-sm">Field: <strong>{{ a.fieldChanged }}</strong></div>
+      <div class="text-sm">From: {{ a.oldValue }} → To: {{ a.newValue }}</div>
+    </div>
+  </div>
+</div>

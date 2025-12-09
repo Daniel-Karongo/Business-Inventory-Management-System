@@ -5,12 +5,16 @@ import { routes } from './app.routes';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { IconLoader } from './core/utils/icon-loader';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { loggingInterceptor } from './core/interceptors/logging.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(withInterceptors([
+      authInterceptor,
+      loggingInterceptor
+    ])),
     provideAnimations(),
 
     // ⭐ Correct Angular 17 initializer pattern

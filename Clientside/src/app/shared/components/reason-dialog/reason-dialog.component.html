@@ -1,0 +1,44 @@
+<div class="p-4 bg-[var(--surface)]">
+  <h2 class="text-lg font-semibold mb-2">{{ data.title }}</h2>
+
+  <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">
+    {{ data.message }}
+  </p>
+
+  <!-- Select predefined reason OR "Other" -->
+  <mat-form-field appearance="fill" class="w-full mb-4">
+    <mat-label>Select a reason (optional)</mat-label>
+    <mat-select [(ngModel)]="selectedReason">
+      <mat-option *ngFor="let r of predefinedReasons" [value]="r">
+        {{ r }}
+      </mat-option>
+
+      <mat-option value="OTHER">
+        Other…
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <!-- Custom reason when selecting "Other" -->
+  <mat-form-field appearance="fill" class="w-full" *ngIf="selectedReason === 'OTHER'">
+    <mat-label>Custom reason</mat-label>
+    <textarea
+        matInput
+        cdkTextareaAutosize
+        cdkAutosizeMinRows="1"
+        cdkAutosizeMaxRows="6"
+        [(ngModel)]="customReason"
+        placeholder="Enter custom reason (optional)"
+    ></textarea>
+  </mat-form-field>
+
+  <div class="flex justify-end gap-2 mt-4">
+    <button mat-stroked-button (click)="cancel()">
+      {{ data.cancelText || 'Cancel' }}
+    </button>
+
+    <button mat-flat-button color="warn" (click)="confirm()">
+      {{ data.confirmText || 'Confirm' }}
+    </button>
+  </div>
+</div>

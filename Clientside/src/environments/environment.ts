@@ -18,20 +18,26 @@ export const environment = {
     users: {
       base: '/users',
 
-      register: '/users/register',
+      /* ---------- CREATE / UPDATE ---------- */
+      register: '/users/register',  // POST (multipart)
       registerBulk: '/users/register/bulk',
 
-      update: (identifier: string) => `/users/${identifier}`,
+      update: (identifier: string) => `/users/${identifier}`, // PATCH
       updateImages: (identifier: string) => `/users/${identifier}/images`,
 
-      get: (identifier: string, deleted?: boolean) =>
+      /* ---------- GET ---------- */
+      get: (identifier: string, deleted: boolean = false) =>
         `/users/user/${identifier}?deleted=${deleted}`,
 
-      getAll: (deleted?: boolean) => `/users/all?deleted=${deleted}`,
+      getAll: (deleted?: boolean) =>
+        deleted === undefined
+          ? `/users/all`
+          : `/users/all?deleted=${deleted}`,
 
-      byRole: (role: string, deleted?: boolean) =>
+      byRole: (role: string, deleted: boolean = false) =>
         `/users/role/${role}/active?deleted=${deleted}`,
 
+      /* ---------- DELETE / RESTORE ---------- */
       softDelete: (id: string) => `/users/soft/${id}`,
       softDeleteBulk: '/users/soft/bulk',
 
@@ -41,7 +47,7 @@ export const environment = {
       hardDelete: (id: string) => `/users/hard/${id}`,
       hardDeleteBulk: '/users/hard/bulk',
 
-      /* IMAGES */
+      /* ---------- IMAGES ---------- */
       images: {
         all: (deletedImages?: boolean, deletedUsers?: boolean) =>
           `/users/images/all?deletedImages=${deletedImages}&deletedUsers=${deletedUsers}`,
@@ -74,17 +80,26 @@ export const environment = {
           `/users/images/all/${identifier}/hard`,
       },
 
-      /* AUDITS */
+      /* ---------- AUDITS ---------- */
       audits: {
         userTarget: (identifier: string) =>
           `/users/audits/${identifier}/target`,
+
         userDoer: (identifier: string) =>
           `/users/audits/${identifier}/doer`,
 
         imageTarget: (identifier: string) =>
           `/users/images/audits/${identifier}/receiver`,
+
         imageDoer: (identifier: string) =>
           `/users/images/audits/${identifier}/doer`,
+      },
+
+      roles: {
+        base: '/roles',
+        get: (id: string) => `/roles/${id}`,
+        create: '/roles',
+        update: (id: string) => `/roles/${id}`,
       }
     },
 

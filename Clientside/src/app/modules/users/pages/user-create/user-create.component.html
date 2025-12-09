@@ -1,0 +1,77 @@
+<div class="p-4 max-w-3xl">
+  <h2 class="text-lg font-semibold mb-4">Create User</h2>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-6">
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      
+      <mat-form-field appearance="fill">
+        <mat-label>Username</mat-label>
+        <input matInput formControlName="username" />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>ID Number</mat-label>
+        <input matInput formControlName="idNumber" />
+      </mat-form-field>
+
+      <!-- EMAILS -->
+      <mat-form-field appearance="fill" class="col-span-2">
+        <mat-label>Email addresses (comma separated)</mat-label>
+        <input
+          matInput
+          [value]="form.value.emailAddresses?.join(', ')"
+          (change)="onEmailsChanged($event)"
+        />
+      </mat-form-field>
+
+      <!-- PHONES -->
+      <mat-form-field appearance="fill" class="col-span-2">
+        <mat-label>Phone numbers (comma separated)</mat-label>
+        <input
+          matInput
+          [value]="form.value.phoneNumbers?.join(', ')"
+          (change)="onPhonesChanged($event)"
+        />
+      </mat-form-field>
+
+      <!-- ROLE -->
+      <mat-form-field appearance="fill" class="col-span-2">
+        <mat-label>Role</mat-label>
+        <mat-select formControlName="role">
+          <mat-option *ngFor="let r of roles" [value]="r.name">
+            {{ r.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Password</mat-label>
+        <input matInput type="password" formControlName="password" />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Confirm Password</mat-label>
+        <input matInput type="password" formControlName="confirmPassword" />
+      </mat-form-field>
+
+      <!-- FILE UPLOAD -->
+      <div class="col-span-2">
+        <input #fileInput type="file" (change)="onFileSelected($event)" hidden />
+        <button mat-stroked-button type="button" (click)="fileInput.click()">
+          Upload ID Image
+        </button>
+        <div class="text-xs text-gray-500 mt-1">Optional</div>
+      </div>
+
+    </div>
+
+    <div class="flex gap-2">
+      <button mat-flat-button color="primary" type="submit">Create</button>
+      <button mat-stroked-button type="button" (click)="router.navigate(['/users'])">
+        Cancel
+      </button>
+    </div>
+
+  </form>
+</div>
