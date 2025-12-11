@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.user.co
 
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.UserBulkRestoreOrDeleteDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.UserDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.service.UserImageService;
@@ -139,26 +140,29 @@ public class UserController {
     /* ====================== SOFT DELETE / RESTORE / HARD DELETE ====================== */
     @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
     @DeleteMapping("/soft/{id}")
-    public ResponseEntity<ApiResponse> softDeleteUser(@PathVariable UUID id, Authentication authentication) {
-        return userService.softDeleteUser(id, authentication);
+    public ResponseEntity<ApiResponse> softDeleteUser(@PathVariable UUID id, @RequestBody String reason, Authentication authentication) {
+        return userService.softDeleteUser(id, authentication, reason);
     }
 
     @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
     @DeleteMapping("/soft/bulk")
-    public ResponseEntity<ApiResponse> softDeleteUsersInBulk(@RequestBody List<UUID> userIds, Authentication authentication) {
-        return userService.softDeleteUsersInBulk(userIds, authentication);
+    public ResponseEntity<ApiResponse> softDeleteUsersInBulk(@RequestBody UserBulkRestoreOrDeleteDTO dto, Authentication authentication) {
+        return userService.softDeleteUsersInBulk(dto.getIds(), dto.getReason(), authentication);
     }
 
     @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
     @PatchMapping("/restore/{id}")
-    public ResponseEntity<ApiResponse> restoreUser(@PathVariable UUID id, Authentication authentication) throws IOException {
-        return userService.restoreUser(id, authentication);
+    public ResponseEntity<ApiResponse> restoreUser(@PathVariable UUID id, @RequestBody(required = false) String reason, Authentication authentication) throws IOException {
+        return userService.restoreUser(id, authentication, reason);
     }
 
     @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
     @PatchMapping("/restore/bulk")
-    public ResponseEntity<ApiResponse> restoreUsersInBulk(@RequestBody List<UUID> userIds, Authentication authentication) throws IOException {
-        return userService.restoreUsersInBulk(userIds, authentication);
+    public ResponseEntity<ApiResponse> restoreUsersInBulk(
+            @RequestBody UserBulkRestoreOrDeleteDTO dto,
+            Authentication authentication) throws IOException {
+
+        return userService.restoreUsersInBulk(dto.getIds(), dto.getReason(), authentication);
     }
 
     @PreAuthorize("hasRole('SUPERUSER')")
