@@ -2,20 +2,24 @@
 .page-container, mat-table, mat-cell, mat-header-cell {
   font-family: 'Inter', system-ui, sans-serif !important;
   letter-spacing: 0.2px;
-  font-size: 14px;
 }
 
 .page-container {
   overflow-x: hidden;
+  padding-top: 0;
 }
 
 mat-header-cell {
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--text-secondary) !important;
+  background: var(--surface) !important;
+  padding: 12px 16px;
 }
 
 mat-cell {
   font-weight: 400;
+  font-size: 0.9rem;
+  padding: 12px 16px;
 }
 
 mat-cell div {
@@ -49,7 +53,7 @@ mat-form-field {
 mat-table {
   width: 100%;
   border-radius: 6px;
-  overflow-x: scroll !important;
+  overflow-x: auto !important;
 }
 
 /* Apply natural width to headers + rows together */
@@ -97,11 +101,6 @@ mat-table {
 .mat-column-actions { min-width: 150px; text-align: center; }
 
 /* header cells */
-.mat-header-cell {
-  font-weight: 700;
-  color: var(--text-secondary);
-  padding: 12px 16px;
-}
 
 /* normal cells */
 .mat-cell {
@@ -136,10 +135,6 @@ mat-table {
   min-width: fit-content;
 }
 
-.email-item, .phone-item {
-  font-size: 0.9rem;
-}
-
 /* Branch / Department grid inside a cell - multi-row table */
 .branch-dept-table {
   display: grid;
@@ -148,39 +143,16 @@ mat-table {
   align-items: start;
   padding-top: 10px;
   padding-bottom: 10px;
+  font-size: 0.9rem;
 }
 
 .branch-dept-table .bd-heading {
   font-weight: 600;
-  font-size: 0.85rem;
   color: var(--text-secondary);
 }
 
 .branch-dept-table .bd-row {
-  font-size: 0.9rem;
   color: var(--text-primary);
-}
-
-/* Tooltip styling for action icons (stand out like sidebar style) */
-// .action-tooltip {
-//   font-size: 13px !important;
-//   padding: 6px 10px !important;
-//   border-radius: 6px !important;
-//   background: #0f172a !important; /* dark slate for both modes */
-//   color: #fff !important;
-//   border: 1px solid rgba(255,255,255,0.08);
-//   box-shadow: 0 6px 18px rgba(2,6,23,0.45);
-// }
-
-// /* Ensure tooltip legible on dark & light backgrounds */
-// .dark .action-tooltip {
-//   background: rgba(17,24,39,0.98) !important;
-//   color: #e6eef8 !important;
-// }
-
-/* hover behavior on rows */
-.mat-row:hover {
-  background: var(--surface-hover);
 }
 
 /* paginator spacing */
@@ -193,33 +165,14 @@ mat-paginator {
   border-radius: 6px;
 }
 
-.user-tooltip {
-  background: #0f172a !important;          /* darker than table */
-  color: #e2e8f0 !important;               /* bright blue-gray */
-  border: 1px solid rgba(255,255,255,0.12);
-  font-size: 13px !important;
-  padding: 8px 12px !important;
-  border-radius: 6px !important;
-  letter-spacing: 0.2px;
-
-  box-shadow:
-    0 4px 8px rgba(0,0,0,0.35),
-    0 0 0 1px rgba(255,255,255,0.05);
+.create-user-button {
+  background-color: #005cbb !important;
+  border-radius: 2px !important;
+  color: white;
 }
 
 /* responsive tweaks */
 @media (max-width: 900px) {
   .search-input { width: 100%; }
   .branch-dept-table { grid-template-columns: 1fr 1fr; }
-}
-
-/* minor visual polish for checkbox column */
-.mat-checkbox {
-  margin: 0;
-}
-
-/* dark mode adjustments for select/filter boxes so they don't stick out */
-.dark mat-form-field .mat-mdc-form-field-flex {
-  background: var(--surface-darker);
-  border-radius: 6px;
 }

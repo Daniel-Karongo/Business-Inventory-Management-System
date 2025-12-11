@@ -5,12 +5,8 @@
     <h2 class="text-xl font-semibold">Users</h2>
 
     <div class="flex items-center gap-2">
-      <button mat-flat-button color="primary" (click)="goCreate()" [attr.aria-label]="'Create a new user'">
+      <button class="create-user-button" mat-flat-button color="primary" (click)="goCreate()" [attr.aria-label]="'Create a new user'">
         Create User
-      </button>
-
-      <button mat-stroked-button (click)="router.navigate(['/users/roles'])" [attr.aria-label]="'Manage user roles'">
-        Roles
       </button>
     </div>
   </div>
@@ -59,7 +55,7 @@
   </div>
 
   <!-- FILTERS -->
-  <div class="filters grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+  <div class="filters grid grid-cols-1 md:grid-cols-auto-fit md:grid-cols-[repeat(auto-fit,minmax(100px,1fr))] gap-4 mb-6">
 
     <!-- Branch -->
     <mat-form-field appearance="fill">
@@ -91,6 +87,16 @@
         <mat-option *ngFor="let r of roles" [value]="r.name">
           {{ r.name }}
         </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <!-- Status -->
+    <mat-form-field appearance="fill" *ngIf="allowShowDeleted">
+      <mat-label>Status</mat-label>
+      <mat-select [(ngModel)]="filterStatus" (selectionChange)="applyFilters()">
+        <mat-option value="">All</mat-option>
+        <mat-option value="active">Active</mat-option>
+        <mat-option value="deleted">Disabled</mat-option>
       </mat-select>
     </mat-form-field>
 
@@ -182,9 +188,9 @@
 
         <mat-cell *matCellDef="let u">
             <div class="branch-dept-table">
-              <div class="bd-heading">Branch</div>
+              <!-- <div class="bd-heading">Branch</div>
               <div class="bd-heading">Department</div>
-              <div class="bd-heading">Position</div>
+              <div class="bd-heading">Position</div> -->
 
               <ng-container *ngFor="let row of branchDeptRows(u)">
                 <div class="bd-row bd-row-name">{{ row.branchName }}</div>
@@ -213,7 +219,14 @@
 
       <!-- Status -->
       <ng-container matColumnDef="status">
-        <mat-header-cell *matHeaderCellDef [attr.aria-label]="'User status'"> Status </mat-header-cell>
+        <mat-header-cell *matHeaderCellDef (click)="sortBy('status')" class="sortable" [attr.aria-label]="'User status'"> 
+          Status 
+          <mat-icon *ngIf="allowShowDeleted" class="sort-icon">
+            {{ sortField === 'status'
+              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+              : 'unfold_more' }}
+          </mat-icon>
+        </mat-header-cell>
 
         <mat-cell *matCellDef="let u">
           <span [ngClass]="{ 'text-green-400': !u.deleted, 'text-red-400': u.deleted }">
@@ -248,7 +261,6 @@
           <button
             mat-icon-button
             matTooltip="View User Details"
-            matTooltipClass="user-tooltip"
             matTooltipPosition="above"
             [attr.aria-label]="'View user {{ u.username }}'"
             (click)="view(u)">
@@ -259,7 +271,6 @@
           <button
             mat-icon-button
             matTooltip="Edit User"
-            matTooltipClass="user-tooltip"
             matTooltipPosition="above"
             [attr.aria-label]="'Edit user {{ u.username }}'"
             (click)="edit(u)">
@@ -270,7 +281,6 @@
           <button
             mat-icon-button
             matTooltip="{{ u.deleted ? 'Restore User' : 'Disable User' }}"
-            matTooltipClass="user-tooltip"
             matTooltipPosition="above"
             [attr.aria-label]="(u.deleted ? 'Restore user ' : 'Disable user ') + u.username"
             (click)="toggleActive(u)">
@@ -283,8 +293,12 @@
 
       <!-- Rows -->
       <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-      <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
-
+      <mat-row 
+        *matRowDef="let row; columns: displayedColumns;"
+        [ngClass]="{ 'row-selected': selection.isSelected(row) }"
+        (click)="toggleRowSelection(row)"
+        class="clickable-row">
+      </mat-row>
     </mat-table>
   </div>
 

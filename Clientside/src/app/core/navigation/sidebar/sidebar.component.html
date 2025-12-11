@@ -30,8 +30,7 @@
       [class.justify-center]="sidebar.isCollapsed$ | async"
       [matTooltip]="(sidebar.isCollapsed$ | async) ? item.title : ''"
       matTooltipPosition="right"
-      matTooltipAppendTo="body"
-      matTooltipClass="sidebar-tooltip">
+      matTooltipAppendTo="body">
 
       <mat-icon class="nav-icon" [svgIcon]="item.icon"></mat-icon>
 

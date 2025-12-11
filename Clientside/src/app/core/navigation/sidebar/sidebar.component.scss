@@ -52,9 +52,3 @@
 :host-context(.sidebar-collapsed) .collapsed-label {
   @apply opacity-0 ml-0 w-0 overflow-hidden;
 }
-
-.sidebar-tooltip {
-  font-size: 13px;
-  padding: 6px 10px;
-  border-radius: 6px;
-}

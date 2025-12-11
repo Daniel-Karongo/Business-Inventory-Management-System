@@ -61,7 +61,7 @@ export class UserListComponent implements OnInit {
   branches: any[] = [];
   departments: any[] = [];
   roles: any[] = [];
-
+  
   total = 0;
   page = 0;
   size = 12;
@@ -70,6 +70,7 @@ export class UserListComponent implements OnInit {
   filterBranch = '';
   filterDepartment = '';
   filterRole = '';
+  filterStatus: '' | 'active' | 'deleted' = '';
   showDeleted = false;
   allowShowDeleted = false;
 
@@ -177,8 +178,16 @@ export class UserListComponent implements OnInit {
       data = data.filter(u => u.role === this.filterRole);
     }
 
-    // deleted filter: unless allowed and toggled, hide deleted
-    if (!this.showDeleted) {
+    // STATUS FILTER
+    if (this.filterStatus === 'active') {
+      data = data.filter(u => u.deleted === false);
+    }
+    else if (this.filterStatus === 'deleted') {
+      data = data.filter(u => u.deleted === true);
+    }
+
+    // Show Deleted toggle (only hide deleted when no explicit status filter)
+    if (!this.showDeleted && this.filterStatus === '') {
       data = data.filter(u => !u.deleted);
     }
 
@@ -240,6 +249,11 @@ export class UserListComponent implements OnInit {
         v2 = (b.branchHierarchy && b.branchHierarchy[0]) ? (b.branchHierarchy[0].branchName || '') : '';
         v1 = v1.toLowerCase();
         v2 = v2.toLowerCase();
+        break;
+
+      case 'status':
+        v1 = (a.deleted || '');
+        v2 = (b.deleted || '');
         break;
 
       default:
@@ -309,18 +323,36 @@ export class UserListComponent implements OnInit {
     return `${this.selection.isSelected(row) ? 'Deselect' : 'Select'} row ${row.username}`;
   }
 
+  toggleRowSelection(row: any) {
+    this.selection.toggle(row);
+  }
+
   // Single-user disable/restore (with reason)
   toggleActive(u: User) {
-    const dialogRef = this.dialog.open(ReasonDialogComponent, {
-      width: '420px',
-      data: {
-        title: u.deleted ? 'Restore User?' : 'Disable User?',
-        message: `Provide a reason for this action for ${u.username}.`,
-        confirmText: u.deleted ? 'Restore' : 'Disable'
-      }
-    });
+    let dialogRef: any;
+    if(u.deleted) {
+      dialogRef = this.dialog.open(ReasonDialogComponent, {
+        width: '420px',
+        data: {
+          title: 'Restore User?',
+          message: `Provide a reason for restoring ${u.username}.`,
+          action: 'RESTORE',
+          confirmText: 'Restore'
+        }
+      });
+    } else {
+      dialogRef = this.dialog.open(ReasonDialogComponent, {
+        width: '420px',
+        data: {
+          title: 'Disable User?',
+          message: `Provide a reason for disabling ${u.username}.`,
+          action: 'DISABLE',
+          confirmText: 'Disable'
+        }
+      });
+    }
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result: { confirmed: any; reason: any; }) => {
       if (!result?.confirmed) return;
       const reason = result.reason;
 
@@ -360,6 +392,7 @@ export class UserListComponent implements OnInit {
       data: {
         title: 'Disable users?',
         message: `Provide a reason for disabling ${selected.length} user(s).`,
+        action: 'DISABLE',
         confirmText: 'Disable'
       }
     });
@@ -370,7 +403,7 @@ export class UserListComponent implements OnInit {
 
       const ids = selected.map(s => s.id!).filter(Boolean);
       // backend expects body list for bulk delete
-      this.userService.softDeleteBulk(ids).subscribe({
+      this.userService.softDeleteBulk(ids, reason).subscribe({
         next: () => {
           this.snackbar.open('Users disabled', 'Close', { duration: 2000 });
           this.loadUsersOnce();
@@ -392,6 +425,7 @@ export class UserListComponent implements OnInit {
       data: {
         title: 'Restore users?',
         message: `Provide a reason for restoring ${selected.length} user(s).`,
+        action: 'RESTORE',
         confirmText: 'Restore'
       }
     });
@@ -401,7 +435,7 @@ export class UserListComponent implements OnInit {
       const reason = result.reason;
 
       const ids = selected.map(s => s.id!).filter(Boolean);
-      this.userService.restoreBulk(ids).subscribe({
+      this.userService.restoreBulk(ids, reason).subscribe({
         next: () => {
           this.snackbar.open('Users restored', 'Close', { duration: 2000 });
           this.loadUsersOnce();

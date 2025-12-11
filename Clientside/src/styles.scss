@@ -1,7 +1,6 @@
-/* =======================================================================
-   GLOBAL THEME + COLORS + TAILWIND
-======================================================================= */
-
+/* ===================================================================
+   GLOBAL THEME + COLORS
+=================================================================== */
 @use '@angular/material' as mat;
 @import '@angular/cdk/overlay-prebuilt.css';
 
@@ -9,29 +8,24 @@
 @tailwind components;
 @tailwind utilities;
 
-/* -------------------------------------------------------
-   MATERIAL THEMES
--------------------------------------------------------- */
-
 @include mat.core();
 
-$light-theme: mat.define-theme((
-  color: (theme-type: light, primary: mat.$azure-palette),
-));
+$light-theme: mat.define-theme((color: (theme-type: light, primary: mat.$azure-palette),));
+$dark-theme: mat.define-theme((color: (theme-type: dark, primary: mat.$azure-palette),));
 
-$dark-theme: mat.define-theme((
-  color: (theme-type: dark, primary: mat.$azure-palette),
-));
+app-root.light {
+  @include mat.all-component-colors($light-theme);
+}
 
-app-root.light { @include mat.all-component-colors($light-theme); }
-app-root.dark  { @include mat.all-component-colors($dark-theme); }
+app-root.dark {
+  @include mat.all-component-colors($dark-theme);
+}
 
-/* -------------------------------------------------------
-   ENTERPRISE COLORS
--------------------------------------------------------- */
-
+/* -----------------------------------------------------
+   DESIGN TOKENS
+----------------------------------------------------- */
 :root {
-  --font-sans: 'Inter','Segoe UI',Arial,sans-serif;
+  --font-sans: 'Inter', 'Segoe UI', Arial, sans-serif;
 
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
@@ -44,27 +38,29 @@ app-root.dark  { @include mat.all-component-colors($dark-theme); }
 
   --app-bg: #f5f6fa;
   --surface: #ffffff;
-  --surface-hover: #f1f5f9;
+  --surface-hover: rgba(0, 122, 255, 0.03);
   --text-primary: #111827;
   --text-secondary: #4b5563;
   --border: #e5e7eb;
 }
 
-:root.dark,
 app-root.dark {
   --app-bg: #0f1115;
   --surface: #1a1d24;
   --surface-hover: #2a2f38;
+
   --text-primary: #e6eef8;
   --text-secondary: #9ca3af;
+
   --border: #2a2d33;
 }
 
-/* -------------------------------------------------------
-   GLOBAL PAGE COLORS
--------------------------------------------------------- */
-
-html, body, app-root {
+/* -----------------------------------------------------
+   BASE LAYOUT
+----------------------------------------------------- */
+html,
+body,
+app-root {
   margin: 0;
   height: 100%;
   background: var(--app-bg);
@@ -72,10 +68,45 @@ html, body, app-root {
   font-family: var(--font-sans);
 }
 
-/* -------------------------------------------------------
-   MATERIAL PANELS
--------------------------------------------------------- */
+/* -----------------------------------------------------
+   MATERIAL INPUT FIX — VERY IMPORTANT
+----------------------------------------------------- */
 
+.mdc-notched-outline {
+  --mdc-outlined-text-field-outline-color: var(--border) !important;
+}
+
+.mat-mdc-form-field-focus-overlay {
+  background: transparent !important;
+}
+
+.mat-mdc-text-field-wrapper {
+  background: var(--surface) !important;
+  border-radius: 1px !important;
+  border: 1px solid var(--border) !important;
+}
+
+.mat-mdc-text-field-wrapper:hover {
+  background: var(--surface-hover) !important;
+}
+
+.mdc-text-field__input {
+  color: var(--text-primary) !important;
+}
+
+.mdc-floating-label {
+  color: var(--text-secondary) !important;
+}
+
+app-root.dark .mat-mdc-text-field-wrapper {
+  background: #1f2937 !important;
+  border-radius: 1px !important;
+  border: 1px solid #374151 !important;
+}
+
+/* -----------------------------------------------------
+   MATERIAL SELECT / MENU
+----------------------------------------------------- */
 .mat-mdc-select-panel,
 .mat-mdc-menu-panel {
   background: var(--surface) !important;
@@ -86,22 +117,77 @@ html, body, app-root {
   background: var(--surface-hover) !important;
 }
 
+/* -----------------------------------------------------
+   TABLE ROWS
+----------------------------------------------------- */
+
+/* Highlight table row on hover */
+.mdc-data-table__row:hover {
+  background-color: var(--surface-hover) !important;
+  cursor: pointer;
+  transition: background 0.15s ease-in-out;
+}
+
+/* Selected Row Styling */
+.mdc-data-table__row.row-selected {
+  background-color: rgba(0, 122, 255, 0.08) !important;
+  border-left: 4px solid #007aff !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+/* Optional: ensure text remains visible */
+.mdc-data-table__row.row-selected td {
+  color: var(--text-primary) !important;
+}
+
+app-root.dark .mdc-data-table__row.row-selected {
+  background-color: rgba(0, 122, 255, 0.10) !important;
+  border-left: 4px solid #3b82f6 !important;
+}
+
+
+/* -----------------------------------------------------
+   SCROLLBAR
+----------------------------------------------------- */
+* {
+  scrollbar-width: thin;
+  // scrollbar-color: rgba(255,255,255,0.14) transparent;
+}
+
+/* Chrome/Edge/Webkit */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+app-root.dark * {
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
 /* -------------------------------------------------------
-   SIDEBAR TOOLTIP
+   GLOBAL ANGULAR MATERIAL TOOLTIP STYLING
 -------------------------------------------------------- */
 
-.sidebar-tooltip {
-  background: rgba(0,0,0,.85) !important;
+.mat-mdc-tooltip {
+  background: rgba(0, 0, 0, 0.85) !important;
   color: #fff !important;
-  border-radius: 6px;
-  padding: 6px 10px;
+  border-radius: 6px !important;
+  padding: 6px 10px !important;
+  font-size: 13px !important;
+  letter-spacing: 0.3px;
 }
 
 /* -------------------------------------------------------
    SNACKBAR GLOBAL (SAFE)
 -------------------------------------------------------- */
 
-.cdk-overlay-container { z-index: 110000 !important; }
+.cdk-overlay-container {
+  z-index: 110000 !important;
+}
 
 .mat-mdc-snack-bar-container {
   background: #1f2937 !important;
@@ -116,4 +202,9 @@ html, body, app-root {
 
 .mat-mdc-snack-bar-action .mdc-button:hover .mdc-button__label {
   color: #93c5fd !important;
+}
+
+
+.mdc-flat-button {
+  background-color: red;
 }

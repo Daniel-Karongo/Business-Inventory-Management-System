@@ -6,16 +6,15 @@
   </p>
 
   <!-- Select predefined reason OR "Other" -->
-  <mat-form-field appearance="fill" class="w-full mb-4">
+  <mat-form-field appearance="fill" class="w-full">
     <mat-label>Select a reason (optional)</mat-label>
+
     <mat-select [(ngModel)]="selectedReason">
-      <mat-option *ngFor="let r of predefinedReasons" [value]="r">
+      <mat-option *ngFor="let r of reasonOptions" [value]="r">
         {{ r }}
       </mat-option>
 
-      <mat-option value="OTHER">
-        Other…
-      </mat-option>
+      <mat-option value="OTHER">Other...</mat-option>
     </mat-select>
   </mat-form-field>
 

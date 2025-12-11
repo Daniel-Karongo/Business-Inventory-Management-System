@@ -104,9 +104,9 @@ export class UserService {
     );
   }
 
-  softDeleteBulk(ids: string[]) {
+  softDeleteBulk(ids: string[], reason: string) {
     const url = `${environment.apiUrl}${environment.endpoints.users.softDeleteBulk}`;
-    return this.http.delete(url, { body: ids });
+    return this.http.delete(url, { body: {ids, reason }});
   }
 
   restore(id: string, reason: string | null) {
@@ -116,9 +116,9 @@ export class UserService {
     );
   }
 
-  restoreBulk(ids: string[]) {
+  restoreBulk(ids: string[], reason: string) {
     const url = `${environment.apiUrl}${environment.endpoints.users.restoreBulk}`;
-    return this.http.patch(url, ids);
+    return this.http.patch(url, { ids, reason });
   }
 
   hardDelete(id: string) {

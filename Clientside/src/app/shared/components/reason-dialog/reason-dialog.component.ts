@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 export interface ReasonDialogData {
   title: string;
   message: string;
+  action: 'DISABLE' | 'RESTORE';
   confirmText?: string;
   cancelText?: string;
 }
@@ -30,7 +31,9 @@ export interface ReasonDialogData {
   ]
 })
 export class ReasonDialogComponent {
-  predefinedReasons = [
+
+  /** Disable reasons */
+  disableReasons = [
     'Security risk',
     'Policy violation',
     'Left company',
@@ -39,13 +42,29 @@ export class ReasonDialogComponent {
     'Duplicate account'
   ];
 
+  /** Restore reasons */
+  restoreReasons = [
+    'Mistaken disable',
+    'Issue resolved',
+    'Reinstated by management',
+    'Information updated',
+    'Investigation complete'
+  ];
+
   selectedReason: string | null = null;
-  customReason: string = '';
+  customReason = '';
 
   constructor(
     private ref: MatDialogRef<ReasonDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: ReasonDialogData
   ) {}
+
+  /** Dynamically return correct reason list */
+  get reasonOptions(): string[] {
+    return this.data.action === 'RESTORE'
+      ? this.restoreReasons
+      : this.disableReasons;
+  }
 
   confirm() {
     let reason: string | null = null;
@@ -62,4 +81,12 @@ export class ReasonDialogComponent {
   cancel() {
     this.ref.close({ confirmed: false });
   }
+}
+
+export interface ReasonDialogData {
+  title: string;
+  message: string;
+  action: 'DISABLE' | 'RESTORE';   // <-- NEW
+  confirmText?: string;
+  cancelText?: string;
 }

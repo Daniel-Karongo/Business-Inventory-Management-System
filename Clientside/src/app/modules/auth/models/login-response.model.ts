@@ -1,6 +1,6 @@
 export interface LoginResponse {
   token: string;
   refreshToken?: string;
-  expiresIn: number;
+  expiresAt: number;
   role: string;
 }

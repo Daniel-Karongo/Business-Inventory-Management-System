@@ -1,2 +1,191 @@
-/* small form tweaks */
-mat-form-field { width: 100%; }
+:host {
+  display: block;
+}
+
+/* ---------------- HEADER ---------------- */
+.wizard-header {
+  height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.create-body {
+  position: relative;
+  top: 64px;
+}
+
+.stepper-frame {
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: none;
+  padding: 8px;
+  background: var(--surface);
+}
+
+/* ---------------- STEPPER ---------------- */
+.wizard-steps {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-block: 5px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 10px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: none;
+  cursor: pointer;
+
+  min-width: 150px;
+}
+
+.step.active {
+  background: rgba(26, 115, 232, 0.14);
+  border-color: rgba(26, 115, 232, 0.45);
+}
+
+.step.completed .num {
+  background: #1a73e8;
+  color: white;
+}
+
+.num {
+  width: 32px;
+  height: 32px;
+  border-radius: none;
+  background: var(--surface-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+/* ---------------- BODY ---------------- */
+.wizard-body {
+  padding: 32px 24px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ---------------- ASSIGNMENTS ---------------- */
+.assignments {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.assignment-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.col {
+  width: 220px;
+}
+
+.col-fluid {
+  flex: 1;
+}
+
+/* ---------------- FILE PREVIEW ---------------- */
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.preview-card {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.thumb {
+  height: 160px;
+  background: var(--surface-hover);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pdf-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.meta {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filename {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+/* ---------------- REVIEW ---------------- */
+.review.card {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.summary-grid {
+  display: flex;
+  gap: 24px;
+}
+
+dt {
+  font-weight: 700;
+  margin-top: 12px;
+  color: var(--text-secondary);
+}
+
+/* ---------------- NAV ---------------- */
+.nav {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
