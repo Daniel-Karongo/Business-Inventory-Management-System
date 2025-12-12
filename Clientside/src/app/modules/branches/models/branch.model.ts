@@ -1,19 +1,32 @@
+import { DepartmentMinimalDTO, DepartmentPositionDTO } from "../../departments/models/department.model";
+import { MinimalUserDTO } from "../../users/models/user.model";
+
 export interface BranchDTO {
-  id?: string;
+  id?: string; // read only
+  branchCode?: string;
   name: string;
-  description?: string;
+  location?: string;
   phone?: string;
   email?: string;
-  address?: string;
+
+  // write-only
+  userIds?: string[];
+  departmentIds?: string[];
+
+  // read-only
+  users?: MinimalUserDTO[];
+  departments?: DepartmentMinimalDTO[];
   deleted?: boolean;
 }
 
 export interface BranchHierarchyDTO {
   branchId: string;
   branchName: string;
-  departments?: {
-    departmentId: string;
-    departmentName: string;   // <-- ADD THIS
-    position?: string;        // head | member
-  }[];
+  departments: DepartmentPositionDTO[];
+}
+
+export interface BranchMinimalDTO {
+  id: string;
+  branchCode: string;
+  name: string;
 }

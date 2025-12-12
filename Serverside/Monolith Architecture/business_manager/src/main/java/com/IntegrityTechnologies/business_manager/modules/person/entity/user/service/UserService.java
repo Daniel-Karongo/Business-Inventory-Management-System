@@ -616,10 +616,14 @@ public class UserService {
         // Delete files from disk
         Path userDir = Paths.get(fileStorageProperties.getUserUploadDir(), user.getUploadFolder())
                 .toAbsolutePath().normalize();
-        userImageService.deleteUserUploadDirectory(userDir);
 
         // Delete the user
+        userRepository.deleteUserFromBranch(user.getId());
+        userRepository.deleteUserFromDepartmentHeads(user.getId());
+        userRepository.deleteUserFromDepartmentMembers(user.getId());
         userRepository.delete(user);
+
+        userImageService.deleteUserUploadDirectory(userDir);
 
         return Map.of("username", user.getUsername());
     }

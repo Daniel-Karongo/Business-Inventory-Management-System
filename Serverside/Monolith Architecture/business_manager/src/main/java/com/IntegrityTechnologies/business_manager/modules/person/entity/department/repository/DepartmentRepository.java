@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository;
 
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -75,4 +76,14 @@ public interface DepartmentRepository extends JpaRepository<Department, UUID> {
 """)
     List<Department> findDepartmentsForUserInBranch(@Param("userId") UUID userId,
                                                     @Param("branchId") UUID branchId);
+
+    @Query("""
+    SELECT b
+    FROM Branch b
+    JOIN b.departments d
+    WHERE d.id = :deptId
+      AND b.deleted = false
+""")
+    List<Branch> findBranchesByDepartmentId(@Param("deptId") UUID deptId);
+
 }

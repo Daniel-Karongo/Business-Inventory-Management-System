@@ -32,18 +32,6 @@ mat-cell div {
   gap: 2px;
 }
 
-/* search input */
-.search-input {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  width: 48%;
-  min-width: 220px;
-  padding-left: 12px;
-  padding-right: 12px;
-  border-radius: 6px;
-}
-
 /* ensure mat form fields behave responsively */
 mat-form-field {
   width: 100%;
@@ -163,12 +151,6 @@ mat-paginator {
 .table-wrapper {
   display: block;
   border-radius: 6px;
-}
-
-.create-user-button {
-  background-color: #005cbb !important;
-  border-radius: 2px !important;
-  color: white;
 }
 
 /* responsive tweaks */

@@ -88,9 +88,12 @@ public class RollcallService {
         RollcallStatus status = computeStatusForDepartment(dept, LocalDateTime.now());
 
         Rollcall r = Rollcall.builder()
-                .user(user)
-                .department(dept)
-                .branch(branch)
+                .userId(user.getId())
+                .username(user.getUsername())
+                .departmentId(dept.getId())
+                .departmentName(dept.getName())
+                .branchId(branch.getId())
+                .branchName(branch.getName())
                 .timestamp(LocalDateTime.now())
                 .status(status)
                 .method(RollcallMethod.BIOMETRIC)
@@ -131,9 +134,12 @@ public class RollcallService {
         RollcallStatus status = computeStatusForDepartment(dept, LocalDateTime.now());
         Rollcall saved = rollcallRepository.save(
                 Rollcall.builder()
-                        .user(user)
-                        .department(dept)
-                        .branch(branch)
+                        .userId(user.getId())
+                        .username(user.getUsername())
+                        .departmentId(dept.getId())
+                        .departmentName(dept.getName())
+                        .branchId(branch.getId())
+                        .branchName(branch.getName())
                         .timestamp(LocalDateTime.now())
                         .status(status)
                         .method(RollcallMethod.LOGIN)
@@ -159,9 +165,12 @@ public class RollcallService {
 
         Rollcall saved = rollcallRepository.save(
                 Rollcall.builder()
-                        .user(user)
-                        .department(dept)
-                        .branch(branch)
+                        .userId(user.getId())
+                        .username(user.getUsername())
+                        .departmentId(dept.getId())
+                        .departmentName(dept.getName())
+                        .branchId(branch.getId())
+                        .branchName(branch.getName())
                         .timestamp(LocalDateTime.now())
                         .status(RollcallStatus.PRESENT)
                         .method(RollcallMethod.LOGOUT)
@@ -207,24 +216,19 @@ public class RollcallService {
                 if (!has) {
                     for(Branch branch: branchRepository.findBranchesByUserId(user.getId())) {
                         Rollcall absent = Rollcall.builder()
-                            .user(user)
-                            .department(d)
+                            .userId(user.getId())
+                            .username(user.getUsername())
+                            .departmentId(d.getId())
+                            .departmentName(d.getName())
+                            .branchId(branch.getId())
+                            .branchName(branch.getName())
                             .timestamp(cutoff)
                             .status(RollcallStatus.ABSENT)
                             .method(null)
                             .performedBy("system")
                             .build();
                         Rollcall saved = rollcallRepository.save(absent);
-                        rollcallAuditRepository.save(RollcallAudit.builder()
-                                .rollcallId(saved.getId())
-                                .userId(user.getId())
-                                .departmentId(d.getId())
-                                .branchId(branch.getId())
-                                .action("AUTO_ABSENT")
-                                .reason("No rollcall by cutoff")
-                                .performedBy("system")
-                                .timestamp(LocalDateTime.now())
-                                .build());
+
                         // send notification to heads
                         notificationService.notifyAbsent(d, user, saved);
                     }

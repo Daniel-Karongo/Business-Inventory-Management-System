@@ -61,10 +61,10 @@ export class UserListComponent implements OnInit {
   branches: any[] = [];
   departments: any[] = [];
   roles: any[] = [];
-  
+
   total = 0;
   page = 0;
-  size = 12;
+  size = 10;
 
   q = '';
   filterBranch = '';
@@ -93,7 +93,7 @@ export class UserListComponent implements OnInit {
     private snackbar: MatSnackBar,
     private dialog: MatDialog,
     public router: Router
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.determineDeletedVisibility();
@@ -301,6 +301,17 @@ export class UserListComponent implements OnInit {
     this.applyPagination();
   }
 
+  get bulkState(): 'active' | 'deleted' | 'mixed' | null {
+    const selected = this.selection.selected;
+    if (selected.length === 0) return null;
+
+    const statuses = new Set(selected.map(u => u.deleted));
+
+    if (statuses.size > 1) return 'mixed';      // mixture
+    if (statuses.has(false)) return 'active';   // all active
+    return 'deleted';                           // all deleted
+  }
+
   // Selection helpers for bulk
   isAllSelected() {
     const numSelected = this.selection.selected.length;
@@ -327,21 +338,11 @@ export class UserListComponent implements OnInit {
     this.selection.toggle(row);
   }
 
-  // Single-user disable/restore (with reason)
   toggleActive(u: User) {
-    let dialogRef: any;
-    if(u.deleted) {
-      dialogRef = this.dialog.open(ReasonDialogComponent, {
-        width: '420px',
-        data: {
-          title: 'Restore User?',
-          message: `Provide a reason for restoring ${u.username}.`,
-          action: 'RESTORE',
-          confirmText: 'Restore'
-        }
-      });
-    } else {
-      dialogRef = this.dialog.open(ReasonDialogComponent, {
+
+    // ----------------- ACTIVE USER → DISABLE -----------------
+    if (!u.deleted) {
+      const dialogRef = this.dialog.open(ReasonDialogComponent, {
         width: '420px',
         data: {
           title: 'Disable User?',
@@ -350,97 +351,164 @@ export class UserListComponent implements OnInit {
           confirmText: 'Disable'
         }
       });
+
+      dialogRef.afterClosed().subscribe(result => {
+        if (!result?.confirmed) return;
+        this.userService.softDelete(u.id!, result.reason).subscribe({
+          next: () => { this.snackbar.open('User disabled', 'Close', { duration: 2000 }); this.loadUsersOnce(); }
+        });
+      });
+
+      return;
     }
 
-    dialogRef.afterClosed().subscribe((result: { confirmed: any; reason: any; }) => {
+    // ----------------- DISABLED USER → CHOOSE ACTION -----------------
+    const choiceRef = this.dialog.open(DisabledUserChoiceDialog);
+    choiceRef.afterClosed().subscribe(choice => {
+      if (!choice) return;
+
+      if (choice === 'RESTORE') {
+        this.openRestoreDialog(u);
+      } else if (choice === 'DELETE') {
+        this.openDeleteDialog(u);
+      }
+    });
+  }
+
+  openRestoreDialog(u: User) {
+    const ref = this.dialog.open(ReasonDialogComponent, {
+      width: '420px',
+      data: {
+        title: 'Restore User?',
+        message: `Provide a reason for restoring ${u.username}.`,
+        action: 'RESTORE',
+        confirmText: 'Restore'
+      }
+    });
+
+    ref.afterClosed().subscribe(result => {
       if (!result?.confirmed) return;
-      const reason = result.reason;
-
-      const obs = u.deleted
-        ? this.userService.restore(u.id!, reason)
-        : this.userService.softDelete(u.id!, reason);
-
-      obs.subscribe({
-        next: () => {
-          this.snackbar.open(
-            u.deleted ? 'User restored' : 'User disabled',
-            'Close',
-            { duration: 2000 }
-          );
-          this.loadUsersOnce();
-        },
-        error: () =>
-          this.snackbar.open(
-            u.deleted ? 'Restore failed' : 'Disable failed',
-            'Close',
-            { duration: 3000 }
-          )
+      this.userService.restore(u.id!, result.reason).subscribe({
+        next: () => { this.snackbar.open('User restored', 'Close', { duration: 2000 }); this.loadUsersOnce(); }
       });
     });
   }
 
+  openDeleteDialog(u: User) {
+    const ref = this.dialog.open(ReasonDialogComponent, {
+      width: '420px',
+      data: {
+        title: 'Delete Permanently?',
+        message: `Provide an optional reason for deleting ${u.username}. This cannot be undone.`,
+        action: 'DELETE',
+        confirmText: 'Delete'
+      }
+    });
+
+    ref.afterClosed().subscribe(result => {
+      if (!result?.confirmed) return;
+      this.userService.hardDelete(u.id!).subscribe({
+        next: () => { this.snackbar.open('User permanently deleted', 'Close', { duration: 2000 }); this.loadUsersOnce(); }
+      });
+    });
+  }
+
+  private validateBulkStatus() {
+    const statuses = new Set(this.selection.selected.map(u => u.deleted));
+    if (statuses.size > 1) {
+      this.snackbar.open('Bulk action failed — selected users have mixed status', 'Close', { duration: 2500 });
+      return false;
+    }
+    return true;
+  }
+
   // Bulk actions (disable)
   bulkDisable() {
+    if (!this.validateBulkStatus()) return;
+
     const selected = this.selection.selected;
-    if (!selected.length) {
-      this.snackbar.open('Select users first', 'Close', { duration: 1500 });
+    if (selected[0].deleted) {
+      this.snackbar.open('All selected users are already disabled', 'Close', { duration: 1500 });
       return;
     }
 
-    const dialogRef = this.dialog.open(ReasonDialogComponent, {
+    const ref = this.dialog.open(ReasonDialogComponent, {
       width: '480px',
       data: {
-        title: 'Disable users?',
-        message: `Provide a reason for disabling ${selected.length} user(s).`,
+        title: 'Disable Users?',
+        message: `Provide a reason for disabling ${selected.length} users.`,
         action: 'DISABLE',
         confirmText: 'Disable'
       }
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    ref.afterClosed().subscribe(result => {
       if (!result?.confirmed) return;
-      const reason = result.reason;
-
-      const ids = selected.map(s => s.id!).filter(Boolean);
-      // backend expects body list for bulk delete
-      this.userService.softDeleteBulk(ids, reason).subscribe({
-        next: () => {
-          this.snackbar.open('Users disabled', 'Close', { duration: 2000 });
-          this.loadUsersOnce();
-        },
-        error: () => this.snackbar.open('Bulk disable failed', 'Close', { duration: 3000 })
+      const ids = selected.map(u => u.id!);
+      this.userService.softDeleteBulk(ids, result.reason).subscribe({
+        next: () => { this.snackbar.open('Users disabled', 'Close', { duration: 2000 }); this.loadUsersOnce(); }
       });
     });
   }
 
   bulkRestore() {
+    if (!this.validateBulkStatus()) return;
+
     const selected = this.selection.selected;
-    if (!selected.length) {
-      this.snackbar.open('Select users first', 'Close', { duration: 1500 });
+    if (!selected[0].deleted) {
+      this.snackbar.open('Cannot restore active users', 'Close', { duration: 1800 });
       return;
     }
 
-    const dialogRef = this.dialog.open(ReasonDialogComponent, {
+    const ref = this.dialog.open(ReasonDialogComponent, {
       width: '480px',
       data: {
-        title: 'Restore users?',
+        title: 'Restore Users?',
         message: `Provide a reason for restoring ${selected.length} user(s).`,
         action: 'RESTORE',
         confirmText: 'Restore'
       }
     });
 
+    ref.afterClosed().subscribe(result => {
+      if (!result?.confirmed) return;
+      const ids = selected.map(u => u.id!);
+      this.userService.restoreBulk(ids, result.reason).subscribe({
+        next: () => { this.snackbar.open('Users restored', 'Close', { duration: 2000 }); this.loadUsersOnce(); }
+      });
+    });
+  }
+
+  bulkDelete() {
+    const selected = this.selection.selected;
+    if (this.bulkState !== 'deleted') {
+      this.snackbar.open('Only disabled users can be permanently deleted', 'Close', { duration: 2000 });
+      return;
+    }
+
+    const dialogRef = this.dialog.open(ReasonDialogComponent, {
+      width: '480px',
+      data: {
+        title: 'Delete Users Permanently?',
+        message: `You are about to permanently delete ${selected.length} user(s). This cannot be undone.`,
+        action: 'DELETE',
+        confirmText: 'Delete'
+      }
+    });
+
     dialogRef.afterClosed().subscribe(result => {
       if (!result?.confirmed) return;
-      const reason = result.reason;
 
-      const ids = selected.map(s => s.id!).filter(Boolean);
-      this.userService.restoreBulk(ids, reason).subscribe({
+      const ids = selected.map(u => u.id!);
+
+      this.userService.hardDeleteBulk(ids).subscribe({
         next: () => {
-          this.snackbar.open('Users restored', 'Close', { duration: 2000 });
+          this.snackbar.open('Users permanently deleted', 'Close', { duration: 2000 });
           this.loadUsersOnce();
         },
-        error: () => this.snackbar.open('Bulk restore failed', 'Close', { duration: 3000 })
+        error: () => {
+          this.snackbar.open('Bulk delete failed', 'Close', { duration: 3000 });
+        }
       });
     });
   }
@@ -471,3 +539,21 @@ export class UserListComponent implements OnInit {
     return rows;
   }
 }
+
+@Component({
+  standalone: true,
+  imports: [MatDialogModule, MatButtonModule, MatIconModule],
+  template: `
+    <h2 mat-dialog-title>User is disabled</h2>
+    <mat-dialog-content>
+      Choose what you want to do with this user.
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end">
+      <button mat-button mat-dialog-close="RESTORE">Restore</button>
+      <button mat-button color="warn" mat-dialog-close="DELETE">Delete Permanently</button>
+      <button mat-button mat-dialog-close>Cancel</button>
+    </mat-dialog-actions>
+  `
+})
+export class DisabledUserChoiceDialog { }

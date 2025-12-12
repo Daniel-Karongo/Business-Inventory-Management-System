@@ -13,11 +13,12 @@
 $light-theme: mat.define-theme((color: (theme-type: light, primary: mat.$azure-palette),));
 $dark-theme: mat.define-theme((color: (theme-type: dark, primary: mat.$azure-palette),));
 
-app-root.light {
+
+body.light {
   @include mat.all-component-colors($light-theme);
 }
 
-app-root.dark {
+body.dark {
   @include mat.all-component-colors($dark-theme);
 }
 
@@ -25,7 +26,7 @@ app-root.dark {
    DESIGN TOKENS
 ----------------------------------------------------- */
 :root {
-  --font-sans: 'Inter', 'Segoe UI', Arial, sans-serif;
+  --font-sans: 'Inter', 'Segoe UI', 'Calibri', Arial, sans-serif;
 
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
@@ -42,9 +43,12 @@ app-root.dark {
   --text-primary: #111827;
   --text-secondary: #4b5563;
   --border: #e5e7eb;
+  --active: #60a5fa;
+  --success: #1a73e8;
+  --text-success: #21a752; 
 }
 
-app-root.dark {
+body.dark {
   --app-bg: #0f1115;
   --surface: #1a1d24;
   --surface-hover: #2a2f38;
@@ -59,8 +63,7 @@ app-root.dark {
    BASE LAYOUT
 ----------------------------------------------------- */
 html,
-body,
-app-root {
+body {
   margin: 0;
   height: 100%;
   background: var(--app-bg);
@@ -83,7 +86,8 @@ app-root {
 .mat-mdc-text-field-wrapper {
   background: var(--surface) !important;
   border-radius: 1px !important;
-  border: 1px solid var(--border) !important;
+  border: none !important;
+  box-shadow: 0px 0px 0px 1px rgba(0,0,0,0.2) !important;
 }
 
 .mat-mdc-text-field-wrapper:hover {
@@ -91,17 +95,31 @@ app-root {
 }
 
 .mdc-text-field__input {
-  color: var(--text-primary) !important;
+  color: var(--text-primary) !important;  
 }
 
 .mdc-floating-label {
   color: var(--text-secondary) !important;
 }
 
-app-root.dark .mat-mdc-text-field-wrapper {
-  background: #1f2937 !important;
+body.dark .mat-mdc-text-field-wrapper {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.search-input {
+  background: var(--surface) !important;
+  box-shadow: 1px 2px 3px 0px rgba(0,0,0,0.35) !important;
+  color: var(--text-primary) !important;
+  width: 48% !important;
+  min-width: 220px !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
   border-radius: 1px !important;
-  border: 1px solid #374151 !important;
+}
+
+body.dark .search-input {
+  border: none !important;
 }
 
 /* -----------------------------------------------------
@@ -111,11 +129,38 @@ app-root.dark .mat-mdc-text-field-wrapper {
 .mat-mdc-menu-panel {
   background: var(--surface) !important;
   color: var(--text-primary) !important;
+  border: none;
+  padding: 0.5rem 1rem;
+  transition: background 0.15s;
+  text-align: left;
+  box-shadow: 1px 2px 3px 0px rgba(0,0,0,0.35) !important;
+  
 }
 
 .mat-mdc-option:hover {
   background: var(--surface-hover) !important;
 }
+
+/* -------------------------------------------------------
+   MATERIAL BUTTONS
+-------------------------------------------------------- */
+
+button[mat-flat-button] {
+  background-color: #005cbb !important;
+  border-radius: 1px !important;
+  color: white !important;
+  box-shadow: 1px 2px 3px 0px rgba(0,0,0,0.35) !important;
+}
+
+button[mat-flat-button]:hover {
+  background: var(--success) !important;
+  transition: background 0.15s ease-in-out;
+}
+
+button[mat-stroked-button] {
+  box-shadow: 1px 2px 3px 0px rgba(0,0,0,0.35) !important;
+}
+
 
 /* -----------------------------------------------------
    TABLE ROWS
@@ -140,7 +185,7 @@ app-root.dark .mat-mdc-text-field-wrapper {
   color: var(--text-primary) !important;
 }
 
-app-root.dark .mdc-data-table__row.row-selected {
+body.dark .mdc-data-table__row.row-selected {
   background-color: rgba(0, 122, 255, 0.10) !important;
   border-left: 4px solid #3b82f6 !important;
 }
@@ -164,7 +209,7 @@ app-root.dark .mdc-data-table__row.row-selected {
   background: transparent;
 }
 
-app-root.dark * {
+body.dark * {
   scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
 }
 
@@ -196,15 +241,10 @@ app-root.dark * {
 }
 
 .mat-mdc-snack-bar-action .mdc-button__label {
-  color: #60a5fa !important;
+  color: var(--active) !important;
   font-weight: 600 !important;
 }
 
 .mat-mdc-snack-bar-action .mdc-button:hover .mdc-button__label {
   color: #93c5fd !important;
-}
-
-
-.mdc-flat-button {
-  background-color: red;
 }

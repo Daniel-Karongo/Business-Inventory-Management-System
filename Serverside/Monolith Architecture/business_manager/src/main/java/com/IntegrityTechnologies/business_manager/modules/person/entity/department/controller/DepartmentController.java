@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.departm
 
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.mapper.DepartmentMapper;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.service.DepartmentService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentMinimalDTO;
@@ -25,7 +26,7 @@ import java.util.UUID;
 public class DepartmentController {
 
     private final DepartmentService departmentService;
-    private final PrivilegesChecker privilegesChecker;
+    private final DepartmentMapper departmentMapper;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
@@ -67,7 +68,7 @@ public class DepartmentController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
     public ResponseEntity<DepartmentDTO> get(@PathVariable UUID id) {
-        return ResponseEntity.ok(DepartmentDTO.from(departmentService.getById(id)));
+        return ResponseEntity.ok(departmentMapper.toDTO(departmentService.getById(id)));
     }
 
     // --- Get all departments ---
@@ -75,7 +76,7 @@ public class DepartmentController {
     @PreAuthorize("""
     (#deleted == true or #deleted == null) and hasRole('SUPERUSER') 
     or 
-    (#deleted == false and hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER'))""")
+    (#deleted == false and hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER','SUPERVISOR'))""")
     public ResponseEntity<List<DepartmentDTO>> getAllDepartments(
             @RequestParam(required = false) Boolean deleted
     ) {

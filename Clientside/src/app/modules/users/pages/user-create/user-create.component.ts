@@ -24,6 +24,8 @@ import { BranchService } from '../../../branches/services/branch.service';
 import { DepartmentService } from '../../../departments/services/department.service';
 import { RoleService } from '../../services/role/role.service';
 import { AuthService } from '../../../auth/services/auth.service';
+import { DepartmentDTO } from '../../../departments/models/department.model';
+import { BranchDTO } from '../../../branches/models/branch.model';
 
 @Component({
   selector: 'app-user-create',
@@ -51,13 +53,12 @@ export class UserCreateComponent implements OnInit {
 
   form!: FormGroup;
 
-  branches: any[] = [];
-  departments: any[] = [];
+  branches: BranchDTO[] = [];
+  departments: DepartmentDTO[] = [];
   assignableRoles: string[] = [];
 
   hidePw = true;
   hideConfirmPw = true;
-  pwMismatch = false;
 
   files: File[] = [];
   previews: { src?: string; name: string; type: string }[] = [];
@@ -86,7 +87,7 @@ export class UserCreateComponent implements OnInit {
 
   ngOnInit() {
     this.form = this.fb.group({
-      username: [''],
+      username: ['', Validators.required],
       idNumber: [''],
       emailAddresses: [[]],
       phoneNumbers: [[]],
@@ -98,10 +99,6 @@ export class UserCreateComponent implements OnInit {
       validators: this.passwordValidator
     });
 
-    this.form.statusChanges.subscribe(() => {
-      this.pwMismatch = this.form.hasError('pwMismatch');
-    });
-
     this.loadBranches();
     this.loadDepts();
     this.loadRoles();
@@ -109,24 +106,164 @@ export class UserCreateComponent implements OnInit {
     this.addAssignment();
   }
 
+  get pwMismatch() {
+    return this.form.get('confirmPassword')?.hasError('pwMismatch');
+  }
+
   /* ------------------ Validators ------------------ */
-  passwordValidator = (group: FormGroup) => {
-    const pw = group.get('password')?.value;
-    const cp = group.get('confirmPassword')?.value;
-    return pw === cp ? null : { pwMismatch: true };
-  };
+  passwordValidator(form: FormGroup) {
+    const pw = form.get('password')!.value;
+    const cpw = form.get('confirmPassword')!.value;
+
+    const confirmControl = form.get('confirmPassword');
+
+    if (!pw || !cpw) {
+      confirmControl?.setErrors(null);
+      return null;
+    }
+
+    if (pw !== cpw) {
+      confirmControl?.setErrors({ pwMismatch: true });
+      return { pwMismatch: true };
+    }
+
+    confirmControl?.setErrors(null);
+    return null;
+  }
+
+  validateEmailsPhones(): boolean {
+    const emails: string[] = this.form.get('emailAddresses')!.value || [];
+    const phones: string[] = this.form.get('phoneNumbers')!.value || [];
+
+    // Email regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    for (const e of emails) {
+      if (e && !emailRegex.test(e)) {
+        this.snackbar.open(`Invalid email: ${e}`, 'Close', { duration: 1800 });
+        return false;
+      }
+    }
+
+    // Phone regex: +country-code OR 07xxxxxxx OR 01xxxxxxx
+    const phoneRegex = /^\+?\d{7,15}$/;
+
+    for (const p of phones) {
+      if (p && !phoneRegex.test(p)) {
+        this.snackbar.open(`Invalid phone number: ${p}`, 'Close', { duration: 1800 });
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  validateAssignments(): boolean {
+    const arr = this.assignments.controls;
+
+    // 1️⃣ Required fields
+    for (let i = 0; i < arr.length; i++) {
+      const row = arr[i].value;
+
+      if (!row.branchId || !row.departmentId) {
+        this.snackbar.open("Fill all assignment fields", "Close", { duration: 1800 });
+        return false;
+      }
+    }
+
+    // 2️⃣ Detect duplicates — same branch + department
+    const seen = new Set<string>();
+    for (let i = 0; i < arr.length; i++) {
+      const row = arr[i].value;
+      const key = `${row.branchId}::${row.departmentId}`;
+
+      if (seen.has(key)) {
+        this.snackbar.open("Duplicate branch/department assignment", "Close", { duration: 1800 });
+        return false;
+      }
+      seen.add(key);
+    }
+
+    // 3️⃣ Head/Member conflict detection
+    const deptMap = new Map<string, Set<string>>();
+
+    for (let i = 0; i < arr.length; i++) {
+      const row = arr[i].value;
+      const dept = row.departmentId;
+      const pos = (row.position || "").toLowerCase();
+
+      const set = deptMap.get(dept) || new Set<string>();
+      set.add(pos);
+      deptMap.set(dept, set);
+    }
+
+    for (const [dept, set] of deptMap.entries()) {
+      if (set.has("head") && set.has("member")) {
+        this.snackbar.open(
+          "A department cannot have the same user as both Head and Member",
+          "Close",
+          { duration: 2000 }
+        );
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  validateStep(step: number): boolean {
+    switch (step) {
+
+      /** STEP 0 — BASIC INFO */
+      case 0:
+        return this.form.get('username')!.valid;
+
+      /** STEP 1 — CONTACTS (emails / phones) */
+      case 1:
+        return this.validateEmailsPhones(); // your function
+
+      /** STEP 2 — ROLE + PASSWORD */
+      case 2:
+        const roleValid = this.form.get('role')!.valid;
+        const pwValid = !this.pwMismatch &&
+          this.form.get('password')!.valid &&
+          this.form.get('confirmPassword')!.valid;
+        return roleValid && pwValid;
+
+      /** STEP 3 — ASSIGNMENTS */
+      case 3:
+        return this.validateAssignments(); // your existing method
+
+      /** STEP 4 — FILES (always valid) */
+      case 4:
+        return true;
+
+      /** STEP 5 — REVIEW (always valid, final) */
+      case 5:
+        return true;
+
+      default:
+        return false;
+    }
+  }
 
   /* ------------------ Data Loading ------------------ */
   loadBranches() {
     this.branchService.getAll(false)
       .pipe(catchError(() => of([])))
-      .subscribe(res => { this.branches = res; });
+      .subscribe(res => {
+        console.log(res);
+        this.branches = res;
+      });
   }
 
   loadDepts() {
     this.departmentService.getAll(false)
       .pipe(catchError(() => of([])))
-      .subscribe(res => { this.departments = res; });
+      .subscribe(res => {
+        console.log(res);
+        this.departments = res;
+      });
   }
 
   loadRoles() {
@@ -167,7 +304,9 @@ export class UserCreateComponent implements OnInit {
   removeAssignment(i: number) { this.assignments.removeAt(i); }
 
   departmentsForBranch(branchId: string) {
-    return this.departments.filter(d => d.branchId === branchId);
+    return this.departments.filter(d =>
+      d.branches?.some(b => b.id === branchId)
+    );
   }
 
   getBranchName(id: string) {
@@ -223,12 +362,41 @@ export class UserCreateComponent implements OnInit {
   }
 
   /* ------------------ Navigation ------------------ */
-  prev() { this.step--; }
   next() {
-    if (this.step === 2 && this.pwMismatch) return;
-    this.step++;
+    if (!this.validateStep(this.step)) {
+      this.snackbar.open("Please complete this step before continuing", "Close", { duration: 1800 });
+      return;
+    }
+
+    if (this.step < this.maxStep) {
+      this.step++;
+    }
   }
-  goTo(i: number) { this.step = i; }
+
+  prev() {
+    if (this.step > 0) {
+      this.step--;
+    }
+  }
+
+  goTo(targetStep: number) {
+    // Going backward is always allowed
+    if (targetStep < this.step) {
+      this.step = targetStep;
+      return;
+    }
+
+    // Validate all previous steps
+    for (let i = 0; i < targetStep; i++) {
+      if (!this.validateStep(i)) {
+        this.snackbar.open("Please complete previous steps first", "Close", { duration: 1800 });
+        return;
+      }
+    }
+
+    this.step = targetStep;
+  }
+
 
   /* ------------------ Submit ------------------ */
   submit() {
@@ -237,8 +405,15 @@ export class UserCreateComponent implements OnInit {
     fd.append('password', this.form.value.password);
     fd.append('role', this.form.value.role);
     fd.append('idNumber', this.form.value.idNumber);
-    fd.append('emailAddresses', JSON.stringify(this.form.value.emailAddresses));
-    fd.append('phoneNumbers', JSON.stringify(this.form.value.phoneNumbers));
+    // EMAILS
+    this.form.value.emailAddresses?.forEach((email: string, i: number) => {
+      fd.append(`emailAddresses[${i}]`, email);
+    });
+
+    // PHONES
+    this.form.value.phoneNumbers?.forEach((phone: string, i: number) => {
+      fd.append(`phoneNumbers[${i}]`, phone);
+    });
 
     this.assignments.value.forEach((a: any, i: number) => {
       fd.append(`departmentsAndPositions[${i}].branchId`, a.branchId);

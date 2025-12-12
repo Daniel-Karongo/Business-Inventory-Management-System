@@ -54,7 +54,6 @@ export class AuthService {
   isLoggedIn(): boolean {
     const token = localStorage.getItem(this.TOKEN_KEY);
     const exp = Number(localStorage.getItem(this.EXPIRES_KEY));
-
     if (!token || !exp) return false;
     if (Date.now() > exp) return false;
 

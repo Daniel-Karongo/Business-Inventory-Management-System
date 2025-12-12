@@ -23,13 +23,9 @@ public class RollcallDTO {
     public static RollcallDTO from(Rollcall rollcall) {
         RollcallDTO dto = new RollcallDTO();
         dto.setRollCallId(rollcall.getId());
-        dto.setUserId(rollcall.getUser().getId());
-        dto.setDepartmentId(
-                rollcall.getDepartment() == null ? null : rollcall.getDepartment().getId()
-        );
-        dto.setBranchId(
-                rollcall.getBranch() == null ? null : rollcall.getBranch().getId()
-        );
+        dto.setUserId(rollcall.getUserId());
+        dto.setDepartmentId(rollcall.getDepartmentId());
+        dto.setBranchId(rollcall.getBranchId());
         dto.setTimestamp(rollcall.getTimestamp());
         dto.setStatus(rollcall.getStatus());
         dto.setMethod(rollcall.getMethod());

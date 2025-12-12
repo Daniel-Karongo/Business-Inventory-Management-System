@@ -3,9 +3,11 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.user.re
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -172,4 +174,21 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
         return cleaned;
     }
+
+    /* ====================== USER DELETE FROM OTHER ENTITIES ====================== */
+
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM branch_users WHERE user_id = :userId", nativeQuery = true)
+    int deleteUserFromBranch(@Param("userId") UUID userId);
+
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM department_heads WHERE user_id = :userId", nativeQuery = true)
+    int deleteUserFromDepartmentHeads(@Param("userId") UUID userId);
+
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM department_members WHERE user_id = :userId", nativeQuery = true)
+    int deleteUserFromDepartmentMembers(@Param("userId") UUID userId);
 }

@@ -22,17 +22,20 @@ public class Rollcall {
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(name = "user_id", columnDefinition = "BINARY(16)", nullable = false)
+    private UUID userId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "department_id")
-    private Department department;
+    private String username;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "branch_id")
-    private Branch branch;
+    @Column(name = "department_id", columnDefinition = "BINARY(16)", nullable = false)
+    private UUID departmentId;
+
+    private String departmentName;
+
+    @Column(name = "branch_id", columnDefinition = "BINARY(16)", nullable = false)
+    private UUID branchId;
+
+    private String branchName;
 
     private LocalDateTime timestamp; // when recorded
 

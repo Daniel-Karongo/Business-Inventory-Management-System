@@ -5,6 +5,7 @@ import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundExcept
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.service.BranchService;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.mapper.DepartmentMapper;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
@@ -33,6 +34,7 @@ public class DepartmentService {
     private final PrivilegesChecker privilegesChecker;
     private final BranchRepository branchRepository;
     private final BranchService branchService;
+    private final DepartmentMapper departmentMapper;
 
     @Transactional
     public DepartmentDTO create(DepartmentDTO dto, Authentication authentication) {
@@ -87,7 +89,7 @@ public class DepartmentService {
         updateBranchDepartments(dto, department, authentication);
         logAudit(department, "CREATE", null, dto.toString(), authentication, null);
 
-        return DepartmentDTO.from(department);
+        return departmentMapper.toDTO(department);
     }
 
 
@@ -150,7 +152,7 @@ public class DepartmentService {
             logAudit(updated, "UPDATE", oldValues.toString(), newValues.toString(), authentication, "Updated department fields");
         }
 
-        return DepartmentDTO.from(updated);
+        return departmentMapper.toDTO(updated);
     }
 
 
@@ -176,7 +178,7 @@ public class DepartmentService {
                                         ? Boolean.TRUE.equals(d.isDeleted())
                                         : Boolean.FALSE.equals(d.isDeleted())
                 )
-                .map(DepartmentDTO::from)
+                .map(d -> departmentMapper.toDTO(d))
                 .collect(Collectors.toList());
     }
 

@@ -10,7 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 export interface ReasonDialogData {
   title: string;
   message: string;
-  action: 'DISABLE' | 'RESTORE';
+  action: 'DISABLE' | 'RESTORE' | 'DELETE';
   confirmText?: string;
   cancelText?: string;
 }
@@ -32,23 +32,22 @@ export interface ReasonDialogData {
 })
 export class ReasonDialogComponent {
 
-  /** Disable reasons */
   disableReasons = [
-    'Security risk',
-    'Policy violation',
-    'Left company',
-    'Temporary suspension',
-    'Incorrect details',
-    'Duplicate account'
+    'Security risk', 'Policy violation', 'Left company', 'Temporary suspension',
+    'Incorrect details', 'Duplicate account'
   ];
 
-  /** Restore reasons */
   restoreReasons = [
-    'Mistaken disable',
-    'Issue resolved',
-    'Reinstated by management',
-    'Information updated',
-    'Investigation complete'
+    'Mistaken disable', 'Issue resolved', 'Reinstated by management',
+    'Information updated', 'Investigation complete'
+  ];
+
+  deleteReasons = [
+    'GDPR / Data cleanup',
+    'Requested by management',
+    'Duplicate account',
+    'Never used',
+    'Fraudulent account'
   ];
 
   selectedReason: string | null = null;
@@ -59,21 +58,18 @@ export class ReasonDialogComponent {
     @Inject(MAT_DIALOG_DATA) public data: ReasonDialogData
   ) {}
 
-  /** Dynamically return correct reason list */
   get reasonOptions(): string[] {
-    return this.data.action === 'RESTORE'
-      ? this.restoreReasons
-      : this.disableReasons;
+    switch (this.data.action) {
+      case 'RESTORE': return this.restoreReasons;
+      case 'DELETE': return this.deleteReasons;
+      default: return this.disableReasons;
+    }
   }
 
   confirm() {
-    let reason: string | null = null;
-
-    if (this.selectedReason && this.selectedReason !== 'OTHER') {
-      reason = this.selectedReason;
-    } else if (this.selectedReason === 'OTHER' && this.customReason.trim()) {
-      reason = this.customReason.trim();
-    }
+    let reason = this.selectedReason === 'OTHER'
+      ? (this.customReason.trim() || null)
+      : this.selectedReason;
 
     this.ref.close({ confirmed: true, reason });
   }
@@ -81,12 +77,4 @@ export class ReasonDialogComponent {
   cancel() {
     this.ref.close({ confirmed: false });
   }
-}
-
-export interface ReasonDialogData {
-  title: string;
-  message: string;
-  action: 'DISABLE' | 'RESTORE';   // <-- NEW
-  confirmText?: string;
-  cancelText?: string;
 }

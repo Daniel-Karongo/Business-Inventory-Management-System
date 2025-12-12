@@ -1,10 +1,11 @@
-:host {
+.user-create-root {
   display: block;
+  padding-top: 0;
 }
 
 /* ---------------- HEADER ---------------- */
 .wizard-header {
-  height: 64px;
+  height: 80px;
   position: sticky;
   top: 0;
   z-index: 50;
@@ -12,69 +13,102 @@
   border-bottom: 1px solid var(--border);
   padding: 12px 18px;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
+  margin-top: 0;
+  box-shadow: 2px 3px 5px 1px rgba(0,0,0,0.25) !important;
 }
 
 .create-body {
-  position: relative;
-  top: 64px;
+  margin-top: 10px;
+  overflow-y: auto;
 }
 
-.stepper-frame {
-  margin-top: 10px;
-  border: 1px solid var(--border);
-  border-radius: none;
-  padding: 8px;
-  background: var(--surface);
-}
+// .stepper-frame {
+//   display: block;
+//   margin-top: 10px;
+//   border: 1px solid var(--border);
+//   border-radius: none;
+//   padding: 8px;
+//   background: var(--surface);
+//   overflow-x: auto;
+//   box-shadow: 2px 3px 7px 0px rgba(0,0,0,0.35) !important;
+// }
 
 /* ---------------- STEPPER ---------------- */
 .wizard-steps {
+  margin-top: 10px;
+  background: var(--surface);
   display: flex;
   gap: 12px;
   overflow-x: auto;
-  padding-block: 5px;
+  padding: 8px;
+  box-shadow: 1px 2px 3px 0px rgba(0,0,0,0.35) !important;
 }
 
 .step {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
 
-  padding: 10px 16px;
+  font-size: 0.9rem;
+  padding: 5px 10px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: none;
+  border-radius: 6px;
   cursor: pointer;
+  box-shadow: 1px 1px 1px 1px rgba(0,0,0,0.2) !important;
 
-  min-width: 150px;
+  white-space: nowrap;  
+  width: auto;
+  min-width: max-content;
+  flex-shrink: 0;
+}
+
+.step .label .title {
+  width: max-content;
 }
 
 .step.active {
-  background: rgba(26, 115, 232, 0.14);
-  border-color: rgba(26, 115, 232, 0.45);
+  background: rgba(26,115,232,0.14);
+  border-color: rgba(26,115,232,0.45);
+  color: var(--success)
+}
+
+.step.active .num {
+  background: var(--active);
+  color: #fff;
 }
 
 .step.completed .num {
-  background: #1a73e8;
-  color: white;
+  background: var(--success);
+  color: #fff;
 }
 
+.step.completed .subtitle {
+  color: var(--text-success);
+}
+
+
 .num {
-  width: 32px;
-  height: 32px;
-  border-radius: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
   background: var(--surface-hover);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
+  box-shadow: 1px 1px 1px 1px rgba(0,0,0,0.09) !important;
+}
+
+.cancel-button {
+  margin-right: 5px;
 }
 
 /* ---------------- BODY ---------------- */
 .wizard-body {
-  padding: 32px 24px;
+  padding: 32px 10px;
 }
 
 .grid {
@@ -164,11 +198,18 @@
 }
 
 /* ---------------- REVIEW ---------------- */
-.review.card {
-  border: 1px solid var(--border);
-  background: var(--surface);
+.review-card {
+  box-shadow: 0px 0px 1px 1px rgba(0,0,0,0.35) !important;
   border-radius: 8px;
   padding: 20px;
+  align-self: center;
+}
+
+.summary-title {
+  text-align: left;
+  font-weight: 500;
+  font-size: 1.2rem;
+  margin-bottom: 10px;
 }
 
 .summary-grid {

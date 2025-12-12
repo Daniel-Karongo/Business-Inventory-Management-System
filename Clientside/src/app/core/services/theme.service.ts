@@ -28,7 +28,7 @@ export class ThemeService {
   }
 
   private applyPreference(pref: 'light' | 'dark' | 'system') {
-    const root = document.querySelector('app-root')!;
+    const root = document.querySelector('body')!;
 
     root.classList.remove('light', 'dark');
 

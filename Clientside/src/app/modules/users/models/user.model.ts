@@ -1,21 +1,39 @@
+import { FileUploadDTO } from "../../../core/models/file-upload.model";
 import { BranchHierarchyDTO } from "../../branches/models/branch.model";
 import { DepartmentAssignmentDTO, DepartmentMinimalDTO } from "../../departments/models/department.model";
 
 export interface User {
-  id?: string;
+  id?: string; // read only
+
   username: string;
   password?: string;
-  emailAddresses?: string[]; // maps to backend
+  emailAddresses?: string[];
   phoneNumbers?: string[];
   idNumber?: string;
-  role?: string; // single role name
+  role: string;
+
+  // read-only
   branchHierarchy?: BranchHierarchyDTO[];
-  departments?: DepartmentMinimalDTO[]; // read-only from backend
-  departmentsAndPositions?: DepartmentAssignmentDTO[]; // write-only to backend
+  departments?: DepartmentMinimalDTO[];
+
+  // write-only
+  departmentsAndPositions?: DepartmentAssignmentDTO[];
+
   createdBy?: string;
   lastModifiedBy?: string;
-  createdAt: string;
+  createdAt?: string; // LocalDateTime
   lastModifiedAt?: string;
+
   deleted?: boolean;
-  idImageUrls?: string[]; // read-only image URLs
+
+  // write-only uploads
+  userFiles?: FileUploadDTO[];
+
+  // read-only
+  idImageUrls?: string[];
+}
+
+export interface MinimalUserDTO {
+  id: string;
+  username: string;
 }

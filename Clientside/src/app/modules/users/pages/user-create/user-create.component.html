@@ -2,10 +2,10 @@
 
   <!-- ========================= HEADER ========================= -->
   <header class="wizard-header">
-    <div class="left">
+    <!-- <div class="left">
       <h2>Create User</h2>
       <div class="breadcrumb-sub">Users / Create</div>
-    </div>
+    </div> -->
 
     <div class="right">
       <button mat-stroked-button class="cancel-button" (click)="router.navigate(['/users'])">
@@ -20,23 +20,16 @@
 
   <div class="create-body">
     <!-- ====================== STEPPER FRAME ====================== -->
-    <div class="stepper-frame">
-      <nav class="wizard-steps">
-        <div
-          *ngFor="let label of steps; let i = index"
-          class="step"
-          [class.active]="i === step"
-          [class.completed]="i < step"
-          (click)="goTo(i)"
-        >
-          <div class="num">{{ i + 1 }}</div>
-          <div class="label">
-            <div class="title">{{ label }}</div>
-            <div class="subtitle" *ngIf="i < step">Completed</div>
-          </div>
+    <nav class="wizard-steps">
+      <div *ngFor="let label of steps; let i = index" class="step" [class.active]="i === step"
+        [class.completed]="i < step" (click)="goTo(i)">
+        <div class="num">{{ i + 1 }}</div>
+        <div class="label">
+          <div class="title">{{ label }}</div>
+          <div class="subtitle" *ngIf="i < step">Completed</div>
         </div>
-      </nav>
-    </div>
+      </div>
+    </nav>
 
     <!-- ============================ BODY ============================ -->
     <main class="wizard-body">
@@ -64,22 +57,14 @@
       <section *ngIf="step === 1">
         <mat-form-field appearance="fill" class="w-full">
           <mat-label>Email addresses (comma separated)</mat-label>
-          <input
-            matInput
-            [value]="form.get('emailAddresses')?.value?.join(', ')"
-            (change)="onEmailsChange($event)"
-            placeholder="alice@example.com, bob@acme.test"
-          />
+          <input matInput [value]="form.get('emailAddresses')?.value?.join(', ')" (change)="onEmailsChange($event)"
+            placeholder="alice@example.com, bob@acme.test" />
         </mat-form-field>
 
         <mat-form-field appearance="fill" class="w-full">
           <mat-label>Phone numbers (comma separated)</mat-label>
-          <input
-            matInput
-            [value]="form.get('phoneNumbers')?.value?.join(', ')"
-            (change)="onPhonesChange($event)"
-            placeholder="0712xxxxxxx, +254712xxxxxx"
-          />
+          <input matInput [value]="form.get('phoneNumbers')?.value?.join(', ')" (change)="onPhonesChange($event)"
+            placeholder="0712xxxxxxx, +254712xxxxxx" />
         </mat-form-field>
 
         <div class="nav">
@@ -112,7 +97,9 @@
             <mat-icon>{{ hideConfirmPw ? 'visibility' : 'visibility_off' }}</mat-icon>
           </button>
 
-          <mat-error *ngIf="pwMismatch">Passwords do not match</mat-error>
+          <mat-error *ngIf="form.get('confirmPassword')?.hasError('pwMismatch')">
+            Passwords do not match
+          </mat-error>
         </mat-form-field>
 
         <div class="nav">
@@ -137,10 +124,7 @@
             <mat-form-field appearance="fill" class="col">
               <mat-label>Department</mat-label>
               <mat-select formControlName="departmentId">
-                <mat-option
-                  *ngFor="let d of departmentsForBranch(g.get('branchId')!.value)"
-                  [value]="d.id"
-                >
+                <mat-option *ngFor="let d of departmentsForBranch(g.get('branchId')!.value)" [value]="d.id">
                   {{ d.name }}
                 </mat-option>
               </mat-select>
@@ -176,7 +160,7 @@
         <div class="files-section">
 
           <input id="fileInput" type="file" hidden multiple accept="image/*,application/pdf"
-                (change)="onFilesPicked($event)" />
+            (change)="onFilesPicked($event)" />
           <button mat-stroked-button (click)="openFilePicker()">Upload files</button>
 
           <div class="preview-grid">
@@ -234,28 +218,33 @@
       <!-- ============= STEP 5 — REVIEW ============= -->
       <section *ngIf="step === 5">
 
-        <div class="review card">
+        <div class="review-card">
 
-          <h3>Summary</h3>
+          <h3 class="summary-title">Summary</h3>
 
           <div class="summary-grid">
             <div class="col">
-              <dt>Username</dt><dd>{{ form.value.username }}</dd>
-              <dt>ID Number</dt><dd>{{ form.value.idNumber }}</dd>
-              <dt>Emails</dt><dd>{{ form.value.emailAddresses?.join(', ') }}</dd>
+              <dt>Username</dt>
+              <dd>{{ form.value.username }}</dd>
+              <dt>ID Number</dt>
+              <dd>{{ form.value.idNumber }}</dd>
+              <dt>Emails</dt>
+              <dd>{{ form.value.emailAddresses?.join(', ') }}</dd>
             </div>
 
             <div class="col">
-              <dt>Phones</dt><dd>{{ form.value.phoneNumbers?.join(', ') }}</dd>
-              <dt>Role</dt><dd>{{ form.value.role }}</dd>
+              <dt>Phones</dt>
+              <dd>{{ form.value.phoneNumbers?.join(', ') }}</dd>
+              <dt>Role</dt>
+              <dd>{{ form.value.role }}</dd>
               <dt>Files</dt>
               <dd>
                 <ul>
                   <li *ngFor="let f of files; let i = index">
-                    {{ previews[i]?.name }} —
+                    {{ previews[i].name }} —
                     {{ fileDescriptions[i] === 'Other'
-                        ? (customDescriptions[i] || 'Other')
-                        : fileDescriptions[i]
+                    ? (customDescriptions[i] || 'Other')
+                    : fileDescriptions[i]
                     }}
                   </li>
                 </ul>
