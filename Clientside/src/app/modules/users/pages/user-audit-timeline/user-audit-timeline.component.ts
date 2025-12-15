@@ -18,8 +18,10 @@ export class UserAuditTimelineComponent implements OnInit {
   constructor(private userService: UserService) {}
 
   ngOnInit() {
-    if (this.userId) {
-      this.userService.auditsForUser(this.userId).subscribe(a => this.audits = a || []);
-    }
+    if (!this.userId) return;
+
+    this.userService.auditsForUser(this.userId).subscribe(a =>
+      this.audits = a || []
+    );
   }
 }

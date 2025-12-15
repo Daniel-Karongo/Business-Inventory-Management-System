@@ -7,7 +7,7 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.m
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductImage;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierMinimalDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.UserMapper.UserMapper;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.mapper.UserMapper;
 import org.mapstruct.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;

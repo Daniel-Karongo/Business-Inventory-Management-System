@@ -26,6 +26,7 @@ import { RoleService } from '../../services/role/role.service';
 import { AuthService } from '../../../auth/services/auth.service';
 import { DepartmentDTO } from '../../../departments/models/department.model';
 import { BranchDTO } from '../../../branches/models/branch.model';
+import { FileViewerDialog } from '../../../../shared/components/file-viewer/file-viewer.component';
 
 @Component({
   selector: 'app-user-create',
@@ -62,9 +63,11 @@ export class UserCreateComponent implements OnInit {
 
   files: File[] = [];
   previews: { src?: string; name: string; type: string }[] = [];
-  descriptionOptions = ['ID', 'Passport', 'Signature', 'Utility Bill', 'Other'];
-  fileDescriptions: string[] = [];
-  customDescriptions: string[] = [];
+  descriptionOptions = ['ID', 'Passport', 'Signature', 'CV', 'Other'];
+
+  get filesArray(): FormArray {
+    return this.form.get('files') as FormArray;
+  }
 
   busy = false;
 
@@ -94,16 +97,40 @@ export class UserCreateComponent implements OnInit {
       role: ['', Validators.required],
       password: ['', [Validators.required, Validators.minLength(8)]],
       confirmPassword: ['', Validators.required],
-      departmentsAndPositions: this.fb.array([])
+      departmentsAndPositions: this.fb.array([]),
+
+      files: this.fb.array([])
     }, {
       validators: this.passwordValidator
     });
+
 
     this.loadBranches();
     this.loadDepts();
     this.loadRoles();
 
     this.addAssignment();
+  }
+
+  newFileGroup(file: File) {
+    const fg = this.fb.group({
+      file: [file],
+      type: ['ID', Validators.required],
+      custom: ['']
+    });
+
+    fg.get('type')!.valueChanges.subscribe(v => {
+      const c = fg.get('custom');
+      if (v === 'Other') {
+        c?.setValidators([Validators.required, Validators.minLength(3)]);
+      } else {
+        c?.clearValidators();
+        c?.setValue('');
+      }
+      c?.updateValueAndValidity();
+    });
+
+    return fg;
   }
 
   get pwMismatch() {
@@ -272,7 +299,7 @@ export class UserCreateComponent implements OnInit {
       .subscribe((roles: any[]) => {
         const all = roles.map(r => typeof r === 'string' ? r : r.name);
         const order = ['EMPLOYEE', 'SUPERVISOR', 'MANAGER', 'ADMIN', 'SUPERUSER'];
-        const myRole = this.auth.getRoles()?.[0];
+        const myRole = this.auth.getRole();
         const idx = order.indexOf(myRole);
         this.assignableRoles = all.filter(r => order.indexOf(r) <= idx);
       });
@@ -328,29 +355,35 @@ export class UserCreateComponent implements OnInit {
 
     for (let i = 0; i < list.length; i++) {
       const file = list.item(i)!;
-      this.files.push(file);
 
-      this.fileDescriptions.push('ID');
-      this.customDescriptions.push('');
+      this.files.push(file);
+      this.filesArray.push(this.newFileGroup(file));
 
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
-        reader.onload = () => this.previews.push({
-          src: reader.result as string, name: file.name, type: file.type
-        });
+        reader.onload = () => {
+          this.previews.push({
+            src: reader.result as string,
+            name: file.name,
+            type: file.type
+          });
+        };
         reader.readAsDataURL(file);
       } else {
-        this.previews.push({ name: file.name, type: file.type });
+        this.previews.push({
+          name: file.name,
+          type: file.type
+        });
       }
     }
+
     ev.target.value = '';
   }
 
   removeFile(i: number) {
     this.files.splice(i, 1);
     this.previews.splice(i, 1);
-    this.fileDescriptions.splice(i, 1);
-    this.customDescriptions.splice(i, 1);
+    this.filesArray.removeAt(i);
   }
 
   viewFile(i: number) {
@@ -421,12 +454,16 @@ export class UserCreateComponent implements OnInit {
       fd.append(`departmentsAndPositions[${i}].position`, a.position);
     });
 
-    this.files.forEach((file, i) => {
+    this.filesArray.controls.forEach((ctrl, i) => {
+      const file = ctrl.value.file;
+      const type = ctrl.value.type;
+      const custom = ctrl.value.custom;
+
       fd.append(`userFiles[${i}].file`, file, file.name);
-      const desc = this.fileDescriptions[i] === 'Other'
-        ? this.customDescriptions[i]
-        : this.fileDescriptions[i];
-      fd.append(`userFiles[${i}].description`, desc);
+      fd.append(
+        `userFiles[${i}].description`,
+        type === 'Other' ? custom : type
+      );
     });
 
     this.busy = true;
@@ -442,52 +479,4 @@ export class UserCreateComponent implements OnInit {
           this.snackbar.open('Failed to create user', 'Close', { duration: 2000 })
       });
   }
-}
-
-/* ============================================================
-   FILE VIEWER DIALOG
-============================================================ */
-@Component({
-  standalone: true,
-  imports: [CommonModule, MatDialogModule, MatIconModule, MatButtonModule],
-  template: `
-    <div class="file-viewer">
-      <header class="header">
-        <h3>{{ data.preview?.name }}</h3>
-        <button mat-icon-button (click)="close()"><mat-icon>close</mat-icon></button>
-      </header>
-
-      <div *ngIf="isImage(); else pdfBlock" class="content">
-        <img [src]="data.preview?.src" />
-      </div>
-
-      <ng-template #pdfBlock>
-        <div class="pdf-content">
-          <button mat-stroked-button (click)="openPdf()">Open PDF</button>
-        </div>
-      </ng-template>
-    </div>
-  `,
-  styles: [`
-    .header { display:flex; justify-content:space-between; align-items:center; }
-    img { width:100%; max-height:80vh; object-fit:contain; background:#000; }
-    .pdf-content { padding:20px; text-align:center; }
-  `]
-})
-export class FileViewerDialog {
-  constructor(
-    @Inject(MAT_DIALOG_DATA) public data: any,
-    private dialog: MatDialog
-  ) { }
-
-  isImage() {
-    return this.data.preview?.src;
-  }
-
-  openPdf() {
-    const url = URL.createObjectURL(this.data.file);
-    window.open(url, '_blank');
-  }
-
-  close() { this.dialog.closeAll(); }
 }

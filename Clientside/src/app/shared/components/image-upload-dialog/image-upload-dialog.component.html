@@ -1,0 +1,50 @@
+<h2 mat-dialog-title>Upload Image</h2>
+
+<div mat-dialog-content class="content" [formGroup]="fg">
+
+  <input
+    type="file"
+    accept="image/*,application/pdf"
+    (change)="onFileSelected($event)"
+  />
+
+  <div class="preview" *ngIf="previewUrl">
+    <img [src]="previewUrl" />
+  </div>
+
+  <!-- PREDEFINED OPTIONS -->
+  <mat-form-field appearance="fill" class="full">
+    <mat-label>Description</mat-label>
+    <mat-select formControlName="type">
+      <mat-option *ngFor="let opt of descriptionOptions" [value]="opt">
+        {{ opt }}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <!-- CUSTOM DESCRIPTION -->
+  <mat-form-field
+    appearance="fill"
+    class="full"
+    *ngIf="fg.get('type')?.value === 'Other'"
+  >
+    <mat-label>Enter description</mat-label>
+    <input matInput formControlName="custom" />
+    <mat-error *ngIf="fg.get('custom')?.invalid">
+      Please enter at least 3 characters
+    </mat-error>
+  </mat-form-field>
+
+</div>
+
+<div mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button
+    mat-flat-button
+    color="primary"
+    [disabled]="!file || fg.invalid"
+    (click)="confirm()"
+  >
+    Upload
+  </button>
+</div>

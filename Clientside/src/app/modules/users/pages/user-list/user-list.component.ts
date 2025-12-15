@@ -515,8 +515,8 @@ export class UserListComponent implements OnInit {
 
   // navigation helpers
   goCreate() { this.router.navigate(['/users/create']); }
-  edit(u: User) { this.router.navigate([`/users/${u.id}/edit`]); }
-  view(u: User) { this.router.navigate([`/users/${u.id}`]); }
+  edit(u: User) { this.router.navigate([`/users/${u.username}/edit`]); }
+  view(u: User) { this.router.navigate([`/users/${u.username}`]); }
 
   // Utility used by template to render branch / dept grid
   branchDeptRows(u: User) {

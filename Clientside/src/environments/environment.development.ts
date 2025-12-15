@@ -55,15 +55,18 @@ export const environment = {
         allDownload: (deletedImages?: boolean, deletedUsers?: boolean) =>
           `/users/images/all/download?deletedImages=${deletedImages}&deletedUsers=${deletedUsers}`,
 
-        forUser: (identifier: string, deleted?: boolean) =>
-          `/users/images/all/${identifier}?deleted=${deleted}`,
+        forUser: (identifier: string) =>
+          `/users/images/all/${identifier}`,
 
-        forUserDownload: (identifier: string, deleted?: boolean) =>
-          `/users/images/all/download/${identifier}?deleted=${deleted}`,
+        forUserDownload: (identifier: string) =>
+          `/users/images/all/download/${identifier}`,
 
         one: (identifier: string, filename: string, deleted?: boolean) =>
           `/users/images/${identifier}/${filename}?deleted=${deleted}`,
 
+        softDelete: (identifier: string, filename: string) =>
+          `/users/images/${identifier}/${filename}/soft`,
+        
         softDeleteAll: (identifier: string) =>
           `/users/images/all/${identifier}/soft`,
 

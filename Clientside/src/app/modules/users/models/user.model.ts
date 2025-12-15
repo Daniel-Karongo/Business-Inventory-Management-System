@@ -3,7 +3,7 @@ import { BranchHierarchyDTO } from "../../branches/models/branch.model";
 import { DepartmentAssignmentDTO, DepartmentMinimalDTO } from "../../departments/models/department.model";
 
 export interface User {
-  id?: string; // read only
+  id: string; // read only
 
   username: string;
   password?: string;
@@ -36,4 +36,23 @@ export interface User {
 export interface MinimalUserDTO {
   id: string;
   username: string;
+}
+
+export interface UserImage {
+  id: string;
+  fileName: string;
+  url: string;
+  description?: string;
+  deleted: boolean;
+  pdf: boolean;
+  image: boolean;
+}
+
+export interface UserImageAudit {
+  id: string;
+  fileName: string;
+  action: 'UPLOAD' | 'DELETE' | 'RESTORE';
+  reason?: string;
+  performedByUsername: string;
+  timestamp: string;
 }

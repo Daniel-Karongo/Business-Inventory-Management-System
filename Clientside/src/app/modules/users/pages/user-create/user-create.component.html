@@ -156,42 +156,44 @@
       </section>
 
       <!-- ============= STEP 4 — FILES ============= -->
-      <section *ngIf="step === 4">
+      <section *ngIf="step === 4" [formArrayName]="'files'">
         <div class="files-section">
 
           <input id="fileInput" type="file" hidden multiple accept="image/*,application/pdf"
             (change)="onFilesPicked($event)" />
+
           <button mat-stroked-button (click)="openFilePicker()">Upload files</button>
 
           <div class="preview-grid">
-            <div class="preview-card" *ngFor="let p of previews; let i = index">
 
-              <!-- thumbnail -->
+            <div class="preview-card" *ngFor="let fg of filesArray.controls; let i = index" [formGroupName]="i">
+
+              <!-- Thumbnail -->
               <div class="thumb" (click)="viewFile(i)">
-                <img *ngIf="p.src" [src]="p.src" />
-                <div *ngIf="p.type === 'application/pdf'" class="pdf-placeholder">
+                <img *ngIf="previews[i].src" [src]="previews[i].src" />
+                <div *ngIf="previews[i].type === 'application/pdf'" class="pdf-placeholder">
                   <mat-icon>picture_as_pdf</mat-icon>
-                  <span>{{ p.name }}</span>
+                  <span>{{ previews[i].name }}</span>
                 </div>
               </div>
 
-              <!-- description -->
+              <!-- Metadata -->
               <div class="meta">
-
-                <div class="filename">{{ p.name }}</div>
+                <div class="filename">{{ previews[i].name }}</div>
 
                 <mat-form-field appearance="fill">
                   <mat-label>Description</mat-label>
-                  <mat-select [(ngModel)]="fileDescriptions[i]">
+                  <mat-select formControlName="type">
                     <mat-option *ngFor="let opt of descriptionOptions" [value]="opt">
                       {{ opt }}
                     </mat-option>
                   </mat-select>
                 </mat-form-field>
 
-                <mat-form-field appearance="fill" *ngIf="fileDescriptions[i] === 'Other'">
+                <!-- ✅ NOW THIS ALWAYS WORKS -->
+                <mat-form-field appearance="fill" *ngIf="fg.get('type')?.value === 'Other'">
                   <mat-label>Enter description</mat-label>
-                  <input matInput [(ngModel)]="customDescriptions[i]" />
+                  <input matInput formControlName="custom" />
                 </mat-form-field>
 
                 <div class="card-actions">
@@ -203,8 +205,8 @@
                     <mat-icon>close</mat-icon>
                   </button>
                 </div>
-
               </div>
+
             </div>
           </div>
         </div>
@@ -223,33 +225,44 @@
           <h3 class="summary-title">Summary</h3>
 
           <div class="summary-grid">
+
             <div class="col">
               <dt>Username</dt>
               <dd>{{ form.value.username }}</dd>
+
               <dt>ID Number</dt>
-              <dd>{{ form.value.idNumber }}</dd>
+              <dd>{{ form.value.idNumber || '—' }}</dd>
+
               <dt>Emails</dt>
-              <dd>{{ form.value.emailAddresses?.join(', ') }}</dd>
+              <dd>{{ form.value.emailAddresses?.join(', ') || '—' }}</dd>
             </div>
 
             <div class="col">
               <dt>Phones</dt>
-              <dd>{{ form.value.phoneNumbers?.join(', ') }}</dd>
+              <dd>{{ form.value.phoneNumbers?.join(', ') || '—' }}</dd>
+
               <dt>Role</dt>
               <dd>{{ form.value.role }}</dd>
+
               <dt>Files</dt>
               <dd>
-                <ul>
-                  <li *ngFor="let f of files; let i = index">
-                    {{ previews[i].name }} —
-                    {{ fileDescriptions[i] === 'Other'
-                    ? (customDescriptions[i] || 'Other')
-                    : fileDescriptions[i]
+                <ul *ngIf="filesArray.length; else noFiles">
+                  <li *ngFor="let fg of filesArray.controls">
+                    {{ fg.value.file?.name }} —
+                    {{
+                    fg.value.type === 'Other'
+                    ? (fg.value.custom || 'Other')
+                    : fg.value.type
                     }}
                   </li>
                 </ul>
+
+                <ng-template #noFiles>
+                  <span class="muted">No files uploaded</span>
+                </ng-template>
               </dd>
             </div>
+
           </div>
 
           <dt>Assignments</dt>

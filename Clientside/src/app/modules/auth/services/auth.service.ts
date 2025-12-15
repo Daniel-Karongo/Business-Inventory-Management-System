@@ -10,7 +10,7 @@ export class AuthService {
 
   private readonly TOKEN_KEY = 'auth_token';
   private readonly EXPIRES_KEY = 'auth_expires_at';
-  private readonly USER_ROLES = 'auth_roles';
+  private readonly USER_ROLE = 'auth_role';
 
   login(payload: LoginRequest) {
     return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, payload);
@@ -19,7 +19,7 @@ export class AuthService {
   saveSession(res: LoginResponse) {
     localStorage.setItem(this.TOKEN_KEY, res.token);
     localStorage.setItem(this.EXPIRES_KEY, String(res.expiresAt));
-    localStorage.setItem(this.USER_ROLES, JSON.stringify([res.role]));
+    localStorage.setItem(this.USER_ROLE, res.role);
 
     this.setAutoLogout();
   }
@@ -43,13 +43,15 @@ export class AuthService {
     return token;
   }
 
-  getRoles(): string[] {
+  getRole(): string {
     if (this.isExpired()) {
       this.logout();
-      return [];
+      return '';
     }
-    return JSON.parse(localStorage.getItem(this.USER_ROLES) || '[]');
+
+    return localStorage.getItem(this.USER_ROLE) || '';
   }
+
 
   isLoggedIn(): boolean {
     const token = localStorage.getItem(this.TOKEN_KEY);
@@ -63,7 +65,7 @@ export class AuthService {
   logout() {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.EXPIRES_KEY);
-    localStorage.removeItem(this.USER_ROLES);
+    localStorage.removeItem(this.USER_ROLE);
   }
 
   setAutoLogout() {

@@ -1,14 +1,15 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
-import { User } from '../../models/user.model';
+import { User, UserImage, UserImageAudit } from '../../models/user.model';
 import { environment } from '../../../../../environments/environment';
+import { UploadImagePayload } from '../../../../core/models/file-upload.model';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
   private base = environment.endpoints.users.base;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   /* ============================================================
      LIST USERS
@@ -106,7 +107,7 @@ export class UserService {
 
   softDeleteBulk(ids: string[], reason: string) {
     const url = `${environment.apiUrl}${environment.endpoints.users.softDeleteBulk}`;
-    return this.http.delete(url, { body: {ids, reason }});
+    return this.http.delete(url, { body: { ids, reason } });
   }
 
   restore(id: string, reason: string | null) {
@@ -135,17 +136,42 @@ export class UserService {
      USER IMAGES
   ============================================================ */
 
-  uploadImage(identifier: string, file: File) {
+  uploadImages(
+    identifier: string,
+    files: UploadImagePayload[],
+    deleteOldImages = false
+  ) {
     const fd = new FormData();
-    fd.append('userImagesFiles', file);
+
+    files.forEach((f, i) => {
+      fd.append(`userImagesFiles[${i}].file`, f.file);
+      fd.append(`userImagesFiles[${i}].description`, f.description ?? '');
+    });
+
+    fd.append('deleteOldImages', String(deleteOldImages));
 
     const url = `${environment.apiUrl}${environment.endpoints.users.updateImages(identifier)}`;
     return this.http.patch(url, fd);
   }
 
-  listImages(identifier: string, deleted = false): Observable<string[]> {
-    const url = `${environment.apiUrl}${environment.endpoints.users.images.forUser(identifier, deleted)}`;
-    return this.http.get<string[]>(url);
+
+  listImages(
+    identifier: string,
+    deleted?: boolean
+  ): Observable<UserImage[]> {
+
+    let params = new HttpParams();
+
+    if (deleted !== undefined) {
+      params = params.set('deleted', String(deleted));
+    }
+
+    console.log(params)
+
+    const url =
+      `${environment.apiUrl}${environment.endpoints.users.images.forUser(identifier)}`;
+
+    return this.http.get<UserImage[]>(url, { params });
   }
 
   deleteAllImages(identifier: string) {
@@ -154,8 +180,21 @@ export class UserService {
   }
 
   restoreImage(identifier: string, filename: string) {
-    const url = `${environment.apiUrl}${environment.endpoints.users.images.restore(identifier, filename)}`;
-    return this.http.patch(url, {});
+    const url =
+      `${environment.apiUrl}${environment.endpoints.users.images.restore(identifier, filename)}`;
+
+    return this.http.patch(url, {}, {
+      responseType: 'text'   // ✅ REQUIRED
+    });
+  }
+
+  softDeleteImage(identifier: string, filename: string) {
+    const url =
+      `${environment.apiUrl}${environment.endpoints.users.images.softDelete(identifier, filename)}`;
+
+    return this.http.delete(url, {
+      responseType: 'text'   // ✅ REQUIRED
+    });
   }
 
   restoreAllImages(identifier: string) {
@@ -164,8 +203,12 @@ export class UserService {
   }
 
   hardDeleteImage(identifier: string, filename: string) {
-    const url = `${environment.apiUrl}${environment.endpoints.users.images.hardDelete(identifier, filename)}`;
-    return this.http.delete(url);
+    const url =
+      `${environment.apiUrl}${environment.endpoints.users.images.hardDelete(identifier, filename)}`;
+
+    return this.http.delete(url, {
+      responseType: 'text'   // ✅ REQUIRED
+    });
   }
 
   hardDeleteAllImages(identifier: string) {
@@ -188,11 +231,30 @@ export class UserService {
 
   imageAuditTarget(identifier: string) {
     const url = `${environment.apiUrl}${environment.endpoints.users.audits.imageTarget(identifier)}`;
-    return this.http.get<any[]>(url);
+    return this.http.get<UserImageAudit[]>(url);
   }
 
   imageAuditDoer(identifier: string) {
     const url = `${environment.apiUrl}${environment.endpoints.users.audits.imageDoer(identifier)}`;
     return this.http.get<any[]>(url);
+  }
+
+  /* ============================================================
+     USER ROLLCALLS
+  ============================================================ */
+
+  getUserRollcalls(userId: string) {
+    return this.http.get<any[]>(
+      `${environment.apiUrl}/rollcall/user/${userId}`
+    );
+  }
+
+  getUserImageBlob(userId: string, fileName: string, deleted = false) {
+    const url =
+      `${environment.apiUrl}/users/images/${userId}/${encodeURIComponent(fileName)}?deleted=${deleted}`;
+
+    return this.http.get(url, {
+      responseType: 'blob'
+    });
   }
 }

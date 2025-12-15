@@ -12,8 +12,8 @@ export const USER_ROUTES: Routes = [
     children: [
       { path: '', component: UserListComponent },
       { path: 'create', component: UserCreateComponent },
-      { path: ':id/edit', component: UserEditComponent },
-      { path: ':id', component: UserDetailsComponent }
+      { path: ':username/edit', component: UserEditComponent },
+      { path: ':username', component: UserDetailsComponent }
     ]
   }
 ];

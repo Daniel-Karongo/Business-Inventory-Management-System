@@ -1,0 +1,17 @@
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+img {
+    width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+    background: #000;
+}
+
+.pdf-content {
+    padding: 20px;
+    text-align: center;
+}

@@ -1,9 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.user.controller;
 
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
-import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
+import com.IntegrityTechnologies.business_manager.common.ImagesUploadForm;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.UserBulkRestoreOrDeleteDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.UserDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.UserImageAuditDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.UserImageDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.service.UserImageService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.service.UserService;
@@ -72,15 +74,29 @@ public class UserController {
         return ResponseEntity.ok(dto);
     }
 
-    @PatchMapping("/{identifier}/images")
+    @PatchMapping(
+            value = "/{identifier}/images",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
     public ResponseEntity<?> updateUserImages(
             @PathVariable String identifier,
-            @RequestParam(value = "userImagesFiles", required = false) List<FIleUploadDTO> userImagesFiles,
-            @RequestParam(value = "deleteOldImages") Boolean deleteOldImages,
+
+            @ModelAttribute ImagesUploadForm form,
+
+            @RequestParam(value = "deleteOldImages", defaultValue = "false")
+            boolean deleteOldImages,
+
             Authentication authentication
     ) throws IOException {
-        return userService.updateUserImages(identifier, userImagesFiles, authentication, deleteOldImages);
+
+        return userService.updateUserImages(
+                identifier,
+                form.getUserImagesFiles(),
+                authentication,
+                deleteOldImages
+        );
     }
+
 
 
 
@@ -222,12 +238,14 @@ public class UserController {
 
 
     @GetMapping("/images/all/{identifier}")
-    public ResponseEntity<List<String>> getAllUserImages(
+    public ResponseEntity<List<UserImageDTO>> getAllUserImages(
             @PathVariable String identifier,
             @RequestParam(required = false) Boolean deleted,
             Authentication authentication
     ) {
-        return ResponseEntity.ok(userImageService.getAllUserImagesForAUser(identifier, authentication, deleted));
+        return ResponseEntity.ok(
+                userImageService.getAllUserImagesForAUser(identifier, authentication, deleted)
+        );
     }
 
     @GetMapping("/images/all/download/{identifier}")
@@ -246,7 +264,7 @@ public class UserController {
     public ResponseEntity<Resource> getUserImage(
             @PathVariable String identifier,
             @PathVariable String filename,
-            @RequestParam Boolean deleted,
+            @RequestParam(required=false) Boolean deleted,
             Authentication authentication
     ) throws IOException {
         return userImageService.getUserImage(identifier, filename, authentication, deleted);
@@ -264,6 +282,15 @@ public class UserController {
     @DeleteMapping("/images/all/{identifier}/soft")
     public ResponseEntity<?> softdeleteAllUserImages(@PathVariable String identifier, Authentication authentication) throws IOException {
         return userImageService.softdeleteAllUserImages(identifier, authentication);
+    }
+
+    @DeleteMapping("/images/{identifier}/{filename}/soft")
+    public ResponseEntity<?> softdeleteUserImage(
+            @PathVariable String identifier,
+            @PathVariable String filename,
+            Authentication authentication
+    ) throws IOException {
+        return userImageService.softdeleteUserImage(identifier, filename, authentication);
     }
 
     @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
@@ -322,10 +349,19 @@ public class UserController {
 
     @GetMapping("/images/audits/{identifier}/receiver")
     @PreAuthorize("hasRole('SUPERUSER')")
-    public ResponseEntity<List<UserImageAudit>> getUserImageAuditsTarget(@PathVariable String identifier) {
+    public ResponseEntity<List<UserImageAuditDTO>> getUserImageAuditsTarget(
+            @PathVariable String identifier
+    ) {
         User user = userService.getUserByIdentifierForAudits(identifier);
-        return ResponseEntity.ok(userService.getUserImageAuditsTarget(user.getId()));
+
+        return ResponseEntity.ok(
+                userService.getUserImageAuditsTarget(user.getId())
+                        .stream()
+                        .map(UserImageAuditDTO::from)
+                        .toList()
+        );
     }
+
     @GetMapping("/images/audits/{identifier}/doer")
     @PreAuthorize("hasRole('SUPERUSER')")
     public ResponseEntity<List<UserImageAudit>> getUserImageAuditsPerpetrated(@PathVariable String identifier) {

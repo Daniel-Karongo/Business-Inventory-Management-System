@@ -1,60 +1,128 @@
-<div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-  <mat-card class="col-span-1 p-4">
-    <div class="flex flex-col items-center gap-3">
-      <div class="w-24 h-24 rounded-full bg-sky-500 text-white flex items-center justify-center text-2xl font-bold">
-        {{ user?.username?.charAt(0) || 'U' }}
-      </div>
-      <div class="text-lg font-semibold">{{ user?.username }}</div>
-      <div class="text-sm text-gray-500">{{ user?.id }}</div>
-      <div class="flex gap-2 mt-3">
-        <button mat-stroked-button (click)="openImageManager()">Manage Images</button>
-      </div>
+<div class="user-details-root" *ngIf="!loading; else loadingTpl">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div>
+      <h2>User Profile</h2>
+      <div class="breadcrumb">Users / {{ user.username }}</div>
     </div>
-  </mat-card>
 
-  <div class="col-span-2 space-y-4">
-    <mat-card>
-      <h3 class="text-sm font-semibold mb-2">Profile</h3>
-      <div class="grid grid-cols-2 gap-2">
-        <div>
-          <strong>ID Number</strong>
-          <div>{{ user?.idNumber || '—' }}</div>
-        </div>
-        <div>
-          <strong>Role</strong>
-          <div>{{ user?.role || '—' }}</div>
-        </div>
+    <button mat-stroked-button (click)="editUser()">
+      <mat-icon>edit</mat-icon>
+      Edit
+    </button>
+  </div>
 
-        <div>
-          <strong>Emails</strong>
-          <div *ngFor="let e of user?.emailAddresses">{{ e }}</div>
-        </div>
+  <div class="content-grid">
 
-        <div>
-          <strong>Phones</strong>
-          <div *ngFor="let p of user?.phoneNumbers">{{ p }}</div>
-        </div>
+    <!-- LEFT -->
+    <mat-card class="identity-card">
+      <div class="avatar">{{ initials() }}</div>
+      <div class="user-id" *ngIf="canViewUserId()">
+        {{ user.id }}
+      </div>
+      <div class="username">{{ user.username }}</div>
 
-        <div>
-          <strong>Branches</strong>
-          <div>{{ branchNames() }}</div>
-        </div>
+      <div class="role-chip" [class.deleted]="user.deleted">
+        {{ user.deleted ? 'DISABLED' : user.role }}
+      </div>
 
-        <div>
-          <strong>Departments</strong>
-          <div *ngFor="let d of user?.departments">{{ d.name }}</div>
-        </div>
+      <div class="identity-actions" *ngIf="canManageUser()">
+        <button mat-stroked-button color="warn" *ngIf="!user.deleted" (click)="deleteUser()">
+          <mat-icon>block</mat-icon>
+          Disable
+        </button>
+
+        <button mat-stroked-button color="primary" *ngIf="user.deleted" (click)="restoreUser()">
+          <mat-icon>restore</mat-icon>
+          Restore
+        </button>
       </div>
     </mat-card>
 
-    <mat-card>
-      <h3 class="text-sm font-semibold mb-2">Recent Audits</h3>
-      <div *ngFor="let a of audits" class="py-2 border-b last:border-b-0">
-        <div class="text-xs text-gray-500">{{ a.timestamp | date: 'medium' }}</div>
-        <div class="text-sm font-medium">{{ a.action }} — {{ a.fieldChanged }}</div>
-        <div class="text-sm">From: {{ a.oldValue }} → To: {{ a.newValue }}</div>
-        <div class="text-xs text-gray-500">By: {{ a.performedByUsername }}</div>
-      </div>
-    </mat-card>
+    <!-- RIGHT -->
+    <div class="details-column">
+
+      <mat-tab-group class="user-tabs" dynamicHeight>
+
+        <!-- PROFILE -->
+        <mat-tab label="Profile">
+          <mat-card class="info-card">
+            <h3>Profile</h3>
+
+            <div class="info-grid">
+              <div>
+                <label>ID Number</label>
+                <div>{{ user.idNumber || '—' }}</div>
+              </div>
+
+              <div>
+                <label>Role</label>
+                <div>{{ user.role }}</div>
+              </div>
+
+              <div>
+                <label>Emails</label>
+                <div *ngFor="let e of user.emailAddresses">{{ e }}</div>
+              </div>
+
+              <div>
+                <label>Phones</label>
+                <div *ngFor="let p of user.phoneNumbers">{{ p }}</div>
+              </div>
+
+              <div>
+                <label>Status</label>
+                <div>{{ status() }}</div>
+              </div>
+
+              <div class="col-span-2">
+                <label>Branches & Departments</label>
+
+                <div class="branch-block" *ngFor="let b of user.branchHierarchy">
+                  <div class="branch-name">{{ b.branchName }}</div>
+
+                  <ul class="department-list">
+                    <li *ngFor="let d of b.departments">
+                      <span class="dept-name">{{ d.departmentName }}</span>
+                      <span class="dept-role">{{ d.position }}</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </mat-card>
+        </mat-tab>
+
+        <!-- IMAGES -->
+        <mat-tab *ngIf="canViewImages()">
+          <ng-template mat-tab-label>
+            Images <span class="badge">{{ imageCount }}</span>
+          </ng-template>
+          <app-user-image-manager [userId]="user.id!" />
+        </mat-tab>
+
+        <!-- AUDITS -->
+        <mat-tab *ngIf="canViewAudits()">
+          <ng-template mat-tab-label>
+            Audits <span class="badge">{{ auditCount }}</span>
+          </ng-template>
+          <app-user-audit-timeline [userId]="user.id!" />
+        </mat-tab>
+
+        <!-- ROLLCALLS -->
+        <mat-tab *ngIf="canViewRollcalls()">
+          <ng-template mat-tab-label>
+            Rollcalls <span class="badge">{{ rollcallCount }}</span>
+          </ng-template>
+          <app-user-rollcalls [userId]="user.id!" />
+        </mat-tab>
+
+      </mat-tab-group>
+    </div>
   </div>
 </div>
+
+<ng-template #loadingTpl>
+  <div class="loading">Loading user…</div>
+</ng-template>

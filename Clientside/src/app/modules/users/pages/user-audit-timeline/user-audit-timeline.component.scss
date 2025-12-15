@@ -1,3 +1,53 @@
 :host {
   display: block;
 }
+
+/* ================= TIMELINE ================= */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+}
+
+/* ================= ITEM ================= */
+.timeline-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+
+  mat-icon {
+    color: var(--text-secondary);
+    font-size: 20px;
+    margin-top: 2px;
+  }
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .title {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .meta {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .change {
+    font-size: 0.85rem;
+  }
+}
+
+/* ================= EMPTY ================= */
+.muted {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}

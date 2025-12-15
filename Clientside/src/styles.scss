@@ -217,15 +217,21 @@ body.dark * {
    GLOBAL ANGULAR MATERIAL TOOLTIP STYLING
 -------------------------------------------------------- */
 
-.mat-mdc-tooltip {
+.mat-mdc-tooltip,
+.mdc-tooltip__surface {
   background: rgba(0, 0, 0, 0.85) !important;
   color: #fff !important;
+}
+
+.mdc-tooltip__surface {
   border-radius: 6px !important;
   padding: 6px 10px !important;
   font-size: 13px !important;
   letter-spacing: 0.3px;
+  line-height: 1.4;
+  max-width: 280px;
+  text-align: center;
 }
-
 /* -------------------------------------------------------
    SNACKBAR GLOBAL (SAFE)
 -------------------------------------------------------- */

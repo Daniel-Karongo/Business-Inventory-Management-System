@@ -1,25 +1,95 @@
 <div class="p-4">
-  <h3 class="text-lg font-semibold mb-3">Images</h3>
 
-  <div class="flex items-center gap-3 mb-4">
-    <input #fileInput type="file" (change)="onFileSelected($event)" hidden>
+  <!-- ================= TOOLBAR ================= -->
+  <div class="toolbar">
+    <h3>Images</h3>
 
-    <button mat-flat-button color="primary" (click)="triggerFile()" [disabled]="uploading">
+    <button mat-flat-button color="primary" (click)="triggerUpload()" [disabled]="uploading">
       <mat-icon>upload</mat-icon>
-      Upload Image
+      Upload
     </button>
   </div>
 
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-    <div *ngFor="let img of images" class="relative group">
-      <img [src]="img" class="w-full h-32 object-cover rounded border">
+  <!-- ================= EMPTY STATE ================= -->
+  <div class="empty" *ngIf="!loading && images.length === 0">
+    No images uploaded
+  </div>
 
-      <button
-        (click)="deleteImage(img)"
-        class="absolute top-2 right-2 bg-black/60 rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
-      >
-        <mat-icon class="text-white text-sm">delete</mat-icon>
-      </button>
+  <!-- ================= GRID ================= -->
+  <div class="image-grid" *ngIf="!loading">
+
+    <div class="image-card" *ngFor="let img of images" [class.deleted]="img.deleted">
+
+      <!-- IMAGE -->
+      <ng-container *ngIf="img.image; else pdfTpl">
+        <img [src]="imageUrl(img)" (click)="viewImage(img)" class="clickable-image" />
+      </ng-container>
+
+      <!-- PDF -->
+      <ng-template #pdfTpl>
+        <div class="pdf-card" (click)="openPdf(img)">
+          <mat-icon>picture_as_pdf</mat-icon>
+          <span>{{ img.fileName }}</span>
+        </div>
+      </ng-template>
+
+      <!-- META -->
+      <div class="image-meta">
+        <div class="filename">{{ img.fileName }}</div>
+
+        <div class="description" *ngIf="img.description">
+          {{ img.description }}
+        </div>
+
+        <div class="deleted" *ngIf="img.deleted">
+          Deleted
+        </div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="actions">
+
+        <!-- PRIMARY ACTION -->
+        <button mat-icon-button (click)="onPrimaryAction(img)"
+          [matTooltip]="img.deleted ? 'Restore image' : 'Soft delete image'" matTooltipPosition="above">
+          <mat-icon>
+            {{ img.deleted ? 'restore' : 'delete' }}
+          </mat-icon>
+        </button>
+
+        <!-- HARD DELETE (ONLY IF SOFT-DELETED) -->
+        <button *ngIf="img.deleted" mat-icon-button color="warn" (click)="onHardDelete(img)"
+          matTooltip="Permanently delete image" matTooltipPosition="above">
+          <mat-icon>delete_forever</mat-icon>
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= IMAGE AUDITS ================= -->
+  <div class="audit-section" *ngIf="!loadingAudits && imageAudits.length">
+
+    <h3 class="audit-title">Image Audit Log</h3>
+
+    <div class="audit-list">
+
+      <div class="audit-row" *ngFor="let audit of imageAudits">
+        <div class="audit-left">
+          <div class="audit-file">{{ audit.fileName }}</div>
+          <div class="audit-meta">
+            {{ audit.performedByUsername }} •
+            {{ audit.timestamp | date:'medium' }}
+          </div>
+        </div>
+
+        <div class="audit-action" [class.upload]="audit.action === 'UPLOAD'" [class.delete]="audit.action === 'DELETE'"
+          [class.restore]="audit.action === 'RESTORE'">
+          {{ audit.action }}
+        </div>
+      </div>
+
     </div>
   </div>
 </div>

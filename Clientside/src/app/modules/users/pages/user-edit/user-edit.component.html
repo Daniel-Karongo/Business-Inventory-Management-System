@@ -1,97 +1,109 @@
-<div class="p-4 max-w-3xl">
-  <h2 class="text-lg font-semibold mb-4">Edit User</h2>
+<div class="user-edit-root" *ngIf="form">
 
-  <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-6">
-
-    <!-- Username / ID Number -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <mat-form-field appearance="fill">
-        <mat-label>Username</mat-label>
-        <input matInput formControlName="username" />
-      </mat-form-field>
-
-      <mat-form-field appearance="fill">
-        <mat-label>ID Number</mat-label>
-        <input matInput formControlName="idNumber" />
-      </mat-form-field>
+  <!-- HEADER -->
+  <div class="page-header">
+    <div>
+      <h2>Edit User</h2>
+      <div class="breadcrumb">Users / {{ originalUsername }} / Edit</div>
     </div>
 
-    <!-- Emails -->
-    <mat-form-field appearance="fill" class="w-full">
-      <mat-label>Email addresses (comma-separated)</mat-label>
-      <input
-        matInput
-        [value]="form.value.emailAddresses?.join(', ')"
-        (change)="onEmailsChanged($event)"
-      />
-    </mat-form-field>
+    <div class="actions">
+      <button mat-stroked-button (click)="cancel()">Cancel</button>
+      <button mat-flat-button color="primary" (click)="submit()" [disabled]="form.invalid">
+        Save Changes
+      </button>
+    </div>
+  </div>
 
-    <!-- Phones -->
-    <mat-form-field appearance="fill" class="w-full">
-      <mat-label>Phone numbers (comma-separated)</mat-label>
-      <input
-        matInput
-        [value]="form.value.phoneNumbers?.join(', ')"
-        (change)="onPhonesChanged($event)"
-      />
-    </mat-form-field>
+  <!-- FORM -->
+  <form [formGroup]="form" class="form-grid">
 
-    <!-- Role -->
-    <mat-form-field appearance="fill" class="w-full">
-      <mat-label>Role</mat-label>
-      <mat-select formControlName="role">
-        <mat-option *ngFor="let r of roles" [value]="r.name">{{ r.name }}</mat-option>
-      </mat-select>
-    </mat-form-field>
+    <!-- BASIC INFO -->
+    <mat-card>
+      <h3>Basic Information</h3>
 
-    <!-- Department assignments -->
-    <div class="space-y-3">
-      <h3 class="font-medium">Department Assignments</h3>
+      <div class="grid-2">
+        <mat-form-field appearance="fill">
+          <mat-label>Username</mat-label>
+          <input matInput formControlName="username" />
+        </mat-form-field>
 
-      <div
-        *ngFor="let d of departmentsAndPositions; let i = index"
-        class="grid grid-cols-1 md:grid-cols-4 gap-3 items-center"
-      >
-        <input
-          class="border rounded px-2 py-1"
-          placeholder="Branch ID"
-          [value]="d.branchId"
-          (change)="updateDepartment(i, 'branchId', $event)"
-        />
+        <mat-form-field appearance="fill">
+          <mat-label>ID Number</mat-label>
+          <input matInput formControlName="idNumber" />
+        </mat-form-field>
+      </div>
 
-        <input
-          class="border rounded px-2 py-1"
-          placeholder="Department ID"
-          [value]="d.departmentId"
-          (change)="updateDepartment(i, 'departmentId', $event)"
-        />
+      <mat-form-field appearance="fill">
+        <mat-label>Role</mat-label>
+        <mat-select formControlName="role">
+          <mat-option *ngFor="let r of roles" [value]="r.name">
+            {{ r.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </mat-card>
 
-        <select
-          class="border rounded px-2 py-1"
-          [value]="d.position"
-          (change)="updateDepartment(i, 'position', $event)"
-        >
-          <option value="member">Member</option>
-          <option value="head">Head</option>
-        </select>
+    <!-- CONTACT -->
+    <mat-card>
+      <h3>Contact</h3>
 
-        <button mat-icon-button color="warn" (click)="removeDepartmentAssignment(i)">
+      <mat-form-field appearance="fill">
+        <mat-label>Email Addresses</mat-label>
+        <input matInput formControlName="emailsInput" placeholder="comma-separated" />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Phone Numbers</mat-label>
+        <input matInput formControlName="phonesInput" placeholder="comma-separated" />
+      </mat-form-field>
+    </mat-card>
+
+    <!-- ASSIGNMENTS -->
+    <mat-card>
+      <h3>Branch & Department Assignments</h3>
+
+      <div class="assignment-row" *ngFor="let g of assignments.controls; let i = index" [formGroup]="g">
+        <mat-form-field appearance="fill">
+          <mat-label>Branch</mat-label>
+          <mat-select formControlName="branchId">
+            <mat-option *ngFor="let b of branches" [value]="b.id">
+              {{ b.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Department</mat-label>
+          <mat-select formControlName="departmentId">
+            <mat-option disabled *ngIf="departmentsForBranch(g.get('branchId')!.value).length === 0">
+              No departments for this branch
+            </mat-option>
+
+            <mat-option *ngFor="let d of departmentsForBranch(g.get('branchId')!.value)" [value]="d.id">
+              {{ d.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Position</mat-label>
+          <mat-select formControlName="position">
+            <mat-option value="member">Member</mat-option>
+            <mat-option value="head">Head</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <button mat-icon-button color="warn" (click)="removeAssignment(i)">
           <mat-icon>delete</mat-icon>
         </button>
       </div>
 
-      <button mat-stroked-button type="button" (click)="addDepartmentAssignment()">
+      <button mat-stroked-button type="button" (click)="addAssignment()">
+        <mat-icon>add</mat-icon>
         Add Assignment
       </button>
-    </div>
-
-    <!-- Actions -->
-    <div class="flex gap-2">
-      <button mat-flat-button color="primary" type="submit">Save</button>
-      <button mat-stroked-button type="button" (click)="router.navigate(['/users'])">
-        Cancel
-      </button>
-    </div>
+    </mat-card>
 
   </form>
 </div>

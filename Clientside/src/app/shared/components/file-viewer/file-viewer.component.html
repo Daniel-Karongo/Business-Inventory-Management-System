@@ -1,0 +1,16 @@
+<div class="file-viewer">
+    <header class="header">
+        <h3>{{ data.preview?.name }}</h3>
+        <button mat-icon-button (click)="close()"><mat-icon>close</mat-icon></button>
+    </header>
+
+    <div *ngIf="isImage(); else pdfBlock" class="content">
+        <img [src]="data.preview?.src" />
+    </div>
+
+    <ng-template #pdfBlock>
+        <div class="pdf-content">
+            <button mat-stroked-button (click)="openPdf()">Open PDF</button>
+        </div>
+    </ng-template>
+</div>

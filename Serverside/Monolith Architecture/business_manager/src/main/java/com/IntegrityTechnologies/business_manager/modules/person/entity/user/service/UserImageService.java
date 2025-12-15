@@ -5,6 +5,8 @@ import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
 import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.exception.*;
 import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.UserImageDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.mapper.UserImageMapper;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserImage;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserImageAudit;
@@ -234,29 +236,17 @@ public class UserImageService {
                 .body(resource);
     }
 
-    public List<String> getAllUserImagesForAUser(String identifier, Authentication authentication, Boolean deleted) {
+    public List<UserImageDTO> getAllUserImagesForAUser(
+            String identifier,
+            Authentication authentication,
+            Boolean deleted
+    ) {
         User target = validateAccess(identifier, authentication, "view");
 
-        if (target.getImages() == null || target.getImages().isEmpty()) {
-            throw new ImageNotFoundException("User has no images: " + target.getUsername());
-        }
-
-        List<String> results = target.getImages().stream()
-                .filter(image -> {
-                    if (deleted == null) return true;                // return all
-                    if (deleted) return Boolean.TRUE.equals(image.getDeleted());  // return only deleted
-                    return !Boolean.TRUE.equals(image.getDeleted()); // return only active
-                })
-                .map(UserImage::getFilePath)
+        return target.getImages().stream()
+                .filter(img -> deleted == null || img.getDeleted().equals(deleted))
+                .map(UserImageMapper::toDto)
                 .toList();
-
-        if (results.isEmpty()) {
-            throw new ImageNotFoundException(
-                    "No images match deleted=" + deleted + " for user: " + target.getUsername()
-            );
-        }
-
-        return results;
     }
 
     public ResponseEntity<Resource> downloadAllUserImages(String identifier, Authentication authentication, Boolean deleted) throws IOException {

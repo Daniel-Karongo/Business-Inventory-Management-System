@@ -276,6 +276,7 @@ public class UserService {
         }
 
         userRepository.save(target);
+
         return ResponseEntity.ok(mapToDTO(target, false));
     }
 

@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.modules.person.entity.user.UserMapper;
+package com.IntegrityTechnologies.business_manager.modules.person.entity.user.mapper;
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserImage;
