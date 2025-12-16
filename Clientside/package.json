@@ -23,6 +23,7 @@
     "@ng-icons/heroicons": "^33.0.0",
     "@ngneat/tailwind": "^7.0.3",
     "apexcharts": "^3.41.0",
+    "jszip": "^3.10.1",
     "material-icons": "^1.13.14",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",

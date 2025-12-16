@@ -1,0 +1,51 @@
+<div class="images-section">
+
+  <!-- HEADER -->
+  <div class="section-header">
+    <h3>Images</h3>
+
+    <button
+      mat-stroked-button
+      *ngIf="product.barcode"
+      (click)="downloadBarcodePdf()">
+      <mat-icon>qr_code</mat-icon>
+      Barcode PDF
+    </button>
+  </div>
+
+  <!-- ================= PRODUCT IMAGES ================= -->
+  <div class="subsection">
+    <h4 class="sub-title">Product Images</h4>
+
+    <div class="image-grid">
+      <div
+        class="image-card"
+        *ngFor="let img of images"
+        (click)="viewImage(img)"
+      >
+        <img [src]="img.url" />
+        <div class="filename">{{ img.name }}</div>
+      </div>
+
+      <div *ngIf="!loading && images.length === 0" class="empty">
+        No product images uploaded
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= BARCODE ================= -->
+  <div class="subsection" *ngIf="barcodeImageUrl">
+    <h4 class="sub-title">Barcode</h4>
+
+    <div class="image-grid">
+      <div
+        class="image-card barcode-card"
+        (click)="viewBarcode()"
+      >
+        <img [src]="barcodeImageUrl" />
+        <div class="filename">Barcode</div>
+      </div>
+    </div>
+  </div>
+
+</div>

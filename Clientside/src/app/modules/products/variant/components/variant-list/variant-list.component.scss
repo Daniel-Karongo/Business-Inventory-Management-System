@@ -1,0 +1,26 @@
+.variant-wrapper {
+  background: var(--surface);
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.variant-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+td {
+  font-size: 0.875rem;
+}
+
+.action-cell {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}

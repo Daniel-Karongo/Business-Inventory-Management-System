@@ -1,0 +1,36 @@
+<h2 mat-dialog-title>Edit Variant</h2>
+
+<mat-dialog-content class="variant-form" [formGroup]="form">
+
+  <mat-form-field appearance="fill">
+    <mat-label>Classification</mat-label>
+    <input matInput formControlName="classification" />
+  </mat-form-field>
+
+  <mat-form-field appearance="fill">
+    <mat-label>SKU</mat-label>
+    <input matInput formControlName="sku" />
+  </mat-form-field>
+
+  <mat-form-field appearance="fill">
+    <mat-label>Minimum Selling Price</mat-label>
+    <input matInput type="number" formControlName="minimumSellingPrice" />
+  </mat-form-field>
+
+  <mat-form-field appearance="fill">
+    <mat-label>Average Buying Price</mat-label>
+    <input matInput type="number" formControlName="averageBuyingPrice" />
+  </mat-form-field>
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button
+    mat-flat-button
+    color="primary"
+    [disabled]="saving || form.invalid"
+    (click)="save()">
+    Save
+  </button>
+</mat-dialog-actions>

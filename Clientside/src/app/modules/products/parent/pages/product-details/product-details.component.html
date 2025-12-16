@@ -1,0 +1,81 @@
+<div class="flex flex-col gap-6" *ngIf="!loading && product">
+
+  <!-- HEADER -->
+  <div class="flex justify-between items-start">
+    <div>
+      <h1 class="text-2xl font-semibold">{{ product.name }}</h1>
+
+      <div class="flex items-center gap-3 mt-2">
+        <span class="status-pill" [ngClass]="product.deleted ? 'status-deleted' : 'status-active'">
+          {{ product.deleted ? 'Deleted' : 'Active' }}
+        </span>
+
+        <span class="text-sm text-gray-500">
+          SKU: {{ product.sku || '—' }}
+        </span>
+
+        <span class="text-sm text-gray-500">
+          Barcode: {{ product.barcode || '—' }}
+        </span>
+      </div>
+    </div>
+
+    <button mat-stroked-button matTooltip="Edit Product" (click)="edit()">
+      Edit
+    </button>
+  </div>
+
+  <!-- CORE INFO -->
+  <div class="info-grid">
+
+    <div>
+      <label>Category</label>
+      <div>{{ product.categoryName || '—' }}</div>
+    </div>
+
+    <div>
+      <label>Minimum % Profit</label>
+      <div>{{ product.minimumPercentageProfit ?? '—' }}</div>
+    </div>
+
+    <div>
+      <label>Suppliers</label>
+      <mat-chip-set *ngIf="product.suppliers?.length; else noSuppliers">
+        <mat-chip *ngFor="let s of product.suppliers">
+          {{ s.name }}
+        </mat-chip>
+      </mat-chip-set>
+      <ng-template #noSuppliers>—</ng-template>
+    </div>
+
+    <div>
+      <label>Created</label>
+      <div>{{ product.createdAt | date:'medium' }}</div>
+    </div>
+
+    <div>
+      <label>Last Updated</label>
+      <div>{{ product.updatedAt | date:'medium' }}</div>
+    </div>
+
+  </div>
+
+  <!-- IMAGES -->
+  <app-product-images [product]="product">
+  </app-product-images>
+
+  <!-- VARIANTS -->
+  <app-variant-summary *ngIf="product" [product]="product">
+  </app-variant-summary>
+
+  <!-- AUDITS -->
+  <app-product-audits *ngIf="product" [productId]="product.id">
+  </app-product-audits>
+
+
+</div>
+
+<!-- LOADING -->
+<div *ngIf="loading" class="text-center py-10 text-gray-500">
+  Loading product…
+</div>

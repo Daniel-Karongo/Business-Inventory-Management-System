@@ -1,0 +1,10 @@
+.variant-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  min-width: 320px;
+}
+
+mat-form-field {
+  width: 100%;
+}

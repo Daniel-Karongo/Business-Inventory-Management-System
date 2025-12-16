@@ -130,10 +130,22 @@ export class UserDetailsComponent implements OnInit {
     return ['ADMIN', 'SUPERUSER'].includes(this.role);
   }
 
-  deleteUser() {
+  softDeleteUser() {
     if (!confirm('Disable this user?')) return;
 
     this.userService.softDelete(this.user.id!, 'Disabled from user details')
+      .subscribe({
+        next: () => {
+          this.user.deleted = true;
+          this.snackbar.open('User disabled', 'Close', { duration: 2000 });
+        }
+      });
+  }
+
+  hardDeleteUser() {
+    if (!confirm('Permanently delete this user?')) return;
+
+    this.userService.hardDelete(this.user.id!)
       .subscribe({
         next: () => {
           this.user.deleted = true;

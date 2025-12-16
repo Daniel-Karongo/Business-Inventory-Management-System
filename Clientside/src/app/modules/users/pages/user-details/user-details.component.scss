@@ -76,10 +76,31 @@
   }
 
   .identity-actions {
-    margin-top: 14px;
+    margin-top: 16px;
     display: flex;
+    flex-direction: column; // ✅ STACK vertically
     gap: 8px;
+    width: 100%;
+  }
+
+  /* Make buttons full width & consistent */
+  .identity-actions button {
+    width: 100%;
     justify-content: center;
+    gap: 6px;
+    padding: 6px 12px !important; // ✅ compact
+    min-height: 36px; // ✅ consistent height
+    font-size: 0.85rem;
+  }
+
+  /* HARD DELETE — stronger danger signal */
+  button.danger {
+    border-color: #ef4444 !important;
+    color: #ef4444 !important;
+  }
+
+  button.danger:hover {
+    background: rgba(239, 68, 68, 0.08) !important;
   }
 }
 

@@ -1,0 +1,39 @@
+<div class="audit-wrapper">
+
+  <h2 class="section-title">Audit Timeline</h2>
+
+  <div *ngIf="loading" class="text-sm text-gray-400">
+    Loading audit history…
+  </div>
+
+  <div *ngIf="!loading && audits.length === 0"
+       class="text-sm text-gray-500">
+    No audit records found.
+  </div>
+
+  <div *ngIf="audits.length > 0" class="audit-list">
+    <div *ngFor="let a of audits" class="audit-item">
+      <mat-icon class="audit-icon">history</mat-icon>
+
+      <div class="audit-content">
+        <div class="audit-main">
+          <strong>{{ a.action }}</strong>
+          <span *ngIf="a.fieldChanged">
+            ({{ a.fieldChanged }})
+          </span>
+        </div>
+
+        <div class="audit-meta">
+          <span>{{ a.performedBy || 'System' }}</span>
+          ·
+          <span>{{ a.timestamp | date:'medium' }}</span>
+        </div>
+
+        <div *ngIf="a.reason" class="audit-reason">
+          Reason: {{ a.reason }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

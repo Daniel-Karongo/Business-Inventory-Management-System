@@ -257,6 +257,17 @@ export const environment = {
     products: {
       base: '/products',
 
+      list: (deleted?: boolean) => `/products?deleted=${deleted}`,
+      advanced: '/products/advanced',
+
+      create: '/products/create',
+      bulkCreate: '/products/create/bulk',
+
+      update: (id: string) => `/products/${id}`,
+
+      softDelete: (id: string) => `/products/soft/${id}`,
+      hardDelete: (id: string) => `/products/hard/${id}`,
+      restore: (id: string) => `/products/restore/${id}`,
       getById: (id: string) => `/products/${id}`,
       search: (keyword: string) => `/products/search?keyword=${keyword}`,
 
@@ -271,11 +282,22 @@ export const environment = {
         delete: (id: string) => `/product-variants/${id}`,
       },
 
+      images: {
+        list: (id: string) => `/products/${id}/images`,
+        upload: (id: string) => `/products/${id}/images`,
+        deleteOne: (id: string, filename: string) =>
+          `/products/${id}/images/${filename}`,
+        deleteAll: (id: string) => `/products/${id}/images`,
+        zip: (id: string) => `/products/${id}/images/zip`
+      },
+
       barcode: {
         generateImage: '/products/barcode/image',
         generateLabel: '/products/barcode/label',
         generateSheet: '/products/barcode/sheet'
-      }
+      },
+
+      audits: (id: string) => `/products/${id}/audits`
     },
 
     /* ============================================================

@@ -102,7 +102,7 @@ export class UserListComponent implements OnInit {
   }
 
   determineDeletedVisibility() {
-    const session = localStorage.getItem('auth_roles');
+    const session = localStorage.getItem('auth_role');
 
     if (!session) {
       this.allowShowDeleted = false;
@@ -110,9 +110,7 @@ export class UserListComponent implements OnInit {
     }
 
     try {
-      const roles = JSON.parse(session);
-      const primary = Array.isArray(roles) ? roles[0] : roles;
-      this.allowShowDeleted = ['SUPERUSER', 'ADMIN', 'MANAGER'].includes(primary);
+      this.allowShowDeleted = ['SUPERUSER', 'ADMIN', 'MANAGER'].includes(session);
       // default showDeleted false; user can toggle it via UI if allowed
     } catch {
       this.allowShowDeleted = false;

@@ -33,13 +33,8 @@ export class UserService {
     });
 
     // ---- FIXED ROLE LOADING ----
-    const roleData = localStorage.getItem("auth_roles");
-    let userRole = '';
-
-    try {
-      const arr = JSON.parse(roleData || '[]');
-      userRole = Array.isArray(arr) ? arr[0] : '';
-    } catch {
+    let userRole = localStorage.getItem("auth_role");
+    if(userRole === null) {
       userRole = '';
     }
 

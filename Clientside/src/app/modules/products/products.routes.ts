@@ -1,6 +1,40 @@
 import { Routes } from '@angular/router';
-import { ProductsPageComponent } from './products-page.component';
+import { authGuard } from '../auth/guards/auth.guard';
 
 export const PRODUCT_ROUTES: Routes = [
-  { path: '', component: ProductsPageComponent }
+  {
+    path: '',
+    canMatch: [authGuard],
+    loadComponent: () =>
+      import('./parent/pages/product-list/product-list.component')
+        .then(m => m.ProductListComponent)
+  },
+  {
+    path: 'create',
+    canMatch: [authGuard],
+    loadComponent: () =>
+      import('./parent/pages/product-create/product-create.component')
+        .then(m => m.ProductCreateComponent)
+  },
+  {
+    path: 'bulk-create',
+    canMatch: [authGuard],
+    loadComponent: () =>
+      import('./parent/pages/product-bulk-create/product-bulk-create.component')
+        .then(m => m.ProductBulkCreateComponent)
+  },
+  {
+    path: ':id',
+    canMatch: [authGuard],
+    loadComponent: () =>
+      import('./parent/pages/product-details/product-details.component')
+        .then(m => m.ProductDetailsComponent)
+  },
+  {
+    path: ':id/edit',
+    canMatch: [authGuard],
+    loadComponent: () =>
+      import('./parent/pages/product-edit/product-edit.component')
+        .then(m => m.ProductEditComponent)
+  }
 ];

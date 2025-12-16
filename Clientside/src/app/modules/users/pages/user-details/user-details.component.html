@@ -28,14 +28,26 @@
       </div>
 
       <div class="identity-actions" *ngIf="canManageUser()">
-        <button mat-stroked-button color="warn" *ngIf="!user.deleted" (click)="deleteUser()">
+
+        <!-- SOFT DISABLE -->
+        <button mat-stroked-button color="warn" *ngIf="!user.deleted" (click)="softDeleteUser()"
+          matTooltip="Disable user (can be restored)">
           <mat-icon>block</mat-icon>
           Disable
         </button>
 
-        <button mat-stroked-button color="primary" *ngIf="user.deleted" (click)="restoreUser()">
+        <!-- RESTORE -->
+        <button mat-stroked-button color="primary" *ngIf="user.deleted" (click)="restoreUser()"
+          matTooltip="Restore disabled user">
           <mat-icon>restore</mat-icon>
           Restore
+        </button>
+
+        <!-- HARD DELETE -->
+        <button mat-stroked-button class="danger" *ngIf="user.deleted && role === 'SUPERUSER'"
+          (click)="hardDeleteUser()" matTooltip="Permanently delete user">
+          <mat-icon>delete_forever</mat-icon>
+          Delete permanently
         </button>
       </div>
     </mat-card>
