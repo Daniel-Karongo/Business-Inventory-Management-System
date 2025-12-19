@@ -60,10 +60,4 @@ export class ProductDetailsComponent implements OnInit {
       error: () => this.router.navigate(['/products'])
     });
   }
-
-
-  edit() {
-    if (!this.product) return;
-    this.router.navigate(['/products', this.product.id, 'edit']);
-  }
 }

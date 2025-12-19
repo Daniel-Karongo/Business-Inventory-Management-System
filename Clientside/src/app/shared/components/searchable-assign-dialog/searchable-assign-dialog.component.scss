@@ -1,0 +1,50 @@
+.dialog-root {
+  padding: 16px 20px;
+  background: var(--surface);
+  border-radius: 8px;
+  outline: none;
+}
+
+.dialog-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+}
+
+.count {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.quick-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.list {
+  height: 260px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.list-item {
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+
+  &:hover,
+  &.active {
+    background: var(--surface-hover);
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}

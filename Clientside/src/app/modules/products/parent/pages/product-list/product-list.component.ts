@@ -12,6 +12,7 @@ import { ProductService } from '../../services/product.service';
 import { Product } from '../../models/product.model';
 import { SelectionModel } from '@angular/cdk/collections';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-product-list',
@@ -23,7 +24,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
     MatCheckboxModule,
     MatButtonModule,
     MatIconModule,
-    MatPaginatorModule
+    MatPaginatorModule,
+    MatTooltipModule
   ],
   templateUrl: './product-list.component.html',
   styleUrls: ['./product-list.component.scss']

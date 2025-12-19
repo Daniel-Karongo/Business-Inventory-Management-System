@@ -1,0 +1,68 @@
+.sms-dialog {
+  background: var(--surface);
+  padding: 1rem;
+  border-radius: 0.75rem;
+  overflow-y: auto !important;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header, .message, .search, .filters {
+  margin-bottom: 0.75rem;
+}
+
+.filters {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filters mat-form-field {
+  min-width: 180px;
+}
+
+.table-wrapper {
+  max-height: 300px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+table {
+  width: 100%;
+}
+
+th {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mdc-data-table__row {
+  cursor: pointer;
+}
+
+.mdc-data-table__row.row-selected {
+  background-color: rgba(0, 122, 255, 0.08) !important;
+  border-left: 4px solid #007aff;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.count {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}

@@ -48,6 +48,13 @@ public class Customer {
     @Builder.Default
     private List<String> emailAddresses = new ArrayList<>();
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private CustomerType type;
+
+    @Enumerated(EnumType.STRING)
+    private Gender gender;       // MALE | FEMALE | OTHER (nullable)
+
     @Column(length = 2000)
     private String address;
 
@@ -55,6 +62,10 @@ public class Customer {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean deleted = false;
 
     @PrePersist
     public void prePersist() {

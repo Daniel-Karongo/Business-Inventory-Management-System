@@ -19,7 +19,9 @@ export class IconLoader {
       'payments',
       'customers',
       'accounts',
-      'users'
+      'users',
+      'branches',
+      'departments'
     ];
 
     icons.forEach(name =>

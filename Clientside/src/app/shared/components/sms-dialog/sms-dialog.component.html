@@ -1,0 +1,114 @@
+<div class="sms-dialog">
+
+  <!-- HEADER -->
+  <header class="header">
+    <h3>Send SMS</h3>
+    <button mat-icon-button matTooltip="Close" (click)="close()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <!-- MESSAGE FIRST (as requested) -->
+  <div class="message">
+    <mat-form-field appearance="fill" class="w-full">
+      <mat-label>Message</mat-label>
+      <textarea matInput rows="4" maxlength="480" [formControl]="messageCtrl">
+    </textarea>
+      <mat-hint align="end">
+        {{ messageCtrl.value.length }}/480
+      </mat-hint>
+    </mat-form-field>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="search" *ngIf="customers.length > 1">
+    <mat-form-field appearance="fill" class="w-full">
+      <mat-label>Search customers</mat-label>
+      <input matInput [formControl]="searchCtrl" placeholder="Search by name, phone or email">
+    </mat-form-field>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filters" *ngIf="customers.length > 1">
+
+    <mat-form-field appearance="fill">
+      <mat-label>Type</mat-label>
+      <mat-select [formControl]="filterTypeCtrl">
+        <mat-option value="">All</mat-option>
+        <mat-option value="INDIVIDUAL">Individual</mat-option>
+        <mat-option value="COMPANY">Company</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill" *ngIf="filterTypeCtrl.value === 'INDIVIDUAL'">
+      <mat-label>Gender</mat-label>
+      <mat-select [formControl]="filterGenderCtrl">
+        <mat-option value="">All</mat-option>
+        <mat-option value="MALE">Male</mat-option>
+        <mat-option value="FEMALE">Female</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrapper">
+    <table mat-table [dataSource]="customers">
+
+      <ng-container matColumnDef="select">
+        <th mat-header-cell *matHeaderCellDef>
+          <mat-checkbox [checked]="isAllSelected()" [indeterminate]="isIndeterminate()" (change)="toggleAll()">
+          </mat-checkbox>
+        </th>
+        <td mat-cell *matCellDef="let c">
+          <mat-checkbox (click)="$event.stopPropagation()" [checked]="selection.isSelected(c)">
+          </mat-checkbox>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef>Name</th>
+        <td mat-cell *matCellDef="let c">{{ c.name }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="phones">
+        <th mat-header-cell *matHeaderCellDef>Phones</th>
+        <td mat-cell *matCellDef="let c">
+          {{ c.phoneNumbers?.join(', ') || '—' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="emails">
+        <th mat-header-cell *matHeaderCellDef>Emails</th>
+        <td mat-cell *matCellDef="let c">
+          {{ c.email?.join(', ') || '—' }}
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns" (click)="toggleRow(row)"
+        [class.row-selected]="selection.isSelected(row)">
+      </tr>
+
+    </table>
+
+    <mat-paginator  *ngIf="customers.length > 1" [length]="total" [pageSize]="size" [pageSizeOptions]="[1, 5, 10, 20, 50]"
+      (page)="onPageChange($event)">
+    </mat-paginator>
+  </div>
+
+  <!-- ACTIONS -->
+  <footer class="actions">
+    <span class="count">
+      {{ selection.selected.length }} selected
+    </span>
+
+    <div class="spacer"></div>
+
+    <button mat-stroked-button (click)="close()">Cancel</button>
+    <button mat-flat-button color="primary" [disabled]="!selection.selected.length || !messageCtrl.value.trim()"
+      (click)="send()">
+      Send SMS
+    </button>
+  </footer>
+
+</div>

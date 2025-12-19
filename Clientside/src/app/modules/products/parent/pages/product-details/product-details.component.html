@@ -20,7 +20,8 @@
       </div>
     </div>
 
-    <button mat-stroked-button matTooltip="Edit Product" (click)="edit()">
+    <button mat-stroked-button matTooltip="Edit Product" matTooltipPosition="above"
+      [routerLink]="['/products', product.id, 'edit']" [state]="{ deleted: product.deleted }">
       Edit
     </button>
   </div>
@@ -40,7 +41,7 @@
 
     <div>
       <label>Suppliers</label>
-      <mat-chip-set *ngIf="product.suppliers?.length; else noSuppliers">
+      <mat-chip-set *ngIf="product.suppliers.length; else noSuppliers">
         <mat-chip *ngFor="let s of product.suppliers">
           {{ s.name }}
         </mat-chip>

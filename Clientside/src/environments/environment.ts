@@ -172,8 +172,8 @@ export const environment = {
       updateRecursive: (id: number) =>
         `/categories/${id}/recursive`,
 
-      allFlat: (mode = 'tree', deleted = false) =>
-        `/categories/all/flat?mode=${mode}&deleted=${deleted}`,
+      all: (mode = 'tree', deleted = false) =>
+        `/categories/all?mode=${mode}&deleted=${deleted}`,
 
       search: (keyword: string, deleted = false) =>
         `/categories/search?keyword=${keyword}&deleted=${deleted}`,

@@ -10,8 +10,8 @@
 
 @include mat.core();
 
-$light-theme: mat.define-theme((color: (theme-type: light, primary: mat.$azure-palette),));
-$dark-theme: mat.define-theme((color: (theme-type: dark, primary: mat.$azure-palette),));
+$light-theme: mat.define-theme((color: (theme-type: light, primary: mat.$azure-palette), ));
+$dark-theme: mat.define-theme((color: (theme-type: dark, primary: mat.$azure-palette), ));
 
 
 body.light {
@@ -26,6 +26,7 @@ body.dark {
    DESIGN TOKENS
 ----------------------------------------------------- */
 :root {
+  // --font-sans: 'times new roman';
   --font-sans: 'Inter', 'Segoe UI', 'Calibri', Arial, sans-serif;
 
   --text-xs: 0.75rem;
@@ -45,7 +46,7 @@ body.dark {
   --border: #e5e7eb;
   --active: #60a5fa;
   --success: #1a73e8;
-  --text-success: #21a752; 
+  --text-success: #21a752;
 }
 
 body.dark {
@@ -87,7 +88,7 @@ body {
   background: var(--surface) !important;
   border-radius: 1px !important;
   border: none !important;
-  box-shadow: 0px 0px 0px 1px rgba(0,0,0,0.2) !important;
+  box-shadow: 0px 0px 0px 1px rgba(0, 0, 0, 0.2) !important;
 }
 
 .mat-mdc-text-field-wrapper:hover {
@@ -95,11 +96,16 @@ body {
 }
 
 .mdc-text-field__input {
-  color: var(--text-primary) !important;  
+  color: var(--text-primary) !important;
 }
 
 .mdc-floating-label {
   color: var(--text-secondary) !important;
+}
+
+.mat-mdc-form-field-subscript-wrapper,
+.mat-mdc-form-field-bottom-align {
+  display: none;
 }
 
 body.dark .mat-mdc-text-field-wrapper {
@@ -109,7 +115,7 @@ body.dark .mat-mdc-text-field-wrapper {
 
 .search-input {
   background: var(--surface) !important;
-  box-shadow: 1px 2px 3px 0px rgba(0,0,0,0.35) !important;
+  box-shadow: 1px 2px 3px 0px rgba(0, 0, 0, 0.35) !important;
   color: var(--text-primary) !important;
   width: 48% !important;
   min-width: 220px !important;
@@ -133,8 +139,8 @@ body.dark .search-input {
   padding: 0.5rem 1rem;
   transition: background 0.15s;
   text-align: left;
-  box-shadow: 1px 2px 3px 0px rgba(0,0,0,0.35) !important;
-  
+  box-shadow: 1px 2px 3px 0px rgba(0, 0, 0, 0.35) !important;
+
 }
 
 .mat-mdc-option:hover {
@@ -149,7 +155,7 @@ button[mat-flat-button] {
   background-color: #005cbb !important;
   border-radius: 1px !important;
   color: white !important;
-  box-shadow: 1px 2px 3px 0px rgba(0,0,0,0.35) !important;
+  box-shadow: 1px 2px 3px 0px rgba(0, 0, 0, 0.35) !important;
 }
 
 button[mat-flat-button]:hover {
@@ -158,19 +164,93 @@ button[mat-flat-button]:hover {
 }
 
 button[mat-stroked-button] {
-  box-shadow: 1px 2px 3px 0px rgba(0,0,0,0.35) !important;
+  box-shadow: 1px 2px 3px 0px rgba(0, 0, 0, 0.35) !important;
+  margin-right: 5px !important;
 }
 
 
 /* -----------------------------------------------------
-   TABLE ROWS
+   TABLE
 ----------------------------------------------------- */
+
+.mat-mdc-table,
+.mat-mdc-header-row,
+.mat-mdc-row,
+.mat-mdc-header-cell,
+.mat-mdc-cell {
+  font-family: var(--font-sans) !important;
+  letter-spacing: 0.2px;
+}
+
+/* ================= SORTABLE HEADERS ================= */
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  transition:
+    background-color 0.15s ease,
+    transform 0.12s ease;
+}
+
+/* Header content layout */
+.sortable-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Icon baseline */
+.sort-icon {
+  font-size: 18px;
+  opacity: 0.6;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
+}
+
+/* 🔥 Hover effect */
+.sortable:hover {
+  background-color: var(--surface-hover) !important;
+  transform: translateY(-1px);
+}
+
+/* Icon reacts slightly stronger */
+.sortable:hover .sort-icon {
+  opacity: 1;
+  transform: scale(1.08);
+}
+
+/* Active sorted column */
+.sortable:has(.sort-icon:not(:contains('unfold_more'))) {
+  font-weight: var(--font-semibold) !important;
+}
+
+/* ================= ROW HOVER ================= */
+
+.mat-mdc-row {
+  transition:
+    background-color 0.05s ease,
+    transform 0.12s ease;
+}
+
+.mat-mdc-row:hover {
+  background-color: var(--surface-hover);
+  transform: translateX(2px);
+}
+
+/* ================= SELECTED ROW ================= */
+
+/* Dark mode tweak */
+.sortable .sort-icon {
+  cursor: pointer;
+}
 
 /* Highlight table row on hover */
 .mdc-data-table__row:hover {
   background-color: var(--surface-hover) !important;
   cursor: pointer;
-  transition: background 0.15s ease-in-out;
+  transition: background 0.05s ease-in-out;
 }
 
 /* Selected Row Styling */
@@ -189,6 +269,22 @@ body.dark .mdc-data-table__row.row-selected {
   background-color: rgba(0, 122, 255, 0.10) !important;
   border-left: 4px solid #3b82f6 !important;
 }
+
+/* ================= ROW ACTIONS ================= */
+
+.mat-mdc-cell.mdc-data-table__cell.cdk-cell.actions.cdk-column-actions.mat-column-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+
+    height: inherit;        /* 🔑 obey row height */
+    padding-right: 8px;
+}
+
+
+
+
 
 
 /* -----------------------------------------------------
@@ -213,6 +309,22 @@ body.dark * {
   scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
 }
 
+/* ---------------------------------------------------------
+   PAGINATOR
+--------------------------------------------------------- */
+
+.mat-mdc-paginator-container {
+  min-height: 48px;
+  padding: 6px 12px;
+  font-size: var(--text-sm);
+  background: transparent;
+}
+
+.mat-mdc-select-trigger {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
 /* -------------------------------------------------------
    GLOBAL ANGULAR MATERIAL TOOLTIP STYLING
 -------------------------------------------------------- */
@@ -232,6 +344,7 @@ body.dark * {
   max-width: 280px;
   text-align: center;
 }
+
 /* -------------------------------------------------------
    SNACKBAR GLOBAL (SAFE)
 -------------------------------------------------------- */

@@ -1,5 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto;
 
+import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.CustomerType;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.Gender;
 import lombok.Builder;
 import lombok.Data;
 
@@ -14,6 +16,9 @@ public class CustomerResponse {
     private String name;
     private List<String> phoneNumbers;
     private List<String> email;
+    private CustomerType type;
+    private Gender gender; // only for INDIVIDUAL
+    private Boolean deleted;
     private String address;
     private String notes;
     private LocalDateTime createdAt;

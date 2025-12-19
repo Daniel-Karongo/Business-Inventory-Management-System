@@ -2,12 +2,17 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.custome
 
 import com.IntegrityTechnologies.business_manager.common.PhoneAndEmailNormalizer;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
+import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.dto.SmsRequest;
+import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.model.SmsMessage;
+import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.service.SmsService;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerRequest;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerResponse;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.Customer;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.CustomerPaymentHistory;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.CustomerType;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.Gender;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.repository.CustomerPaymentHistoryRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +22,12 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
+
+import static com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.CustomerType.COMPANY;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +36,7 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private final CustomerPaymentHistoryRepository cphRepo;
     private final SaleRepository saleRepository;
+    private final SmsService smsService;
 
     @Transactional
     public UUID findOrCreateCustomer(List<CustomerRequest> identifiers) {
@@ -86,6 +96,8 @@ public class CustomerService {
                 .name(best.getName() != null ? best.getName() : "Walk-in Customer")
                 .phoneNumbers(new ArrayList<>(phones))
                 .emailAddresses(new ArrayList<>(emails))
+                .type(best.getType())
+                .gender(best.getGender())
                 .address(best.getAddress())
                 .notes(best.getNotes())
                 .createdAt(LocalDateTime.now())
@@ -100,6 +112,8 @@ public class CustomerService {
                 .name(req.getName())
                 .phoneNumbers(PhoneAndEmailNormalizer.normalizePhones(req.getPhoneNumbers()).stream().toList())
                 .emailAddresses(PhoneAndEmailNormalizer.normalizeEmails(req.getEmailAddresses()).stream().toList())
+                .type(req.getType())
+                .gender(req.getType() == COMPANY ? null : req.getGender())
                 .address(req.getAddress())
                 .notes(req.getNotes())
                 .build();
@@ -107,15 +121,28 @@ public class CustomerService {
         return toResponse(saved);
     }
 
-    public Page<CustomerResponse> listCustomers(int page, int size, String q) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Customer> pageResult;
-        if (q == null || q.isBlank()) {
-            pageResult = customerRepository.findAll(pageable);
+    public Page<CustomerResponse> listCustomers(
+            int page,
+            int size,
+            CustomerType type,
+            Gender gender,
+            Boolean deleted
+    ) {
+        Pageable p = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        Page<Customer> res;
+
+        if (type != null && gender != null && deleted != null) {
+            res = customerRepository.findByTypeAndGenderAndDeleted(type, gender, deleted, p);
+        } else if (type != null && deleted != null) {
+            res = customerRepository.findByTypeAndDeleted(type, deleted, p);
+        } else if (deleted != null){
+            res = customerRepository.findByDeleted(deleted, p);
         } else {
-            pageResult = customerRepository.findByNameContainingIgnoreCase(q, pageable);
+            res = customerRepository.findAll(p);
         }
-        return pageResult.map(this::toResponse);
+
+        return res.map(this::toResponse);
     }
 
     public CustomerResponse getCustomer(UUID id) {
@@ -129,6 +156,8 @@ public class CustomerService {
         c.setName(req.getName());
         c.setPhoneNumbers(PhoneAndEmailNormalizer.normalizePhones(req.getPhoneNumbers()).stream().toList());
         c.setEmailAddresses(PhoneAndEmailNormalizer.normalizeEmails(req.getEmailAddresses()).stream().toList());
+        c.setType(req.getType());
+        c.setGender(req.getType() == COMPANY ? null : req.getGender());
         c.setAddress(req.getAddress());
         c.setNotes(req.getNotes());
         Customer updated = customerRepository.save(c);
@@ -139,6 +168,22 @@ public class CustomerService {
     public void deleteCustomer(UUID id) {
         Customer c = customerRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Customer not found: " + id));
         customerRepository.delete(c);
+    }
+
+    @Transactional
+    public void softDelete(UUID id) {
+        Customer c = customerRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Customer not found"));
+        c.setDeleted(true);
+        customerRepository.save(c);
+    }
+
+    @Transactional
+    public void restore(UUID id) {
+        Customer c = customerRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Customer not found"));
+        c.setDeleted(false);
+        customerRepository.save(c);
     }
 
     @Transactional(readOnly = true)
@@ -179,6 +224,9 @@ public class CustomerService {
                 .name(c.getName())
                 .phoneNumbers(c.getPhoneNumbers())
                 .email(c.getEmailAddresses())
+                .gender(c.getGender())
+                .deleted(c.getDeleted())
+                .type(c.getType())
                 .address(c.getAddress())
                 .notes(c.getNotes())
                 .createdAt(c.getCreatedAt())
@@ -210,5 +258,52 @@ public class CustomerService {
                 .note(note != null ? note : "Refund applied")
                 .build();
         cphRepo.save(h);
+    }
+
+    public Map<String, Object> sendToCustomers(List<UUID> customerIds, String message) {
+
+        List<Customer> customers = customerRepository.findAllById(customerIds);
+
+        Set<String> phones = customers.stream()
+                .flatMap(c -> c.getPhoneNumbers().stream())
+                .collect(Collectors.toSet());
+
+        int skipped = customers.size() - phones.size();
+
+        List<SmsRequest> requests = phones.stream()
+                .map(p -> {
+                    SmsRequest r = new SmsRequest();
+                    r.setToPhone(p);
+                    r.setMessage(message);
+                    return r;
+                })
+                .toList();
+
+        List<SmsMessage> sent = smsService.sendBulk(requests);
+
+        return Map.of(
+                "sent", sent.size(),
+                "skipped", skipped
+        );
+    }
+
+    public byte[] exportCsv(String q, String type, String gender, Boolean deleted) {
+
+        List<Customer> customers = customerRepository.searchAdvanced(
+                q, type, gender, deleted
+        );
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("Name,Type,Gender,Phones,Emails\n");
+
+        for (Customer c : customers) {
+            sb.append(c.getName()).append(",");
+            sb.append(c.getType()).append(",");
+            sb.append(c.getGender()).append(",");
+            sb.append(String.join(" | ", c.getPhoneNumbers())).append(",");
+            sb.append(String.join(" | ", c.getEmailAddresses())).append("\n");
+        }
+
+        return sb.toString().getBytes(StandardCharsets.UTF_8);
     }
 }

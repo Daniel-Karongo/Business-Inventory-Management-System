@@ -1,0 +1,67 @@
+<h2 class="text-xl font-semibold mb-4">Create Customer</h2>
+
+<form [formGroup]="fg" class="card space-y-4">
+
+  <mat-form-field appearance="fill" class="w-full">
+    <mat-label>Name</mat-label>
+    <input matInput formControlName="name">
+    <mat-error *ngIf="fg.get('name')?.invalid">Name is required</mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="fill" class="w-full">
+    <mat-label>Customer Type</mat-label>
+    <mat-select formControlName="type">
+      <mat-option value="INDIVIDUAL">Individual</mat-option>
+      <mat-option value="COMPANY">Company</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="fill" class="w-full"
+    *ngIf="fg.get('type')?.value === 'INDIVIDUAL'">
+    <mat-label>Gender</mat-label>
+    <mat-select formControlName="gender">
+      <mat-option value="MALE">Male</mat-option>
+      <mat-option value="FEMALE">Female</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="fill" class="w-full">
+    <mat-label>Address</mat-label>
+    <input matInput formControlName="address">
+  </mat-form-field>
+
+  <mat-form-field appearance="fill" class="w-full">
+    <mat-label>Notes</mat-label>
+    <textarea matInput rows="3" formControlName="notes"></textarea>
+  </mat-form-field>
+
+  <!-- PHONES -->
+  <mat-form-field appearance="fill" class="w-full">
+    <mat-label>Phone numbers (comma separated)</mat-label>
+    <input
+      matInput
+      [value]="fg.get('phoneNumbers')?.value?.join(', ')"
+      (change)="onPhonesChange($event)"
+      placeholder="0712xxxxxxx, +254712xxxxxx"
+    />
+  </mat-form-field>
+
+  <!-- EMAILS -->
+  <mat-form-field appearance="fill" class="w-full">
+    <mat-label>Email addresses (comma separated)</mat-label>
+    <input
+      matInput
+      [value]="fg.get('emailAddresses')?.value?.join(', ')"
+      (change)="onEmailsChange($event)"
+      placeholder="alice@example.com, bob@acme.test"
+    />
+  </mat-form-field>
+
+</form>
+
+<div class="actions mt-4">
+  <button mat-flat-button color="primary" (click)="save()" [disabled]="fg.invalid">
+    Save
+  </button>
+  <button mat-stroked-button routerLink="/customers">Cancel</button>
+</div>

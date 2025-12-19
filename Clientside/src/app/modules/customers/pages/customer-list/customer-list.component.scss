@@ -1,0 +1,68 @@
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.page-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.toolbar-card,
+.filters-card,
+.table-card {
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+}
+
+.toolbar-card {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+
+  .search {
+    flex: 1;
+  }
+}
+
+.filters-card {
+  display: flex;
+  gap: 1rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+
+  .error {
+    color: #dc2626;
+    font-weight: 500;
+  }
+}
+
+.table-card {
+  overflow-x: auto;
+}
+
+.mat-mdc-table {
+  table-layout: fixed;
+  width: max-content;
+  min-width: max-content;
+}
+
+.mat-mdc-header-cell,
+.mat-mdc-cell {
+  white-space: nowrap;
+}
+
+// .mat-column-name { min-width: 200px; }
+// .mat-column-phones { min-width: 220px; }
+// .mat-column-emails { min-width: 260px; }
+// .mat-column-createdAt { min-width: 180px; }
+// .mat-column-status { min-width: 120px; }
+// .mat-column-actions { min-width: 110px; }

@@ -1,1 +1,54 @@
-<p>branch-create works!</p>
+<h2 class="text-xl font-semibold mb-4">Create Branch</h2>
+
+<form [formGroup]="fg" class="grid grid-cols-2 gap-4 bg-[var(--surface)] p-6 rounded">
+
+  <mat-form-field>
+    <mat-label>Branch Code</mat-label>
+    <input matInput formControlName="branchCode">
+  </mat-form-field>
+
+  <mat-form-field>
+    <mat-label>Name</mat-label>
+    <input matInput formControlName="name">
+  </mat-form-field>
+
+  <mat-form-field>
+    <mat-label>Location</mat-label>
+    <input matInput formControlName="location">
+  </mat-form-field>
+
+  <mat-form-field>
+    <mat-label>Phone</mat-label>
+    <input matInput formControlName="phone">
+  </mat-form-field>
+
+  <mat-form-field class="col-span-2">
+    <mat-label>Email</mat-label>
+    <input matInput formControlName="email">
+  </mat-form-field>
+
+  <mat-expansion-panel class="mt-4 col-span-2">
+    <mat-expansion-panel-header>
+      Assign Users (Optional)
+    </mat-expansion-panel-header>
+
+    <app-searchable-assign label="Users" [items]="users" [display]="userDisplay" [id]="userId"
+      [(selectedIds)]="userIds">
+    </app-searchable-assign>
+  </mat-expansion-panel>
+
+  <mat-expansion-panel class="mt-4 col-span-2">
+    <mat-expansion-panel-header>
+      Assign Departments (Optional)
+    </mat-expansion-panel-header>
+
+    <app-searchable-assign label="Departments" [items]="departments" [display]="deptDisplay" [id]="deptId"
+      [(selectedIds)]="departmentIds">
+    </app-searchable-assign>
+  </mat-expansion-panel>
+</form>
+
+<div class="mt-6 flex gap-2">
+  <button mat-flat-button (click)="save()">Save</button>
+  <button mat-stroked-button routerLink="/branches">Cancel</button>
+</div>

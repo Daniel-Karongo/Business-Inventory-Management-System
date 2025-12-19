@@ -2,7 +2,7 @@ import { BranchMinimalDTO } from "../../branches/models/branch.model";
 import { MinimalUserDTO } from "../../users/models/user.model";
 
 export interface DepartmentDTO {
-  id?: string; // read-only
+  id: string; // read-only
   name: string;
   description?: string;
   rollcallStartTime?: string; // LocalTime → string

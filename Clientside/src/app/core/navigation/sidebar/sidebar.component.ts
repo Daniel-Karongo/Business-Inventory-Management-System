@@ -38,6 +38,8 @@ export class SidebarComponent {
     { title: 'Customers',  route: '/customers',  icon: 'customers' },
     { title: 'Accounts',   route: '/accounts',   icon: 'accounts' },
     { title: 'Users',      route: '/users',      icon: 'users' },
+    { title: 'Branches',   route: '/branches',   icon: 'branches' },
+    { title: 'Departments',   route: '/departments',   icon: 'departments' }
   ];
 
   constructor(public sidebar: SidebarService) {}

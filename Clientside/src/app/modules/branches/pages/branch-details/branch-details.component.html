@@ -1,1 +1,13 @@
-<p>branch-details works!</p>
+<div *ngIf="branch">
+  <div class="flex justify-between mb-4">
+    <h2 class="text-xl font-semibold">{{ branch.name }}</h2>
+    <button mat-stroked-button [routerLink]="['edit']">Edit</button>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4 text-sm">
+    <div><strong>Code:</strong> {{ branch.branchCode }}</div>
+    <div><strong>Location:</strong> {{ branch.location }}</div>
+    <div><strong>Phone:</strong> {{ branch.phone }}</div>
+    <div><strong>Email:</strong> {{ branch.email }}</div>
+  </div>
+</div>

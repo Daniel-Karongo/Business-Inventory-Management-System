@@ -1,1 +1,41 @@
-<p>product-bulk-create works!</p>
+<div class="page-container">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <h1>Bulk Create Products</h1>
+    <p class="subtitle">
+      Upload a CSV or Excel file to create multiple products at once.
+    </p>
+  </div>
+
+  <!-- FILE INPUT -->
+  <div class="upload-card">
+
+    <input
+      type="file"
+      accept=".csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+      (change)="onFileSelected($event)"
+    />
+
+    <div *ngIf="file" class="file-info">
+      <mat-icon>description</mat-icon>
+      {{ file.name }}
+    </div>
+
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="actions">
+    <button mat-button (click)="cancel()">Cancel</button>
+
+    <button
+      mat-flat-button
+      color="primary"
+      [disabled]="!file || uploading"
+      (click)="upload()"
+    >
+      Upload
+    </button>
+  </div>
+
+</div>

@@ -72,7 +72,7 @@ public class CategoryController {
     #deleted == false 
     or 
     ( #deleted == true and hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER') )""")
-    @GetMapping("/all/flat")
+    @GetMapping("/all")
     public ResponseEntity<List<CategoryDTO>> getAllCategories (
             @RequestParam(defaultValue = "tree") String mode,
             @RequestParam(defaultValue = "false") Boolean deleted

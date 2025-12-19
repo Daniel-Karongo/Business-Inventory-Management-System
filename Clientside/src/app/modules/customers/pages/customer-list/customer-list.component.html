@@ -1,0 +1,233 @@
+<div class="flex flex-col gap-4">
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+        <h1 class="text-xl font-semibold">Customers</h1>
+
+        <div class="page-actions">
+            <button mat-stroked-button (click)="exportCsv()">Export CSV</button>
+            <button mat-stroked-button (click)="openSmsDialog()">Send SMS</button>
+            <button mat-flat-button color="primary" routerLink="/customers/create">
+                New Customer
+            </button>
+        </div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar-card">
+        <mat-form-field appearance="fill" class="search">
+            <mat-label>Search customers</mat-label>
+            <input matInput [formControl]="searchCtrl">
+        </mat-form-field>
+
+        <mat-checkbox (change)="toggleDeleted()">Show deleted</mat-checkbox>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="filters-card">
+        <mat-form-field appearance="fill">
+            <mat-label>Type</mat-label>
+            <mat-select [formControl]="filterTypeCtrl">
+                <mat-option value="">All</mat-option>
+                <mat-option value="INDIVIDUAL">Individual</mat-option>
+                <mat-option value="COMPANY">Company</mat-option>
+            </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill" *ngIf="filterTypeCtrl.value === 'INDIVIDUAL'">
+            <mat-label>Gender</mat-label>
+            <mat-select [formControl]="filterGenderCtrl">
+                <mat-option value="">All</mat-option>
+                <mat-option value="MALE">Male</mat-option>
+                <mat-option value="FEMALE">Female</mat-option>
+            </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+            <mat-label>Status</mat-label>
+            <mat-select [formControl]="filterStatusCtrl">
+                <mat-option value="">All</mat-option>
+                <mat-option value="active">Active</mat-option>
+                <mat-option value="deleted">Disabled</mat-option>
+            </mat-select>
+        </mat-form-field>
+    </div>
+
+    <!-- BULK BAR -->
+    <div class="bulk-bar" *ngIf="selection.selected.length">
+        <span>{{ selection.selected.length }} selected</span>
+
+        <button *ngIf="bulkState === 'active'" mat-stroked-button color="warn" (click)="bulkDisable()">
+            Disable selected
+        </button>
+
+        <button *ngIf="bulkState === 'deleted'" mat-stroked-button color="primary" (click)="bulkRestore()">
+            Restore selected
+        </button>
+
+        <button *ngIf="bulkState === 'deleted'" mat-flat-button color="warn" (click)="bulkHardDelete()">
+            Delete permanently
+        </button>
+
+        <span *ngIf="bulkState === 'mixed'" class="error">
+            Mixed status — bulk action disabled
+        </span>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-card rounded shadow overflow-x-auto">
+        <table mat-table [dataSource]="customers" class="w-full">
+
+            <!-- SELECT -->
+            <ng-container matColumnDef="select">
+                <th mat-header-cell *matHeaderCellDef>
+                    <mat-checkbox [checked]="isAllSelected()" [indeterminate]="isIndeterminate()"
+                        (change)="toggleAll()">
+                    </mat-checkbox>
+                </th>
+                <td mat-cell *matCellDef="let c">
+                    <mat-checkbox (click)="$event.stopPropagation()" [checked]="selection.isSelected(c)">
+                    </mat-checkbox>
+                </td>
+            </ng-container>
+
+            <!-- NAME -->
+            <ng-container matColumnDef="name">
+                <th mat-header-cell *matHeaderCellDef (click)="sortBy('name')" class="sortable"
+                    matTooltip="Sort by name" matTooltipPosition="above">
+                    <span class="sortable-content">
+                        Name
+                        <mat-icon class="sort-icon">
+                            {{ sortField === 'name'
+                            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+                            : 'unfold_more' }}
+                        </mat-icon>
+                    </span>
+                </th>
+                <td mat-cell *matCellDef="let c">
+                    <a [routerLink]="['/customers', c.id]" class="text-blue-600 hover:underline">
+                        {{ c.name }}
+                    </a>
+                </td>
+            </ng-container>
+
+            <!-- GENDER -->
+            <ng-container matColumnDef="gender">
+                <th mat-header-cell *matHeaderCellDef (click)="sortBy('gender')" class="sortable"
+                    matTooltip="Sort by gender" matTooltipPosition="above">
+                    <span class="sortable-content">
+                        Gender
+                        <mat-icon class="sort-icon">
+                            {{ sortField === 'gender'
+                            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+                            : 'unfold_more' }}
+                        </mat-icon>
+                    </span>
+                </th>
+                <td mat-cell *matCellDef="let c">
+                    {{ c.gender || '—' }}
+                </td>
+            </ng-container>
+
+            <!-- PHONES -->
+            <ng-container matColumnDef="phones">
+                <th mat-header-cell *matHeaderCellDef (click)="sortBy('phones')" class="sortable"
+                    matTooltip="Sort by phone numbers" matTooltipPosition="above">
+                    <span class="sortable-content">
+                        Phones
+                        <mat-icon class="sort-icon">
+                            {{ sortField === 'phones'
+                            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+                            : 'unfold_more' }}
+                        </mat-icon>
+                    </span>
+                </th>
+                <td mat-cell *matCellDef="let c">
+                    {{ c.phoneNumbers?.join(', ') || '—' }}
+                </td>
+            </ng-container>
+
+            <!-- EMAILS -->
+            <ng-container matColumnDef="emails">
+                <th mat-header-cell *matHeaderCellDef (click)="sortBy('emails')" class="sortable"
+                    matTooltip="Sort by emails" matTooltipPosition="above">
+                    <span class="sortable-content">
+                        Emails
+                        <mat-icon class="sort-icon">
+                            {{ sortField === 'emails'
+                            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+                            : 'unfold_more' }}
+                        </mat-icon>
+                    </span>
+                </th>
+                <td mat-cell *matCellDef="let c">
+                    {{ c.email?.join(', ') || '—' }}
+                </td>
+            </ng-container>
+
+            <!-- CREATED -->
+            <ng-container matColumnDef="createdAt">
+                <th mat-header-cell *matHeaderCellDef (click)="sortBy('createdAt')" class="sortable"
+                    matTooltip="Sort by creation date" matTooltipPosition="above">
+                    <span class="sortable-content">
+                        Created
+                        <mat-icon class="sort-icon">
+                            {{ sortField === 'createdAt'
+                            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+                            : 'unfold_more' }}
+                        </mat-icon>
+                    </span>
+                </th>
+                <td mat-cell *matCellDef="let c">
+                    {{ c.createdAt | date:'medium' }}
+                </td>
+            </ng-container>
+
+            <!-- STATUS -->
+            <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef (click)="sortBy('status')" class="sortable"
+                    matTooltip="Sort by status" matTooltipPosition="above">
+                    <span class="sortable-content">
+                        Status
+                        <mat-icon class="sort-icon">
+                            {{ sortField === 'status'
+                            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+                            : 'unfold_more' }}
+                        </mat-icon>
+                    </span>
+                </th>
+
+                <td mat-cell *matCellDef="let c">
+                    <span [ngClass]="{
+      'text-green-400': !c.deleted,
+      'text-red-400': c.deleted
+    }">
+                        {{ c.deleted ? 'Disabled' : 'Active' }}
+                    </span>
+                </td>
+            </ng-container>
+
+
+            <!-- ACTIONS -->
+            <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef [attr.aria-label]="'Customer actions'"> Actions</th>
+                <td mat-cell *matCellDef="let c" class="actions">
+                    <button mat-icon-button matTooltip="View" (click)="view(c.id)">
+                        <mat-icon>visibility</mat-icon>
+                    </button>
+                    <button mat-icon-button matTooltip="Edit" (click)="edit(c.id)">
+                        <mat-icon>edit</mat-icon>
+                    </button>
+                </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns" (click)="toggleRow(row)"
+                [class.row-selected]="selection.isSelected(row)">
+            </tr>
+        </table>
+
+        <mat-paginator [length]="total" [pageSize]="size" [pageSizeOptions]="[1, 5, 10, 20, 50]"
+            (page)="onPageChange($event)">
+        </mat-paginator>
+    </div>
+</div>

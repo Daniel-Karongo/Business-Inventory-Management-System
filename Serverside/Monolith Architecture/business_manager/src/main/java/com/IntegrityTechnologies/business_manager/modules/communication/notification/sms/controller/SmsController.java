@@ -21,19 +21,19 @@ public class SmsController {
 
     private final SmsService service;
 
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @PostMapping("/send")
     public ResponseEntity<SmsMessage> send(@RequestBody SmsRequest req) {
         return ResponseEntity.ok(service.sendSms(req));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @PostMapping("/send-bulk")
     public ResponseEntity<List<SmsMessage>> sendBulk(@RequestBody BulkSmsRequest req) {
         return ResponseEntity.ok(service.sendBulk(req.getMessages()));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','CASHIER')")
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @GetMapping("/{id}")
     public ResponseEntity<SmsMessage> get(@PathVariable UUID id) {
         SmsMessage msg = service.getMessage(id);

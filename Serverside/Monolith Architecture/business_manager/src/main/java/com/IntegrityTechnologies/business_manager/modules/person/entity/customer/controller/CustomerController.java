@@ -2,11 +2,16 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.custome
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerRequest;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerResponse;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerSmsRequest;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.CustomerType;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.Gender;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service.CustomerService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -22,42 +27,55 @@ public class CustomerController {
 
     private final CustomerService customerService;
 
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','CASHIER')")
     @PostMapping
     public ResponseEntity<CustomerResponse> createCustomer(@Valid @RequestBody CustomerRequest req) {
         CustomerResponse created = customerService.createCustomer(req);
         return ResponseEntity.created(URI.create("/api/customers/" + created.getId())).body(created);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','CASHIER')")
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @GetMapping
     public ResponseEntity<Page<CustomerResponse>> listCustomers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String q) {
-        Page<CustomerResponse> p = customerService.listCustomers(page, size, q);
-        return ResponseEntity.ok(p);
+            @RequestParam(required = false) CustomerType type,
+            @RequestParam(required = false) Gender gender,
+            @RequestParam(required = false) Boolean deleted
+    ) {
+        return ResponseEntity.ok(
+                customerService.listCustomers(page, size, type, gender, deleted)
+        );
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','CASHIER')")
     @GetMapping("/{id}")
     public ResponseEntity<CustomerResponse> getCustomer(@PathVariable UUID id) {
         return ResponseEntity.ok(customerService.getCustomer(id));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @PutMapping("/{id}")
     public ResponseEntity<CustomerResponse> updateCustomer(@PathVariable UUID id, @Valid @RequestBody CustomerRequest req) {
         return ResponseEntity.ok(customerService.updateCustomer(id, req));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCustomer(@PathVariable UUID id) {
-        customerService.deleteCustomer(id);
+    public ResponseEntity<Void> deleteCustomer(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "true") Boolean soft
+    ) {
+        if (soft) customerService.softDelete(id);
+        else customerService.deleteCustomer(id);
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @PatchMapping("/{id}/restore")
+    public ResponseEntity<Void> restore(@PathVariable UUID id) {
+        customerService.restore(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @GetMapping("/search")
     public ResponseEntity<Page<CustomerResponse>> search(
             @RequestParam String q,
@@ -75,5 +93,31 @@ public class CustomerController {
     @GetMapping("/{id}/sales")
     public ResponseEntity<Object> customerSales(@PathVariable UUID id) {
         return ResponseEntity.ok(customerService.getCustomerSales(id));
+    }
+
+    @PostMapping("/send-to-customers")
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    public ResponseEntity<?> sendToCustomers(
+            @RequestBody CustomerSmsRequest req
+    ) {
+        return ResponseEntity.ok(
+                customerService.sendToCustomers(req.getCustomerIds(), req.getMessage())
+        );
+    }
+
+    @GetMapping("/export")
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    public ResponseEntity<byte[]> exportCustomers(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String gender,
+            @RequestParam(required = false, defaultValue = "false") Boolean deleted
+    ) {
+        byte[] csv = customerService.exportCsv(q, type, gender, deleted);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=customers.csv")
+                .contentType(MediaType.TEXT_PLAIN)
+                .body(csv);
     }
 }

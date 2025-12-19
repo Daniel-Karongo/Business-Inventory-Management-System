@@ -130,7 +130,7 @@
       <!-- Username -->
       <ng-container matColumnDef="username">
         <mat-header-cell *matHeaderCellDef (click)="sortBy('username')" class="sortable"
-          [attr.aria-label]="'Sort by username'">
+          [attr.aria-label]="'Sort by username'"matTooltip="Sort by username" matTooltipPosition="above">
           Username
           <mat-icon class="sort-icon">
             {{ sortField === 'username'
@@ -138,9 +138,10 @@
             : 'unfold_more' }}
           </mat-icon>
         </mat-header-cell>
-
         <mat-cell *matCellDef="let u">
-          {{ u.username }}
+          <a (click)="view(u)" class="text-blue-600 hover:underline">
+            {{ u.username }}
+          </a>
         </mat-cell>
       </ng-container>
 
@@ -170,7 +171,7 @@
       <!-- Branch + Department Grid -->
       <ng-container matColumnDef="branches_depts">
         <mat-header-cell *matHeaderCellDef (click)="sortBy('branch')" [attr.aria-label]="'Sort by branch or department'"
-          class="sortable">
+          class="sortable" matTooltip="Sort by branch or department" matTooltipPosition="above">
           Branches / Departments
           <mat-icon class="sort-icon">
             {{ sortField === 'branch' || sortField === 'department'
@@ -196,7 +197,7 @@
 
       <!-- Role -->
       <ng-container matColumnDef="role">
-        <mat-header-cell *matHeaderCellDef (click)="sortBy('role')" class="sortable" [attr.aria-label]="'Sort by role'">
+        <mat-header-cell *matHeaderCellDef (click)="sortBy('role')" class="sortable" [attr.aria-label]="'Sort by role'" matTooltip="Sort by role" matTooltipPosition="above">
           Role
           <mat-icon class="sort-icon">
             {{ sortField === 'role'
@@ -213,7 +214,7 @@
       <!-- Status -->
       <ng-container matColumnDef="status">
         <mat-header-cell *matHeaderCellDef (click)="sortBy('status')" class="sortable"
-          [attr.aria-label]="'User status'">
+          [attr.aria-label]="'User status'" matTooltip="Sort by status" matTooltipPosition="above">
           Status
           <mat-icon *ngIf="allowShowDeleted" class="sort-icon">
             {{ sortField === 'status'
@@ -232,7 +233,7 @@
       <!-- CreatedAt -->
       <ng-container matColumnDef="createdAt">
         <mat-header-cell *matHeaderCellDef (click)="sortBy('createdAt')" class="sortable"
-          [attr.aria-label]="'Sort by date created'">
+          [attr.aria-label]="'Sort by date created'" matTooltip="Sort by date created" matTooltipPosition="above">
           Created
           <mat-icon class="sort-icon">
             {{ sortField === 'createdAt'
@@ -286,7 +287,7 @@
   </div>
 
   <!-- PAGINATOR ONLY WHEN NEEDED -->
-  <mat-paginator [length]="total" [pageSize]="size" [attr.aria-label]="'Users pagination'"
+  <mat-paginator [length]="total" [pageSize]="size" [pageSizeOptions]="[1, 5, 10, 20, 50]" [attr.aria-label]="'Users pagination'"
     (page)="changePage($event)">
   </mat-paginator>
 

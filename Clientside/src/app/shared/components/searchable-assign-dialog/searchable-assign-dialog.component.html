@@ -1,0 +1,39 @@
+<div class="dialog-root" (keydown)="handleKey($event)" tabindex="0">
+
+  <h2 class="dialog-title">
+    Select {{ data.label }}
+    <span class="count">({{ selected.size }})</span>
+  </h2>
+
+  <!-- SEARCH -->
+  <mat-form-field appearance="fill" class="w-full">
+    <mat-label>Search</mat-label>
+    <input matInput [formControl]="search" />
+  </mat-form-field>
+
+  <!-- QUICK ACTIONS -->
+  <div class="quick-actions">
+    <button mat-button (click)="selectAll()">Select all</button>
+    <button mat-button (click)="clearAll()">Clear all</button>
+  </div>
+
+  <!-- LIST -->
+  <cdk-virtual-scroll-viewport itemSize="44" class="list">
+    <div
+      *cdkVirtualFor="let item of filtered; let i = index"
+      class="list-item"
+      [class.active]="i === activeIndex"
+      (click)="toggle(item)">
+
+      {{ data.display(item) }}
+      <mat-icon *ngIf="selected.has(data.id(item))">check</mat-icon>
+    </div>
+  </cdk-virtual-scroll-viewport>
+
+  <!-- ACTIONS -->
+  <div class="actions">
+    <button mat-stroked-button (click)="cancel()">Cancel</button>
+    <button mat-flat-button color="primary" (click)="apply()">Apply</button>
+  </div>
+
+</div>

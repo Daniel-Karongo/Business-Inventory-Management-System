@@ -1,0 +1,156 @@
+<div class="page-container" *ngIf="customer">
+
+  <!-- HEADER -->
+  <div class="page-header">
+
+    <div class="title-block">
+      <h2>{{ customer.name }}</h2>
+      <span class="subtitle">
+        {{ customer.type === 'INDIVIDUAL' ? 'Individual Customer' : 'Company Customer' }}
+      </span>
+    </div>
+
+    <div class="actions">
+
+      <!-- SMS -->
+      <button
+        mat-stroked-button
+        matTooltip="Send SMS"
+        [disabled]="!customer.phoneNumbers?.length"
+        (click)="sendSms()">
+        <mat-icon>sms</mat-icon>
+        SMS
+      </button>
+
+      <!-- EDIT -->
+      <button
+        mat-stroked-button
+        matTooltip="Edit Customer"
+        (click)="edit()">
+        <mat-icon>edit</mat-icon>
+        Edit
+      </button>
+
+      <!-- TOGGLE -->
+      <button
+        mat-flat-button
+        [color]="customer.deleted ? 'primary' : 'warn'"
+        (click)="toggleActive()">
+        <mat-icon>
+          {{ customer.deleted ? 'restore' : 'block' }}
+        </mat-icon>
+        {{ customer.deleted ? 'Restore' : 'Disable' }}
+      </button>
+
+    </div>
+
+  </div>
+
+  <mat-tab-group class="details-tabs">
+
+    <!-- OVERVIEW -->
+    <mat-tab label="Overview">
+      <div class="overview-grid">
+
+        <div class="info-card">
+          <div class="label">Phones</div>
+          <div class="value">{{ customer.phoneNumbers?.join(', ') || '—' }}</div>
+        </div>
+
+        <div class="info-card">
+          <div class="label">Emails</div>
+          <div class="value">{{ customer.email?.join(', ') || '—' }}</div>
+        </div>
+
+        <div class="info-card">
+          <div class="label">Gender</div>
+          <div class="value">{{ customer.gender || '—' }}</div>
+        </div>
+
+        <div class="info-card full">
+          <div class="label">Address</div>
+          <div class="value">{{ customer.address || '—' }}</div>
+        </div>
+
+        <div class="info-card full">
+          <div class="label">Notes</div>
+          <div class="value">{{ customer.notes || '—' }}</div>
+        </div>
+
+      </div>
+    </mat-tab>
+
+    <!-- PAYMENTS -->
+    <mat-tab label="Payments">
+      <div class="table-wrapper" *ngIf="payments.length; else noPayments">
+        <table mat-table [dataSource]="payments">
+
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef>Date</th>
+            <td mat-cell *matCellDef="let p">
+              {{ p.timestamp | date:'medium' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="amount">
+            <th mat-header-cell *matHeaderCellDef>Amount</th>
+            <td mat-cell *matCellDef="let p">
+              {{ p.amount | number }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="note">
+            <th mat-header-cell *matHeaderCellDef>Note</th>
+            <td mat-cell *matCellDef="let p">
+              {{ p.note || '—' }}
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="paymentColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: paymentColumns"></tr>
+        </table>
+      </div>
+
+      <ng-template #noPayments>
+        <div class="empty-state">No payments recorded</div>
+      </ng-template>
+    </mat-tab>
+
+    <!-- SALES -->
+    <mat-tab label="Sales">
+      <div class="table-wrapper" *ngIf="sales.length; else noSales">
+        <table mat-table [dataSource]="sales">
+
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef>Date</th>
+            <td mat-cell *matCellDef="let s">
+              {{ s.createdAt | date:'medium' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="total">
+            <th mat-header-cell *matHeaderCellDef>Total</th>
+            <td mat-cell *matCellDef="let s">
+              {{ s.totalAmount | number }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let s">
+              {{ s.status }}
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="saleColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: saleColumns"></tr>
+        </table>
+      </div>
+
+      <ng-template #noSales>
+        <div class="empty-state">No sales found</div>
+      </ng-template>
+    </mat-tab>
+
+  </mat-tab-group>
+</div>

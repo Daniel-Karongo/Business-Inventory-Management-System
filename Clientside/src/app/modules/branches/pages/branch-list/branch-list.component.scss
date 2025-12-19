@@ -1,0 +1,32 @@
+table {
+  background: var(--surface);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+td {
+  color: var(--text-primary);
+}
+
+button[mat-icon-button] {
+  opacity: 0.85;
+}
+
+button[mat-icon-button]:hover {
+  opacity: 1;
+}
+
+.actions-col {
+  width: 120px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.actions-col button {
+  margin-left: 4px;
+}

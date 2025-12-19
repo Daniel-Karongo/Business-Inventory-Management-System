@@ -1,0 +1,72 @@
+<h2 class="text-xl font-semibold mb-4">Edit Customer</h2>
+
+<form [formGroup]="fg" class="card space-y-4">
+
+    <mat-form-field appearance="fill" class="w-full">
+        <mat-label>Name</mat-label>
+        <input matInput formControlName="name">
+    </mat-form-field>
+
+    <mat-form-field appearance="fill" class="w-full">
+        <mat-label>Customer Type</mat-label>
+        <mat-select formControlName="type">
+            <mat-option value="INDIVIDUAL">Individual</mat-option>
+            <mat-option value="COMPANY">Company</mat-option>
+        </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill" class="w-full" *ngIf="fg.get('type')?.value === 'INDIVIDUAL'">
+        <mat-label>Gender</mat-label>
+        <mat-select formControlName="gender">
+            <mat-option value="MALE">Male</mat-option>
+            <mat-option value="FEMALE">Female</mat-option>
+        </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill" class="w-full">
+        <mat-label>Address</mat-label>
+        <input matInput formControlName="address">
+    </mat-form-field>
+
+    <mat-form-field appearance="fill" class="w-full">
+        <mat-label>Notes</mat-label>
+        <textarea matInput rows="3" formControlName="notes"></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill" class="w-full">
+        <mat-label>Phone Numbers</mat-label>
+
+        <mat-chip-grid #phoneGrid>
+            <mat-chip-row *ngFor="let p of phoneNumbers.controls; let i = index" (removed)="removePhone(i)">
+                {{ p.value }}
+                <button matChipRemove>
+                    <mat-icon>cancel</mat-icon>
+                </button>
+            </mat-chip-row>
+
+            <input [matChipInputFor]="phoneGrid" (matChipInputTokenEnd)="addPhone($event)"
+                placeholder="Add phone number" />
+        </mat-chip-grid>
+    </mat-form-field>
+    <mat-form-field appearance="fill" class="w-full">
+        <mat-label>Email Addresses</mat-label>
+
+        <mat-chip-grid #emailGrid>
+            <mat-chip-row *ngFor="let e of emailAddresses.controls; let i = index" (removed)="removeEmail(i)">
+                {{ e.value }}
+                <button matChipRemove>
+                    <mat-icon>cancel</mat-icon>
+                </button>
+            </mat-chip-row>
+
+            <input [matChipInputFor]="emailGrid" (matChipInputTokenEnd)="addEmail($event)" placeholder="Add email" />
+        </mat-chip-grid>
+    </mat-form-field>
+</form>
+
+<div class="actions mt-4">
+    <button mat-flat-button color="primary" (click)="save()" [disabled]="fg.invalid">
+        Save Changes
+    </button>
+    <button mat-stroked-button [routerLink]="['/customers', id]">Cancel</button>
+</div>

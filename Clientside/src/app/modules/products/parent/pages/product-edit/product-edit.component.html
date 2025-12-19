@@ -1,1 +1,74 @@
-<p>product-edit works!</p>
+<div class="page" *ngIf="!loading">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <h1>Edit Product</h1>
+
+      <span class="status-pill"
+            [ngClass]="product.deleted ? 'status-deleted' : 'status-active'">
+        {{ product.deleted ? 'Deleted' : 'Active' }}
+      </span>
+    </div>
+  </div>
+
+  <!-- DELETED WARNING -->
+  <div class="warning" *ngIf="product.deleted">
+    This product is deleted and cannot be edited.
+  </div>
+
+  <!-- FORM -->
+  <form [formGroup]="form" class="form">
+
+    <mat-form-field appearance="fill">
+      <mat-label>Name</mat-label>
+      <input matInput formControlName="name" />
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Description</mat-label>
+      <textarea matInput rows="3" formControlName="description"></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Category</mat-label>
+      <mat-select formControlName="categoryId">
+        <mat-option *ngFor="let c of categories" [value]="c.id">
+          {{ c.name }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Suppliers</mat-label>
+      <mat-select formControlName="supplierIds" multiple>
+        <mat-option *ngFor="let s of suppliers" [value]="s.id">
+          {{ s.name }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Minimum % Profit</mat-label>
+      <input matInput type="number" formControlName="minimumPercentageProfit" />
+    </mat-form-field>
+
+    <!-- ACTIONS -->
+    <div class="actions">
+      <button mat-button type="button" (click)="cancel()">Cancel</button>
+      <button mat-flat-button
+              color="primary"
+              type="button"
+              [disabled]="form.invalid || saving || product.deleted"
+              (click)="save()">
+        Save
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<!-- LOADING -->
+<div *ngIf="loading" class="loading">
+  Loading product…
+</div>

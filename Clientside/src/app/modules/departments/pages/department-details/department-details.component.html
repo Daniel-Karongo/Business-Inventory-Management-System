@@ -1,1 +1,13 @@
-<p>department-details works!</p>
+<div *ngIf="department">
+    <div class="flex justify-between mb-4">
+        <h2 class="text-xl font-semibold">{{ department.name }}</h2>
+        <button mat-stroked-button [routerLink]="['edit']">Edit</button>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 text-sm bg-[var(--surface)] p-4 rounded">
+        <div><strong>Description:</strong> {{ department.description || '—' }}</div>
+        <div><strong>Rollcall:</strong> {{ department.rollcallStartTime || '—' }}</div>
+        <div><strong>Grace Period:</strong> {{ department.gracePeriodMinutes ?? '—' }} min</div>
+        <div><strong>Branches:</strong> {{ branchNames }}</div>
+    </div>
+</div>

@@ -1,1 +1,57 @@
-<p>department-create works!</p>
+<h2 class="text-xl font-semibold mb-4">Create Department</h2>
+
+<form [formGroup]="fg" class="grid grid-cols-2 gap-4 bg-[var(--surface)] p-6 rounded">
+
+  <mat-form-field class="col-span-2">
+    <mat-label>Name</mat-label>
+    <input matInput formControlName="name">
+  </mat-form-field>
+
+  <mat-form-field class="col-span-2">
+    <mat-label>Description</mat-label>
+    <input matInput formControlName="description">
+  </mat-form-field>
+
+  <mat-form-field>
+    <mat-label>Rollcall Start</mat-label>
+    <input matInput type="time" formControlName="rollcallStartTime">
+  </mat-form-field>
+
+  <mat-form-field>
+    <mat-label>Grace Period (min)</mat-label>
+    <input matInput type="number" formControlName="gracePeriodMinutes">
+  </mat-form-field>
+
+  <!-- HEADS -->
+  <mat-expansion-panel class="mt-4 col-span-2">
+    <mat-expansion-panel-header>Assign Heads</mat-expansion-panel-header>
+
+    <app-searchable-assign label="Heads" [items]="users" [excludeIds]="memberIds" [(selectedIds)]="headIds"
+      [display]="userDisplay" [id]="userId">
+    </app-searchable-assign>
+  </mat-expansion-panel>
+
+  <!-- MEMBERS -->
+  <mat-expansion-panel class="mt-4 col-span-2">
+    <mat-expansion-panel-header>Assign Members</mat-expansion-panel-header>
+
+    <app-searchable-assign label="Members" [items]="users" [excludeIds]="headIds" [(selectedIds)]="memberIds"
+      [display]="userDisplay" [id]="userId">
+    </app-searchable-assign>
+  </mat-expansion-panel>
+
+  <!-- BRANCHES -->
+  <mat-expansion-panel class="mt-4 col-span-2">
+    <mat-expansion-panel-header>Assign Branches</mat-expansion-panel-header>
+
+    <app-searchable-assign label="Branches" [items]="branches" [display]="branchDisplay" [id]="branchId"
+      [(selectedIds)]="branchIds">
+    </app-searchable-assign>
+
+  </mat-expansion-panel>
+</form>
+
+<div class="mt-6 flex gap-2">
+  <button mat-flat-button (click)="save()">Save</button>
+  <button mat-stroked-button routerLink="/departments">Cancel</button>
+</div>
