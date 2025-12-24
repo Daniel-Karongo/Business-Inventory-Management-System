@@ -6,6 +6,8 @@ import com.IntegrityTechnologies.business_manager.config.TransactionalFileManage
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.exception.ImageNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierImageDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.mapper.SupplierImageMapper;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.mapper.SupplierMapper;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.SupplierImage;
@@ -73,6 +75,17 @@ public class SupplierImageService {
         existing.setUpdatedAt(LocalDateTime.now());
         Supplier saved = supplierRepository.save(existing);
         return supplierMapper.toDTO(saved);
+    }
+
+    public List<SupplierImageDTO> listImages(UUID supplierId, Boolean deleted) {
+
+        var images = (deleted == null)
+                ? supplierImageRepository.findBySupplier_Id(supplierId)
+                : supplierImageRepository.findBySupplier_IdAndDeleted(supplierId, deleted);
+
+        return images.stream()
+                .map(SupplierImageMapper::toDTO)
+                .toList();
     }
 
     public List<String> getAllSuppliersImages(Boolean deletedSupplier, Boolean deletedImage) {

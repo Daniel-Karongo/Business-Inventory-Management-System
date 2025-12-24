@@ -1,0 +1,83 @@
+<div class="p-4">
+
+    <!-- HEADER -->
+    <div class="toolbar">
+        <h3>Documents</h3>
+
+        <button mat-flat-button color="primary" (click)="triggerUpload()" [disabled]="uploading">
+            <mat-icon>upload</mat-icon>
+            Upload
+        </button>
+    </div>
+
+    <!-- EMPTY -->
+    <div class="empty" *ngIf="!loading && images.length === 0">
+        No documents uploaded
+    </div>
+
+    <!-- GRID -->
+    <div class="image-grid" *ngIf="!loading">
+        <div class="image-card" *ngFor="let img of images" [class.deleted]="img.deleted">
+
+            <ng-container *ngIf="img.image; else pdfTpl">
+                <img [src]="imageUrl(img)" (click)="view(img)" class="clickable-image" />
+            </ng-container>
+
+            <ng-template #pdfTpl>
+                <div class="pdf-card" (click)="view(img)">
+                    <mat-icon>picture_as_pdf</mat-icon>
+                    <span>{{ img.fileName }}</span>
+                </div>
+            </ng-template>
+
+            <div class="image-meta">
+                <div class="filename">{{ img.fileName }}</div>
+                <div class="description" *ngIf="img.description">
+                    {{ img.description }}
+                </div>
+                <div class="deleted" *ngIf="img.deleted">Deleted</div>
+            </div>
+
+            <div class="actions">
+                <button mat-icon-button (click)="primaryAction(img)"
+                    [matTooltip]="img.deleted ? 'Restore document' : 'Delete document'">
+                    <mat-icon>{{ img.deleted ? 'restore' : 'delete' }}</mat-icon>
+                </button>
+
+                <button *ngIf="img.deleted && allowHardDelete" mat-icon-button color="warn"
+                    matTooltip="Delete permanently" (click)="hardDelete(img)">
+                    <mat-icon>delete_forever</mat-icon>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ================= AUDIT LOG ================= -->
+    <details class="audit-section" *ngIf="!loadingAudits && audits.length">
+
+        <summary class="audit-summary">
+            Document Audit Log
+            <span class="count">({{ audits.length }})</span>
+        </summary>
+
+        <div class="audit-list">
+            <div class="audit-row" *ngFor="let audit of audits">
+                <div class="audit-left">
+                    <div class="audit-file">{{ audit.fileName }}</div>
+                    <div class="audit-meta">
+                        {{ audit.performedByUsername }} •
+                        {{ audit.timestamp | date:'medium' }}
+                    </div>
+                </div>
+
+                <div class="audit-action" [class.upload]="audit.action === 'UPLOAD'"
+                    [class.delete]="audit.action === 'DELETE'" [class.restore]="audit.action === 'RESTORE'"
+                    [class.hard]="audit.action === 'HARD_DELETE'">
+                    {{ audit.action }}
+                </div>
+            </div>
+        </div>
+
+    </details>
+</div>

@@ -16,6 +16,9 @@ public interface SupplierImageRepository extends JpaRepository<SupplierImage, UU
     List<SupplierImage> findBySupplierId(UUID supplierId);
     List<SupplierImage> findBySupplierIdAndDeletedFalse(UUID supplierId);
     List<SupplierImage> findBySupplierIdAndDeletedTrue(UUID supplierId);
+    List<SupplierImage> findBySupplier_Id(UUID supplierId);
+
+    List<SupplierImage> findBySupplier_IdAndDeleted(UUID supplierId, Boolean deleted);
     Optional<SupplierImage> findBySupplierIdAndFileName(UUID supplierId, String fileName);
 
     Optional<SupplierImage> findBySupplierIdAndFileNameAndDeletedFalse(UUID supplierId, String fileName);

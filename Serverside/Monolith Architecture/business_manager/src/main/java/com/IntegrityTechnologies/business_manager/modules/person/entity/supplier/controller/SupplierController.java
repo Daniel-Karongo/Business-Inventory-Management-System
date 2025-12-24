@@ -4,6 +4,7 @@ import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.common.PageWrapper;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierCreateDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierImageDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierUpdateDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierImageAuditRepository;
@@ -173,16 +174,28 @@ public class SupplierController {
 
     /* ====================== IMAGE MANAGEMENT ====================== */
 
-    /* ====================== IMAGE URLS ====================== */
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER', 'SUPERVISOR')")
-    @GetMapping(value = "/{id}/images", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get all URLs for supplier images (active, deleted, or any)")
-    public ResponseEntity<List<String>> getSupplierImages(
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
+    @GetMapping("/{id}/images")
+    @Operation(summary = "List supplier images (active, deleted, or all)")
+    public ResponseEntity<List<SupplierImageDTO>> listSupplierImages(
             @PathVariable UUID id,
-            @RequestParam(required = false) Boolean deleted // null = any, true = deleted, false = active
+            @RequestParam(required = false) Boolean deleted
     ) {
-        return ResponseEntity.ok(supplierImageService.getSupplierImageUrls(id, deleted));
+        return ResponseEntity.ok(
+                supplierImageService.listImages(id, deleted)
+        );
     }
+
+    /* ====================== IMAGE URLS ====================== */
+//    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER', 'SUPERVISOR')")
+//    @GetMapping(value = "/{id}/images", produces = MediaType.APPLICATION_JSON_VALUE)
+//    @Operation(summary = "Get all URLs for supplier images (active, deleted, or any)")
+//    public ResponseEntity<List<String>> getSupplierImages(
+//            @PathVariable UUID id,
+//            @RequestParam(required = false) Boolean deleted // null = any, true = deleted, false = active
+//    ) {
+//        return ResponseEntity.ok(supplierImageService.getSupplierImageUrls(id, deleted));
+//    }
 
     @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
     @GetMapping("/images/all")

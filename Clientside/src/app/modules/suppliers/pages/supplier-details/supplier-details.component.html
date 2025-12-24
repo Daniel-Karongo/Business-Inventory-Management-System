@@ -1,0 +1,220 @@
+<div class="supplier-details-root" *ngIf="!loading">
+
+    <!-- HEADER -->
+    <div class="page-header">
+        <div>
+            <h2>{{ supplier.name }}</h2>
+            <div class="breadcrumb">Suppliers / {{ supplier.name }}</div>
+        </div>
+
+        <div class="actions">
+            <button mat-stroked-button (click)="back()">Back</button>
+
+            <button mat-stroked-button (click)="editSupplier()">
+                <mat-icon>edit</mat-icon>
+                Edit
+            </button>
+
+            <button mat-stroked-button color="warn" *ngIf="!supplier.deleted && canSoftDelete()"
+                (click)="disableSupplier()">
+                <mat-icon>block</mat-icon>
+                Disable
+            </button>
+
+            <button mat-stroked-button color="primary" *ngIf="supplier.deleted && canSoftDelete()"
+                (click)="restoreSupplier()">
+                <mat-icon>restore</mat-icon>
+                Restore
+            </button>
+
+            <button mat-stroked-button color="warn" *ngIf="supplier.deleted && canHardDelete()"
+                (click)="hardDeleteSupplier()">
+                <mat-icon>delete_forever</mat-icon>
+                Delete permanently
+            </button>
+        </div>
+    </div>
+
+    <mat-tab-group dynamicHeight>
+
+        <!-- OVERVIEW -->
+        <mat-tab label="Overview">
+            <mat-card class="card grid-2">
+
+                <div>
+                    <label>Status</label>
+                    <div class="status" [class.deleted]="supplier.deleted">
+                        {{ status() }}
+                    </div>
+                </div>
+
+                <div>
+                    <label>Region</label>
+                    <div>{{ supplier.region || '—' }}</div>
+                </div>
+
+                <div>
+                    <label>Emails</label>
+                    <div *ngFor="let e of supplier.email">{{ e }}</div>
+                </div>
+
+                <div>
+                    <label>Phones</label>
+                    <div *ngFor="let p of supplier.phoneNumber">{{ p }}</div>
+                </div>
+
+            </mat-card>
+        </mat-tab>
+
+        <!-- DOCUMENTS -->
+        <mat-tab label="Documents">
+            <app-entity-image-manager *ngIf="supplierId" [entityId]="supplierId" [adapter]="imageAdapter"
+                [allowHardDelete]="isSuperuser()">
+            </app-entity-image-manager>
+        </mat-tab>
+
+        <!-- PRODUCTS -->
+        <mat-tab label="Products">
+            <mat-card class="card">
+
+                <div class="empty" *ngIf="products.length === 0">
+                    No products supplied by this supplier
+                </div>
+
+                <table class="product-table" *ngIf="products.length">
+                    <tr>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Variants</th>
+                    </tr>
+
+                    <tr *ngFor="let p of products" (click)="goProduct(p.id)">
+                        <td>{{ p.name }}</td>
+                        <td>{{ p.categoryName }}</td>
+                        <td>{{ p.variants.length || 0 }}</td>
+                    </tr>
+                </table>
+
+            </mat-card>
+        </mat-tab>
+
+        <!-- CATEGORIES -->
+        <mat-tab label="Categories">
+            <ul class="category-tree">
+                <li *ngFor="let c of categories">
+                    <div class="category-row" [class.direct]="c.supplyState === 'DIRECT'"
+                        [class.derived]="c.supplyState === 'DERIVED'" [class.partial]="c.supplyState === 'PARTIAL'">
+
+                        <!-- ICON -->
+                        <mat-icon class="state-icon">
+                            {{
+                            c.supplyState === 'DIRECT' ? 'check_circle' :
+                            c.supplyState === 'DERIVED' ? 'check_circle_outline' :
+                            c.supplyState === 'PARTIAL' ? 'remove_circle_outline' :
+                            'radio_button_unchecked'
+                            }}
+                        </mat-icon>
+
+                        <!-- NAME -->
+                        <span class="name">{{ c.name }}</span>
+
+                        <!-- BADGE -->
+                        <span class="badge" *ngIf="c.supplyState !== 'NONE'">
+                            {{
+                            c.supplyState === 'DIRECT' ? 'SUPPLIED' :
+                            c.supplyState === 'DERIVED' ? 'DERIVED' :
+                            'PARTIAL'
+                            }}
+                        </span>
+
+                        <!-- META -->
+                        <span class="meta" *ngIf="c.totalChildrenCount">
+                            {{ c.suppliedChildrenCount }}/{{ c.totalChildrenCount }}
+                        </span>
+                    </div>
+
+                    <!-- CHILDREN -->
+                    <ul *ngIf="c.subcategories?.length">
+                        <ng-container *ngFor="let ch of c.subcategories">
+                            <ng-container *ngTemplateOutlet="node; context: { $implicit: ch }">
+                            </ng-container>
+                        </ng-container>
+                    </ul>
+                </li>
+            </ul>
+
+            <ng-template #node let-c>
+                <li>
+                    <div class="category-row" [class.direct]="c.supplyState === 'DIRECT'"
+                        [class.derived]="c.supplyState === 'DERIVED'" [class.partial]="c.supplyState === 'PARTIAL'">
+
+                        <mat-icon class="state-icon">
+                            {{
+                            c.supplyState === 'DIRECT' ? 'check_circle' :
+                            c.supplyState === 'DERIVED' ? 'check_circle_outline' :
+                            c.supplyState === 'PARTIAL' ? 'remove_circle_outline' :
+                            'radio_button_unchecked'
+                            }}
+                        </mat-icon>
+
+                        <span class="name">{{ c.name }}</span>
+
+                        <span class="badge" *ngIf="c.supplyState !== 'NONE'">
+                            {{
+                            c.supplyState === 'DIRECT' ? 'SUPPLIED' :
+                            c.supplyState === 'DERIVED' ? 'DERIVED' :
+                            'PARTIAL'
+                            }}
+                        </span>
+
+                        <span class="meta" *ngIf="c.totalChildrenCount">
+                            {{ c.suppliedChildrenCount }}/{{ c.totalChildrenCount }}
+                        </span>
+                    </div>
+
+                    <ul *ngIf="c.subcategories?.length">
+                        <ng-container *ngFor="let ch of c.subcategories">
+                            <ng-container *ngTemplateOutlet="node; context: { $implicit: ch }">
+                            </ng-container>
+                        </ng-container>
+                    </ul>
+                </li>
+            </ng-template>
+
+        </mat-tab>
+
+        <!-- AUDITS -->
+        <mat-tab label="Audits">
+            <mat-card class="card audit-card">
+
+                <div class="timeline">
+
+                    <div *ngFor="let a of audits" class="timeline-item">
+                        <mat-icon>history</mat-icon>
+
+                        <div class="content">
+                            <div class="title">{{ a.action }}</div>
+
+                            <div class="meta">
+                                {{ a.timestamp | date:'medium' }}
+                                <span *ngIf="a.performedBy">
+                                    — by {{ a.performedBy }}
+                                </span>
+                            </div>
+
+                            <div class="change" *ngIf="a.fieldChanged">
+                                {{ a.oldValue || '—' }} → {{ a.newValue || '—' }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div *ngIf="!audits.length" class="muted">
+                        No audit records
+                    </div>
+
+                </div>
+
+            </mat-card>
+        </mat-tab>
+    </mat-tab-group>
+</div>

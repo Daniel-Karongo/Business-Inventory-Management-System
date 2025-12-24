@@ -12,7 +12,11 @@ import { UserService } from '../../services/user/user.service';
 import { AuthService } from '../../../auth/services/auth.service';
 import { User } from '../../models/user.model';
 
-import { UserImageManagerComponent } from '../user-image-manager/user-image-manager.component';
+import { EntityImageManagerComponent } from
+  '../../../../shared/components/entity-image-manager/entity-image-manager.component';
+
+import { UserImageAdapter } from '../../services/user/user-image.adapter';
+
 import { UserAuditTimelineComponent } from '../user-audit-timeline/user-audit-timeline.component';
 import { UserRollcallsComponent } from '../user-rollcalls/user-rollcalls.component';
 
@@ -26,7 +30,7 @@ import { UserRollcallsComponent } from '../user-rollcalls/user-rollcalls.compone
     MatIconModule,
     MatTabsModule,
     MatSnackBarModule,
-    UserImageManagerComponent,
+    EntityImageManagerComponent,
     UserAuditTimelineComponent,
     UserRollcallsComponent
   ],
@@ -42,6 +46,7 @@ export class UserDetailsComponent implements OnInit {
   auditCount = 0;
   imageCount = 0;
   rollcallCount = 0;
+  imageAdapter!: any;
 
   constructor(
     private route: ActivatedRoute,
@@ -56,6 +61,8 @@ export class UserDetailsComponent implements OnInit {
     if (!username) return;
 
     this.role = this.auth.getRole();
+
+    this.imageAdapter = UserImageAdapter(this.userService);
 
     this.userService.get(username).subscribe({
       next: u => {

@@ -173,6 +173,17 @@ button[mat-stroked-button] {
    TABLE
 ----------------------------------------------------- */
 
+table {
+  width: 100%;
+  border-spacing: 0;
+}
+
+.mat-mdc-header-cell,
+.mat-mdc-cell {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
 .mat-mdc-table,
 .mat-mdc-header-row,
 .mat-mdc-row,
@@ -180,6 +191,10 @@ button[mat-stroked-button] {
 .mat-mdc-cell {
   font-family: var(--font-sans) !important;
   letter-spacing: 0.2px;
+}
+
+.mat-mdc-header-cell {
+  color: var(--text-secondary);
 }
 
 /* ================= SORTABLE HEADERS ================= */
@@ -202,7 +217,7 @@ button[mat-stroked-button] {
 
 /* Icon baseline */
 .sort-icon {
-  font-size: 18px;
+  font-size: 18px !important;
   opacity: 0.6;
   transition:
     transform 0.15s ease,

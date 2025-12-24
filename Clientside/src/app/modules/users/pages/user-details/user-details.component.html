@@ -109,9 +109,10 @@
         <!-- IMAGES -->
         <mat-tab *ngIf="canViewImages()">
           <ng-template mat-tab-label>
-            Images <span class="badge">{{ imageCount }}</span>
+            Documents <span class="badge">{{ imageCount }}</span>
           </ng-template>
-          <app-user-image-manager [userId]="user.id!" />
+          <app-entity-image-manager [entityId]="user.id!" [adapter]="imageAdapter"
+            [allowHardDelete]="role === 'SUPERUSER'" />
         </mat-tab>
 
         <!-- AUDITS -->

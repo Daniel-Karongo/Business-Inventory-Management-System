@@ -1,0 +1,186 @@
+<div class="supplier-create-root" [formGroup]="form">
+
+    <!-- ================= HEADER ================= -->
+    <header class="wizard-header">
+        <div class="left">
+            <h2>Create Supplier</h2>
+            <div class="breadcrumb">Suppliers / Create</div>
+        </div>
+
+        <div class="right">
+            <button mat-stroked-button (click)="router.navigate(['/suppliers'])">
+                Cancel
+            </button>
+            <button mat-flat-button color="primary" (click)="submit()" [disabled]="busy">
+                Save Supplier
+            </button>
+        </div>
+    </header>
+
+    <!-- ================= STEPS ================= -->
+    <nav class="wizard-steps">
+        <div *ngFor="let s of steps; let i = index" class="step" [class.active]="i === step"
+            [class.completed]="i < step" (click)="step = i">
+            <span class="num">{{ i + 1 }}</span>
+            <span class="label">{{ s }}</span>
+        </div>
+    </nav>
+
+    <!-- ================= BODY ================= -->
+    <div class="wizard-body">
+
+        <!-- STEP 0: BASIC -->
+        <section *ngIf="step === 0" class="card">
+            <h3>Basic Information</h3>
+
+            <div class="grid-3">
+                <mat-form-field appearance="fill">
+                    <mat-label>Name</mat-label>
+                    <input matInput formControlName="name">
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+                    <mat-label>Region</mat-label>
+                    <input matInput formControlName="region">
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+                    <mat-label>Rating</mat-label>
+                    <input matInput type="number" formControlName="rating">
+                </mat-form-field>
+            </div>
+        </section>
+
+        <!-- STEP 1: CONTACTS -->
+        <section *ngIf="step === 1" class="card">
+            <h3>Contacts</h3>
+
+            <div class="grid-2">
+                <mat-form-field appearance="fill">
+                    <mat-label>Email addresses</mat-label>
+                    <input matInput (change)="onEmailsChange($event)" placeholder="a@x.com, b@y.com">
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+                    <mat-label>Phone numbers</mat-label>
+                    <input matInput (change)="onPhonesChange($event)" placeholder="+2547…, 07…">
+                </mat-form-field>
+            </div>
+        </section>
+
+        <!-- STEP 2: CATEGORIES -->
+        <section *ngIf="step === 2" class="card">
+            <h3>Categories Supplied</h3>
+            <p class="muted">Select all product categories this supplier can provide.</p>
+
+            <ul class="category-tree">
+                <li *ngFor="let c of categories">
+                    <label class="category">
+                        <input type="checkbox" [checked]="isCategorySelected(c.id)" (change)="toggleCategory(c.id)">
+                        {{ c.name }}
+                    </label>
+
+                    <ul *ngIf="c.subcategories?.length">
+                        <li *ngFor="let ch of c.subcategories">
+                            <label class="subcategory">
+                                <input type="checkbox" [checked]="isCategorySelected(ch.id)"
+                                    (change)="toggleCategory(ch.id)">
+                                {{ ch.name }}
+                            </label>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </section>
+
+        <!-- STEP 3: FILES -->
+        <section *ngIf="step === 3" formArrayName="supplierFiles" class="card">
+            <h3>Documents</h3>
+
+            <input type="file" multiple (change)="onFilesPicked($event)" />
+
+            <div class="file-grid" *ngIf="supplierFiles.length">
+
+                <div class="file-card" *ngFor="let fg of supplierFiles.controls; let i = index" [formGroupName]="i">
+
+                    <!-- PREVIEW -->
+                    <div class="preview">
+
+                        <!-- IMAGE -->
+                        <img *ngIf="fg.value.previewUrl" [src]="fg.value.previewUrl" alt="Preview"
+                            (click)="viewImage(fg.value.file, fg.value.previewUrl)" />
+
+                        <!-- PDF -->
+                        <div *ngIf="!fg.value.previewUrl && fg.value.file.type === 'application/pdf'"
+                            class="pdf-preview" (click)="openPdf(fg.value.file)">
+                            <mat-icon>picture_as_pdf</mat-icon>
+                            <span>Open PDF</span>
+                        </div>
+
+                        <!-- OTHER -->
+                        <div *ngIf="!fg.value.previewUrl && fg.value.file.type !== 'application/pdf'"
+                            class="file-preview">
+                            <mat-icon>attach_file</mat-icon>
+                        </div>
+
+                    </div>
+
+                    <!-- FILE NAME -->
+                    <div class="filename">
+                        {{ fg.value.file.name }}
+                    </div>
+
+                    <!-- DESCRIPTION -->
+                    <mat-form-field appearance="fill">
+                        <mat-label>Description</mat-label>
+                        <mat-select formControlName="description">
+                            <mat-option *ngFor="let opt of descriptionOptions" [value]="opt">
+                                {{ opt }}
+                            </mat-option>
+                        </mat-select>
+                    </mat-form-field>
+
+                    <!-- CUSTOM DESCRIPTION -->
+                    <mat-form-field *ngIf="fg.get('description')?.value === 'Other'" appearance="fill">
+                        <mat-label>Custom description</mat-label>
+                        <input matInput formControlName="custom" />
+                    </mat-form-field>
+
+                    <!-- REMOVE -->
+                    <button mat-icon-button color="warn" (click)="removeFile(i)">
+                        <mat-icon>close</mat-icon>
+                    </button>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 4: REVIEW -->
+        <section *ngIf="step === 4" class="card">
+            <h3>Review</h3>
+
+            <div class="review-grid">
+                <div><strong>Name:</strong> {{ form.value.name }}</div>
+                <div><strong>Region:</strong> {{ form.value.region || '—' }}</div>
+                <div><strong>Rating:</strong> {{ form.value.rating || '—' }}</div>
+                <div><strong>Emails:</strong> {{ form.value.email.join(', ') || '—' }}</div>
+                <div><strong>Phones:</strong> {{ form.value.phoneNumber.join(', ') || '—' }}</div>
+                <div>
+                    <strong>Categories:</strong>
+                    {{ form.value.categoryIds.length }}
+                </div>
+            </div>
+        </section>
+
+        <!-- NAV -->
+        <div class="nav">
+            <button mat-stroked-button (click)="prev()" *ngIf="step > 0">
+                Previous
+            </button>
+            <button mat-stroked-button color="primary" (click)="next()" *ngIf="step < steps.length - 1">
+                Next
+            </button>
+        </div>
+
+    </div>
+</div>
