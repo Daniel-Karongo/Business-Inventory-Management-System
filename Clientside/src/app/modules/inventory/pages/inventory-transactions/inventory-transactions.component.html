@@ -1,0 +1,116 @@
+<div class="flex flex-col gap-4">
+
+    <div class="flex items-center gap-2">
+        <h1 class="text-xl font-semibold">Stock Transactions</h1>
+        <span class="text-sm text-gray-500">
+            Variant: {{ productName + " - "+ variantName || variantId }}
+        </span>
+    </div>
+
+    <div *ngIf="loading" class="text-center py-10">
+        Loading transactions…
+    </div>
+
+    <div *ngIf="!loading && transactions.length === 0" class="text-center py-10">
+        No transactions found
+    </div>
+
+    <div class="flex flex-wrap gap-4 items-end">
+
+        <mat-form-field appearance="fill">
+            <mat-label>From</mat-label>
+            <input matInput [matDatepicker]="fromPicker" (dateChange)="applyFilters()" [(ngModel)]="fromDate">
+            <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
+            <mat-datepicker #fromPicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+            <mat-label>To</mat-label>
+            <input matInput [matDatepicker]="toPicker" (dateChange)="applyFilters()" [(ngModel)]="toDate">
+            <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
+            <mat-datepicker #toPicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+            <mat-label>Type</mat-label>
+            <mat-select multiple [(ngModel)]="selectedTypes" (selectionChange)="applyFilters()">
+                <mat-option *ngFor="let t of transactionTypes" [value]="t">
+                    {{ t }}
+                </mat-option>
+            </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+            <mat-label>Direction</mat-label>
+            <mat-select [(ngModel)]="direction" (selectionChange)="applyFilters()">
+                <mat-option value="ALL">All</mat-option>
+                <mat-option value="IN">Inbound</mat-option>
+                <mat-option value="OUT">Outbound</mat-option>
+            </mat-select>
+        </mat-form-field>
+
+    </div>
+
+    <div *ngIf="!loading && transactions.length > 0" class="bg-[var(--surface)] rounded shadow overflow-x-auto">
+
+        <table mat-table [dataSource]="filtered">
+
+            <ng-container matColumnDef="timestamp">
+                <th mat-header-cell *matHeaderCellDef>Date</th>
+                <td mat-cell *matCellDef="let t">
+                    {{ t.timestamp | date:'medium' }}
+                </td>
+            </ng-container>
+
+            <ng-container matColumnDef="type">
+                <th mat-header-cell *matHeaderCellDef>Type</th>
+                <td mat-cell *matCellDef="let t" [ngClass]="typeClass(t)">
+                    <mat-icon class="mr-1" matTooltip="{{ t.type }}">
+                        {{ iconFor(t) }}
+                    </mat-icon>
+                    {{ t.type }}
+                </td>
+            </ng-container>
+
+            <ng-container matColumnDef="quantity">
+                <th mat-header-cell *matHeaderCellDef>Δ Qty</th>
+                <td mat-cell *matCellDef="let t" [ngClass]="typeClass(t)">
+                    {{ signedQty(t) }}
+                </td>
+            </ng-container>
+
+            <ng-container matColumnDef="branch">
+                <th mat-header-cell *matHeaderCellDef>Branch</th>
+                <td mat-cell *matCellDef="let t">
+                    {{ t.branchName || '_'}}
+                </td>
+            </ng-container>
+
+            <ng-container matColumnDef="reference">
+                <th mat-header-cell *matHeaderCellDef>Reference</th>
+                <td mat-cell *matCellDef="let t">
+                    {{ t.reference || '—' }}
+                </td>
+            </ng-container>
+
+            <ng-container matColumnDef="note">
+                <th mat-header-cell *matHeaderCellDef>Note</th>
+                <td mat-cell *matCellDef="let t">
+                    {{ t.note || '—' }}
+                </td>
+            </ng-container>
+
+            <ng-container matColumnDef="performedBy">
+                <th mat-header-cell *matHeaderCellDef>User</th>
+                <td mat-cell *matCellDef="let t">
+                    {{ t.performedBy || 'system' }}
+                </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+
+        </table>
+    </div>
+
+</div>

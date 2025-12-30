@@ -1,0 +1,46 @@
+<h2 mat-dialog-title class="font-semibold">Adjust Stock</h2>
+
+<mat-dialog-content [formGroup]="form" class="flex flex-col gap-5">
+
+  <!-- Context -->
+  <div class="text-sm text-gray-500 leading-tight">
+    <div class="font-medium text-gray-700">
+      {{ data.productName }}
+    </div>
+    <div>
+      {{ data.classification }} • {{ data.branchName }}
+    </div>
+  </div>
+
+  <!-- Quantity -->
+  <mat-form-field appearance="fill">
+    <mat-label>Quantity Delta</mat-label>
+    <input matInput type="number" formControlName="quantityDelta">
+    <mat-hint>
+      Use positive or negative values
+    </mat-hint>
+  </mat-form-field>
+
+  <!-- Reason -->
+  <mat-form-field appearance="fill">
+    <mat-label>Reason</mat-label>
+    <input matInput formControlName="reason">
+  </mat-form-field>
+
+  <!-- Reference -->
+  <mat-form-field appearance="fill">
+    <mat-label>Reference</mat-label>
+    <input matInput formControlName="reference">
+  </mat-form-field>
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="gap-2">
+  <button mat-button (click)="close()">Cancel</button>
+  <button mat-flat-button
+          color="warn"
+          (click)="submit()"
+          [disabled]="loading || form.invalid">
+    Adjust Stock
+  </button>
+</mat-dialog-actions>

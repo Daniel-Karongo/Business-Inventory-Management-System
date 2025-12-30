@@ -19,60 +19,49 @@ import ApexCharts from 'apexcharts';
   styles: [':host { display:block; height:100%; }']
 })
 export class ApexChartComponent implements AfterViewInit, OnChanges, OnDestroy {
-  @ViewChild('chartContainer', { static: true }) chartContainer!: ElementRef<HTMLDivElement>;
-  @Input() options: any; // apexcharts options object
-  @Input() autoRender = true;
+
+  @ViewChild('chartContainer', { static: true })
+  chartContainer!: ElementRef<HTMLDivElement>;
+
+  @Input() options!: any;
+  @Input() enabled = true;
 
   private chart?: ApexCharts;
+  private initialized = false;
 
   ngAfterViewInit(): void {
-    if (this.autoRender && this.options) {
-      this.render();
+    if (this.enabled && this.options && !this.initialized) {
+      this.initChart();
     }
   }
 
-  ngOnChanges(changes: SimpleChanges) {
-    if (!this.chart && this.autoRender && this.options && (changes['options'] || changes['autoRender'])) {
-      this.render();
+  ngOnChanges(changes: SimpleChanges): void {
+    if (!this.enabled) return;
+
+    if (!this.initialized && this.options) {
+      this.initChart();
       return;
     }
 
-    if (this.chart && changes['options'] && changes['options'].currentValue) {
-      // update chart options
-      try {
-        // prefer updateOptions which updates axes/series/etc
-        this.chart.updateOptions(changes['options'].currentValue, false, true);
-        if (changes['options'].currentValue.series) {
-          // update series too (force)
-          // ApexCharts updateSeries expects array
-          this.chart.updateSeries(changes['options'].currentValue.series);
-        }
-      } catch (e) {
-        // fallback: destroy and re-render
-        this.destroy();
-        this.render();
+    if (this.chart && changes['options']) {
+      this.chart.updateOptions(this.options, false, true);
+      if (this.options.series) {
+        this.chart.updateSeries(this.options.series, true);
       }
     }
   }
 
-  private render() {
-    if (!this.options || !this.chartContainer) return;
-    this.chart = new ApexCharts(this.chartContainer.nativeElement, this.options);
+  private initChart(): void {
+    this.chart = new ApexCharts(
+      this.chartContainer.nativeElement,
+      this.options
+    );
     this.chart.render();
-  }
-
-  private destroy() {
-    if (this.chart) {
-      try {
-        this.chart.destroy();
-      } catch (e) {
-        // ignore
-      }
-      this.chart = undefined;
-    }
+    this.initialized = true;
   }
 
   ngOnDestroy(): void {
-    this.destroy();
+    this.chart?.destroy();
+    this.chart = undefined;
   }
 }

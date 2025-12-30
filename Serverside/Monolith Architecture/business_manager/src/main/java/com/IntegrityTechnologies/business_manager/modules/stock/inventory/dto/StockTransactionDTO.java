@@ -12,8 +12,11 @@ import java.util.UUID;
 public class StockTransactionDTO {
     private UUID id;
     private UUID productId;
+    private String productName;
     private UUID productVariantId;
+    private String productVariantName;
     private UUID branchId;
+    private String branchName;
 
     private String type;
     private Long quantityDelta;

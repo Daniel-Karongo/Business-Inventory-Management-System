@@ -1,14 +1,14 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StatCardComponent } from '../../shared/widgets/stat-card/stat-card.component';
-import { LineChartComponent } from '../../shared/widgets/line-chart/line-chart.component';
 import { BarChartComponent } from '../../shared/widgets/bar-chart/bar-chart.component';
 import { ActivityListComponent } from '../../shared/widgets/activity-list/activity-list.component';
+import { DonutChartComponent } from '../../shared/widgets/donut-chart/donut-chart.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, StatCardComponent, LineChartComponent, BarChartComponent, ActivityListComponent],
+  imports: [CommonModule, StatCardComponent, DonutChartComponent, BarChartComponent, ActivityListComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })

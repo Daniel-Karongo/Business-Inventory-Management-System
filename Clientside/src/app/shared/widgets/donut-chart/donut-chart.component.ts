@@ -1,9 +1,9 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnChanges, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApexChartComponent } from '../../apex/apex-chart.component';
 
 @Component({
-  selector: 'app-bar-chart',
+  selector: 'app-donut-chart',
   standalone: true,
   imports: [CommonModule, ApexChartComponent],
   template: `
@@ -13,18 +13,17 @@ import { ApexChartComponent } from '../../apex/apex-chart.component';
     </app-apex-chart>
   `
 })
-export class BarChartComponent {
+export class DonutChartComponent {
 
   @Input() labels: string[] = [];
   @Input() values: number[] = [];
 
   get options() {
     return {
-      chart: { type: 'bar', toolbar: { show: false } },
-      series: [{ name: 'KES', data: this.values }],
-      xaxis: { categories: this.labels },
-      dataLabels: { enabled: false },
-      colors: ['#0ea5e9']
+      chart: { type: 'donut' },
+      series: this.values,
+      labels: this.labels,
+      legend: { position: 'bottom' }
     };
   }
 }

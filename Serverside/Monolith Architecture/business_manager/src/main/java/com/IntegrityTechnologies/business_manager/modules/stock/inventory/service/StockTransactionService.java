@@ -1,8 +1,12 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.service;
 
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.StockTransactionDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.StockTransaction;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +19,9 @@ import java.util.UUID;
 public class StockTransactionService {
 
     private final StockTransactionRepository stockRepository;
+    private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
+    private final BranchRepository branchRepository;
 
     public List<StockTransactionDTO> getByProduct(UUID productId) {
         return stockRepository.findByProductIdOrderByTimestampDesc(productId)
@@ -58,8 +65,11 @@ public class StockTransactionService {
         return StockTransactionDTO.builder()
                 .id(t.getId())
                 .productId(t.getProductId())
+                .productName(productRepository.findById(t.getProductId()).get().getName())
                 .productVariantId(t.getProductVariantId())
+                .productVariantName(productVariantRepository.findById(t.getProductVariantId()).get().getClassification())
                 .branchId(t.getBranchId())
+                .branchName(branchRepository.findById(t.getBranchId()).get().getName())
                 .type(t.getType().name())
                 .quantityDelta(t.getQuantityDelta())
                 .unitCost(t.getUnitCost())

@@ -111,9 +111,11 @@ public class InventoryValuationService {
 
         for (InventoryItem item : inventoryItemRepository.findAll()) {
 
-            Category cat = item.getProductVariant().getProduct().getCategory();
+            Category cat = item.getProductVariant()
+                    .getProduct()
+                    .getCategory();
 
-            if (cat == null) continue;
+            if (cat == null || item.getQuantityOnHand() <= 0) continue;
 
             BigDecimal val = calculateItemValuation(item, method);
 
@@ -199,19 +201,20 @@ public class InventoryValuationService {
        ============================================================ */
     public BigDecimal calculateItemValuation(InventoryItem item, ValuationMethod method) {
 
+        long qty = item.getQuantityOnHand();
+        if (qty <= 0) return BigDecimal.ZERO;
+
         UUID variantId = item.getProductVariant().getId();
         UUID branchId = item.getBranch().getId();
-        long qty = item.getQuantityOnHand();
 
-        return switch (method) {
-            case FIFO -> fifoValuation(variantId, branchId, qty);
-            case LIFO -> lifoValuation(variantId, branchId, qty);
-            case WAC -> wacValuation(variantId, branchId, qty);
-            case STANDARD -> {
-                BigDecimal std = new BigDecimal(env.getProperty("inventory.valuation.standard-price", "0"));
-                yield std.multiply(BigDecimal.valueOf(qty));
-            }
+        BigDecimal unitCost = switch (method) {
+            case FIFO, LIFO, WAC -> resolveUnitCost(variantId, branchId);
+            case STANDARD -> new BigDecimal(
+                    env.getProperty("inventory.valuation.standard-price", "0")
+            );
         };
+
+        return unitCost.multiply(BigDecimal.valueOf(qty));
     }
 
     /* ============================================================
@@ -340,4 +343,38 @@ public class InventoryValuationService {
     public String resolveCurrentMethod() {
         return resolveMethod(null).toString();
     }
+
+    private BigDecimal resolveUnitCost(UUID variantId, UUID branchId) {
+
+        // 1️⃣ Try WAC from receipts
+        List<StockTransaction> receipts =
+                stockTransactionRepository.findReceipts(variantId, branchId);
+
+        if (!receipts.isEmpty()) {
+            BigDecimal totalValue = BigDecimal.ZERO;
+            long totalQty = 0;
+
+            for (StockTransaction r : receipts) {
+                if (r.getUnitCost() == null) continue;
+                totalValue = totalValue.add(
+                        r.getUnitCost().multiply(BigDecimal.valueOf(r.getQuantityDelta()))
+                );
+                totalQty += r.getQuantityDelta();
+            }
+
+            if (totalQty > 0) {
+                return totalValue.divide(
+                        BigDecimal.valueOf(totalQty),
+                        6,
+                        RoundingMode.HALF_UP
+                );
+            }
+        }
+
+        // 2️⃣ Fallback → variant averageBuyingPrice
+        return inventoryItemRepository.findFirstByProductVariantId(variantId)
+                .map(i -> i.getProductVariant().getAverageBuyingPrice())
+                .orElse(BigDecimal.ZERO);
+    }
+
 }

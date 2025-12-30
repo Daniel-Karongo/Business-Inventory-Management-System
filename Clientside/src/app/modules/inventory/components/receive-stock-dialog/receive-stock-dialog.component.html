@@ -1,0 +1,79 @@
+<h2 mat-dialog-title class="font-semibold">Receive Stock</h2>
+
+<mat-dialog-content [formGroup]="form" class="flex flex-col gap-5">
+
+  <!-- Context -->
+  <div class="text-sm text-gray-500">
+    <div class="font-medium text-gray-700">
+      {{ data.productName }}
+    </div>
+    <div>
+      {{ data.classification }} • {{ data.branchName }}
+    </div>
+  </div>
+
+  <!-- Reference -->
+  <mat-form-field appearance="fill">
+    <mat-label>Reference</mat-label>
+    <input matInput formControlName="reference">
+  </mat-form-field>
+
+  <!-- Note -->
+  <mat-form-field appearance="fill">
+    <mat-label>Note</mat-label>
+    <input matInput formControlName="note">
+  </mat-form-field>
+
+  <!-- Suppliers -->
+  <div formArrayName="suppliers" class="flex flex-col gap-6">
+
+    <div *ngFor="let s of suppliers.controls; let i = index"
+         [formGroupName]="i"
+         class="flex flex-col gap-4 p-4 rounded-md bg-[var(--surface)] border">
+
+      <mat-form-field appearance="fill">
+        <mat-label>Supplier</mat-label>
+        <mat-select formControlName="supplierId">
+          <mat-option *ngFor="let sup of suppliersList" [value]="sup.id">
+            {{ sup.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Units Supplied</mat-label>
+        <input matInput type="number" formControlName="unitsSupplied">
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Unit Cost</mat-label>
+        <input matInput type="number" formControlName="unitCost">
+      </mat-form-field>
+
+      <div class="flex justify-end">
+        <button mat-icon-button color="warn"
+                (click)="removeSupplier(i)"
+                *ngIf="suppliers.length > 1"
+                matTooltip="Remove supplier">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <button mat-stroked-button (click)="addSupplier()">
+    + Add Supplier
+  </button>
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="gap-2">
+  <button mat-button (click)="close()">Cancel</button>
+  <button mat-flat-button color="primary"
+          (click)="submit()"
+          [disabled]="loading || form.invalid">
+    Receive Stock
+  </button>
+</mat-dialog-actions>
