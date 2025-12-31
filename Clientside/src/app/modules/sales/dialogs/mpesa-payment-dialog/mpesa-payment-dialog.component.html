@@ -1,0 +1,46 @@
+<div class="dialog-container">
+  <h2 mat-dialog-title class="dialog-title">
+    Mpesa Payment
+  </h2>
+
+  <div mat-dialog-content class="dialog-body">
+
+    <!-- SUMMARY -->
+    <div class="summary-card mpesa">
+      <div class="summary-label">Amount to Charge</div>
+      <div class="summary-amount">
+        {{ form.value.amount | currency:'KES ' }}
+      </div>
+    </div>
+
+    <!-- FORM -->
+    <form [formGroup]="form" class="dialog-form">
+
+      <mat-form-field appearance="fill" class="w-full">
+        <mat-label>Phone Number</mat-label>
+        <input matInput placeholder="2547XXXXXXXX" formControlName="phone" />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="w-full">
+        <mat-label>Amount</mat-label>
+        <input matInput type="number" formControlName="amount" />
+      </mat-form-field>
+
+    </form>
+
+    <!-- FOOTNOTE -->
+    <p class="dialog-hint">
+      An STK prompt will be sent to the customer’s phone to authorize payment.
+    </p>
+  </div>
+
+  <div mat-dialog-actions class="dialog-actions">
+    <button mat-stroked-button (click)="cancel()">
+      Cancel
+    </button>
+
+    <button mat-flat-button color="primary" [disabled]="loading" (click)="submit()">
+      Send STK
+    </button>
+  </div>
+</div>

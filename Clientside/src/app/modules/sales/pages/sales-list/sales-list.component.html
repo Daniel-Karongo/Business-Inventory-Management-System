@@ -1,0 +1,112 @@
+<div class="flex flex-col gap-4">
+
+  <!-- HEADER -->
+  <div class="flex justify-between items-center">
+    <div>
+      <h2 class="text-xl font-semibold">Sales</h2>
+      <p class="text-sm text-[var(--text-secondary)]">
+        All sales transactions
+      </p>
+    </div>
+
+    <button mat-flat-button (click)="create()">
+      <mat-icon>add</mat-icon>
+      New Sale
+    </button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="bg-[var(--surface)] rounded shadow overflow-hidden">
+
+    <table mat-table [dataSource]="sales">
+
+      <!-- DATE -->
+      <ng-container matColumnDef="createdAt">
+        <th mat-header-cell *matHeaderCellDef>Date</th>
+        <td mat-cell *matCellDef="let s">
+          {{ s.createdAt | date:'dd/MM/yyyy HH:mm' }}
+        </td>
+      </ng-container>
+
+      <!-- SALE ID -->
+      <ng-container matColumnDef="saleId">
+        <th mat-header-cell *matHeaderCellDef>Sale #</th>
+        <td mat-cell *matCellDef="let s">
+          {{ s.id | slice:0:8 }}
+        </td>
+      </ng-container>
+
+      <!-- STATUS -->
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let s">
+          <mat-chip
+            [color]="
+              s.status === 'COMPLETED' ? 'primary' :
+              s.status === 'REFUNDED'  ? 'warn' :
+              s.status === 'CANCELLED' ? 'warn' : undefined
+            "
+            selected>
+            {{ s.status }}
+          </mat-chip>
+        </td>
+      </ng-container>
+
+      <!-- TOTAL -->
+      <ng-container matColumnDef="total">
+        <th mat-header-cell *matHeaderCellDef>Total</th>
+        <td mat-cell *matCellDef="let s">
+          {{ s.totalAmount | currency:'KES' }}
+        </td>
+      </ng-container>
+
+      <!-- PAID -->
+      <ng-container matColumnDef="paid">
+        <th mat-header-cell *matHeaderCellDef>Paid</th>
+        <td mat-cell *matCellDef="let s">
+          {{ paidAmount(s) | currency:'KES' }}
+        </td>
+      </ng-container>
+
+      <!-- BALANCE -->
+      <ng-container matColumnDef="balance">
+        <th mat-header-cell *matHeaderCellDef>Balance</th>
+        <td mat-cell *matCellDef="let s">
+          <span
+            [class.text-red-500]="balance(s) > 0"
+            [class.text-green-600]="balance(s) === 0">
+            {{ balance(s) | currency:'KES' }}
+          </span>
+        </td>
+      </ng-container>
+
+      <!-- ACTIONS -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let s" class="actions">
+          <button
+            mat-icon-button
+            matTooltip="View sale"
+            (click)="view(s)">
+            <mat-icon>visibility</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row
+          *matRowDef="let row; columns: displayedColumns;"
+          (click)="view(row)"
+          class="cursor-pointer">
+      </tr>
+    </table>
+
+    <mat-paginator
+      [length]="total"
+      [pageSize]="size"
+      [pageSizeOptions]="[10,20,50]"
+      (page)="load($event)">
+    </mat-paginator>
+
+  </div>
+</div>

@@ -52,6 +52,13 @@ public class CustomerController {
         return ResponseEntity.ok(customerService.getCustomer(id));
     }
 
+    @GetMapping("/lookup")
+    public ResponseEntity<CustomerResponse> lookupByPhone(@RequestParam String phone) {
+        return customerService.findByPhone(phone)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<CustomerResponse> updateCustomer(@PathVariable UUID id, @Valid @RequestBody CustomerRequest req) {
         return ResponseEntity.ok(customerService.updateCustomer(id, req));

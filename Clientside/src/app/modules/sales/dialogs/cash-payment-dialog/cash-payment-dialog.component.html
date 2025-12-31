@@ -1,0 +1,41 @@
+<div class="dialog-container">
+  <h2 mat-dialog-title class="dialog-title">
+    Cash Payment
+  </h2>
+
+  <div mat-dialog-content class="dialog-body">
+
+    <!-- SUMMARY -->
+    <div class="summary-card">
+      <div class="summary-label">Balance Due</div>
+      <div class="summary-amount">
+        {{ balanceDue() | currency:'KES ' }}
+      </div>
+    </div>
+
+    <!-- FORM -->
+    <form [formGroup]="form" class="dialog-form">
+
+      <mat-form-field appearance="fill" class="w-full">
+        <mat-label>Amount Received</mat-label>
+        <input matInput type="number" formControlName="amount" />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="w-full">
+        <mat-label>Note (optional)</mat-label>
+        <input matInput formControlName="note" />
+      </mat-form-field>
+
+    </form>
+  </div>
+
+  <div mat-dialog-actions class="dialog-actions">
+    <button mat-stroked-button (click)="cancel()">
+      Cancel
+    </button>
+
+    <button mat-flat-button color="primary" (click)="submit()">
+      Confirm Payment
+    </button>
+  </div>
+</div>

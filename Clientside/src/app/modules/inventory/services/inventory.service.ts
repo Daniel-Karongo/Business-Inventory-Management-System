@@ -46,6 +46,12 @@ export class InventoryService {
     );
   }
 
+  getVariantStock(variantId: string, branchId: string) {
+    return this.http.get<any>(
+      `${environment.apiUrl}/inventory/variant/${variantId}/branch/${branchId}`
+    );
+  }
+
   getTransactionsByVariant(variantId: string) {
     return this.http.get<StockTransactionDTO[]>(
       `${environment.apiUrl}/stock/transactions/variant/${variantId}`

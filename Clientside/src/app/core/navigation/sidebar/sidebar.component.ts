@@ -29,18 +29,18 @@ interface NavItem {
 export class SidebarComponent {
 
   nav: NavItem[] = [
-    { title: 'Dashboard',  route: '/dashboard',  icon: 'dashboard' },
-    { title: 'Inventory',  route: '/inventory',  icon: 'inventory' },
-    { title: 'Products',   route: '/products',   icon: 'products' },
-    { title: 'Suppliers',  route: '/suppliers',  icon: 'suppliers' },
-    { title: 'Sales',      route: '/sales',      icon: 'sales' },
-    { title: 'Payments',   route: '/payments',   icon: 'payments' },
-    { title: 'Customers',  route: '/customers',  icon: 'customers' },
-    { title: 'Accounts',   route: '/accounts',   icon: 'accounts' },
-    { title: 'Users',      route: '/users',      icon: 'users' },
-    { title: 'Branches',   route: '/branches',   icon: 'branches' },
-    { title: 'Departments',   route: '/departments',   icon: 'departments' }
+    { title: 'Dashboard', route: '/dashboard', icon: 'dashboard' },
+    { title: 'Inventory', route: '/inventory', icon: 'inventory' },
+    { title: 'Products', route: '/products', icon: 'products' },
+    { title: 'Suppliers', route: '/suppliers', icon: 'suppliers' },
+    { title: 'Sales', route: '/sales', icon: 'sales' },
+    { title: 'Reports', route: '/reports', icon: 'reports' },
+    { title: 'Customers', route: '/customers', icon: 'customers' },
+    { title: 'Accounts', route: '/accounts', icon: 'accounts' },
+    { title: 'Users', route: '/users', icon: 'users' },
+    { title: 'Branches', route: '/branches', icon: 'branches' },
+    { title: 'Departments', route: '/departments', icon: 'departments' }
   ];
 
-  constructor(public sidebar: SidebarService) {}
+  constructor(public sidebar: SidebarService) { }
 }

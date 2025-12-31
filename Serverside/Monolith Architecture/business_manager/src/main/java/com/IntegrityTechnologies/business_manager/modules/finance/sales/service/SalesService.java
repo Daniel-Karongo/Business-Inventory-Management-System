@@ -6,18 +6,23 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounts.servi
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.Payment;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.service.PaymentServiceImpl;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.SaleCustomerDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.SaleDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.SaleLineItemDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.SaleRequest;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineItem;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.Customer;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.repository.CustomerRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service.CustomerService;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
+import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
@@ -45,6 +50,7 @@ public class SalesService {
     private final CustomerService customerService;
     private final AccountingService accountingService;
     private final PaymentServiceImpl paymentService;
+    private final CustomerRepository customerRepository;
 
     /* ============================================================
        CREATE SALE
@@ -53,11 +59,11 @@ public class SalesService {
     public SaleDTO createSale(SaleRequest req) {
 
         UUID saleId = UUID.randomUUID();
-        String currentUser = getCurrentUsername();
+        String currentUser = SecurityUtils.currentUsername();
 
-        UUID customerId = customerService.findOrCreateCustomer(
-                List.of(req.getCustomerIdentifiers())
-        );
+        UUID customerId = Optional.ofNullable(req.getCustomerIdentifiers())
+                .map(ci -> customerService.findOrCreateCustomer(List.of(ci)))
+                .orElse(null);
 
         List<SaleLineItem> lines = new ArrayList<>();
 
@@ -381,10 +387,10 @@ public class SalesService {
     /* ============================================================
        HELPERS
        ============================================================ */
-    private String getCurrentUsername() {
-        var auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth != null ? auth.getName() : "SYSTEM";
-    }
+//    private String getCurrentUsername() {
+//        var auth = SecurityContextHolder.getContext().getAuthentication();
+//        return auth != null ? auth.getName() : "SYSTEM";
+//    }
 
     @Transactional(readOnly = true)
     public Iterable<com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO> getSalePayments(UUID id) {
@@ -402,6 +408,20 @@ public class SalesService {
     }
 
     public SaleDTO toDTO(Sale sale) {
+        SaleCustomerDTO customerDto = null;
+
+        if (sale.getCustomerId() != null) {
+            Customer c = customerRepository.findById(sale.getCustomerId()).orElse(null);
+            if (c != null) {
+                customerDto = SaleCustomerDTO.builder()
+                        .id(c.getId())
+                        .name(c.getName())
+                        .phoneNumbers(c.getPhoneNumbers())
+                        .emailAddresses(c.getEmailAddresses())
+                        .build();
+            }
+        }
+
         return SaleDTO.builder()
                 .id(sale.getId())
                 .createdAt(sale.getCreatedAt())
@@ -437,6 +457,7 @@ public class SalesService {
                                         .build()
                         ).toList()
                 )
+                .customer(customerDto)
                 .build();
     }
 }

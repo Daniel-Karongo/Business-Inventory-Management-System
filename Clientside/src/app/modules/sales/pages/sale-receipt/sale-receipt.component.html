@@ -1,0 +1,79 @@
+<div *ngIf="loading" class="receipt-loading">
+  Loading receipt…
+</div>
+
+<div *ngIf="!loading" id="print-area" class="receipt">
+
+  <!-- HEADER -->
+  <div class="receipt-header">
+    <div class="receipt-title">Business Manager</div>
+    <div class="receipt-subtitle">Official Receipt</div>
+  </div>
+
+  <!-- META -->
+  <div class="receipt-meta">
+    <div>Sale #: <strong>{{ sale.id }}</strong></div>
+    <div>Date: {{ sale.createdAt | date:'short' }}</div>
+    <div>Served by: {{ sale.createdBy }}</div>
+  </div>
+
+  <hr />
+
+  <!-- ITEMS -->
+  <div class="receipt-items">
+    <div *ngFor="let i of sale.items" class="receipt-item">
+      <div class="item-left">
+        {{ i.productName }} × {{ i.quantity }}
+      </div>
+      <div class="item-right">
+        {{ i.lineTotal | currency:'KES' }}
+      </div>
+    </div>
+  </div>
+
+  <hr />
+
+  <!-- TOTAL -->
+  <div class="receipt-total">
+    <div>Total</div>
+    <div>{{ sale.totalAmount | currency:'KES' }}</div>
+  </div>
+
+  <!-- PAYMENTS -->
+  <div class="receipt-payments">
+    <div class="receipt-section-title">Payments</div>
+
+    <div *ngFor="let p of sale.payments" class="receipt-payment">
+      <div>{{ p.method }}</div>
+      <div>{{ p.amount | currency:'KES' }}</div>
+    </div>
+  </div>
+
+  <!-- CUSTOMER -->
+  <div *ngIf="sale.customer" class="receipt-customer">
+    <div class="receipt-section-title">Customer</div>
+
+    <div class="receipt-line">
+      {{ sale.customer.name }}
+    </div>
+
+    <div *ngIf="sale.customer.phoneNumbers?.length"
+         class="receipt-line muted">
+      {{ sale.customer.phoneNumbers[0] }}
+    </div>
+  </div>
+
+  <hr />
+
+  <!-- FOOTER -->
+  <div class="receipt-footer">
+    Thank you for your business
+  </div>
+</div>
+
+<!-- ACTION (NOT PRINTED) -->
+<div class="receipt-actions no-print">
+  <button mat-flat-button color="primary" (click)="print()">
+    Print Receipt
+  </button>
+</div>

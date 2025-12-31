@@ -76,10 +76,10 @@ public class CustomerService {
             }
 
             // match by name
-            if (req.getName() != null) {
-                var found = customerRepository.findByNameIgnoreCase(req.getName());
-                if (found.isPresent()) return found.get().getId();
-            }
+//            if (req.getName() != null) {
+//                var found = customerRepository.findByNameIgnoreCase(req.getName());
+//                if (found.isPresent()) return found.get().getId();
+//            }
         }
 
         // create a new customer using the first identifier
@@ -96,7 +96,11 @@ public class CustomerService {
                 .name(best.getName() != null ? best.getName() : "Walk-in Customer")
                 .phoneNumbers(new ArrayList<>(phones))
                 .emailAddresses(new ArrayList<>(emails))
-                .type(best.getType())
+                .type(
+                        best.getType() != null
+                                ? best.getType()
+                                : CustomerType.INDIVIDUAL
+                )
                 .gender(best.getGender())
                 .address(best.getAddress())
                 .notes(best.getNotes())
@@ -112,7 +116,11 @@ public class CustomerService {
                 .name(req.getName())
                 .phoneNumbers(PhoneAndEmailNormalizer.normalizePhones(req.getPhoneNumbers()).stream().toList())
                 .emailAddresses(PhoneAndEmailNormalizer.normalizeEmails(req.getEmailAddresses()).stream().toList())
-                .type(req.getType())
+                .type(
+                        req.getType() != null
+                                ? req.getType()
+                                : CustomerType.INDIVIDUAL
+                )
                 .gender(req.getType() == COMPANY ? null : req.getGender())
                 .address(req.getAddress())
                 .notes(req.getNotes())
@@ -148,6 +156,19 @@ public class CustomerService {
     public CustomerResponse getCustomer(UUID id) {
         Customer c = customerRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Customer not found: " + id));
         return toResponse(c);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<CustomerResponse> findByPhone(String phone) {
+        var normalized = PhoneAndEmailNormalizer.normalizePhones(List.of(phone));
+
+        for (String p : normalized) {
+            var found = customerRepository.findByPhoneNumberElement(p);
+            if (found.isPresent()) {
+                return Optional.of(toResponse(found.get()));
+            }
+        }
+        return Optional.empty();
     }
 
     @Transactional

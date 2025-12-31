@@ -16,6 +16,7 @@ export class IconLoader {
       'products',
       'suppliers',
       'sales',
+      'reports',
       'payments',
       'customers',
       'accounts',

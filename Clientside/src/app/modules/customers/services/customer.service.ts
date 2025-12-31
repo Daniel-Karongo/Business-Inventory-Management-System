@@ -21,7 +21,7 @@ export class CustomerService {
       .set('page', page)
       .set('size', size)
 
-    if(deleted != undefined) params.set('deleted', deleted)
+    if (deleted != undefined) params.set('deleted', deleted)
     if (type) params = params.set('type', type);
     if (gender) params = params.set('gender', gender);
 
@@ -49,6 +49,13 @@ export class CustomerService {
 
   get(id: string) {
     return this.http.get<CustomerResponse>(`${this.base}/${id}`);
+  }
+
+  lookupByPhone(phone: string) {
+    return this.http.get<any>(
+      `${this.base}/lookup`,
+      { params: { phone } }
+    );
   }
 
   create(req: CustomerRequest) {

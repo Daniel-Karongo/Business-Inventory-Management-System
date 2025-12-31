@@ -1,0 +1,128 @@
+<div class="flex flex-col gap-4">
+
+  <div>
+    <h2 class="text-xl font-semibold">New Sale</h2>
+    <p class="text-sm text-[var(--text-secondary)]">
+      Add items and confirm
+    </p>
+  </div>
+
+  <!-- CUSTOMER (OPTIONAL) -->
+  <div class="bg-[var(--surface)] p-4 rounded shadow-sm mb-4" [formGroup]="customerGroup">
+
+    <div class="mb-2">
+      <div class="text-sm font-medium">Customer (Optional)</div>
+      <div class="text-xs text-[var(--text-secondary)]">
+        Leave blank for walk-in customers
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <mat-form-field appearance="fill">
+        <mat-label>Name</mat-label>
+        <input matInput formControlName="name" />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Phone</mat-label>
+        <input matInput placeholder="2547..." formControlName="phone" />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Email</mat-label>
+        <input matInput formControlName="email" />
+      </mat-form-field>
+    </div>
+  </div>
+
+  <div class="bg-[var(--surface)] p-4 rounded shadow">
+
+    <!-- HEADER -->
+    <div
+      class="grid grid-cols-[2.2fr_1.2fr_1.6fr_0.7fr_1.2fr_1fr_40px] gap-4 mb-2 text-sm font-medium text-[var(--text-secondary)]">
+      <div>Product</div>
+      <div>Variant</div>
+      <div>Branch</div>
+      <div>Qty</div>
+      <div>Unit Price</div>
+      <div>Total</div>
+      <div></div>
+    </div>
+
+    <!-- ROWS -->
+    <div *ngFor="let row of items.controls; let i = index"
+      class="grid grid-cols-[2.2fr_1.2fr_1.6fr_0.7fr_1.2fr_1fr_40px] gap-4 items-center mb-3">
+
+      <!-- PRODUCT -->
+      <mat-form-field>
+        <mat-select enterNext placeholder="Product" [formControl]="controlAt(i,'productId')"
+          (selectionChange)="onProductChange(i)">
+          <mat-option *ngFor="let p of products" [value]="p.id">
+            {{ p.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- VARIANT -->
+      <mat-form-field>
+        <mat-select enterNext placeholder="Variant" [formControl]="controlAt(i,'productVariantId')"
+          (selectionChange)="onVariantChange(i, $event.value)">
+          <mat-option *ngFor="let v of variantsMap[i]" [value]="v.id">
+            {{ v.classification || 'DEFAULT' }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- BRANCH -->
+      <mat-form-field>
+        <mat-select enterNext placeholder="Branch" [formControl]="controlAt(i,'branchId')">
+          <mat-option *ngFor="let b of branches" [value]="b.id">
+            {{ b.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- QTY -->
+      <mat-form-field>
+        <input matInput enterNext type="number" min="1" [formControl]="controlAt(i,'quantity')">
+
+        <mat-error *ngIf="controlAt(i,'quantity')?.hasError('stockExceeded')">
+          Exceeds available stock ({{ stockMap[i] }})
+        </mat-error>
+      </mat-form-field>
+
+      <!-- UNIT PRICE -->
+      <mat-form-field>
+        <input matInput enterNext type="number" min="0" [formControl]="controlAt(i,'unitPrice')">
+      </mat-form-field>
+
+      <!-- LINE TOTAL -->
+      <div class="font-medium text-right pr-2">
+        {{ lineTotal(i) | currency:'KES ' }}
+      </div>
+
+      <!-- REMOVE -->
+      <button mat-icon-button matTooltip="Remove line" (click)="removeLine(i)">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="flex justify-between items-center mt-6">
+      <button mat-stroked-button (click)="addLine()">
+        <mat-icon>add</mat-icon>
+        Add Line
+      </button>
+
+      <div class="text-lg font-semibold">
+        Total: {{ grandTotal() | currency:'KES ' }}
+      </div>
+    </div>
+
+    <div class="flex justify-end mt-6">
+      <button mat-flat-button (click)="submit()">
+        Create Sale
+      </button>
+    </div>
+  </div>
+</div>

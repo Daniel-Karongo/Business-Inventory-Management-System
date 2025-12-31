@@ -24,4 +24,5 @@ public class SaleDTO {
 
     private List<SaleLineItemDTO> items;
     private List<PaymentDTO> payments;
+    private SaleCustomerDTO customer;
 }

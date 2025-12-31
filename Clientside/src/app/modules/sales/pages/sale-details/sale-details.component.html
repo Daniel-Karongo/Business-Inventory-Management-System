@@ -1,0 +1,185 @@
+<div *ngIf="sale" class="flex flex-col gap-4">
+
+    <!-- HEADER -->
+    <div class="bg-[var(--surface)] p-4 rounded shadow flex justify-between items-center">
+        <div>
+            <h2 class="text-xl font-semibold">
+                Sale {{ sale.id | slice:0:8 }}
+            </h2>
+            <p class="text-sm text-[var(--text-secondary)]">
+                {{ sale.createdAt | date:'dd/MM/yyyy HH:mm' }} · {{ sale.createdBy }}
+            </p>
+        </div>
+
+        <mat-chip [color]="sale.status === 'COMPLETED' ? 'primary' : 'default'" class="uppercase tracking-wide text-xs"
+            selected>
+            {{ sale.status }}
+        </mat-chip>
+    </div>
+
+    <!-- CUSTOMER -->
+    <div *ngIf="sale.customer" class="bg-[var(--surface)] rounded-lg p-4 shadow-sm relative">
+
+        <div class="absolute left-0 top-0 h-full w-1 bg-primary rounded-l"></div>
+
+        <div class="flex items-center justify-between mb-3 pl-2">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+                Customer
+            </h3>
+            <mat-icon class="text-[var(--text-secondary)]">person</mat-icon>
+        </div>
+
+        <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm pl-2">
+            <div class="col-span-2">
+                <div class="label">Name</div>
+                <div class="value font-semibold">{{ sale.customer.name }}</div>
+            </div>
+
+            <div *ngIf="sale.customer.phoneNumbers?.length">
+                <div class="label">Phone</div>
+                <div class="value tabular-nums">
+                    {{ sale.customer.phoneNumbers[0] }}
+                </div>
+            </div>
+
+            <div *ngIf="sale.customer.emailAddresses?.length">
+                <div class="label">Email</div>
+                <div class="value truncate">
+                    {{ sale.customer.emailAddresses[0] }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="grid grid-cols-3 gap-4">
+        <div class="stat-card">
+            <div class="label">Total</div>
+            <div class="value text-lg font-semibold">
+                {{ sale.totalAmount | currency:'KES ' }}
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="label">Paid</div>
+            <div class="value text-lg font-semibold text-success">
+                {{ paid() | currency:'KES ' }}
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="label">Balance</div>
+            <div class="value text-lg font-semibold" [class.text-warn]="balance() > 0">
+                {{ balance() | currency:'KES ' }}
+            </div>
+        </div>
+    </div>
+
+    <!-- ITEMS -->
+    <div class="bg-[var(--surface)] rounded shadow">
+        <table mat-table [dataSource]="sale.items">
+
+            <ng-container matColumnDef="product">
+                <th mat-header-cell *matHeaderCellDef>Product</th>
+                <td mat-cell *matCellDef="let i">{{ i.productName }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="branch">
+                <th mat-header-cell *matHeaderCellDef>Branch</th>
+                <td mat-cell *matCellDef="let i">{{ i.branchId | slice:0:8 }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="qty">
+                <th mat-header-cell *matHeaderCellDef>Qty</th>
+                <td mat-cell *matCellDef="let i">{{ i.quantity }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="price">
+                <th mat-header-cell *matHeaderCellDef>Unit</th>
+                <td mat-cell *matCellDef="let i">{{ i.unitPrice | currency:'KES ' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="total">
+                <th mat-header-cell *matHeaderCellDef>Total</th>
+                <td mat-cell *matCellDef="let i">{{ i.lineTotal | currency:'KES ' }}</td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="lineColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: lineColumns;"></tr>
+        </table>
+    </div>
+
+    <!-- PAYMENTS -->
+    <div class="bg-[var(--surface)] rounded shadow p-4">
+        <div class="flex justify-between mb-2">
+            <h3 class="font-semibold">Payments</h3>
+
+            <div class="flex gap-2" *ngIf="canPay()">
+                <button mat-stroked-button (click)="addCashPayment()">Cash</button>
+                <button mat-stroked-button (click)="addMpesaPayment()">Mpesa</button>
+            </div>
+        </div>
+
+        <table mat-table [dataSource]="sale.payments">
+
+            <ng-container matColumnDef="date">
+                <th mat-header-cell *matHeaderCellDef>Date</th>
+                <td mat-cell *matCellDef="let p">{{ p.timestamp | date:'short' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="method">
+                <th mat-header-cell *matHeaderCellDef>Method</th>
+                <td mat-cell *matCellDef="let p">{{ p.method }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="amount">
+                <th mat-header-cell *matHeaderCellDef>Amount</th>
+                <td mat-cell *matCellDef="let p">{{ p.amount | currency:'KES ' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef>Status</th>
+                <td mat-cell *matCellDef="let p">{{ p.status }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let p">
+                    <button mat-icon-button matTooltip="Refund" *ngIf="p.status === 'SUCCESS'"
+                        (click)="refundPayment(p.paymentId)">
+                        <mat-icon>undo</mat-icon>
+                    </button>
+                </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="paymentColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: paymentColumns;"></tr>
+        </table>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="flex justify-between items-center mt-4">
+
+        <div class="flex gap-2">
+            <button mat-stroked-button *ngIf="sale.status === 'COMPLETED'"
+                [routerLink]="['/sales', sale.id, 'receipt']">
+                Receipt
+            </button>
+
+            <button mat-flat-button color="primary" *ngIf="sale.status === 'COMPLETED'" routerLink="/sales/new">
+                New Sale
+            </button>
+        </div>
+
+        <div class="flex gap-2">
+            <button mat-stroked-button color="warn" *ngIf="sale.status === 'CREATED'" (click)="cancelSale()">
+                Cancel
+            </button>
+
+            <button mat-flat-button color="warn" *ngIf="sale.status === 'COMPLETED'" (click)="refundSale()">
+                Refund
+            </button>
+        </div>
+
+    </div>
+</div>
