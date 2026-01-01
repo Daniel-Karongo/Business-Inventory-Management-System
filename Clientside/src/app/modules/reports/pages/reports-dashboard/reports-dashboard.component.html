@@ -1,0 +1,35 @@
+<div class="page-root">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div>
+      <h2>Reports</h2>
+      <div class="breadcrumb">Finance / Reports</div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="page-content">
+
+    <div class="reports-grid">
+
+      <div
+        class="report-tile"
+        *ngFor="let r of reports"
+        (click)="open(r)"
+      >
+        <div class="tile-icon">
+          <mat-icon>assessment</mat-icon>
+        </div>
+
+        <div class="tile-content">
+          <div class="tile-title">{{ r.title }}</div>
+          <div class="tile-desc">{{ r.description }}</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

@@ -42,7 +42,7 @@ public class BiometricController {
     @DeleteMapping("/remove/{id}")
     @Operation(summary = "Remove (soft-delete) a biometric record by id")
     public ResponseEntity<Void> remove(@PathVariable UUID id) {
-        // Basic implementation — set deleted flag in repository
+        // Basic implementation — set deleted flag in dto
         biometricService.deleteRecord(id);
         return ResponseEntity.noContent().build();
     }

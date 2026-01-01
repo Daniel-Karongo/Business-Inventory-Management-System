@@ -205,7 +205,7 @@ public class RollcallService {
         for (Department d : departments) {
             LocalDateTime cutoff = LocalDateTime.of(now.toLocalDate(), d.getRollcallStartTime()).plusMinutes(d.getGracePeriodMinutes() == null ? 15 : d.getGracePeriodMinutes());
 
-            // list department members (heads and members) - you may want a repository method to fetch all user ids in department
+            // list department members (heads and members) - you may want a dto method to fetch all user ids in department
             List<User> members = departmentRepository.findAllUsersInDepartment(d.getId());
 
             for (User user : members) {

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="general_ledger"
+              pageWidth="595" pageHeight="842"
+              columnWidth="555"
+              leftMargin="20" rightMargin="20"
+              topMargin="30" bottomMargin="30">
+
+    <!-- PARAMETERS -->
+    <parameter name="ACCOUNT_ID" class="java.lang.String"/>
+    <parameter name="FROM_DATE" class="java.lang.String"/>
+    <parameter name="TO_DATE" class="java.lang.String"/>
+
+    <!-- SQL -->
+    <queryString>
+        <![CDATA[
+            SELECT
+                posting_date           AS date,
+                journal_description    AS description,
+                debit,
+                credit,
+                SUM(debit - credit)
+                    OVER (PARTITION BY account_id
+                          ORDER BY posting_date, ledger_entry_id)
+                    AS balance
+            FROM vw_general_ledger
+            WHERE account_id = UUID_TO_BIN($P{ACCOUNT_ID})
+              AND posting_date BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+            ORDER BY posting_date, ledger_entry_id
+        ]]>
+    </queryString>
+
+    <!-- FIELDS -->
+    <field name="date" class="java.sql.Timestamp"/>
+    <field name="description" class="java.lang.String"/>
+    <field name="debit" class="java.math.BigDecimal"/>
+    <field name="credit" class="java.math.BigDecimal"/>
+    <field name="balance" class="java.math.BigDecimal"/>
+
+    <!-- TITLE -->
+    <title>
+        <band height="60">
+            <textField>
+                <reportElement x="0" y="0" width="555" height="25"/>
+                <textElement textAlignment="Center">
+                    <font size="16" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["GENERAL LEDGER"]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="30" width="555" height="15"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA[
+                    "Period: " + $P{FROM_DATE} + " to " + $P{TO_DATE}
+                ]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <!-- DETAIL -->
+    <detail>
+        <band height="18">
+            <textField>
+                <reportElement x="0" y="0" width="80" height="18"/>
+                <textFieldExpression><![CDATA[$F{date}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="80" y="0" width="215" height="18"/>
+                <textFieldExpression><![CDATA[$F{description}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="295" y="0" width="80" height="18"/>
+                <textFieldExpression><![CDATA[$F{debit}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="375" y="0" width="80" height="18"/>
+                <textFieldExpression><![CDATA[$F{credit}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="455" y="0" width="100" height="18"/>
+                <textFieldExpression><![CDATA[$F{balance}]]></textFieldExpression>
+            </textField>
+        </band>
+    </detail>
+
+</jasperReport>

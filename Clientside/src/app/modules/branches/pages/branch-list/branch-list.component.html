@@ -29,7 +29,7 @@
       <button mat-icon-button [routerLink]="[b.id, 'edit']" matTooltip="Edit">
         <mat-icon>edit</mat-icon>
       </button>
-      <button mat-icon-button color="warn" [disabled]="b.branchCode === 'MAIN'" (click)="delete(b)">
+      <button mat-icon-button color="warn" [disabled]="b.branchCode === 'MAIN'" (click)="delete(b)" matTooltip="Delete">
         <mat-icon>delete</mat-icon>
       </button>
     </td>

@@ -1,0 +1,63 @@
+<!-- HEADER -->
+<h2 mat-dialog-title class="dialog-header">
+  <div class="dialog-title">{{ report.title }}</div>
+  <div class="dialog-subtitle">{{ report.description }}</div>
+</h2>
+
+<!-- CONTENT -->
+<mat-dialog-content class="dialog-content">
+
+  <section class="form-section">
+    <div class="section-label">Report parameters</div>
+
+    <div class="form-grid">
+      <mat-form-field appearance="fill">
+        <mat-label>From date</mat-label>
+        <input matInput [matDatepicker]="fromPicker" [(ngModel)]="from">
+        <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
+        <mat-datepicker #fromPicker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>To date</mat-label>
+        <input matInput [matDatepicker]="toPicker" [(ngModel)]="to">
+        <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
+        <mat-datepicker #toPicker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field
+        *ngIf="report.requiresAccount"
+        appearance="fill"
+        class="full-width">
+        <mat-label>Account</mat-label>
+        <mat-select [(ngModel)]="accountId">
+          <mat-option *ngFor="let a of accounts" [value]="a.id">
+            {{ a.code }} — {{ a.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </section>
+
+</mat-dialog-content>
+
+<!-- FOOTER -->
+<mat-dialog-actions class="dialog-footer">
+  <div class="footer-hint">
+    Generated reports are immutable and audit-safe
+  </div>
+
+  <div class="footer-actions">
+    <button mat-stroked-button mat-dialog-close>
+      Cancel
+    </button>
+
+    <button
+      mat-flat-button
+      color="primary"
+      [disabled]="!from || !to || loading"
+      (click)="generate()">
+      Generate report
+    </button>
+  </div>
+</mat-dialog-actions>

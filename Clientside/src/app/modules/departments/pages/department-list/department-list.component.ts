@@ -9,6 +9,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { DepartmentService } from '../../services/department.service';
 import { DepartmentDTO } from '../../models/department.model';
 import { ConfirmDialogComponent } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   standalone: true,
@@ -18,7 +19,8 @@ import { ConfirmDialogComponent } from '../../../../shared/components/confirm-di
     RouterModule,
     MatTableModule,
     MatIconModule,
-    MatButtonModule
+    MatButtonModule,
+    MatTooltipModule
   ],
   templateUrl: './department-list.component.html',
   styleUrls: ['./department-list.component.scss']

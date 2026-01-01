@@ -2,41 +2,35 @@ package com.IntegrityTechnologies.business_manager.modules.finance.sales.service
 
 import com.IntegrityTechnologies.business_manager.config.OptimisticRetryRunner;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounts.service.AccountingService;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.Payment;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.service.PaymentServiceImpl;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.SaleCustomerDTO;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.SaleDTO;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.SaleLineItemDTO;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.SaleRequest;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.service.PaymentService;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineItem;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.Customer;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.repository.CustomerRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service.CustomerService;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -44,12 +38,12 @@ import java.util.UUID;
 public class SalesService {
 
     private final SaleRepository saleRepository;
-    private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
     private final InventoryService inventoryService;
     private final CustomerService customerService;
-    private final AccountingService accountingService;
-    private final PaymentServiceImpl paymentService;
+    private final AccountingFacade accountingFacade;
+    private final AccountingAccounts accountingAccounts;
+    private final PaymentService paymentService;
     private final CustomerRepository customerRepository;
 
     /* ============================================================
@@ -110,7 +104,6 @@ public class SalesService {
 
         Sale saved = saleRepository.save(sale);
 
-        // Reserve stock
         for (SaleLineItem li : lines) {
             inventoryService.reserveStockVariant(
                     li.getProductVariantId(),
@@ -126,12 +119,10 @@ public class SalesService {
     /* ============================================================
        GET SALE
        ============================================================ */
-
     @Transactional(readOnly = true)
     public SaleDTO getSale(UUID id) {
         Sale s = saleRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Sale not found: " + id));
-
         return toDTO(s);
     }
 
@@ -158,36 +149,32 @@ public class SalesService {
                 .filter(s -> {
                     if (from == null && to == null) return true;
                     if (s.getCreatedAt() == null) return false;
-
                     var d = s.getCreatedAt().toLocalDate();
                     if (from != null && d.isBefore(from)) return false;
                     if (to != null && d.isAfter(to)) return false;
-
                     return true;
                 })
-                .map(s -> toDTO(s))
+                .map(this::toDTO)
                 .toList();
 
         return new PageImpl<>(mapped, pageable, mapped.size());
     }
 
     /* ============================================================
-       UPDATE SALE (ONLY IN CREATED STATE)
+       UPDATE SALE
        ============================================================ */
     @Transactional
     public SaleDTO updateSale(UUID id, SaleRequest req) {
 
-        Sale s = saleRepository.findById(id)
+        Sale sale = saleRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Sale not found: " + id));
 
-        if (s.getStatus() != Sale.SaleStatus.CREATED) {
+        if (sale.getStatus() != Sale.SaleStatus.CREATED) {
             throw new IllegalStateException("Only CREATED sales can be updated");
         }
 
-        UUID customerId = customerService.findOrCreateCustomer(List.of(req.getCustomerIdentifiers()));
-
-        // Release existing reservations
-        for (SaleLineItem li : s.getLineItems()) {
+        // release existing reservations
+        for (SaleLineItem li : sale.getLineItems()) {
             inventoryService.releaseReservationVariant(
                     li.getProductVariantId(),
                     li.getBranchId(),
@@ -196,7 +183,10 @@ public class SalesService {
             );
         }
 
-        // Recreate sale lines
+        UUID customerId = customerService.findOrCreateCustomer(
+                List.of(req.getCustomerIdentifiers())
+        );
+
         List<SaleLineItem> newLines = new ArrayList<>();
 
         for (var li : req.getItems()) {
@@ -205,9 +195,8 @@ public class SalesService {
                     .orElseThrow(() ->
                             new IllegalArgumentException("Variant not found: " + li.getProductVariantId()));
 
-            BigDecimal unitPrice = li.getUnitPrice() != null
-                    ? li.getUnitPrice()
-                    : variant.getMinimumSellingPrice();
+            BigDecimal unitPrice = Optional.ofNullable(li.getUnitPrice())
+                    .orElse(variant.getMinimumSellingPrice());
 
             BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(li.getQuantity()));
 
@@ -221,23 +210,20 @@ public class SalesService {
                     .build());
         }
 
-        // Recalculate totals
-        BigDecimal computedTotal = newLines.stream()
+        BigDecimal newTotal = newLines.stream()
                 .map(SaleLineItem::getLineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Replace sale lines
-        s.getLineItems().clear();
-        s.getLineItems().addAll(newLines);
+        sale.getLineItems().clear();
+        sale.getLineItems().addAll(newLines);
 
-        s.setCustomerId(customerId);
-        s.setTotalAmount(computedTotal);
-        s.setTotalDiscount(Optional.ofNullable(req.getTotalDiscount()).orElse(BigDecimal.ZERO));
-        s.setTotalTax(Optional.ofNullable(req.getTotalTax()).orElse(BigDecimal.ZERO));
+        sale.setCustomerId(customerId);
+        sale.setTotalAmount(newTotal);
+        sale.setTotalDiscount(Optional.ofNullable(req.getTotalDiscount()).orElse(BigDecimal.ZERO));
+        sale.setTotalTax(Optional.ofNullable(req.getTotalTax()).orElse(BigDecimal.ZERO));
 
-        saleRepository.save(s);
+        saleRepository.save(sale);
 
-        // Re-reserve stock
         for (SaleLineItem li : newLines) {
             inventoryService.reserveStockVariant(
                     li.getProductVariantId(),
@@ -251,21 +237,20 @@ public class SalesService {
     }
 
     /* ============================================================
-       CANCEL SALE (WITHOUT REFUND)
+       CANCEL SALE (NO REFUND)
        ============================================================ */
     @Transactional
     public SaleDTO cancelSale(UUID id) {
 
-        Sale s = saleRepository.findById(id)
-                .orElseThrow(() ->
-                        new EntityNotFoundException("Sale not found: " + id));
+        Sale sale = saleRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Sale not found: " + id));
 
-        if (s.getStatus() == Sale.SaleStatus.CANCELLED) return getSale(id);
-        if (s.getStatus() == Sale.SaleStatus.REFUNDED) {
+        if (sale.getStatus() == Sale.SaleStatus.CANCELLED) return getSale(id);
+        if (sale.getStatus() == Sale.SaleStatus.REFUNDED) {
             throw new IllegalStateException("Cannot cancel a REFUNDED sale");
         }
 
-        for (SaleLineItem li : s.getLineItems()) {
+        for (SaleLineItem li : sale.getLineItems()) {
             inventoryService.releaseReservationVariant(
                     li.getProductVariantId(),
                     li.getBranchId(),
@@ -274,14 +259,14 @@ public class SalesService {
             );
         }
 
-        s.setStatus(Sale.SaleStatus.CANCELLED);
-        saleRepository.save(s);
+        sale.setStatus(Sale.SaleStatus.CANCELLED);
+        saleRepository.save(sale);
 
         return getSale(id);
     }
 
     /* ============================================================
-       FULL REFUND WORKFLOW
+       FULL REFUND
        ============================================================ */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public SaleDTO refundSale(UUID id) {
@@ -289,11 +274,8 @@ public class SalesService {
         Sale sale = saleRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Sale not found: " + id));
 
-        log.info("🔄 REFUND SALE {}", id);
-
         if (sale.getStatus() == Sale.SaleStatus.REFUNDED) return toDTO(sale);
 
-        // 1️⃣ Restore stock
         for (SaleLineItem li : sale.getLineItems()) {
             inventoryService.incrementVariantStock(
                     li.getProductVariantId(),
@@ -303,7 +285,6 @@ public class SalesService {
             );
         }
 
-        // 2️⃣ Reverse accounting
         BigDecimal totalPaid = sale.getPayments().stream()
                 .filter(p -> "SUCCESS".equalsIgnoreCase(p.getStatus()))
                 .map(Payment::getAmount)
@@ -311,23 +292,37 @@ public class SalesService {
 
         if (totalPaid.compareTo(BigDecimal.ZERO) > 0) {
             OptimisticRetryRunner.runWithRetry(() -> {
-                accountingService.reverseSalePayment(
-                        sale.getId(),
-                        totalPaid,
-                        "REFUND:" + sale.getId()
+                accountingFacade.post(
+                        AccountingEvent.builder()
+                                .sourceModule("SALE_REFUND")
+                                .sourceId(sale.getId())
+                                .reference("SALE-REFUND-" + sale.getId())
+                                .description("Sale refund " + sale.getId())
+                                .performedBy("SYSTEM")
+                                .entries(List.of(
+                                        AccountingEvent.Entry.builder()
+                                                .accountId(accountingAccounts.revenue())
+                                                .direction(EntryDirection.DEBIT)
+                                                .amount(totalPaid)
+                                                .build(),
+                                        AccountingEvent.Entry.builder()
+                                                .accountId(accountingAccounts.cash())
+                                                .direction(EntryDirection.CREDIT)
+                                                .amount(totalPaid)
+                                                .build()
+                                ))
+                                .build()
                 );
                 return null;
             });
         }
 
-        // 3️⃣ Update payment statuses
-        sale.getPayments().forEach(payment -> {
-            if ("SUCCESS".equalsIgnoreCase(payment.getStatus())) {
-                payment.setStatus("REFUNDED");
+        sale.getPayments().forEach(p -> {
+            if ("SUCCESS".equalsIgnoreCase(p.getStatus())) {
+                p.setStatus("REFUNDED");
             }
         });
 
-        // 4️⃣ Update customer history
         if (sale.getCustomerId() != null) {
             customerService.recordRefund(
                     sale.getCustomerId(),
@@ -337,7 +332,6 @@ public class SalesService {
             );
         }
 
-        // 5️⃣ Mark sale as REFUNDED
         sale.setStatus(Sale.SaleStatus.REFUNDED);
         saleRepository.save(sale);
 
@@ -345,7 +339,7 @@ public class SalesService {
     }
 
     /* ============================================================
-       CANCEL + REFUND (ONE ACTION)
+       CANCEL + REFUND
        ============================================================ */
     @Transactional
     public SaleDTO cancelAndRefundSale(UUID id) {
@@ -353,11 +347,8 @@ public class SalesService {
         Sale sale = saleRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Sale not found: " + id));
 
-        log.info("🚨 CANCEL + REFUND SALE {}", id);
-
         if (sale.getStatus() == Sale.SaleStatus.REFUNDED) return toDTO(sale);
 
-        // 1️⃣ Release outstanding reservations (if any)
         for (SaleLineItem li : sale.getLineItems()) {
             try {
                 inventoryService.releaseReservationVariant(
@@ -366,48 +357,47 @@ public class SalesService {
                         li.getQuantity(),
                         "CANCEL+REFUND_RELEASE:" + id
                 );
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) {}
         }
 
-        // 2️⃣ Refund the sale (restores stock, reverses payments)
-        // call refundSale but get entity again for updating
-        refundSale(id); // returns DTO but performs refund internally
+        refundSale(id);
 
         Sale refundedSale = saleRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Sale not found after refund: " + id));
 
-        // mark cancelled AFTER refund
         refundedSale.setStatus(Sale.SaleStatus.CANCELLED);
         saleRepository.save(refundedSale);
 
-        return toDTO(sale);
+        return toDTO(refundedSale);
     }
 
     /* ============================================================
-       HELPERS
+       PAYMENTS FOR SALE (FIXED TYPE ERROR)
        ============================================================ */
-//    private String getCurrentUsername() {
-//        var auth = SecurityContextHolder.getContext().getAuthentication();
-//        return auth != null ? auth.getName() : "SYSTEM";
-//    }
-
     @Transactional(readOnly = true)
-    public Iterable<com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO> getSalePayments(UUID id) {
-        Sale s = saleRepository.findById(id)
+    public Iterable<PaymentDTO> getSalePayments(UUID id) {
+
+        Sale sale = saleRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Sale not found: " + id));
 
-        return s.getPayments().stream()
-                .map(p -> paymentService.toDTO(p))
+        return sale.getPayments().stream()
+                .map(p -> paymentService.getPayment(p.getId())) // ✅ FIXED
                 .toList();
     }
 
+    /* ============================================================
+       RECEIPT
+       ============================================================ */
     @Transactional(readOnly = true)
     public SaleDTO getReceipt(UUID id) {
         return getSale(id);
     }
 
+    /* ============================================================
+       DTO MAPPER
+       ============================================================ */
     public SaleDTO toDTO(Sale sale) {
+
         SaleCustomerDTO customerDto = null;
 
         if (sale.getCustomerId() != null) {

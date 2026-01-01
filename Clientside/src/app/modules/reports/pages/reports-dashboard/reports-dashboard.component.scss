@@ -1,0 +1,80 @@
+.page-root {
+  padding: 20px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+
+  h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: var(--font-semibold);
+  }
+
+  .breadcrumb {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+}
+
+.page-content {
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 20px;
+  border: 1px solid var(--border);
+}
+
+.reports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.report-tile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.report-tile:hover {
+  border-color: var(--active);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.tile-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(0, 92, 187, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tile-icon mat-icon {
+  color: #005cbb;
+}
+
+.tile-title {
+  font-weight: var(--font-semibold);
+}
+
+.tile-desc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}

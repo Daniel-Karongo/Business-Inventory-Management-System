@@ -9,6 +9,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { BranchService } from '../../services/branch.service';
 import { BranchDTO } from '../../models/branch.model';
 import { ConfirmDialogComponent } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   standalone: true,
@@ -18,7 +19,8 @@ import { ConfirmDialogComponent } from '../../../../shared/components/confirm-di
     RouterModule,
     MatTableModule,
     MatIconModule,
-    MatButtonModule
+    MatButtonModule,
+    MatTooltipModule
   ],
   templateUrl: './branch-list.component.html'
 })

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="profit_and_loss"
+              pageWidth="595" pageHeight="842"
+              columnWidth="555"
+              leftMargin="20" rightMargin="20"
+              topMargin="30" bottomMargin="30">
+
+    <!-- PARAMETERS -->
+    <parameter name="FROM_DATE" class="java.lang.String"/>
+    <parameter name="TO_DATE" class="java.lang.String"/>
+
+    <!-- SQL -->
+    <queryString>
+        <![CDATA[
+            SELECT
+                account_type AS category,
+                SUM(
+                    CASE
+                        WHEN account_type = 'INCOME'  AND direction = 'CREDIT' THEN amount
+                        WHEN account_type = 'EXPENSE' AND direction = 'DEBIT'  THEN amount
+                        ELSE 0
+                    END
+                ) AS amount
+            FROM vw_profit_and_loss
+            WHERE posting_date BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+            GROUP BY account_type
+            ORDER BY account_type
+        ]]>
+    </queryString>
+
+    <!-- FIELDS -->
+    <field name="category" class="java.lang.String"/>
+    <field name="amount" class="java.math.BigDecimal"/>
+
+    <!-- TITLE -->
+    <title>
+        <band height="50">
+            <textField>
+                <reportElement x="0" y="0" width="555" height="25"/>
+                <textElement textAlignment="Center">
+                    <font size="16" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["PROFIT & LOSS STATEMENT"]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="30" width="555" height="15"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA[
+                    "Period: " + $P{FROM_DATE} + " to " + $P{TO_DATE}
+                ]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <!-- DETAIL -->
+    <detail>
+        <band height="20">
+            <textField>
+                <reportElement x="0" y="0" width="350" height="20"/>
+                <textFieldExpression><![CDATA[$F{category}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="350" y="0" width="205" height="20"/>
+                <textFieldExpression><![CDATA[$F{amount}]]></textFieldExpression>
+            </textField>
+        </band>
+    </detail>
+
+</jasperReport>

@@ -2,7 +2,7 @@
 //
 //import com.IntegrityTechnologies.business_manager.modules.stock.model.product.Product;
 //import com.IntegrityTechnologies.business_manager.modules.person.entity.model.supplier.Supplier;
-//import com.IntegrityTechnologies.business_manager.modules.person.entity.repository.supplier.SupplierRepository;
+//import com.IntegrityTechnologies.business_manager.modules.person.entity.dto.supplier.SupplierRepository;
 //import lombok.RequiredArgsConstructor;
 //import lombok.extern.slf4j.Slf4j;
 //import org.springframework.stereotype.Service;

@@ -10,6 +10,7 @@ import { loggingInterceptor } from './core/interceptors/logging.interceptor';
 import { IconLoader } from './core/utils/icon-loader';
 import { AuthService } from './modules/auth/services/auth.service';
 import { initAuth } from './modules/auth/services/auth.service';
+import { provideNativeDateAdapter } from '@angular/material/core';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -25,6 +26,7 @@ export const appConfig: ApplicationConfig = {
     ),
 
     provideAnimations(),
+    provideNativeDateAdapter(),
 
     // ⭐ Load icons before app boots
     provideAppInitializer(() => {
