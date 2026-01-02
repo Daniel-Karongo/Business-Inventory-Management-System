@@ -1,0 +1,27 @@
+<h2 class="dialog-title">Multiple active sessions</h2>
+
+<div class="dialog-content">
+  <p class="main-text">
+    You currently have <strong>{{ count }}</strong> active sessions.
+  </p>
+
+  <p class="sub-text">
+    For security, you can log out just this device or end all sessions.
+  </p>
+</div>
+
+<div class="dialog-actions">
+  <button
+    mat-stroked-button
+    class="btn-secondary"
+    (click)="logoutCurrent()">
+    Log out this device
+  </button>
+
+  <button
+    mat-flat-button
+    class="btn-danger"
+    (click)="logoutAll()">
+    Log out all sessions
+  </button>
+</div>

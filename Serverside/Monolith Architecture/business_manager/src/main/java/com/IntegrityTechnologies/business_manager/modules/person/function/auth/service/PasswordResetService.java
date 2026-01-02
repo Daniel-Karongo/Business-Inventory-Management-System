@@ -1,0 +1,4 @@
+package com.IntegrityTechnologies.business_manager.modules.person.function.auth.service;
+
+public class PasswordResetService {
+}

@@ -12,6 +12,10 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { SidebarService } from '../../services/sidebar.service';
 import { ThemeService } from '../../services/theme.service';
 import { NotificationButtonComponent } from './notification-button/notification-button.component';
+import { AuthService } from '../../../modules/auth/services/auth.service';
+import { IdleLogoutService } from '../../services/IdleLogoutService';
+import { MatDialog } from '@angular/material/dialog';
+import { LogoutChoiceDialogComponent } from './logout-choice-dialog/logout-choice-dialog.component';
 
 @Component({
   selector: 'app-topbar',
@@ -40,8 +44,11 @@ export class TopbarComponent implements OnInit {
   constructor(
     public sidebar: SidebarService,
     public theme: ThemeService,
-    private router: Router
-  ) {}
+    private router: Router,
+    private auth: AuthService,
+    private idle: IdleLogoutService,
+    private dialog: MatDialog
+  ) { }
 
   ngOnInit(): void {
     this.router.events
@@ -99,6 +106,49 @@ export class TopbarComponent implements OnInit {
   }
 
   logout() {
-    console.log('logout');
+    this.idle.stop();
+
+    this.auth.getSessions().subscribe({
+      next: sessions => {
+        if (sessions.length <= 1) {
+          this.finalizeLogoutCurrent();
+          return;
+        }
+
+        const ref = this.dialog.open(LogoutChoiceDialogComponent, {
+          width: '440px',
+          disableClose: false, // ✅ allow outside click / ESC
+          data: { count: sessions.length }
+        });
+
+        ref.afterClosed().subscribe(choice => {
+          if (choice === 'all') {
+            this.finalizeLogoutAll();
+          } else if (choice === 'current') {
+            this.finalizeLogoutCurrent();
+          }
+          // ✅ undefined (backdrop / ESC) → DO NOTHING
+        });
+      },
+      error: () => this.finalizeLogoutCurrent()
+    });
+  }
+
+  private finalizeLogoutCurrent() {
+    this.auth.logoutFull();
+    this.router.navigate(['/login']);
+  }
+
+  private finalizeLogoutAll() {
+    this.auth.logoutAllRemote().subscribe({
+      next: () => {
+        this.auth.logoutLocal();
+        this.router.navigate(['/login']);
+      },
+      error: () => {
+        this.auth.logoutLocal();
+        this.router.navigate(['/login']);
+      }
+    });
   }
 }
