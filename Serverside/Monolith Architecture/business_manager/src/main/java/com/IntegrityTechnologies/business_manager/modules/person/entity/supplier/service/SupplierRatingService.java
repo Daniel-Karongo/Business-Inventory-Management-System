@@ -1,7 +1,7 @@
 //package com.IntegrityTechnologies.business_manager.modules.supplier.service;
 //
-//import com.IntegrityTechnologies.business_manager.modules.stock.model.product.Product;
-//import com.IntegrityTechnologies.business_manager.modules.person.entity.model.supplier.Supplier;
+//import com.IntegrityTechnologies.business_manager.modules.stock.config.product.Product;
+//import com.IntegrityTechnologies.business_manager.modules.person.entity.config.supplier.Supplier;
 //import com.IntegrityTechnologies.business_manager.modules.person.entity.dto.supplier.SupplierRepository;
 //import lombok.RequiredArgsConstructor;
 //import lombok.extern.slf4j.Slf4j;

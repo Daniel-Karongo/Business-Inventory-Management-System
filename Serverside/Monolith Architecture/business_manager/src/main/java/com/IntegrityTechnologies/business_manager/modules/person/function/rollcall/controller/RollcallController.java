@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -44,6 +45,12 @@ public class RollcallController {
     public ResponseEntity<RollcallDTO> loginRollcall(@RequestBody LoginRollcallRequest req) {
         RollcallDTO r = rollcallService.recordLoginRollcall(req.getUserId(), req.getDepartmentId(), req.getBranchId());
         return ResponseEntity.ok(r);
+    }
+
+    @PostMapping("/mark-absentees")
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
+    public ResponseEntity<List<RollcallDTO>> markAbsenteesManually() {
+        return ResponseEntity.ok(rollcallService.markAbsenteesAndReturn());
     }
 
     @GetMapping("/user/{userId}")

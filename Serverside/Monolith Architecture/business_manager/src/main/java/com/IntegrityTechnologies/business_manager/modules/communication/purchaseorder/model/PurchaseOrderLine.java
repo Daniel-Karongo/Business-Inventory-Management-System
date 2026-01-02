@@ -1,4 +1,4 @@
-//package com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.model;
+//package com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.config;
 //
 //import jakarta.persistence.*;
 //import lombok.*;

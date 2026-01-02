@@ -1,6 +1,6 @@
-//package com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.model;
+//package com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.config;
 //
-//import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
+//import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.config.Supplier;
 //import jakarta.persistence.*;
 //import lombok.*;
 //import java.time.LocalDateTime;

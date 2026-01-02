@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { LoginRequest, LoginResponse } from '../models';
+import { IdleLogoutService } from '../../../core/services/IdleLogoutService';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -20,8 +21,6 @@ export class AuthService {
     localStorage.setItem(this.TOKEN_KEY, res.token);
     localStorage.setItem(this.EXPIRES_KEY, String(res.expiresAt));
     localStorage.setItem(this.USER_ROLE, res.role);
-
-    this.setAutoLogout();
   }
 
   public isExpired(): boolean {
@@ -45,7 +44,7 @@ export class AuthService {
 
   getRole(): string {
     if (this.isExpired()) {
-      this.logout();
+      this.logoutFull();
       return '';
     }
 
@@ -62,28 +61,50 @@ export class AuthService {
     return true;
   }
 
-  logout() {
+  // auth.service.ts
+  logoutRemote() {
+    return this.http.post(`${environment.apiUrl}/auth/logout`, {}, {
+      observe: 'response'
+    });
+  }
+
+  logoutLocal() {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.EXPIRES_KEY);
     localStorage.removeItem(this.USER_ROLE);
   }
 
-  setAutoLogout() {
-    const exp = Number(localStorage.getItem(this.EXPIRES_KEY));
-    if (!exp) return;
+  logoutFull() {
+    const token = this.getToken();
 
-    const timeout = exp - Date.now();
-    if (timeout <= 0) {
-      this.logout();
+    // 🔒 No token → nothing to invalidate server-side
+    if (!token) {
+      this.logoutLocal();
       return;
     }
 
-    setTimeout(() => this.logout(), timeout);
+    this.logoutRemote().subscribe({
+      next: () => this.logoutLocal(),
+      error: () => this.logoutLocal()
+    });
+  }
+
+  getSessions() {
+    return this.http.post<any[]>(
+      `${environment.apiUrl}/auth/sessions`,
+      {}
+    );
+  }
+
+  logoutAllRemote() {
+    return this.http.post(`${environment.apiUrl}/auth/logout-all`, {}, {
+      observe: 'response'
+    });
   }
 }
 
 export function initAuth(auth: AuthService) {
   if (auth.isExpired()) {
-    auth.logout();
+    auth.logoutLocal(); // ✅ local cleanup only
   }
 }

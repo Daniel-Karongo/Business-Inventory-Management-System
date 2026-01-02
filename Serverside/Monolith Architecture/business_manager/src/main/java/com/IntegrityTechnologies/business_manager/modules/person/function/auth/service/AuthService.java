@@ -4,7 +4,6 @@ import com.IntegrityTechnologies.business_manager.exception.UserNotFoundExceptio
 import com.IntegrityTechnologies.business_manager.modules.person.function.auth.dto.AuthRequest;
 import com.IntegrityTechnologies.business_manager.modules.person.function.auth.dto.AuthResponse;
 import com.IntegrityTechnologies.business_manager.modules.person.function.auth.util.JwtUtil;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
@@ -19,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -28,22 +28,25 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuthService {
 
+    private static final int MAX_SESSIONS_PER_DAY = 4;
+
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final TokenBlacklistService tokenBlacklistService;
     private final RollcallService rollcallService;
     private final DepartmentRepository departmentRepository;
     private final BranchRepository branchRepository;
     private final UserSessionRepository userSessionRepository;
 
+    /* =====================================================
+       LOGIN
+       ===================================================== */
+
     @Transactional
     public AuthResponse login(AuthRequest request) {
 
-        // ------------------------
-        // 1️⃣ Validate credentials
-        // ------------------------
+        // 1️⃣ Resolve user
         User user = userRepository.findByIdentifier(request.getIdentifier())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
@@ -53,108 +56,102 @@ public class AuthService {
 
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        user.getUsername(), request.getPassword()
+                        user.getUsername(),
+                        request.getPassword()
                 )
-        );
-
-        // ------------------------
-        // 2️⃣ Generate JWT Token
-        // ------------------------
-        String token = jwtUtil.generateToken(
-                user.getId(),
-                user.getUsername(),
-                user.getRole().name()
         );
 
         UUID userId = user.getId();
         UUID branchId = request.getBranchId();
+        LocalDate today = LocalDate.now();
 
-        // ------------------------
-        // 3️⃣ Validate branch
-        // ------------------------
+        // 2️⃣ Validate branch & membership
         branchRepository.findByIdAndDeletedFalse(branchId)
                 .orElseThrow(() -> new RuntimeException("Selected branch does not exist"));
 
-        // ------------------------
-        // 4️⃣ Check user belongs to branch
-        // ------------------------
-        boolean userBelongs = branchRepository.findBranchesByUserId(userId)
+        boolean belongs = branchRepository.findBranchesByUserId(userId)
                 .stream()
                 .anyMatch(b -> b.getId().equals(branchId));
 
-        if (!userBelongs) {
+        if (!belongs) {
             throw new RuntimeException("User is not assigned to this branch");
         }
 
-        // ------------------------
-        // 5️⃣ Get departments the user is assigned to in this branch
-        // ------------------------
+        // 3️⃣ Enforce session cap (per day)
+        int activeCount = userSessionRepository
+                .findByUserIdAndLoginDateAndLogoutTimeIsNull(userId, today)
+                .size();
+
+        if (activeCount >= MAX_SESSIONS_PER_DAY) {
+            throw new IllegalStateException("Maximum active sessions reached for today");
+        }
+
+        // 4️⃣ Create session + JWT
+        UUID tokenId = UUID.randomUUID();
+
+        String token = jwtUtil.generateToken(
+                userId,
+                user.getUsername(),
+                user.getRole().name(),
+                tokenId
+        );
+
+        UserSession session = UserSession.builder()
+                .userId(userId)
+                .branchId(branchId)
+                .loginDate(today)
+                .loginTime(LocalDateTime.now())
+                .tokenId(tokenId)
+                .autoLoggedOut(false)
+                .build();
+
+        userSessionRepository.save(session);
+
+        // 5️⃣ Record LOGIN rollcall (once/day logic handled inside service)
         List<Department> departments =
                 departmentRepository.findDepartmentsForUserInBranch(userId, branchId);
 
-        List<UUID> departmentIds = departments.stream()
-                .map(Department::getId)
-                .toList();
-
-        // ------------------------
-        // 6️⃣ Record login rollcall
-        // ------------------------
         if (departments.isEmpty()) {
             rollcallService.recordLoginRollcall(userId, null, branchId);
         } else {
-            for (Department department : departments) {
-                rollcallService.recordLoginRollcall(
-                        userId,
-                        department.getId(),
-                        branchId
-                );
+            for (Department d : departments) {
+                rollcallService.recordLoginRollcall(userId, d.getId(), branchId);
             }
         }
 
-        // ------------------------
-        // 7️⃣ Save session info
-        // ------------------------
-        userSessionRepository.save(
-                UserSession.builder()
-                        .userId(userId)
-                        .branchId(branchId)
-                        .loginTime(LocalDateTime.now())
-                        .build()
-        );
-
-        // ------------------------
-        // 8️⃣ Build improved AuthResponse
-        // ------------------------
-        long expiresAt = jwtUtil.extractExpiration(token).getTime();
-
+        // 6️⃣ Build response
         return new AuthResponse(
-                user.getId(),                  // userId
-                user.getUsername(),            // userName
-                user.getRole().name(),         // role
-                branchId,                      // branchId
-                departmentIds,                 // departments
-                expiresAt,                     // expiry timestamp
-                token                          // JWT
+                userId,
+                user.getUsername(),
+                user.getRole().name(),
+                branchId,
+                departments.stream().map(Department::getId).toList(),
+                jwtUtil.extractExpiration(token).getTime(),
+                token
         );
     }
 
-    public void logout(String token) {
+    /* =====================================================
+       LOGOUT (single session)
+       ===================================================== */
 
-        UUID userId = jwtUtil.extractUserId(token);
+    @Transactional
+    public void logout(UUID tokenId, boolean auto) {
 
         UserSession session = userSessionRepository
-                .findTopByUserIdAndLogoutTimeIsNullOrderByLoginTimeDesc(userId)
+                .findByTokenIdAndLogoutTimeIsNull(tokenId)
                 .orElse(null);
 
-        UUID branchId = null;
-        if (session != null) {
-            session.setLogoutTime(LocalDateTime.now());
-            userSessionRepository.save(session);
+        if (session == null) return;
 
-            branchId = session.getBranchId();  // ✅ Use the logged-in branch
-        }
+        session.logout(LocalDateTime.now(), auto);
+        userSessionRepository.save(session);
 
-        Set<Department> departments = departmentRepository.findDepartmentsByUserId(userId);
+        UUID userId = session.getUserId();
+        UUID branchId = session.getBranchId();
+
+        List<Department> departments =
+                departmentRepository.findDepartmentsForUserInBranch(userId, branchId);
 
         if (departments.isEmpty()) {
             rollcallService.recordLogoutRollcall(userId, null, branchId);
@@ -163,11 +160,37 @@ public class AuthService {
                 rollcallService.recordLogoutRollcall(userId, d.getId(), branchId);
             }
         }
-
-        tokenBlacklistService.blacklistToken(token);
     }
 
-    public boolean isTokenBlacklisted(String token) {
-        return tokenBlacklistService.isTokenBlacklisted(token);
+    /* =====================================================
+       LOGOUT ALL SESSIONS
+       (password change / admin action / midnight expiry)
+       ===================================================== */
+
+    @Transactional
+    public void logoutAllSessions(UUID userId, boolean auto) {
+
+        List<UserSession> sessions =
+                userSessionRepository.findAllByUserIdAndLogoutTimeIsNull(userId);
+
+        LocalDateTime now = LocalDateTime.now();
+
+        for (UserSession s : sessions) {
+            s.logout(now, auto);
+            userSessionRepository.save(s);
+
+            UUID branchId = s.getBranchId();
+
+            List<Department> departments =
+                    departmentRepository.findDepartmentsForUserInBranch(userId, branchId);
+
+            if (departments.isEmpty()) {
+                rollcallService.recordLogoutRollcall(userId, null, branchId);
+            } else {
+                for (Department d : departments) {
+                    rollcallService.recordLogoutRollcall(userId, d.getId(), branchId);
+                }
+            }
+        }
     }
 }

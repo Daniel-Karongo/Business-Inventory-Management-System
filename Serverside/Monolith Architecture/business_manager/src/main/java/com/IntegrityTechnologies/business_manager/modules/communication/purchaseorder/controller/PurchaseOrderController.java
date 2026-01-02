@@ -1,6 +1,6 @@
 //package com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.controller;
 //
-//import com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.model.PurchaseOrder;
+//import com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.config.PurchaseOrder;
 //import com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.service.PurchaseOrderService;
 //import io.swagger.v3.oas.annotations.tags.Tag;
 //import lombok.RequiredArgsConstructor;

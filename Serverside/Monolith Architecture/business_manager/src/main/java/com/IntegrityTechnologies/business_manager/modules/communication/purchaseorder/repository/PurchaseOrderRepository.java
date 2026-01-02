@@ -1,6 +1,6 @@
 //package com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.dto;
 //
-//import com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.model.PurchaseOrder;
+//import com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.config.PurchaseOrder;
 //import org.springframework.data.jpa.dto.JpaRepository;
 //import org.springframework.stereotype.Repository;
 //

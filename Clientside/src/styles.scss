@@ -382,3 +382,11 @@ body.dark * {
 .mat-mdc-snack-bar-action .mdc-button:hover .mdc-button__label {
   color: #93c5fd !important;
 }
+
+/* -------------------------------------------------------
+   MAT DIALOG
+-------------------------------------------------------- */
+
+body.dark .cdk-overlay-backdrop {
+  background: rgba(0, 0, 0, 0.65) !important;
+}

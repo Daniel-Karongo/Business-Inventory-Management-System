@@ -1,6 +1,6 @@
 //package com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.service;
 //
-//import com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.model.PurchaseOrder;
+//import com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.config.PurchaseOrder;
 //import com.IntegrityTechnologies.business_manager.modules.communication.purchaseorder.dto.PurchaseOrderRepository;
 //import com.IntegrityTechnologies.business_manager.modules.finance.accounts.service.AccountingService;
 //import com.IntegrityTechnologies.business_manager.modules.stock.inventory.registry.ReceiveStockRequest;

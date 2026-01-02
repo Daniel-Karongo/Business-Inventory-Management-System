@@ -6,15 +6,22 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.departme
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "rollcalls")
-@Data
+@Table(
+        name = "rollcalls",
+        uniqueConstraints = @UniqueConstraint(
+                columnNames = { "user_id", "department_id", "branch_id", "rollcall_date", "method" }
+        )
+)
+@Getter
+@Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Rollcall {
 
     @Id
@@ -24,26 +31,25 @@ public class Rollcall {
 
     @Column(name = "user_id", columnDefinition = "BINARY(16)", nullable = false)
     private UUID userId;
-
     private String username;
 
     @Column(name = "department_id", columnDefinition = "BINARY(16)", nullable = false)
     private UUID departmentId;
-
     private String departmentName;
 
     @Column(name = "branch_id", columnDefinition = "BINARY(16)", nullable = false)
     private UUID branchId;
-
     private String branchName;
 
-    private LocalDateTime timestamp; // when recorded
+    @Column(nullable = false)
+    private LocalDateTime timestamp;
 
-    // PRESENT, LATE, ABSENT (ABSENT entries may be synthesized by scheduled job)
+    @Column(name = "rollcall_date", nullable = false)
+    private LocalDate rollcallDate;
+
     @Enumerated(EnumType.STRING)
     private RollcallStatus status;
 
-    // Method: BIO_METRIC or LOGIN
     @Enumerated(EnumType.STRING)
     private RollcallMethod method;
 
@@ -51,5 +57,5 @@ public class Rollcall {
     @Column(columnDefinition = "BINARY(16)")
     private UUID biometricRecordId;
 
-    private String performedBy; // username who recorded (system / user)
+    private String performedBy;
 }
