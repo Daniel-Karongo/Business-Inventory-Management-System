@@ -5,6 +5,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.ser
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -33,16 +34,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        final String authHeader = request.getHeader("Authorization");
+        String jwt = extractTokenFromCookie(request);
 
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-
-            String jwt = authHeader.substring(7);
-
+        if (jwt != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 UUID tokenId = jwtUtil.extractTokenId(jwt);
 
-                // 🔐 Enforce session validity
+                // 🔐 Enforce session validity (UNCHANGED LOGIC)
                 boolean sessionValid =
                         userSessionRepository
                                 .findByTokenIdAndLogoutTimeIsNull(tokenId)
@@ -58,27 +56,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 String username = jwtUtil.extractUsername(jwt);
 
-                if (username != null &&
-                        SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails =
+                        userDetailsService.loadUserByUsername(username);
 
-                    UserDetails userDetails =
-                            userDetailsService.loadUserByUsername(username);
+                if (jwtUtil.validateToken(jwt, userDetails.getUsername())) {
 
-                    if (jwtUtil.validateToken(jwt, userDetails.getUsername())) {
-                        UsernamePasswordAuthenticationToken authToken =
-                                new UsernamePasswordAuthenticationToken(
-                                        userDetails,
-                                        null,
-                                        userDetails.getAuthorities()
-                                );
-                        authToken.setDetails(
-                                new WebAuthenticationDetailsSource()
-                                        .buildDetails(request)
-                        );
-                        SecurityContextHolder
-                                .getContext()
-                                .setAuthentication(authToken);
-                    }
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+
+                    authToken.setDetails(
+                            new WebAuthenticationDetailsSource()
+                                    .buildDetails(request)
+                    );
+
+                    SecurityContextHolder
+                            .getContext()
+                            .setAuthentication(authToken);
                 }
 
             } catch (Exception ex) {
@@ -93,12 +90,37 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    /* =====================================================
+       COOKIE EXTRACTION (SINGLE SOURCE)
+       ===================================================== */
+    private String extractTokenFromCookie(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) return null;
+
+        for (Cookie c : cookies) {
+            if ("access_token".equals(c.getName())) {
+                return c.getValue();
+            }
+        }
+        return null;
+    }
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        return path.startsWith("/swagger-ui")
-                || path.startsWith("/v3/api-docs")
-                || path.equals("/swagger-ui.html")
-                || path.startsWith("/api/auth/login");
+        String method = request.getMethod();
+
+        return
+                // Swagger
+                path.startsWith("/swagger-ui")
+                        || path.startsWith("/v3/api-docs")
+                        || path.equals("/swagger-ui.html")
+
+                        // Auth
+                        || path.startsWith("/api/auth/login")
+                        || path.startsWith("/api/auth/password-reset")
+
+                        // ✅ PUBLIC branches (LOGIN SCREEN NEEDS THIS)
+                        || (path.equals("/api/branches") && "GET".equals(method));
     }
 }

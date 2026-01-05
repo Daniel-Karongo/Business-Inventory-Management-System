@@ -12,10 +12,8 @@ import java.util.UUID;
 @AllArgsConstructor
 public class AuthResponse {
     private UUID userId;
-    private String userName;
+    private String username;
     private String role;
     private UUID branchId;
     private List<UUID> departmentIds;
-    private long expiresAt;
-    private String token;
 }

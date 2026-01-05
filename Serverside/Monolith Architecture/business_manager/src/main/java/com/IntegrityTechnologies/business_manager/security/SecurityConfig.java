@@ -16,7 +16,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -30,71 +29,130 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final JwtExceptionHandlerFilter jwtExceptionHandlerFilter;
-    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthFilter,
             JwtExceptionHandlerFilter jwtExceptionHandlerFilter,
-            CustomAuthenticationEntryPoint customAuthenticationEntryPoint
+            CustomAuthenticationEntryPoint authenticationEntryPoint
     ) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.jwtExceptionHandlerFilter = jwtExceptionHandlerFilter;
-        this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
+        this.authenticationEntryPoint = authenticationEntryPoint;
     }
 
-    // ✅ GLOBAL CORS BEAN
+    /* =====================================================
+       CORS (COOKIE-COMPATIBLE)
+       ===================================================== */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+
         CorsConfiguration config = new CorsConfiguration();
 
+        // ⚠️ Must be explicit when allowCredentials = true
         config.setAllowedOrigins(List.of("http://localhost:4200"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+
+        config.setAllowedMethods(List.of(
+                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+        ));
+
         config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(List.of("*"));
+
+        // Cookies are NOT exposed via headers; this is safe
         config.setAllowCredentials(true);
+
         config.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
 
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 
+    /* =====================================================
+       SECURITY FILTER CHAIN
+       ===================================================== */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
+                // ---- CORS ----
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+                // ---- CSRF ----
+                // Disabled because:
+                // - JWT is HttpOnly
+                // - SameSite=Lax
+                // - API is stateless
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // ---- STATELESS ----
+                .sessionManagement(
+                        session -> session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
+                )
+
+                // ---- AUTHORIZATION RULES ----
                 .authorizeHttpRequests(auth -> auth
+
+                        // 🔓 AUTH
                         .requestMatchers(
-                                "/api/auth/**",
-                                "/api/users/register",
+                                "/api/auth/login",
+                                "/api/auth/login/bulk",
+                                "/api/auth/password-reset/**",
+                                "/api/auth/forgot-password/**",
+                                "/api/auth/reset-password/**"
+                        ).permitAll()
+
+                        // 🔓 PUBLIC (LOGIN UI DEPENDENCIES)
+                        .requestMatchers(HttpMethod.GET, "/api/branches").permitAll()
+
+                        // 🔓 SWAGGER
+                        .requestMatchers(
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui.html"
                         ).permitAll()
 
-                        // ⭐ PUBLIC ONLY FOR LOGIN SCREEN
-                        .requestMatchers(HttpMethod.GET, "/api/branches").permitAll()
-                        // (OPTIONAL: if your login screen will need list of departments)
-                        //.requestMatchers(HttpMethod.GET, "/api/departments").permitAll()
-
+                        // 🔐 EVERYTHING ELSE
                         .anyRequest().authenticated()
                 )
-                .exceptionHandling(ex -> ex.authenticationEntryPoint(customAuthenticationEntryPoint))
-                .addFilterBefore(jwtExceptionHandlerFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+                // ---- ERROR HANDLING ----
+                .exceptionHandling(ex ->
+                        ex.authenticationEntryPoint(authenticationEntryPoint)
+                )
+
+                // ---- FILTER ORDER ----
+                .addFilterBefore(
+                        jwtExceptionHandlerFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                )
+                .addFilterBefore(
+                        jwtAuthFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                );
 
         return http.build();
     }
 
+    /* =====================================================
+       PASSWORDS
+       ===================================================== */
     @Bean
-    public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
+    /* =====================================================
+       AUTH MANAGER
+       ===================================================== */
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration config
+    ) throws Exception {
         return config.getAuthenticationManager();
     }
 }

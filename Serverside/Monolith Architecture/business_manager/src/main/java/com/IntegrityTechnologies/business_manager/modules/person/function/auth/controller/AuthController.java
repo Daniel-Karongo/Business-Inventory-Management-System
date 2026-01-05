@@ -1,14 +1,13 @@
 package com.IntegrityTechnologies.business_manager.modules.person.function.auth.controller;
 
-import com.IntegrityTechnologies.business_manager.modules.person.function.auth.dto.AuthRequest;
-import com.IntegrityTechnologies.business_manager.modules.person.function.auth.dto.AuthResponse;
-import com.IntegrityTechnologies.business_manager.modules.person.function.auth.dto.UserSessionDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.function.auth.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.person.function.auth.service.AuthService;
 import com.IntegrityTechnologies.business_manager.modules.person.function.auth.util.JwtUtil;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -20,92 +19,117 @@ import java.util.UUID;
 @Tag(name = "Auth")
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
     private final JwtUtil jwtUtil;
     private final UserSessionRepository userSessionRepository;
 
-    @Autowired
-    public AuthController(
-            AuthService authService,
-            JwtUtil jwtUtil,
-            UserSessionRepository userSessionRepository
-    ) {
-        this.authService = authService;
-        this.jwtUtil = jwtUtil;
-        this.userSessionRepository = userSessionRepository;
-    }
-
+    /* =====================================================
+       LOGIN (BROWSER – HttpOnly COOKIE)
+       ===================================================== */
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
-        return ResponseEntity.ok(authService.login(request));
+    public ResponseEntity<AuthResponse> login(
+            @RequestBody AuthRequest request,
+            HttpServletResponse response
+    ) {
+        AuthService.LoginResult result = authService.loginInternal(request);
+
+        Cookie cookie = new Cookie("access_token", result.jwt());
+        cookie.setHttpOnly(true);
+        cookie.setSecure(false); // ⚠️ true in production (HTTPS)
+        cookie.setPath("/");
+        cookie.setMaxAge((int) jwtUtil.secondsUntilMidnight());
+        cookie.setAttribute("SameSite", "Lax");
+
+        response.addCookie(cookie);
+
+        return ResponseEntity.ok(result.response());
     }
 
+    /* =====================================================
+       BULK LOGIN (NON-BROWSER / ADMIN / AUTOMATION)
+       ===================================================== */
     @PostMapping("/login/bulk")
-    public ResponseEntity<List<AuthResponse>> bulkLogin(@RequestBody List<AuthRequest> requests) {
-        List<AuthResponse> responses = new ArrayList<>();
-        for(AuthRequest request: requests) {
-            responses.add(authService.login(request));
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN')")
+    public ResponseEntity<List<BulkAuthResponse>> bulkLogin(
+            @RequestBody List<AuthRequest> requests
+    ) {
+        List<BulkAuthResponse> responses = new ArrayList<>();
+
+        for (AuthRequest request : requests) {
+            AuthService.LoginResult result = authService.loginInternal(request);
+
+            responses.add(
+                    new BulkAuthResponse(
+                            result.response().getUserId(),
+                            result.response().getUsername(),
+                            result.response().getRole(),
+                            result.response().getBranchId(),
+                            result.jwt(),
+                            jwtUtil.extractExpiration(result.jwt()).getTime()
+                    )
+            );
         }
+
         return ResponseEntity.ok(responses);
     }
 
+    /* =====================================================
+       LOGOUT (CURRENT SESSION)
+       ===================================================== */
     @PostMapping("/logout")
-    public ResponseEntity<String> logout(HttpServletRequest request) {
-
-        final String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.badRequest().body("No valid Authorization header found");
+    public ResponseEntity<Void> logout(
+            @CookieValue(name = "access_token", required = false) String token,
+            HttpServletResponse response
+    ) {
+        if (token != null) {
+            authService.logoutByToken(token);
         }
 
-        String jwt = authHeader.substring(7);
+        Cookie cookie = new Cookie("access_token", "");
+        cookie.setHttpOnly(true);
+        cookie.setSecure(false);
+        cookie.setPath("/");
+        cookie.setMaxAge(0);
+        cookie.setAttribute("SameSite", "Lax");
 
-        UUID tokenId = jwtUtil.extractTokenId(jwt);
-
-        authService.logout(tokenId, false); // manual logout
-
-        return ResponseEntity.ok("Successfully logged out");
+        response.addCookie(cookie);
+        return ResponseEntity.ok().build();
     }
 
+    /* =====================================================
+       LOGOUT ALL (SELF)
+       ===================================================== */
     @PostMapping("/logout-all")
-    public ResponseEntity<String> logoutAll(HttpServletRequest request) {
-
-        final String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.badRequest().body("No valid Authorization header found");
-        }
-
-        String jwt = authHeader.substring(7);
-
-        UUID userId = jwtUtil.extractUserId(jwt);
-
-        authService.logoutAllSessions(userId, false); // manual logout
-
-        return ResponseEntity.ok("All sessions logged out successfully");
+    public ResponseEntity<Void> logoutAll(
+            @CookieValue("access_token") String token
+    ) {
+        UUID userId = jwtUtil.extractUserId(token);
+        authService.logoutAllSessions(userId, false);
+        return ResponseEntity.ok().build();
     }
 
+    /* =====================================================
+       LOGOUT ALL (ADMIN)
+       ===================================================== */
     @PostMapping("/logout-all/{userId}")
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
-    public ResponseEntity<String> logoutAllForUser(@PathVariable UUID userId) {
-
-        authService.logoutAllSessions(userId, true); // auto logout
-
-        return ResponseEntity.ok("User logged out from all sessions");
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    public ResponseEntity<Void> logoutAllForUser(@PathVariable UUID userId) {
+        authService.logoutAllSessions(userId, true);
+        return ResponseEntity.ok().build();
     }
 
+    /* =====================================================
+       ACTIVE SESSIONS (CURRENT USER)
+       ===================================================== */
     @PostMapping("/sessions")
-    public ResponseEntity<List<UserSessionDTO>> getMySessions(HttpServletRequest request) {
-
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        String jwt = authHeader.substring(7);
-
-        UUID userId = jwtUtil.extractUserId(jwt);
-        UUID currentTokenId = jwtUtil.extractTokenId(jwt);
+    public ResponseEntity<List<UserSessionDTO>> mySessions(
+            @CookieValue("access_token") String token
+    ) {
+        UUID userId = jwtUtil.extractUserId(token);
+        UUID currentTokenId = jwtUtil.extractTokenId(token);
 
         List<UserSessionDTO> sessions =
                 userSessionRepository.findAllByUserIdAndLogoutTimeIsNull(userId)
@@ -122,4 +146,13 @@ public class AuthController {
         return ResponseEntity.ok(sessions);
     }
 
+    /* =====================================================
+       CURRENT USER (TOPBAR / APP INIT)
+       ===================================================== */
+    @GetMapping("/me")
+    public ResponseEntity<AuthResponse> me(
+            @CookieValue("access_token") String token
+    ) {
+        return ResponseEntity.ok(authService.resolveMe(token));
+    }
 }

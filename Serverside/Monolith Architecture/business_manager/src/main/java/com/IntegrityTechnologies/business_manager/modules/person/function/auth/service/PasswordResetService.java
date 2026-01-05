@@ -157,19 +157,21 @@ public class PasswordResetService {
             String email,
             String phone
     ) {
+        boolean matched = false;
 
-        if (props.getIdentity().getRequiredFields().contains("idNumber")
-                && !safeEquals(user.getIdNumber(), idNumber)) {
-            throw new RuntimeException("Invalid reset request");
+        if (email != null && user.getEmailAddresses().contains(email)) {
+            matched = true;
         }
 
-        if (props.getIdentity().getRequiredFields().contains("email")
-                && !user.getEmailAddresses().contains(email)) {
-            throw new RuntimeException("Invalid reset request");
+        if (idNumber != null && safeEquals(user.getIdNumber(), idNumber)) {
+            matched = true;
         }
 
-        if (props.getIdentity().getRequiredFields().contains("phone")
-                && !user.getPhoneNumbers().contains(phone)) {
+        if (phone != null && user.getPhoneNumbers().contains(phone)) {
+            matched = true;
+        }
+
+        if (!matched) {
             throw new RuntimeException("Invalid reset request");
         }
     }
