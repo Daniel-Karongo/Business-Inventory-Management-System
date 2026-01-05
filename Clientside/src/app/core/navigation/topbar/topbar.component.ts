@@ -11,11 +11,13 @@ import { MatBadgeModule } from '@angular/material/badge';
 
 import { SidebarService } from '../../services/sidebar.service';
 import { ThemeService } from '../../services/theme.service';
-import { NotificationButtonComponent } from './notification-button/notification-button.component';
+// import { NotificationButtonComponent } from './notification-button/notification-button.component';
 import { AuthService } from '../../../modules/auth/services/auth.service';
 import { IdleLogoutService } from '../../services/IdleLogoutService';
 import { MatDialog } from '@angular/material/dialog';
 import { LogoutChoiceDialogComponent } from './logout-choice-dialog/logout-choice-dialog.component';
+import { BranchDTO } from '../../../modules/branches/models/branch.model';
+import { BranchService } from '../../../modules/branches/services/branch.service';
 
 @Component({
   selector: 'app-topbar',
@@ -26,8 +28,8 @@ import { LogoutChoiceDialogComponent } from './logout-choice-dialog/logout-choic
     MatMenuModule,
     MatButtonModule,
     MatIconModule,
-    MatBadgeModule,
-    NotificationButtonComponent
+    MatBadgeModule
+    // NotificationButtonComponent
   ],
   templateUrl: './topbar.component.html',
   styleUrls: ['./topbar.component.scss']
@@ -37,13 +39,21 @@ export class TopbarComponent implements OnInit {
   currentPage = '';
 
   branch = 'Main Branch';
-  branches = ['Main Branch', 'Warehouse', 'Remote'];
   branchMenu = false;
   notificationsCount = 3;
+  currentUser?: {
+    username: string;
+    role: string;
+    branch: { id: string; name: string };
+  };
+  branches: BranchDTO[] = [];
+  selectedBranchId?: string;
+  selectedBranchName = 'Select branch';
 
   constructor(
     public sidebar: SidebarService,
     public theme: ThemeService,
+    private branchService: BranchService,
     private router: Router,
     private auth: AuthService,
     private idle: IdleLogoutService,
@@ -51,15 +61,66 @@ export class TopbarComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    this.loadUser();
+    this.loadBranches();
+
+    this.updatePageTitle(); // ✅ handle refresh
+
     this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
       .subscribe(() => this.updatePageTitle());
+  }
 
-    this.updatePageTitle(); // initialize on load
+  private loadBranches() {
+    this.branchService.getAll(false).subscribe(list => {
+      this.branches = list;
+
+      // 🔑 recompute AFTER branches load
+      this.updateSelectedBranchName();
+    });
+  }
+
+  private loadUser() {
+    this.auth.getCurrentUser().subscribe(user => {
+      if (!user) return;
+
+      this.currentUser = {
+        username: user.username,
+        role: user.role,
+        branch: { id: user.branchId, name: '' }
+      };
+
+      this.selectedBranchId = user.branchId;
+
+      // 🔑 recompute AFTER user arrives
+      this.updateSelectedBranchName();
+    });
+  }
+
+  private updateSelectedBranchName() {
+    if (!this.selectedBranchId || !this.branches.length) {
+      this.selectedBranchName = 'Select branch';
+      return;
+    }
+
+    const found = this.branches.find(b => b.id === this.selectedBranchId);
+    this.selectedBranchName = found?.name ?? 'Select branch';
+  }
+
+
+  get activeBranchName(): string {
+    if (!this.currentUser || !this.branches.length) {
+      return '—';
+    }
+
+    return (
+      this.branches.find(b => b.id === this.currentUser?.branch.id)?.name
+      ?? '—'
+    );
   }
 
   private updatePageTitle(): void {
-    const segments = this.router.url.split('/').filter(s => s);
+    const segments = this.router.url.split('/').filter(Boolean);
 
     if (segments.length === 0) {
       this.currentPage = 'Dashboard';
@@ -71,9 +132,7 @@ export class TopbarComponent implements OnInit {
   }
 
   private formatSegment(seg: string): string {
-    // /users/123/edit → "Edit"
-    // /departments/department-details → "Department Details"
-    return seg
+    return decodeURIComponent(seg)
       .replace(/-/g, ' ')
       .replace(/\b\w/g, char => char.toUpperCase());
   }
@@ -91,11 +150,6 @@ export class TopbarComponent implements OnInit {
     this.branchMenu = !this.branchMenu;
   }
 
-  selectBranch(b: string) {
-    this.branch = b;
-    this.branchMenu = false;
-  }
-
   @HostListener('document:click')
   closeDropdown() {
     this.branchMenu = false;
@@ -103,6 +157,11 @@ export class TopbarComponent implements OnInit {
 
   setTheme(pref: 'light' | 'dark' | 'system') {
     this.theme.setPreference(pref);
+  }
+
+  goToProfile() {
+    if (!this.currentUser?.username) return;
+    this.router.navigate(['/users', this.currentUser.username]);
   }
 
   logout() {
@@ -135,20 +194,16 @@ export class TopbarComponent implements OnInit {
   }
 
   private finalizeLogoutCurrent() {
-    this.auth.logoutFull();
-    this.router.navigate(['/login']);
+    this.auth.logout().subscribe(() => {
+      this.auth.clearLocalState();
+      this.router.navigate(['/login']);
+    });
   }
 
   private finalizeLogoutAll() {
-    this.auth.logoutAllRemote().subscribe({
-      next: () => {
-        this.auth.logoutLocal();
-        this.router.navigate(['/login']);
-      },
-      error: () => {
-        this.auth.logoutLocal();
-        this.router.navigate(['/login']);
-      }
+    this.auth.logoutAll().subscribe(() => {
+      this.auth.clearLocalState();
+      this.router.navigate(['/login']);
     });
   }
 }

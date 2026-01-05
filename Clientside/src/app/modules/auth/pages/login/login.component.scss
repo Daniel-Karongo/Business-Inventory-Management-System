@@ -1,145 +1,92 @@
-/* ================================
-   ROOT
-================================ */
-
-.login-root {
+.auth-root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--app-bg);
-  color: var(--text-primary);
+  padding: 24px;
 }
 
-/* ================================
-   CARD
-================================ */
-
-.login-card {
+.auth-card {
+  width: 100%;
+  max-width: 560px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 1rem;
-  color: var(--text-primary);
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .08);
 }
 
-/* Branding block */
+.dialog-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;     /* ⬅️ hard center */
+  text-align: center;
+  margin-bottom: 28px;
+}
+
 .logo {
-  box-shadow: 0 6px 18px rgba(59,130,246,0.15);
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: .5px;
+
+  margin-bottom: 20px;     /* ⬅️ spacing to title */
+
+  box-shadow:
+    0 8px 20px rgba(37, 99, 235, .35),
+    inset 0 0 0 1px rgba(255,255,255,.15);
 }
 
-/* ================================
-   LABELS
-================================ */
+.dialog-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
 
-.input-label {
-  display: block;
-  margin-bottom: .4rem;
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
+.dialog-subtitle {
+  font-size: .9rem;
   color: var(--text-secondary);
 }
 
-/* ================================
-   INPUT FIELDS
-================================ */
-
-.input-field {
-  width: 100%;
-  padding: .75rem 1rem;
-  background: var(--surface);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: .75rem;
-  font-size: var(--text-base);
-  transition: border-color .2s ease, box-shadow .2s ease;
+.form-section {
+  margin-top: 16px;
 }
 
-.input-field:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37,99,235,.25);
-  outline: none;
+.form-grid {
+  display: grid;
+  gap: 16px;
 }
 
-/* Select dropdown styling */
-select.input-field {
-  appearance: none;
-  background-repeat: no-repeat;
-  background-position: right 1rem center;
-  background-size: 16px;
-
-  background-image: url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%239ca3af'><path d='M5 7l5 5 5-5'/></svg>");
+.forgot-row {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
 }
 
-/* ================================
-   ERRORS
-================================ */
-
-.input-error {
-  margin-top: .3rem;
-  font-size: var(--text-xs);
-  color: #dc2626;
+.dialog-footer {
+  margin-top: 32px;
+  display: flex;
+  justify-content: center;
 }
 
-/* ================================
-   BUTTON
-================================ */
-
-.login-button {
-  width: 100%;
-  padding: .8rem;
-  border-radius: .75rem;
-  font-size: var(--text-base);
-  font-weight: var(--font-semibold);
-  background: #2563eb !important;
-  color: white !important;
-  transition: all .2s ease;
+.primary-action {
+  min-width: 200px;
+  font-weight: 600;
 }
 
-.login-button:hover:not([disabled]) {
-  background: #1d4ed8 !important;
-  box-shadow: 0 4px 10px rgba(37, 99, 235, .25);
-}
-
-/* Disable state */
-.login-button[disabled] {
-  opacity: .55;
-  cursor: not-allowed;
-}
-
-/* ================================
-   FORGOT PASSWORD
-================================ */
-
-.forgot-link {
-  font-size: var(--text-sm);
+.footer-note {
+  margin-top: 28px;
+  text-align: center;
+  font-size: .75rem;
   color: var(--text-secondary);
-}
-
-.forgot-link:hover {
-  text-decoration: underline;
-}
-
-/* ================================
-   DARK MODE
-================================ */
-
-:host-context(.dark) .login-card,
-:host-context(.dark) .input-field {
-  background: var(--surface);
-  border-color: var(--border);
-  color: var(--text-primary);
-}
-
-:host-context(.dark) .input-label {
-  color: var(--text-secondary);
-}
-
-/* ================================
-   SNACKBAR OVERRIDE (LOCAL)
-================================ */
-
-.mat-mdc-snack-bar-container {
-  background: #1f2937 !important;
-  color: white !important;
-}
-
-.mat-mdc-snack-bar-action .mdc-button__label {
-  color: #60a5fa !important;
 }

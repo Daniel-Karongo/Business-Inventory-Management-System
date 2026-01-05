@@ -63,7 +63,9 @@ export class SupplierDetailsComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    this.role = this.auth.getRole();
+    this.auth.getCurrentUser().subscribe(u => {
+      this.role = u?.role ?? '';
+    });
 
     this.imageAdapter = SupplierImageAdapter(this.supplierService);
 

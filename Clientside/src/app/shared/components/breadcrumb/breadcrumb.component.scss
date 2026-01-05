@@ -6,3 +6,35 @@
 nav {
   padding-left: 1rem;
 }
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.crumb {
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+  text-decoration: none;
+}
+
+.crumb:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+  // text-decoration-thickness: 2px;
+}
+
+.crumb.active {
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: default;
+  text-decoration: none;
+}
+
+.separator {
+  opacity: 0.6;
+}

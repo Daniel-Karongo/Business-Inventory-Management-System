@@ -60,7 +60,9 @@ export class UserDetailsComponent implements OnInit {
     const username = this.route.snapshot.paramMap.get('username');
     if (!username) return;
 
-    this.role = this.auth.getRole();
+    this.auth.getCurrentUser().subscribe(u => {
+      this.role = u?.role ?? '';
+    });
 
     this.imageAdapter = UserImageAdapter(this.userService);
 

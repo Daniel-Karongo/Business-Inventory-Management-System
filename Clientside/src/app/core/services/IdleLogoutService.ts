@@ -46,7 +46,7 @@ export class IdleLogoutService implements OnDestroy {
 
   private logout() {
     this.zone.run(() => {
-      this.auth.logoutLocal();
+      this.auth.logout();
       this.router.navigate(['/login'], {
         queryParams: { reason: 'idle' }
       });

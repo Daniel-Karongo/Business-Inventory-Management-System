@@ -1,110 +1,96 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
-import { LoginRequest, LoginResponse } from '../models';
-import { IdleLogoutService } from '../../../core/services/IdleLogoutService';
+import { Observable, BehaviorSubject, tap } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
 
   private http = inject(HttpClient);
 
-  private readonly TOKEN_KEY = 'auth_token';
-  private readonly EXPIRES_KEY = 'auth_expires_at';
-  private readonly USER_ROLE = 'auth_role';
+  private me$ = new BehaviorSubject<MeResponse | null>(null);
 
-  login(payload: LoginRequest) {
-    return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, payload);
+  /* =========================
+     LOGIN
+     ========================= */
+  login(payload: LoginRequest): Observable<MeResponse> {
+    return this.http
+      .post<MeResponse>(
+        `${environment.apiUrl}/auth/login`,
+        payload,
+        { withCredentials: true }
+      )
+      .pipe(tap(me => this.me$.next(me)));
   }
 
-  saveSession(res: LoginResponse) {
-    localStorage.setItem(this.TOKEN_KEY, res.token);
-    localStorage.setItem(this.EXPIRES_KEY, String(res.expiresAt));
-    localStorage.setItem(this.USER_ROLE, res.role);
+  /* =========================
+     CURRENT USER
+     ========================= */
+  loadMe(): Observable<MeResponse> {
+    return this.http
+      .get<MeResponse>(
+        `${environment.apiUrl}/auth/me`,
+        { withCredentials: true }
+      )
+      .pipe(tap(me => this.me$.next(me)));
   }
 
-  public isExpired(): boolean {
-    const expStr = localStorage.getItem(this.EXPIRES_KEY);
-    if (!expStr) return true;
-
-    const expiresAt = Number(expStr);
-
-    // if the timestamp is invalid, expire immediately
-    if (!expiresAt || Number.isNaN(expiresAt)) return true;
-
-    return Date.now() > expiresAt;
+  getCurrentUser() {
+    return this.me$.asObservable();
   }
 
-  getToken(): string | null {
-    const token = localStorage.getItem(this.TOKEN_KEY);
-    const exp = Number(localStorage.getItem(this.EXPIRES_KEY));
-    if (!token || !exp || Date.now() > exp) return null;
-    return token;
+  getSnapshot(): MeResponse | null {
+    return this.me$.value;
   }
 
-  getRole(): string {
-    if (this.isExpired()) {
-      this.logoutFull();
-      return '';
-    }
-
-    return localStorage.getItem(this.USER_ROLE) || '';
-  }
-
-
-  isLoggedIn(): boolean {
-    const token = localStorage.getItem(this.TOKEN_KEY);
-    const exp = Number(localStorage.getItem(this.EXPIRES_KEY));
-    if (!token || !exp) return false;
-    if (Date.now() > exp) return false;
-
-    return true;
-  }
-
-  // auth.service.ts
-  logoutRemote() {
-    return this.http.post(`${environment.apiUrl}/auth/logout`, {}, {
-      observe: 'response'
-    });
-  }
-
-  logoutLocal() {
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem(this.EXPIRES_KEY);
-    localStorage.removeItem(this.USER_ROLE);
-  }
-
-  logoutFull() {
-    const token = this.getToken();
-
-    // 🔒 No token → nothing to invalidate server-side
-    if (!token) {
-      this.logoutLocal();
-      return;
-    }
-
-    this.logoutRemote().subscribe({
-      next: () => this.logoutLocal(),
-      error: () => this.logoutLocal()
-    });
-  }
-
-  getSessions() {
-    return this.http.post<any[]>(
-      `${environment.apiUrl}/auth/sessions`,
-      {}
+  /* =========================
+     LOGOUT
+     ========================= */
+  logout(): Observable<void> {
+    return this.http.post<void>(
+      `${environment.apiUrl}/auth/logout`,
+      {},
+      { withCredentials: true }
     );
   }
 
-  logoutAllRemote() {
-    return this.http.post(`${environment.apiUrl}/auth/logout-all`, {}, {
-      observe: 'response'
-    });
+  logoutAll(): Observable<void> {
+    return this.http.post<void>(
+      `${environment.apiUrl}/auth/logout-all`,
+      {},
+      { withCredentials: true }
+    );
+  }
+
+  clearLocalState() {
+    this.me$.next(null);
+  }
+
+  /* =========================
+     SESSIONS
+     ========================= */
+  getSessions() {
+    return this.http.post<any[]>(
+      `${environment.apiUrl}/auth/sessions`,
+      {},
+      { withCredentials: true }
+    );
   }
 }
 
-export function initAuth(auth: AuthService) {
-  if (auth.isExpired()) {
-    auth.logoutLocal(); // ✅ local cleanup only
-  }
+/* =========================
+   MODELS
+   ========================= */
+export interface LoginRequest {
+  identifier: string;
+  password: string;
+  branchId: string;
+}
+
+export interface MeResponse {
+  userId: string;
+  username: string;
+  role: string;
+  branchId: string;
+  departmentIds: string[];
 }

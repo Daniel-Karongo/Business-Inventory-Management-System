@@ -299,7 +299,7 @@ export class UserCreateComponent implements OnInit {
       .subscribe((roles: any[]) => {
         const all = roles.map(r => typeof r === 'string' ? r : r.name);
         const order = ['EMPLOYEE', 'SUPERVISOR', 'MANAGER', 'ADMIN', 'SUPERUSER'];
-        const myRole = this.auth.getRole();
+        const myRole = this.auth.getSnapshot()?.role ?? '';
         const idx = order.indexOf(myRole);
         this.assignableRoles = all.filter(r => order.indexOf(r) <= idx);
       });

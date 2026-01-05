@@ -12,7 +12,13 @@ export const environment = {
     auth: {
       login: '/auth/login',
       bulkLogin: '/auth/login/bulk',
-      logout: '/auth/logout'
+      logout: '/auth/logout',
+
+      passwordReset: {
+        options: '/auth/password-reset/options',
+        initiate: '/auth/password-reset/initiate',
+        complete: '/auth/password-reset/complete'
+      }
     },
 
     /* ============================================================

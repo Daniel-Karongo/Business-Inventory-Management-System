@@ -7,7 +7,6 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { finalize } from 'rxjs/operators';
 
 import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -23,7 +22,6 @@ import { IdleLogoutService } from '../../../../core/services/IdleLogoutService';
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    MatCardModule,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
@@ -36,6 +34,7 @@ import { IdleLogoutService } from '../../../../core/services/IdleLogoutService';
   styleUrls: ['./login.component.scss']
 })
 export class LoginComponent implements OnInit {
+
   private fb = inject(FormBuilder);
   private auth = inject(AuthService);
   private router = inject(Router);
@@ -44,7 +43,6 @@ export class LoginComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private idle = inject(IdleLogoutService);
 
-  // form uses nonNullable to avoid null types
   form = this.fb.nonNullable.group({
     identifier: ['', Validators.required],
     password: ['', Validators.required],
@@ -58,7 +56,6 @@ export class LoginComponent implements OnInit {
 
   ngOnInit() {
 
-    // 🔒 Idle logout feedback
     if (this.route.snapshot.queryParamMap.get('reason') === 'idle') {
       this.snack.open(
         'You were logged out due to inactivity.',
@@ -81,8 +78,7 @@ export class LoginComponent implements OnInit {
   }
 
   onForgot() {
-    // navigate to forgot password UI or show dialog
-    this.snack.open('Forgot password flow not implemented.', 'Close', { duration: 3500 });
+    this.router.navigate(['/auth/forgot-password']);
   }
 
   onSubmit() {
@@ -92,19 +88,17 @@ export class LoginComponent implements OnInit {
     }
 
     this.loading = true;
-    const payload = this.form.value as LoginRequest; // safe: nonNullable form
+    const payload = this.form.value as LoginRequest;
 
     this.auth.login(payload).pipe(
       finalize(() => (this.loading = false))
     ).subscribe({
       next: (res) => {
-        this.auth.saveSession(res);
         this.snack.open('Login successful', undefined, { duration: 1200 });
         this.idle.start();
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {
-        // show useful message if available
         const msg = err?.error?.message || 'Invalid login credentials';
         this.snack.open(msg, 'Close', { duration: 5000 });
       }

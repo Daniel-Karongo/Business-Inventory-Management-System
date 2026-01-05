@@ -1,53 +1,87 @@
 <mat-toolbar class="topbar flex justify-between items-center px-4">
 
+  <!-- LEFT -->
   <div class="flex items-center gap-3">
     <button mat-icon-button (click)="toggleSidebar()" aria-label="Toggle sidebar">
       <mat-icon>menu</mat-icon>
     </button>
 
-    <div class="text-lg font-medium hidden sm:block">{{ currentPage }}</div>
+    <div class="text-lg font-medium hidden sm:block">
+      {{ currentPage }}
+    </div>
   </div>
 
-  <div class="flex items-center gap-3">
+  <!-- RIGHT -->
+  <div class="flex items-center gap-5">
 
-    <!-- Branch selector (custom dropdown) -->
-    <div class="relative">
-      <button class="branch-btn" (click)="toggleBranchMenu($event)">
-        <span class="branch-label">{{ branch }}</span>
-        <mat-icon>arrow_drop_down</mat-icon>
-      </button>
+    <!-- ================= BRANCH SELECTOR ================= -->
+    <button mat-button class="meta-btn" disabled>
+      <mat-icon class="meta-icon">business</mat-icon>
 
-      <div *ngIf="branchMenu" class="dropdown-menu flex flex-col">
-        <button *ngFor="let b of branches" class="dropdown-item" (click)="selectBranch(b)">{{ b }}</button>
+      <div class="meta-text hidden sm:flex">
+        <div class="meta-title">
+          {{ activeBranchName }}
+        </div>
       </div>
-    </div>
+    </button>
 
-    <!-- NEW: custom notification component -->
-    <app-notification-button
+    <!-- ================= NOTIFICATIONS ================= -->
+    <!-- <app-notification-button
+      class="notif-btn"
       [count]="notificationsCount"
       (clicked)="onNotificationsClicked()"
-    ></app-notification-button>
+    ></app-notification-button> -->
 
+    <!-- ================= THEME ================= -->
+    <button mat-button [matMenuTriggerFor]="themeMenu" class="meta-btn">
+      <mat-icon class="meta-icon">brightness_6</mat-icon>
 
-    <!-- Theme menu (use mat-menu for accessibility/keyboard) -->
-    <button mat-button [matMenuTriggerFor]="themeMenu" class="flex items-center gap-1">
-      <mat-icon>brightness_6</mat-icon>
-      <span class="hidden sm:inline">Theme</span>
+      <div class="meta-text hidden sm:flex">
+        <div class="meta-title">Theme</div>
+        <!-- <div class="meta-subtitle">Appearance</div> -->
+      </div>
     </button>
+
     <mat-menu #themeMenu="matMenu">
-      <button mat-menu-item (click)="setTheme('light')">Light</button>
-      <button mat-menu-item (click)="setTheme('dark')">Dark</button>
-      <button mat-menu-item (click)="setTheme('system')">System</button>
+      <button mat-menu-item (click)="setTheme('light')">
+        <mat-icon>light_mode</mat-icon>
+        Light
+      </button>
+      <button mat-menu-item (click)="setTheme('dark')">
+        <mat-icon>dark_mode</mat-icon>
+        Dark
+      </button>
+      <button mat-menu-item (click)="setTheme('system')">
+        <mat-icon>settings</mat-icon>
+        System
+      </button>
     </mat-menu>
 
-    <!-- User menu -->
-    <button mat-button [matMenuTriggerFor]="userMenu" class="flex items-center gap-1">
-      <mat-icon>person</mat-icon>
-      <span class="hidden sm:inline">Admin</span>
+    <!-- ================= USER MENU ================= -->
+    <button mat-button [matMenuTriggerFor]="userMenu" class="meta-btn">
+      <mat-icon class="meta-icon">person</mat-icon>
+
+      <div class="meta-text hidden sm:flex">
+        <div class="meta-title">
+          {{ currentUser?.username }}
+        </div>
+        <div class="meta-subtitle">
+          {{ currentUser?.role }}
+        </div>
+      </div>
     </button>
+
     <mat-menu #userMenu="matMenu">
-      <button mat-menu-item>Profile</button>
-      <button mat-menu-item (click)="logout()">Logout</button>
+      <button mat-menu-item (click)="goToProfile()">
+        <mat-icon>account_circle</mat-icon>
+        Profile
+      </button>
+
+      <button mat-menu-item (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        Logout
+      </button>
     </mat-menu>
+
   </div>
 </mat-toolbar>
