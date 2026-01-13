@@ -10,9 +10,18 @@ import java.util.UUID;
 
 @Repository
 public interface ProductVariantRepository extends JpaRepository<ProductVariant, UUID> {
-    List<ProductVariant> findByProductId(UUID productId);
-    Optional<ProductVariant> findByProductIdAndClassification(UUID productId, String classification);
+
     List<ProductVariant> findByProduct_Id(UUID productId);
+
+    Optional<ProductVariant> findByProductIdAndClassification(UUID productId, String classification);
+
     boolean existsByProduct_IdAndClassification(UUID productId, String classification);
 
+    /* =============================
+       NEW — READ-ONLY BARCODE ACCESS
+       ============================= */
+
+    Optional<ProductVariant> findByBarcode(String barcode);
+
+    List<ProductVariant> findByProductId(UUID productId);
 }

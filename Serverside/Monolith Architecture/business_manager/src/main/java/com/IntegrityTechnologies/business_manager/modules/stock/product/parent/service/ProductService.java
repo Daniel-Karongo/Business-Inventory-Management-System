@@ -61,7 +61,6 @@ public class ProductService {
     private final ProductMapper productMapper;
     private final FileStorageProperties fileStorageProperties;
     private final FileStorageService fileStorageService;
-    private final BarcodeService barcodeService;
     private final TransactionalFileManager transactionalFileManager;
     private final ProductAuditRepository productAuditRepository;
     private final ProductImageAuditRepository productImageAuditRepository;
@@ -116,19 +115,6 @@ public class ProductService {
                 )
                 .orElseThrow(() -> new ProductNotFoundException("Product not found: " + id));
         return productMapper.toDTO(p);
-    }
-
-    public ProductDTO getProductByBarcode(String barcode, Boolean deleted) {
-        return productRepository.findByBarcode(barcode)
-                .filter(product ->
-                        deleted == null
-                                ? true                                       // return all
-                                : deleted                                     // deleted = true → get deleted only
-                                ? Boolean.TRUE.equals(product.getDeleted())
-                                : Boolean.FALSE.equals(product.getDeleted()) // deleted = false → get active only
-                )
-                .map(productMapper::toDTO)
-                .orElseThrow(() -> new ProductNotFoundException("Product with barcode not found: " + barcode));
     }
 
     public ProductDTO getProductBySKU(String sku, Boolean deleted) {
@@ -231,13 +217,6 @@ public class ProductService {
             throw new IllegalArgumentException("SKU already exists");
         }
 
-        // --- Barcode
-        if (product.getBarcode() == null || product.getBarcode().isBlank()) {
-            product.setBarcode(barcodeService.autoGenerateBarcode());
-        } else if (!barcodeService.isValidBarcode(product.getBarcode())) {
-            throw new IllegalArgumentException("Provided barcode has invalid format");
-        }
-
         // --- Persist product (to get ID for images)
         product = productRepository.save(product);
 
@@ -268,12 +247,6 @@ public class ProductService {
             productRepository.save(product);
         }
 
-        // --- Generate barcode image
-        Path barcodeDir = productRoot().resolve("barcodes");
-        fileStorageService.initDirectory(barcodeDir);
-        String barcodeImageFile = barcodeService.generateBarcodeImage(product.getBarcode(), barcodeDir);
-        product.setBarcodeImagePath("/api/products/barcodes/" + Paths.get(barcodeImageFile).getFileName().toString());
-
         // --- Save product images
         List<MultipartFile> imageFiles = dto.getImages();
         if (imageFiles != null && !imageFiles.isEmpty()) {
@@ -295,8 +268,8 @@ public class ProductService {
         createAudit.setPerformedBy(SecurityUtils.currentUsername());
         productAuditRepository.save(createAudit);
 
-        log.info("Created product {} (id={} sku={} barcode={})",
-                product.getName(), product.getId(), product.getSku(), product.getBarcode());
+        log.info("Created product {} (id={} sku={}",
+                product.getName(), product.getId(), product.getSku());
 
         return productMapper.toDTO(product);
     }
@@ -319,13 +292,6 @@ public class ProductService {
         // --- Name (unique)
         if (dto.getName() != null && productRepository.existsByName(dto.getName())) {
             throw new IllegalArgumentException("A product with the name '" + dto.getName() + "' already exists.");
-        }
-
-        // --- Barcode (unique when provided)
-        if (dto.getBarcode() != null && !dto.getBarcode().isBlank()) {
-            if (productRepository.existsByBarcode(dto.getBarcode())) {
-                throw new IllegalArgumentException("A product with the barcode '" + dto.getBarcode() + "' already exists.");
-            }
         }
     }
 
@@ -362,21 +328,6 @@ public class ProductService {
                 throw new IllegalArgumentException("SKU already exists");
             fieldAudits.add(auditForField(product, "sku", product.getSku(), dto.getSku()));
             product.setSku(dto.getSku());
-        }
-
-        // barcode
-        if (dto.getBarcode() != null && !dto.getBarcode().equals(product.getBarcode())) {
-            if (productRepository.existsByBarcode(dto.getBarcode()))
-                throw new IllegalArgumentException("Barcode already exists");
-            if (!barcodeService.isValidBarcode(dto.getBarcode()))
-                throw new IllegalArgumentException("Provided barcode has invalid format");
-            fieldAudits.add(auditForField(product, "barcode", product.getBarcode(), dto.getBarcode()));
-            product.setBarcode(dto.getBarcode());
-
-            Path barcodeDir = productRoot().resolve("barcodes");
-            fileStorageService.initDirectory(barcodeDir);
-            String barcodeImageFile = barcodeService.generateBarcodeImage(dto.getBarcode(), barcodeDir);
-            product.setBarcodeImagePath("/api/products/barcodes/" + Paths.get(barcodeImageFile).getFileName().toString());
         }
 
         // category change -> do not change SKU automatically, but allow category update if provided
@@ -468,13 +419,6 @@ public class ProductService {
         // --- Name (unique)
         if (dto.getName() != null && productRepository.existsByName(dto.getName())) {
             throw new IllegalArgumentException("A product with the name '" + dto.getName() + "' already exists.");
-        }
-
-        // --- Barcode (unique when provided)
-        if (dto.getBarcode() != null && !dto.getBarcode().isBlank()) {
-            if (productRepository.existsByBarcode(dto.getBarcode())) {
-                throw new IllegalArgumentException("A product with the barcode '" + dto.getBarcode() + "' already exists.");
-            }
         }
     }
 
@@ -595,41 +539,24 @@ public class ProductService {
 
     public void deleteProductImages(Product product) {
         if (product.getImages() == null) return;
-        for (ProductImage img : new ArrayList<>(product.getImages())) {
-            try {
-                ProductImageAudit audit = ProductImageAudit.builder()
-                        .action("IMAGE_DELETED_PERMANENTLY")
-                        .fileName(img.getFileName())
-                        .filePath(img.getFilePath())
-                        .productId(product.getId())
-                        .productName(product.getName())
-                        .timestamp(LocalDateTime.now())
-                        .performedBy(SecurityUtils.currentUsername())
-                        .build();
-                productImageAuditRepository.save(audit);
+            for (ProductImage img : new ArrayList<>(product.getImages())) {
+                try {
+                    ProductImageAudit audit = ProductImageAudit.builder()
+                            .action("IMAGE_DELETED_PERMANENTLY")
+                            .fileName(img.getFileName())
+                            .filePath(img.getFilePath())
+                            .productId(product.getId())
+                            .productName(product.getName())
+                            .timestamp(LocalDateTime.now())
+                            .performedBy(SecurityUtils.currentUsername())
+                            .build();
+                    productImageAuditRepository.save(audit);
 
-                Path physical = productRoot().resolve(product.getId().toString()).resolve(img.getFileName());
-                Files.deleteIfExists(physical);
-            } catch (IOException ignored) {}
-            productImageRepository.delete(img);
-        }
-
-        String barcode = product.getBarcode();
-            try {
-                ProductImageAudit audit = ProductImageAudit.builder()
-                        .action("BARCODE_IMAGE_DELETED_PERMANENTLY")
-                        .fileName(barcode + ".png")
-                        .filePath(product.getBarcodeImagePath())
-                        .productId(product.getId())
-                        .productName(product.getName())
-                        .timestamp(LocalDateTime.now())
-                        .performedBy(SecurityUtils.currentUsername())
-                        .build();
-                productImageAuditRepository.save(audit);
-
-                Path physical = productRoot().resolve("barcodes").resolve(barcode + ".png");
-                Files.deleteIfExists(physical);
-            } catch (IOException ignored) {}
+                    Path physical = productRoot().resolve(product.getId().toString()).resolve(img.getFileName());
+                    Files.deleteIfExists(physical);
+                } catch (IOException ignored) {}
+                productImageRepository.delete(img);
+            }
         }
 
     public void deleteProductUploadDirectory(UUID productId) throws IOException {
@@ -755,56 +682,6 @@ public class ProductService {
 
 
 
-
-    /* =============================
-       BARCODE / PDF helpers (unchanged)
-       ============================= */
-
-    public File getBarcodeImageFile(String barcode) {
-        Product product = productRepository.findByBarcodeAndDeletedFalse(barcode)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
-        String stored = product.getBarcodeImagePath();
-        if (stored == null) return null;
-
-        // barcode path stored as "/api/products/barcodes/<filename>" - resolve to physical
-        String filename = Paths.get(stored).getFileName().toString();
-        Path physical = productRoot().resolve("barcodes").resolve(filename);
-        return physical.toFile();
-    }
-
-    public File getBarcodePdfSingle(String barcode) throws IOException {
-        Product p = productRepository.findByBarcodeAndDeletedFalse(barcode).orElseThrow(() -> new ProductNotFoundException("Product not found"));
-
-        if (p.getBarcodeImagePath() == null || !Files.exists(Paths.get(productRoot().resolve("barcodes").resolve(Paths.get(p.getBarcodeImagePath()).getFileName().toString()).toString()))) {
-            Path barcodeDir = productRoot().resolve("barcodes");
-            fileStorageService.initDirectory(barcodeDir);
-            String path = barcodeService.generateBarcodeImage(p.getBarcode(), barcodeDir);
-            p.setBarcodeImagePath("/api/products/barcodes/" + Paths.get(path).getFileName().toString());
-            productRepository.save(p);
-        }
-
-        String pdfPath = barcodeService.generateBarcodeLabelPDF(p.getBarcode(), p.getName(), productRoot().resolve("labels"));
-        return new File(pdfPath);
-    }
-
-    public File getBarcodePdfSheet(List<UUID> ids) throws IOException {
-        List<Product> products = productRepository.findAllByIdInAndDeletedFalse(ids);
-        if (products.isEmpty()) throw new ProductNotFoundException("No products found");
-
-        Path barcodeDir = productRoot().resolve("barcodes");
-        fileStorageService.initDirectory(barcodeDir);
-
-        for (Product p : products) {
-            if (p.getBarcodeImagePath() == null || !Files.exists(Paths.get(productRoot().resolve("barcodes").resolve(Paths.get(p.getBarcodeImagePath()).getFileName().toString()).toString()))) {
-                String path = barcodeService.generateBarcodeImage(p.getBarcode(), barcodeDir);
-                p.setBarcodeImagePath("/api/products/barcodes/" + Paths.get(path).getFileName().toString());
-                productRepository.save(p);
-            }
-        }
-
-        String sheetPath = barcodeService.generateBarcodeSheetPDF(products, productRoot().resolve("labels"));
-        return new File(sheetPath);
-    }
 
 
 

@@ -103,25 +103,12 @@ public class ProductController {
     or 
     ( #deleted == true and hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER','SUPERVISOR') )""")
     @GetMapping("/sku/{sku}")
-    @Operation(summary = "Get a product by its barcode")
+    @Operation(summary = "Get a product by its sku")
     public ResponseEntity<ProductDTO> getProductBySKU(
             @PathVariable String sku,
             @RequestParam(required = false) Boolean deleted
     ) {
         return ResponseEntity.ok(productService.getProductBySKU(sku, deleted));
-    }
-
-    @PreAuthorize("""
-    #deleted == false 
-    or 
-    ( #deleted == true and hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER','SUPERVISOR') )""")
-    @GetMapping("/barcode/{barcode}")
-    @Operation(summary = "Get a product by its barcode")
-    public ResponseEntity<ProductDTO> getProductByBarcode(
-            @PathVariable String barcode,
-            @RequestParam(required = false) Boolean deleted
-    ) {
-        return ResponseEntity.ok(productService.getProductByBarcode(barcode, deleted));
     }
 
     @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
@@ -151,44 +138,7 @@ public class ProductController {
 
 
 
-    /* =============================
-       BARCODE IMAGE + PDF
-       ============================= */
-    @GetMapping("/barcode/image/{barcode}")
-    @Operation(summary = "Download barcode image for a product")
-    public ResponseEntity<Resource> getBarcodeImage(@PathVariable String barcode) {
-        File imageFile = productService.getBarcodeImageFile(barcode);
-        if (imageFile == null || !imageFile.exists()) return ResponseEntity.notFound().build();
 
-        Resource resource = new FileSystemResource(imageFile);
-        return ResponseEntity.ok()
-                .contentType(MediaType.IMAGE_PNG)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=" + imageFile.getName())
-                .body(resource);
-    }
-
-    @GetMapping("/barcode/pdf/{barcode}")
-    @Operation(summary = "Download a polished single-barcode PDF label")
-    public ResponseEntity<Resource> getBarcodePdfSingle(@PathVariable String barcode) throws IOException {
-        File pdf = productService.getBarcodePdfSingle(barcode);
-        Resource res = new FileSystemResource(pdf);
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_PDF)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=barcode-" + barcode + ".pdf")
-                .body(res);
-    }
-
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
-    @PostMapping("/barcode/pdf/sheet")
-    @Operation(summary = "Download a polished barcode sheet PDF for multiple products")
-    public ResponseEntity<Resource> getBarcodePdfSheet(@RequestBody List<UUID> ids) throws IOException {
-        File pdf = productService.getBarcodePdfSheet(ids);
-        Resource res = new FileSystemResource(pdf);
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_PDF)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=barcode-sheet.pdf")
-                .body(res);
-    }
 
 
 
@@ -251,10 +201,7 @@ public class ProductController {
                 .body(res);
     }
 
-    @PreAuthorize("""
-    #deleted == false 
-    or 
-    ( #deleted == true and hasAnyRole('SUPERUSER', 'ADMIN') )""")
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN')")
     @GetMapping("/images/all")
     @Operation(summary = "Get URLs for all product images in the system")
     public ResponseEntity<Map<UUID, List<String>>> getAllProductImageUrls() {

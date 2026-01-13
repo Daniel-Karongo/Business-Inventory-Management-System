@@ -9,6 +9,7 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.r
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -21,57 +22,79 @@ public class ProductVariantService {
     private final ProductVariantRepository variantRepo;
     private final ProductRepository productRepo;
     private final ProductVariantMapper mapper;
+    private final VariantBarcodeService barcodeService;
 
+    @Transactional
     public ProductVariantDTO createVariant(ProductVariantCreateDTO dto) {
+
         Product product = productRepo.findById(dto.getProductId())
                 .orElseThrow(() -> new EntityNotFoundException("Product not found"));
 
-        if (variantRepo.existsByProduct_IdAndClassification(dto.getProductId(), dto.getClassification())) {
-            throw new IllegalArgumentException("Variant with classification already exists");
+        if (variantRepo.existsByProduct_IdAndClassification(
+                dto.getProductId(), dto.getClassification())) {
+            throw new IllegalArgumentException("Variant already exists");
         }
 
         ProductVariant v = new ProductVariant();
         v.setProduct(product);
         v.setClassification(dto.getClassification());
-        // Auto-generate SKU if missing
-        v.setSku(dto.getSku() != null ? dto.getSku() : product.getSku() + "-" + dto.getClassification());
+        v.setSku(
+                dto.getSku() != null
+                        ? dto.getSku()
+                        : product.getSku() + "-" + dto.getClassification()
+        );
 
-        return mapper.toDTO(variantRepo.save(v));
+        v = variantRepo.save(v);
+
+        // 🔥 FORCE barcode creation and return UPDATED entity
+        return barcodeService.generateBarcodeIfMissing(v.getId());
     }
 
-    public BigDecimal computeMinSelling(BigDecimal buying, Double pct) {
-        if (buying == null) buying = BigDecimal.ZERO;
-        if (pct == null) pct = 0D;
+    /* =============================
+       CORE HELPERS (REQUIRED)
+       ============================= */
 
-        // pct is a DECIMAL FRACTION, not percent (e.g., 0.2 = 20%)
-        double multiplier = 1 + pct;
-
-        return buying.multiply(BigDecimal.valueOf(multiplier));
+    public ProductVariant getEntity(UUID id) {
+        return variantRepo.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Variant not found"));
     }
+
+    public List<ProductVariant> getEntitiesForProduct(UUID productId) {
+        return variantRepo.findByProduct_Id(productId);
+    }
+
+    /* =============================
+       READ
+       ============================= */
 
     public ProductVariantDTO getVariant(UUID id) {
-        return mapper.toDTO(
-                variantRepo.findById(id)
-                        .orElseThrow(() -> new EntityNotFoundException("Variant not found"))
-        );
+        return mapper.toDTO(getEntity(id));
     }
 
     public List<ProductVariantDTO> getVariantsForProduct(UUID productId) {
-        return variantRepo.findByProduct_Id(productId)
+        return getEntitiesForProduct(productId)
                 .stream()
                 .map(mapper::toDTO)
                 .toList();
     }
 
+    /* =============================
+       UPDATE
+       ============================= */
+
     public ProductVariantDTO updateVariant(UUID id, ProductVariantUpdateDTO dto) {
-        ProductVariant v = variantRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Variant not found"));
 
-        if (dto.getClassification() != null) v.setClassification(dto.getClassification());
-        if (dto.getAverageBuyingPrice() != null) v.setAverageBuyingPrice(dto.getAverageBuyingPrice());
-        if (dto.getSku() != null) v.setSku(dto.getSku());
+        ProductVariant v = getEntity(id);
 
-        // AUTO RECALCULATE USING PRODUCT PERCENTAGE
+        if (dto.getClassification() != null)
+            v.setClassification(dto.getClassification());
+
+        if (dto.getAverageBuyingPrice() != null)
+            v.setAverageBuyingPrice(dto.getAverageBuyingPrice());
+
+        if (dto.getSku() != null)
+            v.setSku(dto.getSku());
+
         Double pct = v.getProduct().getMinimumPercentageProfit();
         v.setMinimumSellingPrice(
                 computeMinSelling(v.getAverageBuyingPrice(), pct)
@@ -80,9 +103,21 @@ public class ProductVariantService {
         return mapper.toDTO(variantRepo.save(v));
     }
 
+    /* =============================
+       DELETE
+       ============================= */
+
     public void deleteVariant(UUID id) {
-        ProductVariant v = variantRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Variant not found"));
-        variantRepo.delete(v);
+        variantRepo.delete(getEntity(id));
+    }
+
+    /* =============================
+       PRICING
+       ============================= */
+
+    public BigDecimal computeMinSelling(BigDecimal buying, Double pct) {
+        if (buying == null) buying = BigDecimal.ZERO;
+        if (pct == null) pct = 0D;
+        return buying.multiply(BigDecimal.valueOf(1 + pct));
     }
 }

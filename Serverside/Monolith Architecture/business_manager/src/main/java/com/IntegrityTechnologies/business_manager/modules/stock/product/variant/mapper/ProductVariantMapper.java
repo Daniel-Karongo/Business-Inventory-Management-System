@@ -10,5 +10,8 @@ public interface ProductVariantMapper {
 
     @Mapping(target = "productId", source = "product.id")
     @Mapping(target = "productName", source = "product.name")
+    @Mapping(target = "barcode", source = "barcode")
+    @Mapping(target = "barcodeImagePath", source = "barcodeImagePath")
+    @Mapping(target = "imageUrls", ignore = true) // filled later
     ProductVariantDTO toDTO(ProductVariant entity);
 }

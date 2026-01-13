@@ -19,10 +19,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
 
     Optional<Product> findBySku(String sku);
     List<Product> findAllByIdInAndDeletedFalse(List<UUID> ids);
-    Optional<Product> findByBarcode(String barcode);
-    Optional<Product> findByBarcodeAndDeletedFalse(String barcode);
     boolean existsBySku(String sku);
-    boolean existsByBarcode(String barcode);
     boolean existsByName(String name);
 
     List<Product> findByDeletedFalse();

@@ -17,11 +17,13 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "products",
+@Table(
+        name = "products",
         indexes = {
                 @Index(name = "idx_product_name", columnList = "name"),
-                @Index(name = "idx_barcode", columnList = "barcode")
-        })
+                @Index(name = "idx_product_sku", columnList = "sku")
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -33,6 +35,10 @@ public class Product {
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
+    /* =============================
+       CORE FIELDS
+       ============================= */
+
     @Column(nullable = false, unique = true)
     private String name;
 
@@ -41,29 +47,36 @@ public class Product {
     @Column(unique = true)
     private String sku;
 
-    @Column(unique = true)
-    private String barcode;
+    /**
+     * NOTE:
+     * - barcode and barcodeImagePath REMOVED
+     * - barcodes are now owned exclusively by ProductVariant
+     */
 
-    private String barcodeImagePath;
     private Double minimumPercentageProfit;
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    /* =============================
+       VARIANTS
+       ============================= */
+
+    @OneToMany(
+            mappedBy = "product",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
     private List<ProductVariant> variants = new ArrayList<>();
 
+    /* =============================
+       SUPPLIERS  (IMPORTANT)
+       ============================= */
 
     /**
-     * Manual soft delete flag. We are not using @SQLDelete/@Where here (per your choice).
+     * Suppliers remain linked to the PRODUCT (not variants).
+     * This preserves:
+     * - purchasing workflows
+     * - category–supplier syncing
+     * - reporting consistency
      */
-    private Boolean deleted;
-
-    private LocalDateTime deletedAt;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
-    private Category category;
-
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "products_suppliers",
@@ -72,8 +85,34 @@ public class Product {
     )
     private Set<Supplier> suppliers = new HashSet<>();
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    /* =============================
+       PRODUCT IMAGES (STILL VALID)
+       ============================= */
+
+    @OneToMany(
+            mappedBy = "product",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
     private List<ProductImage> images = new ArrayList<>();
+
+    /* =============================
+       CATEGORY
+       ============================= */
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
+
+    /* =============================
+       SOFT DELETE + AUDIT
+       ============================= */
+
+    private Boolean deleted;
+    private LocalDateTime deletedAt;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     @PrePersist
     public void onCreate() {
