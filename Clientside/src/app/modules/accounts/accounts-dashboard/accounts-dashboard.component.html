@@ -1,0 +1,63 @@
+<div class="page-container p-4">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header mb-6">
+    <h2 class="text-xl font-semibold">Accounting</h2>
+    <div class="text-sm text-[var(--text-secondary)]">
+      Manage accounts, journals, and ledgers
+    </div>
+  </div>
+
+  <!-- DASHBOARD GRID -->
+  <div class="dashboard-grid">
+
+    <!-- CHART OF ACCOUNTS -->
+    <mat-card class="dash-card" (click)="goChart()">
+      <mat-icon svgIcon="accounts"></mat-icon>
+      <div class="title">Chart of Accounts</div>
+      <div class="desc">
+        Create, view, and manage financial accounts
+      </div>
+      <button mat-stroked-button color="primary">
+        View Accounts
+      </button>
+    </mat-card>
+
+    <!-- NEW JOURNAL -->
+    <mat-card class="dash-card" (click)="goNewJournal()">
+      <mat-icon>post_add</mat-icon>
+      <div class="title">New Journal Entry</div>
+      <div class="desc">
+        Manually record financial transactions
+      </div>
+      <button mat-flat-button color="primary">
+        Post Journal
+      </button>
+    </mat-card>
+
+    <!-- JOURNALS -->
+    <mat-card class="dash-card muted" (click)="goJournals()">
+      <mat-icon>library_books</mat-icon>
+      <div class="title">Journals</div>
+      <div class="desc">
+        View all posted accounting journals
+      </div>
+      <button mat-stroked-button>
+        View Journals
+      </button>
+    </mat-card>
+
+    <!-- LEDGER -->
+    <mat-card class="dash-card muted" (click)="goLedger()">
+      <mat-icon>account_balance</mat-icon>
+      <div class="title">Ledger</div>
+      <div class="desc">
+        Account balances and transaction history
+      </div>
+      <button mat-stroked-button>
+        Open Ledger
+      </button>
+    </mat-card>
+
+  </div>
+</div>

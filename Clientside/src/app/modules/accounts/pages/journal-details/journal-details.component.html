@@ -1,0 +1,58 @@
+<div class="page-container p-4" *ngIf="!loading && journal">
+
+  <!-- HEADER -->
+  <div class="page-header mb-6">
+    <div>
+      <h2 class="text-xl font-semibold">Journal Details</h2>
+      <div class="text-sm text-[var(--text-secondary)]">
+        {{ journal.reference }} · {{ journal.postedAt | date:'medium' }}
+      </div>
+    </div>
+
+    <div class="actions">
+      <button mat-stroked-button (click)="back()">Back</button>
+
+      <!-- REVERSAL -->
+      <button
+        mat-stroked-button
+        color="warn"
+        *ngIf="!journal.reversed"
+        (click)="reverse()">
+        Reverse Journal
+      </button>
+    </div>
+  </div>
+
+  <!-- REVERSED BANNER -->
+  <div
+    *ngIf="journal.reversed"
+    class="reversed-banner">
+    This journal has been reversed
+  </div>
+
+  <!-- DETAILS -->
+  <div class="bg-[var(--surface)] rounded p-4">
+
+    <div class="mb-2"><strong>Description:</strong> {{ journal.description }}</div>
+    <div class="mb-2"><strong>Source:</strong> {{ journal.sourceModule }}</div>
+    <div class="mb-2"><strong>Posted By:</strong> {{ journal.postedBy }}</div>
+
+    <table class="w-full mt-4">
+      <thead>
+        <tr>
+          <th>Account</th>
+          <th>Direction</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let e of journal.entries">
+          <td>{{ e.accountCode }} — {{ e.accountName }}</td>
+          <td>{{ e.direction }}</td>
+          <td>{{ e.amount | number:'1.2-2' }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </div>
+</div>

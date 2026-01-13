@@ -1,0 +1,61 @@
+/* ================= TABLE WRAPPER ================= */
+
+.table-wrapper {
+  display: block;
+  overflow-x: auto;
+}
+
+/* Force natural column widths */
+mat-table {
+  width: 100%;
+}
+
+/* Disable flex squeezing */
+.mat-header-cell,
+.mat-cell {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  white-space: nowrap;
+  padding-right: 24px;
+}
+
+/* ================= COLUMN SIZES ================= */
+
+.mat-column-reference {
+  min-width: 220px;
+}
+
+.mat-column-description {
+  min-width: 320px;
+}
+
+/* Allow description to wrap */
+.mat-column-description {
+  white-space: normal !important;
+  word-break: break-word;
+  max-width: 420px;
+  /* prevents table explosion */
+}
+
+.mat-cell.mat-column-description {
+  line-height: 1.35;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.mat-column-source {
+  min-width: 160px;
+}
+
+.mat-column-postedAt {
+  min-width: 220px;
+}
+
+.mat-column-status {
+  min-width: 120px;
+}
+
+.mat-column-actions {
+  min-width: 100px;
+  text-align: center;
+}

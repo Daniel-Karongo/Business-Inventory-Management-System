@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.policy;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.LedgerEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import org.springframework.stereotype.Component;
@@ -26,5 +27,22 @@ public class DoubleEntryPolicy implements AccountingPolicy {
                     "Unbalanced journal: debit=" + debit + " credit=" + credit
             );
         }
+    }
+
+    @Override
+    public List<LedgerEntry> reverse(
+            JournalEntry original,
+            JournalEntry reversal
+    ) {
+        return original.getLedgerEntries().stream()
+                .map(e -> new LedgerEntry(
+                        e.getAccount(),
+                        reversal,
+                        e.getDirection() == EntryDirection.DEBIT
+                                ? EntryDirection.CREDIT
+                                : EntryDirection.DEBIT,
+                        e.getAmount()
+                ))
+                .toList();
     }
 }

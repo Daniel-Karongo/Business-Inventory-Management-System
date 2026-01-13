@@ -9,18 +9,24 @@ public final class SecurityUtils {
 
     private SecurityUtils() {}
 
+    /* ============================================================
+       USER INFO
+    ============================================================ */
+
     public static String currentUsername() {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth == null) return "system";
             Object p = auth.getPrincipal();
-            if (p instanceof org.springframework.security.core.userdetails.UserDetails) {
-                return ((org.springframework.security.core.userdetails.UserDetails) p).getUsername();
-            } else if (p instanceof String) {
-                return (String) p;
-            } else {
-                return auth.getName() != null ? auth.getName() : "system";
+
+            if (p instanceof org.springframework.security.core.userdetails.UserDetails u) {
+                return u.getUsername();
             }
+            if (p instanceof String s) {
+                return s;
+            }
+            return auth.getName() != null ? auth.getName() : "system";
+
         } catch (Exception e) {
             return "system";
         }
@@ -30,13 +36,12 @@ public final class SecurityUtils {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth == null || auth.getAuthorities() == null || auth.getAuthorities().isEmpty()) {
-                return Role.EMPLOYEE; // default role
+                return Role.EMPLOYEE;
             }
 
             GrantedAuthority authority = auth.getAuthorities().iterator().next();
             String roleName = authority.getAuthority();
 
-            // Remove "ROLE_" prefix if present
             if (roleName.startsWith("ROLE_")) {
                 roleName = roleName.substring(5);
             }
@@ -44,7 +49,36 @@ public final class SecurityUtils {
             return Role.valueOf(roleName);
 
         } catch (Exception e) {
-            return Role.EMPLOYEE; // fallback
+            return Role.EMPLOYEE;
         }
+    }
+
+    /* ============================================================
+       ROLE GUARDS (ENTERPRISE SAFE)
+    ============================================================ */
+
+    public static void requireAtLeast(Role required) {
+        Role current = currentRole();
+        if (!current.canAccess(required)) {
+            throw new SecurityException(
+                    "Access denied: requires " + required + ", current role is " + current
+            );
+        }
+    }
+
+    public static void requireAdmin() {
+        requireAtLeast(Role.ADMIN);
+    }
+
+    public static void requireManager() {
+        requireAtLeast(Role.MANAGER);
+    }
+
+    public static void requireSupervisor() {
+        requireAtLeast(Role.SUPERVISOR);
+    }
+
+    public static boolean hasAtLeast(Role role) {
+        return currentRole().canAccess(role);
     }
 }

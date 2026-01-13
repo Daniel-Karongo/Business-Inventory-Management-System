@@ -1,16 +1,21 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.api;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.controller.JournalController;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.Account;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.LedgerEntry;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.policy.AccountingPolicy;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.engine.LedgerPostingService;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +23,8 @@ public class AccountingFacade {
 
     private final AccountRepository accountRepository;
     private final LedgerPostingService postingService;
+    private final JournalEntryRepository journalRepo;
+    private final AccountingPolicy accountingPolicy;
 
     @Transactional
     public void post(AccountingEvent event) {
@@ -45,5 +52,33 @@ public class AccountingFacade {
         }
 
         postingService.post(journal, ledger);
+    }
+
+    @Transactional
+    public void reverseJournal(UUID journalId, String reason, String user) {
+
+        JournalEntry original = journalRepo.findById(journalId)
+                .orElseThrow(() -> new IllegalArgumentException("Journal not found"));
+
+        if (original.isReversed()) {
+            throw new IllegalStateException("Journal already reversed");
+        }
+
+        if ("JOURNAL_REVERSAL".equals(original.getSourceModule())) {
+            throw new IllegalStateException("Cannot reverse a reversal journal");
+        }
+
+        JournalEntry reversal = new JournalEntry();
+        reversal.setReference("REV-" + original.getReference());
+        reversal.setSourceModule("JOURNAL_REVERSAL");
+        reversal.setDescription("Reversal: " + reason);
+        reversal.markPosted(user);
+
+        List<LedgerEntry> reversed =
+                accountingPolicy.reverse(original, reversal);
+
+        original.markReversed(reversal.getId());
+
+        postingService.post(reversal, reversed);
     }
 }

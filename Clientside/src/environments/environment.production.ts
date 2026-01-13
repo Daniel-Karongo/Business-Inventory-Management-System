@@ -432,6 +432,9 @@ export const environment = {
     ============================================================ */
     accounts: {
       base: '/accounts'
+    },
+    manualJournals: {
+      base: '/accounting/manual-journals'
     }
   }
 };

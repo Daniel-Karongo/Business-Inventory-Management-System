@@ -1,0 +1,48 @@
+<div class="page-container p-4">
+
+  <div class="page-header">
+    <div>
+      <h2>Create Account</h2>
+      <div class="breadcrumb">Accounts / Chart / Create</div>
+    </div>
+
+    <div class="actions">
+      <button mat-stroked-button (click)="cancel()">Cancel</button>
+      <button
+        mat-flat-button
+        color="primary"
+        (click)="submit()"
+        [disabled]="form.invalid">
+        Create
+      </button>
+    </div>
+  </div>
+
+  <mat-card>
+    <h3>Account Details</h3>
+
+    <form [formGroup]="form" class="form-grid">
+
+      <mat-form-field appearance="fill">
+        <mat-label>Account Code</mat-label>
+        <input matInput formControlName="code" />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Account Name</mat-label>
+        <input matInput formControlName="name" />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Account Type</mat-label>
+        <mat-select formControlName="type">
+          <mat-option *ngFor="let t of types" [value]="t.value">
+            {{ t.label }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+    </form>
+  </mat-card>
+
+</div>

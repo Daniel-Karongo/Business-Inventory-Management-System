@@ -1,0 +1,51 @@
+.page-container {
+  max-width: 1200px;
+  margin: auto;
+}
+
+.page-header {
+  h2 {
+    margin: 0;
+    font-weight: 600;
+  }
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.dash-card {
+  padding: 20px;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  mat-icon {
+    font-size: 36px;
+    color: #1a73e8;
+  }
+
+  .title {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    flex: 1;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+  }
+}
+
+.dash-card.muted mat-icon {
+  color: #6b7280;
+}

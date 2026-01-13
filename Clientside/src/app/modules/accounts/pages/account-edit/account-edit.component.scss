@@ -1,0 +1,49 @@
+.page-container {
+  max-width: 900px;
+  margin: auto;
+}
+
+/* ================= HEADER ================= */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+
+  h2 {
+    margin: 0;
+    font-weight: 600;
+    font-size: 1.4rem;
+  }
+
+  .breadcrumb {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+}
+
+/* ================= CARD ================= */
+mat-card {
+  padding: 18px;
+
+  h3 {
+    margin-bottom: 14px;
+    font-weight: 600;
+  }
+}
+
+/* ================= FORM ================= */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+mat-form-field {
+  width: 100%;
+}
