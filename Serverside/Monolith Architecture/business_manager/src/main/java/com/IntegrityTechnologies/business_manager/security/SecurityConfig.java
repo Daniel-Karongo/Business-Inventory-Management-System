@@ -106,6 +106,12 @@ public class SecurityConfig {
                                 "/api/auth/reset-password/**"
                         ).permitAll()
 
+                        // 🔓 MPESA CALLBACKS (CRITICAL)
+                        .requestMatchers(
+                                "/api/payments/mpesa/stk/callback",
+                                "/api/payments/mpesa/c2b/**"
+                        ).permitAll()
+
                         // 🔓 PUBLIC (LOGIN UI DEPENDENCIES)
                         .requestMatchers(HttpMethod.GET, "/api/branches").permitAll()
 

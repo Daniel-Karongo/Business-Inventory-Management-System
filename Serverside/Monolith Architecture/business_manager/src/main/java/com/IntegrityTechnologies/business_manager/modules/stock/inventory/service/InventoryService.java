@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.stock.inventory.servi
 
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import com.IntegrityTechnologies.business_manager.exception.OutOfStockException;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.InventoryAccountingAdapter;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
@@ -57,6 +58,7 @@ public class InventoryService {
 
     private static final int MAX_RETRIES = 5;
     private final ProductVariantService productVariantService;
+    private final InventoryAccountingAdapter inventoryAccountingPort;
 
     // ------------------------
     // EXISTING / CORE METHODS
@@ -275,6 +277,14 @@ public class InventoryService {
             );
         }
 
+        BigDecimal totalValue =
+                newAvgCost.multiply(BigDecimal.valueOf(incomingUnits));
+
+        inventoryAccountingPort.recordInventoryReceipt(
+                variant.getId(),
+                totalValue,
+                req.getReference()
+        );
 
         // -------------------------------------------------------------
         // 9. RETURN RESPONSE
@@ -414,6 +424,15 @@ public class InventoryService {
         item.setLastUpdatedBy(getCurrentUsername());
         inventoryItemRepository.save(item);
 
+        BigDecimal value =
+                item.getAverageCost().multiply(BigDecimal.valueOf(qty));
+
+        inventoryAccountingPort.recordInventoryConsumption(
+                productVariantId,
+                value,
+                reference
+        );
+
         stockTransactionRepository.save(StockTransaction.builder()
                 .productId(item.getProductVariant().getProduct().getId())
                 .productVariantId(productVariantId)
@@ -520,6 +539,15 @@ public class InventoryService {
         item.setLastUpdatedBy(getCurrentUsername());
 
         inventoryItemRepository.save(item);
+
+        BigDecimal value =
+                item.getAverageCost().multiply(BigDecimal.valueOf(qty));
+
+        inventoryAccountingPort.recordInventoryReturn(
+                variantId,
+                value,
+                reference
+        );
 
         stockTransactionRepository.save(
                 StockTransaction.builder()

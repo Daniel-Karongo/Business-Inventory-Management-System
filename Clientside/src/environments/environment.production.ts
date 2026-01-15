@@ -1,7 +1,7 @@
 export const environment = {
   production: true,
 
-  idleLogoutMinutes: 60,
+  idleLogoutMinutes: 1,
 
   apiUrl: 'http://localhost:8080/api',
 

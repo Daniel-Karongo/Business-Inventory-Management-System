@@ -29,4 +29,19 @@ public class AccountingAccounts {
                 .orElseThrow(() -> new IllegalStateException("Revenue account missing"))
                 .getId();
     }
+
+    public UUID inventory() {
+        return accountRepository.findByCode("1200")
+                .orElseThrow().getId();
+    }
+
+    public UUID cogs() {
+        return accountRepository.findByCode("5000")
+                .orElseThrow().getId();
+    }
+
+    public UUID accountsPayable() {
+        return accountRepository.findByCode("2000")
+                .orElseThrow().getId();
+    }
 }

@@ -7,7 +7,10 @@ import { environment } from '../../../environments/environment';
 export class IdleLogoutService implements OnDestroy {
 
   private timeoutId: any;
-  private readonly idleMs = environment.idleLogoutMinutes * 60 * 1000;
+  private loggingOut = false;
+
+  private readonly idleMs =
+    environment.idleLogoutMinutes * 60 * 1000;
 
   private readonly events = [
     'mousemove',
@@ -17,43 +20,75 @@ export class IdleLogoutService implements OnDestroy {
     'touchstart'
   ];
 
+  /**
+   * 🔑 Bound handler — required to preserve `this`
+   */
+  private readonly boundResetTimer = () => this.resetTimer();
+
   constructor(
     private auth: AuthService,
     private router: Router,
     private zone: NgZone
   ) {}
 
-  start() {
+  /* =========================
+     PUBLIC API
+     ========================= */
+
+  start(): void {
     this.resetTimer();
+
     this.zone.runOutsideAngular(() => {
-      this.events.forEach(e =>
-        document.addEventListener(e, this.resetTimer, true)
+      this.events.forEach(event =>
+        document.addEventListener(event, this.boundResetTimer, true)
       );
     });
   }
 
-  stop() {
+  stop(): void {
     clearTimeout(this.timeoutId);
-    this.events.forEach(e =>
-      document.removeEventListener(e, this.resetTimer, true)
+
+    this.events.forEach(event =>
+      document.removeEventListener(event, this.boundResetTimer, true)
     );
   }
 
-  private resetTimer = () => {
-    clearTimeout(this.timeoutId);
-    this.timeoutId = setTimeout(() => this.logout(), this.idleMs);
-  };
+  ngOnDestroy(): void {
+    this.stop();
+  }
 
-  private logout() {
+  /* =========================
+     INTERNALS
+     ========================= */
+
+  private resetTimer(): void {
+    clearTimeout(this.timeoutId);
+
+    this.timeoutId = setTimeout(
+      () => this.logout(),
+      this.idleMs
+    );
+  }
+
+  private logout(): void {
+    if (this.loggingOut) return;
+    this.loggingOut = true;
+
+    console.log('[IdleLogout] Logging out due to inactivity');
+
     this.zone.run(() => {
-      this.auth.logout();
-      this.router.navigate(['/login'], {
-        queryParams: { reason: 'idle' }
+      this.auth.logout().subscribe({
+        next: () => this.finishLogout(),
+        error: () => this.finishLogout() // fail-safe
       });
     });
   }
 
-  ngOnDestroy() {
-    this.stop();
+  private finishLogout(): void {
+    this.auth.clearLocalState();
+
+    this.router.navigate(['/login'], {
+      queryParams: { reason: 'idle' }
+    });
   }
 }

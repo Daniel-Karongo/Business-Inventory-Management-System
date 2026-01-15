@@ -274,8 +274,17 @@ public class SalesService {
         Sale sale = saleRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Sale not found: " + id));
 
-        if (sale.getStatus() == Sale.SaleStatus.REFUNDED) return toDTO(sale);
+        if (sale.getStatus() == Sale.SaleStatus.REFUNDED) {
+            return toDTO(sale);
+        }
 
+        if (sale.getStatus() == Sale.SaleStatus.CANCELLED) {
+            throw new IllegalStateException("Cannot refund a CANCELLED sale");
+        }
+
+    /* ============================================================
+       RETURN STOCK TO INVENTORY
+       ============================================================ */
         for (SaleLineItem li : sale.getLineItems()) {
             inventoryService.incrementVariantStock(
                     li.getProductVariantId(),
@@ -285,45 +294,27 @@ public class SalesService {
             );
         }
 
+    /* ============================================================
+       CALCULATE TOTAL PAID (SUCCESS PAYMENTS ONLY)
+       ============================================================ */
         BigDecimal totalPaid = sale.getPayments().stream()
                 .filter(p -> "SUCCESS".equalsIgnoreCase(p.getStatus()))
                 .map(Payment::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        if (totalPaid.compareTo(BigDecimal.ZERO) > 0) {
-            OptimisticRetryRunner.runWithRetry(() -> {
-                accountingFacade.post(
-                        AccountingEvent.builder()
-                                .sourceModule("SALE_REFUND")
-                                .sourceId(sale.getId())
-                                .reference("SALE-REFUND-" + sale.getId())
-                                .description("Sale refund " + sale.getId())
-                                .performedBy("SYSTEM")
-                                .entries(List.of(
-                                        AccountingEvent.Entry.builder()
-                                                .accountId(accountingAccounts.revenue())
-                                                .direction(EntryDirection.DEBIT)
-                                                .amount(totalPaid)
-                                                .build(),
-                                        AccountingEvent.Entry.builder()
-                                                .accountId(accountingAccounts.cash())
-                                                .direction(EntryDirection.CREDIT)
-                                                .amount(totalPaid)
-                                                .build()
-                                ))
-                                .build()
-                );
-                return null;
-            });
-        }
-
+    /* ============================================================
+       MARK PAYMENTS AS REFUNDED (NO ACCOUNTING HERE)
+       ============================================================ */
         sale.getPayments().forEach(p -> {
             if ("SUCCESS".equalsIgnoreCase(p.getStatus())) {
                 p.setStatus("REFUNDED");
             }
         });
 
-        if (sale.getCustomerId() != null) {
+    /* ============================================================
+       RECORD CUSTOMER REFUND (NON-FINANCIAL)
+       ============================================================ */
+        if (sale.getCustomerId() != null && totalPaid.compareTo(BigDecimal.ZERO) > 0) {
             customerService.recordRefund(
                     sale.getCustomerId(),
                     sale.getId(),
@@ -332,6 +323,9 @@ public class SalesService {
             );
         }
 
+    /* ============================================================
+       FINALIZE SALE STATE
+       ============================================================ */
         sale.setStatus(Sale.SaleStatus.REFUNDED);
         saleRepository.save(sale);
 

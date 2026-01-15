@@ -7,7 +7,7 @@ export class PaymentsService {
 
   private base = environment.apiUrl + environment.endpoints.payments.base;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   create(payload: any) {
     return this.http.post<any>(this.base, payload);
@@ -36,6 +36,12 @@ export class PaymentsService {
       environment.apiUrl + environment.endpoints.payments.mpesa.initiateStk,
       null,
       { params: { saleId, phone, amount } }
+    );
+  }
+
+  getBySale(saleId: string) {
+    return this.http.get<any[]>(
+      environment.apiUrl + environment.endpoints.sales.payments(saleId)
     );
   }
 }

@@ -8,11 +8,18 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "mpesa")
 public class MpesaProperties {
+
+    /**
+     * PAYBILL | TILL
+     */
+    private String paymentType;
+
     private String env;
     private String consumerKey;
     private String consumerSecret;
     private String shortcode;
     private String passkey;
+
     private Stk stk = new Stk();
     private C2b c2b = new C2b();
 

@@ -5,7 +5,9 @@ import com.IntegrityTechnologies.business_manager.config.OptimisticRetryRunner;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentRequest;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.Payment;
@@ -37,6 +39,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final AccountingAccounts accountingAccounts;
     private final CustomerService customerService;
     private final InventoryService inventoryService;
+    private final JournalEntryRepository journalEntryRepository;
 
     /* ============================================================
        PROCESS PAYMENT
@@ -51,17 +54,23 @@ public class PaymentServiceImpl implements PaymentService {
 
         Sale sale = saleRepository.findById(req.getSaleId())
                 .orElseThrow(() -> new IllegalArgumentException("Sale not found: " + req.getSaleId()));
+
+        // 🔐 lock sale row
         saleRepository.lockForUpdate(sale.getId());
 
-        BigDecimal saleTotal = Optional.ofNullable(sale.getTotalAmount()).orElse(BigDecimal.ZERO);
-        BigDecimal alreadyPaid = sale.getPayments() == null
-                ? BigDecimal.ZERO
-                : sale.getPayments().stream()
-                .filter(p -> "SUCCESS".equalsIgnoreCase(p.getStatus()))
-                .map(Payment::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal saleTotal =
+                Optional.ofNullable(sale.getTotalAmount()).orElse(BigDecimal.ZERO);
 
-        BigDecimal paymentAmount = Optional.ofNullable(req.getAmount()).orElse(BigDecimal.ZERO);
+        BigDecimal alreadyPaid =
+                sale.getPayments() == null
+                        ? BigDecimal.ZERO
+                        : sale.getPayments().stream()
+                        .filter(p -> "SUCCESS".equalsIgnoreCase(p.getStatus()))
+                        .map(Payment::getAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal paymentAmount =
+                Optional.ofNullable(req.getAmount()).orElse(BigDecimal.ZERO);
 
         if (paymentAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Payment amount must be > 0");
@@ -80,8 +89,18 @@ public class PaymentServiceImpl implements PaymentService {
         boolean willBeFullyPaid =
                 alreadyPaid.add(paymentAmount).compareTo(saleTotal) >= 0;
 
+        // 🔐 idempotency for provider-based payments (Mpesa)
+        if (req.getProviderReference() != null) {
+            var existing =
+                    paymentRepository.findByProviderReference(req.getProviderReference());
+
+            if (existing != null && !existing.isEmpty()) {
+                return toDTO(existing.get(0));
+            }
+        }
+
         String txnCode =
-                ("MPESA".equalsIgnoreCase(req.getMethod()) && req.getProviderReference() != null)
+                req.getProviderReference() != null
                         ? req.getProviderReference()
                         : TxnCodeGenerator.generate();
 
@@ -99,69 +118,44 @@ public class PaymentServiceImpl implements PaymentService {
 
         boolean autoClear =
                 "CASH".equalsIgnoreCase(req.getMethod())
-                        || ("MPESA".equalsIgnoreCase(req.getMethod()) && req.getProviderReference() != null);
+                        || ("MPESA".equalsIgnoreCase(req.getMethod())
+                        && req.getProviderReference() != null);
 
         if (autoClear) {
-            payment.setStatus("SUCCESS");
-            payment = paymentRepository.save(payment);
 
-            if (willBeFullyPaid) {
+            if (!"SUCCESS".equalsIgnoreCase(payment.getStatus())) {
+                payment.setStatus("SUCCESS");
+                payment = paymentRepository.save(payment);
+            }
 
-                for (SaleLineItem li : sale.getLineItems()) {
+            // ✅ SINGLE journal per payment
+            if (!accountingFacade.isAlreadyPosted("PAYMENT", payment.getId())) {
 
-                    try {
-                        inventoryService.releaseReservationVariant(
-                                li.getProductVariantId(),
-                                li.getBranchId(),
-                                li.getQuantity(),
-                                "PAYMENT:" + payment.getId()
-                        );
-                    } catch (Exception ignored) {
-                    }
-
-                    inventoryService.decrementVariantStock(
-                            li.getProductVariantId(),
-                            li.getBranchId(),
-                            li.getQuantity(),
-                            "PAYMENT:" + payment.getId()
-                    );
-                }
-
-                Payment finalPayment = payment;
-                Sale finalSale = sale;
-                String username = currentUser();
-
-                System.out.println("Hello");
-                System.out.println(finalPayment);
-
-                OptimisticRetryRunner.runWithRetry(() -> {
-                    accountingFacade.post(
-                            AccountingEvent.builder()
-                                    .sourceModule("PAYMENT")
-                                    .sourceId(finalPayment.getId())
-                                    .reference(finalPayment.getTransactionCode())
-                                    .description("Payment received for sale " + finalSale.getId())
-                                    .performedBy(username)
-                                    .entries(List.of(
-                                            AccountingEvent.Entry.builder()
-                                                    .accountId(
-                                                            "CASH".equalsIgnoreCase(finalPayment.getMethod())
-                                                                    ? accountingAccounts.cash()
-                                                                    : accountingAccounts.bank()
-                                                    )
-                                                    .direction(EntryDirection.DEBIT)
-                                                    .amount(finalPayment.getAmount())
-                                                    .build(),
-                                            AccountingEvent.Entry.builder()
-                                                    .accountId(accountingAccounts.revenue())
-                                                    .direction(EntryDirection.CREDIT)
-                                                    .amount(finalPayment.getAmount())
-                                                    .build()
-                                    ))
-                                    .build()
-                    );
-                    return null;
-                });
+                accountingFacade.post(
+                        AccountingEvent.builder()
+                                .sourceModule("PAYMENT")
+                                .sourceId(payment.getId())
+                                .reference(payment.getTransactionCode())
+                                .description("Payment received for sale " + sale.getId())
+                                .performedBy(currentUser())
+                                .entries(List.of(
+                                        AccountingEvent.Entry.builder()
+                                                .accountId(
+                                                        "CASH".equalsIgnoreCase(payment.getMethod())
+                                                                ? accountingAccounts.cash()
+                                                                : accountingAccounts.bank()
+                                                )
+                                                .direction(EntryDirection.DEBIT)
+                                                .amount(payment.getAmount())
+                                                .build(),
+                                        AccountingEvent.Entry.builder()
+                                                .accountId(accountingAccounts.revenue())
+                                                .direction(EntryDirection.CREDIT)
+                                                .amount(payment.getAmount())
+                                                .build()
+                                ))
+                                .build()
+                );
             }
         }
 
@@ -178,6 +172,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         saleRepository.save(sale);
 
+        // 👤 customer payment history (unchanged)
         try {
             if (sale.getCustomerId() != null) {
                 customerService.recordPayment(
@@ -234,39 +229,23 @@ public class PaymentServiceImpl implements PaymentService {
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found"));
 
         if (!"SUCCESS".equalsIgnoreCase(payment.getStatus())) {
-            throw new IllegalStateException("Only successful payments can be refunded");
+            throw new IllegalStateException("Only SUCCESS payments can be refunded");
         }
 
         String username = currentUser();
 
-        OptimisticRetryRunner.runWithRetry(() -> {
-            accountingFacade.post(
-                    AccountingEvent.builder()
-                            .sourceModule("PAYMENT_REFUND")
-                            .sourceId(payment.getId())
-                            .reference("REFUND-" + payment.getTransactionCode())
-                            .description("Refund payment " + payment.getId())
-                            .performedBy(username)
-                            .entries(List.of(
-                                    AccountingEvent.Entry.builder()
-                                            .accountId(accountingAccounts.revenue())
-                                            .direction(EntryDirection.DEBIT)
-                                            .amount(payment.getAmount())
-                                            .build(),
-                                    AccountingEvent.Entry.builder()
-                                            .accountId(
-                                                    "CASH".equalsIgnoreCase(payment.getMethod())
-                                                            ? accountingAccounts.cash()
-                                                            : accountingAccounts.bank()
-                                            )
-                                            .direction(EntryDirection.CREDIT)
-                                            .amount(payment.getAmount())
-                                            .build()
-                            ))
-                            .build()
-            );
-            return null;
-        });
+        // 🔁 reverse original PAYMENT journal
+        JournalEntry originalJournal =
+                journalEntryRepository
+                        .findBySourceModuleAndSourceId("PAYMENT", payment.getId())
+                        .orElseThrow(() ->
+                                new IllegalStateException("Original payment journal not found"));
+
+        accountingFacade.reverseJournal(
+                originalJournal.getId(),
+                "Payment refund",
+                username
+        );
 
         payment.setStatus("REFUNDED");
         paymentRepository.save(payment);
@@ -290,34 +269,17 @@ public class PaymentServiceImpl implements PaymentService {
 
         String username = currentUser();
 
-        OptimisticRetryRunner.runWithRetry(() -> {
-            accountingFacade.post(
-                    AccountingEvent.builder()
-                            .sourceModule("PAYMENT_REVERSAL")
-                            .sourceId(payment.getId())
-                            .reference("REVERSAL-" + payment.getTransactionCode())
-                            .description("Payment reversal " + payment.getId())
-                            .performedBy(username)
-                            .entries(List.of(
-                                    AccountingEvent.Entry.builder()
-                                            .accountId(accountingAccounts.revenue())
-                                            .direction(EntryDirection.DEBIT)
-                                            .amount(payment.getAmount())
-                                            .build(),
-                                    AccountingEvent.Entry.builder()
-                                            .accountId(
-                                                    "CASH".equalsIgnoreCase(payment.getMethod())
-                                                            ? accountingAccounts.cash()
-                                                            : accountingAccounts.bank()
-                                            )
-                                            .direction(EntryDirection.CREDIT)
-                                            .amount(payment.getAmount())
-                                            .build()
-                            ))
-                            .build()
-            );
-            return null;
-        });
+        JournalEntry originalJournal =
+                journalEntryRepository
+                        .findBySourceModuleAndSourceId("PAYMENT", payment.getId())
+                        .orElseThrow(() ->
+                                new IllegalStateException("Original payment journal not found"));
+
+        accountingFacade.reverseJournal(
+                originalJournal.getId(),
+                note != null ? note : "Payment reversal",
+                username
+        );
 
         payment.setStatus("REFUNDED");
         payment.setNote(note != null ? note : "Payment reversed");

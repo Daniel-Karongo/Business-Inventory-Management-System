@@ -58,12 +58,19 @@ public class MpesaClient {
         String t = MpesaUtil.timestamp();
         String password = MpesaUtil.generateStkPassword(props, t);
 
+        String transactionType =
+                "TILL".equalsIgnoreCase(props.getPaymentType())
+                        ? "CustomerBuyGoodsOnline"
+                        : "CustomerPayBillOnline";
+
+
+
         Map<String, Object> payload = new HashMap<>();
         payload.put("BusinessShortCode", props.getShortcode());
         payload.put("Password", password);
         payload.put("Timestamp", t);
-        payload.put("TransactionType", "CustomerPayBillOnline");
-        payload.put("Amount", amount);
+        payload.put("TransactionType", transactionType);
+        payload.put("Amount", Integer.parseInt(amount));
         payload.put("PartyA", phone); // customer phone in 2547... form
         payload.put("PartyB", props.getShortcode());
         payload.put("PhoneNumber", phone);

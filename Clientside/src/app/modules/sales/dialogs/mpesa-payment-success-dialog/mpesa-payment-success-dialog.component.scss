@@ -1,0 +1,75 @@
+:host {
+  display: block;
+}
+
+.dialog-container {
+  padding: 1rem;
+  border-radius: 0.75rem;
+}
+
+.dialog-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* SUMMARY */
+.summary-card {
+  background: var(--surface-hover);
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.summary-card.success {
+  border-left: 4px solid #16a34a; // green
+}
+
+.summary-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.summary-amount {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+/* DETAILS */
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.value {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.value.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ACTIONS */
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.75rem;
+}

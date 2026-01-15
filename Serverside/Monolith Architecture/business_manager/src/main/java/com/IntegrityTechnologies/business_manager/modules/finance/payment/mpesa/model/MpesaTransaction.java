@@ -8,9 +8,14 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "mpesa_transactions", indexes = {
-        @Index(name = "idx_mpesa_cb", columnList = "checkoutRequestId"),
-        @Index(name = "idx_mpesa_ref", columnList = "mpesaReceiptNumber")
+@Table(
+        name = "mpesa_transactions",
+        indexes = {
+            @Index(name = "idx_mpesa_cb", columnList = "checkoutRequestId"),
+            @Index(name = "idx_mpesa_ref", columnList = "mpesaReceiptNumber")
+        },
+        uniqueConstraints = {
+            @UniqueConstraint(columnNames = "checkoutRequestId")
 })
 @Data
 @NoArgsConstructor
@@ -31,5 +36,6 @@ public class MpesaTransaction {
     private String phoneNumber;
     private String status; // PENDING, SUCCESS, FAILED
     private LocalDateTime timestamp;
-    private String rawResponse; // stored JSON from provider
+    @Column(length = 500)
+    private String rawResponse;
 }

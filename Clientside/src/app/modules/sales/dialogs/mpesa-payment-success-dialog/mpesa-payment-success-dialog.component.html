@@ -1,0 +1,36 @@
+<div class="dialog-container">
+
+  <h2 mat-dialog-title class="dialog-title">
+    Payment Successful
+  </h2>
+
+  <div mat-dialog-content class="dialog-body">
+
+    <div class="summary-card success">
+      <div class="summary-label">Amount Paid</div>
+      <div class="summary-amount">
+        {{ data.amount | currency:'KES ' }}
+      </div>
+    </div>
+
+    <div class="details">
+      <div class="row">
+        <span class="label">Phone</span>
+        <span class="value">{{ data.phone }}</span>
+      </div>
+
+      <div class="row">
+        <span class="label">Receipt</span>
+        <span class="value mono">{{ data.receipt }}</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div mat-dialog-actions class="dialog-actions">
+    <button mat-flat-button color="primary" (click)="close()">
+      OK
+    </button>
+  </div>
+
+</div>

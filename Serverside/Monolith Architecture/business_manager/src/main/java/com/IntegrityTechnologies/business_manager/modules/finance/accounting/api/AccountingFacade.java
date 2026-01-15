@@ -35,7 +35,7 @@ public class AccountingFacade {
         journal.setSourceModule(event.getSourceModule());
         journal.setSourceId(event.getSourceId());
         journal.setDescription(event.getDescription());
-        journal.markPosted(event.getPerformedBy());
+        journal.setPostedBy(event.getPerformedBy());
 
         List<LedgerEntry> ledger = new ArrayList<>();
 
@@ -80,5 +80,10 @@ public class AccountingFacade {
         original.markReversed(reversal.getId());
 
         postingService.post(reversal, reversed);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isAlreadyPosted(String sourceModule, UUID sourceId) {
+        return journalRepo.existsBySourceModuleAndSourceId(sourceModule, sourceId);
     }
 }

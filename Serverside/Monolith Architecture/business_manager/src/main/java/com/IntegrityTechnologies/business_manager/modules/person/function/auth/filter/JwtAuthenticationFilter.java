@@ -120,7 +120,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         || path.startsWith("/api/auth/login")
                         || path.startsWith("/api/auth/password-reset")
 
-                        // ✅ PUBLIC branches (LOGIN SCREEN NEEDS THIS)
+                        // ✅ MPESA CALLBACKS (CRITICAL)
+                        || path.equals("/api/payments/mpesa/stk/callback")
+                        || path.startsWith("/api/payments/mpesa/c2b")
+
+                        // ✅ PUBLIC branches
                         || (path.equals("/api/branches") && "GET".equals(method));
     }
 }
