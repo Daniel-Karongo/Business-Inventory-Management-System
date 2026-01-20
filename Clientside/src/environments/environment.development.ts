@@ -17,7 +17,8 @@ export const environment = {
       passwordReset: {
         options: '/auth/password-reset/options',
         initiate: '/auth/password-reset/initiate',
-        complete: '/auth/password-reset/complete'
+        complete: '/auth/password-reset/complete',
+        verify: '/auth/password-reset/verify'
       }
     },
 

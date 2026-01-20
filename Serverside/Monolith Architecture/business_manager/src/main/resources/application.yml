@@ -25,12 +25,30 @@ mpesa:
 #  payment-type: PAYBILL # PAYBILL | TILL
 
 sms:
-  env: sandbox
-  consumer-key: YOUR_SMS_CONSUMER_KEY
-  consumer-secret: YOUR_SMS_CONSUMER_SECRET
-  # For customer SMS (Daraja-like), base-url depends on environment:
-  base-url-sandbox: https://sandbox.safaricom.co.ke
-  base-url-production: https://api.safaricom.co.ke
-  shortcode: 12345     # if required
-  sender-name: "MyBusiness"
+  provider: AFRICAS_TALKING
+  env: sandbox        # sandbox | production
   default-country-code: "+254"
+
+  africa:
+    username: sandbox
+    api-key: atsk_6e7b7b0177840603612d6edd85fcbe00a5fed3bbd7cce8868c01dcac77f6d83a3b9a110b
+    sender-id: sandbox
+    base-url-sandbox: https://api.sandbox.africastalking.com/version1/messaging
+    base-url-production: https://api.africastalking.com/version1/messaging
+
+spring:
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: karongodaniel022@gmail.com
+    password: ugpe rbez thxd avwf
+    from: "Business Manager <karongodaniel022@gmail.com>"
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000

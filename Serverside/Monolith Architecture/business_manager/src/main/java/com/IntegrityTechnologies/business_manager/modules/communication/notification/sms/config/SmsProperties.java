@@ -8,12 +8,19 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "sms")
 public class SmsProperties {
+
+    private String provider;
     private String env;
-    private String consumerKey;
-    private String consumerSecret;
-    private String baseUrlSandbox;
-    private String baseUrlProduction;
-    private String shortcode;
-    private String senderName;
     private String defaultCountryCode;
+
+    private Africa africa;
+
+    @Data
+    public static class Africa {
+        private String username;
+        private String apiKey;
+        private String senderId;
+        private String baseUrlSandbox;
+        private String baseUrlProduction;
+    }
 }

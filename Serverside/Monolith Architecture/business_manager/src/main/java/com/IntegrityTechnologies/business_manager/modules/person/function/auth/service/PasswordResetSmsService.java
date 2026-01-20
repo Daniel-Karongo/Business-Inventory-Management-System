@@ -4,7 +4,6 @@ import com.IntegrityTechnologies.business_manager.modules.communication.notifica
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.service.SmsService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -13,21 +12,17 @@ public class PasswordResetSmsService {
 
     private final SmsService smsService;
 
-    @Value("${app.frontend.reset-password-url:http://localhost:4200/auth/reset-password}")
-    private String resetUrl;
-
-    public void sendResetSms(User user, String rawToken) {
+    public void sendResetSms(User user, String otp) {
 
         if (user.getPhoneNumbers() == null || user.getPhoneNumbers().isEmpty()) {
-            return;
+            return; // silent fail
         }
-
-        String link = resetUrl + "?token=" + rawToken;
 
         SmsRequest req = new SmsRequest();
         req.setToPhone(user.getPhoneNumbers().get(0));
         req.setMessage(
-                "Password reset requested. Use this link: " + link
+                "Your password reset code is: " + otp +
+                        ". This code expires in 10 minutes."
         );
         req.setCreatedBy("SYSTEM");
 

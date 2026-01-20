@@ -9,6 +9,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 
 import { PasswordResetService, ResetChannel } from '../../services/password-reset.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   standalone: true,
@@ -29,6 +30,7 @@ export class ForgotPasswordComponent implements OnInit {
   private fb = inject(FormBuilder);
   private reset = inject(PasswordResetService);
   private router = inject(Router);
+  private snack = inject(MatSnackBar);
 
   loading = false;
   channels: ResetChannel[] = [];
@@ -50,21 +52,33 @@ export class ForgotPasswordComponent implements OnInit {
   submit() {
     if (this.form.invalid) return;
 
-    const { identifier, channel } = this.form.controls;
+    const { identifier, channel } = this.form.value;
+
     this.loading = true;
 
+    // Fire-and-forget backend call
     this.reset.initiate({
-      identifier: identifier.value,
-      channel: channel.value
+      identifier: identifier!,
+      channel: channel!
     }).subscribe({
-      next: () => this.navigate(identifier.value, channel.value),
-      error: () => this.navigate(identifier.value, channel.value)
+      complete: () => { },
+      error: () => { }
     });
-  }
 
-  private navigate(identifier: string, channel: ResetChannel) {
+    // ✅ USER FEEDBACK (THIS IS THE PLACE)
+    this.snack.open(
+      channel === 'EMAIL'
+        ? 'A verification code has been sent to your email.'
+        : channel === 'SMS'
+          ? 'A verification code has been sent to your phone.'
+          : 'Proceed to identity verification.',
+      'Close',
+      { duration: 4000 }
+    );
+
     this.loading = false;
 
+    // Navigate immediately
     this.router.navigate(['/auth/reset-password'], {
       state: { identifier, channel }
     });

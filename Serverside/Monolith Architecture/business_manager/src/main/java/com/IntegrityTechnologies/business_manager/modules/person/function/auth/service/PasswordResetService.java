@@ -119,7 +119,8 @@ public class PasswordResetService {
     ) {
 
         String raw = UUID.randomUUID().toString().replace("-", "");
-        String hash = DigestUtils.sha256Hex(raw);
+        String otp = raw.substring(0, 6).toUpperCase();
+        String hash = DigestUtils.sha256Hex(otp);
 
         PasswordResetToken token = PasswordResetToken.builder()
                 .userId(userId)
@@ -132,9 +133,35 @@ public class PasswordResetService {
 
         tokenRepo.save(token);
 
-        // 🔐 raw token returned ONLY to email/SMS sender
-        token.setTokenHash(raw);
+        // 🔐 Return RAW OTP only (never persisted)
+        token.setTokenHash(otp);
         return token;
+    }
+
+    /* =====================================================
+       TOKEN VERIFICATION
+       ===================================================== */
+
+    @Transactional(readOnly = true)
+    public void verifyToken(String rawToken) {
+
+        String hash = DigestUtils.sha256Hex(rawToken);
+
+        PasswordResetToken token = tokenRepo
+                .findByTokenHashAndUsedFalse(hash)
+                .orElseThrow(() -> new RuntimeException("Invalid or expired code"));
+
+        if (token.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Invalid or expired code");
+        }
+
+        if (token.getAttempts() >= props.getMaxAttempts()) {
+            throw new RuntimeException("Too many attempts");
+        }
+
+        // ⚠️ IMPORTANT:
+        // Do NOT mark used
+        // Do NOT increment attempts here
     }
 
     /* =====================================================

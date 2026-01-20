@@ -4,8 +4,17 @@ import com.IntegrityTechnologies.business_manager.modules.communication.notifica
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
-@Repository
 public interface SmsMessageRepository extends JpaRepository<SmsMessage, UUID> {
+
+    Optional<SmsMessage> findByProviderMessageId(String providerMessageId);
+
+    List<SmsMessage> findByStatusInAndNextRetryAtBeforeOrNextRetryAtIsNull(
+            List<String> statuses,
+            LocalDateTime now
+    );
 }

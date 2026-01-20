@@ -2,7 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.person.function.rollc
 
 import com.IntegrityTechnologies.business_manager.exception.BiometricException;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
-import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.service.NotificationService;
+import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.service.EmailService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
@@ -37,7 +37,7 @@ public class RollcallService {
     private final UserRepository userRepository;
     private final BranchRepository branchRepository;
     private final BiometricService biometricService;
-    private final NotificationService notificationService;
+    private final EmailService notificationService;
 
     /* =====================================================
        LOGIN ROLLCALL

@@ -31,6 +31,14 @@ export class PasswordResetService {
   }) {
     return this.http.post(
       `${this.base}${environment.endpoints.auth.passwordReset.initiate}`,
+      payload,
+      { observe: 'response' }
+    );
+  }
+
+  verifyToken(payload: { token: string }) {
+    return this.http.post(
+      `${this.base}${environment.endpoints.auth.passwordReset.verify}`,
       payload
     );
   }
