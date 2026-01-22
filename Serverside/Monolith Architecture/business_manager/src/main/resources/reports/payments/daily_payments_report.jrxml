@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="daily_payments_report"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <parameter name="REPORT_DATE" class="java.lang.String"/>
+
+    <queryString>
+        <![CDATA[
+            SELECT
+                p.transaction_code           AS transaction_code,
+                p.method                     AS payment_method,
+                p.amount                     AS amount,
+                p.status                     AS payment_status,
+                p.timestamp                  AS payment_time,
+                mt.mpesa_receipt_number      AS mpesa_receipt,
+                mt.phone_number              AS phone_number
+            FROM payments p
+            LEFT JOIN mpesa_transactions mt
+                   ON mt.sale_id = p.sale_id
+                  AND p.method = 'MPESA'
+            WHERE DATE(p.timestamp) = $P{REPORT_DATE}
+            ORDER BY p.timestamp DESC
+        ]]>
+    </queryString>
+
+    <field name="transaction_code" class="java.lang.String"/>
+    <field name="payment_method" class="java.lang.String"/>
+    <field name="amount" class="java.math.BigDecimal"/>
+    <field name="payment_status" class="java.lang.String"/>
+    <field name="payment_time" class="java.sql.Timestamp"/>
+    <field name="mpesa_receipt" class="java.lang.String"/>
+    <field name="phone_number" class="java.lang.String"/>
+
+    <title>
+        <band height="40">
+            <textField>
+                <reportElement x="0" y="0" width="802" height="30"/>
+                <textElement textAlignment="Center">
+                    <font size="15" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["DAILY PAYMENTS REPORT"]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <columnHeader>
+        <band height="30">
+            <staticText><reportElement x="0"   y="0" width="120" height="30"/><text><![CDATA[Txn Code]]></text></staticText>
+            <staticText><reportElement x="120" y="0" width="90"  height="30"/><text><![CDATA[Method]]></text></staticText>
+            <staticText><reportElement x="210" y="0" width="100" height="30"/><text><![CDATA[Amount]]></text></staticText>
+            <staticText><reportElement x="310" y="0" width="90"  height="30"/><text><![CDATA[Status]]></text></staticText>
+            <staticText><reportElement x="400" y="0" width="140" height="30"/><text><![CDATA[Time]]></text></staticText>
+            <staticText><reportElement x="540" y="0" width="130" height="30"/><text><![CDATA[M-Pesa Receipt]]></text></staticText>
+            <staticText><reportElement x="670" y="0" width="132" height="30"/><text><![CDATA[Phone]]></text></staticText>
+        </band>
+    </columnHeader>
+
+    <detail>
+        <band height="25">
+            <textField><reportElement x="0"   y="0" width="120" height="25"/><textFieldExpression><![CDATA[$F{transaction_code}]]></textFieldExpression></textField>
+            <textField><reportElement x="120" y="0" width="90"  height="25"/><textFieldExpression><![CDATA[$F{payment_method}]]></textFieldExpression></textField>
+            <textField pattern="#,##0.00"><reportElement x="210" y="0" width="100" height="25"/><textFieldExpression><![CDATA[$F{amount}]]></textFieldExpression></textField>
+            <textField><reportElement x="310" y="0" width="90"  height="25"/><textFieldExpression><![CDATA[$F{payment_status}]]></textFieldExpression></textField>
+            <textField><reportElement x="400" y="0" width="140" height="25"/><textFieldExpression><![CDATA[$F{payment_time}]]></textFieldExpression></textField>
+            <textField><reportElement x="540" y="0" width="130" height="25"/><textFieldExpression><![CDATA[$F{mpesa_receipt}]]></textFieldExpression></textField>
+            <textField><reportElement x="670" y="0" width="132" height="25"/><textFieldExpression><![CDATA[$F{phone_number}]]></textFieldExpression></textField>
+        </band>
+    </detail>
+
+</jasperReport>

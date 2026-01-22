@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport
+        xmlns="http://jasperreports.sourceforge.net/jasperreports"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+        http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+        name="price_override_audit"
+        pageWidth="842"
+        pageHeight="595"
+        orientation="Landscape"
+        columnWidth="802"
+        leftMargin="20"
+        rightMargin="20"
+        topMargin="20"
+        bottomMargin="20">
+
+    <!-- PARAMETERS -->
+    <parameter name="FROM_DATE" class="java.sql.Date"/>
+    <parameter name="TO_DATE" class="java.sql.Date"/>
+
+    <!-- QUERY -->
+    <queryString>
+        <![CDATA[
+        SELECT
+            s.created_at                 AS sale_time,
+            s.id                         AS sale_id,
+            s.created_by                 AS sold_by,
+            sli.product_name             AS product_name,
+            pv.sku                       AS variant_sku,
+            pv.minimum_selling_price     AS minimum_price,
+            sli.unit_price               AS actual_price,
+            sli.quantity                 AS quantity,
+            (sli.unit_price - pv.minimum_selling_price) AS price_difference,
+            CASE
+                WHEN sli.unit_price < pv.minimum_selling_price THEN 'DISCOUNT'
+                WHEN sli.unit_price > pv.minimum_selling_price THEN 'OVERPRICE'
+            END AS override_type
+        FROM sale_line_items sli
+        JOIN sales s
+             ON s.id = sli.sale_id
+        JOIN product_variants pv
+             ON pv.id = sli.product_variant_id
+        WHERE DATE(s.created_at) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+          AND sli.unit_price <> pv.minimum_selling_price
+        ORDER BY s.created_at DESC
+        ]]>
+    </queryString>
+
+    <!-- FIELDS -->
+    <field name="sale_time" class="java.sql.Timestamp"/>
+    <field name="sale_id" class="java.lang.String"/>
+    <field name="sold_by" class="java.lang.String"/>
+    <field name="product_name" class="java.lang.String"/>
+    <field name="variant_sku" class="java.lang.String"/>
+    <field name="minimum_price" class="java.math.BigDecimal"/>
+    <field name="actual_price" class="java.math.BigDecimal"/>
+    <field name="quantity" class="java.lang.Integer"/>
+    <field name="price_difference" class="java.math.BigDecimal"/>
+    <field name="override_type" class="java.lang.String"/>
+
+    <!-- COLUMN HEADER -->
+    <columnHeader>
+        <band height="30">
+            <staticText><reportElement x="0" y="0" width="120" height="30"/><text><![CDATA[Time]]></text></staticText>
+            <staticText><reportElement x="120" y="0" width="120" height="30"/><text><![CDATA[User]]></text></staticText>
+            <staticText><reportElement x="240" y="0" width="160" height="30"/><text><![CDATA[Product]]></text></staticText>
+            <staticText><reportElement x="400" y="0" width="90" height="30"/><text><![CDATA[SKU]]></text></staticText>
+            <staticText><reportElement x="490" y="0" width="80" height="30"/><text><![CDATA[Min]]></text></staticText>
+            <staticText><reportElement x="570" y="0" width="80" height="30"/><text><![CDATA[Sold]]></text></staticText>
+            <staticText><reportElement x="650" y="0" width="70" height="30"/><text><![CDATA[Qty]]></text></staticText>
+            <staticText><reportElement x="720" y="0" width="60" height="30"/><text><![CDATA[Δ]]></text></staticText>
+            <staticText><reportElement x="780" y="0" width="42" height="30"/><text><![CDATA[Type]]></text></staticText>
+        </band>
+    </columnHeader>
+
+    <!-- DETAIL -->
+    <detail>
+        <band height="25">
+            <textField><reportElement x="0" y="0" width="120" height="25"/><textFieldExpression><![CDATA[$F{sale_time}]]></textFieldExpression></textField>
+            <textField><reportElement x="120" y="0" width="120" height="25"/><textFieldExpression><![CDATA[$F{sold_by}]]></textFieldExpression></textField>
+            <textField><reportElement x="240" y="0" width="160" height="25"/><textFieldExpression><![CDATA[$F{product_name}]]></textFieldExpression></textField>
+            <textField><reportElement x="400" y="0" width="90" height="25"/><textFieldExpression><![CDATA[$F{variant_sku}]]></textFieldExpression></textField>
+            <textField><reportElement x="490" y="0" width="80" height="25"/><textFieldExpression><![CDATA[$F{minimum_price}]]></textFieldExpression></textField>
+            <textField><reportElement x="570" y="0" width="80" height="25"/><textFieldExpression><![CDATA[$F{actual_price}]]></textFieldExpression></textField>
+            <textField><reportElement x="650" y="0" width="70" height="25"/><textFieldExpression><![CDATA[$F{quantity}]]></textFieldExpression></textField>
+            <textField><reportElement x="720" y="0" width="60" height="25"/><textFieldExpression><![CDATA[$F{price_difference}]]></textFieldExpression></textField>
+            <textField><reportElement x="780" y="0" width="42" height="25"/><textFieldExpression><![CDATA[$F{override_type}]]></textFieldExpression></textField>
+        </band>
+    </detail>
+
+</jasperReport>

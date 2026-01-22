@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="payments_by_method"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <parameter name="FROM_DATE" class="java.sql.Timestamp"/>
+    <parameter name="TO_DATE" class="java.sql.Timestamp"/>
+
+    <queryString>
+        <![CDATA[
+            SELECT
+                p.method          AS payment_method,
+                COUNT(*)          AS payment_count,
+                SUM(p.amount)     AS total_amount
+            FROM payments p
+            WHERE p.timestamp >= $P{FROM_DATE}
+              AND p.timestamp <  DATE_ADD($P{TO_DATE}, INTERVAL 1 DAY)
+            GROUP BY
+                p.method
+            ORDER BY
+                total_amount DESC
+        ]]>
+    </queryString>
+
+    <field name="payment_method" class="java.lang.String"/>
+    <field name="payment_count" class="java.lang.Long"/>
+    <field name="total_amount" class="java.math.BigDecimal"/>
+
+    <title>
+        <band height="40">
+            <textField>
+                <reportElement x="0" y="0" width="802" height="30"/>
+                <textElement textAlignment="Center">
+                    <font size="15" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["PAYMENTS BY METHOD"]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <columnHeader>
+        <band height="30">
+            <staticText><reportElement x="0" y="0" width="300" height="30"/><text><![CDATA[Method]]></text></staticText>
+            <staticText><reportElement x="300" y="0" width="200" height="30"/><text><![CDATA[Count]]></text></staticText>
+            <staticText><reportElement x="500" y="0" width="302" height="30"/><text><![CDATA[Total Amount]]></text></staticText>
+        </band>
+    </columnHeader>
+
+    <detail>
+        <band height="25">
+            <textField><reportElement x="0" y="0" width="300" height="25"/><textFieldExpression><![CDATA[$F{payment_method}]]></textFieldExpression></textField>
+            <textField><reportElement x="300" y="0" width="200" height="25"/><textFieldExpression><![CDATA[$F{payment_count}]]></textFieldExpression></textField>
+            <textField pattern="#,##0.00"><reportElement x="500" y="0" width="302" height="25"/><textFieldExpression><![CDATA[$F{total_amount}]]></textFieldExpression></textField>
+        </band>
+    </detail>
+
+</jasperReport>

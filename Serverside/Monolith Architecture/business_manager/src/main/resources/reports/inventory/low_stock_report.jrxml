@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="low_stock_report"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <parameter name="THRESHOLD" class="java.lang.Integer"/>
+
+    <queryString>
+        <![CDATA[
+            SELECT
+                p.name AS product_name,
+                pv.sku AS variant_sku,
+                b.name AS branch_name,
+                i.quantity_on_hand,
+                i.quantity_reserved,
+                (i.quantity_on_hand - i.quantity_reserved) AS available_quantity
+            FROM inventory_items i
+            JOIN product_variants pv
+                 ON pv.id = i.product_variant_id
+            JOIN products p
+                 ON p.id = pv.product_id
+            JOIN branches b
+                 ON b.id = i.branch_id
+            WHERE (i.quantity_on_hand - i.quantity_reserved) <= $P{THRESHOLD}
+            ORDER BY available_quantity ASC
+        ]]>
+    </queryString>
+
+    <field name="product_name" class="java.lang.String"/>
+    <field name="variant_sku" class="java.lang.String"/>
+    <field name="branch_name" class="java.lang.String"/>
+    <field name="quantity_on_hand" class="java.lang.Long"/>
+    <field name="quantity_reserved" class="java.lang.Long"/>
+    <field name="available_quantity" class="java.lang.Long"/>
+
+    <title>
+        <band height="40">
+            <textField>
+                <reportElement x="0" y="0" width="802" height="25"/>
+                <textElement textAlignment="Center">
+                    <font size="15" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["LOW STOCK REPORT"]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <detail>
+        <band height="18">
+
+            <textField>
+                <reportElement x="0" y="0" width="260" height="18"/>
+                <textFieldExpression><![CDATA[$F{product_name}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="260" y="0" width="140" height="18"/>
+                <textFieldExpression><![CDATA[$F{variant_sku}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="400" y="0" width="160" height="18"/>
+                <textFieldExpression><![CDATA[$F{branch_name}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="560" y="0" width="80" height="18"/>
+                <textFieldExpression><![CDATA[$F{quantity_on_hand}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="640" y="0" width="80" height="18"/>
+                <textFieldExpression><![CDATA[$F{quantity_reserved}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="720" y="0" width="82" height="18"/>
+                <textFieldExpression><![CDATA[$F{available_quantity}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </detail>
+
+</jasperReport>

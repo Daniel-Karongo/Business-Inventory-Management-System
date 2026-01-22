@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="accounts_payable_summary"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <queryString>
+        <![CDATA[
+            SELECT
+                sup.name AS supplier_name,
+                SUM(
+                    CASE
+                        WHEN le.direction = 'CREDIT' THEN le.amount
+                        WHEN le.direction = 'DEBIT'  THEN -le.amount
+                    END
+                ) AS payable_balance
+            FROM ledger_entries le
+            JOIN accounts a
+                 ON a.id = le.account_id
+            JOIN journal_entries je
+                 ON je.id = le.journal_entry_id
+            LEFT JOIN stock_transactions st
+                 ON st.reference = je.source_id
+            LEFT JOIN suppliers sup
+                 ON sup.id = st.supplier_id
+            WHERE a.code = '2000'
+              AND je.posted = true
+              AND je.reversed = false
+            GROUP BY sup.name
+            HAVING payable_balance > 0
+            ORDER BY payable_balance DESC
+        ]]>
+    </queryString>
+
+    <field name="supplier_name" class="java.lang.String"/>
+    <field name="payable_balance" class="java.math.BigDecimal"/>
+
+    <title>
+        <band height="40">
+            <textField>
+                <reportElement x="0" y="0" width="802" height="25"/>
+                <textElement textAlignment="Center">
+                    <font size="15" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["ACCOUNTS PAYABLE SUMMARY"]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <detail>
+        <band height="18">
+
+            <textField>
+                <reportElement x="0" y="0" width="520" height="18"/>
+                <textFieldExpression><![CDATA[$F{supplier_name}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="520" y="0" width="282" height="18"/>
+                <textFieldExpression><![CDATA[$F{payable_balance}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </detail>
+
+</jasperReport>

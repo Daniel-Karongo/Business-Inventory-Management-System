@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="stock_on_hand"
+              pageWidth="842" pageHeight="595"
+              orientation="Landscape"
+              columnWidth="782"
+              leftMargin="30" rightMargin="30"
+              topMargin="30" bottomMargin="30">
+
+    <!-- PARAMETERS -->
+    <parameter name="BRANCH_ID" class="java.lang.String"/>
+
+    <!-- QUERY -->
+    <queryString>
+        <![CDATA[
+            SELECT
+              b.name                     AS branch_name,
+              p.name                     AS product_name,
+              pv.sku                     AS variant_sku,
+              pv.barcode                 AS barcode,
+              ii.quantity_on_hand        AS quantity_on_hand,
+              ii.quantity_reserved       AS quantity_reserved,
+              (ii.quantity_on_hand - ii.quantity_reserved) AS quantity_available,
+              ii.average_cost            AS average_cost,
+              (ii.quantity_on_hand * ii.average_cost) AS valuation
+            FROM inventory_items ii
+            JOIN branches b          ON b.id = ii.branch_id
+            JOIN product_variants pv ON pv.id = ii.product_variant_id
+            JOIN products p          ON p.id = pv.product_id
+            WHERE ii.branch_id = UUID_TO_BIN($P{BRANCH_ID})
+            ORDER BY p.name, pv.sku
+        ]]>
+    </queryString>
+
+    <!-- FIELDS -->
+    <field name="branch_name" class="java.lang.String"/>
+    <field name="product_name" class="java.lang.String"/>
+    <field name="variant_sku" class="java.lang.String"/>
+    <field name="barcode" class="java.lang.String"/>
+    <field name="quantity_on_hand" class="java.lang.Long"/>
+    <field name="quantity_reserved" class="java.lang.Long"/>
+    <field name="quantity_available" class="java.lang.Long"/>
+    <field name="average_cost" class="java.math.BigDecimal"/>
+    <field name="valuation" class="java.math.BigDecimal"/>
+
+    <!-- TITLE -->
+    <title>
+        <band height="40">
+            <textField>
+                <reportElement x="0" y="0" width="782" height="20"/>
+                <textElement textAlignment="Center">
+                    <font size="16" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["STOCK ON HAND"]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="0" y="22" width="782" height="14"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA["Branch ID: " + $P{BRANCH_ID}]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <!-- COLUMN HEADER -->
+    <columnHeader>
+        <band height="18">
+            <staticText><reportElement x="0" y="0" width="140" height="18"/><text><![CDATA[Product]]></text></staticText>
+            <staticText><reportElement x="140" y="0" width="120" height="18"/><text><![CDATA[SKU]]></text></staticText>
+            <staticText><reportElement x="260" y="0" width="120" height="18"/><text><![CDATA[Barcode]]></text></staticText>
+            <staticText><reportElement x="380" y="0" width="70" height="18"/><text><![CDATA[On Hand]]></text></staticText>
+            <staticText><reportElement x="450" y="0" width="80" height="18"/><text><![CDATA[Reserved]]></text></staticText>
+            <staticText><reportElement x="530" y="0" width="90" height="18"/><text><![CDATA[Available]]></text></staticText>
+            <staticText><reportElement x="620" y="0" width="80" height="18"/><text><![CDATA[Avg Cost]]></text></staticText>
+            <staticText><reportElement x="700" y="0" width="82" height="18"/><text><![CDATA[Valuation]]></text></staticText>
+        </band>
+    </columnHeader>
+
+    <!-- DETAIL -->
+    <detail>
+        <band height="16">
+            <textField><reportElement x="0" y="0" width="140" height="16"/><textFieldExpression><![CDATA[$F{product_name}]]></textFieldExpression></textField>
+            <textField><reportElement x="140" y="0" width="120" height="16"/><textFieldExpression><![CDATA[$F{variant_sku}]]></textFieldExpression></textField>
+            <textField><reportElement x="260" y="0" width="120" height="16"/><textFieldExpression><![CDATA[$F{barcode}]]></textFieldExpression></textField>
+            <textField><reportElement x="380" y="0" width="70" height="16"/><textFieldExpression><![CDATA[$F{quantity_on_hand}]]></textFieldExpression></textField>
+            <textField><reportElement x="450" y="0" width="80" height="16"/><textFieldExpression><![CDATA[$F{quantity_reserved}]]></textFieldExpression></textField>
+            <textField><reportElement x="530" y="0" width="90" height="16"/><textFieldExpression><![CDATA[$F{quantity_available}]]></textFieldExpression></textField>
+            <textField pattern="#,##0.00"><reportElement x="620" y="0" width="80" height="16"/><textFieldExpression><![CDATA[$F{average_cost}]]></textFieldExpression></textField>
+            <textField pattern="#,##0.00"><reportElement x="700" y="0" width="82" height="16"/><textFieldExpression><![CDATA[$F{valuation}]]></textFieldExpression></textField>
+        </band>
+    </detail>
+</jasperReport>

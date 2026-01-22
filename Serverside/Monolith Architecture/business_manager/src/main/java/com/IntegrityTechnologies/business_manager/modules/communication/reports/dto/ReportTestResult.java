@@ -1,12 +1,12 @@
 package com.IntegrityTechnologies.business_manager.modules.communication.reports.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
-import java.util.Map;
-
 @Data
-public class ReportRequest {
+@AllArgsConstructor
+public class ReportTestResult {
     private String reportName;
-    private Map<String, Object> parameters;
-    private ReportFormat format; // optional
+    private boolean success;
+    private String message;
 }

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="inactive_customers"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <!-- PARAMETERS -->
+    <parameter name="FROM_DATE" class="java.lang.String"/>
+    <parameter name="TO_DATE" class="java.lang.String"/>
+
+    <!-- QUERY -->
+    <queryString>
+        <![CDATA[
+            SELECT
+                c.name AS customer_name
+            FROM customers c
+            LEFT JOIN sales s
+                   ON s.customer_id = c.id
+                  AND DATE(s.created_at) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+            LEFT JOIN payments p
+                   ON p.sale_id = s.id
+                  AND p.status = 'SUCCESS'
+                  AND DATE(p.timestamp) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+            WHERE c.deleted = false
+            GROUP BY c.name
+            HAVING COUNT(s.id) = 0
+               AND COUNT(p.id) = 0
+            ORDER BY c.name
+        ]]>
+    </queryString>
+
+    <!-- FIELDS -->
+    <field name="customer_name" class="java.lang.String"/>
+
+    <!-- TITLE -->
+    <title>
+        <band height="40">
+            <textField>
+                <reportElement x="0" y="0" width="802" height="25"/>
+                <textElement textAlignment="Center">
+                    <font size="15" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["INACTIVE CUSTOMERS"]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <!-- DETAIL -->
+    <detail>
+        <band height="18">
+            <textField>
+                <reportElement x="0" y="0" width="802" height="18"/>
+                <textFieldExpression><![CDATA[$F{customer_name}]]></textFieldExpression>
+            </textField>
+        </band>
+    </detail>
+
+</jasperReport>

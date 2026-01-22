@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="accounts_receivable_summary"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <parameter name="FROM_DATE" class="java.lang.String"/>
+    <parameter name="TO_DATE" class="java.lang.String"/>
+
+    <queryString>
+        <![CDATA[
+            SELECT
+                c.name                         AS customer_name,
+                IFNULL(SUM(s.total_amount),0) AS total_sales,
+                IFNULL(SUM(p.amount),0)       AS total_payments,
+                IFNULL(SUM(s.total_amount),0)
+                  - IFNULL(SUM(p.amount),0)   AS receivable_balance
+            FROM customers c
+            LEFT JOIN sales s
+                   ON s.customer_id = c.id
+                  AND s.status IN ('COMPLETED','REFUNDED')
+                  AND DATE(s.created_at) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+            LEFT JOIN payments p
+                   ON p.sale_id = s.id
+                  AND p.status = 'SUCCESS'
+                  AND DATE(p.timestamp) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+            WHERE c.deleted = false
+            GROUP BY c.name
+            HAVING receivable_balance > 0
+            ORDER BY receivable_balance DESC
+        ]]>
+    </queryString>
+
+    <field name="customer_name" class="java.lang.String"/>
+    <field name="total_sales" class="java.math.BigDecimal"/>
+    <field name="total_payments" class="java.math.BigDecimal"/>
+    <field name="receivable_balance" class="java.math.BigDecimal"/>
+
+    <title>
+        <band height="40">
+            <textField>
+                <reportElement x="0" y="0" width="802" height="25"/>
+                <textElement textAlignment="Center">
+                    <font size="15" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["ACCOUNTS RECEIVABLE SUMMARY"]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <detail>
+        <band height="18">
+
+            <textField>
+                <reportElement x="0" y="0" width="260" height="18"/>
+                <textFieldExpression><![CDATA[$F{customer_name}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="260" y="0" width="180" height="18"/>
+                <textFieldExpression><![CDATA[$F{total_sales}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="440" y="0" width="180" height="18"/>
+                <textFieldExpression><![CDATA[$F{total_payments}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="620" y="0" width="182" height="18"/>
+                <textFieldExpression><![CDATA[$F{receivable_balance}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </detail>
+
+</jasperReport>

@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.modules.person.entity.user.model;
+package com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto;
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.UserDTO;
 import lombok.Data;

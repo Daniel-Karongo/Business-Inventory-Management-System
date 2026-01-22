@@ -1,78 +1,123 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Minimal sales summary JRXML -->
 <jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
               http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
               name="sales_summary"
-              pageWidth="595" pageHeight="842" columnWidth="515"
-              leftMargin="40" rightMargin="40" topMargin="50" bottomMargin="50" uuid="550e8400-e29b-41d4-a716-446655440000
-">
-    <parameter name="REPORT_TITLE" class="java.lang.String"/>
+              pageWidth="595"
+              pageHeight="842"
+              columnWidth="515"
+              leftMargin="40"
+              rightMargin="40"
+              topMargin="40"
+              bottomMargin="40">
+
+    <!-- PARAMETERS -->
     <parameter name="FROM_DATE" class="java.lang.String"/>
     <parameter name="TO_DATE" class="java.lang.String"/>
-    <field name="productName" class="java.lang.String"/>
-    <field name="quantitySold" class="java.lang.Long"/>
-    <field name="totalSales" class="java.math.BigDecimal"/>
+
+    <!-- QUERY -->
+    <queryString>
+        <![CDATA[
+        SELECT
+            sli.product_name               AS product_name,
+            SUM(sli.quantity)              AS quantity_sold,
+            SUM(sli.line_total)            AS total_sales
+        FROM sales s
+        JOIN sale_line_items sli
+             ON sli.sale_id = s.id
+        WHERE DATE(s.created_at) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+          AND s.status = 'COMPLETED'
+        GROUP BY sli.product_name
+        ORDER BY total_sales DESC
+    ]]>
+    </queryString>
+
+    <!-- FIELDS -->
+    <field name="product_name" class="java.lang.String"/>
+    <field name="quantity_sold" class="java.lang.Long"/>
+    <field name="total_sales" class="java.math.BigDecimal"/>
+
+    <!-- VARIABLES -->
+    <variable name="total_sales_SUM"
+              class="java.math.BigDecimal"
+              calculation="Sum">
+        <variableExpression><![CDATA[$F{total_sales}]]></variableExpression>
+    </variable>
+
+    <!-- TITLE -->
     <title>
-        <band height="60">
-            <staticText>
-                <reportElement x="0" y="0" width="515" height="20"/>
-                <textElement textAlignment="Center" verticalAlignment="Middle">
-                    <font size="14" isBold="true"/>
-                </textElement>
-                <text><![CDATA[$P{REPORT_TITLE}]]></text>
-            </staticText>
+        <band height="50">
             <textField>
-                <reportElement x="0" y="22" width="515" height="18"/>
+                <reportElement x="0" y="0" width="515" height="22"/>
                 <textElement textAlignment="Center">
-                    <font size="10"/>
+                    <font size="15" isBold="true"/>
                 </textElement>
-                <textFieldExpression><![CDATA["From: " + $P{FROM_DATE} + "  To: " + $P{TO_DATE}]]></textFieldExpression>
+                <textFieldExpression><![CDATA["SALES SUMMARY"]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="26" width="515" height="14"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA[
+                    "Period: " + $P{FROM_DATE} + " to " + $P{TO_DATE}
+                ]]></textFieldExpression>
             </textField>
         </band>
     </title>
+
+    <!-- COLUMN HEADER -->
     <columnHeader>
         <band height="18">
             <staticText>
                 <reportElement x="0" y="0" width="260" height="18"/>
-                <textElement><font isBold="true"/></textElement>
                 <text><![CDATA[Product]]></text>
             </staticText>
+
             <staticText>
-                <reportElement x="260" y="0" width="125" height="18"/>
-                <textElement><font isBold="true"/></textElement>
+                <reportElement x="260" y="0" width="100" height="18"/>
                 <text><![CDATA[Qty Sold]]></text>
             </staticText>
+
             <staticText>
-                <reportElement x="385" y="0" width="130" height="18"/>
-                <textElement><font isBold="true"/></textElement>
-                <text><![CDATA[Total (KES)]]></text>
+                <reportElement x="360" y="0" width="155" height="18"/>
+                <text><![CDATA[Total Sales (KES)]]></text>
             </staticText>
         </band>
     </columnHeader>
+
+    <!-- DETAIL -->
     <detail>
         <band height="16">
             <textField>
                 <reportElement x="0" y="0" width="260" height="16"/>
-                <textFieldExpression><![CDATA[$F{productName}]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$F{product_name}]]></textFieldExpression>
             </textField>
+
             <textField>
-                <reportElement x="260" y="0" width="125" height="16"/>
-                <textFieldExpression><![CDATA[$F{quantitySold}]]></textFieldExpression>
+                <reportElement x="260" y="0" width="100" height="16"/>
+                <textFieldExpression><![CDATA[$F{quantity_sold}]]></textFieldExpression>
             </textField>
+
             <textField pattern="#,##0.00">
-                <reportElement x="385" y="0" width="130" height="16"/>
-                <textFieldExpression><![CDATA[$F{totalSales}]]></textFieldExpression>
+                <reportElement x="360" y="0" width="155" height="16"/>
+                <textFieldExpression><![CDATA[$F{total_sales}]]></textFieldExpression>
             </textField>
         </band>
     </detail>
+
+    <!-- SUMMARY -->
     <summary>
-        <band height="30">
-            <staticText>
-                <reportElement x="0" y="5" width="260" height="18"/>
-                <text><![CDATA[Report generated by Business Inventory Management System]]></text>
-            </staticText>
+        <band height="24">
+            <textField pattern="#,##0.00">
+                <reportElement x="360" y="4" width="155" height="18"/>
+                <textElement textAlignment="Right">
+                    <font isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[
+                    "TOTAL: " + $V{total_sales_SUM}
+                ]]></textFieldExpression>
+            </textField>
         </band>
     </summary>
 </jasperReport>

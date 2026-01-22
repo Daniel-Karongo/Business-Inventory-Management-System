@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="customer_sales_history_single"
+              pageWidth="595"
+              pageHeight="842"
+              columnWidth="555"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <!-- PARAMETERS -->
+    <parameter name="CUSTOMER_ID" class="java.lang.String"/>
+
+    <!-- QUERY -->
+    <queryString>
+        <![CDATA[
+            SELECT
+                s.id             AS sale_id,
+                s.created_at     AS sale_date,
+                s.created_by     AS created_by,
+                s.total_amount   AS total_amount,
+                s.total_tax      AS total_tax,
+                s.total_discount AS total_discount,
+                s.status         AS status
+            FROM sales s
+            WHERE s.customer_id = UNHEX(REPLACE($P{CUSTOMER_ID}, '-', ''))
+            ORDER BY s.created_at DESC
+        ]]>
+    </queryString>
+
+    <!-- FIELDS -->
+    <field name="sale_id" class="java.lang.String"/>
+    <field name="sale_date" class="java.sql.Timestamp"/>
+    <field name="created_by" class="java.lang.String"/>
+    <field name="total_amount" class="java.math.BigDecimal"/>
+    <field name="total_tax" class="java.math.BigDecimal"/>
+    <field name="total_discount" class="java.math.BigDecimal"/>
+    <field name="status" class="java.lang.String"/>
+
+    <!-- TITLE -->
+    <title>
+        <band height="40">
+            <textField>
+                <reportElement x="0" y="0" width="555" height="25"/>
+                <textElement textAlignment="Center">
+                    <font size="15" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["CUSTOMER SALES HISTORY"]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <!-- COLUMN HEADER -->
+    <columnHeader>
+        <band height="20">
+            <staticText><reportElement x="0" y="0" width="95" height="20"/><text><![CDATA[Date]]></text></staticText>
+            <staticText><reportElement x="95" y="0" width="80" height="20"/><text><![CDATA[Sale ID]]></text></staticText>
+            <staticText><reportElement x="175" y="0" width="80" height="20"/><text><![CDATA[Status]]></text></staticText>
+            <staticText><reportElement x="255" y="0" width="80" height="20"/><text><![CDATA[Total]]></text></staticText>
+            <staticText><reportElement x="335" y="0" width="70" height="20"/><text><![CDATA[Tax]]></text></staticText>
+            <staticText><reportElement x="405" y="0" width="90" height="20"/><text><![CDATA[Discount]]></text></staticText>
+        </band>
+    </columnHeader>
+
+    <!-- DETAIL -->
+    <detail>
+        <band height="18">
+
+            <textField>
+                <reportElement x="0" y="0" width="95" height="18"/>
+                <textFieldExpression><![CDATA[$F{sale_date}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="95" y="0" width="80" height="18"/>
+                <textFieldExpression><![CDATA[$F{sale_id}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="175" y="0" width="80" height="18"/>
+                <textFieldExpression><![CDATA[$F{status}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="255" y="0" width="80" height="18"/>
+                <textFieldExpression><![CDATA[$F{total_amount}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="335" y="0" width="70" height="18"/>
+                <textFieldExpression><![CDATA[$F{total_tax}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="405" y="0" width="90" height="18"/>
+                <textFieldExpression><![CDATA[$F{total_discount}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </detail>
+
+</jasperReport>

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport
+        xmlns="http://jasperreports.sourceforge.net/jasperreports"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+        http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+        name="inventory_audit_trail"
+        pageWidth="842"
+        pageHeight="595"
+        orientation="Landscape"
+        columnWidth="802"
+        leftMargin="20"
+        rightMargin="20"
+        topMargin="20"
+        bottomMargin="20">
+
+    <!-- PARAMETERS -->
+    <parameter name="FROM_DATE" class="java.sql.Date"/>
+    <parameter name="TO_DATE" class="java.sql.Date"/>
+
+    <!-- QUERY -->
+    <queryString>
+        <![CDATA[
+        SELECT
+            st.timestamp          AS activity_time,
+            st.performed_by       AS performed_by,
+            st.type               AS transaction_type,
+            st.product_id         AS product_id,
+            st.product_variant_id AS product_variant_id,
+            st.branch_id          AS branch_id,
+            st.quantity_delta     AS quantity_delta,
+            st.unit_cost          AS unit_cost,
+            st.reference          AS reference,
+            st.note               AS note
+        FROM stock_transactions st
+        WHERE DATE(st.timestamp) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+        ORDER BY st.timestamp DESC
+        ]]>
+    </queryString>
+
+    <!-- FIELDS -->
+    <field name="activity_time" class="java.sql.Timestamp"/>
+    <field name="performed_by" class="java.lang.String"/>
+    <field name="transaction_type" class="java.lang.String"/>
+    <field name="product_id" class="java.lang.String"/>
+    <field name="product_variant_id" class="java.lang.String"/>
+    <field name="branch_id" class="java.lang.String"/>
+    <field name="quantity_delta" class="java.lang.Long"/>
+    <field name="unit_cost" class="java.math.BigDecimal"/>
+    <field name="reference" class="java.lang.String"/>
+    <field name="note" class="java.lang.String"/>
+
+    <!-- COLUMN HEADER -->
+    <columnHeader>
+        <band height="30">
+            <staticText><reportElement x="0"   y="0" width="110" height="30"/><text><![CDATA[Time]]></text></staticText>
+            <staticText><reportElement x="110" y="0" width="90"  height="30"/><text><![CDATA[User]]></text></staticText>
+            <staticText><reportElement x="200" y="0" width="90"  height="30"/><text><![CDATA[Type]]></text></staticText>
+            <staticText><reportElement x="290" y="0" width="120" height="30"/><text><![CDATA[Product ID]]></text></staticText>
+            <staticText><reportElement x="410" y="0" width="120" height="30"/><text><![CDATA[Variant ID]]></text></staticText>
+            <staticText><reportElement x="530" y="0" width="90"  height="30"/><text><![CDATA[Qty Δ]]></text></staticText>
+            <staticText><reportElement x="620" y="0" width="80"  height="30"/><text><![CDATA[Unit Cost]]></text></staticText>
+            <staticText><reportElement x="700" y="0" width="102" height="30"/><text><![CDATA[Ref]]></text></staticText>
+        </band>
+    </columnHeader>
+
+    <!-- DETAIL -->
+    <detail>
+        <band height="25">
+            <textField><reportElement x="0"   y="0" width="110" height="25"/><textFieldExpression><![CDATA[$F{activity_time}]]></textFieldExpression></textField>
+            <textField><reportElement x="110" y="0" width="90"  height="25"/><textFieldExpression><![CDATA[$F{performed_by}]]></textFieldExpression></textField>
+            <textField><reportElement x="200" y="0" width="90"  height="25"/><textFieldExpression><![CDATA[$F{transaction_type}]]></textFieldExpression></textField>
+            <textField><reportElement x="290" y="0" width="120" height="25"/><textFieldExpression><![CDATA[$F{product_id}]]></textFieldExpression></textField>
+            <textField><reportElement x="410" y="0" width="120" height="25"/><textFieldExpression><![CDATA[$F{product_variant_id}]]></textFieldExpression></textField>
+            <textField><reportElement x="530" y="0" width="90"  height="25"/><textFieldExpression><![CDATA[$F{quantity_delta}]]></textFieldExpression></textField>
+            <textField><reportElement x="620" y="0" width="80"  height="25"/><textFieldExpression><![CDATA[$F{unit_cost}]]></textFieldExpression></textField>
+            <textField><reportElement x="700" y="0" width="102" height="25"/><textFieldExpression><![CDATA[$F{reference}]]></textFieldExpression></textField>
+        </band>
+    </detail>
+
+</jasperReport>

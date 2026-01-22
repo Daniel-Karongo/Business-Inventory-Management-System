@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="customer_payment_history"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <!-- PARAMETERS -->
+    <parameter name="FROM_DATE" class="java.lang.String"/>
+    <parameter name="TO_DATE" class="java.lang.String"/>
+
+    <!-- QUERY -->
+    <queryString>
+        <![CDATA[
+            SELECT
+                p.timestamp        AS payment_date,
+                c.name             AS customer_name,
+                p.amount           AS amount,
+                p.method           AS method,
+                p.transaction_code AS transaction_code,
+                p.status           AS payment_status
+            FROM payments p
+            JOIN sales s
+                 ON s.id = p.sale_id
+            JOIN customers c
+                 ON c.id = s.customer_id
+            WHERE c.deleted = false
+              AND p.status = 'SUCCESS'
+              AND DATE(p.timestamp) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+            ORDER BY p.timestamp DESC
+        ]]>
+    </queryString>
+
+    <!-- FIELDS -->
+    <field name="payment_date" class="java.sql.Timestamp"/>
+    <field name="customer_name" class="java.lang.String"/>
+    <field name="amount" class="java.math.BigDecimal"/>
+    <field name="method" class="java.lang.String"/>
+    <field name="transaction_code" class="java.lang.String"/>
+    <field name="payment_status" class="java.lang.String"/>
+
+    <!-- TITLE -->
+    <title>
+        <band height="40">
+            <textField>
+                <reportElement x="0" y="0" width="802" height="25"/>
+                <textElement textAlignment="Center">
+                    <font size="15" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["CUSTOMER PAYMENT HISTORY"]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <!-- DETAIL -->
+    <detail>
+        <band height="16">
+
+            <textField>
+                <reportElement x="0" y="0" width="120" height="16"/>
+                <textFieldExpression><![CDATA[$F{payment_date}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="120" y="0" width="220" height="16"/>
+                <textFieldExpression><![CDATA[$F{customer_name}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="340" y="0" width="110" height="16"/>
+                <textFieldExpression><![CDATA[$F{amount}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="450" y="0" width="90" height="16"/>
+                <textFieldExpression><![CDATA[$F{method}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="540" y="0" width="160" height="16"/>
+                <textFieldExpression><![CDATA[$F{transaction_code}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="700" y="0" width="100" height="16"/>
+                <textFieldExpression><![CDATA[$F{payment_status}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </detail>
+
+</jasperReport>

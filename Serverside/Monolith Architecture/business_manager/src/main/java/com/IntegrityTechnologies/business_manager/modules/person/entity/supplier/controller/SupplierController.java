@@ -2,10 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.supplie
 
 import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.common.PageWrapper;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierCreateDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierImageDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierUpdateDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierImageAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierAuditRepository;
@@ -22,13 +19,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 @Tag(name = "Suppliers")

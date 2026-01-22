@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport
+        xmlns="http://jasperreports.sourceforge.net/jasperreports"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+        http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+        name="financial_audit_log"
+        pageWidth="842"
+        pageHeight="595"
+        orientation="Landscape"
+        columnWidth="802"
+        leftMargin="20"
+        rightMargin="20"
+        topMargin="20"
+        bottomMargin="20">
+
+    <!-- PARAMETERS -->
+    <parameter name="FROM_DATE" class="java.sql.Date"/>
+    <parameter name="TO_DATE" class="java.sql.Date"/>
+
+    <!-- QUERY -->
+    <queryString>
+        <![CDATA[
+        SELECT
+            je.posted_at           AS activity_time,
+            je.posted_by           AS performed_by,
+            je.reference           AS reference,
+            je.source_module       AS source_module,
+            a.code                 AS account_code,
+            a.name                 AS account_name,
+            le.direction           AS entry_direction,
+            le.amount              AS amount,
+            je.reversed            AS reversed,
+            je.reversal_journal_id AS reversal_journal_id
+        FROM journal_entries je
+        JOIN ledger_entries le
+             ON le.journal_entry_id = je.id
+        JOIN accounts a
+             ON a.id = le.account_id
+        WHERE je.posted = true
+          AND DATE(je.posted_at) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+        ORDER BY je.posted_at DESC
+        ]]>
+    </queryString>
+
+    <!-- FIELDS -->
+    <field name="activity_time" class="java.sql.Timestamp"/>
+    <field name="performed_by" class="java.lang.String"/>
+    <field name="reference" class="java.lang.String"/>
+    <field name="source_module" class="java.lang.String"/>
+    <field name="account_code" class="java.lang.String"/>
+    <field name="account_name" class="java.lang.String"/>
+    <field name="entry_direction" class="java.lang.String"/>
+    <field name="amount" class="java.math.BigDecimal"/>
+    <field name="reversed" class="java.lang.Boolean"/>
+    <field name="reversal_journal_id" class="java.lang.String"/>
+
+    <!-- COLUMN HEADER -->
+    <columnHeader>
+        <band height="30">
+            <staticText><reportElement x="0"   y="0" width="110" height="30"/><text><![CDATA[Time]]></text></staticText>
+            <staticText><reportElement x="110" y="0" width="90"  height="30"/><text><![CDATA[User]]></text></staticText>
+            <staticText><reportElement x="200" y="0" width="110" height="30"/><text><![CDATA[Reference]]></text></staticText>
+            <staticText><reportElement x="310" y="0" width="90"  height="30"/><text><![CDATA[Module]]></text></staticText>
+            <staticText><reportElement x="400" y="0" width="80"  height="30"/><text><![CDATA[Acct]]></text></staticText>
+            <staticText><reportElement x="480" y="0" width="140" height="30"/><text><![CDATA[Account Name]]></text></staticText>
+            <staticText><reportElement x="620" y="0" width="60"  height="30"/><text><![CDATA[DR/CR]]></text></staticText>
+            <staticText><reportElement x="680" y="0" width="80"  height="30"/><text><![CDATA[Amount]]></text></staticText>
+            <staticText><reportElement x="760" y="0" width="42"  height="30"/><text><![CDATA[Rev]]></text></staticText>
+        </band>
+    </columnHeader>
+
+    <!-- DETAIL -->
+    <detail>
+        <band height="25">
+            <textField><reportElement x="0"   y="0" width="110" height="25"/><textFieldExpression><![CDATA[$F{activity_time}]]></textFieldExpression></textField>
+            <textField><reportElement x="110" y="0" width="90"  height="25"/><textFieldExpression><![CDATA[$F{performed_by}]]></textFieldExpression></textField>
+            <textField><reportElement x="200" y="0" width="110" height="25"/><textFieldExpression><![CDATA[$F{reference}]]></textFieldExpression></textField>
+            <textField><reportElement x="310" y="0" width="90"  height="25"/><textFieldExpression><![CDATA[$F{source_module}]]></textFieldExpression></textField>
+            <textField><reportElement x="400" y="0" width="80"  height="25"/><textFieldExpression><![CDATA[$F{account_code}]]></textFieldExpression></textField>
+            <textField><reportElement x="480" y="0" width="140" height="25"/><textFieldExpression><![CDATA[$F{account_name}]]></textFieldExpression></textField>
+            <textField><reportElement x="620" y="0" width="60"  height="25"/><textFieldExpression><![CDATA[$F{entry_direction}]]></textFieldExpression></textField>
+            <textField><reportElement x="680" y="0" width="80"  height="25"/><textFieldExpression><![CDATA[$F{amount}]]></textFieldExpression></textField>
+            <textField><reportElement x="760" y="0" width="42"  height="25"/><textFieldExpression><![CDATA[$F{reversed}]]></textFieldExpression></textField>
+        </band>
+    </detail>
+
+</jasperReport>

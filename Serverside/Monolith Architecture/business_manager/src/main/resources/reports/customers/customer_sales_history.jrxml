@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="customer_sales_history"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <parameter name="FROM_DATE" class="java.lang.String"/>
+    <parameter name="TO_DATE" class="java.lang.String"/>
+
+    <queryString>
+        <![CDATA[
+            SELECT
+                s.id                 AS sale_id,
+                s.created_at         AS sale_date,
+                c.name               AS customer_name,
+                s.total_amount       AS total_amount,
+                s.total_tax          AS total_tax,
+                s.total_discount     AS total_discount,
+                s.status             AS sale_status
+            FROM sales s
+            JOIN customers c
+                 ON c.id = s.customer_id
+            WHERE c.deleted = false
+              AND s.status IN ('COMPLETED', 'REFUNDED')
+              AND DATE(s.created_at) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+            ORDER BY s.created_at DESC
+        ]]>
+    </queryString>
+
+    <field name="sale_date" class="java.sql.Timestamp"/>
+    <field name="customer_name" class="java.lang.String"/>
+    <field name="total_amount" class="java.math.BigDecimal"/>
+    <field name="total_tax" class="java.math.BigDecimal"/>
+    <field name="total_discount" class="java.math.BigDecimal"/>
+    <field name="sale_status" class="java.lang.String"/>
+
+    <title>
+        <band height="40">
+            <textField>
+                <reportElement x="0" y="0" width="802" height="25"/>
+                <textElement textAlignment="Center">
+                    <font size="15" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["CUSTOMER SALES HISTORY"]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <detail>
+        <band height="16">
+
+            <textField>
+                <reportElement x="0" y="0" width="140" height="16"/>
+                <textFieldExpression><![CDATA[$F{sale_date}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="140" y="0" width="200" height="16"/>
+                <textFieldExpression><![CDATA[$F{customer_name}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="340" y="0" width="120" height="16"/>
+                <textFieldExpression><![CDATA[$F{total_amount}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="460" y="0" width="100" height="16"/>
+                <textFieldExpression><![CDATA[$F{total_tax}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="560" y="0" width="100" height="16"/>
+                <textFieldExpression><![CDATA[$F{total_discount}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="660" y="0" width="140" height="16"/>
+                <textFieldExpression><![CDATA[$F{sale_status}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </detail>
+
+</jasperReport>

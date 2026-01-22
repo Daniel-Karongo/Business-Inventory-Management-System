@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="mpesa_transactions_report"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <parameter name="FROM_DATE" class="java.sql.Timestamp"/>
+    <parameter name="TO_DATE" class="java.sql.Timestamp"/>
+
+    <queryString>
+        <![CDATA[
+            SELECT
+                mt.mpesa_receipt_number   AS mpesa_receipt,
+                mt.amount                AS amount,
+                mt.phone_number           AS phone_number,
+                mt.checkout_request_id    AS checkout_request_id,
+                mt.merchant_request_id    AS merchant_request_id,
+                mt.status                AS status,
+                mt.timestamp             AS payment_date
+            FROM mpesa_transactions mt
+            WHERE mt.timestamp >= $P{FROM_DATE}
+              AND mt.timestamp <  DATE_ADD($P{TO_DATE}, INTERVAL 1 DAY)
+            ORDER BY mt.timestamp DESC
+        ]]>
+    </queryString>
+
+    <field name="mpesa_receipt" class="java.lang.String"/>
+    <field name="amount" class="java.math.BigDecimal"/>
+    <field name="phone_number" class="java.lang.String"/>
+    <field name="checkout_request_id" class="java.lang.String"/>
+    <field name="merchant_request_id" class="java.lang.String"/>
+    <field name="status" class="java.lang.String"/>
+    <field name="payment_date" class="java.sql.Timestamp"/>
+
+    <columnHeader>
+        <band height="30">
+            <staticText><reportElement x="0"   y="0" width="120" height="30"/><text><![CDATA[Receipt]]></text></staticText>
+            <staticText><reportElement x="120" y="0" width="100" height="30"/><text><![CDATA[Amount]]></text></staticText>
+            <staticText><reportElement x="220" y="0" width="120" height="30"/><text><![CDATA[Phone]]></text></staticText>
+            <staticText><reportElement x="340" y="0" width="160" height="30"/><text><![CDATA[Checkout ID]]></text></staticText>
+            <staticText><reportElement x="500" y="0" width="160" height="30"/><text><![CDATA[Merchant ID]]></text></staticText>
+            <staticText><reportElement x="660" y="0" width="70"  height="30"/><text><![CDATA[Status]]></text></staticText>
+            <staticText><reportElement x="730" y="0" width="72"  height="30"/><text><![CDATA[Date]]></text></staticText>
+        </band>
+    </columnHeader>
+
+    <detail>
+        <band height="25">
+            <textField><reportElement x="0"   y="0" width="120" height="25"/><textFieldExpression><![CDATA[$F{mpesa_receipt}]]></textFieldExpression></textField>
+            <textField pattern="#,##0.00"><reportElement x="120" y="0" width="100" height="25"/><textFieldExpression><![CDATA[$F{amount}]]></textFieldExpression></textField>
+            <textField><reportElement x="220" y="0" width="120" height="25"/><textFieldExpression><![CDATA[$F{phone_number}]]></textFieldExpression></textField>
+            <textField><reportElement x="340" y="0" width="160" height="25"/><textFieldExpression><![CDATA[$F{checkout_request_id}]]></textFieldExpression></textField>
+            <textField><reportElement x="500" y="0" width="160" height="25"/><textFieldExpression><![CDATA[$F{merchant_request_id}]]></textFieldExpression></textField>
+            <textField><reportElement x="660" y="0" width="70"  height="25"/><textFieldExpression><![CDATA[$F{status}]]></textFieldExpression></textField>
+            <textField><reportElement x="730" y="0" width="72"  height="25"/><textFieldExpression><![CDATA[$F{payment_date}]]></textFieldExpression></textField>
+        </band>
+    </detail>
+
+</jasperReport>

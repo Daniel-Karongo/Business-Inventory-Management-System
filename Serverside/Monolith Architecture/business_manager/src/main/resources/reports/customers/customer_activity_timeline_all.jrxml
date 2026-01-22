@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="customer_activity_timeline_all"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <!-- PARAMETERS -->
+    <parameter name="FROM_DATE" class="java.lang.String"/>
+    <parameter name="TO_DATE" class="java.lang.String"/>
+
+    <!-- QUERY -->
+    <queryString>
+        <![CDATA[
+            SELECT
+                c.id            AS customer_id,
+                c.name          AS customer_name,
+                'SALE'          AS activity_type,
+                s.id            AS reference_id,
+                s.created_at    AS activity_date,
+                s.status        AS status,
+                s.total_amount  AS amount,
+                NULL            AS method,
+                NULL            AS note
+            FROM customers c
+            JOIN sales s
+                 ON s.customer_id = c.id
+            WHERE c.deleted = false
+              AND DATE(s.created_at) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+
+            UNION ALL
+
+            SELECT
+                c.id            AS customer_id,
+                c.name          AS customer_name,
+                'PAYMENT'       AS activity_type,
+                p.id            AS reference_id,
+                p.timestamp     AS activity_date,
+                p.status        AS status,
+                p.amount        AS amount,
+                p.method        AS method,
+                p.note          AS note
+            FROM payments p
+            JOIN sales s ON s.id = p.sale_id
+            JOIN customers c ON c.id = s.customer_id
+            WHERE c.deleted = false
+              AND p.status = 'SUCCESS'
+              AND DATE(p.timestamp) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+
+            ORDER BY customer_name, activity_date DESC
+        ]]>
+    </queryString>
+
+    <!-- FIELDS -->
+    <field name="customer_id" class="java.lang.String"/>
+    <field name="customer_name" class="java.lang.String"/>
+    <field name="activity_type" class="java.lang.String"/>
+    <field name="reference_id" class="java.lang.String"/>
+    <field name="activity_date" class="java.sql.Timestamp"/>
+    <field name="status" class="java.lang.String"/>
+    <field name="amount" class="java.math.BigDecimal"/>
+    <field name="method" class="java.lang.String"/>
+    <field name="note" class="java.lang.String"/>
+
+    <!-- GROUP -->
+    <group name="CustomerGroup">
+        <groupExpression><![CDATA[$F{customer_id}]]></groupExpression>
+
+        <groupHeader>
+            <band height="22">
+                <textField>
+                    <reportElement x="0" y="2" width="802" height="18"/>
+                    <textElement>
+                        <font isBold="true"/>
+                    </textElement>
+                    <textFieldExpression><![CDATA["Customer: " + $F{customer_name}]]></textFieldExpression>
+                </textField>
+            </band>
+        </groupHeader>
+    </group>
+
+    <!-- COLUMN HEADER -->
+    <columnHeader>
+        <band height="18">
+            <staticText><reportElement x="0" y="0" width="80" height="18"/><text><![CDATA[Type]]></text></staticText>
+            <staticText><reportElement x="80" y="0" width="120" height="18"/><text><![CDATA[Date]]></text></staticText>
+            <staticText><reportElement x="200" y="0" width="140" height="18"/><text><![CDATA[Reference]]></text></staticText>
+            <staticText><reportElement x="340" y="0" width="80" height="18"/><text><![CDATA[Status]]></text></staticText>
+            <staticText><reportElement x="420" y="0" width="120" height="18"/><text><![CDATA[Amount]]></text></staticText>
+            <staticText><reportElement x="540" y="0" width="262" height="18"/><text><![CDATA[Method / Note]]></text></staticText>
+        </band>
+    </columnHeader>
+
+    <!-- DETAIL -->
+    <detail>
+        <band height="18">
+
+            <textField>
+                <reportElement x="0" y="0" width="80" height="18"/>
+                <textFieldExpression><![CDATA[$F{activity_type}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="80" y="0" width="120" height="18"/>
+                <textFieldExpression><![CDATA[$F{activity_date}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="200" y="0" width="140" height="18"/>
+                <textFieldExpression><![CDATA[$F{reference_id}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="340" y="0" width="80" height="18"/>
+                <textFieldExpression><![CDATA[$F{status}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="420" y="0" width="120" height="18"/>
+                <textFieldExpression><![CDATA[$F{amount}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="540" y="0" width="262" height="18"/>
+                <textFieldExpression><![CDATA[
+                    $F{method} != null ? $F{method} : $F{note}
+                ]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </detail>
+
+</jasperReport>

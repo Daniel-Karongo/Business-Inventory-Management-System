@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="customer_list"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <queryString>
+        <![CDATA[
+            SELECT
+                c.id                              AS customer_id,
+                c.name                            AS customer_name,
+                GROUP_CONCAT(DISTINCT ce.email_address SEPARATOR ', ') AS emails,
+                GROUP_CONCAT(DISTINCT cp.phone_number SEPARATOR ', ')  AS phone_numbers,
+                c.type                            AS customer_type,
+                c.gender                          AS gender,
+                COUNT(s.id)                       AS total_sales_count,
+                COALESCE(SUM(s.total_amount), 0)  AS total_sales_value
+            FROM customers c
+            LEFT JOIN customer_email_addresses ce
+                   ON ce.customer_id = c.id
+            LEFT JOIN customer_phone_numbers cp
+                   ON cp.customer_id = c.id
+            LEFT JOIN sales s
+                   ON s.customer_id = c.id
+                  AND s.status = 'COMPLETED'
+            WHERE c.deleted = false
+            GROUP BY
+                c.id,
+                c.name,
+                c.type,
+                c.gender
+            ORDER BY c.name ASC
+        ]]>
+    </queryString>
+
+    <field name="customer_name" class="java.lang.String"/>
+    <field name="emails" class="java.lang.String"/>
+    <field name="phone_numbers" class="java.lang.String"/>
+    <field name="customer_type" class="java.lang.String"/>
+    <field name="gender" class="java.lang.String"/>
+    <field name="total_sales_count" class="java.lang.Long"/>
+    <field name="total_sales_value" class="java.math.BigDecimal"/>
+
+    <title>
+        <band height="40">
+            <textField>
+                <reportElement x="0" y="0" width="802" height="25"/>
+                <textElement textAlignment="Center">
+                    <font size="15" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["CUSTOMER LIST"]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <detail>
+        <band height="16">
+
+            <textField><reportElement x="0" y="0" width="150" height="16"/>
+                <textFieldExpression><![CDATA[$F{customer_name}]]></textFieldExpression>
+            </textField>
+
+            <textField><reportElement x="150" y="0" width="180" height="16"/>
+                <textFieldExpression><![CDATA[$F{emails}]]></textFieldExpression>
+            </textField>
+
+            <textField><reportElement x="330" y="0" width="140" height="16"/>
+                <textFieldExpression><![CDATA[$F{phone_numbers}]]></textFieldExpression>
+            </textField>
+
+            <textField><reportElement x="470" y="0" width="80" height="16"/>
+                <textFieldExpression><![CDATA[$F{customer_type}]]></textFieldExpression>
+            </textField>
+
+            <textField><reportElement x="550" y="0" width="60" height="16"/>
+                <textFieldExpression><![CDATA[$F{gender}]]></textFieldExpression>
+            </textField>
+
+            <textField><reportElement x="610" y="0" width="80" height="16"/>
+                <textFieldExpression><![CDATA[$F{total_sales_count}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="690" y="0" width="112" height="16"/>
+                <textFieldExpression><![CDATA[$F{total_sales_value}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </detail>
+
+</jasperReport>

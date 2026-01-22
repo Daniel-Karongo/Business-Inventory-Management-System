@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="customer_activity_summary"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <!-- PARAMETERS -->
+    <parameter name="FROM_DATE" class="java.lang.String"/>
+    <parameter name="TO_DATE" class="java.lang.String"/>
+
+    <!-- QUERY -->
+    <queryString>
+        <![CDATA[
+            SELECT
+                c.name                         AS customer_name,
+                COUNT(DISTINCT s.id)           AS total_sales_count,
+                IFNULL(SUM(s.total_amount),0) AS total_sales_amount,
+                COUNT(DISTINCT p.id)           AS total_payments_count,
+                IFNULL(SUM(p.amount),0)       AS total_payments_amount,
+                MAX(
+                    GREATEST(
+                        IFNULL(s.created_at, '1970-01-01'),
+                        IFNULL(p.timestamp,  '1970-01-01')
+                    )
+                )                              AS last_activity_at
+            FROM customers c
+            LEFT JOIN sales s
+                   ON s.customer_id = c.id
+                  AND s.status IN ('COMPLETED','REFUNDED')
+                  AND DATE(s.created_at) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+            LEFT JOIN payments p
+                   ON p.sale_id = s.id
+                  AND p.status = 'SUCCESS'
+                  AND DATE(p.timestamp) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+            WHERE c.deleted = false
+            GROUP BY c.name
+            ORDER BY last_activity_at DESC
+        ]]>
+    </queryString>
+
+    <!-- FIELDS -->
+    <field name="customer_name" class="java.lang.String"/>
+    <field name="total_sales_count" class="java.lang.Long"/>
+    <field name="total_sales_amount" class="java.math.BigDecimal"/>
+    <field name="total_payments_count" class="java.lang.Long"/>
+    <field name="total_payments_amount" class="java.math.BigDecimal"/>
+    <field name="last_activity_at" class="java.sql.Timestamp"/>
+
+    <!-- TITLE -->
+    <title>
+        <band height="40">
+            <textField>
+                <reportElement x="0" y="0" width="802" height="25"/>
+                <textElement textAlignment="Center">
+                    <font size="15" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["CUSTOMER ACTIVITY SUMMARY"]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <!-- DETAIL -->
+    <detail>
+        <band height="18">
+
+            <textField>
+                <reportElement x="0" y="0" width="200" height="18"/>
+                <textFieldExpression><![CDATA[$F{customer_name}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="200" y="0" width="80" height="18"/>
+                <textFieldExpression><![CDATA[$F{total_sales_count}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="280" y="0" width="120" height="18"/>
+                <textFieldExpression><![CDATA[$F{total_sales_amount}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="400" y="0" width="90" height="18"/>
+                <textFieldExpression><![CDATA[$F{total_payments_count}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="490" y="0" width="120" height="18"/>
+                <textFieldExpression><![CDATA[$F{total_payments_amount}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="610" y="0" width="192" height="18"/>
+                <textFieldExpression><![CDATA[$F{last_activity_at}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </detail>
+
+</jasperReport>

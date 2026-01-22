@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model;
+package com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.dto;
 
 import lombok.Data;
 import java.util.UUID;

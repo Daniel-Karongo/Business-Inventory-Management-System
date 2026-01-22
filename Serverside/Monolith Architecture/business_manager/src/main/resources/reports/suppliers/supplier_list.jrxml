@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="supplier_list"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <queryString>
+        <![CDATA[
+            SELECT
+                s.id,
+                s.name,
+                s.address,
+                s.region,
+                s.rating,
+                s.created_at,
+                s.updated_at
+            FROM suppliers s
+            WHERE s.deleted = false
+            ORDER BY s.name ASC
+        ]]>
+    </queryString>
+
+    <field name="id" class="java.lang.String"/>
+    <field name="name" class="java.lang.String"/>
+    <field name="address" class="java.lang.String"/>
+    <field name="region" class="java.lang.String"/>
+    <field name="rating" class="java.lang.Double"/>
+    <field name="created_at" class="java.sql.Timestamp"/>
+    <field name="updated_at" class="java.sql.Timestamp"/>
+
+    <title>
+        <band height="40">
+            <textField>
+                <reportElement x="0" y="0" width="802" height="25"/>
+                <textElement textAlignment="Center">
+                    <font size="15" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["SUPPLIER LIST"]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <columnHeader>
+        <band height="18">
+            <staticText><reportElement x="0"   y="0" width="200" height="18"/><text><![CDATA[Name]]></text></staticText>
+            <staticText><reportElement x="200" y="0" width="200" height="18"/><text><![CDATA[Address]]></text></staticText>
+            <staticText><reportElement x="400" y="0" width="120" height="18"/><text><![CDATA[Region]]></text></staticText>
+            <staticText><reportElement x="520" y="0" width="80"  height="18"/><text><![CDATA[Rating]]></text></staticText>
+            <staticText><reportElement x="600" y="0" width="100" height="18"/><text><![CDATA[Created At]]></text></staticText>
+            <staticText><reportElement x="700" y="0" width="102" height="18"/><text><![CDATA[Updated At]]></text></staticText>
+        </band>
+    </columnHeader>
+
+    <detail>
+        <band height="18">
+            <textField><reportElement x="0"   y="0" width="200" height="18"/><textFieldExpression><![CDATA[$F{name}]]></textFieldExpression></textField>
+            <textField><reportElement x="200" y="0" width="200" height="18"/><textFieldExpression><![CDATA[$F{address}]]></textFieldExpression></textField>
+            <textField><reportElement x="400" y="0" width="120" height="18"/><textFieldExpression><![CDATA[$F{region}]]></textFieldExpression></textField>
+            <textField><reportElement x="520" y="0" width="80"  height="18"/><textFieldExpression><![CDATA[$F{rating}]]></textFieldExpression></textField>
+            <textField><reportElement x="600" y="0" width="100" height="18"/><textFieldExpression><![CDATA[$F{created_at}]]></textFieldExpression></textField>
+            <textField><reportElement x="700" y="0" width="102" height="18"/><textFieldExpression><![CDATA[$F{updated_at}]]></textFieldExpression></textField>
+        </band>
+    </detail>
+
+</jasperReport>

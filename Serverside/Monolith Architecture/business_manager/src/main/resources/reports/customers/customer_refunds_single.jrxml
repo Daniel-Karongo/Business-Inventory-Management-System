@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="customer_refunds_single"
+              pageWidth="595"
+              pageHeight="842"
+              columnWidth="555"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <!-- PARAMETERS -->
+    <parameter name="CUSTOMER_ID" class="java.lang.String"/>
+
+    <!-- QUERY -->
+    <queryString>
+        <![CDATA[
+            SELECT
+                s.id               AS sale_id,
+                s.created_at       AS sale_date,
+                p.amount           AS refund_amount,
+                p.method           AS refund_method,
+                p.transaction_code AS transaction_code,
+                p.timestamp        AS refund_date,
+                p.note             AS refund_note
+            FROM sales s
+            JOIN payments p
+                 ON p.sale_id = s.id
+            WHERE s.customer_id = UNHEX(REPLACE($P{CUSTOMER_ID}, '-', ''))
+              AND s.status = 'REFUNDED'
+              AND p.status = 'SUCCESS'
+            ORDER BY p.timestamp DESC
+        ]]>
+    </queryString>
+
+    <!-- FIELDS -->
+    <field name="sale_id" class="java.lang.String"/>
+    <field name="sale_date" class="java.sql.Timestamp"/>
+    <field name="refund_amount" class="java.math.BigDecimal"/>
+    <field name="refund_method" class="java.lang.String"/>
+    <field name="transaction_code" class="java.lang.String"/>
+    <field name="refund_date" class="java.sql.Timestamp"/>
+    <field name="refund_note" class="java.lang.String"/>
+
+    <!-- TITLE -->
+    <title>
+        <band height="40">
+            <textField>
+                <reportElement x="0" y="0" width="555" height="25"/>
+                <textElement textAlignment="Center">
+                    <font size="15" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["CUSTOMER REFUNDS REPORT"]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <!-- COLUMN HEADER -->
+    <columnHeader>
+        <band height="20">
+            <staticText><reportElement x="0" y="0" width="90" height="20"/><text><![CDATA[Refund Date]]></text></staticText>
+            <staticText><reportElement x="90" y="0" width="90" height="20"/><text><![CDATA[Sale ID]]></text></staticText>
+            <staticText><reportElement x="180" y="0" width="80" height="20"/><text><![CDATA[Amount]]></text></staticText>
+            <staticText><reportElement x="260" y="0" width="90" height="20"/><text><![CDATA[Method]]></text></staticText>
+            <staticText><reportElement x="350" y="0" width="110" height="20"/><text><![CDATA[Transaction]]></text></staticText>
+        </band>
+    </columnHeader>
+
+    <!-- DETAIL -->
+    <detail>
+        <band height="18">
+
+            <textField>
+                <reportElement x="0" y="0" width="90" height="18"/>
+                <textFieldExpression><![CDATA[$F{refund_date}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="90" y="0" width="90" height="18"/>
+                <textFieldExpression><![CDATA[$F{sale_id}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="180" y="0" width="80" height="18"/>
+                <textFieldExpression><![CDATA[$F{refund_amount}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="260" y="0" width="90" height="18"/>
+                <textFieldExpression><![CDATA[$F{refund_method}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="350" y="0" width="110" height="18"/>
+                <textFieldExpression><![CDATA[$F{transaction_code}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </detail>
+
+</jasperReport>

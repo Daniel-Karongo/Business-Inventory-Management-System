@@ -4,4 +4,3 @@ public enum CustomerType {
     INDIVIDUAL,
     COMPANY
 }
-

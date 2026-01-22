@@ -1,0 +1,315 @@
+{
+  "reportName": "sales_by_product",
+  "parameters": {
+    "FROM_DATE": "2025-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "sales_by_branch",
+  "parameters": {
+    "FROM_DATE": "2025-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "customer_list",
+  "parameters": {}
+}
+
+{
+  "reportName": "customer_sales_history",
+  "parameters": {
+    "FROM_DATE": "2026-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "customer_payment_history",
+  "parameters": {
+    "FROM_DATE": "2025-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "customer_outstanding_balances",
+  "parameters": {}
+}
+
+{
+  "reportName": "customer_sales_history_single",
+  "parameters": {
+    "CUSTOMER_ID": "1f9b5a60-1ade-4608-8971-073e3fb9b33b"
+  }
+}
+
+{
+  "reportName": "customer_outstanding_balance_single",
+  "parameters": {
+    "CUSTOMER_ID": "1f9b5a60-1ade-4608-8971-073e3fb9b33b"
+  }
+}
+
+{
+  "reportName": "customer_refunds_single",
+  "parameters": {
+    "CUSTOMER_ID": "1f9b5a60-1ade-4608-8971-073e3fb9b33b"
+  }
+}
+
+{
+  "reportName": "customer_activity_timeline_single",
+  "parameters": {
+    "CUSTOMER_ID": "1f9b5a60-1ade-4608-8971-073e3fb9b33b"
+  }
+}
+
+{
+  "reportName": "customer_activity_summary",
+  "parameters": {
+    "FROM_DATE": "2025-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "customer_activity_timeline_all",
+  "parameters": {
+    "FROM_DATE": "2025-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "top_customers_by_revenue",
+  "parameters": {
+    "FROM_DATE": "2025-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "inactive_customers",
+  "parameters": {
+    "FROM_DATE": "2025-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "sales_by_category",
+  "parameters": {
+    "FROM_DATE": "2025-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "sales_by_customer",
+  "parameters": {
+    "FROM_DATE": "2025-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "daily_sales_report",
+  "parameters": {
+    "FROM_DATE": "2025-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "monthly_sales_report",
+  "parameters": {
+    "FROM_DATE": "2025-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "sales_refunds_report",
+  "parameters": {
+    "FROM_DATE": "2025-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "single_day_sales_report",
+  "parameters": {
+    "SALE_DATE": "2026-01-15"
+  }
+}
+
+{
+  "reportName": "balance_sheet",
+  "parameters": {
+    "AS_AT_DATE": "2026-12-31T23:59:59"
+  }
+}
+
+{
+  "reportName": "cash_flow_statement",
+  "parameters": {
+    "FROM_DATE": "2026-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "accounts_receivable_summary",
+  "parameters": {
+    "FROM_DATE": "2026-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "accounts_payable_summary",
+  "parameters": {}
+}
+
+{
+  "reportName": "low_stock_report",
+  "parameters": {
+    "THRESHOLD": 10
+  }
+}
+
+{
+  "reportName": "out_of_stock_report",
+  "parameters": {}
+}
+
+{
+  "reportName": "fast_moving_items",
+  "parameters": {
+    "FROM_DATE": "2026-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "slow_moving_items",
+  "parameters": {
+    "FROM_DATE": "2026-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "dead_stock_report",
+  "parameters": {
+    "FROM_DATE": "2026-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "inventory_adjustments_report",
+  "parameters": {
+    "FROM_DATE": "2026-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "inventory_turnover_report",
+  "parameters": {
+    "FROM_DATE": "2026-01-01",
+    "TO_DATE": "2026-12-31"
+  }
+}
+
+{
+  "reportName": "supplier_list",
+  "parameters": {}
+}
+
+{
+  "reportName": "supplier_items_supplied_single",
+  "parameters": {
+    "SUPPLIER_ID": "9c79f457-84aa-4584-982c-9765b9f56f69",
+    "FROM_DATE": "2025-01-01T00:00:00",
+    "TO_DATE": "2026-12-31T00:00:00"
+  }
+}
+
+{
+  "reportName": "supplier_items_supplied_all",
+  "parameters": {
+    "FROM_DATE": "2025-01-01T00:00:00",
+    "TO_DATE": "2026-12-31T00:00:00"
+  }
+}
+
+{
+  "reportName": "supplier_price_variance",
+  "parameters": {
+    "FROM_DATE": "2025-01-01 00:00:00",
+    "TO_DATE": "2025-12-31 23:59:59"
+  }
+}
+
+{
+  "reportName": "supplier_price_variance_by_product",
+  "parameters": {
+    "PRODUCT_ID": "88acd47d-c24b-4f6c-a1cd-27219cdf3405",
+    "FROM_DATE": "2025-01-01T00:00:00",
+    "TO_DATE": "2026-12-31T00:00:00"
+  }
+}
+
+{
+  "reportName": "payments_summary",
+  "parameters": {
+    "FROM_DATE": "2025-01-01T00:00:00",
+    "TO_DATE": "2026-12-31T00:00:00"
+  }
+}
+
+{
+  "reportName": "payments_by_method",
+  "parameters": {
+    "FROM_DATE": "2025-01-01T00:00:00",
+    "TO_DATE": "2026-12-31T00:00:00"
+  }
+}
+
+{
+  "reportName": "daily_payments_report",
+  "parameters": {
+    "REPORT_DATE": "2025-12-31"
+  }
+}
+
+{
+  "reportKey": "user_activity_audit",
+  "format": "PDF",
+  "parameters": {
+    "FROM_DATE": "2025-01-01",
+    "TO_DATE": "2025-12-31"
+  }
+}
+
+{
+  "reportName": "inventory_audit_trail",
+  "parameters": {
+    "FROM_DATE": "2025-01-01",
+    "TO_DATE": "2025-12-31"
+  }
+}
+
+{
+  "reportName": "financial_audit_log",
+  "parameters": {
+    "FROM_DATE": "2025-01-01",
+    "TO_DATE": "2025-12-31"
+  }
+}

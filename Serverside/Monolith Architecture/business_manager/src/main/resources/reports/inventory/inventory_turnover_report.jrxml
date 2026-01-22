@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="inventory_turnover_report"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <parameter name="FROM_DATE" class="java.lang.String"/>
+    <parameter name="TO_DATE" class="java.lang.String"/>
+
+    <queryString>
+        <![CDATA[
+            SELECT
+                p.name AS product_name,
+                pv.sku AS variant_sku,
+
+                SUM(
+                    CASE
+                        WHEN le.direction = 'DEBIT' THEN le.amount
+                        ELSE -le.amount
+                    END
+                ) AS cogs,
+
+                AVG(i.quantity_on_hand * i.average_cost) AS avg_inventory_value,
+
+                CASE
+                    WHEN AVG(i.quantity_on_hand * i.average_cost) = 0 THEN 0
+                    ELSE
+                        SUM(
+                            CASE
+                                WHEN le.direction = 'DEBIT' THEN le.amount
+                                ELSE -le.amount
+                            END
+                        ) / AVG(i.quantity_on_hand * i.average_cost)
+                END AS turnover_ratio
+
+            FROM ledger_entries le
+            JOIN accounts a
+                 ON a.id = le.account_id
+            JOIN journal_entries je
+                 ON je.id = le.journal_entry_id
+            JOIN product_variants pv
+                 ON pv.id = je.source_id
+            JOIN products p
+                 ON p.id = pv.product_id
+            JOIN inventory_items i
+                 ON i.product_variant_id = pv.id
+
+            WHERE a.code = '5000'
+              AND je.posted = true
+              AND DATE(je.posted_at) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+
+            GROUP BY p.name, pv.sku
+            ORDER BY turnover_ratio DESC
+        ]]>
+    </queryString>
+
+    <field name="product_name" class="java.lang.String"/>
+    <field name="variant_sku" class="java.lang.String"/>
+    <field name="cogs" class="java.math.BigDecimal"/>
+    <field name="avg_inventory_value" class="java.math.BigDecimal"/>
+    <field name="turnover_ratio" class="java.math.BigDecimal"/>
+
+    <title>
+        <band height="40">
+            <textField>
+                <reportElement x="0" y="0" width="802" height="25"/>
+                <textElement textAlignment="Center">
+                    <font size="15" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["INVENTORY TURNOVER REPORT"]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <detail>
+        <band height="18">
+
+            <textField>
+                <reportElement x="0" y="0" width="220" height="18"/>
+                <textFieldExpression><![CDATA[$F{product_name}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="220" y="0" width="160" height="18"/>
+                <textFieldExpression><![CDATA[$F{variant_sku}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="380" y="0" width="120" height="18"/>
+                <textFieldExpression><![CDATA[$F{cogs}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="500" y="0" width="150" height="18"/>
+                <textFieldExpression><![CDATA[$F{avg_inventory_value}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="650" y="0" width="152" height="18"/>
+                <textFieldExpression><![CDATA[$F{turnover_ratio}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </detail>
+
+</jasperReport>

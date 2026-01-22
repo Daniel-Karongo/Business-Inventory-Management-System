@@ -3,15 +3,13 @@ package com.IntegrityTechnologies.business_manager.modules.person.function.rollc
 import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.modules.person.function.biometric.model.BiometricRollcallRequest;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.dto.RollcallDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.LoginRollcallRequest;
-import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.Rollcall;
+import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.dto.LoginRollcallRequest;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.service.RollcallService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;

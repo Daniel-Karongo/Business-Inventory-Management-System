@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="inventory_valuation_current"
+              pageWidth="842" pageHeight="595"
+              orientation="Landscape"
+              columnWidth="782"
+              leftMargin="30" rightMargin="30"
+              topMargin="30" bottomMargin="30">
+
+    <parameter name="BRANCH_ID" class="java.lang.String"/>
+
+    <queryString>
+        <![CDATA[
+            SELECT
+              b.name                  AS branch_name,
+              p.name                  AS product_name,
+              pv.sku                  AS variant_sku,
+              ii.quantity_on_hand     AS quantity_on_hand,
+              ii.average_cost         AS average_cost,
+              (ii.quantity_on_hand * ii.average_cost) AS valuation
+            FROM inventory_items ii
+            JOIN branches b          ON b.id = ii.branch_id
+            JOIN product_variants pv ON pv.id = ii.product_variant_id
+            JOIN products p          ON p.id = pv.product_id
+            WHERE ii.branch_id = UUID_TO_BIN($P{BRANCH_ID})
+            ORDER BY p.name, pv.sku
+        ]]>
+    </queryString>
+
+    <field name="branch_name" class="java.lang.String"/>
+    <field name="product_name" class="java.lang.String"/>
+    <field name="variant_sku" class="java.lang.String"/>
+    <field name="quantity_on_hand" class="java.lang.Long"/>
+    <field name="average_cost" class="java.math.BigDecimal"/>
+    <field name="valuation" class="java.math.BigDecimal"/>
+
+    <title>
+        <band height="36">
+            <textField>
+                <reportElement x="0" y="0" width="782" height="18"/>
+                <textElement textAlignment="Center">
+                    <font size="16" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["INVENTORY VALUATION (CURRENT)"]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="0" y="20" width="782" height="14"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA["Branch ID: " + $P{BRANCH_ID}]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <columnHeader>
+        <band height="18">
+            <staticText><reportElement x="0" y="0" width="220" height="18"/><text><![CDATA[Product]]></text></staticText>
+            <staticText><reportElement x="220" y="0" width="160" height="18"/><text><![CDATA[SKU]]></text></staticText>
+            <staticText><reportElement x="380" y="0" width="120" height="18"/><text><![CDATA[On Hand]]></text></staticText>
+            <staticText><reportElement x="500" y="0" width="140" height="18"/><text><![CDATA[Avg Cost]]></text></staticText>
+            <staticText><reportElement x="640" y="0" width="142" height="18"/><text><![CDATA[Valuation]]></text></staticText>
+        </band>
+    </columnHeader>
+
+    <detail>
+        <band height="16">
+            <textField><reportElement x="0" y="0" width="220" height="16"/><textFieldExpression><![CDATA[$F{product_name}]]></textFieldExpression></textField>
+            <textField><reportElement x="220" y="0" width="160" height="16"/><textFieldExpression><![CDATA[$F{variant_sku}]]></textFieldExpression></textField>
+            <textField><reportElement x="380" y="0" width="120" height="16"/><textFieldExpression><![CDATA[$F{quantity_on_hand}]]></textFieldExpression></textField>
+            <textField pattern="#,##0.00"><reportElement x="500" y="0" width="140" height="16"/><textFieldExpression><![CDATA[$F{average_cost}]]></textFieldExpression></textField>
+            <textField pattern="#,##0.00"><reportElement x="640" y="0" width="142" height="16"/><textFieldExpression><![CDATA[$F{valuation}]]></textFieldExpression></textField>
+        </band>
+    </detail>
+</jasperReport>

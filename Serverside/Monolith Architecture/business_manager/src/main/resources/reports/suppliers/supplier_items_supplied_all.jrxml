@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="supplier_items_supplied_all"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <!-- ================= PARAMETERS ================= -->
+    <parameter name="FROM_DATE" class="java.sql.Timestamp"/>
+    <parameter name="TO_DATE" class="java.sql.Timestamp"/>
+
+    <!-- ================= QUERY ================= -->
+    <queryString>
+        <![CDATA[
+            SELECT
+                s.id          AS supplier_id,
+                s.name        AS supplier_name,
+                p.name        AS product_name,
+                pv.sku        AS variant_sku,
+                pv.barcode    AS barcode,
+
+                st.quantity_delta AS quantity_received,
+                st.unit_cost      AS unit_cost,
+                (st.quantity_delta * st.unit_cost) AS total_cost,
+
+                st.reference,
+                st.note,
+                st.timestamp AS receipt_date
+
+            FROM stock_transactions st
+            JOIN suppliers s ON s.id = st.supplier_id
+            JOIN products p ON p.id = st.product_id
+            JOIN product_variants pv ON pv.id = st.product_variant_id
+
+            WHERE st.type = 'RECEIPT'
+              AND st.timestamp >= $P{FROM_DATE}
+              AND st.timestamp <  DATE_ADD($P{TO_DATE}, INTERVAL 1 DAY)
+
+            ORDER BY s.name ASC, st.timestamp DESC
+        ]]>
+    </queryString>
+
+    <!-- ================= FIELDS ================= -->
+    <field name="supplier_id" class="java.lang.String"/>
+    <field name="supplier_name" class="java.lang.String"/>
+    <field name="product_name" class="java.lang.String"/>
+    <field name="variant_sku" class="java.lang.String"/>
+    <field name="barcode" class="java.lang.String"/>
+    <field name="quantity_received" class="java.lang.Long"/>
+    <field name="unit_cost" class="java.math.BigDecimal"/>
+    <field name="total_cost" class="java.math.BigDecimal"/>
+    <field name="reference" class="java.lang.String"/>
+    <field name="note" class="java.lang.String"/>
+    <field name="receipt_date" class="java.sql.Timestamp"/>
+
+    <!-- ================= GROUP ================= -->
+    <group name="SupplierGroup">
+        <groupExpression><![CDATA[$F{supplier_id}]]></groupExpression>
+
+        <groupHeader>
+            <band height="28">
+                <textField>
+                    <reportElement x="0" y="0" width="802" height="28"/>
+                    <textElement>
+                        <font isBold="true" size="12"/>
+                    </textElement>
+                    <textFieldExpression><![CDATA["Supplier: " + $F{supplier_name}]]></textFieldExpression>
+                </textField>
+            </band>
+        </groupHeader>
+    </group>
+
+    <!-- ================= COLUMN HEADER ================= -->
+    <columnHeader>
+        <band height="30">
+            <staticText><reportElement x="0" y="0" width="150" height="30"/><text><![CDATA[Product]]></text></staticText>
+            <staticText><reportElement x="150" y="0" width="90" height="30"/><text><![CDATA[SKU]]></text></staticText>
+            <staticText><reportElement x="240" y="0" width="100" height="30"/><text><![CDATA[Barcode]]></text></staticText>
+            <staticText><reportElement x="340" y="0" width="70" height="30"/><text><![CDATA[Qty]]></text></staticText>
+            <staticText><reportElement x="410" y="0" width="80" height="30"/><text><![CDATA[Unit Cost]]></text></staticText>
+            <staticText><reportElement x="490" y="0" width="90" height="30"/><text><![CDATA[Total Cost]]></text></staticText>
+            <staticText><reportElement x="580" y="0" width="120" height="30"/><text><![CDATA[Reference]]></text></staticText>
+            <staticText><reportElement x="700" y="0" width="102" height="30"/><text><![CDATA[Date]]></text></staticText>
+        </band>
+    </columnHeader>
+
+    <!-- ================= DETAIL ================= -->
+    <detail>
+        <band height="25">
+            <textField><reportElement x="0" y="0" width="150" height="25"/><textFieldExpression><![CDATA[$F{product_name}]]></textFieldExpression></textField>
+            <textField><reportElement x="150" y="0" width="90" height="25"/><textFieldExpression><![CDATA[$F{variant_sku}]]></textFieldExpression></textField>
+            <textField><reportElement x="240" y="0" width="100" height="25"/><textFieldExpression><![CDATA[$F{barcode}]]></textFieldExpression></textField>
+            <textField><reportElement x="340" y="0" width="70" height="25"/><textFieldExpression><![CDATA[$F{quantity_received}]]></textFieldExpression></textField>
+            <textField pattern="#,##0.00"><reportElement x="410" y="0" width="80" height="25"/><textFieldExpression><![CDATA[$F{unit_cost}]]></textFieldExpression></textField>
+            <textField pattern="#,##0.00"><reportElement x="490" y="0" width="90" height="25"/><textFieldExpression><![CDATA[$F{total_cost}]]></textFieldExpression></textField>
+            <textField><reportElement x="580" y="0" width="120" height="25"/><textFieldExpression><![CDATA[$F{reference}]]></textFieldExpression></textField>
+            <textField pattern="yyyy-MM-dd"><reportElement x="700" y="0" width="102" height="25"/><textFieldExpression><![CDATA[$F{receipt_date}]]></textFieldExpression></textField>
+        </band>
+    </detail>
+
+</jasperReport>
