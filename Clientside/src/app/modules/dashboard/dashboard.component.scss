@@ -1,1 +1,58 @@
-:host { display:block; }
+:host {
+  display: block;
+}
+
+/* =========================
+   KPI GRID
+========================= */
+
+.kpi-grid {
+  margin-top: 2px;
+}
+
+/* =========================
+   DASHBOARD PANELS
+========================= */
+
+.dashboard-panel {
+  background: var(--surface-bg);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--surface-radius);
+  box-shadow: var(--surface-shadow);
+
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================
+   PANEL TITLES
+========================= */
+
+.panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+/* =========================
+   RESPONSIVE HELPERS
+========================= */
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+
+.span-8 { grid-column: span 8; }
+.span-4 { grid-column: span 4; }
+.span-12 { grid-column: span 12; }
+
+@media (max-width: 1024px) {
+  .span-8,
+  .span-4 {
+    grid-column: span 12;
+  }
+}

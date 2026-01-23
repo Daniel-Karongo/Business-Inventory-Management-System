@@ -1,10 +1,15 @@
-<div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm flex items-center justify-between">
-  <div>
-    <div class="text-xs text-gray-500 dark:text-gray-400">{{ title }}</div>
-    <div class="text-2xl font-semibold text-gray-800 dark:text-gray-100">{{ value }}</div>
+<div class="stat-card">
+
+  <div class="stat-header">
+    <span class="stat-title">{{ title }}</span>
   </div>
 
-  <div class="text-sm font-medium text-green-600 dark:text-green-400">
+  <div class="stat-value">
+    {{ value }}
+  </div>
+
+  <div *ngIf="change" class="stat-change">
     {{ change }}
   </div>
+
 </div>

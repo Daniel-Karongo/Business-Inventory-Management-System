@@ -1,33 +1,66 @@
 <div class="space-y-6">
 
-  <!-- KPI Row -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-    <ng-container *ngFor="let s of stats">
-      <app-stat-card [title]="s.title" [value]="s.value" [change]="s.change"></app-stat-card>
-    </ng-container>
-  </div>
+  <!-- =========================
+       LOADING STATE
+  ========================= -->
+  <ng-container *ngIf="loading; else dashboardContent">
 
-  <!-- Charts Row -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-    <div class="lg:col-span-2">
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 h-96">
-        <div class="mb-2 font-medium text-gray-800 dark:text-gray-100">Revenue Over Time</div>
-        <app-donut-chart class="h-full"></app-donut-chart>
-      </div>
+    <!-- KPI skeletons -->
+    <div class="kpi-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div *ngFor="let _ of [1,2,3,4]" class="dashboard-panel h-24 animate-pulse"></div>
     </div>
 
-    <div>
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 h-96 flex flex-col">
-        <div class="mb-2 font-medium text-gray-800 dark:text-gray-100">Sales by Category</div>
-        <app-bar-chart class="flex-1"></app-bar-chart>
-      </div>
+    <!-- Chart skeletons -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 dashboard-panel h-96 animate-pulse"></div>
+      <div class="dashboard-panel h-96 animate-pulse"></div>
     </div>
-  </div>
 
-  <!-- Activity -->
-  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
-    <div class="mb-3 font-medium text-gray-800 dark:text-gray-100">Recent Activity</div>
-    <app-activity-list></app-activity-list>
-  </div>
+    <!-- Activity skeleton -->
+    <div class="dashboard-panel h-64 animate-pulse"></div>
+  </ng-container>
 
+  <!-- =========================
+       DASHBOARD CONTENT
+  ========================= -->
+  <ng-template #dashboardContent>
+
+    <!-- KPI ROW -->
+    <div class="kpi-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <app-stat-card
+        *ngFor="let s of stats"
+        [title]="s.title"
+        [value]="s.value"
+        [change]="s.change">
+      </app-stat-card>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+      <div class="lg:col-span-2 dashboard-panel h-96">
+        <div class="panel-title">Revenue Trend</div>
+        <app-revenue-line-chart
+          [labels]="revenueLabels"
+          [values]="revenueValues">
+        </app-revenue-line-chart>
+      </div>
+
+      <div class="dashboard-panel h-96">
+        <div class="panel-title">Sales by Category</div>
+        <app-sales-category-chart
+          [labels]="categoryLabels"
+          [values]="categoryValues">
+        </app-sales-category-chart>
+      </div>
+
+    </div>
+
+    <!-- ACTIVITY -->
+    <div class="dashboard-panel">
+      <div class="panel-title">Recent Activity</div>
+      <app-activity-list [activities]="activities"></app-activity-list>
+    </div>
+
+  </ng-template>
 </div>

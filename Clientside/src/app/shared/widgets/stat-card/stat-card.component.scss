@@ -1,1 +1,43 @@
-:host { display:block; }
+.stat-card {
+  background: var(--surface-bg);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--surface-radius);
+  box-shadow: var(--surface-shadow);
+
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+/* subtle authority on hover */
+.stat-card:hover {
+  border-color: var(--active);
+}
+
+/* HEADER */
+.stat-header {
+  font-size: 11px;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* VALUE = STAR OF THE SHOW */
+.stat-value {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+
+/* CHANGE (optional, muted by default) */
+.stat-change {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-success);
+}

@@ -1,12 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-interface Activity {
-  id: string;
-  type: string;
+export interface Activity {
+  type: string;        // SALE | STOCK | USER | PRODUCT | SUPPLIER
   description: string;
-  time: string;
   actor?: string;
+  time: string;
 }
 
 @Component({
@@ -17,10 +16,16 @@ interface Activity {
   styleUrls: ['./activity-list.component.scss']
 })
 export class ActivityListComponent {
-  activities: Activity[] = [
-    { id: '1', type: 'Sale', description: 'Sold 3 units of iPhone 15', time: '5m ago', actor: 'Isaac' },
-    { id: '2', type: 'Stock', description: 'Received 50 units of Charger', time: '12m ago', actor: 'Warehouse' },
-    { id: '3', type: 'User', description: 'New user created: alice@example.com', time: '1h ago', actor: 'System' },
-    { id: '4', type: 'Refund', description: 'Refund issued for Invoice #345', time: '3h ago', actor: 'Finance' },
-  ];
+  @Input() activities: Activity[] = [];
+
+  badgeClass(type: string): string {
+    switch (type) {
+      case 'SALE': return 'badge-sale';
+      case 'STOCK': return 'badge-stock';
+      case 'USER': return 'badge-user';
+      case 'PRODUCT': return 'badge-product';
+      case 'SUPPLIER': return 'badge-supplier';
+      default: return 'badge-default';
+    }
+  }
 }

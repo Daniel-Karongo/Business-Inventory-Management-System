@@ -1,2 +1,103 @@
-:host { display:block; }
-table { border-collapse: collapse; }
+.activity-table {
+  width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead th {
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 10px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+tbody tr {
+  transition: background-color 0.08s ease, box-shadow 0.08s ease;
+}
+
+tbody tr:hover {
+  background: var(--surface-hover);
+  box-shadow: inset 3px 0 0 var(--active);
+}
+
+td {
+  padding: 10px 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+/* COLUMN HIERARCHY */
+.time {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.actor {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.description {
+  font-weight: 500;
+}
+
+/* EMPTY STATE */
+.empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+/* =========================
+   BADGES
+========================= */
+
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+/* Badge colors (enterprise safe) */
+.badge-sale {
+  background: rgba(37, 99, 235, 0.15);
+  color: #2563eb;
+}
+
+.badge-stock {
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+}
+
+.badge-user {
+  background: rgba(124, 58, 237, 0.15);
+  color: #7c3aed;
+}
+
+.badge-product {
+  background: rgba(245, 158, 11, 0.18);
+  color: #f59e0b;
+}
+
+.badge-supplier {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.badge-default {
+  background: rgba(148, 163, 184, 0.18);
+  color: #64748b;
+}

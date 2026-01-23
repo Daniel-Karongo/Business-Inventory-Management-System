@@ -18,4 +18,16 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
     @Lock(LockModeType.OPTIMISTIC_FORCE_INCREMENT)
     @Query("select s from Sale s where s.id = :id")
     Sale lockForUpdate(@Param("id") UUID id);
+
+    @Query("""
+        SELECT DATE(s.createdAt), SUM(li.lineTotal)
+        FROM Sale s
+        JOIN s.lineItems li
+        WHERE li.branchId = :branchId
+          AND s.status = 'COMPLETED'
+        GROUP BY DATE(s.createdAt)
+        ORDER BY DATE(s.createdAt)
+        """)
+    List<Object[]> revenueTrendByDay(@Param("branchId") UUID branchId);
+
 }
