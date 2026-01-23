@@ -11,24 +11,30 @@
   <!-- CONTENT -->
   <div class="page-content">
 
-    <div class="reports-grid">
+    <ng-container *ngFor="let group of (groupedReports | keyvalue)">
 
-      <div
-        class="report-tile"
-        *ngFor="let r of reports"
-        (click)="open(r)"
-      >
-        <div class="tile-icon">
-          <mat-icon>assessment</mat-icon>
+      <h3 class="category-title">{{ group.key }}</h3>
+
+      <div class="reports-grid">
+
+        <div
+          class="report-tile"
+          *ngFor="let r of group.value"
+          (click)="open(r)"
+        >
+          <div class="tile-icon">
+            <mat-icon>assessment</mat-icon>
+          </div>
+
+          <div class="tile-content">
+            <div class="tile-title">{{ r.title }}</div>
+            <div class="tile-desc">{{ r.description }}</div>
+          </div>
         </div>
 
-        <div class="tile-content">
-          <div class="tile-title">{{ r.title }}</div>
-          <div class="tile-desc">{{ r.description }}</div>
-        </div>
       </div>
 
-    </div>
+    </ng-container>
 
   </div>
 

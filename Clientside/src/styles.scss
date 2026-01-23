@@ -168,6 +168,23 @@ button[mat-stroked-button] {
   margin-right: 5px !important;
 }
 
+/* ================================
+   Disabled primary action buttons
+   ================================ */
+
+button[mat-flat-button][disabled],
+button[mat-flat-button].mat-button-disabled {
+  background-color: #e5e7eb !important;
+  color: #9ca3af !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+}
+
+// .mat-mdc-dialog-actions
+//   button.mat-mdc-flat-button:not(:disabled) {
+//   background-color: #0b5ed7;
+// }
+
 
 /* -----------------------------------------------------
    TABLE

@@ -15,8 +15,8 @@
 
     <!-- ================= PARAMETERS ================= -->
     <parameter name="PRODUCT_ID" class="java.lang.String"/>
-    <parameter name="FROM_DATE" class="java.sql.Timestamp"/>
-    <parameter name="TO_DATE" class="java.sql.Timestamp"/>
+    <parameter name="FROM_DATE" class="java.lang.String"/>
+    <parameter name="TO_DATE" class="java.lang.String"/>
 
     <!-- ================= QUERY ================= -->
     <queryString>
@@ -50,7 +50,7 @@
             WHERE st.type = 'RECEIPT'
               AND st.product_id = UUID_TO_BIN($P{PRODUCT_ID})
               AND st.timestamp >= $P{FROM_DATE}
-              AND st.timestamp <  DATE_ADD($P{TO_DATE}, INTERVAL 1 DAY)
+              AND st.timestamp <  $P{TO_DATE}
 
             ORDER BY price_variance DESC
         ]]>

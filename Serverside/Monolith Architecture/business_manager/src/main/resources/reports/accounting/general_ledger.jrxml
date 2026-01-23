@@ -28,7 +28,8 @@
                     AS balance
             FROM vw_general_ledger
             WHERE account_id = UUID_TO_BIN($P{ACCOUNT_ID})
-              AND posting_date BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+              AND posting_date >= $P{FROM_DATE}
+              AND posting_date < DATE_ADD($P{TO_DATE}, INTERVAL 1 DAY)
             ORDER BY posting_date, ledger_entry_id
         ]]>
     </queryString>

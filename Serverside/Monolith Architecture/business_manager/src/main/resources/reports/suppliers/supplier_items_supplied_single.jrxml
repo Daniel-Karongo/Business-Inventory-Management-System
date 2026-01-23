@@ -14,8 +14,8 @@
               bottomMargin="30">
 
     <parameter name="SUPPLIER_ID" class="java.lang.String"/>
-    <parameter name="FROM_DATE" class="java.sql.Timestamp"/>
-    <parameter name="TO_DATE" class="java.sql.Timestamp"/>
+    <parameter name="FROM_DATE" class="java.lang.String"/>
+    <parameter name="TO_DATE" class="java.lang.String"/>
 
     <queryString>
         <![CDATA[

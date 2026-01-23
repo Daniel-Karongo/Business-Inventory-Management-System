@@ -40,6 +40,7 @@
 
   padding: 18px;
   border: 1px solid var(--border);
+  box-shadow: 1px 1px 2px 1px rgba(0, 0, 0, 0.2) !important;
   border-radius: 10px;
   background: var(--surface);
   cursor: pointer;
@@ -77,4 +78,13 @@
 .tile-desc {
   font-size: var(--text-sm);
   color: var(--text-secondary);
+}
+
+.category-title {
+  margin: 22px 0 10px;
+  font-size: 0.85rem;
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
 }

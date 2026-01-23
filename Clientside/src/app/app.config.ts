@@ -7,7 +7,11 @@ import {
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { provideNativeDateAdapter } from '@angular/material/core';
+import {
+  provideNativeDateAdapter,
+  MAT_DATE_LOCALE,
+  MAT_DATE_FORMATS
+} from '@angular/material/core';
 import { firstValueFrom } from 'rxjs';
 
 import { routes } from './app.routes';
@@ -16,6 +20,7 @@ import { loggingInterceptor } from './core/interceptors/logging.interceptor';
 
 import { IconLoader } from './core/utils/icon-loader';
 import { AuthService } from './modules/auth/services/auth.service';
+import { APP_DATE_FORMATS } from './core/services/date-formats';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -31,7 +36,11 @@ export const appConfig: ApplicationConfig = {
     ),
 
     provideAnimations(),
+
+    // ✅ GLOBAL DATE CONFIG
     provideNativeDateAdapter(),
+    { provide: MAT_DATE_LOCALE, useValue: 'en-GB' },
+    { provide: MAT_DATE_FORMATS, useValue: APP_DATE_FORMATS },
 
     // Load icons before app boot
     provideAppInitializer(() => {

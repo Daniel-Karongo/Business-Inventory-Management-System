@@ -11,31 +11,99 @@
     <div class="section-label">Report parameters</div>
 
     <div class="form-grid">
-      <mat-form-field appearance="fill">
-        <mat-label>From date</mat-label>
-        <input matInput [matDatepicker]="fromPicker" [(ngModel)]="from">
-        <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
-        <mat-datepicker #fromPicker></mat-datepicker>
-      </mat-form-field>
 
-      <mat-form-field appearance="fill">
-        <mat-label>To date</mat-label>
-        <input matInput [matDatepicker]="toPicker" [(ngModel)]="to">
-        <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>
-        <mat-datepicker #toPicker></mat-datepicker>
-      </mat-form-field>
+      <ng-container *ngFor="let p of orderedParams">
 
-      <mat-form-field
-        *ngIf="report.requiresAccount"
-        appearance="fill"
-        class="full-width">
-        <mat-label>Account</mat-label>
-        <mat-select [(ngModel)]="accountId">
-          <mat-option *ngFor="let a of accounts" [value]="a.id">
-            {{ a.code }} — {{ a.name }}
-          </mat-option>
+        <!-- DATE -->
+        <mat-form-field *ngIf="p.type === 'DATE'" appearance="fill">
+          <mat-label>{{ labelFor(p) }}</mat-label>
+          <input matInput [matDatepicker]="dp" [(ngModel)]="params[p.name]" placeholder="dd/mm/yyyy">
+          <mat-datepicker-toggle matSuffix [for]="dp"></mat-datepicker-toggle>
+          <mat-datepicker #dp></mat-datepicker>
+        </mat-form-field>
+
+        <!-- BRANCH -->
+        <mat-form-field *ngIf="p.type === 'BRANCH'" appearance="fill">
+          <mat-label>{{ labelFor(p) }}</mat-label>
+          <mat-select [(ngModel)]="params[p.name]">
+            <mat-option *ngFor="let b of branches" [value]="b.id">
+              {{ b.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- ACCOUNT -->
+        <mat-form-field *ngIf="p.type === 'ACCOUNT'" appearance="fill">
+          <mat-label>{{ labelFor(p) }}</mat-label>
+          <mat-select [(ngModel)]="params[p.name]">
+            <mat-option *ngFor="let a of accounts" [value]="a.id">
+              {{ a.code }} — {{ a.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- CUSTOMER -->
+        <mat-form-field *ngIf="p.type === 'CUSTOMER'" appearance="fill">
+          <mat-label>{{ labelFor(p) }}</mat-label>
+          <mat-select [(ngModel)]="params[p.name]">
+            <mat-option *ngFor="let c of customers" [value]="c.id">
+              {{ c.name }} ({{ c.phone ?? c.email }})
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- SUPPLIER -->
+        <mat-form-field *ngIf="p.type === 'SUPPLIER'" appearance="fill">
+          <mat-label>{{ labelFor(p) }}</mat-label>
+          <mat-select [(ngModel)]="params[p.name]">
+            <mat-option *ngFor="let s of suppliers" [value]="s.id">
+              {{ s.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- PRODUCT -->
+        <mat-form-field *ngIf="p.type === 'PRODUCT'" appearance="fill">
+          <mat-label>{{ labelFor(p) }}</mat-label>
+          <mat-select [(ngModel)]="params[p.name]" (selectionChange)="onProductChange($event.value)">
+            <mat-option *ngFor="let pr of products" [value]="pr.id">
+              {{ pr.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- VARIANT -->
+        <mat-form-field *ngIf="p.type === 'VARIANT'" appearance="fill">
+          <mat-label>{{ labelFor(p) }}</mat-label>
+          <mat-select [(ngModel)]="params[p.name]">
+            <mat-option *ngFor="let v of variants" [value]="v.id">
+              {{ v.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- CATEGORY -->
+        <mat-form-field *ngIf="p.type === 'CATEGORY'" appearance="fill">
+          <mat-label>{{ labelFor(p) }}</mat-label>
+          <mat-select [(ngModel)]="params[p.name]">
+            <mat-option *ngFor="let c of categories" [value]="c.id">
+              {{ c.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+      </ng-container>
+
+      <!-- FORMAT -->
+      <mat-form-field appearance="fill">
+        <mat-label>Format</mat-label>
+        <mat-select [(ngModel)]="format">
+          <mat-option value="PDF">PDF</mat-option>
+          <mat-option value="XLSX">Excel</mat-option>
+          <mat-option value="CSV">CSV</mat-option>
         </mat-select>
       </mat-form-field>
+
     </div>
   </section>
 
@@ -48,15 +116,8 @@
   </div>
 
   <div class="footer-actions">
-    <button mat-stroked-button mat-dialog-close>
-      Cancel
-    </button>
-
-    <button
-      mat-flat-button
-      color="primary"
-      [disabled]="!from || !to || loading"
-      (click)="generate()">
+    <button mat-stroked-button mat-dialog-close>Cancel</button>
+    <button mat-flat-button color="primary" [disabled]="loading || isMissingRequired()" (click)="generate()">
       Generate report
     </button>
   </div>
