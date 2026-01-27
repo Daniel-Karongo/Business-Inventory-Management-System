@@ -4,227 +4,159 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.FileSystemUtils;
-import org.springframework.util.StringUtils;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.*;
-import java.nio.file.attribute.DosFileAttributeView;
-import java.util.*;
+import java.util.Comparator;
 
-/**
- * =====================================================================
- * Generic, reusable FileStorageService for multiple modules.
- * ---------------------------------------------------------------------
- * Uses FileStorageProperties for base directories (configurable).
- * =====================================================================
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class FileStorageService {
 
+    private final FileStorageProperties props;
     private final TransactionalFileManager transactionalFileManager;
-    private final FileStorageProperties fileStorageProperties;
 
-    /** Base upload directory (injected from properties). */
-    private Path baseUploadDir;
+    private Path uploadsRoot;
+
+    /* ============================================================
+       INIT
+       ============================================================ */
 
     @PostConstruct
     public void init() {
-        baseUploadDir = Paths.get(fileStorageProperties.getBaseUploadDir())
-                .toAbsolutePath()
-                .normalize();
+
+        Path configured =
+                Paths.get(props.getBaseUploadDir())
+                        .toAbsolutePath()
+                        .normalize();
+
+        uploadsRoot = isWindows()
+                ? configured
+                : dot(configured.getParent(), "uploads");
 
         try {
-            Files.createDirectories(baseUploadDir);
-//            log.info("📦 FileStorageService initialized base dir: {}", baseUploadDir);
+            Files.createDirectories(uploadsRoot);
+            hide(uploadsRoot);
         } catch (IOException e) {
-//            log.error("❌ Failed to initialize upload base directory: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to initialize upload directory", e);
+            throw new RuntimeException("Failed to init uploads root", e);
         }
+
+        log.info("📁 Uploads root initialized at {}", uploadsRoot);
     }
 
-    /**
-     * Ensures a directory exists and returns its normalized path.
-     */
+    /* ============================================================
+       ROOT ACCESSORS (🔥 FIXES YOUR ERROR)
+       ============================================================ */
+
+    public Path productRoot() {
+        return moduleRoot("products");
+    }
+
+    public Path userRoot() {
+        return moduleRoot("users");
+    }
+
+    public Path supplierRoot() {
+        return moduleRoot("suppliers");
+    }
+
+    private Path moduleRoot(String name) {
+        Path dir = isWindows()
+                ? uploadsRoot.resolve(name)
+                : dot(uploadsRoot, name);
+
+        try {
+            Files.createDirectories(dir);
+            hide(dir);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to init module dir: " + dir, e);
+        }
+
+        return dir;
+    }
+
+    /* ============================================================
+       LEGACY / COMPAT API
+       ============================================================ */
+
     public Path initDirectory(Path dir) throws IOException {
-        Objects.requireNonNull(dir, "dir must not be null");
-        Path normalized = dir.toAbsolutePath().normalize();
-        Files.createDirectories(normalized);
-//        log.debug("📁 Initialized directory: {}", normalized);
-        return normalized;
+        Files.createDirectories(dir);
+        hide(dir);
+        return dir;
     }
 
-    /**
-     * Returns or creates a module-specific directory, e.g.:
-     * module = "supplier", subDir = "supplier-42"
-     * => baseUploadDir/supplier/supplier-42
-     */
-    public Path getModuleDirectory(String module, String subDir) throws IOException {
-        Path path = baseUploadDir.resolve(module).resolve(subDir).normalize();
-        Files.createDirectories(path);
-        return path;
-    }
-
-    /**
-     * Saves a single file safely from InputStream.
-     */
-    public Path saveFile(Path dir, String filename, InputStream inputStream) throws IOException {
-        Objects.requireNonNull(dir, "dir must not be null");
-        Objects.requireNonNull(filename, "filename must not be null");
-        Objects.requireNonNull(inputStream, "inputStream must not be null");
-
-        Path normalizedDir = dir.toAbsolutePath().normalize();
-        Path target = normalizedDir.resolve(filename).normalize();
-
-        if (!target.startsWith(normalizedDir)) {
-            throw new IOException("Invalid file path (path traversal attempt): " + filename);
-        }
-
-        Files.createDirectories(normalizedDir);
-        try (InputStream in = inputStream) {
-            Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
-        }
-
-//        log.info("💾 Saved file to {}", target);
+    public Path saveFile(Path dir, String filename, InputStream in) throws IOException {
+        Path target = dir.resolve(filename).normalize();
+        Files.createDirectories(dir);
+        Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+        hide(target);
         return target;
     }
 
-    /**
-     * Deletes a single file (ignores missing).
-     */
-    public void deleteFile(Path file) throws IOException {
-        if (file == null) return;
-        try {
-            Files.deleteIfExists(file);
-            // log.info("🗑️ Deleted file {}", file);
-        } catch (IOException e) {
-            // log.warn("⚠️ Failed to delete file {}", file, e);
-            throw e;
-        }
-    }
-
-    /**
-     * Deletes a visible or hidden directory safely (cross-platform).
-     */
-    public void deleteVisibleOrHiddenDirectory(Path dir) {
-        if (dir == null) return;
-        try {
-            Path parent = dir.getParent();
-            if (parent == null) return;
-
-            String name = dir.getFileName().toString();
-            Path hiddenDir = parent.resolve("." + name);
-
-            if (Files.exists(hiddenDir)) {
-                unhideAndDeleteDirectory(hiddenDir, name);
-                return;
-            }
-
-            if (Files.exists(dir)) {
-                deleteDirectory(dir);
-                return;
-            }
-
-            // log.debug("No visible or hidden directory found for {}", dir);
-
-        } catch (IOException e) {
-            // log.error("Failed to delete directory {}: {}", dir, e.getMessage(), e);
-        }
-    }
-
-    private void unhideAndDeleteDirectory(Path hiddenDir, String name) throws IOException {
-        if (!Files.exists(hiddenDir)) return;
-        Path parent = hiddenDir.getParent();
-        Path visibleDir = parent.resolve(name);
-
-        try {
-            Files.move(hiddenDir, visibleDir, StandardCopyOption.ATOMIC_MOVE);
-            // log.debug("Unhid directory {} → {}", hiddenDir, visibleDir);
-            deleteDirectory(visibleDir);
-        } catch (IOException e) {
-            // log.warn("Could not unhide {} (deleting as hidden): {}", hiddenDir, e.getMessage());
-            deleteDirectory(hiddenDir);
-        }
-    }
-
-    public void deleteDirectory(Path dir) throws IOException {
-        if (dir == null || !Files.exists(dir)) return;
-        Files.walk(dir)
-                .sorted(Comparator.reverseOrder())
-                .forEach(path -> {
-                    try {
-                        Files.deleteIfExists(path);
-                    } catch (IOException e) {
-                        // log.warn("Failed to delete file {}: {}", path, e.getMessage());
-                    }
-                });
-        // log.info("🧹 Deleted directory: {}", dir);
-    }
-
-    public void deleteDirectoryAfterCommit(Path dir, String module) {
-        transactionalFileManager.runAfterCommit(() -> {
-            try {
-                if (Files.exists(dir)) {
-                    deleteVisibleOrHiddenDirectory(dir);
-                    // log.info("🧾 [{}] Directory deleted post-commit: {}", module, dir);
-                }
-            } catch (Exception e) {
-                // log.error("Failed to delete directory {} after commit: {}", dir, e.getMessage(), e);
-            }
-        });
-    }
-
-    /**
-     * Resolves a path relative to the configured base upload directory.
-     */
-    public Path resolveModulePath(String relativePath) {
-        Path resolved = baseUploadDir.resolve(relativePath).normalize();
-        if (!resolved.startsWith(baseUploadDir)) {
-            throw new SecurityException("Attempted path traversal: " + relativePath);
-        }
-        return resolved;
-    }
-
     public void hidePathIfSupported(Path path) {
-        try {
-            Files.createDirectories(path); // ensure it exists
-
-            if (System.getProperty("os.name").toLowerCase().contains("win")) {
-                Files.setAttribute(path, "dos:hidden", true, LinkOption.NOFOLLOW_LINKS);
-            } else {
-                Path parent = path.getParent();
-                String name = path.getFileName().toString();
-                Path hiddenPath = parent.resolve("." + name);
-
-                if (!name.startsWith(".")) {
-                    // Move and/or create hidden folder
-                    if (Files.exists(path) && !Files.exists(hiddenPath)) {
-                        Files.move(path, hiddenPath, StandardCopyOption.REPLACE_EXISTING);
-                    } else if (!Files.exists(hiddenPath)) {
-                        Files.createDirectories(hiddenPath);
-                    }
-                }
-            }
-        } catch (IOException e) {
-            log.debug("Failed to hide path {}: {}", path, e.getMessage());
-        }
+        hide(path);
     }
 
     public void hidePath(Path path) throws IOException {
-        if (System.getProperty("os.name").toLowerCase().contains("win")) {
-            DosFileAttributeView attr = Files.getFileAttributeView(path, DosFileAttributeView.class);
-            if (attr != null) attr.setHidden(true);
-        } else {
-            Path parent = path.getParent();
-            String name = path.getFileName().toString();
-            if (!name.startsWith(".")) {
-                Path hiddenPath = parent.resolve("." + name);
-                if (!Files.exists(hiddenPath)) Files.move(path, hiddenPath, StandardCopyOption.REPLACE_EXISTING);
+        hide(path);
+    }
+
+    public void deleteFile(Path file) throws IOException {
+        if (file == null) return;
+        Files.deleteIfExists(file);
+    }
+
+    public void deleteVisibleOrHiddenDirectory(Path dir) throws IOException {
+        deleteDirectory(dir);
+    }
+
+
+    /* ============================================================
+       DELETE
+       ============================================================ */
+
+    public void deleteDirectoryAfterCommit(Path dir, String module) {
+        transactionalFileManager.runAfterCommit(() -> {
+            try { deleteDirectory(dir); }
+            catch (IOException ignored) {}
+        });
+    }
+
+    public void deleteDirectory(Path dir) throws IOException {
+        if (!Files.exists(dir)) return;
+
+        Files.walk(dir)
+                .sorted(Comparator.reverseOrder())
+                .forEach(p -> {
+                    try { Files.deleteIfExists(p); }
+                    catch (IOException ignored) {}
+                });
+    }
+
+    /* ============================================================
+       HIDING LOGIC (OS-AWARE)
+       ============================================================ */
+
+    private void hide(Path path) {
+        if (!Files.exists(path)) return;
+
+        try {
+            if (isWindows()) {
+                Files.setAttribute(path, "dos:hidden", true, LinkOption.NOFOLLOW_LINKS);
             }
+            // Linux/macOS handled by dot-folders only
+        } catch (Exception e) {
+            log.debug("Failed to hide {}", path);
         }
+    }
+
+    private Path dot(Path parent, String name) {
+        return parent.resolve(name.startsWith(".") ? name : "." + name).normalize();
+    }
+
+    private boolean isWindows() {
+        return System.getProperty("os.name").toLowerCase().contains("win");
     }
 }

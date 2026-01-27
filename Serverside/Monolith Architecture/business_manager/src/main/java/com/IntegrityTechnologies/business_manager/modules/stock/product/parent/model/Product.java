@@ -47,12 +47,6 @@ public class Product {
     @Column(unique = true)
     private String sku;
 
-    /**
-     * NOTE:
-     * - barcode and barcodeImagePath REMOVED
-     * - barcodes are now owned exclusively by ProductVariant
-     */
-
     private Double minimumPercentageProfit;
 
     /* =============================

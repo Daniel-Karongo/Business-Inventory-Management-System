@@ -8,7 +8,7 @@ export class ProductVariantService {
 
   private base = environment.apiUrl + environment.endpoints.products.variants.base;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   forProduct(productId: string) {
     return this.http.get<ProductVariant[]>(
@@ -26,5 +26,18 @@ export class ProductVariantService {
 
   delete(id: string) {
     return this.http.delete<void>(`${this.base}/${id}`);
+  }
+
+  getImages(variantId: string) {
+    return this.http.get<string[]>(
+      `${this.base}/${variantId}/images`
+    );
+  }
+
+  getImageBlob(variantId: string, fileName: string) {
+    return this.http.get(
+      `${this.base}/images/${variantId}/${fileName}`,
+      { responseType: 'blob' }
+    );
   }
 }

@@ -23,8 +23,9 @@ public class BarcodeScanService {
     public BarcodeScanResponse scan(String barcode, UUID branchId) {
 
         ProductVariant variant = variantRepo.findByBarcode(barcode)
+                .or(() -> variantRepo.findBySku(barcode))
                 .orElseThrow(() ->
-                        new EntityNotFoundException("Invalid barcode")
+                        new EntityNotFoundException("Invalid barcode or SKU")
                 );
 
         InventoryItem inventory = null;

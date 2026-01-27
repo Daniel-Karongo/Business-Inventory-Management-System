@@ -8,9 +8,15 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -115,5 +121,49 @@ public class ProductVariantImageService {
         }
 
         return zip;
+    }
+
+    public ResponseEntity<Resource> getProductVariantImage(UUID variantId, String fileName) {
+
+        ProductVariantImage img = imageRepo
+                .findByVariant_IdAndDeletedFalse(variantId)
+                .stream()
+                .filter(i -> i.getFileName().equals(fileName))
+                .findFirst()
+                .orElseThrow(() ->
+                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Image metadata not found")
+                );
+
+        ProductVariant variant = img.getVariant();
+
+        Path imagePath = Paths.get(props.getProductUploadDir())
+                .resolve(variant.getProduct().getId().toString())
+                .resolve("variants")
+                .resolve(variantId.toString())
+                .resolve(img.getFileName())
+                .toAbsolutePath()
+                .normalize();
+
+        System.out.println("Hello");
+        System.out.println(imagePath);
+        System.out.println(imagePath.toString());
+
+        if (!Files.exists(imagePath)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Variant image not found on disk");
+        }
+
+        Resource resource = new FileSystemResource(imagePath.toFile());
+
+        MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+        try {
+            String detected = Files.probeContentType(imagePath);
+            if (detected != null) {
+                mediaType = MediaType.parseMediaType(detected);
+            }
+        } catch (IOException ignored) {}
+
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .body(resource);
     }
 }

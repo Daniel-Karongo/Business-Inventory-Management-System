@@ -29,7 +29,6 @@ public class VariantBarcodeService {
 
     private final ProductVariantRepository variantRepository;
     private final ProductVariantMapper mapper;
-    private final FileStorageProperties props;
     private final FileStorageService fileStorageService;
 
     /* =============================
@@ -65,7 +64,13 @@ public class VariantBarcodeService {
             variant.setBarcode(barcode);
 
             Path imagePath = generateBarcodeImage(barcode, variant);
-            variant.setBarcodeImagePath(imagePath.toString());
+            variant.setBarcodeImagePath(
+                    "/api/product-variants/" +
+                            variant.getId() +
+                            "/barcode/" +
+                            barcode +
+                            ".png"
+            );
 
             variantRepository.save(variant);
         }
@@ -119,21 +124,18 @@ public class VariantBarcodeService {
 
     private Path initAndHideVariantBarcodeDir(ProductVariant variant) throws IOException {
 
-        Path barcodeDir = Paths.get(props.getProductUploadDir())
-                .resolve(variant.getProduct().getId().toString())
-                .resolve("variants")
-                .resolve(variant.getId().toString())
-                .resolve("barcode")
-                .toAbsolutePath()
-                .normalize();
+        Path barcodeDir =
+                fileStorageService.productRoot()
+                        .resolve(variant.getProduct().getId().toString())
+                        .resolve("variants")
+                        .resolve(variant.getId().toString())
+                        .resolve("barcode")
+                        .normalize();
 
         fileStorageService.initDirectory(barcodeDir);
 
-        // Explicitly hide every level (Windows does NOT inherit)
+        // One call is enough — UploadsInitializer already hid parents
         fileStorageService.hidePathIfSupported(barcodeDir);
-        fileStorageService.hidePathIfSupported(barcodeDir.getParent());          // variantId
-        fileStorageService.hidePathIfSupported(barcodeDir.getParent().getParent()); // variants
-        fileStorageService.hidePathIfSupported(barcodeDir.getParent().getParent().getParent()); // productId
 
         return barcodeDir;
     }

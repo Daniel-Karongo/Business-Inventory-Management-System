@@ -4,7 +4,7 @@
     <div class="toolbar">
         <h3>Documents</h3>
 
-        <button mat-flat-button color="primary" (click)="triggerUpload()" [disabled]="uploading">
+        <button *ngIf="!readonly" mat-flat-button color="primary" (click)="triggerUpload()" [disabled]="uploading">
             <mat-icon>upload</mat-icon>
             Upload
         </button>

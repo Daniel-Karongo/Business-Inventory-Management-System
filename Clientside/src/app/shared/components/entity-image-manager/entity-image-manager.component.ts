@@ -62,6 +62,7 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
   @Input() entityId!: string;
   @Input() adapter!: EntityImageAdapter;
   @Input() allowHardDelete = false;
+  @Input() readonly = false;
 
   images: EntityImage[] = [];
   audits: EntityImageAudit[] = [];

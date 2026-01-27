@@ -30,7 +30,6 @@ public class ProductVariantController {
     private final ProductVariantImageService imageService;
     private final VariantBarcodePdfService pdfService;
     private final BarcodeScanService scanService;
-//    private final ProductBarcodeMigrationService migrationService;
 
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @PostMapping
@@ -67,17 +66,6 @@ public class ProductVariantController {
     public ResponseEntity<ProductVariantDTO> generateBarcode(@PathVariable UUID id) {
         return ResponseEntity.ok(barcodeService.generateBarcodeIfMissing(id));
     }
-
-    /* =============================
-       NEW — BARCODE MIGRATION
-       ============================= */
-
-//    @PreAuthorize("hasRole('SUPERUSER')")
-//    @PostMapping("/migrate/product-barcodes")
-//    public ResponseEntity<Void> migrateProductBarcodes() {
-//        migrationService.migrateProductBarcodesToVariants();
-//        return ResponseEntity.noContent().build();
-//    }
 
     @GetMapping("/{id}/barcode/image")
     public ResponseEntity<Resource> downloadBarcodeImage(@PathVariable UUID id) {

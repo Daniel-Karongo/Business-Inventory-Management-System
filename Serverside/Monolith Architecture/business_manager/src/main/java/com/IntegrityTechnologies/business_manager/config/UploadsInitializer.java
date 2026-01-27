@@ -5,9 +5,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.nio.file.*;
-import java.nio.file.attribute.DosFileAttributeView;
+import java.util.Comparator;
 
 @Slf4j
 @Component
@@ -19,21 +18,21 @@ public class UploadsInitializer {
 
     @PostConstruct
     public void init() {
-        createAndHide(props.getBaseUploadDir(), "Base");
-        createAndHide(props.getUserUploadDir(), "User");
-        createAndHide(props.getSupplierUploadDir(), "Supplier");
-        createAndHide(props.getProductUploadDir(), "Product");
-    }
+        Path uploadsRoot = Paths.get(props.getBaseUploadDir())
+                .toAbsolutePath()
+                .normalize();
 
-    private void createAndHide(String dir, String label) {
         try {
-            Path path = Paths.get(dir).toAbsolutePath().normalize();
-            Files.createDirectories(path); // ensures existence
-            fileStorageService.hidePathIfSupported(path);
-            log.info("{} directory initialized: {}", label, path);
+            Files.createDirectories(uploadsRoot);
+
+            Files.walk(uploadsRoot)
+                    .sorted(Comparator.reverseOrder())
+                    .forEach(fileStorageService::hidePathIfSupported);
+
+            log.info("✅ Uploads directory fully hidden (Windows-safe)");
+
         } catch (Exception e) {
-            log.warn("Failed to initialize {} directory: {}", label, e.getMessage());
+            throw new RuntimeException("Failed initializing uploads", e);
         }
     }
-
 }

@@ -17,6 +17,11 @@ import { SalesService } from '../../services/sales.service';
 import { InventoryService } from '../../../inventory/services/inventory.service';
 import { CustomerService } from '../../../customers/services/customer.service';
 import { catchError, debounceTime, distinctUntilChanged, filter, of, switchMap } from 'rxjs';
+import { AuthService } from '../../../auth/services/auth.service';
+import { ViewChild, ElementRef } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../../environments/environment';
+
 
 @Component({
   standalone: true,
@@ -36,6 +41,11 @@ import { catchError, debounceTime, distinctUntilChanged, filter, of, switchMap }
   styleUrls: ['./sale-create.component.scss']
 })
 export class SaleCreateComponent implements OnInit {
+  @ViewChild('barcodeInput') barcodeInput!: ElementRef<HTMLInputElement>;
+
+  scanning = false;
+  barcodeValue = '';
+  barcodeCtrl = new FormControl('');
 
   form!: FormGroup<{
     customer: FormGroup<{
@@ -54,6 +64,7 @@ export class SaleCreateComponent implements OnInit {
 
   displayedColumns = ['product', 'branch', 'qty', 'price', 'total', 'remove'];
   stockMap: Record<number, number> = {};
+  defaultBranchId: string | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -63,7 +74,9 @@ export class SaleCreateComponent implements OnInit {
     private branchService: BranchService,
     private salesService: SalesService,
     private customerService: CustomerService,
-    private router: Router
+    private router: Router,
+    private authService: AuthService,
+    private http: HttpClient
   ) { }
 
   ngOnInit(): void {
@@ -75,6 +88,9 @@ export class SaleCreateComponent implements OnInit {
       }),
       items: this.fb.array<FormGroup>([], Validators.required),
     });
+
+    const me = this.authService.getSnapshot();
+    this.defaultBranchId = me?.branchId ?? null;
 
     this.form.controls.customer.controls.phone.valueChanges
       .pipe(
@@ -129,7 +145,10 @@ export class SaleCreateComponent implements OnInit {
     const row = this.fb.group({
       productId: [null, Validators.required],
       productVariantId: [null, Validators.required],
-      branchId: [null, Validators.required],
+      branchId: [
+        this.defaultBranchId,              // ✅ DEFAULT HERE
+        Validators.required
+      ],
       quantity: [1, [Validators.required, Validators.min(1)]],
       unitPrice: [null]
     });
@@ -137,11 +156,9 @@ export class SaleCreateComponent implements OnInit {
     row.get('quantity')!.valueChanges.subscribe(qty => {
       const i = this.items.controls.indexOf(row);
       const available = this.stockMap[i];
-
       if (available == null) return;
 
-      const q = Number(qty ?? 0); // ✅ FIX
-
+      const q = Number(qty ?? 0);
       const ctrl = row.get('quantity')!;
 
       if (q > available) {
@@ -158,6 +175,127 @@ export class SaleCreateComponent implements OnInit {
 
   removeLine(i: number) {
     this.items.removeAt(i);
+  }
+
+  scanBarcode(value?: string) {
+    const code = (value ?? this.barcodeCtrl.value)?.trim();
+    if (!code) return;
+
+    const payload = {
+      barcode: code,
+      branchId: this.defaultBranchId
+    };
+
+    this.http.post<any>(
+      `${environment.apiUrl}/product-variants/scan`,
+      payload
+    ).subscribe({
+      next: res => this.applyScannedVariant(res),
+      error: () => alert('Invalid barcode / SKU')
+    });
+
+    this.barcodeCtrl.setValue('');
+  }
+
+  private applyScannedVariant(res: any) {
+
+    /* 1️⃣ If variant already exists → increment qty */
+    const existingIndex = this.items.controls.findIndex(ctrl =>
+      ctrl.value.productVariantId === res.variantId &&
+      ctrl.value.branchId === (res.branchId ?? this.defaultBranchId)
+    );
+
+    if (existingIndex !== -1) {
+      const qtyCtrl = this.items.at(existingIndex).get('quantity')!;
+      qtyCtrl.setValue(Number(qtyCtrl.value) + 1);
+      return;
+    }
+
+    /* 2️⃣ Find first EMPTY line (no variant yet) */
+    const emptyIndex = this.items.controls.findIndex(ctrl =>
+      !ctrl.value.productVariantId
+    );
+
+    const targetRow =
+      emptyIndex !== -1
+        ? this.items.at(emptyIndex)
+        : null;
+
+    if (targetRow) {
+      targetRow.patchValue({
+        productId: res.productId,
+        productVariantId: res.variantId,
+        branchId: res.branchId ?? this.defaultBranchId,
+        quantity: 1,
+        unitPrice: res.sellingPrice
+      });
+
+      if (res.branchId) {
+        this.stockMap[emptyIndex] = res.quantityOnHand ?? 0;
+      }
+
+      return;
+    }
+
+    /* 3️⃣ Otherwise → create new line */
+    const row = this.fb.group({
+      productId: [res.productId, Validators.required],
+      productVariantId: [res.variantId, Validators.required],
+      branchId: [res.branchId ?? this.defaultBranchId, Validators.required],
+      quantity: [1, [Validators.required, Validators.min(1)]],
+      unitPrice: [res.sellingPrice, Validators.required]
+    });
+
+    this.items.push(row);
+
+    if (res.branchId) {
+      this.stockMap[this.items.length - 1] = res.quantityOnHand ?? 0;
+    }
+  }
+
+  canUseCameraScan(): boolean {
+    return (
+      'BarcodeDetector' in window &&
+      navigator.mediaDevices &&
+      typeof navigator.mediaDevices.getUserMedia === 'function'
+    );
+  }
+
+  async startCameraScan() {
+    if (!('BarcodeDetector' in window)) {
+      alert('Camera scanning not supported on this device');
+      return;
+    }
+
+    const detector = new (window as any).BarcodeDetector({
+      formats: ['code_128', 'ean_13', 'ean_8']
+    });
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' }
+    });
+
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    video.play();
+
+    this.scanning = true;
+
+    const scanLoop = async () => {
+      if (!this.scanning) return;
+
+      const barcodes = await detector.detect(video);
+      if (barcodes.length) {
+        this.scanning = false;
+        stream.getTracks().forEach(t => t.stop());
+        this.scanBarcode(barcodes[0].rawValue);
+        return;
+      }
+
+      requestAnimationFrame(scanLoop);
+    };
+
+    scanLoop();
   }
 
   onProductChange(i: number) {
