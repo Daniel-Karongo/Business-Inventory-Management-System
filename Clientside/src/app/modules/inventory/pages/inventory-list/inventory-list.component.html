@@ -39,6 +39,24 @@
         No inventory records found
     </div>
 
+    <div class="flex justify-between items-center mb-3">
+        <h1 class="text-xl font-semibold">Inventory</h1>
+
+        <div class="flex gap-2">
+
+            <button mat-stroked-button color="primary" (click)="openReceiveNewProduct()">
+                <mat-icon>add_box</mat-icon>
+                Receive New Product
+            </button>
+
+            <button mat-flat-button color="primary" (click)="openBulkReceive()">
+                <mat-icon>cloud_upload</mat-icon>
+                Bulk Receive
+            </button>
+
+        </div>
+    </div>
+
     <!-- TABLE -->
     <div *ngIf="!loading && filtered.length > 0" class="bg-[var(--surface)] rounded shadow overflow-x-auto">
 
@@ -181,13 +199,15 @@
                 <th mat-header-cell *matHeaderCellDef>Actions</th>
                 <td mat-cell *matCellDef="let r">
                     <button mat-icon-button matTooltip="View transactions"
-                        [routerLink]="['/inventory/transactions', r.productVariantId]">
+                        [routerLink]="['/inventory/', r.productVariantId]">
                         <mat-icon>history</mat-icon>
                     </button>
                     <button mat-icon-button matTooltip="Receive stock" (click)="openReceiveDialog(r)">
                         <mat-icon>add_circle</mat-icon>
                     </button>
-
+                    <button mat-icon-button matTooltip="Transfer stock" (click)="openTransferDialog(r)">
+                        <mat-icon>swap_horiz</mat-icon>
+                    </button>
                     <button mat-icon-button matTooltip="Adjust stock" (click)="openAdjustDialog(r)">
                         <mat-icon>tune</mat-icon>
                     </button>

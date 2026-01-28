@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { ApiResponse } from '../../../core/models/api-response.model';
 import { InventoryResponse } from '../models/inventory-response.model';
 import { StockTransactionDTO } from '../models/stock-transaction.model';
@@ -11,67 +11,82 @@ export class InventoryService {
 
   private base = environment.apiUrl + environment.endpoints.inventory.base;
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
   /** ===========================
-   * READ (GLOBAL / FILTERED)
+   * READ — NORMALIZED
    * =========================== */
 
-  getAll(): Observable<ApiResponse<InventoryResponse[]>> {
-    return this.http.get<ApiResponse<InventoryResponse[]>>(this.base);
+  getAll(): Observable<InventoryResponse[]> {
+    return this.http
+      .get<ApiResponse<InventoryResponse[]>>(this.base)
+      .pipe(map(res => res.data ?? []));
   }
 
-  getByBranch(branchId: string): Observable<ApiResponse<InventoryResponse[]>> {
-    return this.http.get<ApiResponse<InventoryResponse[]>>(
-      `${this.base}/branch/${branchId}`
-    );
+  getByBranch(branchId: string): Observable<InventoryResponse[]> {
+    return this.http
+      .get<ApiResponse<InventoryResponse[]>>(
+        `${this.base}/branch/${branchId}`
+      )
+      .pipe(map(res => res.data ?? []));
   }
 
-  getLowStock(threshold: number = 10): Observable<ApiResponse<InventoryResponse[]>> {
-    return this.http.get<ApiResponse<InventoryResponse[]>>(
-      `${this.base}/low-stock`,
-      { params: { threshold } }
-    );
+  /** Used by Products → Variant List */
+  getVariantAcrossBranches(
+    variantId: string
+  ): Observable<InventoryResponse[]> {
+    return this.http
+      .get<ApiResponse<InventoryResponse[]>>(
+        `${this.base}/variant/${variantId}`
+      )
+      .pipe(map(res => res.data ?? []));
   }
 
-  getOutOfStock(): Observable<ApiResponse<InventoryResponse[]>> {
-    return this.http.get<ApiResponse<InventoryResponse[]>>(
-      `${this.base}/out-of-stock`
-    );
+  /** Used by Sales → Sale Create */
+  getVariantStock(
+    variantId: string,
+    branchId: string
+  ): Observable<InventoryResponse | null> {
+    return this.http
+      .get<ApiResponse<InventoryResponse>>(
+        `${this.base}/variant/${variantId}/branch/${branchId}`
+      )
+      .pipe(map(res => res.data ?? null));
   }
 
-  getVariantAcrossBranches(variantId: string) {
-    return this.http.get<ApiResponse<InventoryResponse[]>>(
-      `${this.base}/variant/${variantId}`
-    );
-  }
+  /** ===========================
+   * TRANSACTIONS (already raw)
+   * =========================== */
 
-  getVariantStock(variantId: string, branchId: string) {
-    return this.http.get<any>(
-      `${environment.apiUrl}/inventory/variant/${variantId}/branch/${branchId}`
-    );
-  }
-
-  getTransactionsByVariant(variantId: string) {
+  getTransactionsByVariant(
+    variantId: string
+  ): Observable<StockTransactionDTO[]> {
     return this.http.get<StockTransactionDTO[]>(
       `${environment.apiUrl}/stock/transactions/variant/${variantId}`
     );
   }
 
   /** ===========================
-   * MUTATIONS (ROLE-GATED)
+   * MUTATIONS (unchanged)
    * =========================== */
 
-  receiveStock(payload: any) {
-    return this.http.post<ApiResponse>(
-      `${this.base}/receive`,
-      payload
-    );
+  receiveStock(payload: any): Observable<ApiResponse> {
+    return this.http.post<ApiResponse>(`${this.base}/receive`, payload);
   }
 
-  adjustVariantStock(payload: any) {
+  adjustVariantStock(payload: any): Observable<ApiResponse> {
+    return this.http.post<ApiResponse>(`${this.base}/adjust/variant`, payload);
+  }
+
+  transferStock(payload: any): Observable<ApiResponse> {
+    return this.http.post<ApiResponse>(`${this.base}/transfer`, payload);
+  }
+
+  bulkReceiveStock(payload: {
+    items: any[];
+  }): Observable<ApiResponse> {
     return this.http.post<ApiResponse>(
-      `${this.base}/adjust/variant`,
+      `${this.base}/receive/bulk`,
       payload
     );
   }

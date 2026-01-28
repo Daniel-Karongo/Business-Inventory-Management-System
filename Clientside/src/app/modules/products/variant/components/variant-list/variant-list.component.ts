@@ -64,11 +64,10 @@ export class VariantListComponent implements OnInit {
         this.variants = variants || [];
 
         this.variants.forEach(v => {
-          this.inventoryService.getVariantAcrossBranches(v.id).subscribe(res => {
-            const rows = res?.data || [];
+          this.inventoryService.getVariantAcrossBranches(v.id).subscribe(rows => {
 
             const totalOnHand = rows.reduce(
-              (sum: number, r: any) => sum + (r.quantityOnHand ?? 0),
+              (sum, r) => sum + (r.quantityOnHand ?? 0),
               0
             );
 

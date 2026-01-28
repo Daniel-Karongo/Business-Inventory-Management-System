@@ -8,7 +8,7 @@ export const INVENTORY_ROUTES: Routes = [
     component: InventoryListComponent
   },
   {
-    path: 'transactions/:variantId',
+    path: ':variantId',
     component: InventoryTransactionsComponent
   }
 ];

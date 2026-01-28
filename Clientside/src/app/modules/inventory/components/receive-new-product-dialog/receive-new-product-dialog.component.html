@@ -1,0 +1,99 @@
+<h2 mat-dialog-title class="dialog-title">
+  Receive New Product
+</h2>
+
+<mat-dialog-content [formGroup]="form" class="dialog-body">
+
+  <!-- PRODUCT CONTEXT -->
+  <div class="context-card">
+    <div class="product-name">{{ product.name }}</div>
+    <div class="product-meta">
+      SKU: {{ product.sku || '—' }}
+    </div>
+  </div>
+
+  <!-- BRANCH -->
+  <mat-form-field appearance="fill">
+    <mat-label>Branch</mat-label>
+    <mat-select formControlName="branchId">
+      <mat-option *ngFor="let b of branches" [value]="b.id">
+        {{ b.name }}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <!-- VARIANT -->
+  <div class="section-title">Variant (first)</div>
+
+  <mat-form-field appearance="fill">
+    <mat-label>Classification</mat-label>
+    <input matInput
+           placeholder="e.g. Standard / Size 42 / 1L"
+           formControlName="classification">
+  </mat-form-field>
+
+  <mat-form-field appearance="fill">
+    <mat-label>Variant SKU (optional)</mat-label>
+    <input matInput formControlName="newVariantSku">
+    <mat-hint>Auto-generated if left blank</mat-hint>
+  </mat-form-field>
+
+  <!-- PRICING -->
+  <div class="section-title">Pricing</div>
+
+  <mat-form-field appearance="fill">
+    <mat-label>Selling Price (optional)</mat-label>
+    <input matInput type="number" formControlName="sellingPrice">
+    <mat-hint>
+      Overrides minimum selling price calculated from cost
+    </mat-hint>
+  </mat-form-field>
+
+  <!-- SUPPLIER -->
+  <div class="section-title">Initial Stock</div>
+
+  <mat-form-field appearance="fill">
+    <mat-label>Supplier</mat-label>
+    <mat-select formControlName="supplierId">
+      <mat-option *ngFor="let s of suppliers" [value]="s.id">
+        {{ s.name }}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <div class="grid-2">
+    <mat-form-field appearance="fill">
+      <mat-label>Units Supplied</mat-label>
+      <input matInput type="number" formControlName="unitsSupplied">
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Unit Cost</mat-label>
+      <input matInput type="number" formControlName="unitCost">
+    </mat-form-field>
+  </div>
+
+  <!-- META -->
+  <div class="section-title">Reference</div>
+
+  <mat-form-field appearance="fill">
+    <mat-label>Reference</mat-label>
+    <input matInput formControlName="reference">
+  </mat-form-field>
+
+  <mat-form-field appearance="fill">
+    <mat-label>Note</mat-label>
+    <textarea matInput rows="2" formControlName="note"></textarea>
+  </mat-form-field>
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="dialog-actions">
+  <button mat-button (click)="close()">Cancel</button>
+  <button mat-flat-button
+          color="primary"
+          (click)="submit()"
+          [disabled]="loading || form.invalid">
+    Receive Product
+  </button>
+</mat-dialog-actions>

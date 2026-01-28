@@ -50,6 +50,18 @@ public class InventoryController {
         return ResponseEntity.ok(new ApiResponse("success", "Inventory Updated successfully", responses));
     }
 
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
+    @PostMapping("/transfer")
+    public ResponseEntity<ApiResponse> transferStock(
+            @RequestBody TransferStockRequest req
+    ) {
+        return ResponseEntity.ok(
+                OptimisticRetryRunner.runWithRetry(
+                        () -> inventoryService.transferStock(req)
+                )
+        );
+    }
+
     /** -------------------------
      * ADJUST
      * ------------------------- */

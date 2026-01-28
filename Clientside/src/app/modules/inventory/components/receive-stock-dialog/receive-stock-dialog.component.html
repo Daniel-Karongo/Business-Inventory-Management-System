@@ -1,66 +1,104 @@
-<h2 mat-dialog-title class="font-semibold">Receive Stock</h2>
+<h2 mat-dialog-title class="dialog-title">
+  Receive Stock
+</h2>
 
-<mat-dialog-content [formGroup]="form" class="flex flex-col gap-5">
+<mat-dialog-content [formGroup]="form" class="dialog-body">
 
-  <!-- Context -->
-  <div class="text-sm text-gray-500">
-    <div class="font-medium text-gray-700">
-      {{ data.productName }}
-    </div>
-    <div>
+  <!-- CONTEXT -->
+  <div class="context-card">
+    <div class="context-title">{{ data.productName }}</div>
+    <div class="context-sub">
       {{ data.classification }} • {{ data.branchName }}
     </div>
   </div>
 
-  <!-- Reference -->
-  <mat-form-field appearance="fill">
-    <mat-label>Reference</mat-label>
-    <input matInput formControlName="reference">
-  </mat-form-field>
+  <!-- VARIANT MODE -->
+  <div class="section">
+    <mat-form-field appearance="fill">
+      <mat-label>Variant</mat-label>
+      <mat-select formControlName="variantMode">
+        <mat-option value="EXISTING">Existing variant</mat-option>
+        <mat-option value="NEW">New variant</mat-option>
+      </mat-select>
+    </mat-form-field>
 
-  <!-- Note -->
-  <mat-form-field appearance="fill">
-    <mat-label>Note</mat-label>
-    <input matInput formControlName="note">
-  </mat-form-field>
+    <!-- NEW VARIANT -->
+    <div *ngIf="form.value.variantMode === 'NEW'" class="grid-2">
+      <mat-form-field appearance="fill">
+        <mat-label>Variant Classification</mat-label>
+        <input matInput formControlName="classification"
+               placeholder="e.g. Size 42 / Red / 1L">
+      </mat-form-field>
 
-  <!-- Suppliers -->
-  <div formArrayName="suppliers" class="flex flex-col gap-6">
+      <mat-form-field appearance="fill">
+        <mat-label>Variant SKU (optional)</mat-label>
+        <input matInput formControlName="newVariantSku">
+        <mat-hint>Auto-generated if left blank</mat-hint>
+      </mat-form-field>
+    </div>
+  </div>
+
+  <!-- META -->
+  <div class="grid-2">
+    <mat-form-field appearance="fill">
+      <mat-label>Reference</mat-label>
+      <input matInput formControlName="reference">
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Note</mat-label>
+      <input matInput formControlName="note">
+    </mat-form-field>
+  </div>
+
+  <!-- SUPPLIERS -->
+  <div formArrayName="suppliers" class="suppliers">
 
     <div *ngFor="let s of suppliers.controls; let i = index"
          [formGroupName]="i"
-         class="flex flex-col gap-4 p-4 rounded-md bg-[var(--surface)] border">
+         class="supplier-card">
 
-      <mat-form-field appearance="fill">
-        <mat-label>Supplier</mat-label>
-        <mat-select formControlName="supplierId">
-          <mat-option *ngFor="let sup of suppliersList" [value]="sup.id">
-            {{ sup.name }}
-          </mat-option>
-        </mat-select>
-      </mat-form-field>
+      <div class="supplier-header">
+        <span>Supplier {{ i + 1 }}</span>
 
-      <mat-form-field appearance="fill">
-        <mat-label>Units Supplied</mat-label>
-        <input matInput type="number" formControlName="unitsSupplied">
-      </mat-form-field>
-
-      <mat-form-field appearance="fill">
-        <mat-label>Unit Cost</mat-label>
-        <input matInput type="number" formControlName="unitCost">
-      </mat-form-field>
-
-      <div class="flex justify-end">
         <button mat-icon-button color="warn"
-                (click)="removeSupplier(i)"
                 *ngIf="suppliers.length > 1"
+                (click)="removeSupplier(i)"
                 matTooltip="Remove supplier">
           <mat-icon>delete</mat-icon>
         </button>
       </div>
 
-    </div>
+      <div class="grid-2">
+        <mat-form-field appearance="fill">
+          <mat-label>Supplier</mat-label>
+          <mat-select formControlName="supplierId">
+            <mat-option *ngFor="let sup of suppliersList" [value]="sup.id">
+              {{ sup.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
 
+        <mat-form-field appearance="fill">
+          <mat-label>Units Supplied</mat-label>
+          <input matInput type="number" formControlName="unitsSupplied">
+        </mat-form-field>
+      </div>
+
+      <div class="grid-2">
+        <mat-form-field appearance="fill">
+          <mat-label>Unit Cost</mat-label>
+          <input matInput type="number" formControlName="unitCost">
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Selling Price (optional)</mat-label>
+          <input matInput type="number" formControlName="sellingPrice">
+          <mat-hint>Overrides minimum selling price</mat-hint>
+        </mat-form-field>
+      </div>
+
+    </div>
   </div>
 
   <button mat-stroked-button (click)="addSupplier()">
@@ -69,11 +107,11 @@
 
 </mat-dialog-content>
 
-<mat-dialog-actions align="end" class="gap-2">
+<mat-dialog-actions align="end" class="dialog-actions">
   <button mat-button (click)="close()">Cancel</button>
   <button mat-flat-button color="primary"
-          (click)="submit()"
-          [disabled]="loading || form.invalid">
+          [disabled]="loading || form.invalid"
+          (click)="submit()">
     Receive Stock
   </button>
 </mat-dialog-actions>

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Data
@@ -17,6 +18,7 @@ public class InventoryResponse {
     private String productVariantSKU;
     private UUID branchId;
     private String branchName;
+    private BigDecimal averageCost;
     private Long quantityOnHand;
     private Long quantityReserved;
     private String lastUpdatedAt;

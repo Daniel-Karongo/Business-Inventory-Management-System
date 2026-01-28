@@ -22,4 +22,20 @@ public interface InventoryAccountingPort {
             BigDecimal value,
             String reference
     );
+
+    /** ===========================
+     * TRANSFERS (NEW)
+     * =========================== */
+
+    void recordInventoryTransferOut(
+            UUID referenceId,
+            BigDecimal value,
+            String reference
+    );
+
+    void recordInventoryTransferIn(
+            UUID referenceId,
+            BigDecimal value,
+            String reference
+    );
 }

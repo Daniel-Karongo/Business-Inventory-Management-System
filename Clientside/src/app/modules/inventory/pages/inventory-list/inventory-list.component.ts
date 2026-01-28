@@ -18,6 +18,11 @@ import { AdjustStockDialogComponent } from '../../components/adjust-stock-dialog
 import { ReceiveStockDialogComponent } from '../../components/receive-stock-dialog/receive-stock-dialog.component';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectChange, MatSelectModule } from '@angular/material/select';
+import { TransferStockDialogComponent } from '../../components/transfer-stock-dialog/transfer-stock-dialog.component';
+import { ProductSelectorDialogComponent } from '../../../sales/dialogs/product-selector-dialog/product-selector-dialog.component';
+import { Product } from '../../../products/parent/models/product.model';
+import { ReceiveNewProductDialogComponent } from '../../components/receive-new-product-dialog/receive-new-product-dialog.component';
+import { BulkReceiveStockDialogComponent } from '../../components/bulk-receive-stock-dialog/bulk-receive-stock-dialog.component';
 
 @Component({
   selector: 'app-inventory-list',
@@ -113,11 +118,11 @@ export class InventoryListComponent implements OnInit {
       : this.inventoryService.getAll();
 
     req.subscribe({
-      next: res => {
-        this.inventory = res.data || [];
+      next: inventory => {
+        this.inventory = inventory;
         this.filtered = [...this.inventory];
 
-        this.applySorting();     // 🔥 INSERT
+        this.applySorting();
         this.page = 0;
         this.applyPagination();
 
@@ -210,7 +215,8 @@ export class InventoryListComponent implements OnInit {
 
   openReceiveDialog(row: InventoryResponse) {
     const ref = this.dialog.open(ReceiveStockDialogComponent, {
-      width: '600px',
+      width: '720px',
+      maxWidth: '95vw',
       data: {
         productId: row.productId,
         productName: row.productName,
@@ -228,7 +234,9 @@ export class InventoryListComponent implements OnInit {
 
   openAdjustDialog(row: InventoryResponse) {
     const ref = this.dialog.open(AdjustStockDialogComponent, {
-      width: '500px',
+      width: '560px',
+      maxWidth: '95vw',
+      disableClose: false,
       data: {
         productVariantId: row.productVariantId,
         productName: row.productName,
@@ -243,4 +251,56 @@ export class InventoryListComponent implements OnInit {
     });
   }
 
+  openTransferDialog(row: InventoryResponse) {
+    const ref = this.dialog.open(TransferStockDialogComponent, {
+      width: '720px',
+      maxWidth: '95vw',
+      disableClose: false,
+      data: {
+        productVariantId: row.productVariantId,
+        productName: row.productName,
+        classification: row.productClassification,
+        fromBranchId: row.branchId,
+        fromBranchName: row.branchName,
+        available: this.available(row),
+        averageCost: row.averageCost
+      }
+    });
+
+    ref.afterClosed().subscribe(success => {
+      if (success) this.loadInventory();
+    });
+  }
+
+  openReceiveNewProduct() {
+    const ref = this.dialog.open(ProductSelectorDialogComponent, {
+      width: '900px'
+    });
+
+    ref.afterClosed().subscribe((products: Product[]) => {
+      if (!products || !products.length) return;
+
+      this.dialog.open(ReceiveNewProductDialogComponent, {
+        width: '600px',
+        data: products
+      }).afterClosed().subscribe(success => {
+        if (success) this.loadInventory();
+      });
+    });
+  }
+
+  openBulkReceive() {
+    const ref = this.dialog.open(BulkReceiveStockDialogComponent, {
+      width: '1200px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      disableClose: false
+    });
+
+    ref.afterClosed().subscribe(success => {
+      if (success) {
+        this.loadInventory();
+      }
+    });
+  }
 }

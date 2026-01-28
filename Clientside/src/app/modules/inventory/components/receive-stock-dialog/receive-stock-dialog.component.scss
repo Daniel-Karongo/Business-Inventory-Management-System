@@ -1,16 +1,68 @@
-// .supplier-block {
-//   display: flex;
-//   flex-direction: column;
-//   gap: 1rem;
+.dialog-title {
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
 
-//   padding: 1rem 1.25rem;
+.dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
 
-//   border-radius: 6px;
-// //   background: rgba(0, 122, 255, 0.04);
-// //   border: 1px solid rgba(0, 122, 255, 0.15);
-// }
+/* Context */
+.context-card {
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
 
-// // body.dark .supplier-block {
-// // //   background: rgba(59, 130, 246, 0.08);
-// // //   border-color: rgba(59, 130, 246, 0.25);
-// // }
+.context-title {
+  font-weight: 600;
+}
+
+.context-sub {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* Layout helpers */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Suppliers */
+.suppliers {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.supplier-card {
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.supplier-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+/* Actions */
+.dialog-actions {
+  padding-top: 12px;
+}

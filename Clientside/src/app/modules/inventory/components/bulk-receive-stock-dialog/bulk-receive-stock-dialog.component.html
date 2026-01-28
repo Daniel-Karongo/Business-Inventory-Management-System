@@ -1,0 +1,154 @@
+<h2 mat-dialog-title class="bulk-title">
+    Bulk Receive Stock
+</h2>
+
+<mat-dialog-content [formGroup]="form" class="body">
+
+    <div class="toolbar">
+
+        <button mat-flat-button color="primary" (click)="openProductSelector()">
+            <mat-icon>add</mat-icon>
+            Add Products
+        </button>
+
+        <span class="spacer"></span>
+
+        <div class="import-group">
+            <button mat-stroked-button (click)="downloadExcelTemplate()">
+                <mat-icon>table_view</mat-icon>
+                Excel Template
+            </button>
+
+            <button mat-stroked-button (click)="downloadTemplate()">
+                <mat-icon>description</mat-icon>
+                CSV Template
+            </button>
+
+            <label class="upload">
+                <input type="file" hidden accept=".xlsx" (change)="importExcel($event)">
+                <mat-icon>upload</mat-icon>
+                Import Excel
+            </label>
+
+            <label class="upload">
+                <input type="file" hidden accept=".csv" (change)="importCsv($event)">
+                <mat-icon>upload_file</mat-icon>
+                Import CSV
+            </label>
+        </div>
+
+    </div>
+
+    <mat-form-field appearance="fill">
+        <mat-label>Branch</mat-label>
+        <mat-select formControlName="branchId">
+            <mat-option *ngFor="let b of branches" [value]="b.id">
+                {{ b.name }}
+            </mat-option>
+        </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+        <mat-label>Reference</mat-label>
+        <input matInput formControlName="reference">
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+        <mat-label>Note (applies to all items)</mat-label>
+        <input matInput formControlName="note" placeholder="Optional remarks for this bulk receipt">
+    </mat-form-field>
+
+    <div class="rows" formArrayName="rows">
+
+        <div class="row-card" *ngFor="let r of rows.controls; let i = index" [formGroupName]="i">
+
+            <!-- ROW HEADER -->
+            <div class="row-header">
+                <span>Item {{ i + 1 }}</span>
+                <button mat-icon-button color="warn" (click)="removeRow(i)">
+                    <mat-icon>delete</mat-icon>
+                </button>
+            </div>
+
+            <!-- PRODUCT -->
+            <div class="grid-2">
+                <mat-form-field appearance="fill">
+                    <mat-label>Product</mat-label>
+                    <input matInput [value]="r.value.productName" disabled>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+                    <mat-label>Variant Mode</mat-label>
+                    <mat-select formControlName="variantMode">
+                        <mat-option value="EXISTING">Existing Variant</mat-option>
+                        <mat-option value="NEW">New Variant</mat-option>
+                    </mat-select>
+                </mat-form-field>
+            </div>
+
+            <!-- EXISTING VARIANT -->
+            <mat-form-field *ngIf="r.value.variantMode === 'EXISTING'" appearance="fill">
+
+                <mat-label>Variant</mat-label>
+                <mat-select formControlName="productVariantId">
+                    <mat-option *ngFor="let v of variantOptions.get(i) || []" [value]="v.id">
+                        {{ v.classification }}
+                    </mat-option>
+                </mat-select>
+
+            </mat-form-field>
+
+            <!-- NEW VARIANT -->
+            <mat-form-field *ngIf="r.value.variantMode === 'NEW'" appearance="fill">
+
+                <mat-label>Variant Classification</mat-label>
+                <input matInput formControlName="classification">
+
+            </mat-form-field>
+
+            <!-- SUPPLIER -->
+            <mat-form-field appearance="fill">
+                <mat-label>Supplier</mat-label>
+                <mat-select formControlName="supplierId">
+                    <mat-option *ngFor="let s of suppliers" [value]="s.id">
+                        {{ s.name }}
+                    </mat-option>
+                </mat-select>
+            </mat-form-field>
+
+            <!-- QUANTITIES -->
+            <div class="grid-3">
+                <mat-form-field appearance="fill">
+                    <mat-label>Units</mat-label>
+                    <input matInput type="number" formControlName="unitsSupplied">
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+                    <mat-label>Unit Cost</mat-label>
+                    <input matInput type="number" formControlName="unitCost">
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+                    <mat-label>Selling Price</mat-label>
+                    <input matInput type="number" formControlName="sellingPrice">
+                </mat-form-field>
+            </div>
+
+            <!-- ERROR -->
+            <div class="row-error" *ngIf="r.value._error">
+                {{ r.value._error }}
+            </div>
+
+        </div>
+    </div>
+
+    <button mat-stroked-button (click)="addRow()">+ Add Row</button>
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+    <button mat-button (click)="close()">Cancel</button>
+    <button mat-flat-button color="primary" [disabled]="submitting || form.invalid" (click)="submit()">
+        Import
+    </button>
+</mat-dialog-actions>

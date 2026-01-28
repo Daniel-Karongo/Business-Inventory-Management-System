@@ -48,6 +48,13 @@ export class ReceiveStockDialogComponent {
     this.form = this.fb.group({
       reference: ['', Validators.required],
       note: [''],
+
+      variantMode: ['EXISTING', Validators.required], // 👈 NEW
+      classification: [''],                           // 👈 NEW
+      newVariantSku: [''],                            // 👈 NEW
+
+      sellingPrice: [null],
+
       suppliers: this.fb.array([this.createSupplier()])
     });
 
@@ -93,13 +100,21 @@ export class ReceiveStockDialogComponent {
 
     this.loading = true;
 
-    const payload = {
+    const payload: any = {
       productId: this.data.productId,
-      productVariantId: this.data.productVariantId,
-      classification: this.data.classification,
       branchId: this.data.branchId,
-      ...this.form.value
+      reference: this.form.value.reference,
+      note: this.form.value.note,
+      sellingPrice: this.form.value.sellingPrice,
+      suppliers: this.form.value.suppliers
     };
+
+    if (this.form.value.variantMode === 'EXISTING') {
+      payload.productVariantId = this.data.productVariantId;
+    } else {
+      payload.classification = this.form.value.classification;
+      payload.newVariantSku = this.form.value.newVariantSku;
+    }
 
     this.inventoryService.receiveStock(payload).subscribe({
       next: () => {

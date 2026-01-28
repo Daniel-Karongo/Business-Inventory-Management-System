@@ -1,33 +1,30 @@
-<h2 mat-dialog-title class="font-semibold">Adjust Stock</h2>
+<h2 mat-dialog-title class="dialog-title">Adjust Stock</h2>
 
-<mat-dialog-content [formGroup]="form" class="flex flex-col gap-5">
+<mat-dialog-content [formGroup]="form" class="dialog-body">
 
   <!-- Context -->
-  <div class="text-sm text-gray-500 leading-tight">
-    <div class="font-medium text-gray-700">
-      {{ data.productName }}
-    </div>
-    <div>
+  <div class="context-card">
+    <div class="product">{{ data.productName }}</div>
+    <div class="meta">
       {{ data.classification }} • {{ data.branchName }}
     </div>
   </div>
 
-  <!-- Quantity -->
-  <mat-form-field appearance="fill">
-    <mat-label>Quantity Delta</mat-label>
-    <input matInput type="number" formControlName="quantityDelta">
-    <mat-hint>
-      Use positive or negative values
-    </mat-hint>
-  </mat-form-field>
+  <div class="grid-2">
 
-  <!-- Reason -->
-  <mat-form-field appearance="fill">
-    <mat-label>Reason</mat-label>
-    <input matInput formControlName="reason">
-  </mat-form-field>
+    <mat-form-field appearance="fill">
+      <mat-label>Quantity Delta</mat-label>
+      <input matInput type="number" formControlName="quantityDelta">
+      <mat-hint>Use positive or negative values</mat-hint>
+    </mat-form-field>
 
-  <!-- Reference -->
+    <mat-form-field appearance="fill">
+      <mat-label>Reason</mat-label>
+      <input matInput formControlName="reason">
+    </mat-form-field>
+
+  </div>
+
   <mat-form-field appearance="fill">
     <mat-label>Reference</mat-label>
     <input matInput formControlName="reference">
@@ -35,12 +32,12 @@
 
 </mat-dialog-content>
 
-<mat-dialog-actions align="end" class="gap-2">
+<mat-dialog-actions align="end" class="dialog-footer">
   <button mat-button (click)="close()">Cancel</button>
   <button mat-flat-button
           color="warn"
-          (click)="submit()"
-          [disabled]="loading || form.invalid">
+          [disabled]="loading || form.invalid"
+          (click)="submit()">
     Adjust Stock
   </button>
 </mat-dialog-actions>

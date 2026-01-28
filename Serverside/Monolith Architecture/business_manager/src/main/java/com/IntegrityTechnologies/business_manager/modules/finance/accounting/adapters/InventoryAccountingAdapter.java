@@ -95,4 +95,46 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                         .build()
         );
     }
+
+    @Override
+    public void recordInventoryTransferOut(UUID refId, BigDecimal value, String ref) {
+
+        accountingFacade.post(
+                AccountingEvent.builder()
+                        .sourceModule("INVENTORY_TRANSFER_OUT")
+                        .sourceId(refId)
+                        .reference(ref)
+                        .description("Inventory transferred out (source branch)")
+                        .performedBy("SYSTEM")
+                        .entries(List.of(
+                                AccountingEvent.Entry.builder()
+                                        .accountId(accounts.inventory())
+                                        .direction(EntryDirection.CREDIT)
+                                        .amount(value)
+                                        .build()
+                        ))
+                        .build()
+        );
+    }
+
+    @Override
+    public void recordInventoryTransferIn(UUID refId, BigDecimal value, String ref) {
+
+        accountingFacade.post(
+                AccountingEvent.builder()
+                        .sourceModule("INVENTORY_TRANSFER_IN")
+                        .sourceId(refId)
+                        .reference(ref)
+                        .description("Inventory transferred in (destination branch)")
+                        .performedBy("SYSTEM")
+                        .entries(List.of(
+                                AccountingEvent.Entry.builder()
+                                        .accountId(accounts.inventory())
+                                        .direction(EntryDirection.DEBIT)
+                                        .amount(value)
+                                        .build()
+                        ))
+                        .build()
+        );
+    }
 }

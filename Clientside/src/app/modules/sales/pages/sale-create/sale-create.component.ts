@@ -529,9 +529,12 @@ export class SaleCreateComponent implements OnInit {
 
   loadStock(i: number, variantId: string, branchId: string) {
     this.inventoryService.getVariantStock(variantId, branchId)
-      .subscribe(res => {
+      .subscribe(stock => {
+
+        if (!stock) return;
+
         const available =
-          res.quantityOnHand - res.quantityReserved;
+          stock.quantityOnHand - stock.quantityReserved;
 
         this.stockMap[i] = available;
 
@@ -543,7 +546,6 @@ export class SaleCreateComponent implements OnInit {
         if (qtyCtrl.value > available) {
           qtyCtrl.setErrors({ stockExceeded: true });
         } else {
-          // IMPORTANT: clear only this error, not others
           if (qtyCtrl.hasError('stockExceeded')) {
             const errors = { ...qtyCtrl.errors };
             delete errors['stockExceeded'];

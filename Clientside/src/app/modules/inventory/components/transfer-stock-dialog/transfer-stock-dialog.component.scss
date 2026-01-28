@@ -1,5 +1,6 @@
 .dialog-title {
   font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
 .dialog-body {
@@ -22,12 +23,21 @@
     font-size: 0.85rem;
     color: var(--text-secondary);
   }
+
+  .available {
+    margin-top: 6px;
+    font-size: 0.85rem;
+  }
 }
 
-.grid-2 {
+.form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+
+  .full {
+    grid-column: 1 / -1;
+  }
 }
 
 .dialog-footer {

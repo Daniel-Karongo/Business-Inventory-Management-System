@@ -10,6 +10,7 @@ export interface InventoryResponse {
   branchId: string;
   branchName: string;
 
+  averageCost?: number;
   quantityOnHand: number;
   quantityReserved: number;
 

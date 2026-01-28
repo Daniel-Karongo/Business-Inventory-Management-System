@@ -9,10 +9,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.AdjustStockRequest;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.InventoryResponse;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.ReceiveStockRequest;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.SupplierUnit;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryItem;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventorySnapshot;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.StockTransaction;
@@ -208,16 +205,22 @@ public class InventoryService {
 
 
         // -------------------------------------------------------------
-        // 6. UPDATE VARIANT PRICING (NEW CORRECT RULE)
-        //     minSelling = newAvgCost × (1 + minPercentageProfit)
+        // 6. UPDATE VARIANT PRICING
         // -------------------------------------------------------------
-        Double margin = product.getMinimumPercentageProfit(); // e.g. 0.20 for 20%
+        Double margin = product.getMinimumPercentageProfit();
         if (margin == null) margin = 0D;
 
         variant.setAverageBuyingPrice(newAvgCost);
+
+        // default calculated selling price
         variant.setMinimumSellingPrice(
-                productVariantService.computeMinSelling(newAvgCost, margin) // now correct
+                productVariantService.computeMinSelling(newAvgCost, margin)
         );
+
+        // 🔐 OPTIONAL OVERRIDE FROM UI
+        if (req.getSellingPrice() != null) {
+            variant.setMinimumSellingPrice(req.getSellingPrice());
+        }
 
         productVariantRepository.save(variant);
 
@@ -290,6 +293,157 @@ public class InventoryService {
         // 9. RETURN RESPONSE
         // -------------------------------------------------------------
         return new ApiResponse("success", "Stock received successfully", buildResponse(item));
+    }
+
+    @Transactional
+    public ApiResponse transferStock(TransferStockRequest req) {
+
+        if (req.getProductVariantId() == null)
+            throw new IllegalArgumentException("productVariantId is required");
+
+        if (req.getFromBranchId() == null || req.getToBranchId() == null)
+            throw new IllegalArgumentException("Both fromBranchId and toBranchId are required");
+
+        if (req.getFromBranchId().equals(req.getToBranchId()))
+            throw new IllegalArgumentException("Source and destination branch cannot be the same");
+
+        if (req.getQuantity() <= 0)
+            throw new IllegalArgumentException("Quantity must be > 0");
+
+        return processTransfer(req);
+    }
+
+    private ApiResponse processTransfer(TransferStockRequest req) {
+
+        ProductVariant variant = productVariantRepository.findById(req.getProductVariantId())
+                .orElseThrow(() -> new IllegalArgumentException("Variant not found"));
+
+        InventoryItem source = inventoryItemRepository
+                .findByProductVariant_IdAndBranchId(req.getProductVariantId(), req.getFromBranchId())
+                .orElseThrow(() -> new OutOfStockException("Source inventory not found"));
+
+        long available =
+                source.getQuantityOnHand() - source.getQuantityReserved();
+
+        if (available < req.getQuantity()) {
+            throw new OutOfStockException("Insufficient stock in source branch");
+        }
+
+        Branch destinationBranch = branchRepository.findById(req.getToBranchId())
+                .orElseThrow(() -> new IllegalArgumentException("Destination branch not found"));
+
+        InventoryItem destination = inventoryItemRepository
+                .findByProductVariant_IdAndBranchId(req.getProductVariantId(), req.getToBranchId())
+                .orElse(null);
+
+        if (destination == null) {
+            destination = InventoryItem.builder()
+                    .productId(source.getProductId())
+                    .productVariant(variant)
+                    .branch(destinationBranch)
+                    .quantityOnHand(0L)
+                    .quantityReserved(0L)
+                    .averageCost(BigDecimal.ZERO)
+                    .build();
+        }
+
+        // -----------------------------
+        // COST RESOLUTION
+        // -----------------------------
+        BigDecimal sourceCost =
+                Optional.ofNullable(source.getAverageCost()).orElse(BigDecimal.ZERO);
+
+        BigDecimal destUnitCost =
+                Optional.ofNullable(req.getDestinationUnitCost()).orElse(sourceCost);
+
+        // -----------------------------
+        // SOURCE: decrement
+        // -----------------------------
+        source.setQuantityOnHand(
+                source.getQuantityOnHand() - req.getQuantity()
+        );
+        source.setLastUpdatedAt(LocalDateTime.now());
+        source.setLastUpdatedBy(getCurrentUsername());
+
+        inventoryItemRepository.save(source);
+
+        // accounting (OUT)
+        inventoryAccountingPort.recordInventoryTransferOut(
+                variant.getId(),
+                sourceCost.multiply(BigDecimal.valueOf(req.getQuantity())),
+                req.getReference()
+        );
+
+        stockTransactionRepository.save(
+                StockTransaction.builder()
+                        .productId(source.getProductId())
+                        .productVariantId(variant.getId())
+                        .branchId(req.getFromBranchId())
+                        .type(StockTransaction.TransactionType.TRANSFER_OUT)
+                        .quantityDelta(-req.getQuantity())
+                        .unitCost(sourceCost)
+                        .reference(req.getReference())
+                        .note(req.getNote())
+                        .timestamp(LocalDateTime.now())
+                        .performedBy(getCurrentUsername())
+                        .build()
+        );
+
+        // -----------------------------
+        // DESTINATION: increment + WAC
+        // -----------------------------
+        long oldQty = destination.getQuantityOnHand();
+        BigDecimal oldAvg = Optional.ofNullable(destination.getAverageCost()).orElse(BigDecimal.ZERO);
+
+        long newQty = oldQty + req.getQuantity();
+
+        BigDecimal newAvg =
+                oldQty == 0
+                        ? destUnitCost
+                        : oldAvg.multiply(BigDecimal.valueOf(oldQty))
+                        .add(destUnitCost.multiply(BigDecimal.valueOf(req.getQuantity())))
+                        .divide(BigDecimal.valueOf(newQty), 6, RoundingMode.HALF_UP);
+
+        destination.setQuantityOnHand(newQty);
+        destination.setAverageCost(newAvg);
+        destination.setLastUpdatedAt(LocalDateTime.now());
+        destination.setLastUpdatedBy(getCurrentUsername());
+
+        inventoryItemRepository.save(destination);
+
+        // accounting (IN)
+        inventoryAccountingPort.recordInventoryTransferIn(
+                variant.getId(),
+                destUnitCost.multiply(BigDecimal.valueOf(req.getQuantity())),
+                req.getReference()
+        );
+
+        stockTransactionRepository.save(
+                StockTransaction.builder()
+                        .productId(destination.getProductId())
+                        .productVariantId(variant.getId())
+                        .branchId(req.getToBranchId())
+                        .type(StockTransaction.TransactionType.TRANSFER_IN)
+                        .quantityDelta(req.getQuantity())
+                        .unitCost(destUnitCost)
+                        .reference(req.getReference())
+                        .note(req.getNote())
+                        .timestamp(LocalDateTime.now())
+                        .performedBy(getCurrentUsername())
+                        .build()
+        );
+
+        return new ApiResponse(
+                "success",
+                "Stock transferred successfully",
+                Map.of(
+                        "variantId", variant.getId(),
+                        "fromBranchId", req.getFromBranchId(),
+                        "toBranchId", req.getToBranchId(),
+                        "quantity", req.getQuantity(),
+                        "destinationUnitCost", destUnitCost
+                )
+        );
     }
 
     // ------------------------
@@ -787,6 +941,7 @@ public class InventoryService {
                 .productVariantSKU(item.getProductVariant().getSku())
                 .branchId(item.getBranch().getId())
                 .branchName(item.getBranch().getName())
+                .averageCost(item.getAverageCost())
                 .quantityOnHand(item.getQuantityOnHand())
                 .quantityReserved(item.getQuantityReserved())
                 .lastUpdatedAt(item.getLastUpdatedAt() != null ? item.getLastUpdatedAt().toString() : null)
