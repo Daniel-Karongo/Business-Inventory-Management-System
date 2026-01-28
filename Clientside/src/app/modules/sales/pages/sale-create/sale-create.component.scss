@@ -10,3 +10,11 @@ input,
 mat-select {
   white-space: nowrap;
 }
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+mat-form-field:hover input[readonly] {
+  background-color: rgba(0, 0, 0, 0.03);
+}

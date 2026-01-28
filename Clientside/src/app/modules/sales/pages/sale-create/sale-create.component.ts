@@ -21,7 +21,19 @@ import { AuthService } from '../../../auth/services/auth.service';
 import { ViewChild, ElementRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
+import { MatDialog } from '@angular/material/dialog';
+import { ProductSelectorDialogComponent } from '../../dialogs/product-selector-dialog/product-selector-dialog.component';
+import { Product } from '../../../products/parent/models/product.model';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
+type SaleItemForm = FormGroup<{
+  productId: FormControl<string | null>;
+  productName: FormControl<string | null>; // ✅ ADD
+  productVariantId: FormControl<string | null>;
+  branchId: FormControl<string | null>;
+  quantity: FormControl<number>;
+  unitPrice: FormControl<number | null>;
+}>;
 
 @Component({
   standalone: true,
@@ -35,7 +47,8 @@ import { environment } from '../../../../../environments/environment';
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
-    MatTableModule
+    MatTableModule,
+    MatTooltipModule
   ],
   templateUrl: './sale-create.component.html',
   styleUrls: ['./sale-create.component.scss']
@@ -53,7 +66,7 @@ export class SaleCreateComponent implements OnInit {
       phone: FormControl<string | null>;
       email: FormControl<string | null>;
     }>;
-    items: FormArray<FormGroup>;
+    items: FormArray<SaleItemForm>;
   }>;
 
   products: any[] = [];
@@ -76,7 +89,8 @@ export class SaleCreateComponent implements OnInit {
     private customerService: CustomerService,
     private router: Router,
     private authService: AuthService,
-    private http: HttpClient
+    private http: HttpClient,
+    private dialog: MatDialog
   ) { }
 
   ngOnInit(): void {
@@ -123,12 +137,35 @@ export class SaleCreateComponent implements OnInit {
     this.addLine();
   }
 
+  private createSaleItemForm(
+    init?: Partial<{
+      productId: string;
+      productName: string;
+      productVariantId: string;
+      branchId: string;
+      quantity: number;
+      unitPrice: number;
+    }>
+  ): SaleItemForm {
+    return this.fb.group({
+      productId: this.fb.control<string | null>(init?.productId ?? null, Validators.required),
+      productName: this.fb.control<string | null>(init?.productName ?? null),
+      productVariantId: this.fb.control<string | null>(init?.productVariantId ?? null, Validators.required),
+      branchId: this.fb.control<string | null>(init?.branchId ?? this.defaultBranchId, Validators.required),
+      quantity: this.fb.control<number>(init?.quantity ?? 1, {
+        nonNullable: true,
+        validators: [Validators.required, Validators.min(1)]
+      }),
+      unitPrice: this.fb.control<number | null>(init?.unitPrice ?? null)
+    });
+  }
+
   get customerGroup(): FormGroup {
     return this.form.controls.customer;
   }
 
-  get items(): FormArray {
-    return this.form.get('items') as FormArray;
+  get items(): FormArray<SaleItemForm> {
+    return this.form.controls.items;
   }
 
   lockCustomerFields() {
@@ -142,35 +179,7 @@ export class SaleCreateComponent implements OnInit {
   }
 
   addLine() {
-    const row = this.fb.group({
-      productId: [null, Validators.required],
-      productVariantId: [null, Validators.required],
-      branchId: [
-        this.defaultBranchId,              // ✅ DEFAULT HERE
-        Validators.required
-      ],
-      quantity: [1, [Validators.required, Validators.min(1)]],
-      unitPrice: [null]
-    });
-
-    row.get('quantity')!.valueChanges.subscribe(qty => {
-      const i = this.items.controls.indexOf(row);
-      const available = this.stockMap[i];
-      if (available == null) return;
-
-      const q = Number(qty ?? 0);
-      const ctrl = row.get('quantity')!;
-
-      if (q > available) {
-        ctrl.setErrors({ ...(ctrl.errors ?? {}), stockExceeded: true });
-      } else if (ctrl.hasError('stockExceeded')) {
-        const errors = { ...(ctrl.errors ?? {}) };
-        delete errors['stockExceeded'];
-        ctrl.setErrors(Object.keys(errors).length ? errors : null);
-      }
-    });
-
-    this.items.push(row);
+    this.items.push(this.createSaleItemForm());
   }
 
   removeLine(i: number) {
@@ -195,63 +204,130 @@ export class SaleCreateComponent implements OnInit {
     });
 
     this.barcodeCtrl.setValue('');
+    // setTimeout(() => this.barcodeInput?.nativeElement.focus());
   }
 
   private applyScannedVariant(res: any) {
+    const branchId = res.branchId ?? this.defaultBranchId;
 
-    /* 1️⃣ If variant already exists → increment qty */
-    const existingIndex = this.items.controls.findIndex(ctrl =>
+    /* 1️⃣ Exact match: same variant + branch → increment qty */
+    const exactIndex = this.items.controls.findIndex(ctrl =>
       ctrl.value.productVariantId === res.variantId &&
-      ctrl.value.branchId === (res.branchId ?? this.defaultBranchId)
+      ctrl.value.branchId === branchId
     );
 
-    if (existingIndex !== -1) {
-      const qtyCtrl = this.items.at(existingIndex).get('quantity')!;
-      qtyCtrl.setValue(Number(qtyCtrl.value) + 1);
+    if (exactIndex !== -1) {
+      const qtyCtrl = this.items.at(exactIndex).get('quantity')!;
+      qtyCtrl.setValue(qtyCtrl.value + 1);
       return;
     }
 
-    /* 2️⃣ Find first EMPTY line (no variant yet) */
-    const emptyIndex = this.items.controls.findIndex(ctrl =>
+    /* 2️⃣ Same product exists but variant not yet selected */
+    const productOnlyIndex = this.items.controls.findIndex(ctrl =>
+      ctrl.value.productId === res.productId &&
       !ctrl.value.productVariantId
     );
 
-    const targetRow =
-      emptyIndex !== -1
-        ? this.items.at(emptyIndex)
-        : null;
+    if (productOnlyIndex !== -1) {
+      const row = this.items.at(productOnlyIndex);
 
-    if (targetRow) {
-      targetRow.patchValue({
-        productId: res.productId,
+      row.patchValue({
         productVariantId: res.variantId,
-        branchId: res.branchId ?? this.defaultBranchId,
+        unitPrice: res.sellingPrice
+      });
+
+      this.ensureVariantsLoaded(
+        productOnlyIndex,
+        res.productId,
+        res.variantId
+      );
+
+      const qtyCtrl = row.get('quantity')!;
+      qtyCtrl.setValue(qtyCtrl.value + 1);
+      return;
+    }
+
+    /* 3️⃣ Empty row (no product yet) */
+    const emptyIndex = this.items.controls.findIndex(ctrl =>
+      !ctrl.value.productId
+    );
+
+    if (emptyIndex !== -1) {
+      const row = this.items.at(emptyIndex);
+
+      row.patchValue({
+        productId: res.productId,
+        productName: res.productName,
+        productVariantId: res.variantId,
+        branchId,
         quantity: 1,
         unitPrice: res.sellingPrice
       });
 
-      if (res.branchId) {
+      this.ensureVariantsLoaded(
+        emptyIndex,
+        res.productId,
+        res.variantId
+      );
+
+      if (branchId) {
         this.stockMap[emptyIndex] = res.quantityOnHand ?? 0;
       }
 
       return;
     }
 
-    /* 3️⃣ Otherwise → create new line */
-    const row = this.fb.group({
-      productId: [res.productId, Validators.required],
-      productVariantId: [res.variantId, Validators.required],
-      branchId: [res.branchId ?? this.defaultBranchId, Validators.required],
-      quantity: [1, [Validators.required, Validators.min(1)]],
-      unitPrice: [res.sellingPrice, Validators.required]
+    /* 4️⃣ Otherwise → create new row */
+    const row = this.createSaleItemForm({
+      productId: res.productId,
+      productName: res.productName,
+      productVariantId: res.variantId,
+      branchId,
+      quantity: 1,
+      unitPrice: res.sellingPrice
     });
 
     this.items.push(row);
+    const i = this.items.length - 1;
 
-    if (res.branchId) {
-      this.stockMap[this.items.length - 1] = res.quantityOnHand ?? 0;
+    this.ensureVariantsLoaded(
+      i,
+      res.productId,
+      res.variantId
+    );
+
+    if (branchId) {
+      this.stockMap[i] = res.quantityOnHand ?? 0;
     }
   }
+
+  private clearVariantSelection(index: number) {
+    const row = this.items.at(index);
+
+    row.patchValue({
+      productVariantId: null,
+      unitPrice: null
+    });
+
+    delete this.stockMap[index];
+  }
+
+  private clearProductVariants(index: number) {
+    this.variantsMap[index] = [];
+  }
+
+  private resetProductDependentState(index: number) {
+    const row = this.items.at(index);
+
+    row.patchValue({
+      productVariantId: null,
+      unitPrice: null
+    });
+
+    delete this.stockMap[index];
+    this.variantsMap[index] = [];
+  }
+
 
   canUseCameraScan(): boolean {
     return (
@@ -296,6 +372,114 @@ export class SaleCreateComponent implements OnInit {
     };
 
     scanLoop();
+  }
+
+  openProductSelector(rowIndex: number) {
+    this.dialog.open(ProductSelectorDialogComponent, {
+      width: '1000px',
+      maxHeight: '85vh'
+    }).afterClosed().subscribe((products: Product[]) => {
+      if (!products?.length) return;
+
+      products.forEach(p => {
+
+        /* 1️⃣ Check if product already exists in any row */
+        const existingIndex = this.items.controls.findIndex(ctrl =>
+          ctrl.value.productId === p.id
+        );
+
+        if (existingIndex !== -1) {
+          // ✅ Increment quantity instead of adding row
+          const qtyCtrl = this.items.at(existingIndex).get('quantity')!;
+          qtyCtrl.setValue(qtyCtrl.value + 1);
+          return;
+        }
+
+        /* 2️⃣ Use current row if empty */
+        const targetRow =
+          !this.items.at(rowIndex).value.productId
+            ? rowIndex
+            : this.items.controls.findIndex(ctrl => !ctrl.value.productId);
+
+        if (targetRow !== -1) {
+          this.patchProductIntoRow(targetRow, p);
+          return;
+        }
+
+        /* 3️⃣ Otherwise create new row */
+        this.addProductAsNewLine(p);
+      });
+    });
+  }
+
+  private patchProductIntoRow(i: number, p: Product) {
+    const row = this.items.at(i);
+
+    row.patchValue({
+      productId: p.id,
+      productName: p.name
+    });
+
+    this.clearVariantSelection(i);
+    this.clearProductVariants(i); // ✅ OK here
+
+    this.variantService.forProduct(p.id).subscribe(v => {
+      this.variantsMap[i] = v;
+      if (v.length === 1) {
+        row.patchValue({
+          productVariantId: v[0].id,
+          unitPrice: v[0].minimumSellingPrice
+        });
+      }
+    });
+  }
+
+  private addProductAsNewLine(p: Product) {
+    const row = this.createSaleItemForm({
+      productId: p.id,
+      productName: p.name
+    });
+
+    this.items.push(row);
+    const i = this.items.length - 1;
+
+    this.variantService.forProduct(p.id).subscribe(v => {
+      this.variantsMap[i] = v;
+      if (v.length === 1) {
+        row.patchValue({
+          productVariantId: v[0].id,
+          unitPrice: v[0].minimumSellingPrice
+        });
+      }
+    });
+  }
+
+  private ensureVariantsLoaded(
+    index: number,
+    productId: string,
+    selectedVariantId?: string
+  ) {
+    // Prevent duplicate loads
+    if (this.variantsMap[index]?.length) return;
+
+    this.variantService.forProduct(productId).subscribe(variants => {
+      this.variantsMap[index] = variants;
+
+      // Keep scanned variant selected
+      if (selectedVariantId && variants.some(v => v.id === selectedVariantId)) {
+        this.items.at(index).patchValue({
+          productVariantId: selectedVariantId
+        });
+      }
+
+      // Auto-select if only one variant
+      if (variants.length === 1) {
+        this.items.at(index).patchValue({
+          productVariantId: variants[0].id,
+          unitPrice: variants[0].minimumSellingPrice
+        });
+      }
+    });
   }
 
   onProductChange(i: number) {

@@ -1,0 +1,149 @@
+<div class="dialog-header">
+  <div class="title">
+    <span>Select Products</span>
+  </div>
+
+  <div class="badge">
+    {{ selected.size }} selected
+  </div>
+</div>
+
+<mat-form-field appearance="fill" class="w-full mb-3">
+  <mat-label>Search products</mat-label>
+  <input
+    matInput
+    [formControl]="searchCtrl"
+    placeholder="Name, SKU…"
+  />
+</mat-form-field>
+
+<div class="table-wrapper">
+  <table mat-table [dataSource]="products" class="w-full">
+
+    <!-- SELECT -->
+    <ng-container matColumnDef="select">
+      <th mat-header-cell *matHeaderCellDef></th>
+      <td mat-cell *matCellDef="let p">
+        <mat-checkbox
+          [checked]="selected.has(p.id)"
+          (click)="$event.stopPropagation()"
+          (change)="toggle(p)">
+        </mat-checkbox>
+      </td>
+    </ng-container>
+
+    <!-- NAME -->
+    <ng-container matColumnDef="name">
+      <th
+        mat-header-cell
+        *matHeaderCellDef
+        (click)="sortBy('name')"
+        class="sortable"
+        matTooltip="Sort by name"
+        matTooltipPosition="above">
+
+        <span class="sortable-content">
+          Name
+          <mat-icon class="sort-icon">
+            {{ sortField === 'name'
+              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+              : 'unfold_more' }}
+          </mat-icon>
+        </span>
+      </th>
+
+      <td mat-cell *matCellDef="let p">
+        {{ p.name }}
+      </td>
+    </ng-container>
+
+    <!-- CATEGORY -->
+    <ng-container matColumnDef="category">
+      <th
+        mat-header-cell
+        *matHeaderCellDef
+        (click)="sortBy('categoryName')"
+        class="sortable"
+        matTooltip="Sort by category"
+        matTooltipPosition="above">
+
+        <span class="sortable-content">
+          Category
+          <mat-icon class="sort-icon">
+            {{ sortField === 'categoryName'
+              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+              : 'unfold_more' }}
+          </mat-icon>
+        </span>
+      </th>
+
+      <td mat-cell *matCellDef="let p">
+        {{ p.categoryName || '—' }}
+      </td>
+    </ng-container>
+
+    <!-- SKU -->
+    <ng-container matColumnDef="sku">
+      <th
+        mat-header-cell
+        *matHeaderCellDef
+        (click)="sortBy('sku')"
+        class="sortable"
+        matTooltip="Sort by SKU"
+        matTooltipPosition="above">
+
+        <span class="sortable-content">
+          SKU
+          <mat-icon class="sort-icon">
+            {{ sortField === 'sku'
+              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+              : 'unfold_more' }}
+          </mat-icon>
+        </span>
+      </th>
+
+      <td mat-cell *matCellDef="let p">
+        {{ p.sku || '—' }}
+      </td>
+    </ng-container>
+
+    <!-- IMAGES -->
+    <ng-container matColumnDef="images">
+      <th mat-header-cell *matHeaderCellDef></th>
+      <td mat-cell *matCellDef="let p">
+        <button
+          mat-icon-button
+          matTooltip="View product images"
+          (click)="openImages(p); $event.stopPropagation()">
+          <mat-icon>image</mat-icon>
+        </button>
+      </td>
+    </ng-container>
+
+    <!-- ROWS -->
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr
+      mat-row
+      *matRowDef="let row; columns: displayedColumns"
+      (click)="toggle(row)"
+      [class.selected]="isSelected(row)">
+    </tr>
+  </table>
+
+  <!-- PAGINATOR -->
+  <mat-paginator
+    [length]="total"
+    [pageIndex]="page"
+    [pageSize]="size"
+    [pageSizeOptions]="pageSizeOptions"
+    showFirstLastButtons
+    (page)="pageChanged($event)">
+  </mat-paginator>
+</div>
+
+<div mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancel()">Cancel</button>
+  <button mat-flat-button color="primary" (click)="confirm()">
+    Add Selected
+  </button>
+</div>

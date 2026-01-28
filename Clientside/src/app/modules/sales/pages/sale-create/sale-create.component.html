@@ -68,23 +68,31 @@
       class="grid grid-cols-[2.2fr_1.2fr_1.6fr_0.7fr_1.2fr_1fr_40px] gap-4 items-center mb-3">
 
       <!-- PRODUCT -->
-      <mat-form-field>
-        <mat-select enterNext placeholder="Product" [formControl]="controlAt(i,'productId')"
-          (selectionChange)="onProductChange(i)">
-          <mat-option *ngFor="let p of products" [value]="p.id">
-            {{ p.name }}
-          </mat-option>
-        </mat-select>
-      </mat-form-field>
+      <div class="flex flex-col gap-1">
+        <mat-form-field appearance="fill" class="cursor-pointer" (click)="openProductSelector(i)">
+          <mat-label>Product</mat-label>
+          <input matInput readonly [value]="items.at(i).value.productName || ''" />
+          <button matSuffix mat-icon-button tabindex="-1">
+            <mat-icon>edit</mat-icon>
+          </button>
+        </mat-form-field>
+      </div>
+
 
       <!-- VARIANT -->
       <mat-form-field>
-        <mat-select enterNext placeholder="Variant" [formControl]="controlAt(i,'productVariantId')"
-          (selectionChange)="onVariantChange(i, $event.value)">
+        <mat-select placeholder="Variant" [formControl]="controlAt(i, 'productVariantId')"
+          [disabled]="!variantsMap[i].length" (selectionChange)="onVariantChange(i, $event.value)">
+
           <mat-option *ngFor="let v of variantsMap[i]" [value]="v.id">
-            {{ v.classification || 'DEFAULT' }}
+            {{ v.classification || 'STANDARD' }}
           </mat-option>
+
         </mat-select>
+
+        <mat-hint *ngIf="!variantsMap[i]?.length">
+          Select a product to load variants
+        </mat-hint>
       </mat-form-field>
 
       <!-- BRANCH -->

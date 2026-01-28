@@ -14,35 +14,55 @@ public class ProductSpecification {
             List<Long> categoryIds,
             String name,
             String description,
+            String keyword,
             BigDecimal minPrice,
             BigDecimal maxPrice
     ) {
-        return (root, query, criteriaBuilder) -> {
+        return (root, query, cb) -> {
+
             List<Predicate> predicates = new ArrayList<>();
 
+            // JOIN category ONCE (safe even if unused)
+            var categoryJoin = root.join("category", jakarta.persistence.criteria.JoinType.LEFT);
+
             if (categoryIds != null && !categoryIds.isEmpty()) {
-                predicates.add(root.get("category").get("id").in(categoryIds));
+                predicates.add(categoryJoin.get("id").in(categoryIds));
             }
 
             if (name != null && !name.isBlank()) {
-                predicates.add(criteriaBuilder.like(
-                        criteriaBuilder.lower(root.get("name")), "%" + name.toLowerCase() + "%"));
+                predicates.add(cb.like(
+                        cb.lower(root.get("name")),
+                        "%" + name.toLowerCase() + "%"
+                ));
             }
 
             if (description != null && !description.isBlank()) {
-                predicates.add(criteriaBuilder.like(
-                        criteriaBuilder.lower(root.get("description")), "%" + description.toLowerCase() + "%"));
+                predicates.add(cb.like(
+                        cb.lower(root.get("description")),
+                        "%" + description.toLowerCase() + "%"
+                ));
+            }
+
+            // 🔥 KEYWORD SEARCH (name OR sku OR category)
+            if (keyword != null && !keyword.isBlank()) {
+                String kw = "%" + keyword.toLowerCase() + "%";
+
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("name")), kw),
+                        cb.like(cb.lower(root.get("sku")), kw),
+                        cb.like(cb.lower(categoryJoin.get("name")), kw)
+                ));
             }
 
             if (minPrice != null) {
-                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("price"), minPrice));
+                predicates.add(cb.greaterThanOrEqualTo(root.get("price"), minPrice));
             }
 
             if (maxPrice != null) {
-                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("price"), maxPrice));
+                predicates.add(cb.lessThanOrEqualTo(root.get("price"), maxPrice));
             }
 
-            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
 }

@@ -2,7 +2,7 @@ import {
   ApplicationConfig,
   provideZoneChangeDetection,
   provideAppInitializer,
-  inject
+  inject, isDevMode
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
@@ -21,6 +21,7 @@ import { loggingInterceptor } from './core/interceptors/logging.interceptor';
 import { IconLoader } from './core/utils/icon-loader';
 import { AuthService } from './modules/auth/services/auth.service';
 import { APP_DATE_FORMATS } from './core/services/date-formats';
+import { provideServiceWorker } from '@angular/service-worker';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -54,6 +55,9 @@ export const appConfig: ApplicationConfig = {
 
       return firstValueFrom(auth.loadMe())
         .catch(() => auth.clearLocalState());
-    })
+    }), provideServiceWorker('ngsw-worker.js', {
+            enabled: !isDevMode(),
+            registrationStrategy: 'registerWhenStable:30000'
+          })
   ]
 };

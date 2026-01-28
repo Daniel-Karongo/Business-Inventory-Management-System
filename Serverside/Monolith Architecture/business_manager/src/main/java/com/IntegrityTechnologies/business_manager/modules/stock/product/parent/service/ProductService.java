@@ -93,15 +93,35 @@ public class ProductService {
 
 
     public Page<ProductDTO> getProductsAdvanced(
-            List<Long> categoryIds, String name, String description,
-            BigDecimal minPrice, BigDecimal maxPrice,
-            int page, int size, String sortBy, String direction, boolean includeDeleted
+            List<Long> categoryIds,
+            String name,
+            String description,
+            String keyword, // ✅ NEW
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            int page,
+            int size,
+            String sortBy,
+            String direction,
+            boolean includeDeleted
     ) {
-        Sort sort = direction.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
         Pageable pageable = PageRequest.of(page, size, sort);
-        Specification<Product> spec = ProductSpecification.filterProducts(categoryIds, name, description, minPrice, maxPrice);
-        if (!includeDeleted) spec = spec.and((r, q, cb) -> cb.isFalse(r.get("deleted")));
-        return productRepository.findAll(spec, pageable).map(productMapper::toDTO);
+
+        Specification<Product> spec =
+                ProductSpecification.filterProducts(
+                        categoryIds, name, description, keyword, minPrice, maxPrice
+                );
+
+        if (!includeDeleted) {
+            spec = spec.and((r, q, cb) -> cb.isFalse(r.get("deleted")));
+        }
+
+        return productRepository.findAll(spec, pageable)
+                .map(productMapper::toDTO);
     }
 
     public ProductDTO getProductById(UUID id, Boolean deleted) {

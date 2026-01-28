@@ -23,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -61,13 +62,12 @@ public class ProductController {
         return ResponseEntity.ok(productService.getAllProducts(deleted));
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
     @GetMapping("/advanced")
-    @Operation(summary = "Advanced product search and filtering")
     public ResponseEntity<PageWrapper<ProductDTO>> getProductsAdvanced(
             @RequestParam(required = false) List<Long> categoryIds,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String description,
+            @RequestParam(required = false) String keyword, // ✅ NEW
             @RequestParam(required = false) Double minPrice,
             @RequestParam(required = false) Double maxPrice,
             @RequestParam(defaultValue = "0") int page,
@@ -77,9 +77,12 @@ public class ProductController {
             @RequestParam(defaultValue = "false") boolean includeDeleted
     ) {
         var result = productService.getProductsAdvanced(
-                categoryIds, name, description,
-                minPrice != null ? new java.math.BigDecimal(minPrice) : null,
-                maxPrice != null ? new java.math.BigDecimal(maxPrice) : null,
+                categoryIds,
+                name,
+                description,
+                keyword, // ✅ pass through
+                minPrice != null ? BigDecimal.valueOf(minPrice) : null,
+                maxPrice != null ? BigDecimal.valueOf(maxPrice) : null,
                 page, size, sortBy, direction, includeDeleted
         );
         return ResponseEntity.ok(new PageWrapper<>(result));

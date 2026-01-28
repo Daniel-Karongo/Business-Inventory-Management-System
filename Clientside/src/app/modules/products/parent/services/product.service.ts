@@ -105,6 +105,19 @@ export class ProductService {
     );
   }
 
+  getImages(productId: string) {
+    return this.http.get<string[]>(
+      `${this.base}/${productId}/images`
+    );
+  }
+
+  getImageBlob(productId: string, fileName: string) {
+    return this.http.get(
+      `${this.base}/${productId}/images/${fileName}`,
+      { responseType: 'blob' }
+    );
+  }
+
   /* =======================
      VARIANTS
   ======================= */
