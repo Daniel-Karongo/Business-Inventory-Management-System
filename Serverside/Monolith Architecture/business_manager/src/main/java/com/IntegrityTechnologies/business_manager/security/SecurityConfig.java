@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.security;
 
 import com.IntegrityTechnologies.business_manager.modules.person.function.auth.filter.JwtAuthenticationFilter;
 import com.IntegrityTechnologies.business_manager.modules.person.function.auth.filter.JwtExceptionHandlerFilter;
+import com.IntegrityTechnologies.business_manager.security.acl.config.PermissionSecurityFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -30,15 +31,19 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final JwtExceptionHandlerFilter jwtExceptionHandlerFilter;
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+    private final PermissionSecurityFilter permissionSecurityFilter;
+
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthFilter,
             JwtExceptionHandlerFilter jwtExceptionHandlerFilter,
-            CustomAuthenticationEntryPoint authenticationEntryPoint
+            CustomAuthenticationEntryPoint authenticationEntryPoint,
+            PermissionSecurityFilter permissionSecurityFilter
     ) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.jwtExceptionHandlerFilter = jwtExceptionHandlerFilter;
         this.authenticationEntryPoint = authenticationEntryPoint;
+        this.permissionSecurityFilter = permissionSecurityFilter;
     }
 
     /* =====================================================
@@ -139,7 +144,11 @@ public class SecurityConfig {
                 .addFilterBefore(
                         jwtAuthFilter,
                         UsernamePasswordAuthenticationFilter.class
-                );
+                ).addFilterAfter(
+                        permissionSecurityFilter,
+                        JwtAuthenticationFilter.class
+                )
+        ;
 
         return http.build();
     }

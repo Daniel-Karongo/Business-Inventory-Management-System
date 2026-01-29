@@ -1,9 +1,16 @@
 package com.IntegrityTechnologies.business_manager.security;
 
+import com.IntegrityTechnologies.business_manager.common.SpringContext;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.security.CustomUserDetails;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import java.util.UUID;
 
 public final class SecurityUtils {
 
@@ -50,6 +57,23 @@ public final class SecurityUtils {
 
         } catch (Exception e) {
             return Role.EMPLOYEE;
+        }
+    }
+
+    public static UUID currentUserId() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null) return null;
+
+            Object principal = auth.getPrincipal();
+
+            if (principal instanceof CustomUserDetails cud) {
+                return cud.getId();
+            }
+
+            return null;
+        } catch (Exception e) {
+            return null;
         }
     }
 

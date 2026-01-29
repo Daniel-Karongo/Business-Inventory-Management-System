@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.function.auth.filter;
 
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.security.CustomUserDetails;
 import com.IntegrityTechnologies.business_manager.modules.person.function.auth.util.JwtUtil;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.service.CustomUserDetailsService;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
@@ -56,8 +57,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 String username = jwtUtil.extractUsername(jwt);
 
-                UserDetails userDetails =
-                        userDetailsService.loadUserByUsername(username);
+                CustomUserDetails userDetails =
+                        (CustomUserDetails) userDetailsService.loadUserByUsername(username);
 
                 if (jwtUtil.validateToken(jwt, userDetails.getUsername())) {
 
