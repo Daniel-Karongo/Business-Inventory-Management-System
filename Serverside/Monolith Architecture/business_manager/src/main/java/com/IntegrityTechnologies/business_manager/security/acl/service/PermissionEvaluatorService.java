@@ -3,70 +3,92 @@ package com.IntegrityTechnologies.business_manager.security.acl.service;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.acl.entity.EndpointPermission;
-import com.IntegrityTechnologies.business_manager.security.acl.repository.UserBranchScopeRepository;
+import com.IntegrityTechnologies.business_manager.security.acl.entity.PermissionCondition;
+import com.IntegrityTechnologies.business_manager.security.acl.repository.PermissionConditionRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.web.context.request.*;
 
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class PermissionEvaluatorService {
 
     private final PermissionCacheService cache;
-    private final UserBranchScopeRepository branchScopeRepo;
+    private final PermissionConditionRepository conditionRepo;
 
-    /* ================================
-       HTTP FILTER LOOKUP
-    ================================= */
-    public Optional<EndpointPermission> resolveEndpointPermission(String method, String path) {
-        return cache.getEndpoint(method, path);
+    private final AntPathMatcher matcher = new AntPathMatcher();
+
+    public Optional<EndpointPermission> resolveEndpointPermission(
+            String method,
+            String requestPath
+    ) {
+
+        for (EndpointPermission ep : cache.getEndpoints()) {
+
+            if (!ep.getHttpMethod().equalsIgnoreCase(method)) continue;
+
+            // Convert {var} → *
+            String pattern =
+                    ep.getPath().replaceAll("\\{[^/]+}", "*");
+
+            if (matcher.match(pattern, requestPath)) {
+                return Optional.of(ep);
+            }
+        }
+
+        return Optional.empty();
     }
 
-    /* ================================
-       FILTER-LEVEL PERMISSION CHECK
-    ================================= */
     public boolean evaluatePermission(EndpointPermission ep) {
 
         Role role = SecurityUtils.currentRole();
-
         if (role == Role.SUPERUSER) return true;
 
-        String permissionCode = ep.getPermission().getCode();
+        String permCode = ep.getPermission().getCode();
 
-        if (!cache.roleHasPermission(role.name(), permissionCode)) {
+        if (!cache.roleHasPermission(role.name(), permCode)) {
             return false;
         }
 
-        UUID branchId = RequestContextBranchResolver.resolveBranchId();
-        if (branchId == null) return true;
+        List<PermissionCondition> conditions =
+                conditionRepo.findByPermission_IdAndRole_NameIgnoreCaseAndActiveTrue(
+                        ep.getPermission().getId(), role.name()
+                );
 
-        UUID userId = SecurityUtils.currentUserId();
+        if (conditions.isEmpty()) return true;
 
-        return hasBranchAccess(userId, branchId);
+        HttpServletRequest req = currentRequest();
+        if (req == null) return false;
+
+        for (PermissionCondition c : conditions) {
+            if (evaluateCondition(c, req)) return true;
+        }
+
+        return false;
     }
 
-    /* ================================
-       ASPECT PERMISSION CHECK
-    ================================= */
+    private boolean evaluateCondition(PermissionCondition c, HttpServletRequest req) {
+
+        String actual = req.getParameter(c.getParam());
+        String expected = c.getValue();
+
+        return Objects.equals(actual, expected);
+    }
+
+    private HttpServletRequest currentRequest() {
+        ServletRequestAttributes a =
+                (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        return a != null ? a.getRequest() : null;
+    }
+
     public boolean hasPermission(Authentication auth, String permissionCode) {
-
         Role role = SecurityUtils.currentRole();
-
-        if (role == Role.SUPERUSER) return true;
-
-        return cache.roleHasPermission(role.name(), permissionCode);
-    }
-
-    /* ================================
-       BRANCH ACCESS CHECK
-    ================================= */
-    public boolean hasBranchAccess(UUID userId, UUID branchId) {
-
-        if (userId == null || branchId == null) return false;
-
-        return branchScopeRepo.existsByUserIdAndBranchIdAndActiveTrue(userId, branchId);
+        return role == Role.SUPERUSER
+                || cache.roleHasPermission(role.name(), permissionCode);
     }
 }

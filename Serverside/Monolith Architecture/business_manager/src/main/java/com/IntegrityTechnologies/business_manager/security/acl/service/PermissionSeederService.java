@@ -3,16 +3,18 @@ package com.IntegrityTechnologies.business_manager.security.acl.service;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import com.IntegrityTechnologies.business_manager.security.acl.entity.*;
 import com.IntegrityTechnologies.business_manager.security.acl.repository.*;
+import com.IntegrityTechnologies.business_manager.security.acl.util.PathTemplateNormalizer;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.annotation.PostConstruct;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -21,6 +23,7 @@ import java.util.regex.Pattern;
 
 @Slf4j
 @Service
+@DependsOn("roleSeederService")
 @RequiredArgsConstructor
 public class PermissionSeederService {
 
@@ -30,29 +33,23 @@ public class PermissionSeederService {
     private final RolePermissionRepository rolePermRepo;
     private final RoleEntityRepository roleRepo;
     private final PermissionConditionRepository conditionRepo;
+    private final PermissionCacheService cache;
 
     private static final Pattern ROLE_PATTERN =
             Pattern.compile("hasAnyRole\\((.*?)\\)");
 
     private static final Pattern CONDITION_PATTERN =
-            Pattern.compile("(#\\w+\\s*==\\s*(true|false|null))");
+            Pattern.compile("#(\\w+)\\s*==\\s*(true|false|null)");
 
     @PostConstruct
     public void seed() {
 
-        log.info("🔐 ACL SAFE LOCKED SEEDER running...");
+        log.info("🔐 ACL SEEDER START");
 
-        Map<String, RoleEntity> roleMap = new HashMap<>();
-        for (Role r : Role.values()) {
-            roleMap.put(r.name(),
-                    roleRepo.findByNameIgnoreCase(r.name())
-                            .orElseThrow(() -> new IllegalStateException("Missing ACL role: " + r.name())));
-        }
+        Map<String, RoleEntity> roles = loadRoles();
 
-        Set<String> discoveredEndpoints = new HashSet<>();
-        Set<String> discoveredPermissions = new HashSet<>();
-
-        String[] controllers = context.getBeanNamesForAnnotation(RestController.class);
+        String[] controllers =
+                context.getBeanNamesForAnnotation(RestController.class);
 
         for (String beanName : controllers) {
 
@@ -62,8 +59,8 @@ public class PermissionSeederService {
             RequestMapping base =
                     AnnotatedElementUtils.findMergedAnnotation(clazz, RequestMapping.class);
 
-            String basePath = (base != null && base.path().length > 0)
-                    ? base.path()[0] : "";
+            String basePath =
+                    (base != null && base.path().length > 0) ? base.path()[0] : "";
 
             for (Method method : clazz.getMethods()) {
 
@@ -73,88 +70,77 @@ public class PermissionSeederService {
                 PreAuthorize pre =
                         AnnotatedElementUtils.findMergedAnnotation(method, PreAuthorize.class);
 
-                for (HttpMapping map : mappings) {
+                for (HttpMapping m : mappings) {
 
-                    String fullPath = normalize(basePath + map.path);
-                    String httpMethod = map.method;
+                    String rawPath = normalize(basePath + m.path);
+                    String path = PathTemplateNormalizer.normalize(rawPath);
 
-                    String endpointKey = httpMethod + ":" + fullPath;
-                    discoveredEndpoints.add(endpointKey);
+                    Permission permission = permissionRepo
+                            .findByCodeIgnoreCase(buildPermissionCode(m.method, path))
+                            .orElseGet(() -> permissionRepo.save(
+                                    Permission.builder()
+                                            .code(buildPermissionCode(m.method, path))
+                                            .description(m.method + " " + path)
+                                            .active(true)
+                                            .build()
+                            ));
 
-                    String permissionCode = buildPermissionCode(clazz, method, httpMethod, fullPath);
-                    discoveredPermissions.add(permissionCode);
+                    endpointRepo.findByHttpMethodIgnoreCaseAndPathAndActiveTrue(m.method, path)
+                            .orElseGet(() -> endpointRepo.save(
+                                    EndpointPermission.builder()
+                                            .httpMethod(m.method)
+                                            .path(path)
+                                            .permission(permission)
+                                            .active(true)
+                                            .build()
+                            ));
 
-                    Permission permission = permissionRepo.findByCodeIgnoreCase(permissionCode)
-                            .orElseGet(() -> {
-                                Permission p = permissionRepo.save(
-                                        Permission.builder()
-                                                .code(permissionCode)
-                                                .description(httpMethod + " " + fullPath)
-                                                .active(true)
-                                                .build()
-                                );
-                                log.info("✅ Created permission {}", permissionCode);
-                                return p;
-                            });
-
-                    endpointRepo.findActiveByMethodAndPath(httpMethod, fullPath)
-                            .orElseGet(() -> {
-                                EndpointPermission ep = endpointRepo.save(
-                                        EndpointPermission.builder()
-                                                .httpMethod(httpMethod)
-                                                .path(fullPath)
-                                                .permission(permission)
-                                                .active(true)
-                                                .build()
-                                );
-                                log.info("🔗 Bound {} {}", httpMethod, fullPath);
-                                return ep;
-                            });
-
-                    // SUPERUSER always allowed — ensure grant exists
-                    ensureRoleGrant(permission, roleMap.get("SUPERUSER"));
-
-                    boolean permissionAlreadyConfigured =
+                    // 🔒 CHECK BEFORE SUPERUSER
+                    boolean alreadyConfigured =
                             rolePermRepo.existsByPermission_Id(permission.getId());
 
-                    // 🚨 LOCK RULE: DO NOT override existing grants
-                    if (permissionAlreadyConfigured) {
-                        log.debug("🔒 Preserved ACL rules for {}", permissionCode);
+                    // SUPERUSER always allowed
+                    ensureRoleGrant(permission, roles.get("SUPERUSER"));
+
+                    if (alreadyConfigured) {
+                        log.debug("🔒 Locked permission {}", permission.getCode());
                         continue;
                     }
 
-                    // If NEW permission → seed rules
                     if (pre == null) {
-                        assignDefaultEmployee(permission, roleMap);
+                        assignDefaultEmployee(permission, roles);
                     } else {
-                        parseAndAssign(pre.value(), permission, roleMap);
+                        parseAndAssign(pre.value(), permission, roles);
                     }
                 }
             }
         }
 
-        cleanupStaleEndpoints(discoveredEndpoints);
-        cleanupUnusedPermissions(discoveredPermissions);
-
-        log.info("✅ ACL SAFE LOCKED SEEDER finished");
+        log.info("✅ ACL SEEDER DONE");
+        cache.refresh();
+        log.info("🧠 ACL cache refreshed");
     }
 
-    /* ===================== ROLE ASSIGNMENT ===================== */
+    /* ===================== ROLE HANDLING ===================== */
 
-    private void assignDefaultEmployee(Permission permission, Map<String, RoleEntity> roles) {
-        roles.forEach((name, role) -> {
-            if (Role.valueOf(name).getLevel() >= Role.EMPLOYEE.getLevel()) {
-                ensureRoleGrant(permission, role);
-            }
-        });
+    private Map<String, RoleEntity> loadRoles() {
+        Map<String, RoleEntity> map = new HashMap<>();
+        for (Role r : Role.values()) {
+            map.put(
+                    r.name(),
+                    roleRepo.findByNameIgnoreCase(r.name())
+                            .orElseThrow(() -> new IllegalStateException("Missing role " + r.name()))
+            );
+        }
+        return map;
     }
 
-    private void ensureRoleGrant(Permission permission, RoleEntity role) {
-        rolePermRepo.findByRole_IdAndPermission_Id(role.getId(), permission.getId())
+    private void ensureRoleGrant(Permission p, RoleEntity r) {
+        rolePermRepo.findByRole_IdAndPermission_Id(r.getId(), p.getId())
                 .orElseGet(() -> rolePermRepo.save(
                         RolePermission.builder()
-                                .role(role)
-                                .permission(permission)
+                                .role(r)
+                                .permission(p)
                                 .allowed(true)
                                 .active(true)
                                 .grantedBy("ACL_SEEDER")
@@ -162,120 +148,129 @@ public class PermissionSeederService {
                 ));
     }
 
-    private void parseAndAssign(String spel, Permission permission, Map<String, RoleEntity> roles) {
+    private void assignDefaultEmployee(Permission p, Map<String, RoleEntity> roles) {
+        roles.forEach((name, role) -> {
+            if (Role.valueOf(name).getLevel() >= Role.EMPLOYEE.getLevel()) {
+                ensureRoleGrant(p, role);
+            }
+        });
+    }
 
-        Matcher roleMatch = ROLE_PATTERN.matcher(spel);
-        Set<String> foundRoles = new HashSet<>();
+    /* ===================== PARSING ===================== */
 
-        while (roleMatch.find()) {
-            String[] parsed = roleMatch.group(1).replace("'", "").split(",");
-            for (String r : parsed) foundRoles.add(r.trim());
-        }
+    private void parseAndAssign(
+            String spel,
+            Permission permission,
+            Map<String, RoleEntity> roles
+    ) {
 
-        Matcher condMatch = CONDITION_PATTERN.matcher(spel);
-        List<String> conditions = new ArrayList<>();
+        String[] orBlocks = spel.split("\\s+or\\s+");
 
-        while (condMatch.find()) {
-            conditions.add(condMatch.group(1));
-        }
+        for (String block : orBlocks) {
 
-        for (String roleName : foundRoles) {
+            // 1️⃣ Extract conditions (mandatory)
+            Matcher cm = CONDITION_PATTERN.matcher(block);
+            List<String[]> conditions = new ArrayList<>();
 
-            RoleEntity role = roles.get(roleName);
-            if (role == null) continue;
+            while (cm.find()) {
+                conditions.add(new String[]{cm.group(1), cm.group(2)});
+            }
 
-            ensureRoleGrant(permission, role);
+            // 2️⃣ Determine target roles
+            Set<RoleEntity> targetRoles = new HashSet<>();
 
-            for (String cond : conditions) {
-                conditionRepo.save(
-                        PermissionCondition.builder()
-                                .role(role)
-                                .permission(permission)
-                                .expression(cond)
-                                .active(true)
-                                .build()
-                );
+            Matcher rm = ROLE_PATTERN.matcher(block);
+
+            if (rm.find()) {
+                // Explicit roles
+                String[] roleNames = rm.group(1).replace("'", "").split(",");
+                for (String roleName : roleNames) {
+                    RoleEntity role = roles.get(roleName.trim());
+                    if (role != null) {
+                        targetRoles.add(role);
+                    }
+                }
+            } else {
+                // 👇 NO hasAnyRole → EMPLOYEE and above
+                roles.forEach((name, role) -> {
+                    if (Role.valueOf(name).getLevel() >= Role.EMPLOYEE.getLevel()) {
+                        targetRoles.add(role);
+                    }
+                });
+            }
+
+            // 3️⃣ Persist grants + conditions
+            for (RoleEntity role : targetRoles) {
+
+                ensureRoleGrant(permission, role);
+
+                for (String[] c : conditions) {
+                    conditionRepo.save(
+                            PermissionCondition.builder()
+                                    .permission(permission)
+                                    .role(role)
+                                    .param(c[0])
+                                    .operator("EQ")
+                                    .value(c[1])
+                                    .active(true)
+                                    .build()
+                    );
+                }
             }
         }
     }
 
-    /* ===================== HTTP RESOLUTION ===================== */
+    /* ===================== HTTP ===================== */
 
     private List<HttpMapping> resolveHttpMappings(Method method) {
-        List<HttpMapping> mappings = new ArrayList<>();
 
-        extract(GetMapping.class, method, "GET", mappings);
-        extract(PostMapping.class, method, "POST", mappings);
-        extract(PutMapping.class, method, "PUT", mappings);
-        extract(PatchMapping.class, method, "PATCH", mappings);
-        extract(DeleteMapping.class, method, "DELETE", mappings);
+        List<HttpMapping> list = new ArrayList<>();
 
-        RequestMapping rm = AnnotatedElementUtils.findMergedAnnotation(method, RequestMapping.class);
-        if (rm != null) {
-            for (RequestMethod m : rm.method()) {
-                add(mappings, m.name(), rm.path(), rm.value());
-            }
-        }
+        extract(GetMapping.class, method, "GET", list);
+        extract(PostMapping.class, method, "POST", list);
+        extract(PatchMapping.class, method, "PATCH", list);
+        extract(PutMapping.class, method, "PUT", list);
+        extract(DeleteMapping.class, method, "DELETE", list);
 
-        return mappings;
+        return list;
     }
 
-    private void extract(Class<? extends Annotation> type, Method method, String verb, List<HttpMapping> out) {
-        Annotation ann = AnnotatedElementUtils.findMergedAnnotation(method, type);
+    private void extract(
+            Class<? extends Annotation> type,
+            Method method,
+            String verb,
+            List<HttpMapping> out
+    ) {
+        Annotation ann =
+                AnnotatedElementUtils.findMergedAnnotation(method, type);
         if (ann == null) return;
 
         try {
-            String[] path = (String[]) type.getMethod("path").invoke(ann);
-            String[] value = (String[]) type.getMethod("value").invoke(ann);
-            add(out, verb, path, value);
-        } catch (Exception ignored) {}
-    }
+            String[] path =
+                    (String[]) type.getMethod("path").invoke(ann);
+            if (path.length == 0) path =
+                    (String[]) type.getMethod("value").invoke(ann);
 
-    private void add(List<HttpMapping> list, String method, String[] path, String[] value) {
-        String[] arr = path.length > 0 ? path : value;
-        if (arr.length == 0) arr = new String[]{""};
-        for (String p : arr) list.add(new HttpMapping(method, p));
+            for (String p : path) out.add(new HttpMapping(verb, p));
+        } catch (Exception ignored) {}
     }
 
     private String normalize(String p) {
         return p.replaceAll("//+", "/");
     }
 
-    private String buildPermissionCode(Class<?> c, Method m, String verb, String path) {
+    private String buildPermissionCode(String verb, String path) {
+
+        String cleaned =
+                path.startsWith("/") ? path.substring(1) : path;
+
         return "API_" + verb + "_" +
-                path.replace("/", "_")
+                cleaned
+                        .replace("/", "_")
                         .replace("{", "")
                         .replace("}", "")
-                        .replace("-", "_")
+                        .replaceAll("_+", "_")
                         .toUpperCase();
-    }
-
-    /* ===================== CLEANUP ===================== */
-
-    private void cleanupStaleEndpoints(Set<String> discovered) {
-        log.info("🧹 Cleaning stale endpoints...");
-
-        endpointRepo.findAll().forEach(ep -> {
-            String key = ep.getHttpMethod() + ":" + ep.getPath();
-
-            if (!discovered.contains(key)) {
-                ep.setActive(false);
-                endpointRepo.save(ep);
-                log.warn("⚠️ Disabled stale endpoint {} {}", ep.getHttpMethod(), ep.getPath());
-            }
-        });
-    }
-
-    private void cleanupUnusedPermissions(Set<String> activeCodes) {
-        log.info("🧹 Cleaning unused permissions...");
-
-        permissionRepo.findAll().forEach(p -> {
-            if (!activeCodes.contains(p.getCode())) {
-                p.setActive(false);
-                permissionRepo.save(p);
-                log.warn("⚠️ Disabled unused permission {}", p.getCode());
-            }
-        });
     }
 
     private record HttpMapping(String method, String path) {}
