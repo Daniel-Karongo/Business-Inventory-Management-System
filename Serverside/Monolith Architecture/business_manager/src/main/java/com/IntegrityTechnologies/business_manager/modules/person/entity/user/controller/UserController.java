@@ -107,8 +107,8 @@ public class UserController {
     /* ====================== GET USERS ====================== */
 
     @PreAuthorize("""
-    #deleted == false 
-    or 
+    #deleted == false
+    or
     ( #deleted == true and hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER') )""")
     @GetMapping("/user/{identifier}")
     public ResponseEntity<UserDTO> getUser(
@@ -122,7 +122,7 @@ public class UserController {
     (#deleted == false || #deleted == null) and hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')
     or 
     ( #deleted == true and hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER') )""")
-    @GetMapping("all")
+    @GetMapping("/all")
     public ResponseEntity<List<UserDTO>> getAllUsers(
             @RequestParam(required = false) Boolean deleted
     ) {
@@ -202,7 +202,7 @@ public class UserController {
     @PreAuthorize(
             "( (#deletedUsers == false && #deletedImages == false) && hasAnyRole('SUPERUSER','ADMIN','MANAGER') )"
                     + " or " +
-            "( (#deletedUsers == true || #deletedImages == true) && hasRole('SUPERUSER') )"
+            "( (#deletedUsers == true || #deletedImages == true  || #deletedUsers == null || #deletedImages == null) && hasRole('SUPERUSER') )"
     )
     @GetMapping("/images/all")
     public ResponseEntity<List<String>> getAllUsersImages(

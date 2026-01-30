@@ -4,7 +4,9 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.mod
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.acl.entity.EndpointPermission;
 import com.IntegrityTechnologies.business_manager.security.acl.entity.PermissionCondition;
+import com.IntegrityTechnologies.business_manager.security.acl.entity.RoleEntity;
 import com.IntegrityTechnologies.business_manager.security.acl.repository.PermissionConditionRepository;
+import com.IntegrityTechnologies.business_manager.security.acl.repository.RoleEntityRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -20,9 +22,13 @@ public class PermissionEvaluatorService {
 
     private final PermissionCacheService cache;
     private final PermissionConditionRepository conditionRepo;
+    private final RoleEntityRepository roleRepo;
 
     private final AntPathMatcher matcher = new AntPathMatcher();
 
+    /* =====================================================
+       ENDPOINT RESOLUTION
+       ===================================================== */
     public Optional<EndpointPermission> resolveEndpointPermission(
             String method,
             String requestPath
@@ -44,39 +50,76 @@ public class PermissionEvaluatorService {
         return Optional.empty();
     }
 
+    /* =====================================================
+       CORE AUTHORIZATION
+       ===================================================== */
     public boolean evaluatePermission(EndpointPermission ep) {
 
         Role role = SecurityUtils.currentRole();
-        if (role == Role.SUPERUSER) return true;
+
+        // 1️⃣ SUPERUSER bypass
+        if (role == Role.SUPERUSER) {
+            return true;
+        }
+
+        // 2️⃣ ROLE ACTIVE GUARD
+        RoleEntity roleEntity =
+                roleRepo.findByNameIgnoreCase(role.name()).orElse(null);
+
+        if (roleEntity == null || !roleEntity.isActive()) {
+            return false;
+        }
+
+        // 3️⃣ ENDPOINT ACTIVE GUARD
+        if (!ep.isActive()) {
+            return false;
+        }
+
+        // 4️⃣ PERMISSION ACTIVE GUARD
+        if (!ep.getPermission().isActive()) {
+            return false;
+        }
 
         String permCode = ep.getPermission().getCode();
 
+        // 5️⃣ ROLE → PERMISSION GRANT
         if (!cache.roleHasPermission(role.name(), permCode)) {
             return false;
         }
 
+        // 6️⃣ CONDITIONS
         List<PermissionCondition> conditions =
                 conditionRepo.findByPermission_IdAndRole_NameIgnoreCaseAndActiveTrue(
                         ep.getPermission().getId(), role.name()
                 );
 
-        if (conditions.isEmpty()) return true;
+        // No conditions → allow
+        if (conditions.isEmpty()) {
+            return true;
+        }
 
         HttpServletRequest req = currentRequest();
         if (req == null) return false;
 
+        // OR semantics across conditions
         for (PermissionCondition c : conditions) {
-            if (evaluateCondition(c, req)) return true;
+            if (evaluateCondition(c, req)) {
+                return true;
+            }
         }
 
         return false;
     }
 
-    private boolean evaluateCondition(PermissionCondition c, HttpServletRequest req) {
-
+    /* =====================================================
+       CONDITION EVALUATION
+       ===================================================== */
+    private boolean evaluateCondition(
+            PermissionCondition c,
+            HttpServletRequest req
+    ) {
         String actual = req.getParameter(c.getParam());
         String expected = c.getValue();
-
         return Objects.equals(actual, expected);
     }
 
@@ -86,6 +129,9 @@ public class PermissionEvaluatorService {
         return a != null ? a.getRequest() : null;
     }
 
+    /* =====================================================
+       OPTIONAL METHOD SECURITY
+       ===================================================== */
     public boolean hasPermission(Authentication auth, String permissionCode) {
         Role role = SecurityUtils.currentRole();
         return role == Role.SUPERUSER

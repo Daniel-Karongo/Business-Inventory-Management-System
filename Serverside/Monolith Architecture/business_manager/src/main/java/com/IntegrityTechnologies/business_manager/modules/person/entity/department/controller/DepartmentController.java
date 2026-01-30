@@ -113,7 +113,7 @@ public class DepartmentController {
 
 
     // --- Delete a department ---
-    @DeleteMapping("delete/{id}")
+    @DeleteMapping("/delete/{id}")
     @PreAuthorize("""
     #soft == false and hasRole('SUPERUSER')
     or 
@@ -130,7 +130,7 @@ public class DepartmentController {
         );
         return ResponseEntity.ok(response);
     }
-    @DeleteMapping("delete/bulk")
+    @DeleteMapping("/delete/bulk")
     @PreAuthorize("""
     #soft == false and hasRole('SUPERUSER')
     or 
@@ -150,7 +150,7 @@ public class DepartmentController {
         return ResponseEntity.ok(response);
     }
 
-    @PatchMapping("restore/{id}")
+    @PatchMapping("/restore/{id}")
     @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
     public ResponseEntity<?> restoreDepartment(
             @PathVariable UUID id,
@@ -164,7 +164,7 @@ public class DepartmentController {
         return ResponseEntity.ok(response);
     }
 
-    @PatchMapping("restore/bulk")
+    @PatchMapping("/restore/bulk")
     @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
     public ResponseEntity<?> restoreDepartmentsInBulk(
             @RequestBody List<UUID> ids,

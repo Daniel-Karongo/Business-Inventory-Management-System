@@ -248,14 +248,29 @@ public class PermissionSeederService {
         try {
             String[] path =
                     (String[]) type.getMethod("path").invoke(ann);
-            if (path.length == 0) path =
-                    (String[]) type.getMethod("value").invoke(ann);
+            if (path.length == 0) {
+                path = (String[]) type.getMethod("value").invoke(ann);
+            }
 
-            for (String p : path) out.add(new HttpMapping(verb, p));
-        } catch (Exception ignored) {}
+            // ✅ CRITICAL FIX
+            if (path.length == 0) {
+                // root mapping
+                out.add(new HttpMapping(verb, ""));
+                return;
+            }
+
+            for (String p : path) {
+                out.add(new HttpMapping(verb, p));
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to extract mapping", e);
+        }
     }
 
     private String normalize(String p) {
+        if (!p.startsWith("/")) {
+            p = "/" + p;
+        }
         return p.replaceAll("//+", "/");
     }
 

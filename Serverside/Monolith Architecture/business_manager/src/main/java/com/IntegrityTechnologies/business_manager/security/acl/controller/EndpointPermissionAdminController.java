@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security.acl.controller;
 
+import com.IntegrityTechnologies.business_manager.security.acl.audit.AclAuditService;
 import com.IntegrityTechnologies.business_manager.security.acl.entity.EndpointPermission;
 import com.IntegrityTechnologies.business_manager.security.acl.repository.EndpointPermissionRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import java.util.List;
 public class EndpointPermissionAdminController {
 
     private final EndpointPermissionRepository repo;
+    private final AclAuditService audit;
 
     @GetMapping
     public List<EndpointPermission> list() {
@@ -23,11 +25,32 @@ public class EndpointPermissionAdminController {
 
     @PostMapping
     public EndpointPermission assign(@RequestBody EndpointPermission ep) {
-        return repo.save(ep);
+
+        EndpointPermission saved = repo.save(ep);
+
+        audit.audit(
+                "ENDPOINT_PERMISSION",
+                "CREATE",
+                null,
+                saved,
+                saved.getId().toString()
+        );
+
+        return saved;
     }
 
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
+
+        EndpointPermission before = repo.findById(id).orElseThrow();
         repo.deleteById(id);
+
+        audit.audit(
+                "ENDPOINT_PERMISSION",
+                "DELETE",
+                before,
+                null,
+                id.toString()
+        );
     }
 }

@@ -385,7 +385,7 @@ public class SupplierController {
     }
 
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
-    @GetMapping(value = "all/audit", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/all/audit", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get all the suppliers' audit history")
     public ResponseEntity<List<SupplierAudit>> getAllSuppliersAudits() {
         return supplierService.getAllSuppliersAudits();

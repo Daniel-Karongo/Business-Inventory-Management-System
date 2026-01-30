@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security.acl.controller;
 
+import com.IntegrityTechnologies.business_manager.security.acl.audit.AclAuditService;
 import com.IntegrityTechnologies.business_manager.security.acl.entity.UserBranchScope;
 import com.IntegrityTechnologies.business_manager.security.acl.repository.UserBranchScopeRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import java.util.UUID;
 public class BranchScopeAdminController {
 
     private final UserBranchScopeRepository repo;
+    private final AclAuditService audit;
 
     @GetMapping
     public List<UserBranchScope> list() {
@@ -24,11 +26,32 @@ public class BranchScopeAdminController {
 
     @PostMapping
     public UserBranchScope assign(@RequestBody UserBranchScope scope) {
-        return repo.save(scope);
+
+        UserBranchScope saved = repo.save(scope);
+
+        audit.audit(
+                "BRANCH_SCOPE",
+                "CREATE",
+                null,
+                saved,
+                saved.getId().toString()
+        );
+
+        return saved;
     }
 
     @DeleteMapping("/{id}")
-    public void revoke(@PathVariable UUID id) {
+    public void hardDelete(@PathVariable UUID id) {
+
+        UserBranchScope before = repo.findById(id).orElseThrow();
         repo.deleteById(id);
+
+        audit.audit(
+                "BRANCH_SCOPE",
+                "DELETE",
+                before,
+                null,
+                id.toString()
+        );
     }
 }
