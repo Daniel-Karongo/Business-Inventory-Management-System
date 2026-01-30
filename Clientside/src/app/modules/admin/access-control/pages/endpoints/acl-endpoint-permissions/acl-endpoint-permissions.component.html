@@ -1,0 +1,62 @@
+<div class="endpoint-surface">
+
+  <div class="endpoint-header">
+    <div>
+      <h2 class="section-title">Endpoint → Permission Mapping</h2>
+      <p class="section-subtitle">
+        Control which permission guards each API endpoint
+      </p>
+    </div>
+  </div>
+
+  <div class="endpoint-table-wrapper">
+    <table class="endpoint-table">
+
+      <thead>
+        <tr>
+          <th class="col-method">Method</th>
+          <th class="col-path">Path</th>
+          <th class="col-permission">Permission</th>
+        </tr>
+      </thead>
+
+      <tbody *ngIf="!loadingEndpoints && !loadingPermissions; else loadingState">
+        <tr *ngFor="let ep of endpoints">
+
+          <td class="col-method">
+            <span class="method-pill {{ ep.httpMethod | lowercase }}">
+              {{ ep.httpMethod }}
+            </span>
+          </td>
+
+          <td class="col-path">
+            <code>{{ ep.path }}</code>
+          </td>
+
+          <td class="col-permission">
+            <mat-select class="permission-select" [value]="ep.permission.id"
+              (selectionChange)="changePermission(ep, $event.value)">
+              <mat-option *ngFor="let p of permissions" [value]="p.id">
+                {{ p.code }}
+              </mat-option>
+            </mat-select>
+          </td>
+
+        </tr>
+      </tbody>
+
+      <ng-template #loadingState>
+        <tr>
+          <td colspan="3">
+            <div class="progress-block">
+              <div class="progress-inline"></div>
+              Resolving endpoint → permission mappings…
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+    </table>
+  </div>
+
+</div>

@@ -1,0 +1,91 @@
+<div class="conditions-surface space-y-4">
+
+    <div class="conditions-header">
+        <h2 class="section-title">Permission Conditions</h2>
+        <p class="section-subtitle">
+            Conditions are evaluated using OR semantics per role
+        </p>
+    </div>
+
+    <!-- SELECTORS -->
+    <div class="conditions-selectors">
+
+        <ng-container *ngIf="!loadingPermissions; else permLoading">
+            <mat-select class="permission-select" placeholder="Permission" [(value)]="selectedPermission"
+                (selectionChange)="loadConditions()">
+
+                <mat-optgroup *ngFor="let group of permissionGroups" [label]="group.module">
+
+                    <mat-option *ngFor="let p of group.items" [value]="p">
+                        {{ p.label }}
+                    </mat-option>
+
+                </mat-optgroup>
+            </mat-select>
+        </ng-container>
+
+        <ng-template #permLoading>
+            <div class="progress-block">
+                <div class="progress-inline"></div>
+                Loading permissions…
+            </div>
+        </ng-template>
+
+        <mat-select class="role-select" placeholder="Role" [(value)]="selectedRole"
+            (selectionChange)="loadConditions()">
+
+            <mat-option *ngFor="let r of roles" [value]="r">
+                {{ r.name }}
+            </mat-option>
+
+        </mat-select>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="flex gap-2">
+        <button mat-flat-button *ngIf="!editMode" (click)="enableEdit()">
+            Enable Editing
+        </button>
+
+        <ng-container *ngIf="editMode">
+            <button mat-stroked-button (click)="cancelEdit()">Cancel</button>
+            <button mat-flat-button (click)="addCondition()">Add Condition</button>
+        </ng-container>
+    </div>
+
+    <!-- CONDITIONS -->
+    <div class="surface" [class.loading-surface]="loadingConditions">
+
+        <h3 class="section-title">
+            Allow access if ANY of the following are true
+        </h3>
+
+        <!-- Loading -->
+        <div *ngIf="loadingConditions" class="space-y-2">
+            <div class="skeleton w-60"></div>
+            <div class="skeleton w-40"></div>
+            <div class="skeleton w-80"></div>
+
+            <div class="loading-hint">
+                Evaluating permission conditions…
+            </div>
+        </div>
+
+        <!-- Empty -->
+        <div *ngIf="!loadingConditions && !conditions.length" class="loading-hint">
+            No conditions defined for this role
+        </div>
+
+        <!-- Data -->
+        <ul *ngIf="!loadingConditions && conditions.length" class="space-y-2">
+            <li *ngFor="let c of conditions" class="condition-row">
+                <span>{{ c.param }} == {{ c.value }}</span>
+
+                <button *ngIf="editMode" mat-stroked-button (click)="deleteCondition(c)">
+                    Remove
+                </button>
+            </li>
+        </ul>
+
+    </div>
+</div>

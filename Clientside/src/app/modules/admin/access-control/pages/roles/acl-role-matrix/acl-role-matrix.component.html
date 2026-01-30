@@ -15,10 +15,7 @@
         </div>
 
         <div class="header-actions">
-          <button
-            mat-flat-button
-            *ngIf="!editMode"
-            (click)="toggleEdit()">
+          <button mat-flat-button *ngIf="!editMode" (click)="toggleEdit()">
             Enable Editing
           </button>
 
@@ -27,11 +24,7 @@
               Cancel
             </button>
 
-            <button
-              mat-flat-button
-              color="primary"
-              [disabled]="!pendingChanges.length"
-              (click)="reviewChanges()">
+            <button mat-flat-button color="primary" [disabled]="!pendingChanges.length" (click)="reviewChanges()">
               Review &amp; Apply
             </button>
           </ng-container>
@@ -47,15 +40,16 @@
 
     </div>
 
+    <div *ngIf="loadingMatrix" class="loading-hint">
+      Loading role / permission matrix…
+    </div>
     <!-- TABLE -->
-    <table class="matrix">
+    <table class="matrix" [class.loading-surface]="loadingMatrix">
 
       <thead>
         <tr>
           <th class="perm-col sticky-header">Permission</th>
-          <th
-            *ngFor="let r of orderedRoles()"
-            class="role-col sticky-header">
+          <th *ngFor="let r of orderedRoles()" class="role-col sticky-header">
             {{ r.name }}
           </th>
         </tr>
@@ -67,9 +61,7 @@
 
           <!-- MODULE ROW -->
           <tr class="module-row">
-            <td
-              class="perm-col"
-              [attr.colspan]="orderedRoles().length + 1">
+            <td class="perm-col" [attr.colspan]="orderedRoles().length + 1">
               {{ group[0] }}
             </td>
           </tr>
@@ -82,22 +74,15 @@
               <div class="perm-code">{{ p.code }}</div>
             </td>
 
-            <td
-              *ngFor="let r of orderedRoles()"
-              class="perm-cell"
-              tabindex="0"
+            <td *ngFor="let r of orderedRoles()" class="perm-cell" tabindex="0"
               [class.pending-add]="isPendingAdd(r.name, p.code)"
-              [class.pending-remove]="isPendingRemove(r.name, p.code)"
-              (click)="toggle(r.name, p.code)"
-              (keydown.enter)="toggle(r.name, p.code)"
-              (keydown.space)="toggle(r.name, p.code)">
+              [class.pending-remove]="isPendingRemove(r.name, p.code)" (click)="toggle(r.name, p.code)"
+              (keydown.enter)="toggle(r.name, p.code)" (keydown.space)="toggle(r.name, p.code)">
 
               <span *ngIf="isPendingAdd(r.name, p.code)" class="icon add">+</span>
               <span *ngIf="isPendingRemove(r.name, p.code)" class="icon remove">−</span>
 
-              <span
-                *ngIf="!isPending(r.name, p.code)"
-                [class.granted]="has(r.name, p.code)"
+              <span *ngIf="!isPending(r.name, p.code)" [class.granted]="has(r.name, p.code)"
                 [class.denied]="!has(r.name, p.code)">
                 {{ has(r.name, p.code) ? '✔' : '—' }}
               </span>

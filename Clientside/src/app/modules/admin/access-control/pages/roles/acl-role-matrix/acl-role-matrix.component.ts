@@ -6,6 +6,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { AclRoleMatrixService } from '../acl-role-matrix.service';
 import { AclAdminService } from '../../../services/acl-admin.service';
 import { AclChangeReviewComponent } from '../../../components/acl-change-review/acl-change-review.component';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-acl-role-matrix',
@@ -23,6 +24,7 @@ export class AclRoleMatrixComponent implements OnInit {
   grants = new Set<string>();
 
   editMode = false;
+  loadingMatrix = true;
 
   pendingChanges: {
     role: string;
@@ -41,23 +43,31 @@ export class AclRoleMatrixComponent implements OnInit {
   constructor(
     private dialog: MatDialog,
     private aclAdmin: AclAdminService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.load();
   }
 
   load() {
-    this.svc.roles().subscribe(r => this.roles = r);
-    this.svc.permissions().subscribe(p => this.permissions = p);
+    this.loadingMatrix = true;
 
-    this.grants.clear();
-    this.svc.rolePermissions().subscribe(rps => {
-      rps
-        .filter((rp: any) => rp.active && rp.allowed)
-        .forEach((rp: any) =>
+    forkJoin({
+      roles: this.svc.roles(),
+      perms: this.svc.permissions(),
+      grants: this.svc.rolePermissions()
+    }).subscribe(({ roles, perms, grants }) => {
+      this.roles = roles;
+      this.permissions = perms;
+      this.grants.clear();
+
+      grants
+        .filter(rp => rp.active && rp.allowed)
+        .forEach(rp =>
           this.grants.add(`${rp.role.name}:${rp.permission.code}`)
         );
+
+      this.loadingMatrix = false;
     });
   }
 

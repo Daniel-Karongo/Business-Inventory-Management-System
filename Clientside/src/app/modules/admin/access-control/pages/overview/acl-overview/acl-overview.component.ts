@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { AclOverviewService } from './acl-overview.service';
+import { AclAuditTimelineComponent } from '../../../components/audit/acl-audit-timeline/acl-audit-timeline.component';
 
 @Component({
   selector: 'app-acl-overview',
@@ -15,7 +16,8 @@ import { AclOverviewService } from './acl-overview.service';
     MatButtonModule,
     MatTableModule,
     MatIconModule,
-    MatTooltipModule
+    MatTooltipModule,
+    AclAuditTimelineComponent
   ],
   templateUrl: './acl-overview.component.html',
   styleUrls: ['./acl-overview.component.scss']

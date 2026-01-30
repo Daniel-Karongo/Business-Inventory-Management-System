@@ -458,3 +458,83 @@ body.dark * {
 body.dark .cdk-overlay-backdrop {
   background: rgba(0, 0, 0, 0.65) !important;
 }
+
+/* =========================================================
+   ENTERPRISE LOADING STATES
+========================================================= */
+
+.loading-surface {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+/* Skeleton block */
+.skeleton {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--surface-hover) 25%,
+    rgba(255, 255, 255, 0.18) 37%,
+    var(--surface-hover) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+/* Variants */
+.skeleton.sm { height: 10px; }
+.skeleton.lg { height: 20px; }
+.skeleton.w-40 { width: 40%; }
+.skeleton.w-60 { width: 60%; }
+.skeleton.w-80 { width: 80%; }
+
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* Inline loading text */
+.loading-hint {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* =========================================================
+   ENTERPRISE PROGRESS LOADER
+========================================================= */
+
+.progress-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.progress-inline {
+  height: 2px;
+  width: 100%;
+  background: var(--border);
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-inline::after {
+  content: '';
+  position: absolute;
+  left: -40%;
+  width: 40%;
+  height: 100%;
+  background: var(--active);
+  animation: progress-move 1.2s infinite linear;
+}
+
+@keyframes progress-move {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}

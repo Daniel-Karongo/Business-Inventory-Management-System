@@ -1,0 +1,56 @@
+<div class="audit-surface">
+
+    <h3 class="section-title">Recent ACL Activity</h3>
+
+    <div *ngIf="loading" class="loading-hint">
+        Fetching audit history…
+    </div>
+
+    <div *ngIf="!loading && !audits.length" class="audit-empty">
+        No audit records found
+    </div>
+
+    <div class="audit-timeline" *ngIf="audits.length">
+
+        <div class="audit-entry" *ngFor="let a of audits">
+
+            <!-- LEFT: ACTION -->
+            <div class="audit-marker">
+                <span class="action-pill" [ngClass]="badgeClass(a.action)">
+                    {{ a.action }}
+                </span>
+            </div>
+
+            <!-- BODY -->
+            <div class="audit-body">
+
+                <div class="audit-header">
+                    <span class="actor">
+                        {{ a.actorUsername }} · {{ a.actorRole }}
+                    </span>
+
+                    <span class="time">
+                        {{ a.createdAt | date:'dd/MM/yyyy HH:mm:ss' }}
+                    </span>
+                </div>
+
+                <div class="audit-diff">
+
+                    <div class="diff-block">
+                        <div class="diff-title">Before</div>
+                        <pre>{{ parse(a.beforeState) ?? '—' }}</pre>
+                    </div>
+
+                    <div class="diff-block">
+                        <div class="diff-title">After</div>
+                        <pre>{{ parse(a.afterState) ?? '—' }}</pre>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>

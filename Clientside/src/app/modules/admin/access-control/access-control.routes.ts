@@ -19,50 +19,19 @@ export const ACCESS_CONTROL_ROUTES: Routes = [
         loadComponent: () =>
           import('./pages/roles/acl-role-matrix/acl-role-matrix.component')
             .then(m => m.AclRoleMatrixComponent)
+      },
+      {
+        path: 'permissions',
+        loadComponent: () =>
+          import('./pages/permissions/acl-permission-conditions/acl-permission-conditions.component')
+            .then(m => m.AclPermissionConditionsComponent)
+      },
+      {
+        path: 'endpoints',
+        loadComponent: () =>
+          import('./pages/endpoints/acl-endpoint-permissions/acl-endpoint-permissions.component')
+            .then(m => m.AclEndpointPermissionsComponent)
       }
-      //   // placeholders — wired in later steps
-      //   {
-      //     path: 'roles',
-      //     loadComponent: () =>
-      //       import('./pages/overview/acl-overview.component')
-      //         .then(m => m.AclOverviewComponent)
-      //   },
-      //   {
-      //     path: 'permissions',
-      //     loadComponent: () =>
-      //       import('./pages/overview/acl-overview.component')
-      //         .then(m => m.AclOverviewComponent)
-      //   },
-      //   {
-      //     path: 'role-matrix',
-      //     loadComponent: () =>
-      //       import('./pages/overview/acl-overview.component')
-      //         .then(m => m.AclOverviewComponent)
-      //   },
-      //   {
-      //     path: 'endpoints',
-      //     loadComponent: () =>
-      //       import('./pages/overview/acl-overview.component')
-      //         .then(m => m.AclOverviewComponent)
-      //   },
-      //   {
-      //     path: 'conditions',
-      //     loadComponent: () =>
-      //       import('./pages/overview/acl-overview.component')
-      //         .then(m => m.AclOverviewComponent)
-      //   },
-      //   {
-      //     path: 'branch-scopes',
-      //     loadComponent: () =>
-      //       import('./pages/overview/acl-overview.component')
-      //         .then(m => m.AclOverviewComponent)
-      //   },
-      //   {
-      //     path: 'audit-log',
-      //     loadComponent: () =>
-      //       import('./pages/overview/acl-overview.component')
-      //         .then(m => m.AclOverviewComponent)
-      //   }
     ]
   }
 ];
