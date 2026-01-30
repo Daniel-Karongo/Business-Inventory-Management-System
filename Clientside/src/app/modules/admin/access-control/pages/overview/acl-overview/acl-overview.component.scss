@@ -1,0 +1,23 @@
+.surface {
+  background: var(--surface-bg);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--surface-radius);
+  box-shadow: var(--surface-shadow);
+  padding: 16px;
+}
+
+.label {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.value {
+  font-size: 1.75rem;
+  font-weight: var(--font-semibold);
+}
+
+.section-title {
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  margin-bottom: 12px;
+}

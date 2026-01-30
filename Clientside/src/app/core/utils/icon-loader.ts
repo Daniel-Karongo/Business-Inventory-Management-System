@@ -22,7 +22,8 @@ export class IconLoader {
       'accounts',
       'users',
       'branches',
-      'departments'
+      'departments',
+      'access-control'
     ];
 
     icons.forEach(name =>

@@ -1,0 +1,29 @@
+.acl-layout {
+  display: flex;
+  flex-direction: column;
+}
+
+.acl-surface {
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: var(--surface-shadow);
+}
+
+.acl-nav {
+  display: flex;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.acl-nav a {
+  padding: 8px 12px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.acl-nav a.active {
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--active);
+}

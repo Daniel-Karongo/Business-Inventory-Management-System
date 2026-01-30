@@ -1,0 +1,226 @@
+/* =========================================================
+   ROOT
+========================================================= */
+
+.acl-matrix-root {
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================================================
+   SINGLE SCROLL CONTEXT
+========================================================= */
+
+.acl-matrix-scroll {
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+/* =========================================================
+   STICKY CONTROLS (TOP)
+========================================================= */
+
+.acl-matrix-controls {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--surface);
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.acl-matrix-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.section-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   EDIT BANNER
+========================================================= */
+
+.edit-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.pending-pill {
+  background: rgba(245, 158, 11, 0.22);
+  color: #92400e;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* =========================================================
+   TABLE
+========================================================= */
+
+.matrix {
+  width: 100%;
+  min-width: 820px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+/* =========================================================
+   STICKY TABLE HEADER
+========================================================= */
+
+.sticky-header {
+  position: sticky;
+  top: 116px; /* controls + banner height */
+  z-index: 20;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+/* =========================================================
+   CELLS
+========================================================= */
+
+th,
+td {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   COLUMN WIDTHS
+========================================================= */
+
+.perm-col {
+  width: clamp(260px, 40%, 360px);
+  text-align: left;
+}
+
+/* Role columns */
+.role-col,
+.perm-cell {
+  width: 96px;        /* ⬅ was 80px */
+  min-width: 96px;
+  text-align: center;
+}
+
+.role-col {
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   MODULE ROWS
+========================================================= */
+
+.module-row td {
+  background: var(--surface-hover);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* =========================================================
+   PERMISSION LABELS
+========================================================= */
+
+.perm-label {
+  font-weight: 500;
+}
+
+.perm-code {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: monospace;
+}
+
+/* =========================================================
+   PERMISSION CELLS — INTERACTION
+========================================================= */
+
+.perm-cell {
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  transition: background-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.perm-cell:hover {
+  background: var(--surface-hover);
+}
+
+/* Saved states */
+.perm-cell .granted {
+  color: var(--text-success);
+}
+
+.perm-cell .denied {
+  color: var(--text-secondary);
+}
+
+/* Pending states */
+.perm-cell.pending-add {
+  background: rgba(34, 197, 94, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.6);
+}
+
+.perm-cell.pending-remove {
+  background: rgba(239, 68, 68, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.6);
+}
+
+/* Icons */
+.icon {
+  font-weight: 700;
+}
+
+.icon.add {
+  color: #16a34a;
+}
+
+.icon.remove {
+  color: #dc2626;
+}
+
+/* Keyboard accessibility */
+.perm-cell:focus-visible {
+  outline: 2px solid var(--active);
+  outline-offset: -2px;
+}

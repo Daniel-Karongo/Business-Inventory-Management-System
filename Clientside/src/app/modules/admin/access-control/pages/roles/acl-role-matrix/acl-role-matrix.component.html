@@ -1,0 +1,115 @@
+<div class="acl-matrix-root">
+
+  <!-- SINGLE SCROLL CONTEXT -->
+  <div class="acl-matrix-scroll">
+
+    <!-- STICKY CONTROLS -->
+    <div class="acl-matrix-controls">
+
+      <div class="acl-matrix-header">
+        <div>
+          <h2 class="section-title">Role / Permission Matrix</h2>
+          <p class="section-subtitle">
+            Configure which roles are allowed to access each API capability
+          </p>
+        </div>
+
+        <div class="header-actions">
+          <button
+            mat-flat-button
+            *ngIf="!editMode"
+            (click)="toggleEdit()">
+            Enable Editing
+          </button>
+
+          <ng-container *ngIf="editMode">
+            <button mat-stroked-button (click)="cancelEdit()">
+              Cancel
+            </button>
+
+            <button
+              mat-flat-button
+              color="primary"
+              [disabled]="!pendingChanges.length"
+              (click)="reviewChanges()">
+              Review &amp; Apply
+            </button>
+          </ng-container>
+        </div>
+      </div>
+
+      <div class="edit-banner" *ngIf="editMode">
+        <span>Editing enabled — changes are not saved yet</span>
+        <span class="pending-pill" *ngIf="pendingChanges.length">
+          {{ pendingChanges.length }} pending
+        </span>
+      </div>
+
+    </div>
+
+    <!-- TABLE -->
+    <table class="matrix">
+
+      <thead>
+        <tr>
+          <th class="perm-col sticky-header">Permission</th>
+          <th
+            *ngFor="let r of orderedRoles()"
+            class="role-col sticky-header">
+            {{ r.name }}
+          </th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+        <ng-container *ngFor="let group of groupedPermissions()">
+
+          <!-- MODULE ROW -->
+          <tr class="module-row">
+            <td
+              class="perm-col"
+              [attr.colspan]="orderedRoles().length + 1">
+              {{ group[0] }}
+            </td>
+          </tr>
+
+          <!-- PERMISSIONS -->
+          <tr *ngFor="let p of group[1]">
+
+            <td class="perm-col">
+              <div class="perm-label">{{ humanize(p.code) }}</div>
+              <div class="perm-code">{{ p.code }}</div>
+            </td>
+
+            <td
+              *ngFor="let r of orderedRoles()"
+              class="perm-cell"
+              tabindex="0"
+              [class.pending-add]="isPendingAdd(r.name, p.code)"
+              [class.pending-remove]="isPendingRemove(r.name, p.code)"
+              (click)="toggle(r.name, p.code)"
+              (keydown.enter)="toggle(r.name, p.code)"
+              (keydown.space)="toggle(r.name, p.code)">
+
+              <span *ngIf="isPendingAdd(r.name, p.code)" class="icon add">+</span>
+              <span *ngIf="isPendingRemove(r.name, p.code)" class="icon remove">−</span>
+
+              <span
+                *ngIf="!isPending(r.name, p.code)"
+                [class.granted]="has(r.name, p.code)"
+                [class.denied]="!has(r.name, p.code)">
+                {{ has(r.name, p.code) ? '✔' : '—' }}
+              </span>
+
+            </td>
+          </tr>
+
+        </ng-container>
+
+      </tbody>
+
+    </table>
+
+  </div>
+</div>

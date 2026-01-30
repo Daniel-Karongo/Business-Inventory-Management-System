@@ -1,0 +1,42 @@
+<h2 mat-dialog-title class="dialog-title">
+  Confirm Access Control Changes
+</h2>
+
+<div mat-dialog-content class="dialog-body">
+
+  <p class="dialog-subtitle">
+    Review the permission changes below before applying them.
+  </p>
+
+  <ul class="diff-list">
+    <li *ngFor="let c of data.changes"
+        [class.allow]="c.newValue"
+        [class.deny]="!c.newValue">
+      <span class="role">{{ c.role }}</span>
+      <span class="arrow">→</span>
+      <span class="perm">{{ c.permission }}</span>
+      <span class="result">
+        {{ c.newValue ? 'ALLOW' : 'DENY' }}
+      </span>
+    </li>
+  </ul>
+
+  <mat-form-field appearance="fill" class="reason-field">
+    <mat-label>Reason</mat-label>
+    <textarea matInput
+              rows="3"
+              [(ngModel)]="reason"
+              placeholder="Explain why these permission changes are required">
+    </textarea>
+  </mat-form-field>
+
+</div>
+
+<div mat-dialog-actions align="end">
+  <button mat-stroked-button (click)="cancel()">Cancel</button>
+  <button mat-flat-button color="primary"
+          [disabled]="!reason"
+          (click)="confirm()">
+    Apply Changes
+  </button>
+</div>

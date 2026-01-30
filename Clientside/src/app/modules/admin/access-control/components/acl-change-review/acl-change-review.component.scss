@@ -1,0 +1,61 @@
+.dialog-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.dialog-subtitle {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.diff-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px 0;
+}
+
+.diff-list li {
+  display: flex;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.diff-list li.allow {
+  background: rgba(34,197,94,0.12);
+  color: #166534;
+}
+
+.diff-list li.deny {
+  background: rgba(239,68,68,0.12);
+  color: #7f1d1d;
+}
+
+.role {
+  font-weight: 600;
+}
+
+.perm {
+  font-family: monospace;
+}
+
+.result {
+  margin-left: auto;
+  font-weight: 700;
+}
+
+.required {
+  color: #ef4444;
+}
+
+.dialog-body {
+  padding-top: 8px;
+}
+
+.reason-field {
+  width: 100%;
+  margin-top: 12px;
+}

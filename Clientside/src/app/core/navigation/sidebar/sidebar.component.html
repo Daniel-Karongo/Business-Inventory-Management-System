@@ -2,7 +2,7 @@
 
   <!-- BRAND -->
   <div class="p-4 border-b dark:border-gray-700 flex items-center gap-3"
-       [class.justify-center]="sidebar.isCollapsed$ | async">
+    [class.justify-center]="sidebar.isCollapsed$ | async">
 
     <ng-container *ngIf="sidebar.isCollapsed$ | async; else expanded">
       <div class="w-10 h-10 rounded-md bg-sky-600 text-white flex items-center justify-center font-bold">
@@ -23,31 +23,32 @@
 
   <!-- NAV -->
   <nav class="flex-1 overflow-y-auto py-4 space-y-1">
-    <a *ngFor="let item of nav"
-      [routerLink]="item.route"
-      routerLinkActive="active"
-      class="nav-item"
+    <a *ngFor="let item of nav" [routerLink]="item.route" routerLinkActive="active" class="nav-item"
       [class.justify-center]="sidebar.isCollapsed$ | async"
-      [matTooltip]="(sidebar.isCollapsed$ | async) ? item.title : ''"
-      matTooltipPosition="right"
+      [matTooltip]="(sidebar.isCollapsed$ | async) ? item.title : ''" matTooltipPosition="right"
       matTooltipAppendTo="body">
 
       <mat-icon class="nav-icon" [svgIcon]="item.icon"></mat-icon>
 
       <span class="collapsed-label">{{ item.title }}</span>
     </a>
+    <a *ngIf="isSuperuser()" routerLink="/admin/access-control" routerLinkActive="active" class="nav-item"
+      [class.justify-center]="sidebar.isCollapsed$ | async"
+      [matTooltip]="(sidebar.isCollapsed$ | async) ? 'Access Control' : ''" matTooltipPosition="right"
+      matTooltipAppendTo="body">
+
+      <mat-icon class="nav-icon" svgIcon="access-control"></mat-icon>
+      <span class="collapsed-label">Access Control</span>
+    </a>
   </nav>
 
   <!-- FOOTER -->
   <div class="p-3 border-t dark:border-gray-700">
-    <div class="flex items-center"
-         [class.justify-center]="sidebar.isCollapsed$ | async"
-         [class.justify-between]="!(sidebar.isCollapsed$ | async)">
-      <button (click)="sidebar.toggle()"
-              class="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
+    <div class="flex items-center" [class.justify-center]="sidebar.isCollapsed$ | async"
+      [class.justify-between]="!(sidebar.isCollapsed$ | async)">
+      <button (click)="sidebar.toggle()" class="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 transform transition"
-             [class.rotate-180]="!(sidebar.isCollapsed$ | async)" fill="none"
-             stroke="currentColor" stroke-width="1.5">
+          [class.rotate-180]="!(sidebar.isCollapsed$ | async)" fill="none" stroke="currentColor" stroke-width="1.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6" />
         </svg>
       </button>
