@@ -5,7 +5,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Comparator;
 
 @Slf4j
@@ -13,17 +14,12 @@ import java.util.Comparator;
 @RequiredArgsConstructor
 public class UploadsInitializer {
 
-    private final FileStorageProperties props;
     private final FileStorageService fileStorageService;
 
     @PostConstruct
     public void init() {
-        Path uploadsRoot = Paths.get(props.getBaseUploadDir())
-                .toAbsolutePath()
-                .normalize();
-
         try {
-            Files.createDirectories(uploadsRoot);
+            Path uploadsRoot = fileStorageService.userRoot().getParent();
 
             Files.walk(uploadsRoot)
                     .sorted(Comparator.reverseOrder())

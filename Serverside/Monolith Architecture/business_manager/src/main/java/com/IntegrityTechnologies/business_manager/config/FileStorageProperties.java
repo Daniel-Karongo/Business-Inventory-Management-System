@@ -1,24 +1,47 @@
 package com.IntegrityTechnologies.business_manager.config;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 
+/**
+ * File storage configuration.
+ * All paths are resolved RELATIVE to the JVM working directory (user.dir).
+ */
 @Getter
 @Setter
 @Component
 @ConfigurationProperties(prefix = "file")
 public class FileStorageProperties {
-    /** Base directory for all images */
-    private String baseUploadDir;
 
-    /** Base directory for product images */
-    private String productUploadDir;
+    /* ============================================================
+       NEW LOGICAL CONFIG (RELATIVE)
+       ============================================================ */
 
-    /** Base directory for user ID images */
-    private String userUploadDir;
+    /** Root storage directory (e.g. data) */
+    private String rootDir;
 
-    /** Base directory for Suppliers' images */
-    private String supplierUploadDir;
+    /** Uploads directory under root (e.g. uploads) */
+    private String uploadsDir;
+
+    /* ============================================================
+       LEGACY API (RESTORED FOR COMPATIBILITY)
+       ============================================================ */
+
+    public String getBaseUploadDir() {
+        return rootDir + "/" + uploadsDir;
+    }
+
+    public String getUserUploadDir() {
+        return getBaseUploadDir() + "/users";
+    }
+
+    public String getProductUploadDir() {
+        return getBaseUploadDir() + "/products";
+    }
+
+    public String getSupplierUploadDir() {
+        return getBaseUploadDir() + "/suppliers";
+    }
 }

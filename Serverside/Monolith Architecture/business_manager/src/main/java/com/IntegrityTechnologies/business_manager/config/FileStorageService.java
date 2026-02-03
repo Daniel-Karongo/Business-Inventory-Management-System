@@ -18,36 +18,42 @@ public class FileStorageService {
     private final FileStorageProperties props;
     private final TransactionalFileManager transactionalFileManager;
 
+    private Path storageRoot;
     private Path uploadsRoot;
 
     /* ============================================================
-       INIT
+       INIT (RELATIVE TO JAR / IDE)
        ============================================================ */
 
     @PostConstruct
     public void init() {
 
-        Path configured =
-                Paths.get(props.getBaseUploadDir())
-                        .toAbsolutePath()
-                        .normalize();
+        Path workingDir = Paths.get(System.getProperty("user.dir"))
+                .toAbsolutePath()
+                .normalize();
 
-        uploadsRoot = isWindows()
-                ? configured
-                : dot(configured.getParent(), "uploads");
+        storageRoot = resolveHidden(workingDir.resolve(props.getRootDir()));
+        uploadsRoot = resolveHidden(storageRoot.resolve(props.getUploadsDir()));
 
         try {
+            // 1️⃣ Storage root (hidden)
+            Files.createDirectories(storageRoot);
+            hidePathIfSupported(storageRoot);
+
+            // 2️⃣ Uploads root (hidden)
             Files.createDirectories(uploadsRoot);
-            hide(uploadsRoot);
+            hidePathIfSupported(uploadsRoot);
+
         } catch (IOException e) {
-            throw new RuntimeException("Failed to init uploads root", e);
+            throw new RuntimeException("Failed to init storage or uploads root", e);
         }
 
+        log.info("📁 Storage root initialized at {}", storageRoot);
         log.info("📁 Uploads root initialized at {}", uploadsRoot);
     }
 
     /* ============================================================
-       ROOT ACCESSORS (🔥 FIXES YOUR ERROR)
+       ROOT ACCESSORS (UNCHANGED API)
        ============================================================ */
 
     public Path productRoot() {
@@ -63,27 +69,84 @@ public class FileStorageService {
     }
 
     private Path moduleRoot(String name) {
-        Path dir = isWindows()
-                ? uploadsRoot.resolve(name)
-                : dot(uploadsRoot, name);
-
+        Path dir = resolveHidden(uploadsRoot.resolve(name));
         try {
             Files.createDirectories(dir);
-            hide(dir);
+            hidePathIfSupported(dir);
         } catch (IOException e) {
             throw new RuntimeException("Failed to init module dir: " + dir, e);
         }
-
         return dir;
     }
 
     /* ============================================================
-       LEGACY / COMPAT API
+       INTERNAL STORAGE (BACKUPS ETC)
+       ============================================================ */
+
+    public Path internalRoot(String name) {
+        Path dir = resolveHidden(storageRoot.resolve(name));
+        try {
+            Files.createDirectories(dir);
+            hidePathIfSupported(dir);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to init internal dir: " + dir, e);
+        }
+        return dir;
+    }
+
+    public Path toRelative(Path absolutePath) {
+
+        Path normalized = absolutePath.normalize();
+
+        if (!normalized.startsWith(storageRoot)) {
+            throw new IllegalArgumentException("Path is outside storage root");
+        }
+
+        return storageRoot.relativize(normalized);
+    }
+    public Path resolveRelative(String relativePath) {
+
+        Path resolved = storageRoot
+                .resolve(relativePath)
+                .normalize();
+
+        if (!resolved.startsWith(storageRoot)) {
+            throw new IllegalArgumentException("Invalid backup path");
+        }
+
+        return resolved;
+    }
+
+    /* ============================================================
+       LEGACY / COMPAT METHODS (RESTORED)
+       ============================================================ */
+
+    public void hidePathIfSupported(Path path) {
+        hidePath(path);
+    }
+
+    public void hidePath(Path path) {
+        if (!Files.exists(path)) return;
+
+        try {
+            if (isWindows()) {
+                Files.setAttribute(path, "dos:hidden", true, LinkOption.NOFOLLOW_LINKS);
+            }
+            // Linux/macOS: handled by dot-folders
+        } catch (Exception ignored) {}
+    }
+
+    public void deleteVisibleOrHiddenDirectory(Path dir) throws IOException {
+        deleteDirectory(dir);
+    }
+
+    /* ============================================================
+       FILE OPS (UNCHANGED)
        ============================================================ */
 
     public Path initDirectory(Path dir) throws IOException {
         Files.createDirectories(dir);
-        hide(dir);
+        hidePathIfSupported(dir);
         return dir;
     }
 
@@ -91,31 +154,14 @@ public class FileStorageService {
         Path target = dir.resolve(filename).normalize();
         Files.createDirectories(dir);
         Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
-        hide(target);
+        hidePathIfSupported(target);
         return target;
-    }
-
-    public void hidePathIfSupported(Path path) {
-        hide(path);
-    }
-
-    public void hidePath(Path path) throws IOException {
-        hide(path);
     }
 
     public void deleteFile(Path file) throws IOException {
         if (file == null) return;
         Files.deleteIfExists(file);
     }
-
-    public void deleteVisibleOrHiddenDirectory(Path dir) throws IOException {
-        deleteDirectory(dir);
-    }
-
-
-    /* ============================================================
-       DELETE
-       ============================================================ */
 
     public void deleteDirectoryAfterCommit(Path dir, String module) {
         transactionalFileManager.runAfterCommit(() -> {
@@ -136,24 +182,17 @@ public class FileStorageService {
     }
 
     /* ============================================================
-       HIDING LOGIC (OS-AWARE)
+       INTERNAL HELPERS (PRIVATE)
        ============================================================ */
 
-    private void hide(Path path) {
-        if (!Files.exists(path)) return;
+    private Path resolveHidden(Path path) {
+        if (isWindows()) return path;
 
-        try {
-            if (isWindows()) {
-                Files.setAttribute(path, "dos:hidden", true, LinkOption.NOFOLLOW_LINKS);
-            }
-            // Linux/macOS handled by dot-folders only
-        } catch (Exception e) {
-            log.debug("Failed to hide {}", path);
-        }
-    }
+        Path parent = path.getParent();
+        String name = path.getFileName().toString();
 
-    private Path dot(Path parent, String name) {
-        return parent.resolve(name.startsWith(".") ? name : "." + name).normalize();
+        if (name.startsWith(".")) return path;
+        return parent.resolve("." + name);
     }
 
     private boolean isWindows() {
