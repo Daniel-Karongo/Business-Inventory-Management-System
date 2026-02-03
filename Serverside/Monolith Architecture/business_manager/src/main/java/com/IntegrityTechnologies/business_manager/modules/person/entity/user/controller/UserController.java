@@ -2,8 +2,11 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.user.co
 
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import com.IntegrityTechnologies.business_manager.common.ImagesUploadForm;
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.*;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.service.UserBulkService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.service.UserImageService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.service.UserService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,7 +32,18 @@ public class UserController {
 
     private final UserService userService;
     private final UserImageService userImageService;
+    private final UserBulkService bulkService;
 
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN')")
+    @PostMapping("/import")
+    public ResponseEntity<BulkResult<UserDTO>> importUsers(
+            @RequestBody BulkRequest<UserBulkRow> request,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(
+                bulkService.importUsers(request, authentication)
+        );
+    }
 
 
 
@@ -43,23 +57,23 @@ public class UserController {
         return ResponseEntity.ok(savedUser);
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
-    @PostMapping(
-        value = "/register/bulk",
-        consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
-        produces = MediaType.APPLICATION_JSON_VALUE
-    )
-    public ResponseEntity<List<UserDTO>> registerUsersInBulk(
-            @ModelAttribute UserBulkWithFilesDTO bulkDTO,
-            Authentication authentication
-    ) throws IOException {
-        List<UserDTO> savedUsers = new ArrayList<>();
-        for (UserDTO userDto : bulkDTO.getUsers()) {
-            savedUsers.add(userService.registerUser(userDto, authentication));
-        }
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedUsers);
-    }
+//    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
+//    @PostMapping(
+//        value = "/register/bulk",
+//        consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+//        produces = MediaType.APPLICATION_JSON_VALUE
+//    )
+//    public ResponseEntity<List<UserDTO>> registerUsersInBulk(
+//            @ModelAttribute UserBulkWithFilesDTO bulkDTO,
+//            Authentication authentication
+//    ) throws IOException {
+//        List<UserDTO> savedUsers = new ArrayList<>();
+//        for (UserDTO userDto : bulkDTO.getUsers()) {
+//            savedUsers.add(userService.registerUser(userDto, authentication));
+//        }
+//
+//        return ResponseEntity.status(HttpStatus.CREATED).body(savedUsers);
+//    }
 
     @PatchMapping("/{identifier}")
     public ResponseEntity<UserDTO> updateUser(

@@ -2,7 +2,11 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.departm
 
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentBulkRow;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.mapper.DepartmentMapper;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.service.DepartmentBulkService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.service.DepartmentService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentMinimalDTO;
@@ -27,7 +31,18 @@ public class DepartmentController {
 
     private final DepartmentService departmentService;
     private final DepartmentMapper departmentMapper;
+    private final DepartmentBulkService bulkService;
 
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @PostMapping("/import")
+    public ResponseEntity<BulkResult<DepartmentDTO>> importDepartments(
+            @RequestBody BulkRequest<DepartmentBulkRow> request,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(
+                bulkService.importDepartments(request, authentication)
+        );
+    }
     @PostMapping
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     public ResponseEntity<DepartmentDTO> create(
@@ -37,18 +52,18 @@ public class DepartmentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(departmentService.create(dto, authentication));
     }
 
-    @PostMapping("/bulk")
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
-    public ResponseEntity<List<DepartmentDTO>> createDepartmentsInBulk(
-            @RequestBody List<DepartmentDTO> dtos,
-            Authentication authentication
-    ) {
-        List<DepartmentDTO> createdDTOs = new ArrayList<>();
-        for(DepartmentDTO dto: dtos) {
-            createdDTOs.add(departmentService.create(dto, authentication));
-        }
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdDTOs);
-    }
+//    @PostMapping("/bulk")
+//    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+//    public ResponseEntity<List<DepartmentDTO>> createDepartmentsInBulk(
+//            @RequestBody List<DepartmentDTO> dtos,
+//            Authentication authentication
+//    ) {
+//        List<DepartmentDTO> createdDTOs = new ArrayList<>();
+//        for(DepartmentDTO dto: dtos) {
+//            createdDTOs.add(departmentService.create(dto, authentication));
+//        }
+//        return ResponseEntity.status(HttpStatus.CREATED).body(createdDTOs);
+//    }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")

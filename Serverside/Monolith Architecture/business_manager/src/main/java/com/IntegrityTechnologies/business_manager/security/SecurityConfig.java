@@ -110,7 +110,10 @@ public class SecurityConfig {
                                 "/api/auth/forgot-password/**",
                                 "/api/auth/reset-password/**"
                         ).permitAll()
-
+                        // 🔓 User Creation
+                                .requestMatchers(
+                                        "/api/users/register"
+                                ).permitAll()
                         // 🔓 MPESA CALLBACKS (CRITICAL)
                         .requestMatchers(
                                 "/api/payments/mpesa/stk/callback",

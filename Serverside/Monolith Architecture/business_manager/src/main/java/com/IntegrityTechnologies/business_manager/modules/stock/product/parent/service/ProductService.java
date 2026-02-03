@@ -240,32 +240,39 @@ public class ProductService {
         // --- Persist product (to get ID for images)
         product = productRepository.save(product);
 
-        // --- Create variants if provided
-        if (dto.getVariants() != null && !dto.getVariants().isEmpty()) {
+        // --- Create variants
+        List<String> classifications =
+                (dto.getVariants() == null || dto.getVariants().isEmpty())
+                        ? List.of("STANDARD")
+                        : dto.getVariants();
 
-            for (String classification : dto.getVariants()) {
-                if (classification == null || classification.isBlank()) continue;
+        for (String classification : classifications) {
+            if (classification == null || classification.isBlank()) continue;
 
-                ProductVariant variant = new ProductVariant();
-                variant.setProduct(product);
-                variant.setClassification(classification);
+            ProductVariant variant = new ProductVariant();
+            variant.setProduct(product);
+            variant.setClassification(classification);
 
-                // no buying price yet — will be set after receiveStock
-                variant.setAverageBuyingPrice(BigDecimal.ZERO);
+            // no buying price yet — will be set after receiveStock
+            variant.setAverageBuyingPrice(BigDecimal.ZERO);
 
-                // Compute minimum selling price using profit percentage
-                BigDecimal minBuy = variant.getAverageBuyingPrice();
-                BigDecimal minSelling = productVariantService.computeMinSelling(minBuy, product.getMinimumPercentageProfit());
-                variant.setMinimumSellingPrice(minSelling);
+            // Compute minimum selling price using profit percentage
+            BigDecimal minBuy = variant.getAverageBuyingPrice();
+            BigDecimal minSelling =
+                    productVariantService.computeMinSelling(
+                            minBuy,
+                            product.getMinimumPercentageProfit()
+                    );
+            variant.setMinimumSellingPrice(minSelling);
 
-                // Generate variant SKU
-                variant.setSku(generateVariantSku(product, classification));
+            // Generate variant SKU
+            variant.setSku(generateVariantSku(product, classification));
 
-                product.getVariants().add(variant); // ensure Product has variants list
-            }
-
-            productRepository.save(product);
+            product.getVariants().add(variant);
         }
+
+        // persist variants
+        productRepository.save(product);
 
         // --- Save product images
         List<MultipartFile> imageFiles = dto.getImages();

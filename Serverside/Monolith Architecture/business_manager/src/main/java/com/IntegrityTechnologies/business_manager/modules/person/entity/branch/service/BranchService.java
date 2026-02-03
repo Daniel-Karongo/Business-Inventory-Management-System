@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.branch.service;
 
+import com.IntegrityTechnologies.business_manager.common.PhoneAndEmailNormalizer;
 import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
@@ -37,7 +38,7 @@ public class BranchService {
     @Transactional
     public BranchDTO create(BranchDTO request, Authentication authentication) {
 
-        if (branchRepository.existsByBranchCode(request.getBranchCode())) {
+        if (branchRepository.existsByBranchCodeIgnoreCase(request.getBranchCode())) {
             throw new IllegalArgumentException("Branch code " + request.getBranchCode() + " already exists");
         }
 
@@ -63,7 +64,7 @@ public class BranchService {
                 .branchCode(request.getBranchCode())
                 .name(request.getName())
                 .location(request.getLocation())
-                .phone(request.getPhone())
+                .phone(PhoneAndEmailNormalizer.normalizePhone(request.getPhone()))
                 .email(request.getEmail())
                 .deleted(false)
                 .build();
@@ -149,6 +150,7 @@ public class BranchService {
                 .id(branch.getId())
                 .users(branch.getUsers().stream().map(user -> MinimalUserDTO.from(user)).collect(Collectors.toSet()))
                 .departments(branch.getDepartments().stream().map(department -> DepartmentMinimalDTO.from(department)).collect(Collectors.toSet()))
+                .createdAt(branch.getCreatedAt())
                 .branchCode(branch.getBranchCode())
                 .name(branch.getName())
                 .location(branch.getLocation())

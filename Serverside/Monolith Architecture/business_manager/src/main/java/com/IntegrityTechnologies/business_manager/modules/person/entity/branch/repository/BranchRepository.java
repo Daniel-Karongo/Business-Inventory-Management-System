@@ -46,5 +46,5 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
 """)
     boolean branchContainsDepartment(@Param("branchId") UUID branchId, @Param("departmentId") UUID departmentId);
 
-    boolean existsByBranchCode(String branchCode);
+    boolean existsByBranchCodeIgnoreCase(String branchCode);
 }

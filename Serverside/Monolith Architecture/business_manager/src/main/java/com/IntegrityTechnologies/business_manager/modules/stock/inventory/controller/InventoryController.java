@@ -1,8 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.controller;
 
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.config.OptimisticRetryRunner;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.*;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryBulkService;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryValuationService;
@@ -25,11 +28,17 @@ public class InventoryController {
     private final InventoryService inventoryService;
     private final StockTransactionRepository stockTransactionRepository;
     private final InventoryValuationService valuationService;
+    private final InventoryBulkService bulkService;
 
-    /** -------------------------
-     * RECEIVE
-     * ------------------------- */
-
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
+    @PostMapping("/import")
+    public ResponseEntity<BulkResult<Object>> importInventory(
+            @RequestBody BulkRequest<InventoryReceiveBulkRow> request
+    ) {
+        return ResponseEntity.ok(
+                bulkService.bulkReceive(request)
+        );
+    }
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
     @PostMapping("/receive")
     public ResponseEntity<ApiResponse> receiveStock(@RequestBody ReceiveStockRequest req) {
@@ -37,18 +46,17 @@ public class InventoryController {
                 OptimisticRetryRunner.runWithRetry(() -> inventoryService.receiveStock(req))
         );
     }
-
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
-    @PostMapping("/receive/bulk")
-    @Transactional
-    public ResponseEntity<ApiResponse> bulkReceiveStock(@RequestBody BulkReceiveStockRequest req) {
-        List<ReceiveStockRequest> stockRequests = req.getItems();
-        List<Object> responses = new ArrayList<>();
-        for (ReceiveStockRequest stockRequest : stockRequests) {
-            OptimisticRetryRunner.runWithRetry(() -> responses.add(inventoryService.receiveStock(stockRequest).getData()));
-        }
-        return ResponseEntity.ok(new ApiResponse("success", "Inventory Updated successfully", responses));
-    }
+//    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
+//    @PostMapping("/receive/bulk")
+//    @Transactional
+//    public ResponseEntity<ApiResponse> bulkReceiveStock(@RequestBody BulkReceiveStockRequest req) {
+//        List<ReceiveStockRequest> stockRequests = req.getItems();
+//        List<Object> responses = new ArrayList<>();
+//        for (ReceiveStockRequest stockRequest : stockRequests) {
+//            OptimisticRetryRunner.runWithRetry(() -> responses.add(inventoryService.receiveStock(stockRequest).getData()));
+//        }
+//        return ResponseEntity.ok(new ApiResponse("success", "Inventory Updated successfully", responses));
+//    }
 
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
     @PostMapping("/transfer")

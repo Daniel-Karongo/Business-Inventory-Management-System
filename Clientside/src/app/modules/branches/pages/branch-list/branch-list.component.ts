@@ -10,6 +10,7 @@ import { BranchService } from '../../services/branch.service';
 import { BranchDTO } from '../../models/branch.model';
 import { ConfirmDialogComponent } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { BranchBulkImportDialogComponent } from '../../components/branch-bulk-import-dialog/branch-bulk-import-dialog.component';
 
 @Component({
   standalone: true,
@@ -26,13 +27,13 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 })
 export class BranchListComponent implements OnInit {
 
-  displayedColumns = ['code', 'name', 'location', 'actions'];
+  displayedColumns = ['code', 'name', 'location', 'createdAt', 'actions'];
   branches: BranchDTO[] = [];
 
   constructor(
     private branchService: BranchService,
     private dialog: MatDialog
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.load();
@@ -40,6 +41,19 @@ export class BranchListComponent implements OnInit {
 
   load() {
     this.branchService.getAll(false).subscribe(b => this.branches = b);
+  }
+
+  openBulkImport() {
+    this.dialog.open(BranchBulkImportDialogComponent, {
+      width: '1100px',
+      maxWidth: '95vw',
+      maxHeight: '90vh'
+    }).afterClosed().subscribe(imported => {
+      if (imported === true) {
+        // 🔄 REFRESH LIST
+        this.load();
+      }
+    });
   }
 
   delete(branch: BranchDTO) {

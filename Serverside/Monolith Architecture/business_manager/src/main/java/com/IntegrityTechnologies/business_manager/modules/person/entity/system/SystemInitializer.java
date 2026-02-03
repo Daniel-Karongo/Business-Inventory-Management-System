@@ -34,7 +34,7 @@ public class SystemInitializer {
                                 .branchCode("MAIN")
                                 .name("Main Branch")
                                 .location("Default Location")
-                                .phone("+0000000000")
+                                .phone("+254700000000")
                                 .email("main@default.com")
                                 .build();
                         branchRepository.save(b);

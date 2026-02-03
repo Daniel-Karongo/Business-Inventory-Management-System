@@ -1,12 +1,12 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.controller;
 
 import com.IntegrityTechnologies.business_manager.common.PageWrapper;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductBulkWithFilesDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductCreateDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductUpdateDTO;
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductAudit;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductImageAudit;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.service.ProductBulkService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,15 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * ProductController — full feature set:
- * - Listing & filtering (advanced)
- * - Create / Update (multipart support, images)
- * - Barcode lookup, barcode image and PDF endpoints
- * - Soft / Restore / Hard delete
- * - Image management (upload/delete)
- */
-
 @Tag(name = "Products")
 @RestController
 @RequestMapping("/api/products")
@@ -46,6 +37,7 @@ import java.util.UUID;
 public class ProductController {
 
     private final ProductService productService;
+    private final ProductBulkService bulkService;
 
     /* =============================
        BASIC READ
@@ -224,6 +216,15 @@ public class ProductController {
        CREATE / UPDATE
        ============================= */
 
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @PostMapping("/import")
+    public ResponseEntity<BulkResult<ProductDTO>> importProducts(
+            @RequestBody BulkRequest<ProductBulkRow> request
+    ) {
+        return ResponseEntity.ok(
+                bulkService.importProducts(request)
+        );
+    }
     @PostMapping(value="/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ProductDTO> createProduct(
             @ModelAttribute("product") ProductCreateDTO dto
@@ -232,26 +233,26 @@ public class ProductController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    @PostMapping(
-            value = "/create/bulk",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE
-    )
-    public ResponseEntity<List<ProductDTO>> createProductInBulk(
-            @ModelAttribute ProductBulkWithFilesDTO bulkDTO,
-            Authentication authentication
-    ) throws IOException {
-        String creatorUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails ud)
-                ? ud.getUsername()
-                : null;
-        List<ProductDTO> savedProductDTOs = new ArrayList<>();
-
-
-        for (ProductCreateDTO productCreateDTO : bulkDTO.getProducts()) {
-            savedProductDTOs.add(productService.createProduct(productCreateDTO));
-        }
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedProductDTOs);
-    }
+//    @PostMapping(
+//            value = "/create/bulk",
+//            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+//            produces = MediaType.APPLICATION_JSON_VALUE
+//    )
+//    public ResponseEntity<List<ProductDTO>> createProductInBulk(
+//            @ModelAttribute ProductBulkWithFilesDTO bulkDTO,
+//            Authentication authentication
+//    ) throws IOException {
+//        String creatorUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails ud)
+//                ? ud.getUsername()
+//                : null;
+//        List<ProductDTO> savedProductDTOs = new ArrayList<>();
+//
+//
+//        for (ProductCreateDTO productCreateDTO : bulkDTO.getProducts()) {
+//            savedProductDTOs.add(productService.createProduct(productCreateDTO));
+//        }
+//        return ResponseEntity.status(HttpStatus.CREATED).body(savedProductDTOs);
+//    }
 
     @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
     @PatchMapping(value = "/{id}")

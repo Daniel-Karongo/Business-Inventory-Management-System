@@ -1,0 +1,120 @@
+<h2 mat-dialog-title class="bulk-title">
+  Bulk Import Branches
+</h2>
+
+<mat-dialog-content [formGroup]="form" class="body">
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+
+    <div class="import-bar">
+
+      <label class="import-action excel">
+        <input type="file" hidden accept=".xlsx" (change)="importExcel($event)">
+        <mat-icon>table_view</mat-icon>
+        <span>
+          <strong>Import Excel</strong>
+          <small>.xlsx template</small>
+        </span>
+      </label>
+
+      <label class="import-action csv">
+        <input type="file" hidden accept=".csv" (change)="importCsv($event)">
+        <mat-icon>description</mat-icon>
+        <span>
+          <strong>Import CSV</strong>
+          <small>.csv template</small>
+        </span>
+      </label>
+
+    </div>
+
+    <span class="spacer"></span>
+
+    <div class="template-downloads">
+
+      <button mat-stroked-button class="template-btn excel" (click)="downloadExcelTemplate()">
+        <mat-icon>table_view</mat-icon>
+        <span>
+          <strong>Excel Template</strong>
+          <small>.xlsx</small>
+        </span>
+      </button>
+
+      <button mat-stroked-button class="template-btn csv" (click)="downloadCsvTemplate()">
+        <mat-icon>description</mat-icon>
+        <span>
+          <strong>CSV Template</strong>
+          <small>.csv</small>
+        </span>
+      </button>
+
+    </div>
+
+  </div>
+
+  <!-- OPTIONS -->
+  <mat-checkbox formControlName="dryRun">
+    Dry run (validate only, do not save)
+  </mat-checkbox>
+
+  <!-- ROWS -->
+  <div class="rows" formArrayName="rows">
+
+    <div class="row-card" *ngFor="let r of rows.controls; let i = index" [formGroupName]="i">
+
+      <div class="row-header">
+        <span>Row {{ i + 1 }}</span>
+        <button mat-icon-button color="warn" (click)="removeRow(i)">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+
+      <div class="grid-2">
+        <mat-form-field appearance="fill">
+          <mat-label>Branch Code</mat-label>
+          <input matInput formControlName="branchCode">
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Name</mat-label>
+          <input matInput formControlName="name">
+        </mat-form-field>
+      </div>
+
+      <div class="grid-2">
+        <mat-form-field appearance="fill">
+          <mat-label>Location</mat-label>
+          <input matInput formControlName="location">
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Phone</mat-label>
+          <input matInput formControlName="phone">
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Email</mat-label>
+        <input matInput formControlName="email">
+      </mat-form-field>
+
+      <div class="row-error" *ngIf="r.value._error">
+        {{ r.value._error }}
+      </div>
+
+    </div>
+  </div>
+
+  <button mat-stroked-button (click)="addRow()">
+    + Add Row
+  </button>
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="close()">Cancel</button>
+  <button mat-flat-button color="primary" [disabled]="submitting || form.invalid" (click)="submit()">
+    Import
+  </button>
+</mat-dialog-actions>

@@ -4,6 +4,7 @@ import { environment } from '../../../../environments/environment';
 import { Observable } from 'rxjs';
 import { BranchDTO } from '../models/branch.model';
 import { ApiResponse } from '../../../core/models/api-response.model';
+import { BulkRequest, BulkResult } from '../../../shared/models/bulk-import.model';
 
 @Injectable({ providedIn: 'root' })
 export class BranchService {
@@ -16,9 +17,16 @@ export class BranchService {
     return this.http.post<ApiResponse>(this.base, dto);
   }
 
-  /** CREATE IN BULK */
-  createBulk(dtos: BranchDTO[]): Observable<ApiResponse> {
-    return this.http.post<ApiResponse>(`${this.base}/bulk`, dtos);
+  // branches/services/branch.service.ts
+
+
+  bulkImport(
+    request: BulkRequest<any>
+  ): Observable<BulkResult<BranchDTO>> {
+    return this.http.post<BulkResult<BranchDTO>>(
+      `${this.base}/import`,
+      request
+    );
   }
 
   /** GET ALL */

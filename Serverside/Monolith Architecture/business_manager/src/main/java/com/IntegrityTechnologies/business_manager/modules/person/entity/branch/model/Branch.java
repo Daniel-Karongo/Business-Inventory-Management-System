@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -27,17 +28,29 @@ public class Branch {
     @ToString.Exclude
     private UUID id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, updatable = false)
     private String branchCode;
 
     @Column(nullable = false)
     private String name;
 
     private String location;
-
     private String phone;
-
     private String email;
+
+    /* =========================
+       AUDIT FIELDS
+       ========================= */
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(nullable = false)
+    private Boolean deleted = false;
+
+    /* =========================
+       RELATIONSHIPS
+       ========================= */
 
     @ToString.Exclude
     @JsonIgnore
@@ -61,5 +74,15 @@ public class Branch {
     @Builder.Default
     private Set<Department> departments = new HashSet<>();
 
-    private Boolean deleted = false;
+    /* =========================
+       LIFECYCLE
+       ========================= */
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        if (this.deleted == null) {
+            this.deleted = false;
+        }
+    }
 }

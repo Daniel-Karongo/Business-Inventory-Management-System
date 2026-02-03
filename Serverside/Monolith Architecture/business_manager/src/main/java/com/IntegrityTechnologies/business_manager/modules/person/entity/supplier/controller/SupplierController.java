@@ -2,10 +2,13 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.supplie
 
 import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.common.PageWrapper;
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierImageAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.service.SupplierBulkService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.service.SupplierImageService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.service.SupplierService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,12 +39,23 @@ public class SupplierController {
     private final SupplierImageAuditRepository supplierImageAuditRepository;
     private final SupplierAuditRepository supplierAuditRepository;
     private final SupplierImageService supplierImageService;
+    private final SupplierBulkService bulkService;
 
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @PostMapping("/import")
+    public ResponseEntity<BulkResult<SupplierDTO>> importSuppliers(
+            @RequestBody BulkRequest<SupplierBulkRow> request,
+            Authentication authentication
+    ) {
+        String creatorUsername =
+                (authentication != null && authentication.getPrincipal() instanceof UserDetails ud)
+                        ? ud.getUsername()
+                        : null;
 
-
-
-
-    /* ====================== CREATE / UPDATE ====================== */
+        return ResponseEntity.ok(
+                bulkService.importSuppliers(request, creatorUsername)
+        );
+    }
 
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @PostMapping(value="/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE,produces = MediaType.APPLICATION_JSON_VALUE)
@@ -57,25 +71,25 @@ public class SupplierController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
-    @PostMapping(
-            value = "/register/bulk",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE
-    )
-    public ResponseEntity<List<SupplierDTO>> registerSuppliersInBulk(
-            @ModelAttribute SupplierBulkWithFilesDTO bulkDTO,
-            Authentication authentication
-    ) throws IOException {
-        String creatorUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails ud)
-                ? ud.getUsername()
-                : null;
-        List<SupplierDTO> savedSupplierDTOs = new ArrayList<>();
-        for (SupplierCreateDTO supplierCreateDTO : bulkDTO.getSuppliers()) {
-            savedSupplierDTOs.add(supplierService.createSupplier(supplierCreateDTO, creatorUsername));
-        }
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedSupplierDTOs);
-    }
+//    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+//    @PostMapping(
+//            value = "/register/bulk",
+//            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+//            produces = MediaType.APPLICATION_JSON_VALUE
+//    )
+//    public ResponseEntity<List<SupplierDTO>> registerSuppliersInBulk(
+//            @ModelAttribute SupplierBulkWithFilesDTO bulkDTO,
+//            Authentication authentication
+//    ) throws IOException {
+//        String creatorUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails ud)
+//                ? ud.getUsername()
+//                : null;
+//        List<SupplierDTO> savedSupplierDTOs = new ArrayList<>();
+//        for (SupplierCreateDTO supplierCreateDTO : bulkDTO.getSuppliers()) {
+//            savedSupplierDTOs.add(supplierService.createSupplier(supplierCreateDTO, creatorUsername));
+//        }
+//        return ResponseEntity.status(HttpStatus.CREATED).body(savedSupplierDTOs);
+//    }
 
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @PatchMapping("/{id}")

@@ -1,7 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.branch.controller;
 
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.dto.BranchBulkRow;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.dto.BranchDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.service.BranchBulkService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.service.BranchService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +24,17 @@ import java.util.UUID;
 public class BranchController {
 
     private final BranchService branchService;
+    private final BranchBulkService bulkService;
+
+    @PostMapping("/import")
+    public ResponseEntity<BulkResult<BranchDTO>> importBranches(
+            @RequestBody BulkRequest<BranchBulkRow> request,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(
+                bulkService.importBranches(request, authentication)
+        );
+    }
 
     @PostMapping
     public ResponseEntity<ApiResponse> create(
@@ -30,18 +45,18 @@ public class BranchController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/bulk")
-    public ResponseEntity<ApiResponse> createInBulk(
-            @RequestBody List<BranchDTO> branches,
-            Authentication authentication
-    ) {
-        List<BranchDTO> branchDTOS = new ArrayList<>();
-        for(BranchDTO branch: branches) {
-            branchDTOS.add(branchService.create(branch, authentication));
-        }
-        ApiResponse response = new ApiResponse("success", "Branches created successfully", branchDTOS);
-        return ResponseEntity.ok(response);
-    }
+//    @PostMapping("/bulk")
+//    public ResponseEntity<ApiResponse> createInBulk(
+//            @RequestBody List<BranchDTO> branches,
+//            Authentication authentication
+//    ) {
+//        List<BranchDTO> branchDTOS = new ArrayList<>();
+//        for(BranchDTO branch: branches) {
+//            branchDTOS.add(branchService.create(branch, authentication));
+//        }
+//        ApiResponse response = new ApiResponse("success", "Branches created successfully", branchDTOS);
+//        return ResponseEntity.ok(response);
+//    }
 
     @GetMapping
     public ResponseEntity<List<BranchDTO>> getAll(@RequestParam(required = false) Boolean deleted) {

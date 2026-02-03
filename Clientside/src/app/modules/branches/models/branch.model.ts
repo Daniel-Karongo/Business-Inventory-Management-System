@@ -9,6 +9,9 @@ export interface BranchDTO {
   phone?: string;
   email?: string;
 
+  // 🔹 audit (read-only)
+  createdAt?: string;
+
   // write-only
   userIds?: string[];
   departmentIds?: string[];
@@ -29,4 +32,12 @@ export interface BranchMinimalDTO {
   id: string;
   branchCode: string;
   name: string;
+}
+
+export interface BranchBulkRow {
+  branchCode: string;
+  name: string;
+  location?: string;
+  phone?: string;
+  email?: string;
 }

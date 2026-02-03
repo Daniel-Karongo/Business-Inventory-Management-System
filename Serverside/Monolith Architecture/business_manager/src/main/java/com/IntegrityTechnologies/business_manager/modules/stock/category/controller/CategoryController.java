@@ -1,7 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.category.controller;
 
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.dto.CategoryBulkRow;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.dto.CategoryDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.service.CategoryBulkService;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.service.CategoryService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierDTO;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,26 +27,30 @@ import java.util.List;
 public class CategoryController {
 
     private final CategoryService categoryService;
-
-
-
-
-
-
-    // ---------------- SAVE / UPDATE ----------------
+    private final CategoryBulkService bulkService;
 
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
-    @PostMapping("/bulk")
-    @Transactional
-    public ResponseEntity<List<CategoryDTO>> saveCategoriesBulk(
-            @Valid @RequestBody List<CategoryDTO> categories
+    @PostMapping("/import")
+    public ResponseEntity<BulkResult<CategoryDTO>> importCategories(
+            @RequestBody BulkRequest<CategoryBulkRow> request
     ) {
-        List<CategoryDTO> savedCategories = new ArrayList<>();
-        for (CategoryDTO dto : categories) {
-            savedCategories.add(categoryService.saveCategory(dto));
-        }
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedCategories);
+        return ResponseEntity.ok(
+                bulkService.importCategories(request)
+        );
     }
+
+//    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
+//    @PostMapping("/bulk")
+//    @Transactional
+//    public ResponseEntity<List<CategoryDTO>> saveCategoriesBulk(
+//            @Valid @RequestBody List<CategoryDTO> categories
+//    ) {
+//        List<CategoryDTO> savedCategories = new ArrayList<>();
+//        for (CategoryDTO dto : categories) {
+//            savedCategories.add(categoryService.saveCategory(dto));
+//        }
+//        return ResponseEntity.status(HttpStatus.CREATED).body(savedCategories);
+//    }
 
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
     @PostMapping

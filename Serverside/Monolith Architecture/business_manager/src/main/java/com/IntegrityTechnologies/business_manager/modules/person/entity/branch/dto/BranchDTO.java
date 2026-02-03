@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -20,6 +21,7 @@ public class BranchDTO {
     private String location;
     private String phone;
     private String email;
+    private LocalDateTime createdAt;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private List<UUID> userIds;
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)

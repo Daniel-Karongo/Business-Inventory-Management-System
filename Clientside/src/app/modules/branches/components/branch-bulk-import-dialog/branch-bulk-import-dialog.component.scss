@@ -1,0 +1,218 @@
+.bulk-title {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ===============================
+   IMPORT BAR
+=============================== */
+
+.import-bar {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+/* ===============================
+   IMPORT ACTION
+=============================== */
+
+.import-action {
+  flex: 1;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+
+  background: var(--surface);
+  box-shadow: var(--surface-shadow);
+
+  transition:
+    background 0.15s ease,
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.import-action:hover {
+  background: var(--surface-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+/* ===============================
+   ICON
+=============================== */
+
+.import-action mat-icon {
+  font-size: 28px;
+  color: var(--active);
+}
+
+/* ===============================
+   TEXT
+=============================== */
+
+.import-action span {
+  display: flex;
+  flex-direction: column;
+}
+
+.import-action strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.import-action small {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* ===============================
+   VARIANTS
+=============================== */
+
+.import-action.excel mat-icon {
+  color: #2e7d32; // Excel green
+}
+
+.import-action.csv mat-icon {
+  color: #1565c0; // CSV blue
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* ===============================
+   TEMPLATE DOWNLOAD BAR
+=============================== */
+
+.template-downloads {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* ===============================
+   TEMPLATE BUTTON
+=============================== */
+
+.template-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 10px 14px !important;
+  border-radius: 8px !important;
+
+  background: var(--surface);
+  box-shadow: var(--surface-shadow);
+
+  transition:
+    background 0.15s ease,
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.template-btn:hover {
+  background: var(--surface-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* ===============================
+   ICONS
+=============================== */
+
+.template-btn mat-icon {
+  font-size: 22px;
+}
+
+/* ===============================
+   TEXT
+=============================== */
+
+.template-btn span {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.template-btn strong {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.template-btn small {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+/* ===============================
+   VARIANTS
+=============================== */
+
+.template-btn.excel mat-icon {
+  color: #2e7d32; // Excel green
+}
+
+.template-btn.csv mat-icon {
+  color: #1565c0; // CSV blue
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.row-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.row-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.row-error {
+  color: #c62828;
+  font-size: 0.8rem;
+}

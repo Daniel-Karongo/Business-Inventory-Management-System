@@ -1,10 +1,14 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.customer.controller;
 
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerBulkRow;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerRequest;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerResponse;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerSmsRequest;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.CustomerType;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.Gender;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service.CustomerBulkService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service.CustomerService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -26,7 +30,17 @@ import java.util.UUID;
 public class CustomerController {
 
     private final CustomerService customerService;
+    private final CustomerBulkService bulkService;
 
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @PostMapping("/import")
+    public ResponseEntity<BulkResult<CustomerResponse>> importCustomers(
+            @RequestBody BulkRequest<CustomerBulkRow> request
+    ) {
+        return ResponseEntity.ok(
+                bulkService.importCustomers(request)
+        );
+    }
     @PostMapping
     public ResponseEntity<CustomerResponse> createCustomer(@Valid @RequestBody CustomerRequest req) {
         CustomerResponse created = customerService.createCustomer(req);
