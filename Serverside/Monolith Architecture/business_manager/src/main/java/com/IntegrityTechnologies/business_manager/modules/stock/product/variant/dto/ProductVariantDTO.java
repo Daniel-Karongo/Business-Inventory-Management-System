@@ -19,11 +19,6 @@ public class ProductVariantDTO {
     private BigDecimal minimumSellingPrice;
     private BigDecimal averageBuyingPrice;
     private String sku;
-
-    /* =============================
-       NEW — SAFE ADDITIONS
-       ============================= */
-
     private String barcode;
     private String barcodeImagePath;
     private List<String> imageUrls;

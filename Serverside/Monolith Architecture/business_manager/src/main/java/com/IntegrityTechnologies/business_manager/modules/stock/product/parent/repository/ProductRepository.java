@@ -12,7 +12,7 @@ import java.util.UUID;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpecificationExecutor<Product> {
-
+    boolean existsByNameIgnoreCase(String name);
     Page<Product> findByCategoryIdAndNameContainingIgnoreCase(Long categoryId, String name, Pageable pageable);
     Page<Product> findByCategoryId(Long categoryId, Pageable pageable);
     Page<Product> findByNameContainingIgnoreCase(String name, Pageable pageable);

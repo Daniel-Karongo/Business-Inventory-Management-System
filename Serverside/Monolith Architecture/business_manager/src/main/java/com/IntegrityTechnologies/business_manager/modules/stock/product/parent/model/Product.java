@@ -102,7 +102,8 @@ public class Product {
        SOFT DELETE + AUDIT
        ============================= */
 
-    private Boolean deleted;
+    @Column(nullable = false)
+    private Boolean deleted = false;
     private LocalDateTime deletedAt;
 
     private LocalDateTime createdAt;

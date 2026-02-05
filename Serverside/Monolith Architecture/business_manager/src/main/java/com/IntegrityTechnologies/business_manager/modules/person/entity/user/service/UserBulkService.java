@@ -1,12 +1,14 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.user.service;
 
 import com.IntegrityTechnologies.business_manager.common.bulk.*;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentAssignmentDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.acl.entity.RoleEntity;
 import com.IntegrityTechnologies.business_manager.security.acl.repository.RoleEntityRepository;
@@ -14,15 +16,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class UserBulkService {
 
     private final UserService userService;
+    private final UserRepository userRepository;
     private final BranchRepository branchRepository;
     private final DepartmentRepository departmentRepository;
     private final RoleEntityRepository roleEntityRepository;
@@ -37,6 +42,15 @@ public class UserBulkService {
         BulkResult<UserDTO> result = new BulkResult<>();
         result.setTotal(request.getItems().size());
 
+        BulkOptions options =
+                request.getOptions() != null
+                        ? request.getOptions()
+                        : new BulkOptions();
+
+        Set<String> seenUsernames = new HashSet<>();
+        Set<String> seenEmails = new HashSet<>();
+        Set<String> seenPhones = new HashSet<>();
+
         Role currentUserRole = SecurityUtils.currentRole();
 
         for (int i = 0; i < request.getItems().size(); i++) {
@@ -47,15 +61,65 @@ public class UserBulkService {
                 validate(row);
 
                 /* =========================
-                   ROLE RESOLUTION (STRICT)
+                   NORMALIZATION
+                   ========================= */
+
+                String username = normalizeProductName(row.getUsername());
+                String roleName =
+                        (row.getRole() == null || row.getRole().isBlank())
+                                ? Role.EMPLOYEE.name()
+                                : row.getRole().trim().toUpperCase();
+
+                List<String> emails = normalizeCommaList(row.getEmailAddresses());
+                List<String> phones = normalizeCommaList(row.getPhoneNumbers());
+
+                /* =========================
+                   IN-FILE DUPLICATES
+                   ========================= */
+
+                if (!seenUsernames.add(username)) {
+                    throw new IllegalArgumentException(
+                            "Duplicate username in import: " + username
+                    );
+                }
+
+                for (String e : emails) {
+                    if (!seenEmails.add(e)) {
+                        throw new IllegalArgumentException(
+                                "Duplicate email in import: " + e
+                        );
+                    }
+                }
+
+                for (String p : phones) {
+                    if (!seenPhones.add(p)) {
+                        throw new IllegalArgumentException(
+                                "Duplicate phone in import: " + p
+                        );
+                    }
+                }
+
+                /* =========================
+                   DB DUPLICATES
+                   ========================= */
+
+                if (options.isSkipDuplicates()
+                        && userRepository.existsByUsername(username)) {
+                    throw new IllegalArgumentException(
+                            "Username already exists: " + username
+                    );
+                }
+
+                /* =========================
+                   ROLE RESOLUTION
                    ========================= */
 
                 Role targetRole;
                 try {
-                    targetRole = Role.valueOf(row.getRole().toUpperCase());
+                    targetRole = Role.valueOf(roleName);
                 } catch (Exception ex) {
                     throw new IllegalArgumentException(
-                            "Invalid role: " + row.getRole()
+                            "Invalid role: " + roleName
                     );
                 }
 
@@ -65,58 +129,81 @@ public class UserBulkService {
                     );
                 }
 
-                RoleEntity roleEntity = roleEntityRepository
+                roleEntityRepository
                         .findByNameIgnoreCase(targetRole.name())
                         .filter(RoleEntity::isActive)
                         .orElseThrow(() ->
                                 new IllegalArgumentException(
-                                        "Role is inactive or not configured: " + targetRole
+                                        "Role inactive or not configured: " + targetRole
                                 )
                         );
 
                 /* =========================
-                   ORG RESOLUTION
+                   ORG RESOLUTION (OPTIONAL)
                    ========================= */
 
-                UUID branchId = branchRepository
-                        .findByBranchCode(row.getBranchCode())
-                        .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Unknown branchCode: " + row.getBranchCode()
-                                )
-                        ).getId();
+                List<DepartmentAssignmentDTO> assignments = null;
 
-                Department department = departmentRepository
-                        .findByNameIgnoreCase(row.getDepartmentName())
-                        .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Unknown department: " + row.getDepartmentName()
-                                )
-                        );
+                if (row.getBranchCode() != null && row.getDepartmentName() != null) {
 
-                String password =
-                        (row.getPassword() != null && !row.getPassword().isBlank())
-                                ? row.getPassword()
-                                : DEFAULT_PASSWORD;
+                    Branch branch = branchRepository
+                            .findByBranchCode(row.getBranchCode())
+                            .orElseThrow(() ->
+                                    new IllegalArgumentException(
+                                            "Unknown branchCode: " + row.getBranchCode()
+                                    )
+                            );
+
+                    Department department = departmentRepository
+                            .findByNameIgnoreCase(row.getDepartmentName())
+                            .orElseThrow(() ->
+                                    new IllegalArgumentException(
+                                            "Unknown department: " + row.getDepartmentName()
+                                    )
+                            );
+
+                    assignments = List.of(
+                            new DepartmentAssignmentDTO(
+                                    branch.getId(),
+                                    department.getId(),
+                                    normalizePosition(row.getPosition())
+                            )
+                    );
+                }
+
+                /* =========================
+                   BUILD DTO
+                   ========================= */
 
                 UserDTO dto = UserDTO.builder()
-                        .username(row.getUsername())
-                        .password(password)
-                        .role(roleEntity.getName())   // 🔑 canonical role name
-                        .emailAddresses(row.getEmailAddresses())
-                        .phoneNumbers(row.getPhoneNumbers())
-                        .departmentsAndPositions(
-                                List.of(
-                                        new DepartmentAssignmentDTO(
-                                                branchId,
-                                                department.getId(),
-                                                normalizePosition(row.getPosition())
-                                        )
-                                )
+                        .username(username)
+                        .password(DEFAULT_PASSWORD)
+                        .role(targetRole.name())
+                        .emailAddresses(emails)
+                        .phoneNumbers(phones)
+                        .branchCode(
+                                row.getBranchCode() != null
+                                        ? row.getBranchCode()
+                                        : "MAIN"
                         )
+                        .departmentName(
+                                row.getDepartmentName() != null
+                                        ? row.getDepartmentName()
+                                        : "GENERAL"
+                        )
+                        .position(
+                                row.getPosition() != null
+                                        ? normalizePosition(row.getPosition())
+                                        : "member"
+                        )
+                        .departmentsAndPositions(assignments) // still used on real import
                         .build();
 
-                if (!request.getOptions().isDryRun()) {
+                if (request.getOptions().isDryRun()) {
+                    // 🧪 Dry run → simulate success
+                    result.addSuccess(dto);
+                } else {
+                    // 💾 Actual import
                     UserDTO saved =
                             userService.registerUser(dto, authentication);
                     result.addSuccess(saved);
@@ -127,30 +214,57 @@ public class UserBulkService {
             }
         }
 
+        // 🔥 HARD GUARANTEE — NO PERSISTENCE ON DRY RUN
+        if (options.isDryRun()) {
+            TransactionAspectSupport
+                    .currentTransactionStatus()
+                    .setRollbackOnly();
+        }
+
         return result;
     }
 
     /* =========================
-       VALIDATION
+       HELPERS
        ========================= */
 
     private void validate(UserBulkRow row) {
         if (row.getUsername() == null || row.getUsername().isBlank())
             throw new IllegalArgumentException("username is required");
+    }
 
-        if (row.getRole() == null || row.getRole().isBlank())
-            throw new IllegalArgumentException("role is required");
+    private String normalizeProductName(String raw) {
+        String cleaned =
+                raw.trim()
+                        .replaceAll("\\s+", " ")
+                        .toLowerCase();
 
-        if (row.getBranchCode() == null || row.getBranchCode().isBlank())
-            throw new IllegalArgumentException("branchCode is required");
+        StringBuilder title = new StringBuilder();
+        for (String part : cleaned.split(" ")) {
+            if (part.isBlank()) continue;
+            title.append(
+                    Character.toUpperCase(part.charAt(0))
+            ).append(
+                    part.substring(1)
+            ).append(" ");
+        }
+        return title.toString().trim();
+    }
 
-        if (row.getDepartmentName() == null || row.getDepartmentName().isBlank())
-            throw new IllegalArgumentException("departmentName is required");
+    private List<String> normalizeCommaList(List<String> raw) {
+        if (raw == null || raw.isEmpty()) return List.of();
+
+        return raw.stream()
+                .flatMap(v -> Arrays.stream(v.split(",")))
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .map(String::toLowerCase)
+                .distinct()
+                .toList();
     }
 
     private String normalizePosition(String position) {
         if (position == null) return "member";
-
         String p = position.toLowerCase();
         if (!p.equals("head") && !p.equals("member")) {
             throw new IllegalArgumentException(
@@ -158,12 +272,5 @@ public class UserBulkService {
             );
         }
         return p;
-    }
-
-    private String generateTemporaryPassword() {
-        return UUID.randomUUID()
-                .toString()
-                .replace("-", "")
-                .substring(0, 10);
     }
 }

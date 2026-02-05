@@ -17,13 +17,6 @@ export const PRODUCT_ROUTES: Routes = [
         .then(m => m.ProductCreateComponent)
   },
   {
-    path: 'bulk-create',
-    canMatch: [authGuard],
-    loadComponent: () =>
-      import('./parent/pages/product-bulk-create/product-bulk-create.component')
-        .then(m => m.ProductBulkCreateComponent)
-  },
-  {
     path: ':id',
     canMatch: [authGuard],
     loadComponent: () =>

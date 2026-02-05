@@ -24,6 +24,10 @@ import { ReasonDialogComponent } from '../../../../shared/components/reason-dial
 import { BranchService } from '../../../branches/services/branch.service';
 import { DepartmentService } from '../../../departments/services/department.service';
 import { RoleService } from '../../services/role/role.service';
+import { UserBulkImportDialogComponent } from '../../components/user-bulk-import-dialog/user-bulk-import-dialog.component';
+import { AuthService } from '../../../auth/services/auth.service';
+import { canSeeDeleted } from '../../../../core/utils/permission.utils';
+
 
 @Component({
   selector: 'app-user-list',
@@ -88,6 +92,7 @@ export class UserListComponent implements OnInit {
   constructor(
     private userService: UserService,
     private branchService: BranchService,
+    private authService: AuthService,
     private departmentService: DepartmentService,
     private roleService: RoleService,
     private snackbar: MatSnackBar,
@@ -96,25 +101,11 @@ export class UserListComponent implements OnInit {
   ) { }
 
   ngOnInit() {
-    this.determineDeletedVisibility();
     this.loadFilters();
     this.loadUsersOnce();
-  }
 
-  determineDeletedVisibility() {
-    const session = localStorage.getItem('auth_role');
-
-    if (!session) {
-      this.allowShowDeleted = false;
-      return;
-    }
-
-    try {
-      this.allowShowDeleted = ['SUPERUSER', 'ADMIN', 'MANAGER'].includes(session);
-      // default showDeleted false; user can toggle it via UI if allowed
-    } catch {
-      this.allowShowDeleted = false;
-    }
+    const me = this.authService.getSnapshot();
+    this.allowShowDeleted = canSeeDeleted(me);
   }
 
   loadFilters() {
@@ -515,6 +506,20 @@ export class UserListComponent implements OnInit {
   goCreate() { this.router.navigate(['/users/create']); }
   edit(u: User) { this.router.navigate([`/users/${u.username}/edit`]); }
   view(u: User) { this.router.navigate([`/users/${u.username}`]); }
+
+  openBulkImport() {
+    this.dialog.open(UserBulkImportDialogComponent, {
+      width: '1100px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      autoFocus: false
+    }).afterClosed().subscribe(imported => {
+      if (imported === true) {
+        // 🔄 refresh list after successful import
+        this.loadUsersOnce();
+      }
+    });
+  }
 
   // Utility used by template to render branch / dept grid
   branchDeptRows(u: User) {

@@ -7,6 +7,7 @@ import com.IntegrityTechnologies.business_manager.security.acl.entity.Permission
 import com.IntegrityTechnologies.business_manager.security.acl.entity.RoleEntity;
 import com.IntegrityTechnologies.business_manager.security.acl.repository.PermissionConditionRepository;
 import com.IntegrityTechnologies.business_manager.security.acl.repository.RoleEntityRepository;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -26,6 +27,10 @@ public class PermissionEvaluatorService {
 
     private final AntPathMatcher matcher = new AntPathMatcher();
 
+    @PostConstruct
+    public void refreshCache() {
+        cache.refresh();
+    }
     /* =====================================================
        ENDPOINT RESOLUTION
        ===================================================== */

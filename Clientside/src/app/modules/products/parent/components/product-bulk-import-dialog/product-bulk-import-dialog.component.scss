@@ -1,12 +1,11 @@
-.bulk-title {
-  font-weight: 600;
-  letter-spacing: 0.3px;
-}
-
 .body {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.bulk-title {
+  font-weight: 600;
 }
 
 .import-zone {
@@ -66,18 +65,6 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
-/* ===============================
-   VARIANTS
-=============================== */
-
-.template-btn.excel mat-icon {
-  color: #2e7d32; // Excel green
-}
-
-.template-btn.csv mat-icon {
-  color: #1565c0; // CSV blue
-}
-
 .rows {
   display: flex;
   flex-direction: column;
@@ -87,8 +74,7 @@
 .row-card {
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 20px;
-  background: var(--surface);
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -98,8 +84,6 @@
   display: flex;
   justify-content: space-between;
   font-weight: 600;
-  padding-bottom: 6px;
-  border-bottom: 1px dashed var(--border);
 }
 
 .grid-2 {

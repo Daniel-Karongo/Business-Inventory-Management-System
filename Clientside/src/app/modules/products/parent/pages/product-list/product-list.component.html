@@ -5,8 +5,8 @@
     <h1 class="text-xl font-semibold">Products</h1>
 
     <div class="flex gap-2">
-      <button mat-stroked-button routerLink="/products/bulk-create">
-        Bulk Create
+      <button mat-stroked-button (click)="openBulkImport()">
+        Bulk Import
       </button>
       <button mat-flat-button routerLink="/products/create">
         + Create Product
@@ -80,7 +80,8 @@
 
       <!-- NAME -->
       <ng-container matColumnDef="name">
-        <th mat-header-cell *matHeaderCellDef (click)="sortBy('name')" class="sortable" matTooltip="Sort by name" matTooltipPosition="above">
+        <th mat-header-cell *matHeaderCellDef (click)="sortBy('name')" class="sortable" matTooltip="Sort by name"
+          matTooltipPosition="above">
           <span class="sortable-content">
             Name
             <mat-icon class="sort-icon">
@@ -101,7 +102,8 @@
 
       <!-- CATEGORY -->
       <ng-container matColumnDef="category">
-        <th mat-header-cell *matHeaderCellDef (click)="sortBy('category')" class="sortable" matTooltip="Sort by category" matTooltipPosition="above">
+        <th mat-header-cell *matHeaderCellDef (click)="sortBy('category')" class="sortable"
+          matTooltip="Sort by category" matTooltipPosition="above">
           <span class="sortable-content">
             Category
             <mat-icon class="sort-icon">
@@ -130,7 +132,8 @@
 
       <!-- SKU -->
       <ng-container matColumnDef="sku">
-        <th mat-header-cell *matHeaderCellDef (click)="sortBy('sku')" class="sortable" matTooltip="Sort by sku code" matTooltipPosition="above">
+        <th mat-header-cell *matHeaderCellDef (click)="sortBy('sku')" class="sortable" matTooltip="Sort by sku code"
+          matTooltipPosition="above">
           <span class="sortable-content">
             SKU
             <mat-icon class="sort-icon">
@@ -159,7 +162,8 @@
 
       <!-- STATUS -->
       <ng-container matColumnDef="status">
-        <th mat-header-cell *matHeaderCellDef (click)="sortBy('deleted')" class="sortable" matTooltip="Sort by status" matTooltipPosition="above">
+        <th mat-header-cell *matHeaderCellDef (click)="sortBy('deleted')" class="sortable" matTooltip="Sort by status"
+          matTooltipPosition="above">
           <span class="sortable-content">
             Status
             <mat-icon class="sort-icon">
@@ -179,7 +183,8 @@
 
       <!-- UPDATED -->
       <ng-container matColumnDef="updated">
-        <th mat-header-cell *matHeaderCellDef (click)="sortBy('updatedAt')" class="sortable" matTooltip="Sort by date of last update" matTooltipPosition="above">
+        <th mat-header-cell *matHeaderCellDef (click)="sortBy('updatedAt')" class="sortable"
+          matTooltip="Sort by date of last update" matTooltipPosition="above">
           <span class="sortable-content">
             Updated
             <mat-icon class="sort-icon">
@@ -200,7 +205,8 @@
         <th mat-header-cell *matHeaderCellDef [attr.aria-label]="'Product actions'"> Actions</th>
 
         <td mat-cell *matCellDef="let row">
-          <button mat-icon-button matTooltip="View Product" [routerLink]="['/products', row.id]" [state]="{ deleted: row.deleted }">
+          <button mat-icon-button matTooltip="View Product" [routerLink]="['/products', row.id]"
+            [state]="{ deleted: row.deleted }">
             <mat-icon>visibility</mat-icon>
           </button>
           <button mat-icon-button matTooltip="Edit Product" [routerLink]="['/products', row.id, 'edit']"

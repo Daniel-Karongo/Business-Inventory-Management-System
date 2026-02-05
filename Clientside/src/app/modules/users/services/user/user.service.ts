@@ -4,12 +4,17 @@ import { map, Observable } from 'rxjs';
 import { User, UserImage, UserImageAudit } from '../../models/user.model';
 import { environment } from '../../../../../environments/environment';
 import { UploadImagePayload } from '../../../../core/models/file-upload.model';
+import { BulkRequest, BulkResult } from '../../../../shared/models/bulk-import.model';
+import { AuthService } from '../../../auth/services/auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
   private base = environment.endpoints.users.base;
 
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService
+  ) { }
 
   /* ============================================================
      LIST USERS
@@ -22,7 +27,6 @@ export class UserService {
 
     let params = new HttpParams();
 
-    // Optional filters (search, branch, etc)
     Object.keys(filter).forEach(key => {
       if (key === 'deleted') return;
 
@@ -32,15 +36,10 @@ export class UserService {
       }
     });
 
-    // ---- FIXED ROLE LOADING ----
-    let userRole = localStorage.getItem("auth_role");
-    if(userRole === null) {
-      userRole = '';
-    }
+    const me = this.authService.getSnapshot();
+    const canSeeDeleted =
+      !!me && ['SUPERUSER', 'ADMIN', 'MANAGER'].includes(me.role);
 
-    const canSeeDeleted = ['SUPERUSER', 'ADMIN', 'MANAGER'].includes(userRole);
-
-    // If NOT privileged → force deleted=false
     const url = `${environment.apiUrl}${environment.endpoints.users.getAll(
       canSeeDeleted ? undefined : false
     )}`;
@@ -57,7 +56,6 @@ export class UserService {
       })
     );
   }
-
 
   /* ============================================================
      GET SINGLE USER
@@ -78,6 +76,16 @@ export class UserService {
       payload
     );
   }
+
+  bulkImport(
+    request: BulkRequest<any>
+  ): Observable<BulkResult<User>> {
+    return this.http.post<BulkResult<User>>(
+      `${environment.apiUrl}${environment.endpoints.users.base}/import`,
+      request
+    );
+  }
+
 
   /* ============================================================
      UPDATE USER (PATCH)

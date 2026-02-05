@@ -17,7 +17,7 @@ public class ProductBulkRow {
     private Set<String> supplierNames;
 
     /** Variant support */
-    private List<String> variants;   // e.g. ["Small", "Medium", "Large"]
+    private List<String> variants;   // default: ["STANDARD"]
 
     private Double minimumPercentageProfit;
 }

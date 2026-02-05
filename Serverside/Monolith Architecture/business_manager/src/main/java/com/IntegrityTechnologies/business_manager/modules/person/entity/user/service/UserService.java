@@ -65,9 +65,6 @@ public class UserService {
     /* ====================== REGISTER USER ====================== */
     @Transactional
     public UserDTO registerUser(UserDTO dto, Authentication authentication) throws IOException {
-        System.out.println("Hello");
-        System.out.println(dto);
-
         String creatorUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails)
                 ? userDetails.getUsername()
                 : null;

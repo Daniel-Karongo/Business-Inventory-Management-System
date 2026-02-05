@@ -1,15 +1,27 @@
 <div class="page-container p-4">
 
   <!-- PAGE HEADER -->
-  <div class="page-header flex items-center justify-between mb-6">
-    <h2 class="text-xl font-semibold">Users</h2>
+  <div class="page-header flex items-center mb-6">
 
-    <div class="flex items-center gap-2">
-      <button mat-flat-button color="primary" (click)="goCreate()"
-        [attr.aria-label]="'Create a new user'">
+    <!-- LEFT: TITLE -->
+    <h2 class="text-xl font-semibold">
+      Users
+    </h2>
+
+    <!-- RIGHT: ACTIONS -->
+    <div class="flex items-center gap-2 ml-auto">
+
+      <button mat-stroked-button (click)="openBulkImport()">
+        <mat-icon>cloud_upload</mat-icon>
+        Bulk Import
+      </button>
+
+      <button mat-flat-button color="primary" (click)="goCreate()">
         Create User
       </button>
+
     </div>
+
   </div>
 
   <!-- BULK ACTION BAR -->
@@ -130,7 +142,7 @@
       <!-- Username -->
       <ng-container matColumnDef="username">
         <mat-header-cell *matHeaderCellDef (click)="sortBy('username')" class="sortable"
-          [attr.aria-label]="'Sort by username'"matTooltip="Sort by username" matTooltipPosition="above">
+          [attr.aria-label]="'Sort by username'" matTooltip="Sort by username" matTooltipPosition="above">
           Username
           <mat-icon class="sort-icon">
             {{ sortField === 'username'
@@ -197,7 +209,8 @@
 
       <!-- Role -->
       <ng-container matColumnDef="role">
-        <mat-header-cell *matHeaderCellDef (click)="sortBy('role')" class="sortable" [attr.aria-label]="'Sort by role'" matTooltip="Sort by role" matTooltipPosition="above">
+        <mat-header-cell *matHeaderCellDef (click)="sortBy('role')" class="sortable" [attr.aria-label]="'Sort by role'"
+          matTooltip="Sort by role" matTooltipPosition="above">
           Role
           <mat-icon class="sort-icon">
             {{ sortField === 'role'
@@ -213,8 +226,8 @@
 
       <!-- Status -->
       <ng-container matColumnDef="status">
-        <mat-header-cell *matHeaderCellDef (click)="sortBy('status')" class="sortable"
-          [attr.aria-label]="'User status'" matTooltip="Sort by status" matTooltipPosition="above">
+        <mat-header-cell *matHeaderCellDef (click)="sortBy('status')" class="sortable" [attr.aria-label]="'User status'"
+          matTooltip="Sort by status" matTooltipPosition="above">
           Status
           <mat-icon *ngIf="allowShowDeleted" class="sort-icon">
             {{ sortField === 'status'
@@ -287,8 +300,8 @@
   </div>
 
   <!-- PAGINATOR ONLY WHEN NEEDED -->
-  <mat-paginator [length]="total" [pageSize]="size" [pageSizeOptions]="[1, 5, 10, 20, 50]" [attr.aria-label]="'Users pagination'"
-    (page)="changePage($event)">
+  <mat-paginator [length]="total" [pageSize]="size" [pageSizeOptions]="[1, 5, 10, 20, 50]"
+    [attr.aria-label]="'Users pagination'" (page)="changePage($event)">
   </mat-paginator>
 
 </div>

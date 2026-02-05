@@ -27,7 +27,6 @@ public class ProductDTO {
     private Double minimumPercentageProfit; // same field name you used
 
     private List<ProductVariantDTO> variants; // <-- NEW
-
     private List<String> imageUrls;
     private Long categoryId;
     private String categoryName;

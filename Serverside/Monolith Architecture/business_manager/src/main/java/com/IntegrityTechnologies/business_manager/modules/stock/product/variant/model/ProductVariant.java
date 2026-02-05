@@ -43,4 +43,7 @@ public class ProductVariant {
 
     @OneToMany(mappedBy = "variant", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductVariantImage> images = new ArrayList<>();
+
+    @Column(nullable = false)
+    private Boolean deleted = false;
 }

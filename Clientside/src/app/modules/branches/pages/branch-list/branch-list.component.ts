@@ -47,7 +47,8 @@ export class BranchListComponent implements OnInit {
     this.dialog.open(BranchBulkImportDialogComponent, {
       width: '1100px',
       maxWidth: '95vw',
-      maxHeight: '90vh'
+      maxHeight: '90vh',
+      autoFocus: false
     }).afterClosed().subscribe(imported => {
       if (imported === true) {
         // 🔄 REFRESH LIST

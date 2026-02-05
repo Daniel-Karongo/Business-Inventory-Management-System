@@ -19,13 +19,15 @@
 }
 
 /* ===============================
-   CONTENT (FIXED HEIGHT)
+   CONTENT (SCROLLABLE)
 =============================== */
 
 .content {
-  height: 520px;              // 🔑 prevents jarring resize
-  overflow: hidden;
+  height: 520px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
+
 
 /* ===============================
    SUMMARY

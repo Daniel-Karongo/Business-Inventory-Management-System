@@ -13,6 +13,8 @@ import { Product } from '../../models/product.model';
 import { SelectionModel } from '@angular/cdk/collections';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { ProductBulkImportDialogComponent } from '../../components/product-bulk-import-dialog/product-bulk-import-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
 
 @Component({
   selector: 'app-product-list',
@@ -66,6 +68,7 @@ export class ProductListComponent implements OnInit {
   constructor(
     private productService: ProductService,
     private snackbar: MatSnackBar,
+    private dialog: MatDialog
   ) { }
 
   ngOnInit(): void {
@@ -209,6 +212,18 @@ export class ProductListComponent implements OnInit {
       },
       error: () => {
         this.snackbar.open('Bulk hard delete failed', 'Close', { duration: 3000 });
+      }
+    });
+  }
+
+  openBulkImport() {
+    this.dialog.open(ProductBulkImportDialogComponent, {
+      width: '1100px',
+      maxWidth: '95vw',
+      maxHeight: '90vh'
+    }).afterClosed().subscribe(result => {
+      if (result === true) {
+        this.loadProducts();
       }
     });
   }

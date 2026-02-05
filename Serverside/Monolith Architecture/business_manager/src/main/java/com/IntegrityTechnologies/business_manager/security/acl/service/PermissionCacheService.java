@@ -4,12 +4,14 @@ import com.IntegrityTechnologies.business_manager.security.acl.entity.EndpointPe
 import com.IntegrityTechnologies.business_manager.security.acl.repository.EndpointPermissionRepository;
 import com.IntegrityTechnologies.business_manager.security.acl.repository.RolePermissionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class PermissionCacheService {
 
@@ -31,6 +33,7 @@ public class PermissionCacheService {
                         .computeIfAbsent(rp.getRole().getName(), k -> new HashSet<>())
                         .add(rp.getPermission().getCode())
         );
+        log.info("🧠 ACL cache refreshed");
     }
 
     public List<EndpointPermission> getEndpoints() {

@@ -42,6 +42,13 @@ export class ProductService {
     );
   }
 
+  bulkImport(request: any) {
+    return this.http.post<any>(
+      `${this.base}/import`,
+      request
+    );
+  }
+
   bulkSoftDelete(ids: string[]) {
     return this.http.delete(`${this.base}/soft/bulk`, { body: ids });
   }

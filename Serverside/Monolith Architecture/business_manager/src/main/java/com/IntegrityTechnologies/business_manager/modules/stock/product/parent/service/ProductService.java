@@ -322,6 +322,10 @@ public class ProductService {
         }
     }
 
+    public boolean existsByName(String name) {
+        return productRepository.existsByNameIgnoreCase(name);
+    }
+
     /**
      * Generate SKU for a category using first 3 letters uppercase (alpha only),
      * padded/truncated to 3 chars, then a 6-digit sequence number (per-category).

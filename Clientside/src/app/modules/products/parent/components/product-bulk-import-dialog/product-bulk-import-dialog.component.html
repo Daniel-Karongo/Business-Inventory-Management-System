@@ -1,10 +1,8 @@
-<h2 mat-dialog-title class="bulk-title">
-  Bulk Import Branches
-</h2>
+<h2 mat-dialog-title class="bulk-title">Bulk Import Products</h2>
 
 <mat-dialog-content [formGroup]="form" class="body">
 
-  <!-- ================= TOOLBAR ================= -->
+  <!-- TOOLBAR -->
   <div class="import-zone">
 
     <div class="import-tiles">
@@ -43,9 +41,8 @@
 
   </div>
 
-  <!-- OPTIONS -->
   <mat-checkbox formControlName="dryRun">
-    Dry run (validate only, do not save)
+    Dry run (validate only)
   </mat-checkbox>
 
   <!-- ROWS -->
@@ -54,39 +51,39 @@
     <div class="row-card" *ngFor="let r of rows.controls; let i = index" [formGroupName]="i">
 
       <div class="row-header">
-        <span>Row {{ i + 1 }}</span>
+        <span>Product {{ i + 1 }}</span>
         <button mat-icon-button color="warn" (click)="removeRow(i)">
           <mat-icon>delete</mat-icon>
         </button>
       </div>
 
       <div class="grid-2">
-        <mat-form-field appearance="fill">
-          <mat-label>Branch Code</mat-label>
-          <input matInput formControlName="branchCode">
-        </mat-form-field>
-
-        <mat-form-field appearance="fill">
+        <mat-form-field>
           <mat-label>Name</mat-label>
           <input matInput formControlName="name">
+        </mat-form-field>
+
+        <mat-form-field>
+          <mat-label>Category</mat-label>
+          <input matInput formControlName="categoryName">
         </mat-form-field>
       </div>
 
       <div class="grid-2">
-        <mat-form-field appearance="fill">
-          <mat-label>Location</mat-label>
-          <input matInput formControlName="location">
+        <mat-form-field>
+          <mat-label>Suppliers (exact names, comma-separated)</mat-label>
+          <input matInput formControlName="supplierNames">
         </mat-form-field>
 
-        <mat-form-field appearance="fill">
-          <mat-label>Phone</mat-label>
-          <input matInput formControlName="phone">
+        <mat-form-field>
+          <mat-label>Variants</mat-label>
+          <input matInput formControlName="variants">
         </mat-form-field>
       </div>
 
-      <mat-form-field appearance="fill">
-        <mat-label>Email</mat-label>
-        <input matInput formControlName="email">
+      <mat-form-field>
+        <mat-label>Minimum % Profit</mat-label>
+        <input matInput type="number" formControlName="minimumPercentageProfit">
       </mat-form-field>
 
       <div class="row-error" *ngIf="r.value._error">
@@ -96,9 +93,7 @@
     </div>
   </div>
 
-  <button mat-stroked-button (click)="addRow()">
-    + Add Row
-  </button>
+  <button mat-stroked-button (click)="addRow()">+ Add Product</button>
 
 </mat-dialog-content>
 

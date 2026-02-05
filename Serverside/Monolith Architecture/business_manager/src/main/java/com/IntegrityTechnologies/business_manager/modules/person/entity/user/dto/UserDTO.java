@@ -63,4 +63,11 @@ public class UserDTO {
     @Schema(description = "List of stored ID image URLs (response only)")
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private List<String> idImageUrls;
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String branchCode;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String departmentName;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String position;
 }
