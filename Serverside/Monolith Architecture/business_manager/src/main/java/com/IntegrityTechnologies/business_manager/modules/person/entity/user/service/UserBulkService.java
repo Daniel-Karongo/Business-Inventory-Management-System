@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.user.service;
 
+import com.IntegrityTechnologies.business_manager.common.PhoneAndEmailNormalizer;
 import com.IntegrityTechnologies.business_manager.common.bulk.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
@@ -64,7 +65,7 @@ public class UserBulkService {
                    NORMALIZATION
                    ========================= */
 
-                String username = normalizeProductName(row.getUsername());
+                String username = PhoneAndEmailNormalizer.toTitleCase(row.getUsername());
                 String roleName =
                         (row.getRole() == null || row.getRole().isBlank())
                                 ? Role.EMPLOYEE.name()
@@ -231,24 +232,6 @@ public class UserBulkService {
     private void validate(UserBulkRow row) {
         if (row.getUsername() == null || row.getUsername().isBlank())
             throw new IllegalArgumentException("username is required");
-    }
-
-    private String normalizeProductName(String raw) {
-        String cleaned =
-                raw.trim()
-                        .replaceAll("\\s+", " ")
-                        .toLowerCase();
-
-        StringBuilder title = new StringBuilder();
-        for (String part : cleaned.split(" ")) {
-            if (part.isBlank()) continue;
-            title.append(
-                    Character.toUpperCase(part.charAt(0))
-            ).append(
-                    part.substring(1)
-            ).append(" ");
-        }
-        return title.toString().trim();
     }
 
     private List<String> normalizeCommaList(List<String> raw) {

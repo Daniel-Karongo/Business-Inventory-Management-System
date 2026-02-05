@@ -1,28 +1,28 @@
-import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatTableModule } from '@angular/material/table';
+import { Component, OnInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { InventoryService } from '../../services/inventory.service';
-import { InventoryResponse } from '../../models/inventory-response.model';
-import { BranchService } from '../../../branches/services/branch.service';
-import { BranchMinimalDTO } from '../../../branches/models/branch.model';
-import { RouterModule } from '@angular/router';
-import { MatPaginator, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { ViewChild } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-import { AdjustStockDialogComponent } from '../../components/adjust-stock-dialog/adjust-stock-dialog.component';
-import { ReceiveStockDialogComponent } from '../../components/receive-stock-dialog/receive-stock-dialog.component';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatPaginator, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectChange, MatSelectModule } from '@angular/material/select';
-import { TransferStockDialogComponent } from '../../components/transfer-stock-dialog/transfer-stock-dialog.component';
-import { ProductSelectorDialogComponent } from '../../../sales/dialogs/product-selector-dialog/product-selector-dialog.component';
+import { RouterModule } from '@angular/router';
+import { BranchMinimalDTO } from '../../../branches/models/branch.model';
+import { BranchService } from '../../../branches/services/branch.service';
 import { Product } from '../../../products/parent/models/product.model';
+import { ProductSelectorDialogComponent } from '../../../sales/dialogs/product-selector-dialog/product-selector-dialog.component';
+import { AdjustStockDialogComponent } from '../../components/adjust-stock-dialog/adjust-stock-dialog.component';
+import { InventoryBulkImportDialogComponent } from '../../components/inventory-bulk-import-dialog/inventory-bulk-import-dialog.component';
 import { ReceiveNewProductDialogComponent } from '../../components/receive-new-product-dialog/receive-new-product-dialog.component';
-import { BulkReceiveStockDialogComponent } from '../../components/bulk-receive-stock-dialog/bulk-receive-stock-dialog.component';
+import { ReceiveStockDialogComponent } from '../../components/receive-stock-dialog/receive-stock-dialog.component';
+import { TransferStockDialogComponent } from '../../components/transfer-stock-dialog/transfer-stock-dialog.component';
+import { InventoryResponse } from '../../models/inventory-response.model';
+import { InventoryService } from '../../services/inventory.service';
 
 @Component({
   selector: 'app-inventory-list',
@@ -290,15 +290,13 @@ export class InventoryListComponent implements OnInit {
   }
 
   openBulkReceive() {
-    const ref = this.dialog.open(BulkReceiveStockDialogComponent, {
-      width: '1200px',
+    this.dialog.open(InventoryBulkImportDialogComponent, {
+      width: '1100px',
       maxWidth: '95vw',
       maxHeight: '90vh',
-      disableClose: false
-    });
-
-    ref.afterClosed().subscribe(success => {
-      if (success) {
+      autoFocus: false
+    }).afterClosed().subscribe(success => {
+      if (success === true) {
         this.loadInventory();
       }
     });

@@ -30,15 +30,15 @@ public class InventoryController {
     private final InventoryValuationService valuationService;
     private final InventoryBulkService bulkService;
 
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
     @PostMapping("/import")
-    public ResponseEntity<BulkResult<Object>> importInventory(
+    public ResponseEntity<BulkResult<InventoryBulkPreviewResult>> importInventory(
             @RequestBody BulkRequest<InventoryReceiveBulkRow> request
     ) {
         return ResponseEntity.ok(
                 bulkService.bulkReceive(request)
         );
     }
+
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
     @PostMapping("/receive")
     public ResponseEntity<ApiResponse> receiveStock(@RequestBody ReceiveStockRequest req) {

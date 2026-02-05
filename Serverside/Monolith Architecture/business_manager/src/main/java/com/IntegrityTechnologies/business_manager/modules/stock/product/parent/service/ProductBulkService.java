@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.service;
 
+import com.IntegrityTechnologies.business_manager.common.PhoneAndEmailNormalizer;
 import com.IntegrityTechnologies.business_manager.common.bulk.BulkOptions;
 import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
 import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
@@ -45,7 +46,7 @@ public class ProductBulkService {
             try {
                 validate(row);
 
-                String normalizedName = normalizeProductName(row.getName());
+                String normalizedName = PhoneAndEmailNormalizer.toTitleCase(row.getName());
 
                 if (!seenNames.add(normalizedName.toLowerCase())) {
                     throw new IllegalArgumentException(
@@ -156,23 +157,5 @@ public class ProductBulkService {
 
         if (row.getCategoryName() == null || row.getCategoryName().isBlank())
             throw new IllegalArgumentException("categoryName is required");
-    }
-
-    private String normalizeProductName(String raw) {
-        String cleaned =
-                raw.trim()
-                        .replaceAll("\\s+", " ")
-                        .toLowerCase();
-
-        StringBuilder title = new StringBuilder();
-        for (String part : cleaned.split(" ")) {
-            if (part.isBlank()) continue;
-            title.append(
-                    Character.toUpperCase(part.charAt(0))
-            ).append(
-                    part.substring(1)
-            ).append(" ");
-        }
-        return title.toString().trim();
     }
 }

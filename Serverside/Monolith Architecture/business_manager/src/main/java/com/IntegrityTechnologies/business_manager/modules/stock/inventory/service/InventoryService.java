@@ -295,6 +295,112 @@ public class InventoryService {
         return new ApiResponse("success", "Stock received successfully", buildResponse(item));
     }
 
+    @Transactional(readOnly = true)
+    public InventoryBulkPreviewRow simulateReceive(
+            ReceiveStockRequest req
+    ) {
+
+    /* =========================
+       1. RESOLVE PRODUCT + BRANCH
+       ========================= */
+
+        Product product = productRepository.findById(req.getProductId())
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Product not found")
+                );
+
+        Branch branch = branchRepository.findById(req.getBranchId())
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Branch not found")
+                );
+
+    /* =========================
+       2. RESOLVE OR SIMULATE VARIANT
+       ========================= */
+
+        ProductVariant variant =
+                req.getProductVariantId() != null
+                        ? productVariantRepository
+                        .findById(req.getProductVariantId())
+                        .orElseThrow(() ->
+                                new IllegalArgumentException("Variant not found")
+                        )
+                        : productVariantRepository
+                        .findByProductIdAndClassification(
+                                req.getProductId(),
+                                req.getClassification()
+                        )
+                        .orElseGet(() -> {
+                            ProductVariant v = new ProductVariant();
+                            v.setProduct(product);
+                            v.setClassification(req.getClassification());
+                            v.setSku(
+                                    req.getNewVariantSku() != null
+                                            ? req.getNewVariantSku()
+                                            : productService.generateVariantSku(
+                                            product,
+                                            req.getClassification()
+                                    )
+                            );
+                            return v; // ❗ NOT persisted
+                        });
+
+    /* =========================
+       3. COMPUTE UNITS + COST
+       ========================= */
+
+        long totalUnits = 0;
+        BigDecimal totalCost = BigDecimal.ZERO;
+
+        for (SupplierUnit su : req.getSuppliers()) {
+
+            if (su.getUnitsSupplied() == null || su.getUnitsSupplied() <= 0)
+                throw new IllegalArgumentException("unitsSupplied must be > 0");
+
+            if (su.getUnitCost() == null)
+                throw new IllegalArgumentException("unitCost is required");
+
+            totalUnits += su.getUnitsSupplied();
+
+            totalCost = totalCost.add(
+                    su.getUnitCost().multiply(
+                            BigDecimal.valueOf(su.getUnitsSupplied())
+                    )
+            );
+        }
+
+        if (totalUnits == 0)
+            throw new IllegalArgumentException("Total units must be > 0");
+
+        BigDecimal unitCost =
+                totalCost.divide(
+                        BigDecimal.valueOf(totalUnits),
+                        6,
+                        BigDecimal.ROUND_HALF_UP
+                );
+
+    /* =========================
+       4. PREVIEW RESULT
+       ========================= */
+
+        return InventoryBulkPreviewRow.builder()
+                .productId(product.getId())
+                .productName(product.getName())
+
+                .productVariantId(variant.getId())
+                .variantClassification(variant.getClassification())
+                .variantSku(variant.getSku())
+
+                .branchId(branch.getId())
+                .branchName(branch.getName())
+
+                .unitsReceived(totalUnits)
+                .unitCost(unitCost)
+                .sellingPrice(req.getSellingPrice())
+                .totalCost(totalCost)
+                .build();
+    }
+
     @Transactional
     public ApiResponse transferStock(TransferStockRequest req) {
 

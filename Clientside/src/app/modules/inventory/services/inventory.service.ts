@@ -11,7 +11,7 @@ export class InventoryService {
 
   private base = environment.apiUrl + environment.endpoints.inventory.base;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   /** ===========================
    * READ — NORMALIZED
@@ -82,12 +82,10 @@ export class InventoryService {
     return this.http.post<ApiResponse>(`${this.base}/transfer`, payload);
   }
 
-  bulkReceiveStock(payload: {
-    items: any[];
-  }): Observable<ApiResponse> {
-    return this.http.post<ApiResponse>(
-      `${this.base}/receive/bulk`,
-      payload
+  bulkImport(request: any) {
+    return this.http.post<any>(
+      `${this.base}/import`,
+      request
     );
   }
 }

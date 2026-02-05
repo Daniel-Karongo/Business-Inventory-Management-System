@@ -40,4 +40,25 @@ public class PhoneAndEmailNormalizer {
 
         return cleaned;
     }
+
+    public static String toTitleCase(String input) {
+        if (input == null || input.isBlank()) return input;
+
+        StringBuilder result = new StringBuilder();
+        boolean capitalizeNext = true;
+
+        for (char c : input.toLowerCase().toCharArray()) {
+            if (Character.isWhitespace(c)) {
+                capitalizeNext = true;
+                result.append(c);
+            } else if (capitalizeNext) {
+                result.append(Character.toUpperCase(c));
+                capitalizeNext = false;
+            } else {
+                result.append(c);
+            }
+        }
+
+        return result.toString();
+    }
 }

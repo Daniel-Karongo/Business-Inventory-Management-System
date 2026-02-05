@@ -220,7 +220,8 @@ export class ProductListComponent implements OnInit {
     this.dialog.open(ProductBulkImportDialogComponent, {
       width: '1100px',
       maxWidth: '95vw',
-      maxHeight: '90vh'
+      maxHeight: '90vh',
+      autoFocus: false
     }).afterClosed().subscribe(result => {
       if (result === true) {
         this.loadProducts();
