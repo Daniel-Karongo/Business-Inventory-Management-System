@@ -22,6 +22,7 @@ import { Supplier } from '../../models/supplier.model';
 import { ReasonDialogComponent } from '../../../../shared/components/reason-dialog/reason-dialog.component';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { SupplierBulkImportDialogComponent } from '../../components/supplier-bulk-import-dialog/supplier-bulk-import-dialog.component';
 
 @Component({
   selector: 'app-supplier-list',
@@ -311,5 +312,18 @@ export class SupplierListComponent implements OnInit {
 
   goCreate() {
     this.router.navigate(['/suppliers/create']);
+  }
+
+  openBulkImport() {
+    this.dialog.open(SupplierBulkImportDialogComponent, {
+      width: '1100px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      autoFocus: false
+    }).afterClosed().subscribe(imported => {
+      if (imported === true) {
+        this.loadSuppliers();
+      }
+    });
   }
 }

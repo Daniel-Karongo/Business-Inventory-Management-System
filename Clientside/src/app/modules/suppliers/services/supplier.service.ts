@@ -13,6 +13,7 @@ import {
 } from '../models/supplier.model';
 
 import { Product } from '../../products/parent/models/product.model';
+import { BulkRequest, BulkResult } from '../../../shared/models/bulk-import.model';
 
 @Injectable({ providedIn: 'root' })
 export class SupplierService {
@@ -29,7 +30,7 @@ export class SupplierService {
     if (deleted !== undefined) {
       let params = new HttpParams();
       params = params.set('deleted', String(deleted));
-      return this.http.get<Supplier[]>(`${this.base}/all`, { params }); 
+      return this.http.get<Supplier[]>(`${this.base}/all`, { params });
     } else {
       return this.http.get<Supplier[]>(`${this.base}/all`);
     }
@@ -59,6 +60,15 @@ export class SupplierService {
     return this.http.post<Supplier>(
       `${this.base}/register`,
       payload
+    );
+  }
+
+  bulkImport(
+    request: BulkRequest<any>
+  ): Observable<BulkResult<Supplier>> {
+    return this.http.post<BulkResult<Supplier>>(
+      `${this.base}/import`,
+      request
     );
   }
 

@@ -22,6 +22,7 @@ import { CustomerResponse } from '../../models/customer.model';
 import { SmsDialogComponent } from '../../../../shared/components/sms-dialog/sms-dialog.component';
 import { SmsService } from '../../../communication/services/sms.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { CustomerBulkImportDialogComponent } from '../../components/customer-bulk-import-dialog/customer-bulk-import-dialog.component';
 
 @Component({
   standalone: true,
@@ -365,4 +366,17 @@ export class CustomerListComponent implements OnInit {
 
   view(id: string) { this.router.navigate(['/customers', id]); }
   edit(id: string) { this.router.navigate(['/customers', id, 'edit']); }
+
+  openBulkImport() {
+    this.dialog.open(CustomerBulkImportDialogComponent, {
+      width: '1100px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      autoFocus: false
+    }).afterClosed().subscribe(imported => {
+      if (imported === true) {
+        this.loadAllCustomersOnce();
+      }
+    });
+  }
 }

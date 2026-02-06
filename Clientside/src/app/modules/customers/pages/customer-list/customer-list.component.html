@@ -6,9 +6,8 @@
         <div class="page-actions">
             <button mat-stroked-button (click)="exportCsv()">Export CSV</button>
             <button mat-stroked-button (click)="openSmsDialog()">Send SMS</button>
-            <button mat-flat-button color="primary" routerLink="/customers/create">
-                New Customer
-            </button>
+            <button mat-stroked-button (click)="openBulkImport()"><mat-icon>cloud_upload</mat-icon>Bulk Import Customers</button>
+            <button mat-flat-button color="primary" routerLink="/customers/create">New Customer</button>
         </div>
     </div>
 

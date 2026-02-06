@@ -1,0 +1,103 @@
+.bulk-title {
+  font-weight: 600;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* IMPORT ZONE */
+
+.import-zone {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.import-tiles {
+  display: flex;
+  gap: 16px;
+}
+
+.import-tile {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--surface-shadow);
+}
+
+.import-tile:hover {
+  background: var(--surface-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.import-tile mat-icon {
+  font-size: 28px;
+}
+
+.import-tile.excel mat-icon {
+  color: #2e7d32;
+}
+
+.import-tile.csv mat-icon {
+  color: #1565c0;
+}
+
+.template-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* ROWS */
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.row-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.row-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 6px;
+}
+
+/* GRIDS */
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+/* ERROR */
+
+.row-error {
+  color: #c62828;
+  font-size: 0.8rem;
+}

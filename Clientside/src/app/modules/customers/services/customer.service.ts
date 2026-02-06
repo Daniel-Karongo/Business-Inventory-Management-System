@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { CustomerRequest, CustomerResponse } from '../models/customer.model';
 import { forkJoin } from 'rxjs';
+import { BulkRequest, BulkResult } from '../../../shared/models/bulk-import.model';
 
 @Injectable({ providedIn: 'root' })
 export class CustomerService {
@@ -62,6 +63,15 @@ export class CustomerService {
     return this.http.post<CustomerResponse>(this.base, req);
   }
 
+  bulkImport(
+    request: BulkRequest<any>
+  ) {
+    return this.http.post<BulkResult<CustomerResponse>>(
+      `${this.base}/import`,
+      request
+    );
+  }
+  
   update(id: string, req: CustomerRequest) {
     return this.http.put<CustomerResponse>(`${this.base}/${id}`, req);
   }

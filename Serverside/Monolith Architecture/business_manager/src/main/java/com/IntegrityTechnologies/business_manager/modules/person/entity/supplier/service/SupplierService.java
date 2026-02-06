@@ -162,7 +162,9 @@ public class SupplierService {
         return supplierRepository.findAll(spec, pageable).map(supplierMapper::toDTO);
     }
 
-
+    public boolean existsByNameIgnoreCase(String name) {
+        return supplierRepository.existsByNameIgnoreCase(name);
+    }
 
 
 

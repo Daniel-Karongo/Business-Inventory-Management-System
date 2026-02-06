@@ -21,21 +21,16 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 
-import { forkJoin } from 'rxjs';
-
-import { UserService } from '../../services/user/user.service';
-import { BranchService } from '../../../branches/services/branch.service';
-import { DepartmentService } from '../../../departments/services/department.service';
-
+import { CustomerService } from '../../services/customer.service';
 import { BulkRequest, BulkResult } from '../../../../shared/models/bulk-import.model';
 import { BulkImportResultDialogComponent } from '../../../../shared/components/bulk-import-result-dialog/bulk-import-result-dialog.component';
-import { User } from '../../models/user.model';
+import { CustomerResponse } from '../../models/customer.model';
 
 @Component({
   standalone: true,
-  selector: 'app-user-bulk-import-dialog',
-  templateUrl: './user-bulk-import-dialog.component.html',
-  styleUrls: ['./user-bulk-import-dialog.component.scss'],
+  selector: 'app-customer-bulk-import-dialog',
+  templateUrl: './customer-bulk-import-dialog.component.html',
+  styleUrls: ['./customer-bulk-import-dialog.component.scss'],
   imports: [
     CommonModule,
     ReactiveFormsModule,
@@ -49,24 +44,18 @@ import { User } from '../../models/user.model';
     MatSnackBarModule
   ]
 })
-export class UserBulkImportDialogComponent implements OnInit {
+export class CustomerBulkImportDialogComponent implements OnInit {
 
   form!: FormGroup;
   submitting = false;
 
-  branches: any[] = [];
-  departments: any[] = [];
-  hideOrgFields = false;
-
   constructor(
     private fb: FormBuilder,
-    private dialogRef: MatDialogRef<UserBulkImportDialogComponent>,
-    private userService: UserService,
-    private branchService: BranchService,
-    private departmentService: DepartmentService,
+    private dialogRef: MatDialogRef<CustomerBulkImportDialogComponent>,
+    private customerService: CustomerService,
     private snackbar: MatSnackBar,
     private dialog: MatDialog
-  ) { }
+  ) {}
 
   ngOnInit(): void {
     this.form = this.fb.group({
@@ -74,7 +63,6 @@ export class UserBulkImportDialogComponent implements OnInit {
       rows: this.fb.array([])
     });
 
-    this.loadOrgMeta();
     this.addRow();
   }
 
@@ -88,14 +76,13 @@ export class UserBulkImportDialogComponent implements OnInit {
 
   private createRow(data?: any): FormGroup {
     return this.fb.group({
-      username: [data?.username ?? '', Validators.required],
-      password: [data?.password ?? '1234'],
-      role: [data?.role ?? 'EMPLOYEE'],
-      emails: [data?.emails ?? ''],
+      name: [data?.name ?? '', Validators.required],
       phones: [data?.phones ?? ''],
-      branchCode: [data?.branchCode ?? ''],
-      departmentName: [data?.departmentName ?? ''],
-      position: [data?.position ?? 'member'],
+      emails: [data?.emails ?? ''],
+      type: [data?.type ?? 'INDIVIDUAL', Validators.required],
+      gender: [data?.gender ?? ''],
+      address: [data?.address ?? ''],
+      notes: [data?.notes ?? ''],
       _error: ['']
     });
   }
@@ -104,25 +91,8 @@ export class UserBulkImportDialogComponent implements OnInit {
     this.rows.push(this.createRow(data));
   }
 
-  removeRow(index: number) {
-    this.rows.removeAt(index);
-  }
-
-  /* =========================
-     ORG META
-     ========================= */
-
-  private loadOrgMeta() {
-    forkJoin([
-      this.branchService.getAll(false),
-      this.departmentService.getAll(false)
-    ]).subscribe(([b, d]) => {
-      this.branches = b || [];
-      this.departments = d || [];
-      this.hideOrgFields =
-        this.branches.length === 1 &&
-        this.departments.length === 1;
-    });
+  removeRow(i: number) {
+    this.rows.removeAt(i);
   }
 
   /* =========================
@@ -131,11 +101,13 @@ export class UserBulkImportDialogComponent implements OnInit {
 
   downloadCsvTemplate() {
     const csv =
-      `username,password,role,emails,phones,branchCode,department,position
-jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
+`name,phones,emails,type,gender,address,notes
+John Doe,0712345678,john@doe.com,INDIVIDUAL,MALE,Nairobi,VIP customer`;
 
-    const blob = new Blob([csv], { type: 'text/csv' });
-    saveAs(blob, 'users-bulk-template.csv');
+    saveAs(
+      new Blob([csv], { type: 'text/csv' }),
+      'customers-bulk-template.csv'
+    );
   }
 
   importCsv(event: Event) {
@@ -155,19 +127,26 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
       if (!line.trim()) continue;
 
       const [
-        username, password, role, emails, phones,
-        branchCode, departmentName, position
+        name,
+        phones,
+        emails,
+        type,
+        gender,
+        address,
+        notes
       ] = line.split(',');
 
+      // 🔥 meaningful row check
+      if (!name?.trim() && !phones?.trim() && !emails?.trim()) continue;
+
       this.addRow({
-        username: username?.trim(),
-        password: password?.trim() || '1234',
-        role: role?.trim() || 'EMPLOYEE',
-        emails: emails?.trim(),
+        name: name?.trim(),
         phones: phones?.trim(),
-        branchCode: branchCode?.trim(),
-        departmentName: departmentName?.trim(),
-        position: position?.trim() || 'member'
+        emails: emails?.trim(),
+        type: type?.trim() || 'INDIVIDUAL',
+        gender: gender?.trim(),
+        address: address?.trim(),
+        notes: notes?.trim()
       });
     }
   }
@@ -177,29 +156,21 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
      ========================= */
 
   async downloadExcelTemplate() {
-
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Users', {
+    const worksheet = workbook.addWorksheet('Customers', {
       views: [{ state: 'frozen', ySplit: 1 }]
     });
 
-    /* ============================
-       DEFINE COLUMNS
-       ============================ */
     worksheet.columns = [
-      { header: 'username', key: 'username', width: 18 },
-      { header: 'password', key: 'password', width: 12 },
-      { header: 'role', key: 'role', width: 14 },
-      { header: 'emails', key: 'emails', width: 32 },
+      { header: 'name', key: 'name', width: 22 },
       { header: 'phones', key: 'phones', width: 22 },
-      { header: 'branchCode', key: 'branchCode', width: 14 },
-      { header: 'department', key: 'department', width: 18 },
-      { header: 'position', key: 'position', width: 12 }
+      { header: 'emails', key: 'emails', width: 32 },
+      { header: 'type', key: 'type', width: 14 },
+      { header: 'gender', key: 'gender', width: 14 },
+      { header: 'address', key: 'address', width: 26 },
+      { header: 'notes', key: 'notes', width: 32 }
     ];
 
-    /* ============================
-       HEADER STYLING
-       ============================ */
     const headerRow = worksheet.getRow(1);
     headerRow.font = { bold: true };
 
@@ -213,18 +184,14 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
       };
     });
 
-    /* ============================
-       EXAMPLE ROW
-       ============================ */
     const exampleRow = worksheet.addRow({
-      username: 'jdoe',
-      password: '1234',
-      role: 'EMPLOYEE',
-      emails: 'jdoe@company.com',
+      name: 'John Doe',
       phones: '0712345678',
-      branchCode: 'MAIN',
-      department: 'GENERAL',
-      position: 'member'
+      emails: 'john@doe.com',
+      type: 'INDIVIDUAL',
+      gender: 'MALE',
+      address: 'Nairobi',
+      notes: 'VIP customer'
     });
 
     exampleRow.eachCell(cell => {
@@ -237,24 +204,18 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
       };
     });
 
-    // 🔥 FORCE PHONES COLUMN TO TEXT
     exampleRow.getCell('phones').numFmt = '@';
 
-    /* ============================
-       EMPTY DATA ROWS
-       ============================ */
     const ROW_COUNT = 200;
-
     for (let i = 0; i < ROW_COUNT; i++) {
       const row = worksheet.addRow({
-        username: '',
-        password: '1234',
-        role: 'EMPLOYEE',
-        emails: '',
+        name: '',
         phones: '',
-        branchCode: '',
-        department: '',
-        position: 'member'
+        emails: '',
+        type: 'INDIVIDUAL',
+        gender: '',
+        address: '',
+        notes: ''
       });
 
       row.eachCell(cell => {
@@ -267,20 +228,15 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
         };
       });
 
-      // 🔥 FORCE PHONES COLUMN TO TEXT (ALL ROWS)
       row.getCell('phones').numFmt = '@';
     }
 
-    /* ============================
-       FINALIZE
-       ============================ */
     const buffer = await workbook.xlsx.writeBuffer();
-
     saveAs(
       new Blob([buffer], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       }),
-      'users-bulk-template.xlsx'
+      'customers-bulk-template.xlsx'
     );
   }
 
@@ -289,25 +245,31 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
     if (!input.files?.length) return;
 
     const reader = new FileReader();
+
     reader.onload = e => {
       const wb = XLSX.read(e.target?.result, { type: 'binary' });
       const sheet = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<any>(sheet, { defval: '' });
 
+      const rawRows = XLSX.utils.sheet_to_json<any>(sheet, { defval: '' });
       this.rows.clear();
 
-      rows.forEach(r => {
-        this.addRow({
-          username: r.username,
-          password: r.password || '1234',
-          role: r.role || 'EMPLOYEE',
-          emails: r.emails,
-          phones: r.phones,
-          branchCode: r.branchCode,
-          departmentName: r.department,
-          position: r.position || 'member'
+      rawRows
+        .filter(r =>
+          String(r.name || '').trim() ||
+          String(r.phones || '').trim() ||
+          String(r.emails || '').trim()
+        )
+        .forEach(r => {
+          this.addRow({
+            name: String(r.name || '').trim(),
+            phones: String(r.phones || '').trim(),
+            emails: String(r.emails || '').trim(),
+            type: String(r.type || 'INDIVIDUAL').trim(),
+            gender: String(r.gender || '').trim(),
+            address: String(r.address || '').trim(),
+            notes: String(r.notes || '').trim()
+          });
         });
-      });
     };
 
     reader.readAsBinaryString(input.files[0]);
@@ -319,19 +281,17 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
 
   submit() {
     if (this.form.invalid) return;
-
     this.submitting = true;
 
     const payload: BulkRequest<any> = {
       items: this.rows.controls.map(r => ({
-        username: r.value.username,
-        password: r.value.password,
-        role: r.value.role,
-        emailAddresses: [r.value.emails],
-        phoneNumbers: [r.value.phones],
-        branchCode: this.hideOrgFields ? null : r.value.branchCode,
-        departmentName: this.hideOrgFields ? null : r.value.departmentName,
-        position: r.value.position
+        name: r.value.name,
+        phone: r.value.phones,
+        email: r.value.emails,
+        type: r.value.type,
+        gender: r.value.gender || null,
+        address: r.value.address,
+        notes: r.value.notes
       })),
       options: {
         dryRun: this.form.value.dryRun,
@@ -339,8 +299,8 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
       }
     };
 
-    this.userService.bulkImport(payload).subscribe({
-      next: (res: BulkResult<User>) => {
+    this.customerService.bulkImport(payload).subscribe({
+      next: (res: BulkResult<CustomerResponse>) => {
 
         this.rows.controls.forEach(r =>
           r.patchValue({ _error: '' }, { emitEvent: false })
@@ -352,7 +312,7 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
 
         if (!this.form.value.dryRun && res.failed === 0) {
           this.snackbar.open(
-            `${res.success} users imported successfully`,
+            `${res.success} customers imported successfully`,
             'Close',
             { duration: 3000 }
           );
@@ -364,18 +324,15 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
           width: '1100px',
           maxWidth: '95vw',
           data: {
-            title: 'User Import Preview',
+            title: 'Customer Import Preview',
             dryRun: this.form.value.dryRun,
             result: res,
             confirmLabel: 'Import Now',
             columns: [
-              { key: 'username', label: 'Username' },
-              { key: 'role', label: 'Role' },
-              { key: 'emailAddresses', label: 'Emails' },
+              { key: 'name', label: 'Name' },
               { key: 'phoneNumbers', label: 'Phones' },
-              { key: 'branchCode', label: 'Branch' },
-              { key: 'departmentName', label: 'Department' },
-              { key: 'position', label: 'Position' }
+              { key: 'email', label: 'Emails' },
+              { key: 'type', label: 'Type' }
             ]
           }
         }).afterClosed().subscribe(confirm => {
@@ -390,7 +347,7 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
       error: () => {
         this.submitting = false;
         this.snackbar.open(
-          'User bulk import failed',
+          'Customer bulk import failed',
           'Close',
           { duration: 3000 }
         );

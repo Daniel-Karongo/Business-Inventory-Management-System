@@ -1,0 +1,128 @@
+<h2 mat-dialog-title class="bulk-title">
+  Bulk Import Suppliers
+</h2>
+
+<mat-dialog-content [formGroup]="form" class="body">
+
+  <!-- ================= TOOLBAR ================= -->
+  <div class="import-zone">
+
+    <div class="import-tiles">
+
+      <label class="import-tile excel">
+        <input type="file" hidden accept=".xlsx" (change)="importExcel($event)">
+        <mat-icon>table_view</mat-icon>
+        <div>
+          <strong>Import Excel</strong>
+          <small>.xlsx template</small>
+        </div>
+      </label>
+
+      <label class="import-tile csv">
+        <input type="file" hidden accept=".csv" (change)="importCsv($event)">
+        <mat-icon>description</mat-icon>
+        <div>
+          <strong>Import CSV</strong>
+          <small>.csv template</small>
+        </div>
+      </label>
+
+    </div>
+
+    <div class="template-actions">
+      <button mat-stroked-button (click)="downloadExcelTemplate()">
+        <mat-icon>table_view</mat-icon>
+        Excel Template
+      </button>
+
+      <button mat-stroked-button (click)="downloadCsvTemplate()">
+        <mat-icon>description</mat-icon>
+        CSV Template
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ================= OPTIONS ================= -->
+  <mat-checkbox formControlName="dryRun">
+    Dry run (validate only, do not save)
+  </mat-checkbox>
+
+  <!-- ================= ROWS ================= -->
+  <div class="rows" formArrayName="rows">
+
+    <div
+      class="row-card"
+      *ngFor="let r of rows.controls; let i = index"
+      [formGroupName]="i">
+
+      <div class="row-header">
+        <span>Supplier {{ i + 1 }}</span>
+        <button mat-icon-button color="warn" (click)="removeRow(i)">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+
+      <!-- CORE -->
+      <div class="grid-3">
+        <mat-form-field appearance="fill">
+          <mat-label>Name</mat-label>
+          <input matInput formControlName="name">
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Emails</mat-label>
+          <input matInput placeholder="a@x.com,b@y.com" formControlName="emails">
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Phones</mat-label>
+          <input matInput placeholder="0712345678,0799999999" formControlName="phones">
+        </mat-form-field>
+      </div>
+
+      <!-- META -->
+      <div class="grid-3">
+        <mat-form-field appearance="fill">
+          <mat-label>Address</mat-label>
+          <input matInput formControlName="address">
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Region</mat-label>
+          <input matInput formControlName="region">
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Categories</mat-label>
+          <input
+            matInput
+            placeholder="Electronics,Accessories"
+            formControlName="categories">
+        </mat-form-field>
+      </div>
+
+      <!-- ERROR -->
+      <div class="row-error" *ngIf="r.value._error">
+        {{ r.value._error }}
+      </div>
+
+    </div>
+  </div>
+
+  <button mat-stroked-button (click)="addRow()">
+    + Add Supplier
+  </button>
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="close()">Cancel</button>
+  <button
+    mat-flat-button
+    color="primary"
+    [disabled]="submitting || form.invalid"
+    (click)="submit()">
+    Import
+  </button>
+</mat-dialog-actions>

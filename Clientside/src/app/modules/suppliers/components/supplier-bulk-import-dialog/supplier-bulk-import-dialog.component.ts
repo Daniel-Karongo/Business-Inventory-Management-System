@@ -19,23 +19,20 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
 
 import { forkJoin } from 'rxjs';
 
-import { UserService } from '../../services/user/user.service';
-import { BranchService } from '../../../branches/services/branch.service';
-import { DepartmentService } from '../../../departments/services/department.service';
-
+import { SupplierService } from '../../services/supplier.service';
+import { CategoryService } from '../../../categories/services/category.service';
 import { BulkRequest, BulkResult } from '../../../../shared/models/bulk-import.model';
 import { BulkImportResultDialogComponent } from '../../../../shared/components/bulk-import-result-dialog/bulk-import-result-dialog.component';
-import { User } from '../../models/user.model';
+import { Supplier } from '../../models/supplier.model';
 
 @Component({
   standalone: true,
-  selector: 'app-user-bulk-import-dialog',
-  templateUrl: './user-bulk-import-dialog.component.html',
-  styleUrls: ['./user-bulk-import-dialog.component.scss'],
+  selector: 'app-supplier-bulk-import-dialog',
+  templateUrl: './supplier-bulk-import-dialog.component.html',
+  styleUrls: ['./supplier-bulk-import-dialog.component.scss'],
   imports: [
     CommonModule,
     ReactiveFormsModule,
@@ -45,25 +42,20 @@ import { User } from '../../models/user.model';
     MatIconModule,
     MatCheckboxModule,
     MatFormFieldModule,
-    MatSelectModule,
     MatSnackBarModule
   ]
 })
-export class UserBulkImportDialogComponent implements OnInit {
+export class SupplierBulkImportDialogComponent implements OnInit {
 
   form!: FormGroup;
   submitting = false;
-
-  branches: any[] = [];
-  departments: any[] = [];
-  hideOrgFields = false;
+  categories: any[] = [];
 
   constructor(
     private fb: FormBuilder,
-    private dialogRef: MatDialogRef<UserBulkImportDialogComponent>,
-    private userService: UserService,
-    private branchService: BranchService,
-    private departmentService: DepartmentService,
+    private dialogRef: MatDialogRef<SupplierBulkImportDialogComponent>,
+    private supplierService: SupplierService,
+    private categoryService: CategoryService,
     private snackbar: MatSnackBar,
     private dialog: MatDialog
   ) { }
@@ -74,13 +66,9 @@ export class UserBulkImportDialogComponent implements OnInit {
       rows: this.fb.array([])
     });
 
-    this.loadOrgMeta();
+    this.loadCategories();
     this.addRow();
   }
-
-  /* =========================
-     FORM HELPERS
-     ========================= */
 
   get rows(): FormArray {
     return this.form.get('rows') as FormArray;
@@ -88,14 +76,12 @@ export class UserBulkImportDialogComponent implements OnInit {
 
   private createRow(data?: any): FormGroup {
     return this.fb.group({
-      username: [data?.username ?? '', Validators.required],
-      password: [data?.password ?? '1234'],
-      role: [data?.role ?? 'EMPLOYEE'],
-      emails: [data?.emails ?? ''],
-      phones: [data?.phones ?? ''],
-      branchCode: [data?.branchCode ?? ''],
-      departmentName: [data?.departmentName ?? ''],
-      position: [data?.position ?? 'member'],
+      name: [data?.name ?? '', Validators.required],
+      emails: [data?.emails ?? '', Validators.required],
+      phones: [data?.phones ?? '', Validators.required],
+      address: [data?.address ?? ''],
+      region: [data?.region ?? ''],
+      categories: [data?.categories ?? ''],
       _error: ['']
     });
   }
@@ -104,25 +90,13 @@ export class UserBulkImportDialogComponent implements OnInit {
     this.rows.push(this.createRow(data));
   }
 
-  removeRow(index: number) {
-    this.rows.removeAt(index);
+  removeRow(i: number) {
+    this.rows.removeAt(i);
   }
 
-  /* =========================
-     ORG META
-     ========================= */
-
-  private loadOrgMeta() {
-    forkJoin([
-      this.branchService.getAll(false),
-      this.departmentService.getAll(false)
-    ]).subscribe(([b, d]) => {
-      this.branches = b || [];
-      this.departments = d || [];
-      this.hideOrgFields =
-        this.branches.length === 1 &&
-        this.departments.length === 1;
-    });
+  private loadCategories() {
+    this.categoryService.getAll('flat', false)
+      .subscribe(c => this.categories = c || []);
   }
 
   /* =========================
@@ -131,55 +105,16 @@ export class UserBulkImportDialogComponent implements OnInit {
 
   downloadCsvTemplate() {
     const csv =
-      `username,password,role,emails,phones,branchCode,department,position
-jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
+      `name,emails,phones,address,region,categories
+Acme Ltd,info@acme.com,0712345678,Nairobi,Nairobi,Electronics,Accessories`;
 
-    const blob = new Blob([csv], { type: 'text/csv' });
-    saveAs(blob, 'users-bulk-template.csv');
+    saveAs(new Blob([csv], { type: 'text/csv' }), 'suppliers-bulk-template.csv');
   }
-
-  importCsv(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (!input.files?.length) return;
-
-    const reader = new FileReader();
-    reader.onload = () => this.parseCsv(reader.result as string);
-    reader.readAsText(input.files[0]);
-  }
-
-  private parseCsv(text: string) {
-    const lines = text.split('\n').slice(1);
-    this.rows.clear();
-
-    for (const line of lines) {
-      if (!line.trim()) continue;
-
-      const [
-        username, password, role, emails, phones,
-        branchCode, departmentName, position
-      ] = line.split(',');
-
-      this.addRow({
-        username: username?.trim(),
-        password: password?.trim() || '1234',
-        role: role?.trim() || 'EMPLOYEE',
-        emails: emails?.trim(),
-        phones: phones?.trim(),
-        branchCode: branchCode?.trim(),
-        departmentName: departmentName?.trim(),
-        position: position?.trim() || 'member'
-      });
-    }
-  }
-
-  /* =========================
-     EXCEL
-     ========================= */
 
   async downloadExcelTemplate() {
 
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Users', {
+    const worksheet = workbook.addWorksheet('Suppliers', {
       views: [{ state: 'frozen', ySplit: 1 }]
     });
 
@@ -187,14 +122,12 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
        DEFINE COLUMNS
        ============================ */
     worksheet.columns = [
-      { header: 'username', key: 'username', width: 18 },
-      { header: 'password', key: 'password', width: 12 },
-      { header: 'role', key: 'role', width: 14 },
+      { header: 'name', key: 'name', width: 26 },
       { header: 'emails', key: 'emails', width: 32 },
       { header: 'phones', key: 'phones', width: 22 },
-      { header: 'branchCode', key: 'branchCode', width: 14 },
-      { header: 'department', key: 'department', width: 18 },
-      { header: 'position', key: 'position', width: 12 }
+      { header: 'address', key: 'address', width: 26 },
+      { header: 'region', key: 'region', width: 18 },
+      { header: 'categories', key: 'categories', width: 32 }
     ];
 
     /* ============================
@@ -217,14 +150,12 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
        EXAMPLE ROW
        ============================ */
     const exampleRow = worksheet.addRow({
-      username: 'jdoe',
-      password: '1234',
-      role: 'EMPLOYEE',
-      emails: 'jdoe@company.com',
+      name: 'Acme Ltd',
+      emails: 'info@acme.com',
       phones: '0712345678',
-      branchCode: 'MAIN',
-      department: 'GENERAL',
-      position: 'member'
+      address: 'Nairobi',
+      region: 'Nairobi',
+      categories: 'Electronics,Accessories'
     });
 
     exampleRow.eachCell(cell => {
@@ -247,14 +178,12 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
 
     for (let i = 0; i < ROW_COUNT; i++) {
       const row = worksheet.addRow({
-        username: '',
-        password: '1234',
-        role: 'EMPLOYEE',
+        name: '',
         emails: '',
         phones: '',
-        branchCode: '',
-        department: '',
-        position: 'member'
+        address: '',
+        region: '',
+        categories: ''
       });
 
       row.eachCell(cell => {
@@ -280,34 +209,89 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
       new Blob([buffer], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       }),
-      'users-bulk-template.xlsx'
+      'suppliers-bulk-template.xlsx'
     );
   }
+
+  importCsv(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length) return;
+
+    const reader = new FileReader();
+    reader.onload = () => this.parseCsv(reader.result as string);
+    reader.readAsText(input.files[0]);
+  }
+
+  private parseCsv(text: string) {
+    const lines = text.split('\n').slice(1); // skip header
+    this.rows.clear();
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+
+      const [
+        name,
+        emails,
+        phones,
+        address,
+        region,
+        categories
+      ] = line.split(',');
+
+      this.addRow({
+        name: name?.trim(),
+        emails: emails?.trim(),
+        phones: phones?.trim(),
+        address: address?.trim(),
+        region: region?.trim(),
+        categories: categories?.trim()
+      });
+    }
+  }
+
+  /* =========================
+   EXCEL
+   ========================= */
 
   importExcel(event: Event) {
     const input = event.target as HTMLInputElement;
     if (!input.files?.length) return;
 
     const reader = new FileReader();
-    reader.onload = e => {
-      const wb = XLSX.read(e.target?.result, { type: 'binary' });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<any>(sheet, { defval: '' });
 
+    reader.onload = e => {
+      const binary = e.target?.result;
+      if (!binary) return;
+
+      const workbook = XLSX.read(binary, { type: 'binary' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+
+      // Convert sheet → objects (one per physical row)
+      const rawRows = XLSX.utils.sheet_to_json<any>(sheet, {
+        defval: ''
+      });
+
+      // Clear existing form rows
       this.rows.clear();
 
-      rows.forEach(r => {
-        this.addRow({
-          username: r.username,
-          password: r.password || '1234',
-          role: r.role || 'EMPLOYEE',
-          emails: r.emails,
-          phones: r.phones,
-          branchCode: r.branchCode,
-          departmentName: r.department,
-          position: r.position || 'member'
+      // 🔥 FILTER: only rows with real data
+      rawRows
+        .filter(r =>
+          String(r.name || '').trim() ||
+          String(r.emails || '').trim() ||
+          String(r.phones || '').trim()
+        )
+        .forEach(r => {
+          this.addRow({
+            name: String(r.name || '').trim(),
+            emails: String(r.emails || '').trim(),
+            phones: String(r.phones || '').trim(),
+            address: String(r.address || '').trim(),
+            region: String(r.region || '').trim(),
+            categories: String(r.categories || '').trim()
+          });
         });
-      });
     };
 
     reader.readAsBinaryString(input.files[0]);
@@ -324,14 +308,14 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
 
     const payload: BulkRequest<any> = {
       items: this.rows.controls.map(r => ({
-        username: r.value.username,
-        password: r.value.password,
-        role: r.value.role,
-        emailAddresses: [r.value.emails],
-        phoneNumbers: [r.value.phones],
-        branchCode: this.hideOrgFields ? null : r.value.branchCode,
-        departmentName: this.hideOrgFields ? null : r.value.departmentName,
-        position: r.value.position
+        name: r.value.name,
+        email: [r.value.emails],
+        phoneNumber: [r.value.phones],
+        address: r.value.address,
+        region: r.value.region,
+        categoryNames: r.value.categories
+          ? r.value.categories.split(',').map((c: string) => c.trim())
+          : []
       })),
       options: {
         dryRun: this.form.value.dryRun,
@@ -339,8 +323,8 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
       }
     };
 
-    this.userService.bulkImport(payload).subscribe({
-      next: (res: BulkResult<User>) => {
+    this.supplierService.bulkImport(payload).subscribe({
+      next: (res: BulkResult<Supplier>) => {
 
         this.rows.controls.forEach(r =>
           r.patchValue({ _error: '' }, { emitEvent: false })
@@ -352,7 +336,7 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
 
         if (!this.form.value.dryRun && res.failed === 0) {
           this.snackbar.open(
-            `${res.success} users imported successfully`,
+            `${res.success} suppliers imported successfully`,
             'Close',
             { duration: 3000 }
           );
@@ -364,18 +348,15 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
           width: '1100px',
           maxWidth: '95vw',
           data: {
-            title: 'User Import Preview',
+            title: 'Supplier Import Preview',
             dryRun: this.form.value.dryRun,
             result: res,
             confirmLabel: 'Import Now',
             columns: [
-              { key: 'username', label: 'Username' },
-              { key: 'role', label: 'Role' },
-              { key: 'emailAddresses', label: 'Emails' },
-              { key: 'phoneNumbers', label: 'Phones' },
-              { key: 'branchCode', label: 'Branch' },
-              { key: 'departmentName', label: 'Department' },
-              { key: 'position', label: 'Position' }
+              { key: 'name', label: 'Name' },
+              { key: 'email', label: 'Emails' },
+              { key: 'phoneNumber', label: 'Phones' },
+              { key: 'region', label: 'Region' }
             ]
           }
         }).afterClosed().subscribe(confirm => {
@@ -390,7 +371,7 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
       error: () => {
         this.submitting = false;
         this.snackbar.open(
-          'User bulk import failed',
+          'Supplier bulk import failed',
           'Close',
           { duration: 3000 }
         );

@@ -69,4 +69,8 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
             @Param("gender") String gender,
             @Param("deleted") Boolean deleted
     );
+
+    boolean existsByPhoneNumbersContains(String phone);
+
+    boolean existsByEmailAddressesContains(String email);
 }
