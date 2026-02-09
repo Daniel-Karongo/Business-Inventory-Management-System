@@ -2,7 +2,7 @@
   Bulk Receive Inventory
 </h2>
 
-<mat-dialog-content [formGroup]="form" class="body">
+<mat-dialog-content #scrollContainer [formGroup]="form" class="body">
 
   <!-- IMPORT ZONE -->
   <div class="import-zone">
@@ -10,11 +10,7 @@
     <div class="import-tiles">
 
       <label class="import-tile excel">
-        <input
-          type="file"
-          hidden
-          accept=".xlsx"
-          (change)="importExcel($event)">
+        <input type="file" hidden accept=".xlsx" (change)="importExcel($event)">
         <mat-icon>table_view</mat-icon>
         <div>
           <strong>Import Excel</strong>
@@ -23,11 +19,7 @@
       </label>
 
       <label class="import-tile csv">
-        <input
-          type="file"
-          hidden
-          accept=".csv"
-          (change)="importCsv($event)">
+        <input type="file" hidden accept=".csv" (change)="importCsv($event)">
         <mat-icon>description</mat-icon>
         <div>
           <strong>Import CSV</strong>
@@ -51,6 +43,34 @@
 
   </div>
 
+  <!-- 🔴 NEW -->
+  <div class="line-tally prominent">
+    <mat-icon>format_list_numbered</mat-icon>
+    <div class="tally-text">
+      <strong>{{ rowCount }}</strong>
+      <span *ngIf="rowCount==1"> Item loaded</span>
+      <span *ngIf="rowCount!=1"> Items loaded</span>
+    </div>
+  </div>
+
+  <!-- 🔴 NEW -->
+  <div class="go-to-line">
+    <mat-form-field appearance="fill">
+      <mat-label>Go to line</mat-label>
+      <input
+        id="goToLineInput"
+        matInput
+        type="number"
+        min="1"
+        [max]="rowCount"
+        #lineInput>
+    </mat-form-field>
+
+    <button mat-stroked-button (click)="goToLine(lineInput.valueAsNumber)">
+      Go
+    </button>
+  </div>
+
   <!-- DRY RUN -->
   <mat-checkbox formControlName="dryRun">
     Dry run (simulate only — no stock changes)
@@ -71,11 +91,10 @@
         </button>
       </div>
 
-      <!-- PRODUCT + BRANCH -->
       <div class="grid-2">
         <mat-form-field appearance="fill">
-          <mat-label>Product Name</mat-label>
-          <input matInput formControlName="productName">
+          <mat-label>Item Name</mat-label>
+          <input matInput formControlName="ItemName">
         </mat-form-field>
 
         <mat-form-field appearance="fill">
@@ -84,7 +103,6 @@
         </mat-form-field>
       </div>
 
-      <!-- VARIANT -->
       <div class="grid-2">
         <mat-form-field appearance="fill">
           <mat-label>Variant Classification</mat-label>
@@ -97,7 +115,6 @@
         </mat-form-field>
       </div>
 
-      <!-- QUANTITY + COST -->
       <div class="grid-3">
         <mat-form-field appearance="fill">
           <mat-label>Units Supplied</mat-label>
@@ -115,7 +132,6 @@
         </mat-form-field>
       </div>
 
-      <!-- META -->
       <div class="grid-2">
         <mat-form-field appearance="fill">
           <mat-label>Reference</mat-label>
@@ -137,9 +153,28 @@
 
   <button mat-stroked-button (click)="addRow()">+ Add Row</button>
 
+  <!-- 🔴 NEW -->
+  <div #bottomAnchor></div>
+
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
+
+  <!-- 🔴 NEW -->
+  <div class="scroll-actions">
+    <button mat-icon-button (click)="scrollToTop()" matTooltip="Go to top">
+      <mat-icon>arrow_upward</mat-icon>
+    </button>
+
+    <button mat-icon-button (click)="scrollToBottom()" matTooltip="Go to bottom">
+      <mat-icon>arrow_downward</mat-icon>
+    </button>
+
+    <button mat-icon-button color="warn" (click)="goToNextError()" matTooltip="Go to next error">
+      <mat-icon>error_outline</mat-icon>
+    </button>
+  </div>
+
   <button mat-button (click)="close()">Cancel</button>
   <button
     mat-flat-button
@@ -148,4 +183,5 @@
     (click)="submit()">
     Import
   </button>
+
 </mat-dialog-actions>

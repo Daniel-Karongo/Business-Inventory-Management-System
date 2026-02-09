@@ -1,4 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  OnDestroy
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormArray,
@@ -10,21 +17,20 @@ import {
 import * as ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogModule, MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import * as XLSX from 'xlsx';
 
 import { BranchService } from '../../services/branch.service';
-import { BranchBulkRow } from '../../models/branch.model';
-import { BranchDTO } from '../../models/branch.model';
+import { BranchBulkRow, BranchDTO } from '../../models/branch.model';
 import { BulkRequest, BulkResult } from '../../../../shared/models/bulk-import.model';
-import { MatDialog } from '@angular/material/dialog';
 import { BulkImportResultDialogComponent } from '../../../../shared/components/bulk-import-result-dialog/bulk-import-result-dialog.component';
 
 @Component({
@@ -38,17 +44,27 @@ import { BulkImportResultDialogComponent } from '../../../../shared/components/b
     MatInputModule,
     MatIconModule,
     MatCheckboxModule,
-    MatFormFieldModule
+    MatFormFieldModule,
+    MatTooltipModule
   ],
   templateUrl: './branch-bulk-import-dialog.component.html',
   styleUrls: ['./branch-bulk-import-dialog.component.scss']
 })
-export class BranchBulkImportDialogComponent implements OnInit {
+export class BranchBulkImportDialogComponent
+  implements OnInit, AfterViewInit, OnDestroy {
 
   loading = false;
   submitting = false;
 
   form!: FormGroup;
+
+  /* 🔴 NEW */
+  private errorIndex = 0;
+  private errorRows: number[] = [];
+
+  /* 🔴 NEW */
+  @ViewChild('scrollContainer') scrollContainer!: ElementRef;
+  @ViewChild('bottomAnchor') bottomAnchor!: ElementRef;
 
   constructor(
     private fb: FormBuilder,
@@ -56,7 +72,7 @@ export class BranchBulkImportDialogComponent implements OnInit {
     private branchService: BranchService,
     private snackbar: MatSnackBar,
     private dialog: MatDialog
-  ) { }
+  ) {}
 
   ngOnInit(): void {
     this.form = this.fb.group({
@@ -64,15 +80,44 @@ export class BranchBulkImportDialogComponent implements OnInit {
       rows: this.fb.array([])
     });
 
-    this.addRow(); // start with one row
+    this.addRow();
   }
 
+  /* 🔴 NEW */
+  ngAfterViewInit() {
+    window.addEventListener('keydown', this.handleKeyNav);
+  }
+
+  ngOnDestroy() {
+    window.removeEventListener('keydown', this.handleKeyNav);
+  }
+
+  /* 🔴 NEW */
+  handleKeyNav = (e: KeyboardEvent) => {
+    if (e.ctrlKey && e.key.toLowerCase() === 'g') {
+      e.preventDefault();
+      document.querySelector<HTMLInputElement>('#goToLineInput')?.focus();
+    }
+
+    if (e.key === 'Enter') {
+      const el = document.activeElement as HTMLInputElement;
+      if (el?.id === 'goToLineInput') {
+        this.goToLine(el.valueAsNumber);
+      }
+    }
+  };
+
   /* =========================
-     ROWS
+     ROWS (UNCHANGED)
      ========================= */
 
   get rows(): FormArray {
     return this.form.get('rows') as FormArray;
+  }
+
+  /* 🔴 NEW (DERIVED ONLY) */
+  get rowCount(): number {
+    return this.rows.length;
   }
 
   private createRow(data?: Partial<BranchBulkRow>) {
@@ -85,7 +130,6 @@ export class BranchBulkImportDialogComponent implements OnInit {
       _error: ['']
     });
 
-    // 🔤 AUTO-UPPERCASE
     fg.get('branchCode')!.valueChanges.subscribe(v => {
       if (!v) return;
       const upper = v.toUpperCase();
@@ -106,22 +150,20 @@ export class BranchBulkImportDialogComponent implements OnInit {
   }
 
   /* =========================
-     CSV
+     CSV (UNCHANGED)
      ========================= */
 
   downloadCsvTemplate() {
     const csv =
-      `branchCode,name,location,phone,email
+`branchCode,name,location,phone,email
 MAIN,Main Branch,Nairobi,0700000000,main@example.com`;
 
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
-
     const a = document.createElement('a');
     a.href = url;
     a.download = 'branches-bulk-template.csv';
     a.click();
-
     URL.revokeObjectURL(url);
   }
 
@@ -129,15 +171,9 @@ MAIN,Main Branch,Nairobi,0700000000,main@example.com`;
     const input = event.target as HTMLInputElement;
     if (!input.files?.length) return;
 
-    const file = input.files[0];
     const reader = new FileReader();
-
-    reader.onload = () => {
-      const text = reader.result as string;
-      this.parseCsv(text);
-    };
-
-    reader.readAsText(file);
+    reader.onload = () => this.parseCsv(reader.result as string);
+    reader.readAsText(input.files[0]);
   }
 
   private parseCsv(text: string) {
@@ -147,13 +183,7 @@ MAIN,Main Branch,Nairobi,0700000000,main@example.com`;
     for (const line of lines) {
       if (!line.trim()) continue;
 
-      const [
-        branchCode,
-        name,
-        location,
-        phone,
-        email
-      ] = line.split(',');
+      const [branchCode, name, location, phone, email] = line.split(',');
 
       this.addRow({
         branchCode: branchCode?.trim(),
@@ -163,22 +193,25 @@ MAIN,Main Branch,Nairobi,0700000000,main@example.com`;
         email: email?.trim()
       });
     }
+
+    /* 🔴 NEW */
+    this.snackbar.open(
+      `✅ ${this.rowCount} branches loaded from CSV`,
+      'Close',
+      { duration: 3000 }
+    );
   }
 
   /* =========================
-     EXCEL
+     EXCEL (UNCHANGED)
      ========================= */
 
   async downloadExcelTemplate() {
-
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Branches', {
       views: [{ state: 'frozen', ySplit: 1 }]
     });
 
-    /* ============================
-       DEFINE COLUMNS
-       ============================ */
     worksheet.columns = [
       { header: 'branchCode', key: 'branchCode', width: 14 },
       { header: 'name', key: 'name', width: 22 },
@@ -187,9 +220,6 @@ MAIN,Main Branch,Nairobi,0700000000,main@example.com`;
       { header: 'email', key: 'email', width: 28 }
     ];
 
-    /* ============================
-       HEADER STYLING
-       ============================ */
     const headerRow = worksheet.getRow(1);
     headerRow.font = { bold: true };
 
@@ -203,9 +233,6 @@ MAIN,Main Branch,Nairobi,0700000000,main@example.com`;
       };
     });
 
-    /* ============================
-       PLACEHOLDER / EXAMPLE ROW
-       ============================ */
     const exampleRow = worksheet.addRow({
       branchCode: 'BR001',
       name: 'Main Branch',
@@ -224,15 +251,9 @@ MAIN,Main Branch,Nairobi,0700000000,main@example.com`;
       };
     });
 
-    // 🔥 Force phone column to TEXT
     exampleRow.getCell('phone').numFmt = '@';
 
-    /* ============================
-       EMPTY DATA ROWS
-       ============================ */
-    const ROW_COUNT = 200;
-
-    for (let i = 0; i < ROW_COUNT; i++) {
+    for (let i = 0; i < 200; i++) {
       const row = worksheet.addRow({
         branchCode: '',
         name: '',
@@ -254,9 +275,6 @@ MAIN,Main Branch,Nairobi,0700000000,main@example.com`;
       row.getCell('phone').numFmt = '@';
     }
 
-    /* ============================
-       FINALIZE
-       ============================ */
     const buffer = await workbook.xlsx.writeBuffer();
 
     saveAs(
@@ -271,18 +289,15 @@ MAIN,Main Branch,Nairobi,0700000000,main@example.com`;
     const input = event.target as HTMLInputElement;
     if (!input.files?.length) return;
 
-    const file = input.files[0];
     const reader = new FileReader();
-
-    reader.onload = (e: any) => {
-      const workbook = XLSX.read(e.target.result, { type: 'binary' });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    reader.onload = e => {
+      const wb = XLSX.read(e.target?.result, { type: 'binary' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
       const rawRows = XLSX.utils.sheet_to_json<any>(sheet, { defval: '' });
 
       this.rows.clear();
 
       rawRows
-        // 🔥 FILTER OUT EMPTY ROWS
         .filter(r =>
           (r.branchCode && String(r.branchCode).trim()) ||
           (r.name && String(r.name).trim())
@@ -303,14 +318,54 @@ MAIN,Main Branch,Nairobi,0700000000,main@example.com`;
           'Close',
           { duration: 3000 }
         );
+      } else {
+        /* 🔴 NEW */
+        this.snackbar.open(
+          `✅ ${this.rowCount} branches loaded from Excel`,
+          'Close',
+          { duration: 3000 }
+        );
       }
     };
 
-    reader.readAsBinaryString(file);
+    reader.readAsBinaryString(input.files[0]);
+  }
+
+  /* 🔴 NEW: SCROLL + ERRORS */
+
+  scrollToTop() {
+    this.scrollContainer?.nativeElement.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  scrollToBottom() {
+    this.bottomAnchor?.nativeElement.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  goToLine(line: number) {
+    if (!line || line < 1 || line > this.rows.length) return;
+
+    const cards = this.scrollContainer.nativeElement.querySelectorAll('.row-card');
+    const target = cards[line - 1] as HTMLElement;
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    target.classList.add('highlight-line');
+    setTimeout(() => target.classList.remove('highlight-line'), 1500);
+  }
+
+  private cacheErrors(res: BulkResult<any>) {
+    this.errorRows = res.errors?.map(e => e.row) || [];
+    this.errorIndex = 0;
+  }
+
+  goToNextError() {
+    if (!this.errorRows.length) return;
+    this.goToLine(this.errorRows[this.errorIndex]);
+    this.errorIndex = (this.errorIndex + 1) % this.errorRows.length;
   }
 
   /* =========================
-     SUBMIT
+     SUBMIT (UNCHANGED)
      ========================= */
 
   submit() {
@@ -342,30 +397,31 @@ MAIN,Main Branch,Nairobi,0700000000,main@example.com`;
     this.branchService.bulkImport(payload).subscribe({
       next: (res: BulkResult<BranchDTO>) => {
 
-        // clear previous errors
         this.rows.controls.forEach(r =>
           r.patchValue({ _error: '' }, { emitEvent: false })
         );
 
         res.errors?.forEach(e => {
-          const row = this.rows.at(e.row - 1);
-          row?.patchValue({ _error: e.message });
+          this.rows.at(e.row - 1)?.patchValue({ _error: e.message });
         });
 
-        // ACTUAL IMPORT SUCCESS → CLOSE EVERYTHING
+        /* 🔴 NEW */
+        if (res.errors?.length) {
+          setTimeout(() => this.goToLine(res.errors[0].row), 200);
+        }
+
+        this.cacheErrors(res);
+
         if (!this.form.value.dryRun && res.failed === 0) {
           this.snackbar.open(
             `${res.success} branches imported successfully`,
             'Close',
             { duration: 3000 }
           );
-
-          // 🔥 CLOSE THIS DIALOG AND SIGNAL SUCCESS
           this.dialogRef.close(true);
           return;
         }
 
-        // DRY RUN OR PARTIAL FAIL → SHOW RESULT DIALOG
         this.dialog.open(BulkImportResultDialogComponent, {
           width: '1100px',
           maxWidth: '95vw',
@@ -385,7 +441,7 @@ MAIN,Main Branch,Nairobi,0700000000,main@example.com`;
         }).afterClosed().subscribe(confirm => {
           if (confirm) {
             this.form.patchValue({ dryRun: false });
-            this.submit(); // 🔁 re-submit as actual import
+            this.submit();
           }
         });
 

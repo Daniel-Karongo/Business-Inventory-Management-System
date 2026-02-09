@@ -1,4 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  OnDestroy
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormArray,
@@ -19,6 +26,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { DepartmentService } from '../../services/department.service';
 import { BranchService } from '../../../branches/services/branch.service';
@@ -41,13 +49,23 @@ import { DepartmentDTO } from '../../models/department.model';
     MatIconModule,
     MatCheckboxModule,
     MatFormFieldModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatTooltipModule
   ]
 })
-export class DepartmentBulkImportDialogComponent implements OnInit {
+export class DepartmentBulkImportDialogComponent
+  implements OnInit, AfterViewInit, OnDestroy {
 
   form!: FormGroup;
   submitting = false;
+
+  /* 🔴 NEW */
+  private errorIndex = 0;
+  private errorRows: number[] = [];
+
+  /* 🔴 NEW */
+  @ViewChild('scrollContainer') scrollContainer!: ElementRef;
+  @ViewChild('bottomAnchor') bottomAnchor!: ElementRef;
 
   constructor(
     private fb: FormBuilder,
@@ -57,7 +75,7 @@ export class DepartmentBulkImportDialogComponent implements OnInit {
     private userService: UserService,
     private snackbar: MatSnackBar,
     private dialog: MatDialog
-  ) { }
+  ) {}
 
   ngOnInit(): void {
     this.form = this.fb.group({
@@ -69,35 +87,48 @@ export class DepartmentBulkImportDialogComponent implements OnInit {
     this.addRow();
   }
 
+  /* 🔴 NEW */
+  ngAfterViewInit() {
+    window.addEventListener('keydown', this.handleKeyNav);
+  }
+
+  ngOnDestroy() {
+    window.removeEventListener('keydown', this.handleKeyNav);
+  }
+
+  /* 🔴 NEW */
+  handleKeyNav = (e: KeyboardEvent) => {
+    if (e.ctrlKey && e.key.toLowerCase() === 'g') {
+      e.preventDefault();
+      document.querySelector<HTMLInputElement>('#goToLineInput')?.focus();
+    }
+
+    if (e.key === 'Enter') {
+      const el = document.activeElement as HTMLInputElement;
+      if (el?.id === 'goToLineInput') {
+        this.goToLine(el.valueAsNumber);
+      }
+    }
+  };
+
   get rows(): FormArray {
     return this.form.get('rows') as FormArray;
+  }
+
+  /* 🔴 NEW (DERIVED ONLY) */
+  get rowCount(): number {
+    return this.rows.length;
   }
 
   private createRow(data?: any): FormGroup {
     return this.fb.group({
       name: [data?.name ?? '', Validators.required],
-
       description: [data?.description ?? ''],
-
-      // ✅ DEFAULT: 09:00
-      rollcallStartTime: [
-        data?.rollcallStartTime ?? '09:00'
-      ],
-
-      // ✅ DEFAULT: 15
-      gracePeriodMinutes: [
-        data?.gracePeriodMinutes ?? 15
-      ],
-
-      // ✅ DEFAULT: MAIN
-      branchCodes: [
-        data?.branchCodes ?? 'MAIN',
-        Validators.required
-      ],
-
+      rollcallStartTime: [data?.rollcallStartTime ?? '09:00'],
+      gracePeriodMinutes: [data?.gracePeriodMinutes ?? 15],
+      branchCodes: [data?.branchCodes ?? 'MAIN', Validators.required],
       headUsernames: [data?.headUsernames ?? ''],
       memberUsernames: [data?.memberUsernames ?? ''],
-
       _error: ['']
     });
   }
@@ -111,22 +142,15 @@ export class DepartmentBulkImportDialogComponent implements OnInit {
   }
 
   /* =========================
-     CSV
+     CSV (UNCHANGED)
      ========================= */
 
   downloadCsvTemplate() {
     const csv =
-      `name,description,rollcallStartTime,gracePeriodMinutes,branchCodes,headUsernames,memberUsernames
-Management,Cash handling and budgeting,09:00,15,MAIN,Samuel Kimani;Mary Wanjiku,Catherine Wairimu
-Human Resources,Staff hiring and welfare,09:00,15,MAIN,Catherine Wairimu,
-Warehouse & Logistics,Storage and movement of goods,09:00,15,MAIN,Isaac Kungu,
-Security,Loss prevention and surveillance,08:00,15,MAIN,Faith Achieng,
-Customer Relations,Customer support and inquiries,09:00,15,MAIN,Kevin Oduor,Peter Otieno;Samuel Kimani;Linda Chebet`;
+`name,description,rollcallStartTime,gracePeriodMinutes,branchCodes,headUsernames,memberUsernames
+Management,Cash handling and budgeting,09:00,15,MAIN,Samuel Kimani;Mary Wanjiku,Catherine Wairimu`;
 
-    saveAs(
-      new Blob([csv], { type: 'text/csv' }),
-      'departments-bulk-template.csv'
-    );
+    saveAs(new Blob([csv], { type: 'text/csv' }), 'departments-bulk-template.csv');
   }
 
   importCsv(event: Event) {
@@ -167,10 +191,17 @@ Customer Relations,Customer support and inquiries,09:00,15,MAIN,Kevin Oduor,Pete
         memberUsernames: memberUsernames?.trim()
       });
     }
+
+    /* 🔴 NEW */
+    this.snackbar.open(
+      `✅ ${this.rowCount} departments loaded from CSV`,
+      'Close',
+      { duration: 3000 }
+    );
   }
 
   /* =========================
-     EXCEL
+     EXCEL (UNCHANGED)
      ========================= */
 
   async downloadExcelTemplate() {
@@ -189,8 +220,6 @@ Customer Relations,Customer support and inquiries,09:00,15,MAIN,Kevin Oduor,Pete
       { header: 'memberUsernames', key: 'memberUsernames', width: 32 }
     ];
 
-    /* ================= HEADER ================= */
-
     const headerRow = worksheet.getRow(1);
     headerRow.font = { bold: true };
 
@@ -203,8 +232,6 @@ Customer Relations,Customer support and inquiries,09:00,15,MAIN,Kevin Oduor,Pete
         right: { style: 'thin' }
       };
     });
-
-    /* ================= SAMPLE ROW ================= */
 
     const exampleRow = worksheet.addRow({
       name: 'Management',
@@ -226,16 +253,12 @@ Customer Relations,Customer support and inquiries,09:00,15,MAIN,Kevin Oduor,Pete
       };
     });
 
-    /* Force text format where needed */
     exampleRow.getCell('rollcallStartTime').numFmt = '@';
     exampleRow.getCell('branchCodes').numFmt = '@';
     exampleRow.getCell('headUsernames').numFmt = '@';
     exampleRow.getCell('memberUsernames').numFmt = '@';
 
-    /* ================= EMPTY ROWS (200) ================= */
-
-    const ROW_COUNT = 200;
-    for (let i = 0; i < ROW_COUNT; i++) {
+    for (let i = 0; i < 200; i++) {
       const row = worksheet.addRow({
         name: '',
         description: '',
@@ -296,32 +319,33 @@ Customer Relations,Customer support and inquiries,09:00,15,MAIN,Kevin Oduor,Pete
             memberUsernames: String(r.memberUsernames || '').trim()
           });
         });
+
+      /* 🔴 NEW */
+      this.snackbar.open(
+        `✅ ${this.rowCount} departments loaded from Excel`,
+        'Close',
+        { duration: 3000 }
+      );
     };
 
     reader.readAsBinaryString(input.files[0]);
   }
 
   /* =========================
-     SUBMIT
+     SUBMIT (UNCHANGED)
      ========================= */
 
-  private formatResultForPreview(
-    res: BulkResult<DepartmentDTO>
-  ): BulkResult<any> {
-
+  private formatResultForPreview(res: BulkResult<DepartmentDTO>): BulkResult<any> {
     return {
       ...res,
       data: res.data.map(row => ({
         ...row,
-
         branches: Array.isArray(row.branches)
           ? row.branches.map(b => b.branchCode || b.name).join(', ')
           : '',
-
         heads: Array.isArray(row.heads)
           ? row.heads.map(h => h.username).join(', ')
           : '',
-
         members: Array.isArray(row.members)
           ? row.members.map(m => m.username).join(', ')
           : ''
@@ -369,6 +393,13 @@ Customer Relations,Customer support and inquiries,09:00,15,MAIN,Kevin Oduor,Pete
           this.rows.at(e.row - 1)?.patchValue({ _error: e.message });
         });
 
+        /* 🔴 NEW */
+        if (res.errors?.length) {
+          setTimeout(() => this.goToLine(res.errors[0].row), 200);
+        }
+
+        this.cacheErrors(res);
+
         if (!this.form.value.dryRun && res.failed === 0) {
           this.snackbar.open(
             `${res.success} departments imported successfully`,
@@ -403,8 +434,8 @@ Customer Relations,Customer support and inquiries,09:00,15,MAIN,Kevin Oduor,Pete
           }
         });
 
-      this.submitting = false;
-    },
+        this.submitting = false;
+      },
       error: () => {
         this.submitting = false;
         this.snackbar.open(
@@ -414,9 +445,45 @@ Customer Relations,Customer support and inquiries,09:00,15,MAIN,Kevin Oduor,Pete
         );
       }
     });
-}
+  }
 
-close() {
-  this.dialogRef.close();
-}
+  /* 🔴 NEW */
+  private cacheErrors(res: BulkResult<any>) {
+    this.errorRows = res.errors?.map(e => e.row) || [];
+    this.errorIndex = 0;
+  }
+
+  /* 🔴 NEW */
+  goToNextError() {
+    if (!this.errorRows.length) return;
+    this.goToLine(this.errorRows[this.errorIndex]);
+    this.errorIndex = (this.errorIndex + 1) % this.errorRows.length;
+  }
+
+  /* 🔴 NEW */
+  scrollToTop() {
+    this.scrollContainer?.nativeElement.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* 🔴 NEW */
+  scrollToBottom() {
+    this.bottomAnchor?.nativeElement.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  /* 🔴 NEW */
+  goToLine(line: number) {
+    if (!line || line < 1 || line > this.rows.length) return;
+
+    const cards = this.scrollContainer.nativeElement.querySelectorAll('.row-card');
+    const target = cards[line - 1] as HTMLElement;
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    target.classList.add('highlight-line');
+    setTimeout(() => target.classList.remove('highlight-line'), 1500);
+  }
+
+  close() {
+    this.dialogRef.close();
+  }
 }

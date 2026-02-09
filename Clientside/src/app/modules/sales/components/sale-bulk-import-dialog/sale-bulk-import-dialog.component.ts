@@ -26,6 +26,12 @@ import { BulkImportResultDialogComponent } from '../../../../shared/components/b
 import { SalesService } from '../../services/sales.service';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 
+/* =========================
+   🔴 NEW IMPORTS (ADDITIVE)
+   ========================= */
+import { ViewChild, ElementRef } from '@angular/core';
+import { MatTooltipModule } from '@angular/material/tooltip';
+
 @Component({
   standalone: true,
   selector: 'app-sale-bulk-import-dialog',
@@ -42,7 +48,8 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
     MatFormFieldModule,
     MatSelectModule,
     MatSnackBarModule,
-    MatDatepickerModule
+    MatDatepickerModule,
+    MatTooltipModule
   ]
 })
 export class SaleBulkImportDialogComponent implements OnInit {
@@ -53,6 +60,14 @@ export class SaleBulkImportDialogComponent implements OnInit {
   /** defaults must match backend */
   readonly DEFAULT_VARIANT = 'STANDARD';
   readonly DEFAULT_BRANCH = 'MAIN';
+
+  private errorIndex = 0;
+  private errorRows: number[] = [];
+  /* =========================
+     🔴 NEW VIEW REFERENCES
+     ========================= */
+  @ViewChild('scrollContainer') scrollContainer!: ElementRef;
+  @ViewChild('bottomAnchor') bottomAnchor!: ElementRef;
 
   constructor(
     private fb: FormBuilder,
@@ -73,11 +88,62 @@ export class SaleBulkImportDialogComponent implements OnInit {
   }
 
   /* =========================
+   🔴 KEYBOARD SHORTCUTS
+   ========================= */
+
+  ngAfterViewInit() {
+    window.addEventListener('keydown', this.handleKeyNav);
+  }
+
+  ngOnDestroy() {
+    window.removeEventListener('keydown', this.handleKeyNav);
+  }
+
+  handleKeyNav = (e: KeyboardEvent) => {
+    // Ctrl + G → focus Go To Line
+    if (e.ctrlKey && e.key.toLowerCase() === 'g') {
+      e.preventDefault();
+      const input = document.querySelector<HTMLInputElement>('#goToLineInput');
+      input?.focus();
+    }
+
+    // Enter → jump if Go To Line focused
+    if (e.key === 'Enter') {
+      const input = document.activeElement as HTMLInputElement;
+      if (input?.id === 'goToLineInput') {
+        this.goToLine(input.valueAsNumber);
+      }
+    }
+  };
+
+  /* =========================
+   🔴 ERROR NAVIGATION
+   ========================= */
+
+  private cacheErrors(res: BulkResult<any>) {
+    this.errorRows = res.errors?.map(e => e.row) || [];
+    this.errorIndex = 0;
+  }
+
+  goToNextError() {
+    if (!this.errorRows.length) return;
+    this.goToLine(this.errorRows[this.errorIndex]);
+    this.errorIndex = (this.errorIndex + 1) % this.errorRows.length;
+  }
+
+  /* =========================
      FORM HELPERS
      ========================= */
 
   get rows(): FormArray {
     return this.form.get('rows') as FormArray;
+  }
+
+  /* =========================
+     🔴 NEW LIVE TALLY (DERIVED)
+     ========================= */
+  get rowCount(): number {
+    return this.rows.length;
   }
 
   private createRow(data?: any): FormGroup {
@@ -156,6 +222,13 @@ R-002,,Lenovo ThinkPad T480,STANDARD,1,42360,MAIN,,MPESA|42360|ABC123`;
         payments: payments?.trim()
       });
     }
+
+    /* 🔴 NEW FEEDBACK (NO LOGIC CHANGE) */
+    this.snackbar.open(
+      `✅ ${this.rowCount} lines loaded from CSV`,
+      'Close',
+      { duration: 3000 }
+    );
   }
 
   /* =========================
@@ -225,7 +298,6 @@ R-002,,Lenovo ThinkPad T480,STANDARD,1,42360,MAIN,,MPESA|42360|ABC123`;
       };
     });
 
-    /* 🔥 DATE TYPE */
     example.getCell('saleDate').numFmt = 'dd/mm/yyyy';
 
     /* ============================
@@ -256,13 +328,9 @@ R-002,,Lenovo ThinkPad T480,STANDARD,1,42360,MAIN,,MPESA|42360|ABC123`;
         };
       });
 
-      /* Ensure date column stays date-typed */
       row.getCell('saleDate').numFmt = 'dd/mm/yyyy';
     }
 
-    /* ============================
-       FINALIZE
-       ============================ */
     const buffer = await workbook.xlsx.writeBuffer();
 
     saveAs(
@@ -290,6 +358,13 @@ R-002,,Lenovo ThinkPad T480,STANDARD,1,42360,MAIN,,MPESA|42360|ABC123`;
           saleDate: this.parseExcelDate(r.saleDate)
         });
       });
+
+      /* 🔴 NEW FEEDBACK (NO LOGIC CHANGE) */
+      this.snackbar.open(
+        `✅ ${this.rowCount} lines loaded from Excel`,
+        'Close',
+        { duration: 3000 }
+      );
     };
 
     reader.readAsBinaryString(input.files[0]);
@@ -298,19 +373,15 @@ R-002,,Lenovo ThinkPad T480,STANDARD,1,42360,MAIN,,MPESA|42360|ABC123`;
   private parseExcelDate(value: any): Date | null {
     if (!value) return null;
 
-    // Case 1: already a Date (ExcelJS, datepicker, etc.)
     if (value instanceof Date) {
       return value;
     }
 
-    // Case 2: Excel serial number
     if (typeof value === 'number') {
-      // Excel epoch = 1899-12-30
       const utcDays = value - 25569;
       return new Date(utcDays * 86400 * 1000);
     }
 
-    // Case 3: ISO / string date
     if (typeof value === 'string') {
       const parsed = new Date(value);
       if (!isNaN(parsed.getTime())) {
@@ -322,7 +393,47 @@ R-002,,Lenovo ThinkPad T480,STANDARD,1,42360,MAIN,,MPESA|42360|ABC123`;
   }
 
   /* =========================
-     SUBMIT (IDENTICAL FLOW TO USERS)
+     🔴 NEW SCROLL HELPERS
+     ========================= */
+
+  scrollToTop() {
+    this.scrollContainer?.nativeElement.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }
+
+  scrollToBottom() {
+    this.bottomAnchor?.nativeElement.scrollIntoView({
+      behavior: 'smooth'
+    });
+  }
+
+  /* =========================
+   🔴 NEW FEATURE: GO TO LINE
+   ========================= */
+
+  goToLine(lineNumber: number) {
+    if (!lineNumber || lineNumber < 1 || lineNumber > this.rows.length) return;
+
+    const container: HTMLElement = this.scrollContainer.nativeElement;
+    const rowCards = container.querySelectorAll('.row-card');
+
+    const target = rowCards[lineNumber - 1] as HTMLElement;
+    if (!target) return;
+
+    target.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+
+    // Optional visual focus
+    target.classList.add('highlight-line');
+    setTimeout(() => target.classList.remove('highlight-line'), 1500);
+  }
+
+  /* =========================
+     SUBMIT (UNCHANGED)
      ========================= */
 
   submit() {
@@ -358,6 +469,14 @@ R-002,,Lenovo ThinkPad T480,STANDARD,1,42360,MAIN,,MPESA|42360|ABC123`;
         res.errors?.forEach(e => {
           this.rows.at(e.row - 1)?.patchValue({ _error: e.message });
         });
+
+        /* 🔴 AUTO-FOCUS FIRST ERROR */
+        if (res.errors?.length) {
+          const firstErrorLine = res.errors[0].row;
+          setTimeout(() => this.goToLine(firstErrorLine), 200);
+        }
+
+        this.cacheErrors(res);
 
         if (!this.form.value.dryRun && res.failed === 0) {
           this.snackbar.open(

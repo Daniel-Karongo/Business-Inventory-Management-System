@@ -1,10 +1,8 @@
 <h2 mat-dialog-title class="bulk-title">Bulk Import Products</h2>
 
-<mat-dialog-content [formGroup]="form" class="body">
+<mat-dialog-content #scrollContainer [formGroup]="form" class="body">
 
-  <!-- TOOLBAR -->
   <div class="import-zone">
-
     <div class="import-tiles">
 
       <label class="import-tile excel">
@@ -38,14 +36,40 @@
         CSV Template
       </button>
     </div>
+  </div>
 
+  <!-- 🔴 NEW -->
+  <div class="line-tally prominent">
+    <mat-icon>format_list_numbered</mat-icon>
+    <div class="tally-text">
+      <strong>{{ rowCount }}</strong>
+      <span *ngIf="rowCount==1"> Product loaded</span>
+      <span *ngIf="rowCount!=1"> Products loaded</span>
+    </div>
+  </div>
+
+  <!-- 🔴 NEW -->
+  <div class="go-to-line">
+    <mat-form-field appearance="fill">
+      <mat-label>Go to line</mat-label>
+      <input
+        id="goToLineInput"
+        matInput
+        type="number"
+        min="1"
+        [max]="rowCount"
+        #lineInput>
+    </mat-form-field>
+
+    <button mat-stroked-button (click)="goToLine(lineInput.valueAsNumber)">
+      Go
+    </button>
   </div>
 
   <mat-checkbox formControlName="dryRun">
     Dry run (validate only)
   </mat-checkbox>
 
-  <!-- ROWS -->
   <div class="rows" formArrayName="rows">
 
     <div class="row-card" *ngFor="let r of rows.controls; let i = index" [formGroupName]="i">
@@ -71,7 +95,7 @@
 
       <div class="grid-2">
         <mat-form-field>
-          <mat-label>Suppliers (exact names, comma-separated)</mat-label>
+          <mat-label>Suppliers</mat-label>
           <input matInput formControlName="supplierNames">
         </mat-form-field>
 
@@ -95,11 +119,33 @@
 
   <button mat-stroked-button (click)="addRow()">+ Add Product</button>
 
+  <!-- 🔴 NEW -->
+  <div #bottomAnchor></div>
+
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
+
+  <!-- 🔴 NEW -->
+  <div class="scroll-actions">
+    <button mat-icon-button (click)="scrollToTop()" matTooltip="Go to top">
+      <mat-icon>arrow_upward</mat-icon>
+    </button>
+
+    <button mat-icon-button (click)="scrollToBottom()" matTooltip="Go to bottom">
+      <mat-icon>arrow_downward</mat-icon>
+    </button>
+
+    <button mat-icon-button color="warn" (click)="goToNextError()" matTooltip="Go to next error">
+      <mat-icon>error_outline</mat-icon>
+    </button>
+  </div>
+
   <button mat-button (click)="close()">Cancel</button>
-  <button mat-flat-button color="primary" [disabled]="submitting || form.invalid" (click)="submit()">
+  <button mat-flat-button color="primary"
+          [disabled]="submitting || form.invalid"
+          (click)="submit()">
     Import
   </button>
+
 </mat-dialog-actions>

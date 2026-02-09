@@ -1,4 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  OnDestroy
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormArray,
@@ -19,8 +26,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
-
-import { forkJoin } from 'rxjs';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { SupplierService } from '../../services/supplier.service';
 import { CategoryService } from '../../../categories/services/category.service';
@@ -42,14 +48,23 @@ import { Supplier } from '../../models/supplier.model';
     MatIconModule,
     MatCheckboxModule,
     MatFormFieldModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatTooltipModule
   ]
 })
-export class SupplierBulkImportDialogComponent implements OnInit {
+export class SupplierBulkImportDialogComponent
+  implements OnInit, AfterViewInit, OnDestroy {
 
   form!: FormGroup;
   submitting = false;
   categories: any[] = [];
+
+  /* 🔴 UX ADDITIONS */
+  private errorRows: number[] = [];
+  private errorIndex = 0;
+
+  @ViewChild('scrollContainer') scrollContainer!: ElementRef;
+  @ViewChild('bottomAnchor') bottomAnchor!: ElementRef;
 
   constructor(
     private fb: FormBuilder,
@@ -58,7 +73,7 @@ export class SupplierBulkImportDialogComponent implements OnInit {
     private categoryService: CategoryService,
     private snackbar: MatSnackBar,
     private dialog: MatDialog
-  ) { }
+  ) {}
 
   ngOnInit(): void {
     this.form = this.fb.group({
@@ -70,8 +85,40 @@ export class SupplierBulkImportDialogComponent implements OnInit {
     this.addRow();
   }
 
+  ngAfterViewInit() {
+    window.addEventListener('keydown', this.handleKeyNav);
+  }
+
+  ngOnDestroy() {
+    window.removeEventListener('keydown', this.handleKeyNav);
+  }
+
+  /* 🔴 KEYBOARD NAV */
+  handleKeyNav = (e: KeyboardEvent) => {
+    if (e.ctrlKey && e.key.toLowerCase() === 'g') {
+      e.preventDefault();
+      document.querySelector<HTMLInputElement>('#goToLineInput')?.focus();
+    }
+
+    if (e.key === 'Enter') {
+      const el = document.activeElement as HTMLInputElement;
+      if (el?.id === 'goToLineInput') {
+        this.goToLine(el.valueAsNumber);
+      }
+    }
+  };
+
+  /* =========================
+     FORM
+     ========================= */
+
   get rows(): FormArray {
     return this.form.get('rows') as FormArray;
+  }
+
+  /* 🔴 DERIVED */
+  get rowCount(): number {
+    return this.rows.length;
   }
 
   private createRow(data?: any): FormGroup {
@@ -95,32 +142,73 @@ export class SupplierBulkImportDialogComponent implements OnInit {
   }
 
   private loadCategories() {
-    this.categoryService.getAll('flat', false)
+    this.categoryService
+      .getAll('flat', false)
       .subscribe(c => this.categories = c || []);
   }
 
   /* =========================
-     CSV
+     CSV (UNCHANGED)
      ========================= */
 
   downloadCsvTemplate() {
     const csv =
-      `name,emails,phones,address,region,categories
+`name,emails,phones,address,region,categories
 Acme Ltd,info@acme.com,0712345678,Nairobi,Nairobi,Electronics,Accessories`;
 
-    saveAs(new Blob([csv], { type: 'text/csv' }), 'suppliers-bulk-template.csv');
+    saveAs(
+      new Blob([csv], { type: 'text/csv' }),
+      'suppliers-bulk-template.csv'
+    );
   }
 
-  async downloadExcelTemplate() {
+  importCsv(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length) return;
 
+    const reader = new FileReader();
+    reader.onload = () => this.parseCsv(reader.result as string);
+    reader.readAsText(input.files[0]);
+  }
+
+  private parseCsv(text: string) {
+    const lines = text.split('\n').slice(1);
+    this.rows.clear();
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+
+      const [name, emails, phones, address, region, categories] =
+        line.split(',');
+
+      this.addRow({
+        name: name?.trim(),
+        emails: emails?.trim(),
+        phones: phones?.trim(),
+        address: address?.trim(),
+        region: region?.trim(),
+        categories: categories?.trim()
+      });
+    }
+
+    /* 🔴 UX */
+    this.snackbar.open(
+      `✅ ${this.rowCount} suppliers loaded from CSV`,
+      'Close',
+      { duration: 3000 }
+    );
+  }
+
+  /* =========================
+     EXCEL TEMPLATE (UNCHANGED)
+     ========================= */
+
+  async downloadExcelTemplate() {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Suppliers', {
       views: [{ state: 'frozen', ySplit: 1 }]
     });
 
-    /* ============================
-       DEFINE COLUMNS
-       ============================ */
     worksheet.columns = [
       { header: 'name', key: 'name', width: 26 },
       { header: 'emails', key: 'emails', width: 32 },
@@ -130,9 +218,6 @@ Acme Ltd,info@acme.com,0712345678,Nairobi,Nairobi,Electronics,Accessories`;
       { header: 'categories', key: 'categories', width: 32 }
     ];
 
-    /* ============================
-       HEADER STYLING
-       ============================ */
     const headerRow = worksheet.getRow(1);
     headerRow.font = { bold: true };
 
@@ -146,9 +231,6 @@ Acme Ltd,info@acme.com,0712345678,Nairobi,Nairobi,Electronics,Accessories`;
       };
     });
 
-    /* ============================
-       EXAMPLE ROW
-       ============================ */
     const exampleRow = worksheet.addRow({
       name: 'Acme Ltd',
       emails: 'info@acme.com',
@@ -168,15 +250,9 @@ Acme Ltd,info@acme.com,0712345678,Nairobi,Nairobi,Electronics,Accessories`;
       };
     });
 
-    // 🔥 FORCE PHONES COLUMN TO TEXT
     exampleRow.getCell('phones').numFmt = '@';
 
-    /* ============================
-       EMPTY DATA ROWS
-       ============================ */
-    const ROW_COUNT = 200;
-
-    for (let i = 0; i < ROW_COUNT; i++) {
+    for (let i = 0; i < 200; i++) {
       const row = worksheet.addRow({
         name: '',
         emails: '',
@@ -196,13 +272,9 @@ Acme Ltd,info@acme.com,0712345678,Nairobi,Nairobi,Electronics,Accessories`;
         };
       });
 
-      // 🔥 FORCE PHONES COLUMN TO TEXT (ALL ROWS)
       row.getCell('phones').numFmt = '@';
     }
 
-    /* ============================
-       FINALIZE
-       ============================ */
     const buffer = await workbook.xlsx.writeBuffer();
 
     saveAs(
@@ -213,76 +285,29 @@ Acme Ltd,info@acme.com,0712345678,Nairobi,Nairobi,Electronics,Accessories`;
     );
   }
 
-  importCsv(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (!input.files?.length) return;
-
-    const reader = new FileReader();
-    reader.onload = () => this.parseCsv(reader.result as string);
-    reader.readAsText(input.files[0]);
-  }
-
-  private parseCsv(text: string) {
-    const lines = text.split('\n').slice(1); // skip header
-    this.rows.clear();
-
-    for (const line of lines) {
-      if (!line.trim()) continue;
-
-      const [
-        name,
-        emails,
-        phones,
-        address,
-        region,
-        categories
-      ] = line.split(',');
-
-      this.addRow({
-        name: name?.trim(),
-        emails: emails?.trim(),
-        phones: phones?.trim(),
-        address: address?.trim(),
-        region: region?.trim(),
-        categories: categories?.trim()
-      });
-    }
-  }
-
   /* =========================
-   EXCEL
-   ========================= */
+     EXCEL IMPORT (UNCHANGED)
+     ========================= */
 
   importExcel(event: Event) {
     const input = event.target as HTMLInputElement;
     if (!input.files?.length) return;
 
     const reader = new FileReader();
-
     reader.onload = e => {
-      const binary = e.target?.result;
-      if (!binary) return;
+      const workbook = XLSX.read(e.target?.result, { type: 'binary' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rawRows = XLSX.utils.sheet_to_json<any>(sheet, { defval: '' });
 
-      const workbook = XLSX.read(binary, { type: 'binary' });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-
-      // Convert sheet → objects (one per physical row)
-      const rawRows = XLSX.utils.sheet_to_json<any>(sheet, {
-        defval: ''
-      });
-
-      // Clear existing form rows
       this.rows.clear();
 
-      // 🔥 FILTER: only rows with real data
       rawRows
         .filter(r =>
           String(r.name || '').trim() ||
           String(r.emails || '').trim() ||
           String(r.phones || '').trim()
         )
-        .forEach(r => {
+        .forEach(r =>
           this.addRow({
             name: String(r.name || '').trim(),
             emails: String(r.emails || '').trim(),
@@ -290,15 +315,22 @@ Acme Ltd,info@acme.com,0712345678,Nairobi,Nairobi,Electronics,Accessories`;
             address: String(r.address || '').trim(),
             region: String(r.region || '').trim(),
             categories: String(r.categories || '').trim()
-          });
-        });
+          })
+        );
+
+      /* 🔴 UX */
+      this.snackbar.open(
+        `✅ ${this.rowCount} suppliers loaded from Excel`,
+        'Close',
+        { duration: 3000 }
+      );
     };
 
     reader.readAsBinaryString(input.files[0]);
   }
 
   /* =========================
-     SUBMIT
+     SUBMIT (UNCHANGED + UX)
      ========================= */
 
   submit() {
@@ -333,6 +365,14 @@ Acme Ltd,info@acme.com,0712345678,Nairobi,Nairobi,Electronics,Accessories`;
         res.errors?.forEach(e => {
           this.rows.at(e.row - 1)?.patchValue({ _error: e.message });
         });
+
+        /* 🔴 UX */
+        this.errorRows = res.errors?.map(e => e.row) || [];
+        this.errorIndex = 0;
+
+        if (this.errorRows.length) {
+          setTimeout(() => this.goToLine(this.errorRows[0]), 200);
+        }
 
         if (!this.form.value.dryRun && res.failed === 0) {
           this.snackbar.open(
@@ -376,6 +416,41 @@ Acme Ltd,info@acme.com,0712345678,Nairobi,Nairobi,Electronics,Accessories`;
           { duration: 3000 }
         );
       }
+    });
+  }
+
+  /* 🔴 UX HELPERS */
+
+  goToLine(line: number) {
+    if (!line || line < 1 || line > this.rows.length) return;
+
+    const cards =
+      this.scrollContainer.nativeElement.querySelectorAll('.row-card');
+
+    const target = cards[line - 1] as HTMLElement;
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    target.classList.add('highlight-line');
+    setTimeout(() => target.classList.remove('highlight-line'), 1500);
+  }
+
+  goToNextError() {
+    if (!this.errorRows.length) return;
+    this.goToLine(this.errorRows[this.errorIndex]);
+    this.errorIndex = (this.errorIndex + 1) % this.errorRows.length;
+  }
+
+  scrollToTop() {
+    this.scrollContainer.nativeElement.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }
+
+  scrollToBottom() {
+    this.bottomAnchor.nativeElement.scrollIntoView({
+      behavior: 'smooth'
     });
   }
 

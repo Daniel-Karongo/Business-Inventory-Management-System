@@ -66,18 +66,6 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
-/* ===============================
-   VARIANTS
-=============================== */
-
-.template-btn.excel mat-icon {
-  color: #2e7d32; // Excel green
-}
-
-.template-btn.csv mat-icon {
-  color: #1565c0; // CSV blue
-}
-
 .rows {
   display: flex;
   flex-direction: column;
@@ -111,4 +99,36 @@
 .row-error {
   color: #c62828;
   font-size: 0.8rem;
+}
+
+/* 🔴 NEW */
+
+.line-tally.prominent {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #e3f2fd, #f1f8ff);
+  border: 1px solid #bbdefb;
+  color: #0d47a1;
+  width: fit-content;
+}
+
+.go-to-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.scroll-actions {
+  display: flex;
+  gap: 6px;
+  margin-right: auto;
+}
+
+.highlight-line {
+  outline: 2px solid #1976d2;
+  outline-offset: 4px;
+  transition: outline 0.3s ease;
 }

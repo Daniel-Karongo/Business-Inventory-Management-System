@@ -9,9 +9,7 @@
   letter-spacing: 0.3px;
 }
 
-/* ===============================
-   IMPORT ZONE (ENTERPRISE)
-=============================== */
+/* IMPORT ZONE */
 
 .import-zone {
   display: flex;
@@ -65,14 +63,7 @@
   align-items: center;
 }
 
-.template-actions button:hover {
-  background: var(--surface-hover);
-  transform: translateY(-1px);
-}
-
-/* ===============================
-   ROWS
-=============================== */
+/* ROWS */
 
 .rows {
   display: flex;
@@ -98,9 +89,7 @@
   border-bottom: 1px dashed var(--border);
 }
 
-/* ===============================
-   GRID SYSTEM
-=============================== */
+/* GRID */
 
 .grid-2 {
   display: grid;
@@ -114,11 +103,41 @@
   gap: 16px;
 }
 
-/* ===============================
-   ERROR
-=============================== */
+/* ERROR */
 
 .row-error {
   color: #c62828;
   font-size: 0.8rem;
+}
+
+/* 🔴 NEW */
+
+.line-tally.prominent {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #e3f2fd, #f1f8ff);
+  border: 1px solid #bbdefb;
+  color: #0d47a1;
+  width: fit-content;
+}
+
+.go-to-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.scroll-actions {
+  display: flex;
+  gap: 6px;
+  margin-right: auto;
+}
+
+.highlight-line {
+  outline: 2px solid #1976d2;
+  outline-offset: 4px;
+  transition: outline 0.3s ease;
 }

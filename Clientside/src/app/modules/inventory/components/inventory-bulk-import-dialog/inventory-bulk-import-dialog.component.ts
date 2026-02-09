@@ -1,4 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  OnDestroy
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormArray,
@@ -19,6 +26,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { InventoryService } from '../../services/inventory.service';
 import { InventoryBulkPreviewResult } from '../../models/inventory-bulk.model';
@@ -39,13 +47,23 @@ import { BulkImportResultDialogComponent } from '../../../../shared/components/b
     MatIconModule,
     MatCheckboxModule,
     MatFormFieldModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatTooltipModule
   ]
 })
-export class InventoryBulkImportDialogComponent implements OnInit {
+export class InventoryBulkImportDialogComponent
+  implements OnInit, AfterViewInit, OnDestroy {
 
   form!: FormGroup;
   submitting = false;
+
+  /* 🔴 NEW */
+  private errorIndex = 0;
+  private errorRows: number[] = [];
+
+  /* 🔴 NEW */
+  @ViewChild('scrollContainer') scrollContainer!: ElementRef;
+  @ViewChild('bottomAnchor') bottomAnchor!: ElementRef;
 
   constructor(
     private fb: FormBuilder,
@@ -53,7 +71,7 @@ export class InventoryBulkImportDialogComponent implements OnInit {
     private dialog: MatDialog,
     private dialogRef: MatDialogRef<InventoryBulkImportDialogComponent>,
     private snackbar: MatSnackBar
-  ) { }
+  ) {}
 
   ngOnInit(): void {
     this.form = this.fb.group({
@@ -64,12 +82,41 @@ export class InventoryBulkImportDialogComponent implements OnInit {
     this.addRow();
   }
 
+  /* 🔴 NEW */
+  ngAfterViewInit() {
+    window.addEventListener('keydown', this.handleKeyNav);
+  }
+
+  ngOnDestroy() {
+    window.removeEventListener('keydown', this.handleKeyNav);
+  }
+
+  /* 🔴 NEW */
+  handleKeyNav = (e: KeyboardEvent) => {
+    if (e.ctrlKey && e.key.toLowerCase() === 'g') {
+      e.preventDefault();
+      document.querySelector<HTMLInputElement>('#goToLineInput')?.focus();
+    }
+
+    if (e.key === 'Enter') {
+      const el = document.activeElement as HTMLInputElement;
+      if (el?.id === 'goToLineInput') {
+        this.goToLine(el.valueAsNumber);
+      }
+    }
+  };
+
   /* =========================
      FORM
      ========================= */
 
   get rows(): FormArray {
     return this.form.get('rows') as FormArray;
+  }
+
+  /* 🔴 NEW (DERIVED) */
+  get rowCount(): number {
+    return this.rows.length;
   }
 
   private createRow(data?: any): FormGroup {
@@ -96,18 +143,16 @@ export class InventoryBulkImportDialogComponent implements OnInit {
   }
 
   /* =========================
-     CSV
+     CSV (UNCHANGED)
      ========================= */
 
   downloadCsvTemplate() {
     const csv =
-      `productName,variantClassification,branchCode,supplierName,unitsSupplied,unitCost,sellingPrice,reference,note
+`productName,variantClassification,branchCode,supplierName,unitsSupplied,unitCost,sellingPrice,reference,note
 Milk 1L,STANDARD,MAIN,Local Supplier,10,2500,3200,GRN-001,Initial stock`;
 
-    saveAs(
-      new Blob([csv], { type: 'text/csv' }),
-      'inventory-bulk-receive-template.csv'
-    );
+    saveAs(new Blob([csv], { type: 'text/csv' }),
+      'inventory-bulk-receive-template.csv');
   }
 
   importCsv(event: Event) {
@@ -150,10 +195,17 @@ Milk 1L,STANDARD,MAIN,Local Supplier,10,2500,3200,GRN-001,Initial stock`;
         note
       });
     }
+
+    /* 🔴 NEW */
+    this.snackbar.open(
+      `✅ ${this.rowCount} rows loaded from CSV`,
+      'Close',
+      { duration: 3000 }
+    );
   }
 
   /* =========================
-     EXCEL TEMPLATE (PARITY)
+     EXCEL TEMPLATE (UNCHANGED)
      ========================= */
 
   async downloadExcelTemplate() {
@@ -216,7 +268,6 @@ Milk 1L,STANDARD,MAIN,Local Supplier,10,2500,3200,GRN-001,Initial stock`;
         reference: '',
         note: ''
       });
-
       applyBorders(row);
     }
 
@@ -231,7 +282,7 @@ Milk 1L,STANDARD,MAIN,Local Supplier,10,2500,3200,GRN-001,Initial stock`;
   }
 
   /* =========================
-     EXCEL IMPORT
+     EXCEL IMPORT (UNCHANGED)
      ========================= */
 
   importExcel(event: Event) {
@@ -259,18 +310,24 @@ Milk 1L,STANDARD,MAIN,Local Supplier,10,2500,3200,GRN-001,Initial stock`;
           note: r.note
         })
       );
+
+      /* 🔴 NEW */
+      this.snackbar.open(
+        `✅ ${this.rowCount} rows loaded from Excel`,
+        'Close',
+        { duration: 3000 }
+      );
     };
 
     reader.readAsBinaryString(input.files[0]);
   }
 
   /* =========================
-     SUBMIT
+     SUBMIT (UNCHANGED + ADDITIVE UX)
      ========================= */
 
   submit() {
     if (this.form.invalid || this.submitting) return;
-
     this.submitting = true;
 
     const payload: BulkRequest<any> = {
@@ -301,8 +358,19 @@ Milk 1L,STANDARD,MAIN,Local Supplier,10,2500,3200,GRN-001,Initial stock`;
           this.rows.at(e.row - 1)?.patchValue({ _error: e.message });
         });
 
+        /* 🔴 NEW */
+        if (res.errors?.length) {
+          setTimeout(() => this.goToLine(res.errors[0].row), 200);
+        }
+
+        this.cacheErrors(res);
+
         if (!this.form.value.dryRun && res.failed === 0) {
-          this.snackbar.open('Inventory received successfully', 'Close', { duration: 3000 });
+          this.snackbar.open(
+            'Inventory received successfully',
+            'Close',
+            { duration: 3000 }
+          );
           this.dialogRef.close(true);
           return;
         }
@@ -314,7 +382,6 @@ Milk 1L,STANDARD,MAIN,Local Supplier,10,2500,3200,GRN-001,Initial stock`;
           this.submitting = false;
           return;
         }
-
 
         this.dialog.open(BulkImportResultDialogComponent, {
           width: '1100px',
@@ -344,9 +411,49 @@ Milk 1L,STANDARD,MAIN,Local Supplier,10,2500,3200,GRN-001,Initial stock`;
       },
       error: () => {
         this.submitting = false;
-        this.snackbar.open('Inventory bulk import failed', 'Close', { duration: 3000 });
+        this.snackbar.open(
+          'Inventory bulk import failed',
+          'Close',
+          { duration: 3000 }
+        );
       }
     });
+  }
+
+  /* 🔴 NEW */
+  private cacheErrors(res: BulkResult<any>) {
+    this.errorRows = res.errors?.map(e => e.row) || [];
+    this.errorIndex = 0;
+  }
+
+  /* 🔴 NEW */
+  goToNextError() {
+    if (!this.errorRows.length) return;
+    this.goToLine(this.errorRows[this.errorIndex]);
+    this.errorIndex = (this.errorIndex + 1) % this.errorRows.length;
+  }
+
+  /* 🔴 NEW */
+  scrollToTop() {
+    this.scrollContainer?.nativeElement.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* 🔴 NEW */
+  scrollToBottom() {
+    this.bottomAnchor?.nativeElement.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  /* 🔴 NEW */
+  goToLine(line: number) {
+    if (!line || line < 1 || line > this.rows.length) return;
+
+    const cards = this.scrollContainer.nativeElement.querySelectorAll('.row-card');
+    const target = cards[line - 1] as HTMLElement;
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    target.classList.add('highlight-line');
+    setTimeout(() => target.classList.remove('highlight-line'), 1500);
   }
 
   close() {

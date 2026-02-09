@@ -1,4 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  OnDestroy
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormArray,
@@ -20,6 +27,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { CustomerService } from '../../services/customer.service';
 import { BulkRequest, BulkResult } from '../../../../shared/models/bulk-import.model';
@@ -41,13 +49,22 @@ import { CustomerResponse } from '../../models/customer.model';
     MatCheckboxModule,
     MatFormFieldModule,
     MatSelectModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatTooltipModule
   ]
 })
-export class CustomerBulkImportDialogComponent implements OnInit {
+export class CustomerBulkImportDialogComponent
+  implements OnInit, AfterViewInit, OnDestroy {
 
   form!: FormGroup;
   submitting = false;
+
+  /* 🔴 UX STATE */
+  private errorRows: number[] = [];
+  private errorIndex = 0;
+
+  @ViewChild('scrollContainer') scrollContainer!: ElementRef;
+  @ViewChild('bottomAnchor') bottomAnchor!: ElementRef;
 
   constructor(
     private fb: FormBuilder,
@@ -55,7 +72,7 @@ export class CustomerBulkImportDialogComponent implements OnInit {
     private customerService: CustomerService,
     private snackbar: MatSnackBar,
     private dialog: MatDialog
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.form = this.fb.group({
@@ -66,12 +83,43 @@ export class CustomerBulkImportDialogComponent implements OnInit {
     this.addRow();
   }
 
+  ngAfterViewInit() {
+    window.addEventListener('keydown', this.handleKeyNav);
+  }
+
+  ngOnDestroy() {
+    window.removeEventListener('keydown', this.handleKeyNav);
+  }
+
+  /* =========================
+     KEYBOARD SHORTCUTS
+     ========================= */
+
+  handleKeyNav = (e: KeyboardEvent) => {
+    if (e.ctrlKey && e.key.toLowerCase() === 'g') {
+      e.preventDefault();
+      document.querySelector<HTMLInputElement>('#goToLineInput')?.focus();
+    }
+
+    if (e.key === 'Enter') {
+      const el = document.activeElement as HTMLInputElement;
+      if (el?.id === 'goToLineInput') {
+        this.goToLine(el.valueAsNumber);
+      }
+    }
+  };
+
   /* =========================
      FORM HELPERS
      ========================= */
 
   get rows(): FormArray {
     return this.form.get('rows') as FormArray;
+  }
+
+  /* 🔴 DERIVED */
+  get rowCount(): number {
+    return this.rows.length;
   }
 
   private createRow(data?: any): FormGroup {
@@ -96,12 +144,12 @@ export class CustomerBulkImportDialogComponent implements OnInit {
   }
 
   /* =========================
-     CSV
+     CSV (UNCHANGED + UX)
      ========================= */
 
   downloadCsvTemplate() {
     const csv =
-`name,phones,emails,type,gender,address,notes
+      `name,phones,emails,type,gender,address,notes
 John Doe,0712345678,john@doe.com,INDIVIDUAL,MALE,Nairobi,VIP customer`;
 
     saveAs(
@@ -126,17 +174,9 @@ John Doe,0712345678,john@doe.com,INDIVIDUAL,MALE,Nairobi,VIP customer`;
     for (const line of lines) {
       if (!line.trim()) continue;
 
-      const [
-        name,
-        phones,
-        emails,
-        type,
-        gender,
-        address,
-        notes
-      ] = line.split(',');
+      const [name, phones, emails, type, gender, address, notes] =
+        line.split(',');
 
-      // 🔥 meaningful row check
       if (!name?.trim() && !phones?.trim() && !emails?.trim()) continue;
 
       this.addRow({
@@ -149,10 +189,16 @@ John Doe,0712345678,john@doe.com,INDIVIDUAL,MALE,Nairobi,VIP customer`;
         notes: notes?.trim()
       });
     }
+
+    this.snackbar.open(
+      `✅ ${this.rowCount} customers loaded from CSV`,
+      'Close',
+      { duration: 3000 }
+    );
   }
 
   /* =========================
-     EXCEL
+     EXCEL (UNCHANGED + UX)
      ========================= */
 
   async downloadExcelTemplate() {
@@ -206,8 +252,7 @@ John Doe,0712345678,john@doe.com,INDIVIDUAL,MALE,Nairobi,VIP customer`;
 
     exampleRow.getCell('phones').numFmt = '@';
 
-    const ROW_COUNT = 200;
-    for (let i = 0; i < ROW_COUNT; i++) {
+    for (let i = 0; i < 200; i++) {
       const row = worksheet.addRow({
         name: '',
         phones: '',
@@ -245,12 +290,11 @@ John Doe,0712345678,john@doe.com,INDIVIDUAL,MALE,Nairobi,VIP customer`;
     if (!input.files?.length) return;
 
     const reader = new FileReader();
-
     reader.onload = e => {
       const wb = XLSX.read(e.target?.result, { type: 'binary' });
       const sheet = wb.Sheets[wb.SheetNames[0]];
-
       const rawRows = XLSX.utils.sheet_to_json<any>(sheet, { defval: '' });
+
       this.rows.clear();
 
       rawRows
@@ -259,7 +303,7 @@ John Doe,0712345678,john@doe.com,INDIVIDUAL,MALE,Nairobi,VIP customer`;
           String(r.phones || '').trim() ||
           String(r.emails || '').trim()
         )
-        .forEach(r => {
+        .forEach(r =>
           this.addRow({
             name: String(r.name || '').trim(),
             phones: String(r.phones || '').trim(),
@@ -268,15 +312,21 @@ John Doe,0712345678,john@doe.com,INDIVIDUAL,MALE,Nairobi,VIP customer`;
             gender: String(r.gender || '').trim(),
             address: String(r.address || '').trim(),
             notes: String(r.notes || '').trim()
-          });
-        });
+          })
+        );
+
+      this.snackbar.open(
+        `✅ ${this.rowCount} customers loaded from Excel`,
+        'Close',
+        { duration: 3000 }
+      );
     };
 
     reader.readAsBinaryString(input.files[0]);
   }
 
   /* =========================
-     SUBMIT
+     SUBMIT (UNCHANGED + UX)
      ========================= */
 
   submit() {
@@ -309,6 +359,13 @@ John Doe,0712345678,john@doe.com,INDIVIDUAL,MALE,Nairobi,VIP customer`;
         res.errors?.forEach(e => {
           this.rows.at(e.row - 1)?.patchValue({ _error: e.message });
         });
+
+        this.errorRows = res.errors?.map(e => e.row) || [];
+        this.errorIndex = 0;
+
+        if (this.errorRows.length) {
+          setTimeout(() => this.goToLine(this.errorRows[0]), 200);
+        }
 
         if (!this.form.value.dryRun && res.failed === 0) {
           this.snackbar.open(
@@ -352,6 +409,43 @@ John Doe,0712345678,john@doe.com,INDIVIDUAL,MALE,Nairobi,VIP customer`;
           { duration: 3000 }
         );
       }
+    });
+  }
+
+  /* =========================
+     UX HELPERS
+     ========================= */
+
+  goToLine(line: number) {
+    if (!line || line < 1 || line > this.rows.length) return;
+
+    const cards =
+      this.scrollContainer.nativeElement.querySelectorAll('.row-card');
+
+    const target = cards[line - 1] as HTMLElement;
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    target.classList.add('highlight-line');
+    setTimeout(() => target.classList.remove('highlight-line'), 1500);
+  }
+
+  goToNextError() {
+    if (!this.errorRows.length) return;
+    this.goToLine(this.errorRows[this.errorIndex]);
+    this.errorIndex = (this.errorIndex + 1) % this.errorRows.length;
+  }
+
+  scrollToTop() {
+    this.scrollContainer.nativeElement.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }
+
+  scrollToBottom() {
+    this.bottomAnchor.nativeElement.scrollIntoView({
+      behavior: 'smooth'
     });
   }
 

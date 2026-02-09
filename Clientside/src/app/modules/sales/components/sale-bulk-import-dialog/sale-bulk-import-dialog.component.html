@@ -2,7 +2,7 @@
   Bulk Import Sales
 </h2>
 
-<mat-dialog-content [formGroup]="form" class="body">
+<mat-dialog-content #scrollContainer [formGroup]="form" class="body">
 
   <!-- IMPORT ZONE -->
   <div class="import-zone">
@@ -43,6 +43,28 @@
 
   </div>
 
+  <!-- 🔴 NEW FEATURE: LIVE LINE TALLY (DERIVED, NO LOGIC CHANGE) -->
+  <div class="line-tally prominent">
+    <mat-icon>format_list_numbered</mat-icon>
+    <div class="tally-text">
+      <strong>{{ rowCount }}</strong>
+      <span *ngIf="rowCount==1"> Sale line loaded</span>
+      <span *ngIf="rowCount!=1"> Sale lines loaded</span>
+    </div>
+  </div>
+
+  <!-- 🔴 NEW FEATURE: GO TO LINE -->
+  <div class="go-to-line">
+    <mat-form-field appearance="fill">
+      <mat-label>Go to line</mat-label>
+      <input id="goToLineInput" matInput type="number" min="1" [max]="rowCount" #lineInput>
+    </mat-form-field>
+
+    <button mat-stroked-button (click)="goToLine(lineInput.valueAsNumber)">
+      Go
+    </button>
+  </div>
+
   <!-- OPTIONS -->
   <div class="grid-2">
     <mat-checkbox formControlName="dryRun">
@@ -71,27 +93,44 @@
       </div>
 
       <div class="grid-3">
-        <mat-form-field><input matInput placeholder="Receipt No" formControlName="receiptNo"></mat-form-field>
-        <mat-form-field><input matInput placeholder="SKU" formControlName="sku"></mat-form-field>
-        <mat-form-field><input matInput placeholder="Product Name" formControlName="productName"></mat-form-field>
+        <mat-form-field>
+          <input matInput placeholder="Receipt No" formControlName="receiptNo">
+        </mat-form-field>
+        <mat-form-field>
+          <input matInput placeholder="SKU" formControlName="sku">
+        </mat-form-field>
+        <mat-form-field>
+          <input matInput placeholder="Line Name" formControlName="LineName">
+        </mat-form-field>
       </div>
 
       <div class="grid-3">
-        <mat-form-field><input matInput placeholder="Variant" formControlName="variant"></mat-form-field>
-        <mat-form-field><input matInput type="number" placeholder="Qty" formControlName="quantity"></mat-form-field>
-        <mat-form-field><input matInput type="number" placeholder="Unit Price"
-            formControlName="unitPrice"></mat-form-field>
+        <mat-form-field>
+          <input matInput placeholder="Variant" formControlName="variant">
+        </mat-form-field>
+        <mat-form-field>
+          <input matInput type="number" placeholder="Qty" formControlName="quantity">
+        </mat-form-field>
+        <mat-form-field>
+          <input matInput type="number" placeholder="Unit Price" formControlName="unitPrice">
+        </mat-form-field>
       </div>
 
       <div class="grid-3">
-        <mat-form-field><input matInput placeholder="Branch" formControlName="branchCode"></mat-form-field>
+        <mat-form-field>
+          <input matInput placeholder="Branch" formControlName="branchCode">
+        </mat-form-field>
+
         <mat-form-field appearance="fill">
           <mat-label>Sale Date</mat-label>
           <input matInput [matDatepicker]="dp" formControlName="saleDate" placeholder="dd/mm/yyyy">
           <mat-datepicker-toggle matSuffix [for]="dp"></mat-datepicker-toggle>
           <mat-datepicker #dp></mat-datepicker>
         </mat-form-field>
-        <mat-form-field><input matInput placeholder="Payments" formControlName="payments"></mat-form-field>
+
+        <mat-form-field>
+          <input matInput placeholder="Payments" formControlName="payments">
+        </mat-form-field>
       </div>
 
       <div class="row-error" *ngIf="r.value._error">
@@ -105,11 +144,35 @@
     + Add Line
   </button>
 
+  <!-- 🔴 NEW FEATURE: SCROLL TARGET -->
+  <div #bottomAnchor></div>
+
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
+
+  <!-- 🔴 SCROLL + ERROR CONTROLS (ALWAYS VISIBLE) -->
+  <div class="scroll-actions">
+
+    <button mat-icon-button (click)="scrollToTop()" matTooltip="Go to top">
+      <mat-icon>arrow_upward</mat-icon>
+    </button>
+
+    <button mat-icon-button (click)="scrollToBottom()" matTooltip="Go to bottom">
+      <mat-icon>arrow_downward</mat-icon>
+    </button>
+
+    <!-- 🔴 NEW: NEXT ERROR -->
+    <button mat-icon-button color="warn" (click)="goToNextError()" matTooltip="Go to next error">
+      <mat-icon>error_outline</mat-icon>
+    </button>
+
+  </div>
+
   <button mat-button (click)="close()">Cancel</button>
+
   <button mat-flat-button color="primary" [disabled]="submitting || form.invalid" (click)="submit()">
     Import
   </button>
+
 </mat-dialog-actions>

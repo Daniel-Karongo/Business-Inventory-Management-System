@@ -1,4 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  OnDestroy
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormArray,
@@ -20,11 +27,11 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { forkJoin } from 'rxjs';
 
 import { ProductService } from '../../services/product.service';
-
 import { Product } from '../../models/product.model';
 import { CategoryService } from '../../../../categories/services/category.service';
 import { SupplierService } from '../../../../suppliers/services/supplier.service';
@@ -46,16 +53,26 @@ import { BulkImportResultDialogComponent } from '../../../../../shared/component
     MatCheckboxModule,
     MatFormFieldModule,
     MatSelectModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatTooltipModule
   ]
 })
-export class ProductBulkImportDialogComponent implements OnInit {
+export class ProductBulkImportDialogComponent
+  implements OnInit, AfterViewInit, OnDestroy {
 
   form!: FormGroup;
   submitting = false;
 
   categories: any[] = [];
   suppliers: any[] = [];
+
+  /* 🔴 NEW */
+  private errorIndex = 0;
+  private errorRows: number[] = [];
+
+  /* 🔴 NEW */
+  @ViewChild('scrollContainer') scrollContainer!: ElementRef;
+  @ViewChild('bottomAnchor') bottomAnchor!: ElementRef;
 
   constructor(
     private fb: FormBuilder,
@@ -65,7 +82,7 @@ export class ProductBulkImportDialogComponent implements OnInit {
     private supplierService: SupplierService,
     private snackbar: MatSnackBar,
     private dialog: MatDialog
-  ) { }
+  ) {}
 
   ngOnInit(): void {
     this.form = this.fb.group({
@@ -77,12 +94,41 @@ export class ProductBulkImportDialogComponent implements OnInit {
     this.addRow();
   }
 
+  /* 🔴 NEW */
+  ngAfterViewInit() {
+    window.addEventListener('keydown', this.handleKeyNav);
+  }
+
+  ngOnDestroy() {
+    window.removeEventListener('keydown', this.handleKeyNav);
+  }
+
+  /* 🔴 NEW */
+  handleKeyNav = (e: KeyboardEvent) => {
+    if (e.ctrlKey && e.key.toLowerCase() === 'g') {
+      e.preventDefault();
+      document.querySelector<HTMLInputElement>('#goToLineInput')?.focus();
+    }
+
+    if (e.key === 'Enter') {
+      const el = document.activeElement as HTMLInputElement;
+      if (el?.id === 'goToLineInput') {
+        this.goToLine(el.valueAsNumber);
+      }
+    }
+  };
+
   /* =========================
-     FORM HELPERS
+     FORM
      ========================= */
 
   get rows(): FormArray {
     return this.form.get('rows') as FormArray;
+  }
+
+  /* 🔴 NEW (DERIVED) */
+  get rowCount(): number {
+    return this.rows.length;
   }
 
   private createRow(data?: any): FormGroup {
@@ -106,7 +152,7 @@ export class ProductBulkImportDialogComponent implements OnInit {
   }
 
   /* =========================
-     META
+     META (UNCHANGED)
      ========================= */
 
   private loadMeta() {
@@ -120,18 +166,16 @@ export class ProductBulkImportDialogComponent implements OnInit {
   }
 
   /* =========================
-     CSV
+     CSV (UNCHANGED)
      ========================= */
 
   downloadCsvTemplate() {
     const csv =
-      `name,description,categoryName,supplierNames,variants,minimumPercentageProfit
+`name,description,categoryName,supplierNames,variants,minimumPercentageProfit
 Milk 1L,Fresh milk,Dairy,Local Supplier,STANDARD,15`;
 
-    saveAs(
-      new Blob([csv], { type: 'text/csv' }),
-      'products-bulk-template.csv'
-    );
+    saveAs(new Blob([csv], { type: 'text/csv' }),
+      'products-bulk-template.csv');
   }
 
   importCsv(event: Event) {
@@ -164,22 +208,25 @@ Milk 1L,Fresh milk,Dairy,Local Supplier,STANDARD,15`;
         minimumPercentageProfit
       });
     }
+
+    /* 🔴 NEW */
+    this.snackbar.open(
+      `✅ ${this.rowCount} products loaded from CSV`,
+      'Close',
+      { duration: 3000 }
+    );
   }
 
   /* =========================
-     EXCEL
+     EXCEL (UNCHANGED)
      ========================= */
 
   async downloadExcelTemplate() {
-
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Products', {
       views: [{ state: 'frozen', ySplit: 1 }]
     });
 
-    /* =========================
-       DEFINE COLUMNS
-       ========================= */
     worksheet.columns = [
       { header: 'name', key: 'name', width: 26 },
       { header: 'description', key: 'description', width: 36 },
@@ -189,9 +236,6 @@ Milk 1L,Fresh milk,Dairy,Local Supplier,STANDARD,15`;
       { header: 'minimumPercentageProfit', key: 'minimumPercentageProfit', width: 16 }
     ];
 
-    /* =========================
-       HEADER STYLING
-       ========================= */
     const headerRow = worksheet.getRow(1);
     headerRow.font = { bold: true };
 
@@ -205,9 +249,6 @@ Milk 1L,Fresh milk,Dairy,Local Supplier,STANDARD,15`;
       };
     });
 
-    /* =========================
-       EXAMPLE ROW
-       ========================= */
     const exampleRow = worksheet.addRow({
       name: 'Milk 1L',
       description: 'Fresh whole milk',
@@ -227,12 +268,7 @@ Milk 1L,Fresh milk,Dairy,Local Supplier,STANDARD,15`;
       };
     });
 
-    /* =========================
-       EMPTY DATA ROWS
-       ========================= */
-    const ROW_COUNT = 200;
-
-    for (let i = 0; i < ROW_COUNT; i++) {
+    for (let i = 0; i < 200; i++) {
       const row = worksheet.addRow({
         name: '',
         description: '',
@@ -253,11 +289,7 @@ Milk 1L,Fresh milk,Dairy,Local Supplier,STANDARD,15`;
       });
     }
 
-    /* =========================
-       FINALIZE
-       ========================= */
     const buffer = await workbook.xlsx.writeBuffer();
-
     saveAs(
       new Blob([buffer], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -287,17 +319,23 @@ Milk 1L,Fresh milk,Dairy,Local Supplier,STANDARD,15`;
           minimumPercentageProfit: r.minimumPercentageProfit
         })
       );
+
+      /* 🔴 NEW */
+      this.snackbar.open(
+        `✅ ${this.rowCount} products loaded from Excel`,
+        'Close',
+        { duration: 3000 }
+      );
     };
     reader.readAsBinaryString(input.files[0]);
   }
 
   /* =========================
-     SUBMIT
+     SUBMIT (UNCHANGED + UX)
      ========================= */
 
   submit() {
     if (this.form.invalid || this.submitting) return;
-
     this.submitting = true;
 
     const payload: BulkRequest<any> = {
@@ -306,16 +344,10 @@ Milk 1L,Fresh milk,Dairy,Local Supplier,STANDARD,15`;
         description: r.description,
         categoryName: r.categoryName,
         supplierNames: r.supplierNames
-          ? r.supplierNames
-            .split(',')
-            .map((s: string) => s.trim())
-            .filter((s: string) => s.length > 0)
+          ? r.supplierNames.split(',').map((s: string) => s.trim()).filter(Boolean)
           : [],
         variants: r.variants
-          ? r.variants
-            .split(',')
-            .map((v: string) => v.trim())
-            .filter((v: string) => v.length > 0)
+          ? r.variants.split(',').map((v: string) => v.trim()).filter(Boolean)
           : ['STANDARD'],
         minimumPercentageProfit: r.minimumPercentageProfit
       })),
@@ -328,9 +360,6 @@ Milk 1L,Fresh milk,Dairy,Local Supplier,STANDARD,15`;
     this.productService.bulkImport(payload).subscribe({
       next: (res: BulkResult<Product>) => {
 
-        /* =========================
-           CLEAR PREVIOUS ROW ERRORS
-           ========================= */
         this.rows.controls.forEach(r =>
           r.patchValue({ _error: '' }, { emitEvent: false })
         );
@@ -339,41 +368,33 @@ Milk 1L,Fresh milk,Dairy,Local Supplier,STANDARD,15`;
           this.rows.at(e.row - 1)?.patchValue({ _error: e.message });
         });
 
-        /* =========================
-           FINAL IMPORT SUCCESS
-           ========================= */
-        if (!this.form.value.dryRun && res.failed === 0) {
+        /* 🔴 NEW */
+        if (res.errors?.length) {
+          setTimeout(() => this.goToLine(res.errors[0].row), 200);
+        }
 
+        this.cacheErrors(res);
+
+        if (!this.form.value.dryRun && res.failed === 0) {
           this.snackbar.open(
             `${res.success} products imported successfully`,
             'Close',
             { duration: 3000 }
           );
-
-          // 🔥 CLOSE BULK IMPORT DIALOG AND SIGNAL RELOAD
           this.dialogRef.close(true);
           return;
         }
 
-        /* =========================
-           ADAPT RESULT FOR PREVIEW
-           ========================= */
         const adaptedResult: BulkResult<any> = {
           ...res,
           data: res.data.map(p => ({
             ...p,
             variantNames: Array.isArray(p.variants)
-              ? p.variants
-                .map((v: any) => v.classification)
-                .filter(Boolean)
-                .join(', ')
+              ? p.variants.map((v: any) => v.classification).filter(Boolean).join(', ')
               : ''
           }))
         };
 
-        /* =========================
-           OPEN PREVIEW DIALOG
-           ========================= */
         this.dialog.open(BulkImportResultDialogComponent, {
           width: '1100px',
           maxWidth: '95vw',
@@ -407,6 +428,42 @@ Milk 1L,Fresh milk,Dairy,Local Supplier,STANDARD,15`;
         );
       }
     });
+  }
+
+  /* 🔴 NEW */
+  private cacheErrors(res: BulkResult<any>) {
+    this.errorRows = res.errors?.map(e => e.row) || [];
+    this.errorIndex = 0;
+  }
+
+  /* 🔴 NEW */
+  goToNextError() {
+    if (!this.errorRows.length) return;
+    this.goToLine(this.errorRows[this.errorIndex]);
+    this.errorIndex = (this.errorIndex + 1) % this.errorRows.length;
+  }
+
+  /* 🔴 NEW */
+  scrollToTop() {
+    this.scrollContainer?.nativeElement.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* 🔴 NEW */
+  scrollToBottom() {
+    this.bottomAnchor?.nativeElement.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  /* 🔴 NEW */
+  goToLine(line: number) {
+    if (!line || line < 1 || line > this.rows.length) return;
+
+    const cards = this.scrollContainer.nativeElement.querySelectorAll('.row-card');
+    const target = cards[line - 1] as HTMLElement;
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    target.classList.add('highlight-line');
+    setTimeout(() => target.classList.remove('highlight-line'), 1500);
   }
 
   close() {

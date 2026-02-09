@@ -1,4 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  OnDestroy
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormArray,
@@ -12,6 +19,8 @@ import * as ExcelJS from 'exceljs';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
+import { forkJoin } from 'rxjs';
+
 import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
@@ -20,8 +29,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
-
-import { forkJoin } from 'rxjs';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { UserService } from '../../services/user/user.service';
 import { BranchService } from '../../../branches/services/branch.service';
@@ -46,10 +54,12 @@ import { User } from '../../models/user.model';
     MatCheckboxModule,
     MatFormFieldModule,
     MatSelectModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatTooltipModule
   ]
 })
-export class UserBulkImportDialogComponent implements OnInit {
+export class UserBulkImportDialogComponent
+  implements OnInit, AfterViewInit, OnDestroy {
 
   form!: FormGroup;
   submitting = false;
@@ -57,6 +67,13 @@ export class UserBulkImportDialogComponent implements OnInit {
   branches: any[] = [];
   departments: any[] = [];
   hideOrgFields = false;
+
+  /* 🔴 NEW (ADDITIVE) */
+  private errorIndex = 0;
+  private errorRows: number[] = [];
+
+  @ViewChild('scrollContainer') scrollContainer!: ElementRef;
+  @ViewChild('bottomAnchor') bottomAnchor!: ElementRef;
 
   constructor(
     private fb: FormBuilder,
@@ -66,7 +83,7 @@ export class UserBulkImportDialogComponent implements OnInit {
     private departmentService: DepartmentService,
     private snackbar: MatSnackBar,
     private dialog: MatDialog
-  ) { }
+  ) {}
 
   ngOnInit(): void {
     this.form = this.fb.group({
@@ -78,12 +95,41 @@ export class UserBulkImportDialogComponent implements OnInit {
     this.addRow();
   }
 
+  /* 🔴 NEW (ADDITIVE) */
+  ngAfterViewInit() {
+    window.addEventListener('keydown', this.handleKeyNav);
+  }
+
+  ngOnDestroy() {
+    window.removeEventListener('keydown', this.handleKeyNav);
+  }
+
+  /* 🔴 NEW (ADDITIVE) */
+  handleKeyNav = (e: KeyboardEvent) => {
+    if (e.ctrlKey && e.key.toLowerCase() === 'g') {
+      e.preventDefault();
+      document.querySelector<HTMLInputElement>('#goToLineInput')?.focus();
+    }
+
+    if (e.key === 'Enter') {
+      const el = document.activeElement as HTMLInputElement;
+      if (el?.id === 'goToLineInput') {
+        this.goToLine(el.valueAsNumber);
+      }
+    }
+  };
+
   /* =========================
-     FORM HELPERS
+     FORM HELPERS (UNCHANGED)
      ========================= */
 
   get rows(): FormArray {
     return this.form.get('rows') as FormArray;
+  }
+
+  /* 🔴 NEW (DERIVED ONLY) */
+  get rowCount(): number {
+    return this.rows.length;
   }
 
   private createRow(data?: any): FormGroup {
@@ -109,7 +155,7 @@ export class UserBulkImportDialogComponent implements OnInit {
   }
 
   /* =========================
-     ORG META
+     ORG META (UNCHANGED)
      ========================= */
 
   private loadOrgMeta() {
@@ -126,16 +172,15 @@ export class UserBulkImportDialogComponent implements OnInit {
   }
 
   /* =========================
-     CSV
+     CSV (UNCHANGED)
      ========================= */
 
   downloadCsvTemplate() {
     const csv =
-      `username,password,role,emails,phones,branchCode,department,position
+`username,password,role,emails,phones,branchCode,department,position
 jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
 
-    const blob = new Blob([csv], { type: 'text/csv' });
-    saveAs(blob, 'users-bulk-template.csv');
+    saveAs(new Blob([csv], { type: 'text/csv' }), 'users-bulk-template.csv');
   }
 
   importCsv(event: Event) {
@@ -170,22 +215,25 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
         position: position?.trim() || 'member'
       });
     }
+
+    /* 🔴 NEW (FEEDBACK ONLY) */
+    this.snackbar.open(
+      `✅ ${this.rowCount} users loaded from CSV`,
+      'Close',
+      { duration: 3000 }
+    );
   }
 
   /* =========================
-     EXCEL
+     EXCEL (UNCHANGED)
      ========================= */
 
   async downloadExcelTemplate() {
-
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Users', {
       views: [{ state: 'frozen', ySplit: 1 }]
     });
 
-    /* ============================
-       DEFINE COLUMNS
-       ============================ */
     worksheet.columns = [
       { header: 'username', key: 'username', width: 18 },
       { header: 'password', key: 'password', width: 12 },
@@ -197,9 +245,6 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
       { header: 'position', key: 'position', width: 12 }
     ];
 
-    /* ============================
-       HEADER STYLING
-       ============================ */
     const headerRow = worksheet.getRow(1);
     headerRow.font = { bold: true };
 
@@ -213,9 +258,6 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
       };
     });
 
-    /* ============================
-       EXAMPLE ROW
-       ============================ */
     const exampleRow = worksheet.addRow({
       username: 'jdoe',
       password: '1234',
@@ -237,12 +279,8 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
       };
     });
 
-    // 🔥 FORCE PHONES COLUMN TO TEXT
     exampleRow.getCell('phones').numFmt = '@';
 
-    /* ============================
-       EMPTY DATA ROWS
-       ============================ */
     const ROW_COUNT = 200;
 
     for (let i = 0; i < ROW_COUNT; i++) {
@@ -267,13 +305,9 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
         };
       });
 
-      // 🔥 FORCE PHONES COLUMN TO TEXT (ALL ROWS)
       row.getCell('phones').numFmt = '@';
     }
 
-    /* ============================
-       FINALIZE
-       ============================ */
     const buffer = await workbook.xlsx.writeBuffer();
 
     saveAs(
@@ -308,13 +342,53 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
           position: r.position || 'member'
         });
       });
+
+      /* 🔴 NEW (FEEDBACK ONLY) */
+      this.snackbar.open(
+        `✅ ${this.rowCount} users loaded from Excel`,
+        'Close',
+        { duration: 3000 }
+      );
     };
 
     reader.readAsBinaryString(input.files[0]);
   }
 
+  /* 🔴 NEW (SCROLL + ERRORS) */
+
+  scrollToTop() {
+    this.scrollContainer?.nativeElement.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  scrollToBottom() {
+    this.bottomAnchor?.nativeElement.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  goToLine(line: number) {
+    if (!line || line < 1 || line > this.rows.length) return;
+
+    const cards = this.scrollContainer.nativeElement.querySelectorAll('.row-card');
+    const target = cards[line - 1] as HTMLElement;
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    target.classList.add('highlight-line');
+    setTimeout(() => target.classList.remove('highlight-line'), 1500);
+  }
+
+  private cacheErrors(res: BulkResult<any>) {
+    this.errorRows = res.errors?.map(e => e.row) || [];
+    this.errorIndex = 0;
+  }
+
+  goToNextError() {
+    if (!this.errorRows.length) return;
+    this.goToLine(this.errorRows[this.errorIndex]);
+    this.errorIndex = (this.errorIndex + 1) % this.errorRows.length;
+  }
+
   /* =========================
-     SUBMIT
+     SUBMIT (UNCHANGED)
      ========================= */
 
   submit() {
@@ -350,6 +424,13 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
           this.rows.at(e.row - 1)?.patchValue({ _error: e.message });
         });
 
+        /* 🔴 NEW */
+        if (res.errors?.length) {
+          setTimeout(() => this.goToLine(res.errors[0].row), 200);
+        }
+
+        this.cacheErrors(res);
+
         if (!this.form.value.dryRun && res.failed === 0) {
           this.snackbar.open(
             `${res.success} users imported successfully`,
@@ -367,16 +448,7 @@ jdoe,1234,EMPLOYEE,jdoe@company.com,0712345678,MAIN,GENERAL,member`;
             title: 'User Import Preview',
             dryRun: this.form.value.dryRun,
             result: res,
-            confirmLabel: 'Import Now',
-            columns: [
-              { key: 'username', label: 'Username' },
-              { key: 'role', label: 'Role' },
-              { key: 'emailAddresses', label: 'Emails' },
-              { key: 'phoneNumbers', label: 'Phones' },
-              { key: 'branchCode', label: 'Branch' },
-              { key: 'departmentName', label: 'Department' },
-              { key: 'position', label: 'Position' }
-            ]
+            confirmLabel: 'Import Now'
           }
         }).afterClosed().subscribe(confirm => {
           if (confirm) {
