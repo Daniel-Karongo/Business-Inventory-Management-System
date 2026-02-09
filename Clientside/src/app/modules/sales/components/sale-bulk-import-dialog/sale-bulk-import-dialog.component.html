@@ -24,7 +24,9 @@
     (goBottom)="scrollToBottom()"
     (prevError)="goToPreviousError()"
     (nextError)="goToNextError()"
-    (clearAll)="clearRows()">
+    (clearAll)="clearRows()"
+    (exportCsv)="exportCsvCurrentRows()"
+    (exportExcel)="exportExcelCurrentRows()">
 
     <!-- ⬇ REQUIRED SCROLL ROOT -->
     <div class="sales-body">

@@ -7,13 +7,29 @@ import { BulkRequest, BulkResult } from '../../models/bulk-import.model';
 import { BulkImportResultDialogComponent } from
   '../../components/bulk-import-result-dialog/bulk-import-result-dialog.component';
 
+/* ============================================================
+   Inventory backend preview adapter helpers
+   ============================================================ */
+
+type PreviewContainer = {
+  rows: any[];
+};
+
+function hasRowsContainer(x: unknown): x is PreviewContainer {
+  return !!x && typeof x === 'object' && Array.isArray((x as any).rows);
+}
+
+/* ============================================================
+   Submit Engine
+   ============================================================ */
+
 @Injectable({ providedIn: 'root' })
 export class BulkImportSubmitEngineService {
 
   constructor(
     private dialog: MatDialog,
     private snackbar: MatSnackBar
-  ) { }
+  ) {}
 
   execute<T>({
     submitFn,
@@ -42,6 +58,35 @@ export class BulkImportSubmitEngineService {
     submitFn(payload).subscribe({
       next: res => {
 
+        /* ======================================================
+           INVENTORY BACKEND NORMALIZATION
+           ------------------------------------------------------
+           Inventory returns preview rows inside:
+             result.data[n].rows
+
+           BulkImportResultDialogComponent renders from:
+             result.data
+
+           So we normalize ONCE here.
+           ====================================================== */
+
+        const dataAsUnknown = res.data as unknown[];
+
+        if (Array.isArray(dataAsUnknown)) {
+          const previewContainer = dataAsUnknown.find(hasRowsContainer);
+
+          if (previewContainer) {
+            res = {
+              ...res,
+              data: previewContainer.rows
+            };
+          }
+        }
+
+        /* ======================================================
+           APPLY FIELD-LEVEL ERRORS
+           ====================================================== */
+
         rows.forEach(r =>
           r.patchValue({ _error: '' }, { emitEvent: false })
         );
@@ -55,6 +100,10 @@ export class BulkImportSubmitEngineService {
 
         onErrorsApplied?.(res);
 
+        /* ======================================================
+           FINAL (NON-DRY-RUN) SUCCESS
+           ====================================================== */
+
         if (!dryRun && res.failed === 0) {
           this.snackbar.open(
             `${res.success} records imported successfully`,
@@ -65,14 +114,24 @@ export class BulkImportSubmitEngineService {
           return;
         }
 
+        /* ======================================================
+           PREVIEW DIALOG
+           ====================================================== */
+
         const ref = this.dialog.open(BulkImportResultDialogComponent, {
           width: '1100px',
           maxWidth: '95vw',
-          data: { title, dryRun, result: res, confirmLabel, columns }
+          data: {
+            title,
+            dryRun,
+            result: res,
+            confirmLabel,
+            columns
+          }
         });
 
         ref.afterClosed().subscribe(confirm => {
-          // 🔴 IMPORTANT: restore error navigation after dialog
+          // restore error navigation after dialog close
           onErrorsApplied?.(res);
 
           if (confirm) {

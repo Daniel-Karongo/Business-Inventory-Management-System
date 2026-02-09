@@ -114,6 +114,14 @@
     <button mat-icon-button matTooltip="Next error" color="warn" (click)="nextError.emit()">
       <mat-icon>keyboard_arrow_down</mat-icon>
     </button>
+
+    <button mat-icon-button matTooltip="Export rows to Excel" (click)="exportExcel.emit()">
+      <mat-icon>table_view</mat-icon>
+    </button>
+
+    <button mat-icon-button matTooltip="Export rows to CSV" (click)="exportCsv.emit()">
+      <mat-icon>description</mat-icon>
+    </button>
     
     <button mat-icon-button matTooltip="Clear all lines" color="warn" (click)="clearAll.emit()">
       <mat-icon>delete_sweep</mat-icon>

@@ -66,14 +66,6 @@ export abstract class BulkImportFormComponent<
     this.rows.removeAt(index);
   }
 
-  protected clearRowsInternal() {
-    this.rows.clear();
-
-    // 🔴 Reset import-related state
-    this.errorRows = [];
-    this.errorIndex = 0;
-  }
-
   clearRows() {
     if (!this.rows.length) return;
 
@@ -86,6 +78,30 @@ export abstract class BulkImportFormComponent<
         this.clearRowsInternal();
       }
     });
+  }
+
+  protected override get errorRows(): number[] {
+    const rows = this.form?.get('rows') as any;
+
+    if (!rows?.controls) return [];
+
+    return rows.controls
+      .map((c: any, i: number) => c.value?._error ? i + 1 : null)
+      .filter((x: number | null): x is number => x !== null);
+  }
+
+  protected cacheErrors(_: any) {
+    const errors = this.errorRows;
+
+    if (errors.length) {
+      queueMicrotask(() =>
+        this.scroll.goToLine(errors[0])
+      );
+    }
+  }
+
+  protected clearRowsInternal() {
+    this.rows.clear();
   }
 
   /* ================= FILE ================= */
@@ -178,5 +194,19 @@ export abstract class BulkImportFormComponent<
     }
 
     return result;
+  }
+
+  exportCsvCurrentRows() {
+    const rows = this.rows.value;
+    if (!rows.length) return;
+
+    this.templates.exportCsvFromRows(rows, this.config);
+  }
+
+  exportExcelCurrentRows() {
+    const rows = this.rows.value;
+    if (!rows.length) return;
+
+    this.templates.exportExcelFromRows(rows, this.config);
   }
 }

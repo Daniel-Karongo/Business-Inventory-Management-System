@@ -1,205 +1,122 @@
-<h2 mat-dialog-title class="bulk-title">
-  Bulk Import Users
-</h2>
+<form
+  [formGroup]="form"
+  (keydown.enter)="$event.stopPropagation()">
 
-<mat-dialog-content #scrollContainer [formGroup]="form" class="body">
+  <app-bulk-import-shell
+    [title]="config.title"
+    [rowCount]="rowCount"
+    [submitting]="submitting"
+    [formInvalid]="form.invalid"
+    [loading]="submitting || loading"
+    [progress]="progress"
 
-  <!-- ================= TOOLBAR ================= -->
-  <div class="import-zone">
+    (importCsv)="importCsv($event)"
+    (importExcel)="importExcel($event)"
+    (downloadCsv)="downloadCsvTemplate()"
+    (downloadExcel)="downloadExcelTemplate()"
+    (submit)="submit()"
+    (cancel)="close()"
 
-    <div class="import-tiles">
+    (goToLine)="goToLine($event)"
+    (goTop)="scrollToTop()"
+    (goBottom)="scrollToBottom()"
+    (prevError)="goToPreviousError()"
+    (nextError)="goToNextError()"
+    (clearAll)="clearRows()"
+    (exportCsv)="exportCsvCurrentRows()"
+    (exportExcel)="exportExcelCurrentRows()">
 
-      <label class="import-tile excel">
-        <input type="file" hidden accept=".xlsx" (change)="importExcel($event)">
-        <mat-icon>table_view</mat-icon>
-        <div>
-          <strong>Import Excel</strong>
-          <small>.xlsx template</small>
+    <div class="users-body">
+
+      <div bulk-options class="grid-2">
+        <mat-checkbox formControlName="dryRun">
+          Dry run (validate only)
+        </mat-checkbox>
+      </div>
+
+      <div class="rows" formArrayName="rows">
+
+        <div
+          class="row-card"
+          *ngFor="let r of rows.controls; let i = index"
+          [formGroupName]="i">
+
+          <div class="row-header">
+            <span>User {{ i + 1 }}</span>
+            <button mat-icon-button color="warn" (click)="removeRow(i)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+
+          <div class="grid-3">
+            <mat-form-field>
+              <input matInput placeholder="Username" formControlName="username">
+            </mat-form-field>
+
+            <mat-form-field>
+              <input matInput placeholder="Password" formControlName="password">
+            </mat-form-field>
+
+            <mat-form-field>
+              <mat-select formControlName="role">
+                <mat-option value="EMPLOYEE">EMPLOYEE</mat-option>
+                <mat-option value="SUPERVISOR">SUPERVISOR</mat-option>
+                <mat-option value="MANAGER">MANAGER</mat-option>
+                <mat-option value="ADMIN">ADMIN</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <div class="grid-2">
+            <mat-form-field>
+              <input matInput placeholder="Emails" formControlName="emails">
+            </mat-form-field>
+
+            <mat-form-field>
+              <input matInput placeholder="Phones" formControlName="phones">
+            </mat-form-field>
+          </div>
+
+          <div *ngIf="!hideOrgFields" class="grid-3">
+            <mat-form-field>
+              <mat-select formControlName="branchCode">
+                <mat-option value="">Auto</mat-option>
+                <mat-option *ngFor="let b of branches" [value]="b.branchCode">
+                  {{ b.name }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field>
+              <mat-select formControlName="departmentName">
+                <mat-option value="">Auto</mat-option>
+                <mat-option *ngFor="let d of departments" [value]="d.name">
+                  {{ d.name }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field>
+              <mat-select formControlName="position">
+                <mat-option value="member">Member</mat-option>
+                <mat-option value="head">Head</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <div class="row-error" *ngIf="r.value._error">
+            {{ r.value._error }}
+          </div>
+
         </div>
-      </label>
+      </div>
 
-      <label class="import-tile csv">
-        <input type="file" hidden accept=".csv" (change)="importCsv($event)">
-        <mat-icon>description</mat-icon>
-        <div>
-          <strong>Import CSV</strong>
-          <small>.csv template</small>
-        </div>
-      </label>
-
-    </div>
-
-    <div class="template-actions">
-      <button mat-stroked-button (click)="downloadExcelTemplate()">
-        <mat-icon>table_view</mat-icon>
-        Excel Template
+      <button mat-stroked-button (click)="addRow()">
+        + Add User
       </button>
 
-      <button mat-stroked-button (click)="downloadCsvTemplate()">
-        <mat-icon>description</mat-icon>
-        CSV Template
-      </button>
-    </div>
-
-  </div>
-
-  <!-- 🔴 NEW: LINE TALLY -->
-  <div class="line-tally prominent">
-    <mat-icon>format_list_numbered</mat-icon>
-    <div class="tally-text">
-      <strong>{{ rowCount }}</strong>
-      <span> Users loaded</span>
-    </div>
-  </div>
-
-  <!-- 🔴 NEW: GO TO LINE -->
-  <div class="go-to-line">
-    <mat-form-field appearance="fill">
-      <mat-label>Go to line</mat-label>
-      <input
-        id="goToLineInput"
-        matInput
-        type="number"
-        min="1"
-        [max]="rowCount"
-        #lineInput>
-    </mat-form-field>
-
-    <button mat-stroked-button (click)="goToLine(lineInput.valueAsNumber)">
-      Go
-    </button>
-  </div>
-
-  <!-- ================= OPTIONS ================= -->
-  <mat-checkbox formControlName="dryRun">
-    Dry run (validate only, do not save)
-  </mat-checkbox>
-
-  <!-- ================= ROWS ================= -->
-  <div class="rows" formArrayName="rows">
-
-    <div class="row-card"
-         *ngFor="let r of rows.controls; let i = index"
-         [formGroupName]="i">
-
-      <div class="row-header">
-        <span>User {{ i + 1 }}</span>
-        <button mat-icon-button color="warn" (click)="removeRow(i)">
-          <mat-icon>delete</mat-icon>
-        </button>
-      </div>
-
-      <!-- USER CORE -->
-      <div class="grid-3">
-        <mat-form-field appearance="fill">
-          <mat-label>Username</mat-label>
-          <input matInput formControlName="username">
-        </mat-form-field>
-
-        <mat-form-field appearance="fill">
-          <mat-label>Password</mat-label>
-          <input matInput formControlName="password">
-        </mat-form-field>
-
-        <mat-form-field appearance="fill">
-          <mat-label>Role</mat-label>
-          <mat-select formControlName="role">
-            <mat-option value="EMPLOYEE">EMPLOYEE</mat-option>
-            <mat-option value="SUPERVISOR">SUPERVISOR</mat-option>
-            <mat-option value="MANAGER">MANAGER</mat-option>
-            <mat-option value="ADMIN">ADMIN</mat-option>
-          </mat-select>
-        </mat-form-field>
-      </div>
-
-      <!-- CONTACT -->
-      <div class="grid-2">
-        <mat-form-field appearance="fill">
-          <mat-label>Emails</mat-label>
-          <input matInput placeholder="a@x.com,b@y.com" formControlName="emails">
-        </mat-form-field>
-
-        <mat-form-field appearance="fill">
-          <mat-label>Phones</mat-label>
-          <input matInput placeholder="0712345678,0799999999" formControlName="phones">
-        </mat-form-field>
-      </div>
-
-      <!-- ORG (OPTIONAL) -->
-      <div *ngIf="!hideOrgFields" class="grid-3">
-
-        <mat-form-field appearance="fill">
-          <mat-label>Branch</mat-label>
-          <mat-select formControlName="branchCode">
-            <mat-option value="">Auto (MAIN)</mat-option>
-            <mat-option *ngFor="let b of branches" [value]="b.branchCode">
-              {{ b.name }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="fill">
-          <mat-label>Department</mat-label>
-          <mat-select formControlName="departmentName">
-            <mat-option value="">Auto (GENERAL)</mat-option>
-            <mat-option *ngFor="let d of departments" [value]="d.name">
-              {{ d.name }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="fill">
-          <mat-label>Position</mat-label>
-          <mat-select formControlName="position">
-            <mat-option value="member">Member</mat-option>
-            <mat-option value="head">Head</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-      </div>
-
-      <div class="row-error" *ngIf="r.value._error">
-        {{ r.value._error }}
-      </div>
+      <div #bottomAnchor></div>
 
     </div>
-  </div>
-
-  <button mat-stroked-button (click)="addRow()">
-    + Add User
-  </button>
-
-  <!-- 🔴 NEW -->
-  <div #bottomAnchor></div>
-
-</mat-dialog-content>
-
-<mat-dialog-actions align="end">
-
-  <!-- 🔴 NEW -->
-  <div class="scroll-actions">
-
-    <button mat-icon-button (click)="scrollToTop()" matTooltip="Go to top">
-      <mat-icon>arrow_upward</mat-icon>
-    </button>
-
-    <button mat-icon-button (click)="scrollToBottom()" matTooltip="Go to bottom">
-      <mat-icon>arrow_downward</mat-icon>
-    </button>
-
-    <button mat-icon-button color="warn" (click)="goToNextError()" matTooltip="Go to next error">
-      <mat-icon>error_outline</mat-icon>
-    </button>
-
-  </div>
-
-  <button mat-button (click)="close()">Cancel</button>
-
-  <button mat-flat-button
-          color="primary"
-          [disabled]="submitting || form.invalid"
-          (click)="submit()">
-    Import
-  </button>
-
-</mat-dialog-actions>
+  </app-bulk-import-shell>
+</form>

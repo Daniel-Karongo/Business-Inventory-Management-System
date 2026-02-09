@@ -51,6 +51,7 @@ export interface BulkImportConfig<TRow, TItem, TResult> {
   };
 
   mapRowToItem(row: TRow): TItem;
+  mapPreviewRow?: (row: TResult) => any;
 
   submit(request: BulkRequest<TItem>): any; // Observable<BulkResult<TResult>>
 }

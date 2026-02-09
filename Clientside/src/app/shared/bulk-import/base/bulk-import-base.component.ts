@@ -17,8 +17,8 @@ export abstract class BulkImportBaseComponent<T>
 
   submitting = false;
 
-  protected errorRows: number[] = [];
-  protected errorIndex = 0;
+  /* 🔴 DECLARE CONTRACT */
+  protected abstract get errorRows(): number[];
 
   /* ================= LIFECYCLE ================= */
 
@@ -52,36 +52,28 @@ export abstract class BulkImportBaseComponent<T>
 
   /* ================= ERRORS ================= */
 
-  protected cacheErrors(res: BulkResult<any>) {
-    this.errorRows = res.errors?.map(e => e.row).sort((a, b) => a - b) || [];
-
-    if (this.errorRows.length) {
-      queueMicrotask(() =>
-        this.scroll.goToLine(this.errorRows[0])
-      );
-    }
-  }
-
   goToNextError() {
-    if (!this.errorRows.length) return;
+    const errors = this.errorRows;
+    if (!errors.length) return;
 
     const current = this.scroll.getCurrentLine();
 
     const next =
-      this.errorRows.find(r => r > current) ??
-      this.errorRows[0]; // wrap around
+      errors.find(r => r > current) ??
+      errors[0];
 
     this.scroll.goToLine(next);
   }
 
   goToPreviousError() {
-    if (!this.errorRows.length) return;
+    const errors = this.errorRows;
+    if (!errors.length) return;
 
     const current = this.scroll.getCurrentLine();
 
     const prev =
-      [...this.errorRows].reverse().find(r => r < current) ??
-      this.errorRows[this.errorRows.length - 1]; // wrap around
+      [...errors].reverse().find(r => r < current) ??
+      errors[errors.length - 1];
 
     this.scroll.goToLine(prev);
   }

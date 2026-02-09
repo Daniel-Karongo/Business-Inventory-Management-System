@@ -67,6 +67,9 @@ export class BulkImportShellComponent {
   @Output() prevError = new EventEmitter<void>();
   @Output() nextError = new EventEmitter<void>();
   @Output() clearAll = new EventEmitter<void>();
+  @Output() exportExcel = new EventEmitter<void>();
+  @Output() exportCsv = new EventEmitter<void>();
+
 
   onGo(line?: number) {
     if (line && line > 0) {
