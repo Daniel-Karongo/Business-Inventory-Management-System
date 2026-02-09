@@ -1,0 +1,125 @@
+<h2 mat-dialog-title class="bulk-title">
+  {{ title }}
+</h2>
+
+<mat-dialog-content #scrollContainer class="body">
+
+  <!-- IMPORT ZONE -->
+  <div class="import-zone">
+
+    <div class="import-tiles">
+
+      <label class="import-tile excel" [class.disabled]="loading">
+        <input #excelInput type="file" hidden accept=".xlsx"
+          (change)="importExcel.emit(excelInput.files?.[0]); excelInput.value = ''">
+
+        <mat-icon>table_view</mat-icon>
+        <div>
+          <strong>Import Excel</strong>
+          <small>.xlsx template</small>
+        </div>
+      </label>
+
+      <label class="import-tile csv" [class.disabled]="loading">
+        <input #csvInput type="file" hidden accept=".csv"
+          (change)="importCsv.emit(csvInput.files?.[0]); csvInput.value = ''">
+
+        <mat-icon>description</mat-icon>
+        <div>
+          <strong>Import CSV</strong>
+          <small>.csv template</small>
+        </div>
+      </label>
+
+    </div>
+
+    <div class="template-actions">
+      <button mat-stroked-button (click)="downloadExcel.emit()">
+        <mat-icon>table_view</mat-icon>
+        Excel Template
+      </button>
+
+      <button mat-stroked-button (click)="downloadCsv.emit()">
+        <mat-icon>description</mat-icon>
+        CSV Template
+      </button>
+    </div>
+
+  </div>
+
+  <!-- LINE TALLY -->
+  <div class="line-tally prominent">
+    <mat-icon>format_list_numbered</mat-icon>
+    <strong>{{ rowCount }}</strong>
+    <span *ngIf="rowCount === 1"> line loaded</span>
+    <span *ngIf="rowCount !== 1"> lines loaded</span>
+  </div>
+
+  <!-- GO TO LINE -->
+  <div class="go-to-line">
+    <mat-form-field>
+      <mat-label>Go to line</mat-label>
+      <input #lineInput id="goToLineInput" matInput type="number" min="1" [max]="rowCount"
+        (keydown.enter)="$event.preventDefault(); onGo(lineInput.valueAsNumber)">
+    </mat-form-field>
+
+    <button mat-stroked-button (click)="onGo(lineInput.valueAsNumber)">
+      Go
+    </button>
+  </div>
+
+  <div class="shell-body" [class.loading-surface]="loading">
+
+    <!-- 🔒 BLOCKING LOADER -->
+    <div class="shell-loading-overlay" *ngIf="loading">
+      <div class="shell-loading-card">
+        <div class="progress-block">
+          <div class="progress-inline"></div>
+          <span *ngIf="progress !== null">{{ progress }}%</span>
+        </div>
+
+        <div class="loading-hint">
+          {{ loadingLabel || 'Processing import…' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- OPTIONS -->
+    <ng-content select="[bulk-options]"></ng-content>
+
+    <!-- ROWS -->
+    <ng-content></ng-content>
+  </div>
+
+  <div #bottomAnchor></div>
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+
+  <div class="scroll-actions">
+
+    <button mat-icon-button matTooltip="Go to top" (click)="goTop.emit()">
+      <mat-icon>arrow_upward</mat-icon>
+    </button>
+
+    <button mat-icon-button matTooltip="Go to bottom" (click)="goBottom.emit()">
+      <mat-icon>arrow_downward</mat-icon>
+    </button>
+
+    <button mat-icon-button color="warn" matTooltip="Next error" (click)="nextError.emit()">
+      <mat-icon>error_outline</mat-icon>
+    </button>
+    <button mat-icon-button matTooltip="Clear all lines" color="warn" (click)="clearAll.emit()">
+      <mat-icon>delete_sweep</mat-icon>
+    </button>
+
+  </div>
+
+  <button mat-button (click)="cancel.emit()">Cancel</button>
+
+  <button mat-flat-button color="primary" [disabled]="submitting || formInvalid" (click)="submit.emit()">
+    Import
+  </button>
+
+</mat-dialog-actions>
