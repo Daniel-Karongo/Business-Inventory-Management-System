@@ -4,6 +4,7 @@ import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Data
 @Builder
@@ -17,6 +18,7 @@ public class BulkResult<T> {
 
     private List<T> data = new ArrayList<>();
     private List<BulkError> errors = new ArrayList<>();
+    private List<Map<String, Object>> preview = new ArrayList<>();
 
     public void addError(int row, String message) {
         errors.add(new BulkError(row, message));

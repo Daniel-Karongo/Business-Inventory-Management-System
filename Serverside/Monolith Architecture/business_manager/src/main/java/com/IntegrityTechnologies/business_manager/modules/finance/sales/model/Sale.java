@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,7 +20,8 @@ public class Sale {
     @Id
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
-
+    @Column(unique = true)
+    private String receiptNo;
     private LocalDateTime createdAt;
 
     private String createdBy;
@@ -32,10 +34,13 @@ public class Sale {
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "sale_id")
-    private List<SaleLineItem> lineItems;
+    @Builder.Default
+    private List<SaleLineItem> lineItems = new ArrayList<>();
 
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Payment> payments;
+    @Builder.Default
+    private List<Payment> payments = new ArrayList<>();
+
 
     @Column(columnDefinition = "BINARY(16)")
     private UUID customerId;

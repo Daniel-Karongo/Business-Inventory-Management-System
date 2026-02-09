@@ -5,6 +5,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.Pa
 import org.springframework.data.domain.Page;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 public interface PaymentService {
@@ -21,4 +22,7 @@ public interface PaymentService {
     Object reconcile(String fromIso, String toIso);
 
     PaymentDTO reversePayment(UUID id, String note);
+    BigDecimal totalSuccessfulPaymentsForSale(UUID saleId);
+    void validatePaymentRequest(PaymentRequest req);
+
 }

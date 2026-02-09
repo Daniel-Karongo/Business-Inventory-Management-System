@@ -1,6 +1,16 @@
-<div class="flex justify-between mb-4">
-    <h2 class="text-xl font-semibold">Departments</h2>
-    <button mat-flat-button routerLink="create">Create Department</button>
+<div class="page-header flex items-center mb-6">
+  <h2 class="text-xl font-semibold">Departments</h2>
+
+  <div class="flex items-center gap-2 ml-auto">
+    <button mat-stroked-button (click)="openBulkImport()">
+      <mat-icon>cloud_upload</mat-icon>
+      Bulk Import
+    </button>
+
+    <button mat-flat-button routerLink="create">
+      Create Department
+    </button>
+  </div>
 </div>
 
 <table mat-table [dataSource]="departments" class="w-full">

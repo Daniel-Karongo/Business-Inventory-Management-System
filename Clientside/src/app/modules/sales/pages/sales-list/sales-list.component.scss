@@ -6,3 +6,36 @@ mat-chip {
   font-size: 12px;
   height: 24px;
 }
+
+/* ================= SORTABLE HEADERS ================= */
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Inline layout: text + icon sit next to each other */
+.header-inner {
+  display: inline-flex;
+  /* 🔑 inline, not full-width */
+  align-items: center;
+  gap: 6px;
+  /* adjust to taste: 4–8px */
+}
+
+/* Sort icon styling */
+.sort-icon {
+  font-size: 18px !important;
+  line-height: 1 !important;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+/* Hover */
+.sortable:hover {
+  background-color: var(--surface-hover) !important;
+}
+
+.sortable:hover .sort-icon {
+  opacity: 1;
+}

@@ -1031,6 +1031,21 @@ public class InventoryService {
         return result;
     }
 
+    @Transactional(readOnly = true)
+    public boolean inventoryExists(UUID variantId, UUID branchId) {
+        return inventoryItemRepository
+                .findByProductVariant_IdAndBranchId(variantId, branchId)
+                .isPresent();
+    }
+
+    @Transactional(readOnly = true)
+    public long availableQuantity(UUID variantId, UUID branchId) {
+        return inventoryItemRepository
+                .findByProductVariant_IdAndBranchId(variantId, branchId)
+                .map(i -> i.getQuantityOnHand() - i.getQuantityReserved())
+                .orElse(0L);
+    }
+
     // ------------------------
     // Helpers
     // ------------------------

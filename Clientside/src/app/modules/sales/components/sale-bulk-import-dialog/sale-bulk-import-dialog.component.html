@@ -1,0 +1,115 @@
+<h2 mat-dialog-title class="bulk-title">
+  Bulk Import Sales
+</h2>
+
+<mat-dialog-content [formGroup]="form" class="body">
+
+  <!-- IMPORT ZONE -->
+  <div class="import-zone">
+
+    <div class="import-tiles">
+
+      <label class="import-tile excel">
+        <input type="file" hidden accept=".xlsx" (change)="importExcel($event)">
+        <mat-icon>table_view</mat-icon>
+        <div>
+          <strong>Import Excel</strong>
+          <small>.xlsx template</small>
+        </div>
+      </label>
+
+      <label class="import-tile csv">
+        <input type="file" hidden accept=".csv" (change)="importCsv($event)">
+        <mat-icon>description</mat-icon>
+        <div>
+          <strong>Import CSV</strong>
+          <small>.csv template</small>
+        </div>
+      </label>
+
+    </div>
+
+    <div class="template-actions">
+      <button mat-stroked-button (click)="downloadExcelTemplate()">
+        <mat-icon>table_view</mat-icon>
+        Excel Template
+      </button>
+
+      <button mat-stroked-button (click)="downloadCsvTemplate()">
+        <mat-icon>description</mat-icon>
+        CSV Template
+      </button>
+    </div>
+
+  </div>
+
+  <!-- OPTIONS -->
+  <div class="grid-2">
+    <mat-checkbox formControlName="dryRun">
+      Dry run (validate only)
+    </mat-checkbox>
+
+    <mat-form-field>
+      <mat-label>Import Mode</mat-label>
+      <mat-select formControlName="mode">
+        <mat-option value="OPERATIONAL">Operational</mat-option>
+        <mat-option value="HISTORICAL">Historical</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <!-- ROWS -->
+  <div class="rows" formArrayName="rows">
+
+    <div class="row-card" *ngFor="let r of rows.controls; let i = index" [formGroupName]="i">
+
+      <div class="row-header">
+        <span>Line {{ i + 1 }}</span>
+        <button mat-icon-button color="warn" (click)="removeRow(i)">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+
+      <div class="grid-3">
+        <mat-form-field><input matInput placeholder="Receipt No" formControlName="receiptNo"></mat-form-field>
+        <mat-form-field><input matInput placeholder="SKU" formControlName="sku"></mat-form-field>
+        <mat-form-field><input matInput placeholder="Product Name" formControlName="productName"></mat-form-field>
+      </div>
+
+      <div class="grid-3">
+        <mat-form-field><input matInput placeholder="Variant" formControlName="variant"></mat-form-field>
+        <mat-form-field><input matInput type="number" placeholder="Qty" formControlName="quantity"></mat-form-field>
+        <mat-form-field><input matInput type="number" placeholder="Unit Price"
+            formControlName="unitPrice"></mat-form-field>
+      </div>
+
+      <div class="grid-3">
+        <mat-form-field><input matInput placeholder="Branch" formControlName="branchCode"></mat-form-field>
+        <mat-form-field appearance="fill">
+          <mat-label>Sale Date</mat-label>
+          <input matInput [matDatepicker]="dp" formControlName="saleDate" placeholder="dd/mm/yyyy">
+          <mat-datepicker-toggle matSuffix [for]="dp"></mat-datepicker-toggle>
+          <mat-datepicker #dp></mat-datepicker>
+        </mat-form-field>
+        <mat-form-field><input matInput placeholder="Payments" formControlName="payments"></mat-form-field>
+      </div>
+
+      <div class="row-error" *ngIf="r.value._error">
+        {{ r.value._error }}
+      </div>
+
+    </div>
+  </div>
+
+  <button mat-stroked-button (click)="addRow()">
+    + Add Line
+  </button>
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="close()">Cancel</button>
+  <button mat-flat-button color="primary" [disabled]="submitting || form.invalid" (click)="submit()">
+    Import
+  </button>
+</mat-dialog-actions>

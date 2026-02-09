@@ -1,9 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.sales.controller;
 
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.config.OptimisticRetryRunner;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.SaleDTO;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.SaleRequest;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.*;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.service.SaleBulkService;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.service.SalesService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -21,10 +23,22 @@ import java.util.UUID;
 public class SalesController {
 
     private final SalesService salesService;
+    private final SaleBulkService saleBulkService;
 
     /* ============================================================
        CREATE SALE
        ============================================================ */
+
+    @PostMapping("/import")
+    public ResponseEntity<BulkResult<SaleBulkPreviewRow>> importSales(
+            @RequestParam SaleImportMode mode,
+            @RequestBody BulkRequest<SaleBulkRow> request
+    ) {
+        return ResponseEntity.ok(
+                saleBulkService.importSales(request, mode)
+        );
+    }
+
     @PostMapping
     public ResponseEntity<SaleDTO> createSale(@RequestBody SaleRequest req) {
         return ResponseEntity.ok(salesService.createSale(req));

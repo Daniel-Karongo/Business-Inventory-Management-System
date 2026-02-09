@@ -4,7 +4,7 @@
     <div class="bg-[var(--surface)] p-4 rounded shadow flex justify-between items-center">
         <div>
             <h2 class="text-xl font-semibold">
-                Sale {{ sale.id | slice:0:8 }}
+                Sale {{ sale.receiptNo | slice:0:8 }}
             </h2>
             <p class="text-sm text-[var(--text-secondary)]">
                 {{ sale.createdAt | date:'dd/MM/yyyy HH:mm' }} · {{ sale.createdBy }}

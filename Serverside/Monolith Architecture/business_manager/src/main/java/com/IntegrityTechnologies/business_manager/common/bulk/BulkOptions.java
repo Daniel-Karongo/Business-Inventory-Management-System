@@ -6,4 +6,5 @@ import lombok.Data;
 public class BulkOptions {
     private boolean dryRun = false;
     private boolean skipDuplicates = true;
+    private boolean updateExisting;
 }

@@ -4,6 +4,7 @@ import { environment } from '../../../../environments/environment';
 import { Observable } from 'rxjs';
 import { DepartmentDTO, DepartmentMinimalDTO } from '../models/department.model';
 import { ApiResponse } from '../../../core/models/api-response.model';
+import { BulkRequest, BulkResult } from '../../../shared/models/bulk-import.model';
 
 @Injectable({ providedIn: 'root' })
 export class DepartmentService {
@@ -16,9 +17,13 @@ export class DepartmentService {
     return this.http.post<DepartmentDTO>(this.base, dto);
   }
 
-  /** CREATE BULK */
-  createBulk(dtos: DepartmentDTO[]): Observable<DepartmentDTO[]> {
-    return this.http.post<DepartmentDTO[]>(`${this.base}/bulk`, dtos);
+  bulkImport(
+    request: BulkRequest<any>
+  ): Observable<BulkResult<DepartmentDTO>> {
+    return this.http.post<BulkResult<DepartmentDTO>>(
+      `${this.base}/import`,
+      request
+    );
   }
 
   /** UPDATE */

@@ -1,5 +1,6 @@
 export interface BulkOptions {
   dryRun?: boolean;
+  updateExisting?: boolean;
   skipDuplicates?: boolean;
 }
 
@@ -14,6 +15,7 @@ export interface BulkResult<T> {
   failed: number;
   data: T[];
   errors: BulkError[];
+  preview?: T[]
 }
 
 export interface BulkRequest<T> {

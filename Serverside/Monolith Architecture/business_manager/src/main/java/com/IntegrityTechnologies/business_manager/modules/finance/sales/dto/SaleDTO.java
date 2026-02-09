@@ -12,16 +12,14 @@ import java.math.BigDecimal;
 @Builder
 public class SaleDTO {
     private UUID id;
+    private String receiptNo;
     private LocalDateTime createdAt;
     private String createdBy;
-
     private BigDecimal totalAmount;
     private BigDecimal totalTax;
     private BigDecimal totalDiscount;
-
     private String status;
     private UUID customerId;
-
     private List<SaleLineItemDTO> items;
     private List<PaymentDTO> payments;
     private SaleCustomerDTO customer;

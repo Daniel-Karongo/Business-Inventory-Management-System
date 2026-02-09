@@ -19,6 +19,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.departme
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
@@ -86,7 +87,7 @@ public class DepartmentService {
 
         Department department = departmentRepository.save(d);
 
-        updateBranchDepartments(dto, department, authentication);
+        syncBranches(dto, department, authentication);
         logAudit(department, "CREATE", null, dto.toString(), authentication, null);
 
         return departmentMapper.toDTO(department);
@@ -155,6 +156,37 @@ public class DepartmentService {
         return departmentMapper.toDTO(updated);
     }
 
+    @Transactional
+    public Department updateExisting(
+            Department existing,
+            DepartmentDTO dto,
+            Authentication authentication
+    ) {
+
+        Set<User> heads = resolveUsers(dto.getHeadIds(), true);
+        Set<User> members = resolveUsers(dto.getMemberIds(), false);
+
+        checkOverlap(heads, members);
+
+        existing.setDescription(dto.getDescription());
+        existing.setRollcallStartTime(dto.getRollcallStartTime());
+        existing.setGracePeriodMinutes(dto.getGracePeriodMinutes());
+        existing.setHeads(heads);
+        existing.setMembers(members);
+
+        syncBranches(dto, existing, authentication);
+
+        logAudit(
+                existing,
+                "UPDATE",
+                null,
+                dto.toString(),
+                authentication,
+                "Bulk import update"
+        );
+
+        return departmentRepository.save(existing);
+    }
 
 
 
@@ -245,6 +277,22 @@ public class DepartmentService {
                 .collect(Collectors.toSet());
     }
 
+    private Set<User> resolveUsers(Set<UUID> ids, boolean asHead) {
+        if (ids == null || ids.isEmpty()) return Set.of();
+
+        return ids.stream()
+                .map(id -> userRepository.findByIdAndDeletedFalse(id)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException("User not found: " + id)))
+                .peek(user -> {
+                    if (asHead && !privilegesChecker.isAuthorizedToBeHead(user)) {
+                        user.setRole(Role.SUPERVISOR);
+                        userRepository.save(user);
+                    }
+                })
+                .collect(Collectors.toSet());
+    }
+
     private void checkOverlap(Set<User> heads, Set<User> members) {
         Set<User> overlap = heads.stream().filter(members::contains).collect(Collectors.toSet());
         if (!overlap.isEmpty()) {
@@ -253,16 +301,93 @@ public class DepartmentService {
         }
     }
 
-    private void updateBranchDepartments(DepartmentDTO dto, Department department, Authentication authentication) {
-        Set<UUID> branchIds = dto.getBranchIds() == null ? Set.of() : dto.getBranchIds();
-        Set<Branch> departmentBranches = branchIds.stream().map(id -> branchRepository.findByIdAndDeletedFalse(id).get()).collect(Collectors.toSet());
-        for(Branch branch: departmentBranches) {
-            Set<Department> oldDepartments = branch.getDepartments();
-            branch.getDepartments().add(department);
+    private void syncBranches(
+            DepartmentDTO dto,
+            Department department,
+            Authentication authentication
+    ) {
 
-            branchRepository.save(branch);
+        Set<UUID> newBranchIds =
+                dto.getBranchIds() == null ? Set.of() : dto.getBranchIds();
 
-            branchService.recordBranchAudit(branch, "UPDATE", "departments", oldDepartments.toString(), branch.getDepartments().toString(), authentication, "Department added to branch");
+    /* =========================
+       RESOLVE NEW BRANCHES
+       ========================= */
+        Set<Branch> newBranches = newBranchIds.stream()
+                .map(id ->
+                        branchRepository.findByIdAndDeletedFalse(id)
+                                .orElseThrow(() ->
+                                        new IllegalArgumentException(
+                                                "Branch not found: " + id
+                                        )
+                                )
+                )
+                .collect(Collectors.toSet());
+
+    /* =========================
+       FETCH CURRENT BRANCHES (DB-AUTHORITATIVE)
+       ========================= */
+        List<Branch> currentBranches =
+                departmentRepository.findBranchesByDepartmentId(
+                        department.getId()
+                );
+
+        Set<UUID> currentBranchIds = currentBranches.stream()
+                .map(Branch::getId)
+                .collect(Collectors.toSet());
+
+    /* =========================
+       REMOVE FROM OLD BRANCHES
+       ========================= */
+        for (Branch oldBranch : currentBranches) {
+
+            if (!newBranchIds.contains(oldBranch.getId())) {
+
+                oldBranch.getDepartments().remove(department);
+                branchRepository.save(oldBranch);
+
+                branchService.recordBranchAudit(
+                        oldBranch,
+                        "UPDATE",
+                        "departments",
+                        department.getName(),
+                        null,
+                        authentication,
+                        "Department removed via bulk import"
+                );
+            }
+        }
+
+    /* =========================
+       ADD TO NEW BRANCHES
+       (SAFE JOIN-TABLE INSERT)
+       ========================= */
+        for (Branch newBranch : newBranches) {
+
+            if (!currentBranchIds.contains(newBranch.getId())) {
+
+                // 🔒 DB-level safety check (prevents duplicate PK)
+                boolean alreadyAssigned =
+                        branchRepository.branchContainsDepartment(
+                                newBranch.getId(),
+                                department.getId()
+                        );
+
+                if (!alreadyAssigned) {
+                    newBranch.getDepartments().add(department);
+                    branchRepository.save(newBranch);
+
+                    branchService.recordBranchAudit(
+                            newBranch,
+                            "UPDATE",
+                            "departments",
+                            null,
+                            department.getName(),
+                            authentication,
+                            "Department assigned via bulk import"
+                    );
+                }
+            }
         }
     }
 

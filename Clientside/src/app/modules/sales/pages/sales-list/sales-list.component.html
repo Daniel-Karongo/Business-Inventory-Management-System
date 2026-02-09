@@ -1,7 +1,7 @@
 <div class="flex flex-col gap-4">
 
   <!-- HEADER -->
-  <div class="flex justify-between items-center">
+  <div class="page-header flex items-center mb-6">
     <div>
       <h2 class="text-xl font-semibold">Sales</h2>
       <p class="text-sm text-[var(--text-secondary)]">
@@ -9,10 +9,43 @@
       </p>
     </div>
 
-    <button mat-flat-button (click)="create()">
-      <mat-icon>add</mat-icon>
-      New Sale
-    </button>
+    <div class="flex items-center gap-2 ml-auto">
+      <button mat-flat-button (click)="create()">
+        <mat-icon>add</mat-icon>
+        New Sale
+      </button>
+
+      <button mat-stroked-button (click)="openBulkImport()">
+        <mat-icon>cloud_upload</mat-icon>
+        Bulk Import
+      </button>
+    </div>
+  </div>
+
+  <!-- SEARCH + FILTERS -->
+  <div class="flex gap-4">
+    <input class="search-input px-3 py-2 border rounded" placeholder="Search receipt, status, amount or date…"
+      [(ngModel)]="q" (input)="applyFilters()" />
+
+    <mat-form-field appearance="fill">
+      <mat-label>Status</mat-label>
+      <mat-select [(ngModel)]="filterStatus" (selectionChange)="applyFilters()">
+        <mat-option value="">All</mat-option>
+        <mat-option value="COMPLETED">Completed</mat-option>
+        <mat-option value="CANCELLED">Cancelled</mat-option>
+        <mat-option value="REFUNDED">Refunded</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Payment</mat-label>
+      <mat-select [(ngModel)]="filterPayment" (selectionChange)="applyFilters()">
+        <mat-option value="">All</mat-option>
+        <mat-option value="paid">Paid</mat-option>
+        <mat-option value="partial">Partial</mat-option>
+        <mat-option value="unpaid">Unpaid</mat-option>
+      </mat-select>
+    </mat-form-field>
   </div>
 
   <!-- TABLE -->
@@ -22,60 +55,112 @@
 
       <!-- DATE -->
       <ng-container matColumnDef="createdAt">
-        <th mat-header-cell *matHeaderCellDef>Date</th>
+        <th mat-header-cell *matHeaderCellDef (click)="sortBy('createdAt')" class="sortable">
+          <div class="header-inner">
+            <span>Date</span>
+            <mat-icon class="sort-icon">
+              {{ sortField === 'createdAt'
+              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+              : 'unfold_more' }}
+            </mat-icon>
+          </div>
+        </th>
+
         <td mat-cell *matCellDef="let s">
           {{ s.createdAt | date:'dd/MM/yyyy HH:mm' }}
         </td>
       </ng-container>
 
-      <!-- SALE ID -->
-      <ng-container matColumnDef="saleId">
-        <th mat-header-cell *matHeaderCellDef>Sale #</th>
+      <!-- RECEIPT -->
+      <ng-container matColumnDef="receiptNo">
+        <th mat-header-cell *matHeaderCellDef (click)="sortBy('receiptNo')" class="sortable">
+          <div class="header-inner">
+            <span>Receipt No</span>
+            <mat-icon class="sort-icon">
+              {{ sortField === 'receiptNo'
+              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+              : 'unfold_more' }}
+            </mat-icon>
+          </div>
+        </th>
+
         <td mat-cell *matCellDef="let s">
-          {{ s.id | slice:0:8 }}
+          {{ s.receiptNo | slice:0:8 }}
         </td>
       </ng-container>
 
       <!-- STATUS -->
       <ng-container matColumnDef="status">
-        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <th mat-header-cell *matHeaderCellDef (click)="sortBy('status')" class="sortable">
+          <div class="header-inner">
+            <span>Status</span>
+            <mat-icon class="sort-icon">
+              {{ sortField === 'status'
+              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+              : 'unfold_more' }}
+            </mat-icon>
+          </div>
+        </th>
+
         <td mat-cell *matCellDef="let s">
-          <mat-chip
-            [color]="
-              s.status === 'COMPLETED' ? 'primary' :
-              s.status === 'REFUNDED'  ? 'warn' :
-              s.status === 'CANCELLED' ? 'warn' : undefined
-            "
-            selected>
-            {{ s.status }}
-          </mat-chip>
+          <mat-chip selected>{{ s.status }}</mat-chip>
         </td>
       </ng-container>
 
       <!-- TOTAL -->
       <ng-container matColumnDef="total">
-        <th mat-header-cell *matHeaderCellDef>Total</th>
+        <th mat-header-cell *matHeaderCellDef (click)="sortBy('total')" class="sortable">
+          <div class="header-inner">
+            <span>Total</span>
+            <mat-icon class="sort-icon">
+              {{ sortField === 'total'
+              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+              : 'unfold_more' }}
+            </mat-icon>
+          </div>
+        </th>
+
         <td mat-cell *matCellDef="let s">
-          {{ s.totalAmount | currency:'KES' }}
+          {{ s.totalAmount | currency:'KES ' }}
         </td>
       </ng-container>
 
       <!-- PAID -->
       <ng-container matColumnDef="paid">
-        <th mat-header-cell *matHeaderCellDef>Paid</th>
+        <th mat-header-cell *matHeaderCellDef (click)="sortBy('paid')" class="sortable">
+          <div class="header-inner">
+            <span>Paid</span>
+            <mat-icon class="sort-icon">
+              {{ sortField === 'paid'
+              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+              : 'unfold_more' }}
+            </mat-icon>
+          </div>
+        </th>
+
         <td mat-cell *matCellDef="let s">
-          {{ paidAmount(s) | currency:'KES' }}
+          <span class="text-[var(--text-secondary)]">
+            {{ paidAmount(s) | currency:'KES ' }}
+          </span>
         </td>
       </ng-container>
 
       <!-- BALANCE -->
       <ng-container matColumnDef="balance">
-        <th mat-header-cell *matHeaderCellDef>Balance</th>
+        <th mat-header-cell *matHeaderCellDef (click)="sortBy('balance')" class="sortable">
+          <div class="header-inner">
+            <span>Balance</span>
+            <mat-icon class="sort-icon">
+              {{ sortField === 'balance'
+              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+              : 'unfold_more' }}
+            </mat-icon>
+          </div>
+        </th>
+
         <td mat-cell *matCellDef="let s">
-          <span
-            [class.text-red-500]="balance(s) > 0"
-            [class.text-green-600]="balance(s) === 0">
-            {{ balance(s) | currency:'KES' }}
+          <span [class.text-red-500]="balance(s) > 0" [class.text-green-600]="balance(s) === 0">
+            {{ balance(s) | currency:'KES ' }}
           </span>
         </td>
       </ng-container>
@@ -83,29 +168,20 @@
       <!-- ACTIONS -->
       <ng-container matColumnDef="actions">
         <th mat-header-cell *matHeaderCellDef></th>
-        <td mat-cell *matCellDef="let s" class="actions">
-          <button
-            mat-icon-button
-            matTooltip="View sale"
-            (click)="view(s)">
+        <td mat-cell *matCellDef="let s">
+          <button mat-icon-button (click)="view(s)">
             <mat-icon>visibility</mat-icon>
           </button>
         </td>
       </ng-container>
 
       <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-      <tr mat-row
-          *matRowDef="let row; columns: displayedColumns;"
-          (click)="view(row)"
-          class="cursor-pointer">
+      <tr mat-row *matRowDef="let row; columns: displayedColumns" (click)="view(row)" class="cursor-pointer">
       </tr>
+
     </table>
 
-    <mat-paginator
-      [length]="total"
-      [pageSize]="size"
-      [pageSizeOptions]="[10,20,50]"
-      (page)="load($event)">
+    <mat-paginator [length]="total" [pageSize]="size" [pageSizeOptions]="[10,20,50]" (page)="changePage($event)">
     </mat-paginator>
 
   </div>

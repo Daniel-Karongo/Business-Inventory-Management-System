@@ -26,4 +26,8 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     List<ProductVariant> findByProductId(UUID productId);
 
     Optional<ProductVariant> findBySku(String sku);
+    List<ProductVariant> findByProduct_NameIgnoreCaseAndClassificationAndDeletedFalse(
+            String productName,
+            String classification
+    );
 }

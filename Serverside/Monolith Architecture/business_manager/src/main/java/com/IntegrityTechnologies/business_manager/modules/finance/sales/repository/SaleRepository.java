@@ -2,12 +2,15 @@ package com.IntegrityTechnologies.business_manager.modules.finance.sales.reposit
 
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,4 +33,31 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
         """)
     List<Object[]> revenueTrendByDay(@Param("branchId") UUID branchId);
 
+    @Query("""
+    SELECT DISTINCT s
+    FROM Sale s
+    JOIN s.lineItems li
+    WHERE (:status IS NULL OR s.status = :status)
+      AND (:customerId IS NULL OR s.customerId = :customerId)
+      AND (:branchId IS NULL OR li.branchId = :branchId)
+      AND (:from IS NULL OR s.createdAt >= :from)
+      AND (:to IS NULL OR s.createdAt <= :to)
+""")
+    Page<Sale> searchSales(
+            @Param("status") Sale.SaleStatus status,
+            @Param("customerId") UUID customerId,
+            @Param("branchId") UUID branchId,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable
+    );
+
+    boolean existsByReceiptNo(String receiptNo);
+
+    @Query("""
+        select max(s.receiptNo)
+        from Sale s
+        where s.receiptNo like :prefix%
+    """)
+    String findMaxReceiptNo(@Param("prefix") String prefix);
 }

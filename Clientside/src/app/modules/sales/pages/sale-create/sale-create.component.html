@@ -82,12 +82,10 @@
       <!-- VARIANT -->
       <mat-form-field>
         <mat-select placeholder="Variant" [formControl]="controlAt(i, 'productVariantId')"
-          [disabled]="!variantsMap[i].length" (selectionChange)="onVariantChange(i, $event.value)">
-
-          <mat-option *ngFor="let v of variantsMap[i]" [value]="v.id">
+          [disabled]="!(variantsMap[i]?.length)" (selectionChange)="onVariantChange(i, $event.value)">
+          <mat-option *ngFor="let v of (variantsMap[i] || [])" [value]="v.id">
             {{ v.classification || 'STANDARD' }}
           </mat-option>
-
         </mat-select>
 
         <mat-hint *ngIf="!variantsMap[i]?.length">

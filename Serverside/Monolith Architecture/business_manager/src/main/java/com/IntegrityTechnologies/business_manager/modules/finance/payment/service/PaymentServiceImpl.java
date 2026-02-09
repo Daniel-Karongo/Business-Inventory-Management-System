@@ -316,6 +316,53 @@ public class PaymentServiceImpl implements PaymentService {
         return auth != null ? auth.getName() : "SYSTEM";
     }
 
+    @Override
+    @Transactional(
+            readOnly = true,
+            noRollbackFor = IllegalArgumentException.class
+    )
+    public void validatePaymentRequest(PaymentRequest req) {
+        if (req == null || req.getProviderReference() == null) return;
+
+        var existing =
+                paymentRepository.findByProviderReference(req.getProviderReference());
+
+        if (existing != null && !existing.isEmpty()) {
+
+            Payment p = existing.get(0);
+
+            if (req.getSaleId() == null
+                    || !p.getSale().getId().equals(req.getSaleId())) {
+
+                throw new IllegalArgumentException(
+                        "Provider reference already used for another sale"
+                );
+            }
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal totalSuccessfulPaymentsForSale(UUID saleId) {
+
+        if (saleId == null) {
+            return BigDecimal.ZERO;
+        }
+
+        Sale sale = saleRepository.findById(saleId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Sale not found: " + saleId));
+
+        if (sale.getPayments() == null) {
+            return BigDecimal.ZERO;
+        }
+
+        return sale.getPayments().stream()
+                .filter(p -> "SUCCESS".equalsIgnoreCase(p.getStatus()))
+                .map(Payment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
     private PaymentDTO toDTO(Payment p) {
         return PaymentDTO.builder()
                 .paymentId(p.getId())

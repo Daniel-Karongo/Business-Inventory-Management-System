@@ -1,13 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
+import { BulkRequest, BulkResult } from '../../../shared/models/bulk-import.model';
 
 @Injectable({ providedIn: 'root' })
 export class SalesService {
 
   private base = environment.apiUrl + environment.endpoints.sales.base;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   list(params: {
     page?: number;
@@ -35,6 +36,19 @@ export class SalesService {
 
   create(payload: any) {
     return this.http.post<any>(this.base, payload);
+  }
+
+  import(
+    mode: 'HISTORICAL' | 'OPERATIONAL',
+    payload: BulkRequest<any>
+  ) {
+    const params = new HttpParams().set('mode', mode);
+
+    return this.http.post<BulkResult<any>>(
+      `${this.base}/import`,
+      payload,
+      { params }
+    );
   }
 
   update(id: string, payload: any) {

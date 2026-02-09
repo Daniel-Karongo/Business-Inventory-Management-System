@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -45,6 +46,7 @@ public class SalesService {
     private final AccountingAccounts accountingAccounts;
     private final PaymentService paymentService;
     private final CustomerRepository customerRepository;
+    private final ReceiptNumberService receiptNumberService;
 
     /* ============================================================
        CREATE SALE
@@ -91,6 +93,7 @@ public class SalesService {
 
         Sale sale = Sale.builder()
                 .id(saleId)
+                .receiptNo(receiptNumberService.nextSaleReceipt()) // ✅ NEW
                 .createdAt(LocalDateTime.now())
                 .createdBy(currentUser)
                 .customerId(customerId)
@@ -134,30 +137,35 @@ public class SalesService {
             int page, int size,
             String status, String customer,
             UUID branchId,
-            java.time.LocalDate from, java.time.LocalDate to
+            LocalDate from, LocalDate to
     ) {
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Sale> pageRes = saleRepository.findAll(pageable);
+        Pageable pageable =
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        List<SaleDTO> mapped = pageRes.stream()
-                .filter(s -> status == null || s.getStatus().name().equalsIgnoreCase(status))
-                .filter(s -> customer == null || (s.getCustomerId() != null &&
-                        s.getCustomerId().toString().equalsIgnoreCase(customer)))
-                .filter(s -> branchId == null || s.getLineItems().stream()
-                        .anyMatch(li -> branchId.equals(li.getBranchId())))
-                .filter(s -> {
-                    if (from == null && to == null) return true;
-                    if (s.getCreatedAt() == null) return false;
-                    var d = s.getCreatedAt().toLocalDate();
-                    if (from != null && d.isBefore(from)) return false;
-                    if (to != null && d.isAfter(to)) return false;
-                    return true;
-                })
-                .map(this::toDTO)
-                .toList();
+        Sale.SaleStatus saleStatus =
+                status != null ? Sale.SaleStatus.valueOf(status.toUpperCase()) : null;
 
-        return new PageImpl<>(mapped, pageable, mapped.size());
+        UUID customerId =
+                customer != null ? UUID.fromString(customer) : null;
+
+        LocalDateTime fromDt =
+                from != null ? from.atStartOfDay() : null;
+
+        LocalDateTime toDt =
+                to != null ? to.atTime(23, 59, 59) : null;
+
+        Page<Sale> pageRes =
+                saleRepository.searchSales(
+                        saleStatus,
+                        customerId,
+                        branchId,
+                        fromDt,
+                        toDt,
+                        pageable
+                );
+
+        return pageRes.map(this::toDTO);
     }
 
     /* ============================================================
@@ -408,6 +416,7 @@ public class SalesService {
 
         return SaleDTO.builder()
                 .id(sale.getId())
+                .receiptNo(sale.getReceiptNo() != null ? sale.getReceiptNo() : sale.getId().toString())
                 .createdAt(sale.getCreatedAt())
                 .createdBy(sale.getCreatedBy())
                 .totalAmount(sale.getTotalAmount())

@@ -72,11 +72,11 @@ export class SaleCreateComponent implements OnInit {
   products: any[] = [];
   variants: any[] = [];
   branches: any[] = [];
-  variantsMap: Record<number, any[]> = {};
-
 
   displayedColumns = ['product', 'branch', 'qty', 'price', 'total', 'remove'];
-  stockMap: Record<number, number> = {};
+  variantsMap: Record<number, any[] | undefined> = {};
+  stockMap: Record<number, number | undefined> = {};
+
   defaultBranchId: string | null = null;
 
   constructor(
@@ -135,6 +135,7 @@ export class SaleCreateComponent implements OnInit {
     this.branchService.getAll(false).subscribe(b => this.branches = b);
 
     this.addLine();
+    this.variantsMap[0] = [];
   }
 
   private createSaleItemForm(
@@ -180,11 +181,36 @@ export class SaleCreateComponent implements OnInit {
 
   addLine() {
     this.items.push(this.createSaleItemForm());
+
+    const index = this.items.length - 1;
+    this.variantsMap[index] = [];   // ✅ GUARANTEE
   }
 
   removeLine(i: number) {
-    this.items.removeAt(i);
-  }
+  this.items.removeAt(i);
+
+  delete this.variantsMap[i];
+  delete this.stockMap[i];
+
+  // 🔁 reindex variantsMap
+  this.variantsMap = Object.values(this.variantsMap).reduce(
+    (acc, v, idx) => {
+      acc[idx] = v;
+      return acc;
+    },
+    {} as Record<number, any[] | undefined>
+  );
+
+  // 🔁 reindex stockMap
+  this.stockMap = Object.values(this.stockMap).reduce(
+    (acc, v, idx) => {
+      acc[idx] = v;
+      return acc;
+    },
+    {} as Record<number, number | undefined>
+  );
+}
+
 
   scanBarcode(value?: string) {
     const code = (value ?? this.barcodeCtrl.value)?.trim();

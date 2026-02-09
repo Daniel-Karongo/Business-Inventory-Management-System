@@ -10,6 +10,7 @@ import { DepartmentService } from '../../services/department.service';
 import { DepartmentDTO } from '../../models/department.model';
 import { ConfirmDialogComponent } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { DepartmentBulkImportDialogComponent } from '../../components/department-bulk-import-dialog/department-bulk-import-dialog.component';
 
 @Component({
   standalone: true,
@@ -64,5 +65,18 @@ export class DepartmentListComponent implements OnInit {
       return '—';
     }
     return d.branches.map((b: any) => b.name).join(', ');
+  }
+
+  openBulkImport() {
+    this.dialog.open(DepartmentBulkImportDialogComponent, {
+      width: '1100px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      autoFocus: false
+    }).afterClosed().subscribe(imported => {
+      if (imported === true) {
+        this.load();
+      }
+    });
   }
 }
