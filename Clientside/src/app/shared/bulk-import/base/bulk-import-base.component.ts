@@ -53,8 +53,7 @@ export abstract class BulkImportBaseComponent<T>
   /* ================= ERRORS ================= */
 
   protected cacheErrors(res: BulkResult<any>) {
-    this.errorRows = res.errors?.map(e => e.row) || [];
-    this.errorIndex = 0;
+    this.errorRows = res.errors?.map(e => e.row).sort((a, b) => a - b) || [];
 
     if (this.errorRows.length) {
       queueMicrotask(() =>
@@ -66,9 +65,25 @@ export abstract class BulkImportBaseComponent<T>
   goToNextError() {
     if (!this.errorRows.length) return;
 
-    this.scroll.goToLine(this.errorRows[this.errorIndex]);
-    this.errorIndex =
-      (this.errorIndex + 1) % this.errorRows.length;
+    const current = this.scroll.getCurrentLine();
+
+    const next =
+      this.errorRows.find(r => r > current) ??
+      this.errorRows[0]; // wrap around
+
+    this.scroll.goToLine(next);
+  }
+
+  goToPreviousError() {
+    if (!this.errorRows.length) return;
+
+    const current = this.scroll.getCurrentLine();
+
+    const prev =
+      [...this.errorRows].reverse().find(r => r < current) ??
+      this.errorRows[this.errorRows.length - 1]; // wrap around
+
+    this.scroll.goToLine(prev);
   }
 
   /* ================= SCROLL ================= */

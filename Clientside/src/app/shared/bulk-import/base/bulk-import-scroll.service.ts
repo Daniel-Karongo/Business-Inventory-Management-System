@@ -22,6 +22,25 @@ export class BulkImportScrollService {
     this.bottom?.scrollIntoView({ behavior: 'smooth' });
   }
 
+  getCurrentLine(): number {
+    if (!this.container) return 1;
+
+    const cards = Array.from(
+      this.container.querySelectorAll<HTMLElement>('.row-card')
+    );
+
+    const containerTop = this.container.getBoundingClientRect().top;
+
+    for (let i = 0; i < cards.length; i++) {
+      const rect = cards[i].getBoundingClientRect();
+      if (rect.bottom > containerTop + 10) {
+        return i + 1;
+      }
+    }
+
+    return 1;
+  }
+
   goToLine(line: number) {
     if (!this.container || line < 1) return;
 

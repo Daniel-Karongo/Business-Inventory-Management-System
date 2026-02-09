@@ -64,6 +64,7 @@ export class BulkImportShellComponent {
   @Output() goToLine = new EventEmitter<number>();
   @Output() goTop = new EventEmitter<void>();
   @Output() goBottom = new EventEmitter<void>();
+  @Output() prevError = new EventEmitter<void>();
   @Output() nextError = new EventEmitter<void>();
   @Output() clearAll = new EventEmitter<void>();
 
