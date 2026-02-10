@@ -3,7 +3,10 @@ import {
   Input,
   ChangeDetectionStrategy,
   OnChanges,
-  OnDestroy
+  OnDestroy,
+  AfterViewInit,
+  ViewChild,
+  ElementRef
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import ApexCharts from 'apexcharts';
@@ -16,33 +19,63 @@ import ApexCharts from 'apexcharts';
   styleUrls: ['./sales-category-chart.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class SalesCategoryChartComponent implements OnChanges, OnDestroy {
+export class SalesCategoryChartComponent
+  implements OnChanges, AfterViewInit, OnDestroy {
 
   @Input() labels: string[] = [];
   @Input() values: number[] = [];
 
+  @ViewChild('wrapper', { static: true })
+  wrapperRef!: ElementRef<HTMLDivElement>;
+
   chart?: ApexCharts;
-  themeObserver?: MutationObserver;
+  private resizeObserver?: ResizeObserver;
+  private themeObserver?: MutationObserver;
+  private viewReady = false;
+
+  /* =========================
+     LIFECYCLE
+  ========================= */
+
+  ngAfterViewInit(): void {
+    this.viewReady = true;
+
+    this.observeResize();
+    this.watchTheme();
+
+    if (this.labels.length && this.values.length) {
+      this.render();
+    }
+  }
 
   ngOnChanges(): void {
-    if (!this.labels.length || !this.values.length) return;
+    if (!this.viewReady || !this.labels.length || !this.values.length) return;
     this.render();
-    this.watchTheme();
   }
 
   ngOnDestroy(): void {
     this.chart?.destroy();
+    this.resizeObserver?.disconnect();
     this.themeObserver?.disconnect();
   }
 
   /* =========================
-     THEME WATCHER
+     OBSERVERS
   ========================= */
 
-  private watchTheme(): void {
-    if (this.themeObserver) return;
+  private observeResize(): void {
+    this.resizeObserver = new ResizeObserver(() => {
+      this.render();
+    });
 
+    this.resizeObserver.observe(this.wrapperRef.nativeElement);
+  }
+
+  private watchTheme(): void {
     this.themeObserver = new MutationObserver(() => {
+      // safest for Apex
+      this.chart?.destroy();
+      this.chart = undefined;
       this.render();
     });
 
@@ -57,25 +90,23 @@ export class SalesCategoryChartComponent implements OnChanges, OnDestroy {
   ========================= */
 
   private render(): void {
+    if (!this.wrapperRef) return;
+
     this.chart?.destroy();
 
+    const containerWidth = this.wrapperRef.nativeElement.clientWidth;
+    const isCompact = containerWidth < 420;
     const isDark = document.body.classList.contains('dark');
+
     const total = this.values.reduce((a, b) => a + b, 0);
 
-    // Text contrast — explicit per theme
-    const TEXT_DARK = '#f1f5f9';
-    const MUTED_DARK = '#cbd5e1';
-
-    const TEXT_LIGHT = '#111827';
-    const MUTED_LIGHT = '#374151';
-
     this.chart = new ApexCharts(
-      document.querySelector('#sales-category-chart')!,
+      this.wrapperRef.nativeElement.querySelector('#sales-category-chart')!,
       {
         chart: {
           type: 'donut',
-          height: 320,
-          foreColor: isDark ? TEXT_DARK : TEXT_LIGHT
+          height: isCompact ? 240 : 300,
+          foreColor: isDark ? '#f1f5f9' : '#111827'
         },
 
         labels: this.labels,
@@ -84,16 +115,18 @@ export class SalesCategoryChartComponent implements OnChanges, OnDestroy {
         plotOptions: {
           pie: {
             donut: {
-              size: '68%'
+              size: isCompact ? '72%' : '68%'
             }
           }
         },
 
         legend: {
-          position: 'bottom',
+          position: isCompact ? 'bottom' : 'right',
+          horizontalAlign: isCompact ? 'center' : 'left',
           fontSize: '12px',
+          offsetY: isCompact ? 6 : 0,
           labels: {
-            colors: isDark ? MUTED_DARK : MUTED_LIGHT
+            colors: isDark ? '#cbd5e1' : '#374151'
           },
           formatter: (label: any, opts: { w: { globals: { series: { [x: string]: any; }; }; }; seriesIndex: string | number; }) => {
             const val = opts.w.globals.series[opts.seriesIndex];
@@ -102,13 +135,10 @@ export class SalesCategoryChartComponent implements OnChanges, OnDestroy {
           }
         },
 
-        dataLabels: {
-          enabled: false
-        },
+        dataLabels: { enabled: false },
 
         tooltip: {
           theme: isDark ? 'dark' : 'light',
-          style: { fontSize: '12px' },
           y: {
             formatter: (v: number) => {
               const pct = total ? ((v / total) * 100).toFixed(1) : '0';

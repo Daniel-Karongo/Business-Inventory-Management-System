@@ -22,6 +22,61 @@ body.dark {
   @include mat.all-component-colors($dark-theme);
 }
 
+/* ======================================================
+   GLOBAL THEME TRANSITION CONTROL
+====================================================== */
+
+body {
+  transition:
+    background-color 220ms ease,
+    color 220ms ease;
+}
+
+body * {
+  transition:
+    background-color 220ms ease,
+    color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+/* SVG + charts */
+svg,
+.apexcharts-canvas,
+.apexcharts-svg {
+  transition:
+    fill 220ms ease,
+    stroke 220ms ease,
+    opacity 220ms ease;
+}
+
+/* Disable transitions DURING theme switch */
+body.theme-switching,
+body.theme-switching * {
+  transition: none !important;
+}
+
+/* ======================================================
+   GLOBAL THEME CROSSFADE
+====================================================== */
+
+body {
+  transition: opacity 180ms ease, background-color 220ms ease;
+}
+
+body.theme-fade-out {
+  opacity: 0.92;
+}
+
+body.theme-fade-in {
+  opacity: 1;
+}
+
+/* Prevent interaction during transition */
+body.theme-fade-out * {
+  pointer-events: none;
+}
+
 /* -----------------------------------------------------
    DESIGN TOKENS
 ----------------------------------------------------- */
@@ -473,26 +528,43 @@ body.dark .cdk-overlay-backdrop {
 .skeleton {
   height: 14px;
   border-radius: 4px;
-  background: linear-gradient(
-    90deg,
-    var(--surface-hover) 25%,
-    rgba(255, 255, 255, 0.18) 37%,
-    var(--surface-hover) 63%
-  );
+  background: linear-gradient(90deg,
+      var(--surface-hover) 25%,
+      rgba(255, 255, 255, 0.18) 37%,
+      var(--surface-hover) 63%);
   background-size: 400% 100%;
   animation: shimmer 1.4s ease infinite;
 }
 
 /* Variants */
-.skeleton.sm { height: 10px; }
-.skeleton.lg { height: 20px; }
-.skeleton.w-40 { width: 40%; }
-.skeleton.w-60 { width: 60%; }
-.skeleton.w-80 { width: 80%; }
+.skeleton.sm {
+  height: 10px;
+}
+
+.skeleton.lg {
+  height: 20px;
+}
+
+.skeleton.w-40 {
+  width: 40%;
+}
+
+.skeleton.w-60 {
+  width: 60%;
+}
+
+.skeleton.w-80 {
+  width: 80%;
+}
 
 @keyframes shimmer {
-  0% { background-position: 100% 0; }
-  100% { background-position: -100% 0; }
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
 }
 
 /* Inline loading text */
@@ -535,6 +607,11 @@ body.dark .cdk-overlay-backdrop {
 }
 
 @keyframes progress-move {
-  0% { left: -40%; }
-  100% { left: 100%; }
+  0% {
+    left: -40%;
+  }
+
+  100% {
+    left: 100%;
+  }
 }

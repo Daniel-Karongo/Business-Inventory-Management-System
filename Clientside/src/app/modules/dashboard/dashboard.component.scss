@@ -8,6 +8,7 @@
 
 .kpi-grid {
   margin-top: 2px;
+  margin-bottom: 4px;
 }
 
 /* =========================
@@ -46,13 +47,52 @@
   gap: 16px;
 }
 
-.span-8 { grid-column: span 8; }
-.span-4 { grid-column: span 4; }
-.span-12 { grid-column: span 12; }
+.span-8 {
+  grid-column: span 8;
+}
+
+.span-4 {
+  grid-column: span 4;
+}
+
+.span-12 {
+  grid-column: span 12;
+}
+
+.dashboard-panel {
+  margin-top: 0;
+}
+
+.kpi-section {
+  margin-bottom: 4px;
+}
+
+/* Remove bottom padding ONLY where charts scroll */
+.dashboard-panel.no-bottom-padding {
+  padding-bottom: 0;
+}
+
+/* Inner content owns scrolling + spacing */
+.panel-content-scroll {
+  height: calc(100% - 32px); /* title space */
+  padding: 0 16px 14px 16px;
+  overflow: hidden;
+}
 
 @media (max-width: 1024px) {
+
   .span-8,
   .span-4 {
     grid-column: span 12;
+  }
+}
+
+@media (max-width: 640px) {
+  .kpi-grid {
+    gap: 12px;
+  }
+
+  .dashboard-panel.h-96 {
+    height: 320px;
   }
 }

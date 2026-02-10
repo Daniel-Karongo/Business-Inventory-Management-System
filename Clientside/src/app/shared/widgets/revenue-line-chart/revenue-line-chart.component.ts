@@ -3,10 +3,12 @@ import {
   Input,
   ChangeDetectionStrategy,
   OnChanges,
-  OnDestroy
+  OnDestroy,
+  AfterViewInit
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import ApexCharts from 'apexcharts';
+import { observeThemeChange } from '../../../core/utils/theme-observer';
 
 @Component({
   selector: 'app-revenue-line-chart',
@@ -16,23 +18,48 @@ import ApexCharts from 'apexcharts';
   styleUrls: ['./revenue-line-chart.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class RevenueLineChartComponent implements OnChanges, OnDestroy {
+export class RevenueLineChartComponent
+  implements OnChanges, AfterViewInit, OnDestroy {
 
   @Input() labels: string[] = [];
   @Input() values: number[] = [];
 
+  private viewReady = false;
+  private pendingRender = false;
+
   chart?: ApexCharts;
   themeObserver?: MutationObserver;
+  private readonly onResize = () => this.safeRender();
+
+  ngAfterViewInit(): void {
+    this.viewReady = true;
+    this.watchResize();
+
+    if (this.pendingRender) {
+      this.pendingRender = false;
+      this.safeRender();
+    }
+  }
+
+  ngOnInit(): void {
+    this.watchTheme();
+  }
 
   ngOnChanges(): void {
     if (!this.labels.length || !this.values.length) return;
-    this.render();
-    this.watchTheme();
+
+    if (!this.viewReady) {
+      this.pendingRender = true;
+      return;
+    }
+
+    this.safeRender();
   }
 
   ngOnDestroy(): void {
     this.chart?.destroy();
     this.themeObserver?.disconnect();
+    window.removeEventListener('resize', this.onResize);
   }
 
   /* =========================
@@ -42,13 +69,15 @@ export class RevenueLineChartComponent implements OnChanges, OnDestroy {
   private watchTheme(): void {
     if (this.themeObserver) return;
 
-    this.themeObserver = new MutationObserver(() => {
-      this.render();
-    });
+    this.themeObserver = observeThemeChange(() => {
+      if (!this.viewReady) return;
 
-    this.themeObserver.observe(document.body, {
-      attributes: true,
-      attributeFilter: ['class']
+      // Let Angular + CSS finish first
+      setTimeout(() => {
+        this.chart?.destroy();
+        this.chart = undefined;
+        this.safeRender();
+      });
     });
   }
 
@@ -60,88 +89,113 @@ export class RevenueLineChartComponent implements OnChanges, OnDestroy {
     return new Date(d).toLocaleDateString('en-GB'); // dd-MM-yyyy
   }
 
-  private render(): void {
-    this.chart?.destroy();
-
+  private createChart(): void {
+    const isMobile = window.matchMedia('(max-width: 640px)').matches;
     const isDark = document.body.classList.contains('dark');
-
-    // Text contrast — explicit per theme
-    const TEXT_DARK = '#f1f5f9';
-    const MUTED_DARK = '#cbd5e1';
-
-    const TEXT_LIGHT = '#111827';
-    const MUTED_LIGHT = '#4b5563';
 
     this.chart = new ApexCharts(
       document.querySelector('#revenue-line-chart')!,
-      {
-        chart: {
-          type: 'area',
-          height: 320,
-          toolbar: { show: false },
-          zoom: { enabled: false },
-          foreColor: isDark ? TEXT_DARK : TEXT_LIGHT
-        },
-
-        series: [
-          { name: 'Revenue', data: this.values }
-        ],
-
-        xaxis: {
-          categories: this.labels.map(d => this.formatDate(d)),
-          labels: {
-            rotate: -45,
-            style: {
-              fontSize: '11px',
-              colors: isDark ? MUTED_DARK : MUTED_LIGHT
-            }
-          },
-          axisBorder: { show: false },
-          axisTicks: { show: false }
-        },
-
-        yaxis: {
-          labels: {
-            formatter: (v: { toLocaleString: (arg0: string) => any; }) => `KSh ${v.toLocaleString('en-KE')}`,
-            style: {
-              fontSize: '11px',
-              colors: isDark ? MUTED_DARK : MUTED_LIGHT
-            }
-          }
-        },
-
-        stroke: {
-          curve: 'smooth',
-          width: 2.5
-        },
-
-        fill: {
-          type: 'gradient',
-          gradient: {
-            shadeIntensity: 0.15,
-            opacityFrom: 0.28,
-            opacityTo: 0.02
-          }
-        },
-
-        grid: {
-          borderColor: isDark ? '#475569' : '#d1d5db',
-          strokeDashArray: 3
-        },
-
-        tooltip: {
-          theme: isDark ? 'dark' : 'light',
-          style: { fontSize: '12px' },
-          marker: { show: false },
-          y: {
-            formatter: (v: { toLocaleString: (arg0: string) => any; }) => `KSh ${v.toLocaleString('en-KE')}`
-          }
-        },
-
-        colors: ['#3b82f6']
-      }
+      this.buildOptions(isMobile, isDark)
     );
 
     this.chart.render();
+  }
+
+  private updateChart(): void {
+    const isMobile = window.matchMedia('(max-width: 640px)').matches;
+    const isDark = document.body.classList.contains('dark');
+
+    this.chart!.updateOptions(
+      this.buildOptions(isMobile, isDark),
+      false,
+      true
+    );
+  }
+
+  private buildOptions(isMobile: boolean, isDark: boolean): ApexCharts.ApexOptions {
+    return {
+      chart: {
+        type: 'area',
+        width: Math.max(this.labels.length * 80, 900),
+        height: isMobile ? 300 : 320,
+        toolbar: { show: false },
+        zoom: { enabled: false },
+        foreColor: isDark ? '#f1f5f9' : '#111827'
+      },
+
+      series: [{ name: 'Revenue', data: this.values }],
+
+      xaxis: {
+        categories: this.labels.map(d => this.formatDate(d)),
+        tickPlacement: 'between',
+        labels: {
+          rotate: -30,
+          offsetY: 6,
+          style: {
+            fontSize: '11px',
+            colors: isDark ? '#cbd5e1' : '#4b5563'
+          }
+        },
+        axisBorder: { show: false },
+        axisTicks: { show: false }
+      },
+
+      yaxis: {
+        labels: {
+          formatter: v => `KSh ${v.toLocaleString('en-KE')}`,
+          style: {
+            fontSize: '11px',
+            colors: isDark ? '#cbd5e1' : '#4b5563'
+          }
+        }
+      },
+
+      grid: {
+        padding: {
+          left: 12,
+          right: 12,
+          top: 8,
+          bottom: isMobile ? 58 : 40
+        },
+        borderColor: isDark ? '#475569' : '#d1d5db',
+        strokeDashArray: 3
+      },
+
+      stroke: { curve: 'smooth', width: 2.5 },
+
+      fill: {
+        type: 'gradient',
+        gradient: {
+          shadeIntensity: 0.15,
+          opacityFrom: 0.28,
+          opacityTo: 0.02
+        }
+      },
+
+      tooltip: {
+        theme: isDark ? 'dark' : 'light',
+        y: {
+          formatter: v => `KSh ${v.toLocaleString('en-KE')}`
+        }
+      },
+
+      colors: ['#3b82f6']
+    };
+  }
+
+  private safeRender(): void {
+    requestAnimationFrame(() => {
+      if (!this.viewReady) return;
+
+      if (this.chart) {
+        this.updateChart();
+      } else {
+        this.createChart();
+      }
+    });
+  }
+
+  private watchResize(): void {
+    window.addEventListener('resize', this.onResize);
   }
 }

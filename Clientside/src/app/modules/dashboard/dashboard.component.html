@@ -1,4 +1,4 @@
-<div class="space-y-6">
+<div class="space-y-4">
 
   <!-- =========================
        LOADING STATE
@@ -26,31 +26,29 @@
   <ng-template #dashboardContent>
 
     <!-- KPI ROW -->
-    <div class="kpi-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <app-stat-card
-        *ngFor="let s of stats"
-        [title]="s.title"
-        [value]="s.value"
-        [change]="s.change">
-      </app-stat-card>
+    <div class="kpi-section">
+      <div class="kpi-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+        <app-stat-card *ngFor="let s of stats" [title]="s.title" [value]="s.value" [change]="s.change">
+        </app-stat-card>
+      </div>
     </div>
 
     <!-- CHARTS -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-      <div class="lg:col-span-2 dashboard-panel h-96">
+      <div class="lg:col-span-2 dashboard-panel h-96 no-bottom-padding">
         <div class="panel-title">Revenue Trend</div>
-        <app-revenue-line-chart
-          [labels]="revenueLabels"
-          [values]="revenueValues">
-        </app-revenue-line-chart>
+
+        <div class="panel-content-scroll">
+          <app-revenue-line-chart [labels]="revenueLabels" [values]="revenueValues">
+          </app-revenue-line-chart>
+        </div>
       </div>
 
       <div class="dashboard-panel h-96">
         <div class="panel-title">Sales by Category</div>
-        <app-sales-category-chart
-          [labels]="categoryLabels"
-          [values]="categoryValues">
+        <app-sales-category-chart [labels]="categoryLabels" [values]="categoryValues">
         </app-sales-category-chart>
       </div>
 

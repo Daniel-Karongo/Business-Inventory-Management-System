@@ -41,3 +41,13 @@
   font-weight: 500;
   color: var(--text-success);
 }
+
+@media (max-width: 640px) {
+  .stat-card {
+    padding: 12px 14px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+}

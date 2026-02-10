@@ -52,3 +52,21 @@
 :host-context(.sidebar-collapsed) .collapsed-label {
   @apply opacity-0 ml-0 w-0 overflow-hidden;
 }
+
+/* Prevent icons from shrinking in collapsed sidebar */
+.nav-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+}
+
+:host-context(.sidebar-collapsed) .nav-icon {
+  width: 24px;
+  height: 24px;
+}
+
+:host-context(.sidebar-collapsed) .nav-item {
+  justify-content: center;
+}

@@ -1,13 +1,21 @@
-.chart-wrapper {
+.chart-outer {
   width: 100%;
   height: 100%;
+  overflow: hidden;
 }
 
-.empty {
-  height: 320px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
+.chart-scroll {
+  width: 100%;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 14px;
+}
+
+/* ApexCharts width enforcement */
+.chart-scroll > div,
+.chart-scroll .apexcharts-canvas,
+.chart-scroll svg,
+.chart-scroll foreignObject {
+  min-width: max-content;
 }

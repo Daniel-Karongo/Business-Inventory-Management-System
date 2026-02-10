@@ -1,7 +1,9 @@
-<div class="chart-wrapper">
+<div class="chart-outer">
+  <div class="chart-scroll">
+    <div id="revenue-line-chart"></div>
+  </div>
+
   <div *ngIf="!labels.length" class="empty">
     No revenue data available
   </div>
-
-  <div id="revenue-line-chart"></div>
 </div>

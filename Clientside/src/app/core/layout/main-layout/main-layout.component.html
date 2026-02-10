@@ -1,13 +1,13 @@
-<div class="flex h-screen overflow-hidden">
+<div class="flex h-screen overflow-hidden relative">
 
   <!-- SIDEBAR -->
-  <aside
-    class="sidebar transition-all duration-300 flex-shrink-0"
-    [class.sidebar-collapsed]="sidebar.isCollapsed$ | async"
-    [class.sidebar-expanded]="!(sidebar.isCollapsed$ | async)"
-  >
+  <aside class="sidebar transition-all duration-300 flex-shrink-0"
+    [class.sidebar-collapsed]="sidebar.isCollapsed$ | async" [class.sidebar-expanded]="!(sidebar.isCollapsed$ | async)">
     <app-sidebar></app-sidebar>
   </aside>
+
+  <div *ngIf="!(sidebar.isCollapsed$ | async)" class="sidebar-backdrop" (click)="sidebar.toggle()">
+  </div>
 
   <!-- MAIN -->
   <div class="flex flex-col flex-1 overflow-hidden min-w-0">
@@ -22,7 +22,7 @@
     </div>
 
     <!-- CONTENT -->
-    <main class="flex-1 overflow-y-auto p-6 transition-colors bg-[var(--app-bg)]">
+    <main class="flex-1 overflow-y-auto px-6 py-6 sm:px-6 px-0 py-4 transition-colors bg-[var(--app-bg)]">
       <router-outlet></router-outlet>
     </main>
 

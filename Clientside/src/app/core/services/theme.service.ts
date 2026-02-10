@@ -28,16 +28,39 @@ export class ThemeService {
   }
 
   private applyPreference(pref: 'light' | 'dark' | 'system') {
-    const root = document.querySelector('body')!;
+    const root = document.body;
 
-    root.classList.remove('light', 'dark');
+    // STEP 1: fade out slightly
+    root.classList.add('theme-fade-out');
 
-    if (pref === 'system') {
-      const sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      root.classList.add(sysDark ? 'dark' : 'light');
-      return;
-    }
+    // wait for fade to start
+    setTimeout(() => {
 
-    root.classList.add(pref);
+      // STEP 2: disable transitions during switch
+      root.classList.add('theme-switching');
+      root.classList.remove('light', 'dark');
+
+      if (pref === 'system') {
+        const sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        root.classList.add(sysDark ? 'dark' : 'light');
+      } else {
+        root.classList.add(pref);
+      }
+
+      // STEP 3: re-enable transitions + fade in
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          root.classList.remove('theme-switching');
+          root.classList.remove('theme-fade-out');
+          root.classList.add('theme-fade-in');
+
+          // cleanup
+          setTimeout(() => {
+            root.classList.remove('theme-fade-in');
+          }, 180);
+        });
+      });
+
+    }, 90);
   }
 }

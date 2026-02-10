@@ -101,3 +101,14 @@ td {
   background: rgba(148, 163, 184, 0.18);
   color: #64748b;
 }
+
+@media (max-width: 640px) {
+  th:nth-child(4),
+  td:nth-child(4) {
+    display: none;
+  }
+
+  .description {
+    font-size: 13px;
+  }
+}
