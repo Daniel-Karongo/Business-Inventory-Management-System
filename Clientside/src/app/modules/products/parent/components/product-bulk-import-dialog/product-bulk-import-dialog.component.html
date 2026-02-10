@@ -1,151 +1,94 @@
-<h2 mat-dialog-title class="bulk-title">Bulk Import Products</h2>
+<form
+  [formGroup]="form"
+  (keydown.enter)="$event.stopPropagation()">
 
-<mat-dialog-content #scrollContainer [formGroup]="form" class="body">
+  <app-bulk-import-shell
+    [title]="config.title"
+    [rowCount]="rowCount"
+    [submitting]="submitting"
+    [formInvalid]="form.invalid"
+    [loading]="submitting || loading"
+    [progress]="progress"
 
-  <div class="import-zone">
-    <div class="import-tiles">
+    (importCsv)="importCsv($event)"
+    (importExcel)="importExcel($event)"
+    (downloadCsv)="downloadCsvTemplate()"
+    (downloadExcel)="downloadExcelTemplate()"
+    (submit)="submit()"
+    (cancel)="close()"
 
-      <label class="import-tile excel">
-        <input type="file" hidden accept=".xlsx" (change)="importExcel($event)">
-        <mat-icon>table_view</mat-icon>
-        <div>
-          <strong>Import Excel</strong>
-          <small>.xlsx template</small>
+    (goToLine)="goToLine($event)"
+    (goTop)="scrollToTop()"
+    (goBottom)="scrollToBottom()"
+    (prevError)="goToPreviousError()"
+    (nextError)="goToNextError()"
+    (clearAll)="clearRows()"
+    (exportCsv)="exportCsvCurrentRows()"
+    (exportExcel)="exportExcelCurrentRows()">
+
+    <div class="products-body">
+
+      <div bulk-options>
+        <mat-checkbox formControlName="dryRun">
+          Dry run (validate only)
+        </mat-checkbox>
+      </div>
+
+      <div class="rows" formArrayName="rows">
+
+        <div
+          class="row-card"
+          *ngFor="let r of rows.controls; let i = index"
+          [formGroupName]="i">
+
+          <div class="row-header">
+            <span>Product {{ i + 1 }}</span>
+            <button mat-icon-button color="warn" (click)="removeRow(i)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+
+          <div class="grid-2">
+            <mat-form-field>
+              <input matInput placeholder="Name" formControlName="name">
+            </mat-form-field>
+
+            <mat-form-field>
+              <input matInput placeholder="Category" formControlName="categoryName">
+            </mat-form-field>
+          </div>
+
+          <div class="grid-2">
+            <mat-form-field>
+              <input matInput placeholder="Suppliers" formControlName="supplierNames">
+            </mat-form-field>
+
+            <mat-form-field>
+              <input matInput placeholder="Variants" formControlName="variants">
+            </mat-form-field>
+          </div>
+
+          <mat-form-field>
+            <input
+              matInput
+              type="number"
+              placeholder="Minimum % Profit"
+              formControlName="minimumPercentageProfit">
+          </mat-form-field>
+
+          <div class="row-error" *ngIf="r.value._error">
+            {{ r.value._error }}
+          </div>
+
         </div>
-      </label>
+      </div>
 
-      <label class="import-tile csv">
-        <input type="file" hidden accept=".csv" (change)="importCsv($event)">
-        <mat-icon>description</mat-icon>
-        <div>
-          <strong>Import CSV</strong>
-          <small>.csv template</small>
-        </div>
-      </label>
-
-    </div>
-
-    <div class="template-actions">
-      <button mat-stroked-button (click)="downloadExcelTemplate()">
-        <mat-icon>table_view</mat-icon>
-        Excel Template
+      <button mat-stroked-button (click)="addRow()">
+        + Add Product
       </button>
 
-      <button mat-stroked-button (click)="downloadCsvTemplate()">
-        <mat-icon>description</mat-icon>
-        CSV Template
-      </button>
-    </div>
-  </div>
-
-  <!-- 🔴 NEW -->
-  <div class="line-tally prominent">
-    <mat-icon>format_list_numbered</mat-icon>
-    <div class="tally-text">
-      <strong>{{ rowCount }}</strong>
-      <span *ngIf="rowCount==1"> Product loaded</span>
-      <span *ngIf="rowCount!=1"> Products loaded</span>
-    </div>
-  </div>
-
-  <!-- 🔴 NEW -->
-  <div class="go-to-line">
-    <mat-form-field appearance="fill">
-      <mat-label>Go to line</mat-label>
-      <input
-        id="goToLineInput"
-        matInput
-        type="number"
-        min="1"
-        [max]="rowCount"
-        #lineInput>
-    </mat-form-field>
-
-    <button mat-stroked-button (click)="goToLine(lineInput.valueAsNumber)">
-      Go
-    </button>
-  </div>
-
-  <mat-checkbox formControlName="dryRun">
-    Dry run (validate only)
-  </mat-checkbox>
-
-  <div class="rows" formArrayName="rows">
-
-    <div class="row-card" *ngFor="let r of rows.controls; let i = index" [formGroupName]="i">
-
-      <div class="row-header">
-        <span>Product {{ i + 1 }}</span>
-        <button mat-icon-button color="warn" (click)="removeRow(i)">
-          <mat-icon>delete</mat-icon>
-        </button>
-      </div>
-
-      <div class="grid-2">
-        <mat-form-field>
-          <mat-label>Name</mat-label>
-          <input matInput formControlName="name">
-        </mat-form-field>
-
-        <mat-form-field>
-          <mat-label>Category</mat-label>
-          <input matInput formControlName="categoryName">
-        </mat-form-field>
-      </div>
-
-      <div class="grid-2">
-        <mat-form-field>
-          <mat-label>Suppliers</mat-label>
-          <input matInput formControlName="supplierNames">
-        </mat-form-field>
-
-        <mat-form-field>
-          <mat-label>Variants</mat-label>
-          <input matInput formControlName="variants">
-        </mat-form-field>
-      </div>
-
-      <mat-form-field>
-        <mat-label>Minimum % Profit</mat-label>
-        <input matInput type="number" formControlName="minimumPercentageProfit">
-      </mat-form-field>
-
-      <div class="row-error" *ngIf="r.value._error">
-        {{ r.value._error }}
-      </div>
+      <div #bottomAnchor></div>
 
     </div>
-  </div>
-
-  <button mat-stroked-button (click)="addRow()">+ Add Product</button>
-
-  <!-- 🔴 NEW -->
-  <div #bottomAnchor></div>
-
-</mat-dialog-content>
-
-<mat-dialog-actions align="end">
-
-  <!-- 🔴 NEW -->
-  <div class="scroll-actions">
-    <button mat-icon-button (click)="scrollToTop()" matTooltip="Go to top">
-      <mat-icon>arrow_upward</mat-icon>
-    </button>
-
-    <button mat-icon-button (click)="scrollToBottom()" matTooltip="Go to bottom">
-      <mat-icon>arrow_downward</mat-icon>
-    </button>
-
-    <button mat-icon-button color="warn" (click)="goToNextError()" matTooltip="Go to next error">
-      <mat-icon>error_outline</mat-icon>
-    </button>
-  </div>
-
-  <button mat-button (click)="close()">Cancel</button>
-  <button mat-flat-button color="primary"
-          [disabled]="submitting || form.invalid"
-          (click)="submit()">
-    Import
-  </button>
-
-</mat-dialog-actions>
+  </app-bulk-import-shell>
+</form>

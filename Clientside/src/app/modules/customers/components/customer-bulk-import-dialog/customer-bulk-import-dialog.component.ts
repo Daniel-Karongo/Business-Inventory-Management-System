@@ -1,38 +1,25 @@
-import {
-  Component,
-  OnInit,
-  ViewChild,
-  ElementRef,
-  AfterViewInit,
-  OnDestroy
-} from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  FormArray,
-  FormBuilder,
-  FormGroup,
-  Validators,
-  ReactiveFormsModule
-} from '@angular/forms';
-
-import * as ExcelJS from 'exceljs';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
-
-import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
-import { MatInputModule } from '@angular/material/input';
-import { MatIconModule } from '@angular/material/icon';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { ReactiveFormsModule } from '@angular/forms';
+import { MatDialogRef } from '@angular/material/dialog';
 
 import { CustomerService } from '../../services/customer.service';
-import { BulkRequest, BulkResult } from '../../../../shared/models/bulk-import.model';
-import { BulkImportResultDialogComponent } from '../../../../shared/components/bulk-import-result-dialog/bulk-import-result-dialog.component';
-import { CustomerResponse } from '../../models/customer.model';
+
+import { BulkImportFormComponent } from
+  '../../../../shared/bulk-import/base/bulk-import-form.component';
+import { BulkImportSubmitEngineService } from
+  '../../../../shared/bulk-import/engine/bulk-import-submit-engine.service';
+import { BulkImportShellComponent } from
+  '../../../../shared/bulk-import/shell/bulk-import-shell.component';
+
+import { CUSTOMER_BULK_IMPORT_CONFIG } from './customer-bulk-import.config';
+
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   standalone: true,
@@ -42,411 +29,76 @@ import { CustomerResponse } from '../../models/customer.model';
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    MatDialogModule,
-    MatButtonModule,
-    MatInputModule,
-    MatIconModule,
-    MatCheckboxModule,
+    BulkImportShellComponent,
+
     MatFormFieldModule,
+    MatInputModule,
     MatSelectModule,
-    MatSnackBarModule,
-    MatTooltipModule
+    MatCheckboxModule,
+    MatButtonModule,
+    MatIconModule
   ]
 })
 export class CustomerBulkImportDialogComponent
-  implements OnInit, AfterViewInit, OnDestroy {
+  extends BulkImportFormComponent<any, any, any>
+  implements OnInit {
 
-  form!: FormGroup;
-  submitting = false;
-
-  /* 🔴 UX STATE */
-  private errorRows: number[] = [];
-  private errorIndex = 0;
-
-  @ViewChild('scrollContainer') scrollContainer!: ElementRef;
-  @ViewChild('bottomAnchor') bottomAnchor!: ElementRef;
+  config = CUSTOMER_BULK_IMPORT_CONFIG;
 
   constructor(
-    private fb: FormBuilder,
-    private dialogRef: MatDialogRef<CustomerBulkImportDialogComponent>,
     private customerService: CustomerService,
-    private snackbar: MatSnackBar,
-    private dialog: MatDialog
-  ) { }
-
-  ngOnInit(): void {
-    this.form = this.fb.group({
-      dryRun: [true],
-      rows: this.fb.array([])
-    });
-
-    this.addRow();
+    private submitEngine: BulkImportSubmitEngineService,
+    private dialogRef: MatDialogRef<CustomerBulkImportDialogComponent>
+  ) {
+    super();
   }
 
-  ngAfterViewInit() {
-    window.addEventListener('keydown', this.handleKeyNav);
+  ngOnInit() {
+    this.initForm();
   }
-
-  ngOnDestroy() {
-    window.removeEventListener('keydown', this.handleKeyNav);
-  }
-
-  /* =========================
-     KEYBOARD SHORTCUTS
-     ========================= */
-
-  handleKeyNav = (e: KeyboardEvent) => {
-    if (e.ctrlKey && e.key.toLowerCase() === 'g') {
-      e.preventDefault();
-      document.querySelector<HTMLInputElement>('#goToLineInput')?.focus();
-    }
-
-    if (e.key === 'Enter') {
-      const el = document.activeElement as HTMLInputElement;
-      if (el?.id === 'goToLineInput') {
-        this.goToLine(el.valueAsNumber);
-      }
-    }
-  };
-
-  /* =========================
-     FORM HELPERS
-     ========================= */
-
-  get rows(): FormArray {
-    return this.form.get('rows') as FormArray;
-  }
-
-  /* 🔴 DERIVED */
-  get rowCount(): number {
-    return this.rows.length;
-  }
-
-  private createRow(data?: any): FormGroup {
-    return this.fb.group({
-      name: [data?.name ?? '', Validators.required],
-      phones: [data?.phones ?? ''],
-      emails: [data?.emails ?? ''],
-      type: [data?.type ?? 'INDIVIDUAL', Validators.required],
-      gender: [data?.gender ?? ''],
-      address: [data?.address ?? ''],
-      notes: [data?.notes ?? ''],
-      _error: ['']
-    });
-  }
-
-  addRow(data?: any) {
-    this.rows.push(this.createRow(data));
-  }
-
-  removeRow(i: number) {
-    this.rows.removeAt(i);
-  }
-
-  /* =========================
-     CSV (UNCHANGED + UX)
-     ========================= */
-
-  downloadCsvTemplate() {
-    const csv =
-      `name,phones,emails,type,gender,address,notes
-John Doe,0712345678,john@doe.com,INDIVIDUAL,MALE,Nairobi,VIP customer`;
-
-    saveAs(
-      new Blob([csv], { type: 'text/csv' }),
-      'customers-bulk-template.csv'
-    );
-  }
-
-  importCsv(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (!input.files?.length) return;
-
-    const reader = new FileReader();
-    reader.onload = () => this.parseCsv(reader.result as string);
-    reader.readAsText(input.files[0]);
-  }
-
-  private parseCsv(text: string) {
-    const lines = text.split('\n').slice(1);
-    this.rows.clear();
-
-    for (const line of lines) {
-      if (!line.trim()) continue;
-
-      const [name, phones, emails, type, gender, address, notes] =
-        line.split(',');
-
-      if (!name?.trim() && !phones?.trim() && !emails?.trim()) continue;
-
-      this.addRow({
-        name: name?.trim(),
-        phones: phones?.trim(),
-        emails: emails?.trim(),
-        type: type?.trim() || 'INDIVIDUAL',
-        gender: gender?.trim(),
-        address: address?.trim(),
-        notes: notes?.trim()
-      });
-    }
-
-    this.snackbar.open(
-      `✅ ${this.rowCount} customers loaded from CSV`,
-      'Close',
-      { duration: 3000 }
-    );
-  }
-
-  /* =========================
-     EXCEL (UNCHANGED + UX)
-     ========================= */
-
-  async downloadExcelTemplate() {
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Customers', {
-      views: [{ state: 'frozen', ySplit: 1 }]
-    });
-
-    worksheet.columns = [
-      { header: 'name', key: 'name', width: 22 },
-      { header: 'phones', key: 'phones', width: 22 },
-      { header: 'emails', key: 'emails', width: 32 },
-      { header: 'type', key: 'type', width: 14 },
-      { header: 'gender', key: 'gender', width: 14 },
-      { header: 'address', key: 'address', width: 26 },
-      { header: 'notes', key: 'notes', width: 32 }
-    ];
-
-    const headerRow = worksheet.getRow(1);
-    headerRow.font = { bold: true };
-
-    headerRow.eachCell(cell => {
-      cell.alignment = { vertical: 'middle', horizontal: 'left' };
-      cell.border = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' }
-      };
-    });
-
-    const exampleRow = worksheet.addRow({
-      name: 'John Doe',
-      phones: '0712345678',
-      emails: 'john@doe.com',
-      type: 'INDIVIDUAL',
-      gender: 'MALE',
-      address: 'Nairobi',
-      notes: 'VIP customer'
-    });
-
-    exampleRow.eachCell(cell => {
-      cell.alignment = { vertical: 'middle', horizontal: 'left' };
-      cell.border = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' }
-      };
-    });
-
-    exampleRow.getCell('phones').numFmt = '@';
-
-    for (let i = 0; i < 200; i++) {
-      const row = worksheet.addRow({
-        name: '',
-        phones: '',
-        emails: '',
-        type: 'INDIVIDUAL',
-        gender: '',
-        address: '',
-        notes: ''
-      });
-
-      row.eachCell(cell => {
-        cell.alignment = { vertical: 'middle', horizontal: 'left' };
-        cell.border = {
-          top: { style: 'thin' },
-          left: { style: 'thin' },
-          bottom: { style: 'thin' },
-          right: { style: 'thin' }
-        };
-      });
-
-      row.getCell('phones').numFmt = '@';
-    }
-
-    const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(
-      new Blob([buffer], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      }),
-      'customers-bulk-template.xlsx'
-    );
-  }
-
-  importExcel(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (!input.files?.length) return;
-
-    const reader = new FileReader();
-    reader.onload = e => {
-      const wb = XLSX.read(e.target?.result, { type: 'binary' });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      const rawRows = XLSX.utils.sheet_to_json<any>(sheet, { defval: '' });
-
-      this.rows.clear();
-
-      rawRows
-        .filter(r =>
-          String(r.name || '').trim() ||
-          String(r.phones || '').trim() ||
-          String(r.emails || '').trim()
-        )
-        .forEach(r =>
-          this.addRow({
-            name: String(r.name || '').trim(),
-            phones: String(r.phones || '').trim(),
-            emails: String(r.emails || '').trim(),
-            type: String(r.type || 'INDIVIDUAL').trim(),
-            gender: String(r.gender || '').trim(),
-            address: String(r.address || '').trim(),
-            notes: String(r.notes || '').trim()
-          })
-        );
-
-      this.snackbar.open(
-        `✅ ${this.rowCount} customers loaded from Excel`,
-        'Close',
-        { duration: 3000 }
-      );
-    };
-
-    reader.readAsBinaryString(input.files[0]);
-  }
-
-  /* =========================
-     SUBMIT (UNCHANGED + UX)
-     ========================= */
 
   submit() {
     if (this.form.invalid) return;
-    this.submitting = true;
 
-    const payload: BulkRequest<any> = {
-      items: this.rows.controls.map(r => ({
-        name: r.value.name,
-        phone: r.value.phones,
-        email: r.value.emails,
-        type: r.value.type,
-        gender: r.value.gender || null,
-        address: r.value.address,
-        notes: r.value.notes
-      })),
+    const payload = {
+      items: this.rows.controls.map(r =>
+        this.config.mapRowToItem(r.value)
+      ),
       options: {
         dryRun: this.form.value.dryRun,
         skipDuplicates: true
       }
     };
 
-    this.customerService.bulkImport(payload).subscribe({
-      next: (res: BulkResult<CustomerResponse>) => {
-
-        this.rows.controls.forEach(r =>
-          r.patchValue({ _error: '' }, { emitEvent: false })
-        );
-
-        res.errors?.forEach(e => {
-          this.rows.at(e.row - 1)?.patchValue({ _error: e.message });
-        });
-
-        this.errorRows = res.errors?.map(e => e.row) || [];
-        this.errorIndex = 0;
-
-        if (this.errorRows.length) {
-          setTimeout(() => this.goToLine(this.errorRows[0]), 200);
-        }
-
-        if (!this.form.value.dryRun && res.failed === 0) {
-          this.snackbar.open(
-            `${res.success} customers imported successfully`,
-            'Close',
-            { duration: 3000 }
-          );
-          this.dialogRef.close(true);
-          return;
-        }
-
-        this.dialog.open(BulkImportResultDialogComponent, {
-          width: '1100px',
-          maxWidth: '95vw',
-          data: {
-            title: 'Customer Import Preview',
-            dryRun: this.form.value.dryRun,
-            result: res,
-            confirmLabel: 'Import Now',
-            columns: [
-              { key: 'name', label: 'Name' },
-              { key: 'phoneNumbers', label: 'Phones' },
-              { key: 'email', label: 'Emails' },
-              { key: 'type', label: 'Type' }
-            ]
-          }
-        }).afterClosed().subscribe(confirm => {
-          if (confirm) {
-            this.form.patchValue({ dryRun: false });
-            this.submit();
-          }
-        });
-
-        this.submitting = false;
-      },
-      error: () => {
-        this.submitting = false;
-        this.snackbar.open(
-          'Customer bulk import failed',
-          'Close',
-          { duration: 3000 }
-        );
+    this.submitEngine.execute({
+      submitFn: req => this.customerService.bulkImport(req),
+      payload,
+      rows: this.rows.controls,
+      dryRun: this.form.value.dryRun,
+      title: this.config.title,
+      confirmLabel: this.config.confirmLabel,
+      columns: this.config.previewColumns,
+      onErrorsApplied: res => this.cacheErrors(res),
+      onFinalSuccess: () => this.dialogRef.close(true),
+      onConfirmRetry: () => {
+        this.form.patchValue({ dryRun: false });
+        this.submit();
       }
     });
   }
 
-  /* =========================
-     UX HELPERS
-     ========================= */
-
-  goToLine(line: number) {
-    if (!line || line < 1 || line > this.rows.length) return;
-
-    const cards =
-      this.scrollContainer.nativeElement.querySelectorAll('.row-card');
-
-    const target = cards[line - 1] as HTMLElement;
-    if (!target) return;
-
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    target.classList.add('highlight-line');
-    setTimeout(() => target.classList.remove('highlight-line'), 1500);
+  async importExcel(file: File | undefined) {
+    if (!file) return;
+    const mode = await this.confirmMerge();
+    if (!mode) return;
+    super.importExcelFile(file, undefined, mode);
   }
 
-  goToNextError() {
-    if (!this.errorRows.length) return;
-    this.goToLine(this.errorRows[this.errorIndex]);
-    this.errorIndex = (this.errorIndex + 1) % this.errorRows.length;
-  }
-
-  scrollToTop() {
-    this.scrollContainer.nativeElement.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-  }
-
-  scrollToBottom() {
-    this.bottomAnchor.nativeElement.scrollIntoView({
-      behavior: 'smooth'
-    });
+  async importCsv(file: File | undefined) {
+    if (!file) return;
+    const mode = await this.confirmMerge();
+    if (!mode) return;
+    super.importCsvFile(file, mode);
   }
 
   close() {

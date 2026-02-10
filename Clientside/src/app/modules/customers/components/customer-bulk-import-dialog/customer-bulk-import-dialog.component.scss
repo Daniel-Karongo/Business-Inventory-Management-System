@@ -1,62 +1,7 @@
-.bulk-title {
-  font-weight: 600;
-}
-
-.body {
+.customers-body {
   display: flex;
   flex-direction: column;
   gap: 24px;
-}
-
-.import-zone {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px;
-  border: 1px dashed var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-}
-
-.import-tiles {
-  display: flex;
-  gap: 16px;
-}
-
-.import-tile {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 18px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  box-shadow: var(--surface-shadow);
-}
-
-.import-tile:hover {
-  background: var(--surface-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
-}
-
-.import-tile mat-icon {
-  font-size: 28px;
-}
-
-.import-tile.excel mat-icon {
-  color: #2e7d32;
-}
-
-.import-tile.csv mat-icon {
-  color: #1565c0;
-}
-
-.template-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
 }
 
 .rows {
@@ -89,35 +34,13 @@
   gap: 16px;
 }
 
+.mat-form-field {
+  width: 100%;
+}
+
 .row-error {
   color: #c62828;
   font-size: 0.8rem;
-}
-
-/* 🔴 UX */
-
-.line-tally.prominent {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #e3f2fd, #f1f8ff);
-  border: 1px solid #bbdefb;
-  color: #0d47a1;
-  width: fit-content;
-}
-
-.go-to-line {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.scroll-actions {
-  display: flex;
-  gap: 6px;
-  margin-right: auto;
 }
 
 .highlight-line {
