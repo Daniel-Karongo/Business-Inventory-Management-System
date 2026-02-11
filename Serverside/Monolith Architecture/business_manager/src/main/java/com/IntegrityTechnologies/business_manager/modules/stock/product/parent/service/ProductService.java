@@ -13,25 +13,39 @@ import com.IntegrityTechnologies.business_manager.modules.stock.category.reposit
 import com.IntegrityTechnologies.business_manager.modules.stock.category.service.CategoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductCreateDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductFullCreateDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductUpdateDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.mapper.ProductMapper;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.*;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductAudit;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductImage;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductImageAudit;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductImageAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantCreateDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service.ProductVariantService;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
+import java.io.IOException;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.coobird.thumbnailator.Thumbnails;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,6 +83,7 @@ public class ProductService {
     private final CategoryService categoryService;
     private final ProductVariantService productVariantService;
     private final ProductVariantRepository productVariantRepository;
+    private final ProductImageService productImageService;
 
     private Path productRoot() {
         return Paths.get(fileStorageProperties.getProductUploadDir()).toAbsolutePath().normalize();
@@ -201,104 +216,144 @@ public class ProductService {
        ============================= */
 
     @Transactional
-    public ProductDTO createProduct(ProductCreateDTO dto) throws IOException {
+    public ProductDTO fullCreate(
+            ProductFullCreateDTO dto,
+            List<MultipartFile> files
+    ) throws IOException {
+
+    /* =============================
+       1️⃣ CREATE PRODUCT
+       ============================= */
+
+        ProductDTO productDTO = createProductCore(dto.getProduct());
+
+        Product product = productRepository.findById(productDTO.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Product not found"));
+
+    /* =============================
+       2️⃣ CREATE VARIANTS
+       ============================= */
+
+        List<ProductVariantCreateDTO> variants =
+                (dto.getVariants() == null || dto.getVariants().isEmpty())
+                        ? List.of(defaultVariant())
+                        : dto.getVariants();
+
+        List<ProductVariant> createdVariants = new ArrayList<>();
+
+        for (ProductVariantCreateDTO v : variants) {
+
+            v.setProductId(product.getId());
+
+            ProductVariantDTO created =
+                    productVariantService.createVariant(v);
+
+            ProductVariant entity =
+                    productVariantRepository.findById(created.getId())
+                            .orElseThrow();
+
+            createdVariants.add(entity);
+        }
+
+    /* =============================
+       3️⃣ HANDLE FILES (REUSE PIPELINE)
+       ============================= */
+
+        if (files != null && !files.isEmpty()) {
+
+            productImageService.attachFilesWithAssignments(
+                    product,
+                    createdVariants,
+                    dto.getFileAssignments(),
+                    files
+            );
+        }
+
+        return productMapper.toDTO(product);
+    }
+
+    private ProductVariantCreateDTO defaultVariantDTO(UUID productId) {
+
+        ProductVariantCreateDTO dto = new ProductVariantCreateDTO();
+        dto.setProductId(productId);
+        dto.setClassification("STANDARD");
+        return dto;
+    }
+
+    private ProductVariantCreateDTO defaultVariant() {
+
+        ProductVariantCreateDTO dto = new ProductVariantCreateDTO();
+        dto.setClassification("STANDARD");
+        return dto;
+    }
+
+    @Transactional
+    public ProductDTO createProductCore(ProductCreateDTO dto) {
+
         validateCreateDTO(dto);
         validateCreateDTOUniqueness(dto);
 
-        // --- Map DTO to entity
         Product product = productMapper.toEntity(dto);
 
-        // --- Category
         Category category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid categoryId"));
+
         product.setCategory(category);
 
-        // --- Suppliers
         if (dto.getSupplierIds() != null && !dto.getSupplierIds().isEmpty()) {
-            List<Supplier> suppliers = supplierRepository.findAllById(dto.getSupplierIds());
 
-            if (suppliers.size() != dto.getSupplierIds().size()) {
-                Set<UUID> found = suppliers.stream().map(Supplier::getId).collect(Collectors.toSet());
-                dto.getSupplierIds().stream()
-                        .filter(id -> !found.contains(id))
-                        .findFirst()
-                        .ifPresent(id -> { throw new EntityNotFoundException("Supplier not found: " + id); });
-            }
+            List<Supplier> suppliers =
+                    supplierRepository.findAllById(dto.getSupplierIds());
 
-            // Safe assignment to avoid ConcurrentModificationException
             product.setSuppliers(new HashSet<>(suppliers));
             syncCategorySuppliers(category, product.getSuppliers());
         }
 
-        // --- SKU
         if (product.getSku() == null || product.getSku().isBlank()) {
             product.setSku(skuService.generateSkuForCategory(category));
         } else if (productRepository.existsBySku(product.getSku())) {
             throw new IllegalArgumentException("SKU already exists");
         }
 
-        // --- Persist product (to get ID for images)
         product = productRepository.save(product);
 
-        // --- Create variants
-        List<String> classifications =
-                (dto.getVariants() == null || dto.getVariants().isEmpty())
-                        ? List.of("STANDARD")
-                        : dto.getVariants();
-
-        for (String classification : classifications) {
-            if (classification == null || classification.isBlank()) continue;
-
-            ProductVariant variant = new ProductVariant();
-            variant.setProduct(product);
-            variant.setClassification(classification);
-
-            // no buying price yet — will be set after receiveStock
-            variant.setAverageBuyingPrice(BigDecimal.ZERO);
-
-            // Compute minimum selling price using profit percentage
-            BigDecimal minBuy = variant.getAverageBuyingPrice();
-            BigDecimal minSelling =
-                    productVariantService.computeMinSelling(
-                            minBuy,
-                            product.getMinimumPercentageProfit()
-                    );
-            variant.setMinimumSellingPrice(minSelling);
-
-            // Generate variant SKU
-            variant.setSku(generateVariantSku(product, classification));
-
-            product.getVariants().add(variant);
-        }
-
-        // persist variants
-        productRepository.save(product);
-
-        // --- Save product images
-        List<MultipartFile> imageFiles = dto.getImages();
-        if (imageFiles != null && !imageFiles.isEmpty()) {
-            saveProductImages(product, imageFiles);
-        }
-
-        // --- Save final product state
-        product = productRepository.save(product);
-
-        // --- Product audit (keep your original logic)
+        // CREATE audit ONLY
         ProductAudit createAudit = new ProductAudit();
         createAudit.setAction("CREATE");
-        createAudit.setFieldChanged(null);
-        createAudit.setOldValue(null);
-        createAudit.setNewValue("created");
         createAudit.setProductId(product.getId());
         createAudit.setProductName(product.getName());
         createAudit.setTimestamp(LocalDateTime.now());
         createAudit.setPerformedBy(SecurityUtils.currentUsername());
         productAuditRepository.save(createAudit);
 
-        log.info("Created product {} (id={} sku={}",
-                product.getName(), product.getId(), product.getSku());
-
         return productMapper.toDTO(product);
+    }
+
+    @Transactional
+    public ProductDTO createProduct(ProductCreateDTO dto) throws IOException {
+
+        ProductFullCreateDTO full = new ProductFullCreateDTO();
+        full.setProduct(dto);
+
+        // convert simple variant string list into DTO list
+        if (dto.getVariants() != null && !dto.getVariants().isEmpty()) {
+
+            List<ProductVariantCreateDTO> variantDTOs =
+                    dto.getVariants().stream()
+                            .map(v -> {
+                                ProductVariantCreateDTO vd = new ProductVariantCreateDTO();
+                                vd.setClassification(v);
+                                return vd;
+                            })
+                            .toList();
+
+            full.setVariants(variantDTOs);
+        }
+
+        // No file assignments
+        full.setFileAssignments(null);
+
+        return fullCreate(full, null);
     }
 
     private void validateCreateDTO(ProductCreateDTO dto) {
@@ -485,55 +540,8 @@ public class ProductService {
     public void uploadProductImages(UUID productId, List<MultipartFile> files) throws IOException {
         Product product = productRepository.findById(productId).orElseThrow(() -> new ProductNotFoundException("Product not found"));
         Path productDir = fileStorageService.initDirectory(productRoot().resolve(product.getId().toString()));
-        saveProductImages(product, files);
+        productImageService.saveProductImages(product, files);
         productRepository.save(product);
-    }
-
-    @Transactional
-    public void saveProductImages(Product product, List<MultipartFile> files) throws IOException {
-        if (files == null || files.isEmpty()) return;
-        Path productDir = fileStorageService.initDirectory(productRoot().resolve(product.getId().toString()));
-        fileStorageService.hidePathIfSupported(productDir);
-
-        List<ProductImage> newImages = new ArrayList<>();
-        for (var file : files) {
-            if (file.isEmpty()) continue;
-            String fileName = System.currentTimeMillis() + "_" + UUID.randomUUID() + "_" + sanitizeFilename(file.getOriginalFilename());
-            try (InputStream in = file.getInputStream()) {
-                Path saved = fileStorageService.saveFile(productDir, fileName, in);
-                transactionalFileManager.track(saved); // for rollback cleanup
-                fileStorageService.hidePath(saved);
-                // store API-friendly path (not absolute)
-                String apiPath = "/api/products/images/" + product.getId() + "/" + fileName;
-
-                ProductImage pi = ProductImage.builder()
-                        .fileName(fileName)
-                        .filePath(apiPath)
-                        .product(product)
-                        .build();
-
-                newImages.add(pi);
-            }
-        }
-
-        productImageRepository.saveAll(newImages);
-        if (product.getImages() == null) product.setImages(new ArrayList<>());
-        product.getImages().addAll(newImages);
-
-        // create image audit entries for each upload
-        List<ProductImageAudit> audits = newImages.stream().map(img -> {
-            ProductImageAudit ia = new ProductImageAudit();
-            ia.setAction("IMAGE_UPLOADED");
-            ia.setFileName(img.getFileName());
-            ia.setFilePath(img.getFilePath());
-            ia.setProductId(product.getId());
-            ia.setProductName(product.getName());
-            ia.setTimestamp(LocalDateTime.now());
-            ia.setPerformedBy(SecurityUtils.currentUsername());
-            return ia;
-        }).collect(Collectors.toList());
-
-        if (!audits.isEmpty()) productImageAuditRepository.saveAll(audits);
     }
 
     public void deleteProductImageByFilename(UUID productId, String filename) throws IOException {
@@ -838,9 +846,46 @@ public class ProductService {
         return zipFile;
     }
 
+    public ResponseEntity<Resource> getProductThumbnail(UUID id) {
 
+        Product product = productRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
 
+        if (product.getImages() == null || product.getImages().isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
 
+        // 🔥 Null-safe filtering
+        ProductImage primary = product.getImages().stream()
+                .filter(img -> !Boolean.TRUE.equals(img.getDeleted()))
+                .filter(img -> Boolean.TRUE.equals(img.getPrimaryImage()))
+                .findFirst()
+                .orElseGet(() ->
+                        product.getImages().stream()
+                                .filter(img -> !Boolean.TRUE.equals(img.getDeleted()))
+                                .findFirst()
+                                .orElse(null)
+                );
+
+        if (primary == null || primary.getThumbnailFileName() == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Path path = productRoot()
+                .resolve(id.toString())
+                .resolve(primary.getThumbnailFileName());
+
+        if (!Files.exists(path)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Resource resource = new FileSystemResource(path.toFile());
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_JPEG)
+                .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+                .body(resource);
+    }
 
 
 

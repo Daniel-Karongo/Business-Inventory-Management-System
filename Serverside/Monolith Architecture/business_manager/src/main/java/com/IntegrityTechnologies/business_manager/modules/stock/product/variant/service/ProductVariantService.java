@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service;
 
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.mapper.ProductVariantMapper;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
@@ -23,6 +24,7 @@ public class ProductVariantService {
     private final ProductRepository productRepo;
     private final ProductVariantMapper mapper;
     private final VariantBarcodeService barcodeService;
+    private final InventoryItemRepository inventoryItemRepository;
 
     @Transactional
     public ProductVariantDTO createVariant(ProductVariantCreateDTO dto) {
@@ -107,8 +109,29 @@ public class ProductVariantService {
        DELETE
        ============================= */
 
-    public void deleteVariant(UUID id) {
-        variantRepo.delete(getEntity(id));
+    @Transactional
+    public void deleteVariant(UUID variantId) {
+
+        ProductVariant variant = variantRepo.findById(variantId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Variant not found"));
+
+    /* ================================
+       BUSINESS RULE: NO DELETE IF STOCK EXISTS
+       ================================ */
+
+        boolean hasInventory = inventoryItemRepository
+                .existsByProductVariant_Id(variantId);
+
+        if (hasInventory) {
+            throw new IllegalStateException(
+                    "Cannot delete variant '" +
+                            variant.getClassification() +
+                            "' because inventory records exist."
+            );
+        }
+
+        variantRepo.delete(variant);
     }
 
     /* =============================

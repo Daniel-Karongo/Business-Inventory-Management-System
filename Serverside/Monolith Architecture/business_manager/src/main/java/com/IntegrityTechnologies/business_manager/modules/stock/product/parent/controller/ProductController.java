@@ -203,6 +203,11 @@ public class ProductController {
         return ResponseEntity.ok(productService.getAllProductImageUrls());
     }
 
+    @GetMapping("/{id}/thumbnail")
+    public ResponseEntity<Resource> getThumbnail(@PathVariable UUID id) {
+        return productService.getProductThumbnail(id);
+    }
+
 
 
 
@@ -225,6 +230,16 @@ public class ProductController {
                 bulkService.importProducts(request)
         );
     }
+
+    @PostMapping(value = "/full-create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ProductDTO fullCreate(
+            @RequestPart("payload") ProductFullCreateDTO dto,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files
+    ) throws IOException {
+
+        return productService.fullCreate(dto, files);
+    }
+
     @PostMapping(value="/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ProductDTO> createProduct(
             @ModelAttribute("product") ProductCreateDTO dto

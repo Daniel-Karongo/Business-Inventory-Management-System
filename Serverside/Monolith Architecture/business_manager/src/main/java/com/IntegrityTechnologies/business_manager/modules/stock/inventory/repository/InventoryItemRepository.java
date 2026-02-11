@@ -12,6 +12,7 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
     Optional<InventoryItem> findByProductVariant_IdAndBranchId(UUID variantId, UUID branchId);
 
     List<InventoryItem> findByProductVariant_Id(UUID variantId);
+    boolean existsByProductVariant_Id(UUID variantId);
 
     List<InventoryItem> findByBranchId(UUID branchId);
 

@@ -25,20 +25,30 @@ public class ProductImage {
 
     private String fileName;
     private String filePath;
+    private String thumbnailFileName;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Product product;
+    @Column(nullable = false)
+    private Boolean primaryImage = false;
 
-    private Boolean deleted;
+    @Column(nullable = false)
+    private Boolean deleted = false;
+
 
     private LocalDateTime uploadedAt;
 
     @PrePersist
     public void onCreate() {
-        uploadedAt = LocalDateTime.now();
-        deleted = (deleted == null) ? false : deleted;
+        if (uploadedAt == null)
+            uploadedAt = LocalDateTime.now();
+        if (deleted == null)
+            deleted = false;
+        if (primaryImage == null)
+            primaryImage = false;
     }
+
 }

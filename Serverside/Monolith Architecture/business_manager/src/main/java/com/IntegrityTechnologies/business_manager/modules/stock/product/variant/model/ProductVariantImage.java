@@ -47,6 +47,7 @@ public class ProductVariantImage {
 
     @Column(nullable = false)
     private Boolean deleted = false;
+    private String thumbnailFileName;
 
     private LocalDateTime uploadedAt;
 
