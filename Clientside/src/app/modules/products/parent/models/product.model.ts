@@ -14,7 +14,8 @@ export interface Product {
 
   variants: ProductVariant[];
   imageUrls: string[];
-
+  thumbnail?: string;
+  
   suppliers: {
     id: string;
     name: string;

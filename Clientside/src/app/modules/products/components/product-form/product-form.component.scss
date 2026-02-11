@@ -1,0 +1,54 @@
+:host {
+  display: block;
+}
+
+.form-container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.section {
+  padding: 1.5rem;
+}
+
+.variant-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.variant-row mat-form-field {
+  flex: 1 1 200px;
+}
+
+.file-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  margin-bottom: 0.75rem;
+}
+
+.file-name {
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 768px) {
+
+  .variant-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .file-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}

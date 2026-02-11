@@ -1,227 +1,389 @@
-<div class="flex flex-col gap-4">
+<app-page-shell>
 
     <!-- HEADER -->
-    <div class="flex justify-between items-center">
-        <h1 class="text-xl font-semibold">Inventory</h1>
+    <div page-header>
+
+        <div class="inventory-header">
+
+            <!-- LEFT SIDE -->
+            <div class="header-left">
+
+                <button mat-icon-button matTooltip="Grid View" [class.active]="viewMode === 'grid'"
+                    (click)="setView('grid')">
+                    <mat-icon>grid_view</mat-icon>
+                </button>
+
+                <button mat-icon-button matTooltip="Table View" [class.active]="viewMode === 'table'"
+                    (click)="setView('table')">
+                    <mat-icon>table_rows</mat-icon>
+                </button>
+
+                <button *ngIf="!isMobile" mat-icon-button matTooltip="Toggle Density" (click)="toggleDensity()">
+                    <mat-icon>format_line_spacing</mat-icon>
+                </button>
+
+            </div>
+
+            <!-- RIGHT SIDE -->
+            <div class="header-right">
+
+                <button mat-stroked-button (click)="openReceiveNewProduct()">
+                    <mat-icon>add_box</mat-icon>
+                    Receive New Product
+                </button>
+
+                <button mat-flat-button color="primary" (click)="openBulkReceive()">
+                    <mat-icon>cloud_upload</mat-icon>
+                    Bulk Receive
+                </button>
+
+            </div>
+
+        </div>
+
     </div>
 
-    <!-- FILTERS -->
-    <!-- <div class="flex gap-3 items-center">
-        <select class="search-input" (change)="onBranchChange($event)">
-            <option value="">All Branches</option>
-            <option *ngFor="let b of branches" [value]="b.id">
-                {{ b.name }}
-            </option>
-        </select>
-    </div> -->
-    <div class="flex gap-3 items-center">
-        <mat-form-field appearance="fill" class="min-w-[220px]">
+    <!-- TOOLBAR -->
+    <div page-toolbar class="inventory-toolbar">
+
+        <mat-form-field appearance="fill" class="branch-field">
             <mat-label>Branch</mat-label>
-
-            <mat-select (selectionChange)="onBranchChange($event)" [attr.aria-label]="'Filter inventory by branch'">
-
+            <mat-select (selectionChange)="onBranchChange($event)">
                 <mat-option value="">All Branches</mat-option>
                 <mat-option *ngFor="let b of branches" [value]="b.id">
                     {{ b.name }}
                 </mat-option>
-
             </mat-select>
         </mat-form-field>
-    </div>
 
-    <!-- LOADING -->
-    <div *ngIf="loading" class="text-center py-10">
-        Loading inventory…
-    </div>
-
-    <!-- EMPTY -->
-    <div *ngIf="!loading && filtered.length === 0" class="text-center py-10">
-        No inventory records found
-    </div>
-
-    <div class="flex justify-between items-center mb-3">
-        <h1 class="text-xl font-semibold">Inventory</h1>
-
-        <div class="flex gap-2">
-
-            <button mat-stroked-button color="primary" (click)="openReceiveNewProduct()">
-                <mat-icon>add_box</mat-icon>
-                Receive New Product
+        <mat-form-field appearance="fill" class="search-field">
+            <mat-label>Search Product or SKU</mat-label>
+            <input matInput [(ngModel)]="searchTerm" (input)="applySearch()" placeholder="Search by name or SKU">
+            <button matSuffix mat-icon-button *ngIf="searchTerm" (click)="searchTerm=''; applySearch()">
+                <mat-icon>close</mat-icon>
             </button>
+        </mat-form-field>
 
-            <button mat-flat-button color="primary" (click)="openBulkReceive()">
-                <mat-icon>cloud_upload</mat-icon>
-                Bulk Receive
-            </button>
+    </div>
 
+    <!-- CONTENT -->
+    <div page-content>
+
+        <!-- LOADING -->
+        <div *ngIf="loading" class="text-center py-10">
+            Loading inventory…
         </div>
-    </div>
 
-    <!-- TABLE -->
-    <div *ngIf="!loading && filtered.length > 0" class="bg-[var(--surface)] rounded shadow overflow-x-auto">
+        <!-- EMPTY -->
+        <div *ngIf="!loading && filtered.length === 0" class="text-center py-10">
+            No inventory records found
+        </div>
 
-        <table mat-table [dataSource]="pagedData">
+        <!-- GRID VIEW -->
+        <div *ngIf="!loading && viewMode === 'grid'" class="inventory-grid">
 
-            <ng-container matColumnDef="product">
-                <th mat-header-cell *matHeaderCellDef class="sortable" (click)="sortBy('productName')"
-                    matTooltip="Sort by product">
-                    <span class="sortable-content">
-                        Product
-                        <mat-icon class="sort-icon">
-                            {{
-                            sortField === 'productName'
-                            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-                            : 'unfold_more'
-                            }}
-                        </mat-icon>
-                    </span>
-                </th>
-                <td mat-cell *matCellDef="let r">{{ r.productName }}</td>
-            </ng-container>
+            <div *ngFor="let r of pagedData" class="inventory-card" [class.compact]="density === 'compact'">
 
-            <ng-container matColumnDef="variant">
-                <th mat-header-cell *matHeaderCellDef class="sortable" (click)="sortBy('productClassification')"
-                    matTooltip="Sort by variant">
-                    <span class="sortable-content">
-                        Variant
-                        <mat-icon class="sort-icon">
-                            {{ sortField === 'productClassification'
-                            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-                            : 'unfold_more' }}
-                        </mat-icon>
-                    </span>
-                </th>
+                <div class="card-title">
+                    {{ r.productName }}
+                </div>
 
-                <td mat-cell *matCellDef="let r">{{ r.productClassification }}</td>
-            </ng-container>
+                <div class="card-sub">
+                    {{ r.productClassification }}
+                </div>
 
-            <ng-container matColumnDef="variantSku">
-                <th mat-header-cell *matHeaderCellDef class="sortable" (click)="sortBy('productClassification')"
-                    matTooltip="Sort by variant">
-                    <span class="sortable-content">
-                        Variant
-                        <mat-icon class="sort-icon">
-                            {{ sortField === 'productClassification'
-                            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-                            : 'unfold_more' }}
-                        </mat-icon>
-                    </span>
-                </th>
+                <div class="card-sub text-xs text-gray-500">
+                    SKU: {{ r.productVariantSKU }}
+                </div>
 
-                <td mat-cell *matCellDef="let r">{{ r.productVariantSKU }}</td>
-            </ng-container>
+                <div class="card-sub text-xs text-gray-500">
+                    Branch: {{ r.branchName }}
+                </div>
 
-            <ng-container matColumnDef="branch">
-                <th mat-header-cell *matHeaderCellDef class="sortable" (click)="sortBy('branchName')"
-                    matTooltip="Sort by branch">
-                    <span class="sortable-content">
-                        Branch
-                        <mat-icon class="sort-icon">
-                            {{ sortField === 'branchName'
-                            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-                            : 'unfold_more' }}
-                        </mat-icon>
-                    </span>
-                </th>
+                <div class="card-metrics">
+                    <div>
+                        <div class="metric-label">On Hand</div>
+                        <div class="metric-value">{{ r.quantityOnHand }}</div>
+                    </div>
 
-                <td mat-cell *matCellDef="let r">{{ r.branchName }}</td>
-            </ng-container>
+                    <div>
+                        <div class="metric-label">Reserved</div>
+                        <div class="metric-value">{{ r.quantityReserved }}</div>
+                    </div>
 
-            <ng-container matColumnDef="onHand">
-                <th mat-header-cell *matHeaderCellDef class="sortable" (click)="sortBy('quantityOnHand')"
-                    matTooltip="Sort by quantity on hand">
-                    <span class="sortable-content">
-                        On Hand
-                        <mat-icon class="sort-icon">
-                            {{ sortField === 'quantityOnHand'
-                            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-                            : 'unfold_more' }}
-                        </mat-icon>
-                    </span>
-                </th>
+                    <div>
+                        <div class="metric-label">Available</div>
+                        <div class="metric-value">
+                            {{ available(r) }}
+                        </div>
+                    </div>
+                </div>
 
-                <td mat-cell *matCellDef="let r">{{ r.quantityOnHand }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="reserved">
-                <th mat-header-cell *matHeaderCellDef class="sortable" (click)="sortBy('quantityReserved')"
-                    matTooltip="Sort by reserved quantity">
-                    <span class="sortable-content">
-                        Reserved
-                        <mat-icon class="sort-icon">
-                            {{ sortField === 'quantityReserved'
-                            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-                            : 'unfold_more' }}
-                        </mat-icon>
-                    </span>
-                </th>
-
-                <td mat-cell *matCellDef="let r">{{ r.quantityReserved }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="available">
-                <th mat-header-cell *matHeaderCellDef class="sortable" (click)="sortBy('available')"
-                    matTooltip="Sort by available stock">
-                    <span class="sortable-content">
-                        Available
-                        <mat-icon class="sort-icon">
-                            {{ sortField === 'available'
-                            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-                            : 'unfold_more' }}
-                        </mat-icon>
-                    </span>
-                </th>
-
-                <td mat-cell *matCellDef="let r">
-                    {{ available(r) }}
-                </td>
-            </ng-container>
-
-            <ng-container matColumnDef="updated">
-                <th mat-header-cell *matHeaderCellDef class="sortable" (click)="sortBy('lastUpdatedAt')"
-                    matTooltip="Sort by last update">
-                    <span class="sortable-content">
-                        Updated
-                        <mat-icon class="sort-icon">
-                            {{ sortField === 'lastUpdatedAt'
-                            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-                            : 'unfold_more' }}
-                        </mat-icon>
-                    </span>
-                </th>
-
-                <td mat-cell *matCellDef="let r">
+                <div class="card-sub text-xs text-gray-500">
+                    Updated:
                     {{ r.lastUpdatedAt | date:'medium' }}
-                </td>
-            </ng-container>
+                </div>
 
-            <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef>Actions</th>
-                <td mat-cell *matCellDef="let r">
-                    <button mat-icon-button matTooltip="View transactions"
-                        [routerLink]="['/inventory/', r.productVariantId]">
-                        <mat-icon>history</mat-icon>
+                <div class="card-actions">
+                    <button mat-icon-button matTooltip="Create Sale" (click)="createSaleFromInventory(r)">
+                        <mat-icon>point_of_sale</mat-icon>
                     </button>
+
                     <button mat-icon-button matTooltip="Receive stock" (click)="openReceiveDialog(r)">
                         <mat-icon>add_circle</mat-icon>
                     </button>
+
                     <button mat-icon-button matTooltip="Transfer stock" (click)="openTransferDialog(r)">
                         <mat-icon>swap_horiz</mat-icon>
                     </button>
+
                     <button mat-icon-button matTooltip="Adjust stock" (click)="openAdjustDialog(r)">
                         <mat-icon>tune</mat-icon>
                     </button>
 
-                </td>
-            </ng-container>
+                    <button mat-icon-button matTooltip="View transactions"
+                        [routerLink]="['/inventory/', r.productVariantId]">
+                        <mat-icon>history</mat-icon>
+                    </button>
+                </div>
 
-            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+            </div>
+        </div>
+        
+        <div *ngIf="!loading && viewMode === 'table'" class="bg-[var(--surface)] rounded shadow table-wrapper"
+            [class.compact]="density === 'compact'">
 
-        </table>
-        <mat-paginator [length]="total" [pageSize]="size" [pageSizeOptions]="[5, 10, 20, 50]" showFirstLastButtons
-            (page)="changePage($event)">
-        </mat-paginator>
+            <!-- DESKTOP / TABLET TABLE -->
+            <div class="overflow-x-auto" *ngIf="!isMobile">
+
+                <table mat-table [dataSource]="pagedData">
+
+                    <ng-container matColumnDef="product">
+                        <th mat-header-cell *matHeaderCellDef class="sortable" (click)="sortBy('productName')">
+                            <span class="sortable-content">
+                                Product
+                                <mat-icon class="sort-icon">
+                                    {{
+                                    sortField === 'productName'
+                                    ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+                                    : 'unfold_more'
+                                    }}
+                                </mat-icon>
+                            </span>
+                        </th>
+                        <td mat-cell *matCellDef="let r">{{ r.productName }}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="variant">
+                        <th mat-header-cell *matHeaderCellDef class="sortable"
+                            (click)="sortBy('productClassification')">
+                            <span class="sortable-content">
+                                Variant
+                                <mat-icon class="sort-icon">
+                                    {{ sortField === 'productClassification'
+                                    ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+                                    : 'unfold_more' }}
+                                </mat-icon>
+                            </span>
+                        </th>
+                        <td mat-cell *matCellDef="let r">{{ r.productClassification }}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="variantSku">
+                        <th mat-header-cell *matHeaderCellDef>
+                            SKU
+                        </th>
+                        <td mat-cell *matCellDef="let r">{{ r.productVariantSKU }}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="branch">
+                        <th mat-header-cell *matHeaderCellDef class="sortable" (click)="sortBy('branchName')">
+                            <span class="sortable-content">
+                                Branch
+                                <mat-icon class="sort-icon">
+                                    {{ sortField === 'branchName'
+                                    ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+                                    : 'unfold_more' }}
+                                </mat-icon>
+                            </span>
+                        </th>
+                        <td mat-cell *matCellDef="let r">{{ r.branchName }}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="onHand">
+                        <th mat-header-cell *matHeaderCellDef class="sortable" (click)="sortBy('quantityOnHand')">
+                            <span class="sortable-content">
+                                On Hand
+                                <mat-icon class="sort-icon">
+                                    {{ sortField === 'quantityOnHand'
+                                    ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+                                    : 'unfold_more' }}
+                                </mat-icon>
+                            </span>
+                        </th>
+                        <td mat-cell *matCellDef="let r">{{ r.quantityOnHand }}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="reserved">
+                        <th mat-header-cell *matHeaderCellDef class="sortable" (click)="sortBy('quantityReserved')">
+                            <span class="sortable-content">
+                                Reserved
+                                <mat-icon class="sort-icon">
+                                    {{ sortField === 'quantityReserved'
+                                    ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+                                    : 'unfold_more' }}
+                                </mat-icon>
+                            </span>
+                        </th>
+                        <td mat-cell *matCellDef="let r">{{ r.quantityReserved }}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="available">
+                        <th mat-header-cell *matHeaderCellDef class="sortable" (click)="sortBy('available')">
+                            <span class="sortable-content">
+                                Available
+                                <mat-icon class="sort-icon">
+                                    {{ sortField === 'available'
+                                    ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+                                    : 'unfold_more' }}
+                                </mat-icon>
+                            </span>
+                        </th>
+                        <td mat-cell *matCellDef="let r">
+                            {{ available(r) }}
+                        </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="updated">
+                        <th mat-header-cell *matHeaderCellDef class="sortable" (click)="sortBy('lastUpdatedAt')">
+                            <span class="sortable-content">
+                                Updated
+                                <mat-icon class="sort-icon">
+                                    {{ sortField === 'lastUpdatedAt'
+                                    ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+                                    : 'unfold_more' }}
+                                </mat-icon>
+                            </span>
+                        </th>
+                        <td mat-cell *matCellDef="let r">
+                            {{ r.lastUpdatedAt | date:'medium' }}
+                        </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="actions">
+                        <th mat-header-cell *matHeaderCellDef>Actions</th>
+                        <td mat-cell *matCellDef="let r">
+                            <button mat-icon-button matTooltip="Create Sale" (click)="createSaleFromInventory(r)">
+                                <mat-icon>point_of_sale</mat-icon>
+                            </button>
+                            <button mat-icon-button matTooltip="Receive stock" (click)="openReceiveDialog(r)">
+                                <mat-icon>add_circle</mat-icon>
+                            </button>
+                            <button mat-icon-button matTooltip="Transfer stock" (click)="openTransferDialog(r)">
+                                <mat-icon>swap_horiz</mat-icon>
+                            </button>
+                            <button mat-icon-button matTooltip="Adjust stock" (click)="openAdjustDialog(r)">
+                                <mat-icon>tune</mat-icon>
+                            </button>
+                            <button mat-icon-button matTooltip="View transactions"
+                                [routerLink]="['/inventory/', r.productVariantId]">
+                                <mat-icon>history</mat-icon>
+                            </button>
+                        </td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+
+                </table>
+
+            </div>
+
+            <!-- MOBILE STACKED ROWS -->
+            <div *ngIf="isMobile" class="stacked-wrapper">
+
+                <div *ngFor="let r of pagedData" class="stacked-row">
+
+                    <div class="stacked-header">
+                        <div class="stacked-title">
+                            {{ r.productName }}
+                        </div>
+                        <div class="stacked-sub">
+                            {{ r.productClassification }}
+                        </div>
+                    </div>
+
+                    <div class="stacked-grid">
+
+                        <div class="stacked-item">
+                            <div class="label">SKU</div>
+                            <div class="value">{{ r.productVariantSKU }}</div>
+                        </div>
+
+                        <div class="stacked-item">
+                            <div class="label">Branch</div>
+                            <div class="value">{{ r.branchName }}</div>
+                        </div>
+
+                        <div class="stacked-item">
+                            <div class="label">On Hand</div>
+                            <div class="value">{{ r.quantityOnHand }}</div>
+                        </div>
+
+                        <div class="stacked-item">
+                            <div class="label">Reserved</div>
+                            <div class="value">{{ r.quantityReserved }}</div>
+                        </div>
+
+                        <div class="stacked-item">
+                            <div class="label">Available</div>
+                            <div class="value">
+                                {{ available(r) }}
+                            </div>
+                        </div>
+
+                        <div class="stacked-item">
+                            <div class="label">Updated</div>
+                            <div class="value">
+                                {{ r.lastUpdatedAt | date:'medium' }}
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="stacked-actions">
+                        <button mat-icon-button matTooltip="Create Sale" (click)="createSaleFromInventory(r)">
+                            <mat-icon>point_of_sale</mat-icon>
+                        </button>
+
+                        <button mat-icon-button matTooltip="Receive stock" (click)="openReceiveDialog(r)">
+                            <mat-icon>add_circle</mat-icon>
+                        </button>
+
+                        <button mat-icon-button matTooltip="Transfer stock" (click)="openTransferDialog(r)">
+                            <mat-icon>swap_horiz</mat-icon>
+                        </button>
+
+                        <button mat-icon-button matTooltip="Adjust stock" (click)="openAdjustDialog(r)">
+                            <mat-icon>tune</mat-icon>
+                        </button>
+
+                        <button mat-icon-button matTooltip="View transactions"
+                            [routerLink]="['/inventory/', r.productVariantId]">
+                            <mat-icon>history</mat-icon>
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+        <div *ngIf="!loading" class="shared-paginator">
+            <mat-paginator [length]="total" [pageSize]="size" [pageSizeOptions]="[10, 25, 50, 100]" showFirstLastButtons
+                (page)="changePage($event)">
+            </mat-paginator>
+        </div>
     </div>
 
-</div>
+</app-page-shell>

@@ -1,13 +1,147 @@
+/* =========================================
+   ROOT
+========================================= */
+
+.transactions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* =========================================
+   HEADER
+========================================= */
+
+.header-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.header-block h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.variant-info {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* =========================================
+   STATES
+========================================= */
+
+.state-block {
+  text-align: center;
+  padding: 40px 0;
+  color: var(--text-secondary);
+}
+
+/* =========================================
+   FILTERS
+========================================= */
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+/* =========================================
+   TABLE
+========================================= */
+
+.table-wrapper {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table-scroll {
+  overflow: auto;
+}
+
+.transactions-table {
+  width: 100%;
+}
+
+/* Cell padding + overflow control */
+.mat-mdc-cell,
+.mat-mdc-header-cell {
+  padding: 10px 14px;
+  white-space: nowrap;
+}
+
+/* Sticky header */
+.mat-mdc-header-row {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 2;
+}
+
+/* Type block */
+.type-block {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Quantity coloring */
 .tx-in {
-  color: #2e7d32; // green
+  color: #2e7d32;
   font-weight: 500;
 }
 
 .tx-out {
-  color: #c62828; // red
+  color: #c62828;
   font-weight: 500;
 }
 
-mat-icon {
-  vertical-align: middle;
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 900px) {
+
+  /* Hide note first */
+  .mat-column-note {
+    display: none;
+  }
+
+}
+
+@media (max-width: 700px) {
+
+  /* Hide user */
+  .mat-column-performedBy {
+    display: none;
+  }
+
+}
+
+@media (max-width: 600px) {
+
+  /* Hide branch on small phones */
+  .mat-column-branch {
+    display: none;
+  }
+
+  .transactions-container {
+    padding: 14px;
+  }
+
+}
+
+@media (max-width: 480px) {
+
+  /* Hide reference on very small */
+  .mat-column-reference {
+    display: none;
+  }
+
 }

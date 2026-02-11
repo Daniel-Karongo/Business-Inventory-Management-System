@@ -2,25 +2,42 @@
   font-weight: 600;
 }
 
+/* =========================
+   BODY LAYOUT
+========================= */
+
 .body {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  overflow-x: hidden;
 }
+
+/* ===================================
+   IMPORT ZONE – Responsive (Clean)
+=================================== */
 
 .import-zone {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 20px;
+
   padding: 16px;
   border: 1px dashed var(--border);
   border-radius: 12px;
   background: var(--surface);
+
+  flex-wrap: wrap;
+  /* allows clean collapse */
 }
 
+/* LEFT SIDE (Excel / CSV tiles) */
 .import-tiles {
   display: flex;
   gap: 16px;
+  flex-wrap: wrap;
+  flex: 1;
 }
 
 .import-tile {
@@ -28,35 +45,89 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 16px 18px;
-  border-radius: 10px;
+
+  padding: 18px 20px;
+
+  border-radius: 12px;
   border: 1px solid var(--border);
+
   background: var(--surface);
-  box-shadow: var(--surface-shadow);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+
+  transition: all 160ms ease;
+
+  min-width: 220px;
 }
 
+/* Hover */
 .import-tile:hover {
   background: var(--surface-hover);
-  transform: translateY(-1px);
+  border-color: rgba(0, 0, 0, 0.18);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
 }
 
+/* Icon size */
 .import-tile mat-icon {
   font-size: 28px;
 }
 
+/* Excel icon color */
 .import-tile.excel mat-icon {
   color: #2e7d32;
+  /* rich Excel green */
 }
 
+/* CSV icon color */
 .import-tile.csv mat-icon {
   color: #1565c0;
+  /* strong blue */
 }
 
+/* Disabled */
+.import-tile.disabled {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* RIGHT SIDE (Template buttons) */
 .template-actions {
   display: flex;
   gap: 12px;
-  align-items: center;
+  flex-wrap: wrap;
 }
+
+/* Small screens */
+@media (max-width: 768px) {
+
+  .import-zone {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .import-tiles {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .import-tile {
+    flex: 1 1 100%;
+  }
+
+  .template-actions {
+    width: 100%;
+    justify-content: flex-start;
+    /* ← fixes empty right space */
+  }
+
+  .template-actions button {
+    flex: 1;
+  }
+}
+
+/* =========================
+   LINE TALLY
+========================= */
 
 .line-tally.prominent {
   display: inline-flex;
@@ -70,23 +141,36 @@
   width: fit-content;
 }
 
+/* =========================
+   GO TO LINE
+========================= */
+
 .go-to-line {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
+
+/* =========================
+   SCROLL ACTIONS (FOOTER)
+========================= */
 
 .scroll-actions {
   display: flex;
   gap: 6px;
   margin-right: auto;
+  flex-wrap: wrap;
 }
+
+/* =========================
+   LOADING OVERLAY
+========================= */
 
 .shell-body {
   position: relative;
 }
 
-/* Overlay */
 .shell-loading-overlay {
   position: absolute;
   inset: 0;
@@ -101,22 +185,74 @@ body.dark .shell-loading-overlay {
   background: rgba(15, 17, 21, 0.65);
 }
 
-/* Card */
 .shell-loading-card {
   background: var(--surface-bg);
   border: 1px solid var(--surface-border);
   border-radius: var(--surface-radius);
   padding: 20px 24px;
   min-width: 260px;
-
   display: flex;
   flex-direction: column;
   gap: 14px;
-
   box-shadow: var(--surface-shadow);
 }
 
-.import-tile.disabled {
-  pointer-events: none;
-  opacity: 0.6;
+/* =========================
+   RESPONSIVE BREAKPOINTS
+========================= */
+
+@media (max-width: 1024px) {
+
+  .import-zone {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .template-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+
+  .import-tiles {
+    flex-direction: column;
+  }
+
+  .import-tile {
+    width: 100%;
+  }
+
+  /* Footer layout */
+  mat-dialog-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 12px;
+  }
+
+  /* Scroll actions row */
+  .scroll-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Make icon buttons feel intentional */
+  .scroll-actions button {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Action buttons row */
+  mat-dialog-actions>button {
+    width: 100%;
+  }
 }

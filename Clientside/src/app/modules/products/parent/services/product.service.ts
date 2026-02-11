@@ -31,8 +31,11 @@ export class ProductService {
     );
   }
 
-  create(formData: FormData) {
-    return this.http.post<Product>(`${this.base}/create`, formData);
+  fullCreate(formData: FormData) {
+    return this.http.post<Product>(
+      `${this.base}/full-create`,
+      formData
+    );
   }
 
   bulkCreate(formData: FormData) {

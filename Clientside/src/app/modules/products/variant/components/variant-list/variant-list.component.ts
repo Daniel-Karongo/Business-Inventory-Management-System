@@ -95,7 +95,7 @@ export class VariantListComponent implements OnInit {
   }
 
   delete(v: ProductVariant) {
-    const ok = confirm(`Delete variant "${v.classification}" permanently?`);
+    const ok = confirm(`Delete variant "${v.classification}"?`);
     if (!ok) return;
 
     this.variantService.delete(v.id).subscribe({
@@ -103,8 +103,9 @@ export class VariantListComponent implements OnInit {
         this.snackbar.open('Variant deleted', 'Close', { duration: 2000 });
         this.loadVariants();
       },
-      error: () => {
-        this.snackbar.open('Delete failed', 'Close', { duration: 3000 });
+      error: (err) => {
+        const msg = err?.error || 'Delete failed';
+        this.snackbar.open(msg, 'Close', { duration: 4000 });
       }
     });
   }

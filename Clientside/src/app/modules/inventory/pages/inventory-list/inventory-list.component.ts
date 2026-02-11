@@ -11,7 +11,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatPaginator, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectChange, MatSelectModule } from '@angular/material/select';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { BranchMinimalDTO } from '../../../branches/models/branch.model';
 import { BranchService } from '../../../branches/services/branch.service';
 import { Product } from '../../../products/parent/models/product.model';
@@ -23,6 +23,10 @@ import { ReceiveStockDialogComponent } from '../../components/receive-stock-dial
 import { TransferStockDialogComponent } from '../../components/transfer-stock-dialog/transfer-stock-dialog.component';
 import { InventoryResponse } from '../../models/inventory-response.model';
 import { InventoryService } from '../../services/inventory.service';
+import { PageShellComponent } from '../../../../shared/layout/page-shell/page-shell.component';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { FormsModule } from '@angular/forms';
+import { MatInputModule } from '@angular/material/input';
 
 @Component({
   selector: 'app-inventory-list',
@@ -36,12 +40,19 @@ import { InventoryService } from '../../services/inventory.service';
     RouterModule,
     MatPaginatorModule,
     MatSelectModule,
-    MatFormFieldModule
+    MatFormFieldModule,
+    PageShellComponent,
+    FormsModule,
+    MatInputModule
   ],
   templateUrl: './inventory-list.component.html',
   styleUrls: ['./inventory-list.component.scss']
 })
 export class InventoryListComponent implements OnInit {
+
+  viewMode: 'table' | 'grid' = 'table';
+  density: 'compact' | 'comfortable' = 'compact';
+  isMobile = false;
 
   loading = true;
 
@@ -80,16 +91,33 @@ export class InventoryListComponent implements OnInit {
   total = 0;
 
   pagedData: InventoryResponse[] = [];
+  searchTerm = '';
+  private readonly STORAGE_KEY = 'inventory_list_prefs';
 
   constructor(
     private inventoryService: InventoryService,
     private branchService: BranchService,
     private snackbar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private breakpoint: BreakpointObserver,
+    private router: Router
   ) { }
 
   ngOnInit(): void {
+    this.breakpoint.observe(['(max-width: 640px)']).subscribe(result => {
+      this.isMobile = result.matches;
+
+      if (this.isMobile) {
+        this.viewMode = 'grid';
+        this.density = 'comfortable';
+      } else {
+        this.viewMode = 'table';
+        this.density = 'compact';
+      }
+    });
+
     this.loadBranches();
+    this.loadPreferences();
     this.loadInventory();
   }
 
@@ -133,6 +161,42 @@ export class InventoryListComponent implements OnInit {
         this.snackbar.open('Failed to load inventory', 'Close', { duration: 3000 });
       }
     });
+  }
+
+  private savePreferences() {
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify({
+      viewMode: this.viewMode,
+      density: this.density,
+      size: this.size
+    }));
+  }
+
+  private loadPreferences() {
+    const raw = localStorage.getItem(this.STORAGE_KEY);
+    if (!raw) return;
+
+    const prefs = JSON.parse(raw);
+
+    this.viewMode = prefs.viewMode ?? this.viewMode;
+    this.density = prefs.density ?? this.density;
+    this.size = prefs.size ?? this.size;
+  }
+
+  applySearch() {
+    const term = this.searchTerm.trim().toLowerCase();
+
+    if (!term) {
+      this.filtered = [...this.inventory];
+    } else {
+      this.filtered = this.inventory.filter(r =>
+        r.productName.toLowerCase().includes(term) ||
+        r.productVariantSKU.toLowerCase().includes(term)
+      );
+    }
+
+    this.applySorting();
+    this.page = 0;
+    this.applyPagination();
   }
 
   applySorting() {
@@ -213,6 +277,46 @@ export class InventoryListComponent implements OnInit {
     return (row.quantityOnHand || 0) - (row.quantityReserved || 0);
   }
 
+  setView(mode: 'grid' | 'table') {
+    this.viewMode = mode;
+
+    this.size = this.viewMode === 'grid'
+      ? (this.density === 'compact' ? 25 : 12)
+      : (this.density === 'compact' ? 25 : 10);
+
+    this.page = 0;
+    this.savePreferences();
+    this.applyPagination();
+  }
+
+  toggleDensity() {
+    this.density =
+      this.density === 'compact'
+        ? 'comfortable'
+        : 'compact';
+
+    this.size = this.viewMode === 'grid'
+      ? (this.density === 'compact' ? 25 : 12)
+      : (this.density === 'compact' ? 25 : 10);
+
+    this.page = 0;
+    this.savePreferences();
+    this.applyPagination();
+  }
+
+  createSaleFromInventory(row: InventoryResponse) {
+    this.router.navigate(['/sales/new'], {
+      state: {
+        inventorySeed: {
+          productId: row.productId,
+          productName: row.productName,
+          variantId: row.productVariantId,
+          branchId: row.branchId
+        }
+      }
+    });
+  }
+
   openReceiveDialog(row: InventoryResponse) {
     const ref = this.dialog.open(ReceiveStockDialogComponent, {
       width: '720px',
@@ -274,7 +378,10 @@ export class InventoryListComponent implements OnInit {
 
   openReceiveNewProduct() {
     const ref = this.dialog.open(ProductSelectorDialogComponent, {
-      width: '900px'
+      width: '90vw',
+      maxWidth: '1000px',
+      height: '85vh',
+      panelClass: 'responsive-dialog'
     });
 
     ref.afterClosed().subscribe((products: Product[]) => {

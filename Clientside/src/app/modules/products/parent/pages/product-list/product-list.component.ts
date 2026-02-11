@@ -10,11 +10,18 @@ import { ViewChild } from '@angular/core';
 
 import { ProductService } from '../../services/product.service';
 import { Product } from '../../models/product.model';
-import { SelectionModel } from '@angular/cdk/collections';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ProductBulkImportDialogComponent } from '../../components/product-bulk-import-dialog/product-bulk-import-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { PageShellComponent } from '../../../../../shared/layout/page-shell/page-shell.component';
+import { environment } from '../../../../../../environments/environment';
+import { FileViewerDialog } from '../../../../../shared/components/file-viewer/file-viewer.component';
 
 @Component({
   selector: 'app-product-list',
@@ -22,12 +29,16 @@ import { MatDialog } from '@angular/material/dialog';
   imports: [
     CommonModule,
     RouterModule,
+    PageShellComponent,
     MatTableModule,
     MatCheckboxModule,
     MatButtonModule,
     MatIconModule,
     MatPaginatorModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatFormFieldModule,
+    FormsModule,
+    MatInputModule
   ],
   templateUrl: './product-list.component.html',
   styleUrls: ['./product-list.component.scss']
@@ -42,7 +53,7 @@ export class ProductListComponent implements OnInit {
     categoryIds: [],
     includeDeleted: false
   };
-  selection = new SelectionModel<Product>(true, []);
+  selectedIds = new Set<string>();
 
   sortField: string | null = null;
   sortDir: 'asc' | 'desc' = 'asc';
@@ -63,15 +74,38 @@ export class ProductListComponent implements OnInit {
   page = 0;
   size = 10;
 
+  private readonly STORAGE_KEY = 'product_list_prefs';
+  viewMode: 'table' | 'grid' = 'table';
+  density: 'compact' | 'comfortable' = 'compact';
+  isMobile = false;
+
+  searchTerm = '';
+  private searchTimeout: any;
+
   @ViewChild(MatPaginator) paginator?: MatPaginator;
 
   constructor(
     private productService: ProductService,
     private snackbar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private breakpoint: BreakpointObserver,
+    private router: Router
   ) { }
 
   ngOnInit(): void {
+    this.breakpoint.observe(['(max-width: 640px)']).subscribe(res => {
+      this.isMobile = res.matches;
+
+      if (this.isMobile) {
+        this.viewMode = 'grid';
+        this.density = 'comfortable';
+      } else {
+        this.viewMode = 'table';
+        this.density = 'compact';
+      }
+    });
+
+    this.loadPreferences();
     this.loadProducts();
   }
 
@@ -84,6 +118,10 @@ export class ProductListComponent implements OnInit {
       includeDeleted: this.showDeleted
     };
 
+    if (this.searchTerm?.trim()) {
+      params.keyword = this.searchTerm.trim();
+    }
+
     if (this.sortField) {
       params.sortBy = this.sortField;
       params.direction = this.sortDir;
@@ -91,10 +129,13 @@ export class ProductListComponent implements OnInit {
 
     this.productService.getAdvanced(params).subscribe({
       next: res => {
-        this.products = res.content || [];
+        this.products = (res.content || []).map((p: Product) => ({
+          ...p,
+          thumbnail: `${environment.apiUrl}/products/${p.id}/thumbnail`
+        }));
+
         this.total = res.totalElements || 0;
 
-        this.selection.clear(); // reset bulk selection on page change
         this.loading = false;
       },
       error: () => {
@@ -103,11 +144,86 @@ export class ProductListComponent implements OnInit {
     });
   }
 
-  get bulkState(): 'active' | 'deleted' | 'mixed' | null {
-    const selected = this.selection.selected;
-    if (selected.length === 0) return null;
+  applySearch() {
+    this.page = 0;
+    this.loadProducts();
+  }
 
-    const states = new Set(selected.map(p => p.deleted));
+  onSearchChange(value: string) {
+    clearTimeout(this.searchTimeout);
+
+    this.searchTimeout = setTimeout(() => {
+      this.page = 0;
+      this.loadProducts();
+    }, 300);
+  }
+
+  setView(mode: 'grid' | 'table') {
+    this.viewMode = mode;
+
+    this.size = this.viewMode === 'grid'
+      ? (this.density === 'compact' ? 24 : 12)
+      : (this.density === 'compact' ? 25 : 10);
+
+    this.page = 0;
+    this.savePreferences();
+    this.loadProducts();
+  }
+
+  toggleDensity() {
+    this.density =
+      this.density === 'compact'
+        ? 'comfortable'
+        : 'compact';
+
+    this.size = this.viewMode === 'grid'
+      ? (this.density === 'compact' ? 24 : 12)
+      : (this.density === 'compact' ? 25 : 10);
+
+    this.page = 0;
+    this.savePreferences();
+    this.loadProducts();
+  }
+
+  createSale(row: Product) {
+    this.router.navigate(['/sales/new'], {
+      state: {
+        inventorySeed: {
+          productId: row.id,
+          productName: row.name,
+          variantId: null,
+          branchId: null
+        }
+      }
+    });
+  }
+
+  private savePreferences() {
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify({
+      viewMode: this.viewMode,
+      density: this.density,
+      size: this.size
+    }));
+  }
+
+  private loadPreferences() {
+    const raw = localStorage.getItem(this.STORAGE_KEY);
+    if (!raw) return;
+
+    const prefs = JSON.parse(raw);
+
+    this.viewMode = prefs.viewMode ?? this.viewMode;
+    this.density = prefs.density ?? this.density;
+    this.size = prefs.size ?? this.size;
+  }
+
+  get bulkState(): 'active' | 'deleted' | 'mixed' | null {
+    if (!this.selectedIds.size) return null;
+
+    const selectedProducts = this.products
+      .filter(p => this.selectedIds.has(p.id));
+
+    const states = new Set(selectedProducts.map(p => p.deleted));
     if (states.size > 1) return 'mixed';
     return states.has(true) ? 'deleted' : 'active';
   }
@@ -134,21 +250,56 @@ export class ProductListComponent implements OnInit {
   }
 
   isAllSelected() {
-    const numSelected = this.selection.selected.length;
-    const numRows = this.products.length;
-    return numSelected === numRows && numRows > 0;
+    return this.products.every(p => this.selectedIds.has(p.id));
   }
 
   masterToggle() {
-    if (this.isAllSelected()) {
-      this.selection.clear();
+    const allSelected = this.products.every(p =>
+      this.selectedIds.has(p.id)
+    );
+
+    if (allSelected) {
+      this.products.forEach(p => this.selectedIds.delete(p.id));
     } else {
-      this.products.forEach(row => this.selection.select(row));
+      this.products.forEach(p => this.selectedIds.add(p.id));
     }
   }
 
   toggleRowSelection(row: Product) {
-    this.selection.toggle(row);
+    if (this.selectedIds.has(row.id)) {
+      this.selectedIds.delete(row.id);
+    } else {
+      this.selectedIds.add(row.id);
+    }
+  }
+
+  trackById(index: number, item: Product): string {
+    return item.id;
+  }
+
+  clearSelection(): void {
+    this.selectedIds.clear();
+  }
+
+  onThumbnailError(product: Product) {
+    product.thumbnail = undefined;
+  }
+
+  openImageViewer(product: Product) {
+    if (!product.thumbnail) return;
+
+    this.dialog.open(FileViewerDialog, {
+      width: '90vw',
+      maxWidth: '900px',
+      panelClass: 'file-viewer-dialog',
+      data: {
+        preview: {
+          src: product.thumbnail,
+          name: product.name,
+          type: 'image'
+        }
+      }
+    });
   }
 
   bulkSoftDelete() {
@@ -161,7 +312,7 @@ export class ProductListComponent implements OnInit {
       return;
     }
 
-    const ids = this.selection.selected.map(p => p.id);
+    const ids = Array.from(this.selectedIds);
 
     this.productService.bulkSoftDelete(ids).subscribe({
       next: () => {
@@ -180,7 +331,7 @@ export class ProductListComponent implements OnInit {
       return;
     }
 
-    const ids = this.selection.selected.map(p => p.id);
+    const ids = Array.from(this.selectedIds);
 
     this.productService.bulkRestore(ids).subscribe({
       next: () => {
@@ -203,7 +354,7 @@ export class ProductListComponent implements OnInit {
       return;
     }
 
-    const ids = this.selection.selected.map(p => p.id);
+    const ids = Array.from(this.selectedIds);
 
     this.productService.bulkHardDelete(ids).subscribe({
       next: () => {

@@ -1,7 +1,7 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -87,6 +87,7 @@ export class SaleCreateComponent implements OnInit {
     private branchService: BranchService,
     private salesService: SalesService,
     private customerService: CustomerService,
+    private route: ActivatedRoute,
     private router: Router,
     private authService: AuthService,
     private http: HttpClient,
@@ -102,6 +103,21 @@ export class SaleCreateComponent implements OnInit {
       }),
       items: this.fb.array<FormGroup>([], Validators.required),
     });
+
+    const seed = history.state?.inventorySeed;
+
+    if (seed?.productId) {
+
+      // Case 1: full inventory seed
+      if (seed.variantId) {
+        this.prefillFromInventory(seed);
+      }
+
+      // Case 2: product only seed
+      else {
+        this.prefillProductOnly(seed);
+      }
+    }
 
     const me = this.authService.getSnapshot();
     this.defaultBranchId = me?.branchId ?? null;
@@ -136,6 +152,71 @@ export class SaleCreateComponent implements OnInit {
 
     this.addLine();
     this.variantsMap[0] = [];
+  }
+
+  private prefillFromInventory(seed: {
+    productId: string;
+    productName: string;
+    variantId: string;
+    branchId: string;
+  }) {
+    const row = this.createSaleItemForm({
+      productId: seed.productId,
+      productName: seed.productName,
+      productVariantId: seed.variantId,
+      branchId: seed.branchId,
+      quantity: 1
+    });
+
+    this.items.clear();
+    this.items.push(row);
+
+    const index = 0;
+
+    this.variantService.forProduct(seed.productId)
+      .subscribe(v => {
+        this.variantsMap[index] = v;
+
+        const variant = v.find(x => x.id === seed.variantId);
+        if (variant) {
+          row.patchValue({
+            unitPrice: variant.minimumSellingPrice
+          });
+        }
+      });
+
+    this.loadStock(index, seed.variantId, seed.branchId);
+  }
+
+  private prefillProductOnly(seed: {
+    productId: string;
+    productName: string;
+  }) {
+
+    const row = this.createSaleItemForm({
+      productId: seed.productId,
+      productName: seed.productName,
+      quantity: 1
+    });
+
+    this.items.clear();
+    this.items.push(row);
+
+    const index = 0;
+
+    // Load variants
+    this.variantService.forProduct(seed.productId)
+      .subscribe(v => {
+        this.variantsMap[index] = v;
+
+        // Auto select if only one variant
+        if (v.length === 1) {
+          row.patchValue({
+            productVariantId: v[0].id,
+            unitPrice: v[0].minimumSellingPrice
+          });
+        }
+      });
   }
 
   private createSaleItemForm(
@@ -187,29 +268,29 @@ export class SaleCreateComponent implements OnInit {
   }
 
   removeLine(i: number) {
-  this.items.removeAt(i);
+    this.items.removeAt(i);
 
-  delete this.variantsMap[i];
-  delete this.stockMap[i];
+    delete this.variantsMap[i];
+    delete this.stockMap[i];
 
-  // 🔁 reindex variantsMap
-  this.variantsMap = Object.values(this.variantsMap).reduce(
-    (acc, v, idx) => {
-      acc[idx] = v;
-      return acc;
-    },
-    {} as Record<number, any[] | undefined>
-  );
+    // 🔁 reindex variantsMap
+    this.variantsMap = Object.values(this.variantsMap).reduce(
+      (acc, v, idx) => {
+        acc[idx] = v;
+        return acc;
+      },
+      {} as Record<number, any[] | undefined>
+    );
 
-  // 🔁 reindex stockMap
-  this.stockMap = Object.values(this.stockMap).reduce(
-    (acc, v, idx) => {
-      acc[idx] = v;
-      return acc;
-    },
-    {} as Record<number, number | undefined>
-  );
-}
+    // 🔁 reindex stockMap
+    this.stockMap = Object.values(this.stockMap).reduce(
+      (acc, v, idx) => {
+        acc[idx] = v;
+        return acc;
+      },
+      {} as Record<number, number | undefined>
+    );
+  }
 
 
   scanBarcode(value?: string) {
@@ -402,8 +483,10 @@ export class SaleCreateComponent implements OnInit {
 
   openProductSelector(rowIndex: number) {
     this.dialog.open(ProductSelectorDialogComponent, {
-      width: '1000px',
-      maxHeight: '85vh'
+      width: '90vw',
+      maxWidth: '1000px',
+      height: '85vh',
+      panelClass: 'responsive-dialog'
     }).afterClosed().subscribe((products: Product[]) => {
       if (!products?.length) return;
 

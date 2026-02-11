@@ -1,235 +1,396 @@
-<div class="flex flex-col gap-4">
+<app-page-shell>
 
-  <!-- HEADER -->
-  <div class="flex justify-between items-center">
-    <h1 class="text-xl font-semibold">Products</h1>
+  <!-- ================= HEADER ================= -->
+  <div page-header>
 
-    <div class="flex gap-2">
-      <button mat-stroked-button (click)="openBulkImport()">
-        Bulk Import
-      </button>
-      <button mat-flat-button routerLink="/products/create">
-        + Create Product
-      </button>
+    <div class="product-header">
+
+      <div class="header-left">
+
+        <button mat-icon-button matTooltip="Grid View" [class.active]="viewMode === 'grid'" (click)="setView('grid')">
+          <mat-icon>grid_view</mat-icon>
+        </button>
+
+        <button mat-icon-button matTooltip="Table View" [class.active]="viewMode === 'table'"
+          (click)="setView('table')">
+          <mat-icon>table_rows</mat-icon>
+        </button>
+
+        <button *ngIf="!isMobile" mat-icon-button matTooltip="Toggle Density" (click)="toggleDensity()">
+          <mat-icon>format_line_spacing</mat-icon>
+        </button>
+
+      </div>
+
+      <div class="header-right">
+        <button mat-stroked-button (click)="openBulkImport()">
+          Bulk Import
+        </button>
+
+        <button mat-flat-button routerLink="/products/create">
+          + Create Product
+        </button>
+      </div>
+
     </div>
+
   </div>
 
-  <!-- BULK ACTION BAR -->
-  <div *ngIf="selection.selected.length > 0" class="flex items-center gap-3 mb-4">
+  <!-- ================= TOOLBAR ================= -->
+  <div page-toolbar class="product-toolbar">
 
-    <span class="font-medium text-blue-500">
-      {{ selection.selected.length }} selected
-    </span>
+    <mat-form-field appearance="fill" class="search-field">
+      <mat-label>Search name, category or SKU</mat-label>
+      <input matInput [(ngModel)]="searchTerm" (ngModelChange)="onSearchChange($event)">
 
-    <!-- SOFT DELETE -->
-    <button *ngIf="bulkState === 'active'" mat-stroked-button color="warn" (click)="bulkSoftDelete()">
-      Soft Delete
-    </button>
+      <button matSuffix mat-icon-button *ngIf="searchTerm" (click)="searchTerm=''; applySearch()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </mat-form-field>
 
-    <!-- RESTORE -->
-    <button *ngIf="bulkState === 'deleted'" mat-stroked-button color="primary" (click)="bulkRestore()">
-      Restore
-    </button>
-
-    <!-- HARD DELETE -->
-    <button *ngIf="bulkState === 'deleted'" mat-flat-button color="warn" (click)="bulkHardDelete()">
-      Hard Delete
-    </button>
-
-    <!-- MIXED ERROR -->
-    <span *ngIf="bulkState === 'mixed'" class="text-red-500 font-medium">
-      Cannot perform bulk action — selected products have mixed status
-    </span>
-  </div>
-
-  <!-- TOOLS -->
-  <div class="flex items-center gap-4">
     <mat-checkbox [checked]="showDeleted" (change)="toggleDeleted()">
       Show deleted
     </mat-checkbox>
+
   </div>
 
-  <!-- LOADING / EMPTY -->
-  <div *ngIf="loading" class="text-center py-10 text-gray-500">
-    Loading products…
-  </div>
+  <!-- ================= CONTENT ================= -->
+  <div page-content>
 
-  <div *ngIf="!loading && products.length === 0" class="text-center py-10 text-gray-500">
-    No products found
-  </div>
+    <div *ngIf="selectedIds.size > 0" class="bulk-bar">
 
-  <!-- TABLE -->
-  <div class="bg-[var(--surface)] rounded shadow overflow-x-auto">
+      <span class="bulk-count">
+        {{ selectedIds.size }} selected
+      </span>
 
-    <table mat-table [dataSource]="products" class="w-full">
+      <button *ngIf="bulkState === 'active'" mat-stroked-button color="warn" (click)="bulkSoftDelete()">
+        Soft Delete
+      </button>
 
-      <!-- SELECT -->
-      <ng-container matColumnDef="select">
-        <th mat-header-cell *matHeaderCellDef>
-          <mat-checkbox [checked]="isAllSelected()" [indeterminate]="selection.selected.length > 0 && !isAllSelected()"
-            (change)="masterToggle()">
-          </mat-checkbox>
-        </th>
+      <button *ngIf="bulkState === 'deleted'" mat-stroked-button color="primary" (click)="bulkRestore()">
+        Restore
+      </button>
 
-        <td mat-cell *matCellDef="let row">
-          <mat-checkbox (click)="$event.stopPropagation()" (change)="selection.toggle(row)"
-            [checked]="selection.isSelected(row)">
-          </mat-checkbox>
-        </td>
-      </ng-container>
+      <button *ngIf="bulkState === 'deleted'" mat-flat-button color="warn" (click)="bulkHardDelete()">
+        Hard Delete
+      </button>
 
-      <!-- NAME -->
-      <ng-container matColumnDef="name">
-        <th mat-header-cell *matHeaderCellDef (click)="sortBy('name')" class="sortable" matTooltip="Sort by name"
-          matTooltipPosition="above">
-          <span class="sortable-content">
-            Name
-            <mat-icon class="sort-icon">
-              {{ sortField === 'name'
-              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-              : 'unfold_more' }}
-            </mat-icon>
-          </span>
-        </th>
+      <span *ngIf="bulkState === 'mixed'" class="bulk-error">
+        Mixed selection — cannot perform bulk action
+      </span>
 
-        <td mat-cell *matCellDef="let row">
-          <a [routerLink]="['/products', row.id]" [state]="{ deleted: row.deleted }"
-            class="text-blue-600 hover:underline">
-            {{ row.name }}
-          </a>
-        </td>
-      </ng-container>
+      <button mat-button class="cancel-selection" (click)="clearSelection()">
+        Cancel Selection
+      </button>
 
-      <!-- CATEGORY -->
-      <ng-container matColumnDef="category">
-        <th mat-header-cell *matHeaderCellDef (click)="sortBy('category')" class="sortable"
-          matTooltip="Sort by category" matTooltipPosition="above">
-          <span class="sortable-content">
-            Category
-            <mat-icon class="sort-icon">
-              {{ sortField === 'category'
-              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-              : 'unfold_more' }}
-            </mat-icon>
-          </span>
-        </th>
+    </div>
 
-        <td mat-cell *matCellDef="let row">
-          {{ row.categoryName || '—' }}
-        </td>
-      </ng-container>
+    <!-- GRID VIEW -->
+    <div *ngIf="!loading && viewMode === 'grid'" class="product-grid" [class.compact]="density === 'compact'"
+      [class.comfortable]="density === 'comfortable'">
 
-      <!-- VARIANTS -->
-      <ng-container matColumnDef="variants">
-        <th mat-header-cell *matHeaderCellDef>
-          Variants
-        </th>
+      <div *ngFor="let p of products" class="product-card" [class.compact]="density === 'compact'"
+        [class.comfortable]="density === 'comfortable'" [class.deleted]="p.deleted"
+        [class.selected]="selectedIds.has(p.id)" (click)="toggleRowSelection(p)">
 
-        <td mat-cell *matCellDef="let row">
-          {{ row.variants?.length || 0 }}
-        </td>
-      </ng-container>
+        <div class="card-thumb" (click)="openImageViewer(p); $event.stopPropagation()">
+          <img *ngIf="p.thumbnail" [src]="p.thumbnail" loading="lazy" class="product-thumb"
+            (error)="onThumbnailError(p)" />
+          <div *ngIf="!p.thumbnail" class="thumb-placeholder">
+            <mat-icon>inventory_2</mat-icon>
+          </div>
+        </div>
 
-      <!-- SKU -->
-      <ng-container matColumnDef="sku">
-        <th mat-header-cell *matHeaderCellDef (click)="sortBy('sku')" class="sortable" matTooltip="Sort by sku code"
-          matTooltipPosition="above">
-          <span class="sortable-content">
-            SKU
-            <mat-icon class="sort-icon">
-              {{ sortField === 'sku'
-              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-              : 'unfold_more' }}
-            </mat-icon>
-          </span>
-        </th>
+        <div class="card-title">
+          {{ p.name }}
+        </div>
 
-        <td mat-cell *matCellDef="let row">
-          {{ row.sku || '—' }}
-        </td>
-      </ng-container>
+        <div class="card-sub">
+          {{ p.categoryName || '—' }}
+        </div>
 
-      <!-- SUPPLIERS -->
-      <ng-container matColumnDef="suppliers">
-        <th mat-header-cell *matHeaderCellDef>
-          Suppliers
-        </th>
+        <div class="card-sub text-xs">
+          SKU: {{ p.sku || '—' }}
+        </div>
 
-        <td mat-cell *matCellDef="let row">
-          {{ row.suppliers?.length || 0 }}
-        </td>
-      </ng-container>
+        <div class="card-meta">
+          Variants: {{ p.variants.length || 0 }}
+          · Suppliers: {{ p.suppliers.length || 0 }}
+        </div>
 
-      <!-- STATUS -->
-      <ng-container matColumnDef="status">
-        <th mat-header-cell *matHeaderCellDef (click)="sortBy('deleted')" class="sortable" matTooltip="Sort by status"
-          matTooltipPosition="above">
-          <span class="sortable-content">
-            Status
-            <mat-icon class="sort-icon">
-              {{ sortField === 'deleted'
-              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-              : 'unfold_more' }}
-            </mat-icon>
-          </span>
-        </th>
+        <div class="card-actions">
 
-        <td mat-cell *matCellDef="let row">
-          <span [ngClass]="{ 'text-green-400': !row.deleted, 'text-red-400': row.deleted }">
-            {{ row.deleted ? 'Disabled' : 'Active' }}
-          </span>
-        </td>
-      </ng-container>
+          <button mat-icon-button matTooltip="Create Sale" (click)="createSale(p)">
+            <mat-icon>point_of_sale</mat-icon>
+          </button>
 
-      <!-- UPDATED -->
-      <ng-container matColumnDef="updated">
-        <th mat-header-cell *matHeaderCellDef (click)="sortBy('updatedAt')" class="sortable"
-          matTooltip="Sort by date of last update" matTooltipPosition="above">
-          <span class="sortable-content">
-            Updated
-            <mat-icon class="sort-icon">
-              {{ sortField === 'updatedAt'
-              ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-              : 'unfold_more' }}
-            </mat-icon>
-          </span>
-        </th>
-
-        <td mat-cell *matCellDef="let row">
-          {{ row.updatedAt | date:'medium' }}
-        </td>
-      </ng-container>
-
-      <!-- ACTIONS -->
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef [attr.aria-label]="'Product actions'"> Actions</th>
-
-        <td mat-cell *matCellDef="let row">
-          <button mat-icon-button matTooltip="View Product" [routerLink]="['/products', row.id]"
-            [state]="{ deleted: row.deleted }">
+          <button mat-icon-button matTooltip="View" [routerLink]="['/products', p.id]">
             <mat-icon>visibility</mat-icon>
           </button>
-          <button mat-icon-button matTooltip="Edit Product" [routerLink]="['/products', row.id, 'edit']"
-            [state]="{ deleted: row.deleted }">
+
+          <button mat-icon-button matTooltip="Edit" [routerLink]="['/products', p.id, 'edit']">
             <mat-icon>edit</mat-icon>
           </button>
-        </td>
-      </ng-container>
 
-      <!-- ROWS -->
-      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        </div>
 
-      <tr mat-row *matRowDef="let row; columns: displayedColumns" (click)="toggleRowSelection(row)"
-        [ngClass]="{ 'row-selected': selection.isSelected(row) }" class="clickable-row">
-      </tr>
+      </div>
 
-    </table>
+    </div>
 
-    <!-- PAGINATOR -->
-    <mat-paginator [disabled]="loading" [length]="total" [pageSize]="size" [pageSizeOptions]="[1, 5, 10, 20, 50]"
-      showFirstLastButtons (page)="changePage($event)">
-    </mat-paginator>
+    <!-- TABLE VIEW -->
+    <div *ngIf="!loading && viewMode === 'table'" class="table-wrapper" [class.compact]="density === 'compact'">
 
+      <div class="overflow-x-auto" *ngIf="!isMobile">
+
+        <table mat-table [dataSource]="products">
+
+          <!-- SELECT -->
+          <ng-container matColumnDef="select">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-checkbox [checked]="isAllSelected()" [indeterminate]="selectedIds.size > 0 && !isAllSelected()"
+                (change)="masterToggle()">
+              </mat-checkbox>
+            </th>
+
+            <td mat-cell *matCellDef="let row">
+              <mat-checkbox (click)="$event.stopPropagation()" (change)="toggleRowSelection(row)"
+                [checked]="selectedIds.has(row.id)">
+              </mat-checkbox>
+            </td>
+          </ng-container>
+
+          <!-- NAME -->
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef (click)="sortBy('name')" class="sortable" matTooltip="Sort by name"
+              matTooltipPosition="above">
+              <span class="sortable-content">
+                Name
+                <mat-icon class="sort-icon">
+                  {{ sortField === 'name'
+                  ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+                  : 'unfold_more' }}
+                </mat-icon>
+              </span>
+            </th>
+
+            <td mat-cell *matCellDef="let row">
+              <a [routerLink]="['/products', row.id]" [state]="{ deleted: row.deleted }"
+                class="text-blue-600 hover:underline">
+                {{ row.name }}
+              </a>
+            </td>
+          </ng-container>
+
+          <!-- CATEGORY -->
+          <ng-container matColumnDef="category">
+            <th mat-header-cell *matHeaderCellDef (click)="sortBy('category')" class="sortable"
+              matTooltip="Sort by category" matTooltipPosition="above">
+              <span class="sortable-content">
+                Category
+                <mat-icon class="sort-icon">
+                  {{ sortField === 'category'
+                  ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+                  : 'unfold_more' }}
+                </mat-icon>
+              </span>
+            </th>
+
+            <td mat-cell *matCellDef="let row">
+              {{ row.categoryName || '—' }}
+            </td>
+          </ng-container>
+
+          <!-- VARIANTS -->
+          <ng-container matColumnDef="variants">
+            <th mat-header-cell *matHeaderCellDef>
+              Variants
+            </th>
+
+            <td mat-cell *matCellDef="let row">
+              {{ row.variants?.length || 0 }}
+            </td>
+          </ng-container>
+
+          <!-- SKU -->
+          <ng-container matColumnDef="sku">
+            <th mat-header-cell *matHeaderCellDef (click)="sortBy('sku')" class="sortable" matTooltip="Sort by sku code"
+              matTooltipPosition="above">
+              <span class="sortable-content">
+                SKU
+                <mat-icon class="sort-icon">
+                  {{ sortField === 'sku'
+                  ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+                  : 'unfold_more' }}
+                </mat-icon>
+              </span>
+            </th>
+
+            <td mat-cell *matCellDef="let row">
+              {{ row.sku || '—' }}
+            </td>
+          </ng-container>
+
+          <!-- SUPPLIERS -->
+          <ng-container matColumnDef="suppliers">
+            <th mat-header-cell *matHeaderCellDef>
+              Suppliers
+            </th>
+
+            <td mat-cell *matCellDef="let row">
+              {{ row.suppliers?.length || 0 }}
+            </td>
+          </ng-container>
+
+          <!-- STATUS -->
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef (click)="sortBy('deleted')" class="sortable"
+              matTooltip="Sort by status" matTooltipPosition="above">
+              <span class="sortable-content">
+                Status
+                <mat-icon class="sort-icon">
+                  {{ sortField === 'deleted'
+                  ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+                  : 'unfold_more' }}
+                </mat-icon>
+              </span>
+            </th>
+
+            <td mat-cell *matCellDef="let row">
+              <span [ngClass]="{ 'text-green-400': !row.deleted, 'text-red-400': row.deleted }">
+                {{ row.deleted ? 'Disabled' : 'Active' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- UPDATED -->
+          <ng-container matColumnDef="updated">
+            <th mat-header-cell *matHeaderCellDef (click)="sortBy('updatedAt')" class="sortable"
+              matTooltip="Sort by date of last update" matTooltipPosition="above">
+              <span class="sortable-content">
+                Updated
+                <mat-icon class="sort-icon">
+                  {{ sortField === 'updatedAt'
+                  ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+                  : 'unfold_more' }}
+                </mat-icon>
+              </span>
+            </th>
+
+            <td mat-cell *matCellDef="let row">
+              {{ row.updatedAt | date:'medium' }}
+            </td>
+          </ng-container>
+
+          <!-- ACTIONS -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef [attr.aria-label]="'Product actions'"> Actions</th>
+
+            <td mat-cell *matCellDef="let row">
+              <button mat-icon-button matTooltip="Create Sale" (click)="createSale(row); $event.stopPropagation()">
+                <mat-icon>point_of_sale</mat-icon>
+              </button>
+              <button mat-icon-button matTooltip="View Product" [routerLink]="['/products', row.id]"
+                [state]="{ deleted: row.deleted }">
+                <mat-icon>visibility</mat-icon>
+              </button>
+              <button mat-icon-button matTooltip="Edit Product" [routerLink]="['/products', row.id, 'edit']"
+                [state]="{ deleted: row.deleted }">
+                <mat-icon>edit</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <!-- ROWS -->
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+
+          <tr mat-row *matRowDef="let row; columns: displayedColumns" (click)="toggleRowSelection(row)"
+            [ngClass]="{ 'row-selected': selectedIds.has(row.id) }" class="clickable-row">
+          </tr>
+
+        </table>
+
+      </div>
+
+      <!-- MOBILE STACKED -->
+      <div *ngIf="isMobile" class="stacked-wrapper" [class.compact]="density === 'compact'"
+        [class.comfortable]="density === 'comfortable'">
+
+        <div *ngFor="let p of products; trackBy: trackById" class="stacked-row" [class.deleted]="p.deleted"
+          [class.selected]="selectedIds.has(p.id)" (click)="toggleRowSelection(p)">
+
+          <!-- TOP ROW -->
+          <div class="stacked-top">
+
+            <mat-checkbox (click)="$event.stopPropagation()" (change)="toggleRowSelection(p)"
+              [checked]="selectedIds.has(p.id)">
+            </mat-checkbox>
+
+            <div class="stacked-title">
+              {{ p.name }}
+            </div>
+
+          </div>
+
+          <div class="stacked-sub">
+            {{ p.categoryName || '—' }}
+          </div>
+
+          <div class="stacked-grid">
+
+            <div>
+              <div class="label">SKU</div>
+              <div class="value">{{ p.sku }}</div>
+            </div>
+
+            <div>
+              <div class="label">Variants</div>
+              <div class="value">{{ p.variants.length || 0 }}</div>
+            </div>
+
+            <div>
+              <div class="label">Suppliers</div>
+              <div class="value">{{ p.suppliers.length || 0 }}</div>
+            </div>
+
+            <div>
+              <div class="label">Status</div>
+              <div class="value" [ngClass]="{ 'text-green-400': !p.deleted, 'text-red-400': p.deleted }">
+                {{ p.deleted ? 'Disabled' : 'Active' }}
+              </div>
+            </div>
+
+          </div>
+
+          <div class="stacked-actions">
+
+            <button mat-icon-button matTooltip="Create Sale" (click)="createSale(p); $event.stopPropagation()">
+              <mat-icon>point_of_sale</mat-icon>
+            </button>
+
+            <button mat-icon-button matTooltip="View" (click)="$event.stopPropagation()"
+              [routerLink]="['/products', p.id]">
+              <mat-icon>visibility</mat-icon>
+            </button>
+
+            <button mat-icon-button matTooltip="Edit" (click)="$event.stopPropagation()"
+              [routerLink]="['/products', p.id, 'edit']">
+              <mat-icon>edit</mat-icon>
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+    </div>
+    <div class="shared-paginator">
+      <mat-paginator [disabled]="loading" [length]="total" [pageSize]="size" [pageSizeOptions]="[5,10,20,50,100]"
+        showFirstLastButtons (page)="changePage($event)">
+      </mat-paginator>
+    </div>
   </div>
 
-</div>
+</app-page-shell>

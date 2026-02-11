@@ -1,45 +1,191 @@
-.dialog-content {
+/* ==============================
+   ROOT CONTAINER
+============================== */
+
+.dialog-container {
   display: flex;
   flex-direction: column;
+  height: 100%;
+  max-height: 85vh;
+  padding: 16px;
   gap: 12px;
-  padding-top: 8px;
+  box-sizing: border-box;
 }
 
-/* 👇 Only this area scrolls */
-.table-wrapper {
-  max-height: 50vh;
-  overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-}
-
-tr.selected {
-  background: rgba(0, 122, 255, 0.08);
-}
+/* ==============================
+   HEADER
+============================== */
 
 .dialog-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
 }
 
 .title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 600;
-  padding: 10px;
 }
 
 .badge {
-  background: rgba(0,122,255,0.1);
+  background: rgba(0, 122, 255, 0.1);
   color: #007aff;
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
-  margin: 10px;
+}
+
+/* ==============================
+   TABLE AREA
+============================== */
+
+.table-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.table-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.product-table {
+  width: 100%;
+}
+
+/* ==============================
+   COLUMN WIDTH CONTROL
+============================== */
+
+.col-select {
+  width: 48px;
+  max-width: 48px;
+}
+
+.col-images {
+  width: 60px;
+  max-width: 60px;
+  text-align: center;
+}
+
+.col-sku {
+  width: 140px;
+  max-width: 160px;
+}
+
+.col-category {
+  width: 180px;
+  max-width: 220px;
+}
+
+.col-name {
+  width: auto;
+}
+
+/* ==============================
+   CELL BEHAVIOR
+============================== */
+
+.mat-mdc-cell,
+.mat-mdc-header-cell {
+  padding: 8px 12px;
+}
+
+/* Apply ellipsis only to text columns */
+.col-name,
+.col-category,
+.col-sku {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Icon columns should not ellipsis */
+.col-images,
+.col-select {
+  overflow: visible;
+}
+
+/* ==============================
+   NAME BLOCK (MOBILE SUPPORT)
+============================== */
+
+.name-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-category {
+  display: none;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* ==============================
+   STICKY HEADER
+============================== */
+
+.mat-mdc-header-row {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 2;
+}
+
+/* ==============================
+   SELECTED ROW
+============================== */
+
+.row-selected {
+  background-color: rgba(0, 122, 255, 0.08) !important;
+  border-left: 4px solid #007aff;
+}
+
+/* ==============================
+   ACTIONS
+============================== */
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ==============================
+   RESPONSIVE
+============================== */
+
+@media (max-width: 650px) {
+
+  .dialog-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  /* Hide category column */
+  .col-category {
+    display: none;
+  }
+
+  /* Show category under name */
+  .mobile-category {
+    display: block;
+  }
+
+  .col-sku {
+    width: 110px;
+  }
+
+  .mat-mdc-row {
+    height: 50px;
+  }
 }

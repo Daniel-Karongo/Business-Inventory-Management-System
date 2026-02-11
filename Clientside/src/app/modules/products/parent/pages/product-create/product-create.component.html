@@ -1,56 +1,11 @@
 <div class="page-container">
 
-  <!-- HEADER -->
   <div class="page-header">
     <h1>Create Product</h1>
   </div>
 
-  <!-- FORM -->
-  <form [formGroup]="form" class="form-grid">
-
-    <mat-form-field appearance="fill">
-      <mat-label>Name</mat-label>
-      <input matInput formControlName="name" />
-    </mat-form-field>
-
-    <mat-form-field appearance="fill">
-      <mat-label>Description</mat-label>
-      <textarea matInput rows="3" formControlName="description"></textarea>
-    </mat-form-field>
-
-    <mat-form-field appearance="fill">
-      <mat-label>Category</mat-label>
-      <mat-select formControlName="categoryId">
-        <mat-option *ngFor="let c of categories" [value]="c.id">
-          {{ c.name }}
-        </mat-option>
-      </mat-select>
-    </mat-form-field>
-
-    <mat-form-field appearance="fill">
-      <mat-label>Suppliers</mat-label>
-      <mat-select multiple formControlName="supplierIds">
-        <mat-option *ngFor="let s of suppliers" [value]="s.id">
-          {{ s.name }}
-        </mat-option>
-      </mat-select>
-    </mat-form-field>
-
-    <mat-form-field appearance="fill">
-      <mat-label>Minimum % Profit</mat-label>
-      <input matInput type="number" formControlName="minimumPercentageProfit" />
-    </mat-form-field>
-
-  </form>
-
-  <!-- ACTIONS -->
-  <div class="actions">
-    <button mat-button (click)="cancel()">Cancel</button>
-    <button mat-flat-button color="primary"
-            [disabled]="form.invalid || saving"
-            (click)="save()">
-      Create
-    </button>
-  </div>
+  <app-product-form
+    (submitForm)="handleSubmit($event)">
+  </app-product-form>
 
 </div>

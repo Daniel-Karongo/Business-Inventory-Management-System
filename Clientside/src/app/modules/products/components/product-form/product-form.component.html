@@ -1,0 +1,71 @@
+<mat-tab-group>
+
+  <!-- BASICS -->
+  <mat-tab label="Basics">
+    <div class="p-4 flex flex-col gap-4">
+
+      <mat-form-field>
+        <input matInput placeholder="Name" formControlName="name">
+      </mat-form-field>
+
+      <mat-form-field>
+        <textarea matInput placeholder="Description" formControlName="description"></textarea>
+      </mat-form-field>
+
+      <mat-form-field>
+        <input matInput type="number" placeholder="Minimum % Profit" formControlName="minimumPercentageProfit">
+      </mat-form-field>
+
+    </div>
+  </mat-tab>
+
+  <!-- VARIANTS -->
+  <mat-tab label="Variants">
+    <div class="p-4 flex flex-col gap-4">
+
+      <div *ngFor="let v of variantGroups; let i = index" [formGroup]="v" class="variant-row">
+
+        <mat-form-field appearance="fill">
+          <mat-label>Classification</mat-label>
+          <input matInput formControlName="classification" />
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Barcode (optional)</mat-label>
+          <input matInput formControlName="barcode" />
+        </mat-form-field>
+
+        <button mat-stroked-button color="warn" type="button" (click)="removeVariant(i)">
+          Remove
+        </button>
+
+      </div>
+
+      <button mat-stroked-button (click)="addVariant()">
+        + Add Variant
+      </button>
+
+    </div>
+  </mat-tab>
+
+  <!-- FILES -->
+  <mat-tab label="Files">
+    <div class="p-4 flex flex-col gap-4">
+
+      <input type="file" multiple (change)="addFiles($event)">
+
+      <div *ngFor="let f of files">
+        {{ f.file.name }}
+      </div>
+
+    </div>
+  </mat-tab>
+
+</mat-tab-group>
+
+<div class="form-actions">
+  <button mat-button type="button" (click)="cancel.emit()">Cancel</button>
+  <button mat-flat-button color="primary" type="button" (click)="save()">
+    Create Product
+  </button>
+</div>
