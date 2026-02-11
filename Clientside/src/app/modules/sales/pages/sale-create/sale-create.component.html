@@ -106,7 +106,7 @@
       <mat-form-field>
         <input matInput enterNext type="number" min="1" [formControl]="controlAt(i,'quantity')">
 
-        <mat-error *ngIf="controlAt(i,'quantity')?.hasError('stockExceeded')">
+        <mat-error *ngIf="controlAt(i,'quantity').hasError('stockExceeded')">
           Exceeds available stock ({{ stockMap[i] }})
         </mat-error>
       </mat-form-field>
