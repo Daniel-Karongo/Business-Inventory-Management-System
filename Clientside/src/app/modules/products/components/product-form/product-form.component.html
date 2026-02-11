@@ -1,71 +1,126 @@
-<mat-tab-group>
+<form [formGroup]="form" class="form-container">
 
-  <!-- BASICS -->
-  <mat-tab label="Basics">
-    <div class="p-4 flex flex-col gap-4">
+  <mat-tab-group>
 
-      <mat-form-field>
-        <input matInput placeholder="Name" formControlName="name">
-      </mat-form-field>
+    <!-- ========================= -->
+    <!-- BASICS TAB -->
+    <!-- ========================= -->
+    <mat-tab label="Basics">
+      <div class="section">
 
-      <mat-form-field>
-        <textarea matInput placeholder="Description" formControlName="description"></textarea>
-      </mat-form-field>
-
-      <mat-form-field>
-        <input matInput type="number" placeholder="Minimum % Profit" formControlName="minimumPercentageProfit">
-      </mat-form-field>
-
-    </div>
-  </mat-tab>
-
-  <!-- VARIANTS -->
-  <mat-tab label="Variants">
-    <div class="p-4 flex flex-col gap-4">
-
-      <div *ngFor="let v of variantGroups; let i = index" [formGroup]="v" class="variant-row">
-
-        <mat-form-field appearance="fill">
-          <mat-label>Classification</mat-label>
-          <input matInput formControlName="classification" />
+        <mat-form-field appearance="fill" class="w-full">
+          <mat-label>Name</mat-label>
+          <input matInput formControlName="name" />
         </mat-form-field>
 
-        <mat-form-field appearance="fill">
-          <mat-label>Barcode (optional)</mat-label>
-          <input matInput formControlName="barcode" />
+        <mat-form-field appearance="fill" class="w-full">
+          <mat-label>Description</mat-label>
+          <textarea matInput formControlName="description"></textarea>
         </mat-form-field>
 
-        <button mat-stroked-button color="warn" type="button" (click)="removeVariant(i)">
-          Remove
+        <mat-form-field appearance="fill" class="w-full">
+          <mat-label>Minimum % Profit</mat-label>
+          <input
+            matInput
+            type="number"
+            formControlName="minimumPercentageProfit"
+          />
+        </mat-form-field>
+
+      </div>
+    </mat-tab>
+
+    <!-- ========================= -->
+    <!-- VARIANTS TAB -->
+    <!-- ========================= -->
+    <mat-tab label="Variants">
+      <div class="section">
+
+        <div formArrayName="variants">
+
+          <div
+            *ngFor="let v of variantGroups; let i = index"
+            [formGroupName]="i"
+            class="variant-row"
+          >
+
+            <mat-form-field appearance="fill">
+              <mat-label>Classification</mat-label>
+              <input matInput formControlName="classification" />
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+              <mat-label>Barcode (optional)</mat-label>
+              <input matInput formControlName="barcode" />
+            </mat-form-field>
+
+            <button
+              mat-stroked-button
+              color="warn"
+              type="button"
+              (click)="removeVariant(i)"
+            >
+              Remove
+            </button>
+
+          </div>
+
+        </div>
+
+        <button
+          mat-stroked-button
+          type="button"
+          (click)="addVariant()"
+        >
+          + Add Variant
         </button>
 
       </div>
+    </mat-tab>
 
-      <button mat-stroked-button (click)="addVariant()">
-        + Add Variant
-      </button>
+    <!-- ========================= -->
+    <!-- FILES TAB -->
+    <!-- ========================= -->
+    <mat-tab label="Files">
+      <div class="section">
 
-    </div>
-  </mat-tab>
+        <input type="file" multiple (change)="addFiles($event)" />
 
-  <!-- FILES -->
-  <mat-tab label="Files">
-    <div class="p-4 flex flex-col gap-4">
+        <div *ngFor="let f of files; let i = index" class="file-card">
+          <span class="file-name">{{ f.file.name }}</span>
 
-      <input type="file" multiple (change)="addFiles($event)">
+          <button
+            mat-icon-button
+            color="warn"
+            type="button"
+            (click)="removeFile(i)"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
 
-      <div *ngFor="let f of files">
-        {{ f.file.name }}
       </div>
+    </mat-tab>
 
-    </div>
-  </mat-tab>
+  </mat-tab-group>
 
-</mat-tab-group>
+  <!-- ========================= -->
+  <!-- ACTIONS -->
+  <!-- ========================= -->
+  <div class="form-actions">
+    <button mat-button type="button" (click)="cancel.emit()">
+      Cancel
+    </button>
 
-<div class="form-actions">
-  <button mat-button type="button" (click)="cancel.emit()">Cancel</button>
-  <button mat-flat-button color="primary" type="button" (click)="save()">
-    Create Product
-  </button>
-</div>
+    <button
+      mat-flat-button
+      color="primary"
+      type="button"
+      (click)="save()"
+      [disabled]="form.invalid"
+    >
+      Create Product
+    </button>
+  </div>
+
+</form>
