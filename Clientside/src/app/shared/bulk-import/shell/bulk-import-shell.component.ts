@@ -53,6 +53,7 @@ export class BulkImportShellComponent {
   @Input() rowCount = 0;
   @Input() submitting = false;
   @Input() formInvalid = false;
+  @Input() supportsArchiveImport = false;
 
   @Output() importExcel = new EventEmitter<File>();
   @Output() importCsv = new EventEmitter<File>();
@@ -69,11 +70,38 @@ export class BulkImportShellComponent {
   @Output() clearAll = new EventEmitter<void>();
   @Output() exportExcel = new EventEmitter<void>();
   @Output() exportCsv = new EventEmitter<void>();
-
+  @Output() zipDropped = new EventEmitter<File>();
 
   onGo(line?: number) {
     if (line && line > 0) {
       this.goToLine.emit(line);
+    }
+  }
+
+  isDragging = false;
+
+  onDragOver(event: DragEvent) {
+    event.preventDefault();
+    this.isDragging = true;
+  }
+
+  onDragLeave() {
+    this.isDragging = false;
+  }
+
+  onDrop(event: DragEvent) {
+    event.preventDefault();
+    this.isDragging = false;
+
+    const file = event.dataTransfer?.files?.[0];
+    if (!file) return;
+
+    if (file.name.endsWith('.zip')) {
+      this.zipDropped.emit(file);
+    } else if (file.name.endsWith('.xlsx')) {
+      this.importExcel.emit(file);
+    } else if (file.name.endsWith('.csv')) {
+      this.importCsv.emit(file);
     }
   }
 }

@@ -34,4 +34,6 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
             String productName,
             String classification
     );
+
+    long countByProduct_IdAndDeletedFalse(UUID productId);
 }

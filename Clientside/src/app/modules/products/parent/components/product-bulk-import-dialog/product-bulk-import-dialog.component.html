@@ -1,30 +1,12 @@
-<form
-  [formGroup]="form"
-  (keydown.enter)="$event.stopPropagation()">
+<form [formGroup]="form" (keydown.enter)="$event.stopPropagation()">
 
-  <app-bulk-import-shell
-    [title]="config.title"
-    [rowCount]="rowCount"
-    [submitting]="submitting"
-    [formInvalid]="form.invalid"
-    [loading]="submitting || loading"
-    [progress]="progress"
-
-    (importCsv)="importCsv($event)"
-    (importExcel)="importExcel($event)"
-    (downloadCsv)="downloadCsvTemplate()"
-    (downloadExcel)="downloadExcelTemplate()"
-    (submit)="submit()"
-    (cancel)="close()"
-
-    (goToLine)="goToLine($event)"
-    (goTop)="scrollToTop()"
-    (goBottom)="scrollToBottom()"
-    (prevError)="goToPreviousError()"
-    (nextError)="goToNextError()"
-    (clearAll)="clearRows()"
-    (exportCsv)="exportCsvCurrentRows()"
-    (exportExcel)="exportExcelCurrentRows()">
+  <app-bulk-import-shell [title]="config.title" [rowCount]="rowCount" [submitting]="submitting"
+    [formInvalid]="form.invalid" [loading]="submitting || loading" [progress]="progress" (importCsv)="importCsv($event)"
+    (importExcel)="importExcel($event)" (downloadCsv)="downloadCsvTemplate()" (downloadExcel)="downloadExcelTemplate()"
+    (submit)="submit()" (cancel)="close()" (goToLine)="goToLine($event)" (goTop)="scrollToTop()"
+    (goBottom)="scrollToBottom()" (prevError)="goToPreviousError()" (nextError)="goToNextError()"
+    (clearAll)="clearRows()" (exportCsv)="exportCsvCurrentRows()" (exportExcel)="exportExcelCurrentRows()"
+    (zipDropped)="importZip($event)" [supportsArchiveImport]="supportsArchiveImport">
 
     <div class="products-body">
 
@@ -36,10 +18,7 @@
 
       <div class="rows" formArrayName="rows">
 
-        <div
-          class="row-card"
-          *ngFor="let r of rows.controls; let i = index"
-          [formGroupName]="i">
+        <div class="row-card" *ngFor="let r of rows.controls; let i = index; trackBy: trackByIndex" [formGroupName]="i">
 
           <div class="row-header">
             <span>Product {{ i + 1 }}</span>
@@ -64,23 +43,41 @@
             </mat-form-field>
 
             <mat-form-field>
-              <input matInput placeholder="Variants" formControlName="variants">
+              <input matInput placeholder="Variants" formControlName="variants" (input)="uppercaseVariants(i)">
             </mat-form-field>
           </div>
 
           <mat-form-field>
-            <input
-              matInput
-              type="number"
-              placeholder="Minimum % Profit"
-              formControlName="minimumPercentageProfit">
+            <input matInput type="number" placeholder="Minimum % Profit" formControlName="minimumPercentageProfit">
           </mat-form-field>
+
+          <input type="file" multiple hidden #fileInput
+            (change)="onRowFilesSelected(i, fileInput.files); fileInput.value = ''" />
+
+          <button mat-stroked-button (click)="fileInput.click()">
+            Upload Files
+          </button>
+
+          <app-bulk-file-assignment [files]="getRowFiles(i)" [rowIndex]="i" [rowVariants]="getRowVariants(i)"
+            (remove)="onFileRemove($event)" (assign)="openAssignmentDialog($event)"
+            (multiAssign)="openAssignmentDialog($event)" [multiSelectMode]="true">
+          </app-bulk-file-assignment>
 
           <div class="row-error" *ngIf="r.value._error">
             {{ r.value._error }}
           </div>
 
         </div>
+      </div>
+
+      <div *ngIf="getUnassignedFiles().length" class="unassigned-section">
+
+        <h3>Unassigned Files</h3>
+
+        <app-bulk-file-assignment [files]="getUnassignedFiles()" [multiSelectMode]="true"
+          (multiAssign)="openAssignmentDialog($event)" (remove)="onFileRemove($event)">
+        </app-bulk-file-assignment>
+
       </div>
 
       <button mat-stroked-button (click)="addRow()">

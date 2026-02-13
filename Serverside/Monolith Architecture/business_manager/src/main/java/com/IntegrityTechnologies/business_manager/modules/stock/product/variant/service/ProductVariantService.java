@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.UUID;
 
@@ -116,18 +117,33 @@ public class ProductVariantService {
                 .orElseThrow(() ->
                         new IllegalArgumentException("Variant not found"));
 
+        UUID productId = variant.getProduct().getId();
+
     /* ================================
-       BUSINESS RULE: NO DELETE IF STOCK EXISTS
+       RULE 1: BLOCK IF INVENTORY EXISTS
        ================================ */
 
-        boolean hasInventory = inventoryItemRepository
-                .existsByProductVariant_Id(variantId);
+        boolean hasInventory =
+                inventoryItemRepository.existsByProductVariant_Id(variantId);
 
         if (hasInventory) {
             throw new IllegalStateException(
                     "Cannot delete variant '" +
                             variant.getClassification() +
                             "' because inventory records exist."
+            );
+        }
+
+    /* ================================
+       RULE 2: BLOCK IF LAST VARIANT
+       ================================ */
+
+        long activeVariants =
+                variantRepo.countByProduct_IdAndDeletedFalse(productId);
+
+        if (activeVariants <= 1) {
+            throw new IllegalStateException(
+                    "Cannot delete the last remaining variant of a product."
             );
         }
 
@@ -139,8 +155,23 @@ public class ProductVariantService {
        ============================= */
 
     public BigDecimal computeMinSelling(BigDecimal buying, Double pct) {
-        if (buying == null) buying = BigDecimal.ZERO;
-        if (pct == null) pct = 0D;
-        return buying.multiply(BigDecimal.valueOf(1 + pct));
+
+        if (buying == null) {
+            buying = BigDecimal.ZERO;
+        }
+
+        if (pct == null) {
+            pct = 0D;
+        }
+
+        BigDecimal percentage =
+                BigDecimal.valueOf(pct)
+                        .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+
+        BigDecimal multiplier =
+                BigDecimal.ONE.add(percentage);
+
+        return buying.multiply(multiplier)
+                .setScale(2, RoundingMode.HALF_UP);
     }
 }

@@ -27,6 +27,8 @@ export const INVENTORY_BULK_IMPORT_CONFIG: BulkImportConfig<
   csvFileName: 'inventory-bulk-receive-template.csv',
   excelFileName: 'inventory-bulk-receive-template.xlsx',
 
+  supportsArchiveImport: false,
+  
   headers: [
     'productName',
     'variantClassification',

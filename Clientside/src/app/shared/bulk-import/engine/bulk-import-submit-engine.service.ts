@@ -29,7 +29,7 @@ export class BulkImportSubmitEngineService {
   constructor(
     private dialog: MatDialog,
     private snackbar: MatSnackBar
-  ) {}
+  ) { }
 
   execute<T>({
     submitFn,
@@ -135,6 +135,76 @@ export class BulkImportSubmitEngineService {
           onErrorsApplied?.(res);
 
           if (confirm) {
+            onConfirmRetry();
+          }
+        });
+      },
+
+      error: () => {
+        this.snackbar.open(
+          'Bulk import failed',
+          'Close',
+          { duration: 3000 }
+        );
+      }
+    });
+  }
+
+  executeMultipart<T>({
+    submitFn,
+    formData,
+    title,
+    dryRun,
+    confirmLabel = 'Import Now',
+    columns,
+    onFinalSuccess,
+    onConfirmRetry
+  }: {
+    submitFn: (fd: FormData) => Observable<BulkResult<T>>;
+    formData: FormData;
+    title: string;
+    dryRun: boolean;
+    confirmLabel?: string;
+    columns?: any[];
+    onFinalSuccess: (res: BulkResult<T>) => void;
+    onConfirmRetry?: () => void;
+  }) {
+
+    submitFn(formData).subscribe({
+      next: res => {
+
+        /* ================================
+           FINAL SUCCESS (NON-DRY RUN)
+           ================================ */
+
+        if (!dryRun && res.failed === 0) {
+          this.snackbar.open(
+            `${res.success} records imported successfully`,
+            'Close',
+            { duration: 3000 }
+          );
+          onFinalSuccess(res);
+          return;
+        }
+
+        /* ================================
+           PREVIEW OR FAILED
+           ================================ */
+
+        const ref = this.dialog.open(BulkImportResultDialogComponent, {
+          width: '1100px',
+          maxWidth: '95vw',
+          data: {
+            title,
+            dryRun,
+            result: res,
+            confirmLabel,
+            columns
+          }
+        });
+
+        ref.afterClosed().subscribe(confirm => {
+          if (confirm && onConfirmRetry) {
             onConfirmRetry();
           }
         });

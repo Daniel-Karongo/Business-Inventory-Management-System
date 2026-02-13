@@ -14,7 +14,14 @@ import java.util.UUID;
 @Table(
         name = "product_variants",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uq_variant_barcode", columnNames = "barcode")
+                @UniqueConstraint(
+                        name = "uq_variant_barcode",
+                        columnNames = "barcode"
+                ),
+                @UniqueConstraint(
+                        name = "uq_product_variant_classification",
+                        columnNames = {"product_id", "classification"}
+                )
         }
 )
 @Data

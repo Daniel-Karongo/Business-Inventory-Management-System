@@ -1,0 +1,59 @@
+<div class="file-grid">
+
+  <div *ngFor="let file of files; trackBy: trackByFile" class="file-card">
+
+    <mat-checkbox *ngIf="multiSelectMode" (change)="toggleSelection(file, $event.checked)">
+    </mat-checkbox>
+
+    <div class="file-preview" (click)="preview(file)">
+
+      <img *ngIf="isImage(file) && getPreview(file)" [src]="getPreview(file)!" />
+
+      <mat-icon *ngIf="file.fileType === 'pdf'">
+        picture_as_pdf
+      </mat-icon>
+
+    </div>
+
+    <div class="file-meta">
+
+      <div class="file-name">
+        <strong>{{ file.file.name }}</strong>
+      </div>
+
+      <div class="entity-checkbox">
+        <mat-checkbox [(ngModel)]="file.assignToEntity">
+          Assign to entity
+        </mat-checkbox>
+      </div>
+
+      <div *ngIf="rowVariants.length" class="variant-block">
+
+        <label *ngFor="let v of rowVariants">
+
+          <input type="checkbox" [checked]="file.rowVariantMap[rowIndex]?.includes(v)"
+            (change)="onVariantChange($event, file, v)" />
+
+          {{ v }}
+
+        </label>
+
+      </div>
+
+      <textarea *ngIf="supportsDescription" [(ngModel)]="file.description" placeholder="File description" rows="2">
+      </textarea>
+
+
+    </div>
+
+    <button mat-stroked-button (click)="assign.emit(file)">
+      Assign Rows
+    </button>
+
+  </div>
+
+</div>
+
+<button *ngIf="multiSelectMode && selectedIds.size" mat-flat-button color="primary" (click)="emitMultiAssign()">
+  Assign Selected ({{ selectedIds.size }})
+</button>

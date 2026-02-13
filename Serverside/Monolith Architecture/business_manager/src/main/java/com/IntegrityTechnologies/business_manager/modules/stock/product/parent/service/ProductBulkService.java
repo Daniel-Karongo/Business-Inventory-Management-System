@@ -8,13 +8,15 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductBulkRow;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductCreateDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.*;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantCreateDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.*;
 
 @Service
@@ -145,6 +147,153 @@ public class ProductBulkService {
         }
 
         return result;
+    }
+
+    @Transactional
+    public BulkResult<ProductDTO> bulkFullCreate(
+            ProductBulkFullCreateDTO request,
+            List<MultipartFile> files
+    ) throws IOException {
+
+        BulkResult<ProductDTO> result = new BulkResult<>();
+
+        if (request == null || request.getProducts() == null) {
+            return result;
+        }
+
+        BulkOptions options =
+                request.getOptions() != null
+                        ? request.getOptions()
+                        : new BulkOptions();
+
+        result.setTotal(request.getProducts().size());
+
+    /* ===================================================
+       DRY RUN MODE (NO PERSISTENCE)
+       =================================================== */
+
+        if (options.isDryRun()) {
+
+            for (int i = 0; i < request.getProducts().size(); i++) {
+
+                int rowNumber = i + 1;
+                ProductFullCreateDTO productDto =
+                        request.getProducts().get(i);
+
+                try {
+
+                    validateFullCreate(productDto);
+
+                    result.addSuccess(
+                            ProductDTO.builder()
+                                    .name(productDto.getProduct().getName())
+                                    .description(productDto.getProduct().getDescription())
+                                    .build()
+                    );
+
+                } catch (Exception ex) {
+                    result.addError(rowNumber, ex.getMessage());
+                }
+            }
+
+            return result;
+        }
+
+    /* ===================================================
+       REAL INSERT MODE (ALL OR NOTHING)
+       =================================================== */
+
+        List<ProductDTO> created = new ArrayList<>();
+
+        for (int i = 0; i < request.getProducts().size(); i++) {
+
+            ProductFullCreateDTO productDto =
+                    request.getProducts().get(i);
+
+            List<MultipartFile> relevantFiles =
+                    filterFilesForProduct(productDto, files);
+
+            ProductDTO saved =
+                    productService.fullCreate(productDto, relevantFiles);
+
+            created.add(saved);
+        }
+
+    /* ===================================================
+       IF WE REACH HERE → ALL SUCCESS
+       =================================================== */
+
+        result.setSuccess(created.size());
+        result.setFailed(0);
+        result.setData(created);
+
+        return result;
+    }
+
+    private List<MultipartFile> filterFilesForProduct(
+            ProductFullCreateDTO dto,
+            List<MultipartFile> files
+    ) {
+
+        if (files == null || files.isEmpty()
+                || dto.getFileAssignments() == null
+                || dto.getFileAssignments().isEmpty()) {
+            return List.of();
+        }
+
+        List<String> fileNames =
+                dto.getFileAssignments()
+                        .stream()
+                        .map(FileAssignmentDTO::getFileName)
+                        .toList();
+
+        return files.stream()
+                .filter(f -> fileNames.contains(f.getOriginalFilename()))
+                .toList();
+    }
+
+    private void validateFullCreate(ProductFullCreateDTO dto) {
+
+        if (dto.getProduct() == null) {
+            throw new IllegalArgumentException("Product payload missing");
+        }
+
+        ProductCreateDTO product = dto.getProduct();
+
+        if (product.getName() == null || product.getName().isBlank()) {
+            throw new IllegalArgumentException("Product name is required");
+        }
+
+        if (product.getCategoryId() == null) {
+            throw new IllegalArgumentException("Category is required");
+        }
+
+        if (productService.existsByName(product.getName())) {
+            throw new IllegalArgumentException(
+                    "Product already exists: " + product.getName()
+            );
+        }
+
+        if (dto.getVariants() != null) {
+
+            Set<String> seen = new HashSet<>();
+
+            for (ProductVariantCreateDTO v : dto.getVariants()) {
+
+                if (v.getClassification() == null || v.getClassification().isBlank()) {
+                    throw new IllegalArgumentException(
+                            "Variant classification required"
+                    );
+                }
+
+                if (!seen.add(v.getClassification().toLowerCase())) {
+                    throw new IllegalArgumentException(
+                            "Duplicate variant classification: "
+                                    + v.getClassification()
+                    );
+                }
+            }
+        }
     }
 
     /* =========================

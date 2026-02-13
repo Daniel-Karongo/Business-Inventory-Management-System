@@ -45,21 +45,38 @@ export abstract class BulkImportFormComponent<
 
   /* ================= ROWS ================= */
 
-  get rows(): FormArray {
-    return this.form.get('rows') as FormArray;
+  get rows(): FormArray<FormGroup> {
+    return this.form.get('rows') as FormArray<FormGroup>;
   }
 
   get rowCount(): number {
     return this.rows.length;
   }
 
+  get supportsArchiveImport(): boolean {
+    return !!this.config.supportsArchiveImport;
+  }
+
   addRow(data?: Partial<TRow>) {
+
     BulkImportConfigAdapter.addRow(
       this.fb,
       this.form,
       this.config,
       data
     );
+
+    const lastIndex = this.rows.length - 1;
+
+    const control = this.rows.at(lastIndex); // now FormGroup
+
+    if (!control.contains('files')) {
+      control.addControl('files', this.fb.control([]));
+    }
+
+    if (!control.contains('variants')) {
+      control.addControl('variants', this.fb.control([]));
+    }
   }
 
   removeRow(index: number) {

@@ -5,7 +5,8 @@
 <mat-dialog-content #scrollContainer class="body">
 
   <!-- IMPORT ZONE -->
-  <div class="import-zone">
+  <div class="import-zone" [class.drag-active]="isDragging" (dragover)="onDragOver($event)" (dragleave)="onDragLeave()"
+    (drop)="onDrop($event)">
 
     <div class="import-tiles">
 
@@ -28,6 +29,18 @@
         <div>
           <strong>Import CSV</strong>
           <small>.csv template</small>
+        </div>
+      </label>
+
+      <label *ngIf="supportsArchiveImport" class="import-tile zip" [class.disabled]="loading">
+
+        <input #zipInput type="file" hidden accept=".zip"
+          (change)="zipDropped.emit(zipInput.files?.[0]); zipInput.value = ''">
+
+        <mat-icon>archive</mat-icon>
+        <div>
+          <strong>Import Files Archive</strong>
+          <small>.zip</small>
         </div>
       </label>
 
@@ -122,7 +135,7 @@
     <button mat-icon-button matTooltip="Export rows to CSV" (click)="exportCsv.emit()">
       <mat-icon>description</mat-icon>
     </button>
-    
+
     <button mat-icon-button matTooltip="Clear all lines" color="warn" (click)="clearAll.emit()">
       <mat-icon>delete_sweep</mat-icon>
     </button>

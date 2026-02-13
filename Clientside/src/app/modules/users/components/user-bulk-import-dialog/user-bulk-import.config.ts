@@ -26,6 +26,9 @@ export const USER_BULK_IMPORT_CONFIG: BulkImportConfig<
   csvFileName: 'users-bulk-template.csv',
   excelFileName: 'users-bulk-template.xlsx',
 
+  supportsArchiveImport: true,
+  supportsFileDescription: true,
+
   headers: [
     'username',
     'password',

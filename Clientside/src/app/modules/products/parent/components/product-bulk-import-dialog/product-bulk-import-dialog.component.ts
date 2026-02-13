@@ -1,22 +1,28 @@
-import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
-import { MatDialogRef } from '@angular/material/dialog';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 
 import { ProductService } from '../../services/product.service';
-import { CategoryService } from '../../../../categories/services/category.service';
-import { SupplierService } from '../../../../suppliers/services/supplier.service';
 
 import { PRODUCT_BULK_IMPORT_CONFIG } from './product-bulk-import.config';
 
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { BulkImportShellComponent } from '../../../../../shared/bulk-import/shell/bulk-import-shell.component';
+import { MatInputModule } from '@angular/material/input';
+
 import { BulkImportFormComponent } from '../../../../../shared/bulk-import/base/bulk-import-form.component';
 import { BulkImportSubmitEngineService } from '../../../../../shared/bulk-import/engine/bulk-import-submit-engine.service';
+import { BulkImportShellComponent } from '../../../../../shared/bulk-import/shell/bulk-import-shell.component';
+
+import { BulkFileAssignmentComponent } from '../../../../../shared/bulk-import/files/bulk-file-assignment.component';
+import { BulkAssignedFile } from '../../../../../shared/bulk-import/files/bulk-file.model';
+import { BulkImportWithFilesComponent } from '../../../../../shared/bulk-import/base/bulk-import-with-files.component';
+import { BulkFileFactoryService } from '../../../../../shared/bulk-import/files/bulk-file-factory.service';
+import { BulkFileLifecycleService } from '../../../../../shared/bulk-import/files/bulk-file-lifecycle.service';
+import { BulkFileImportEngine } from '../../../../../shared/bulk-import/files/bulk-file-import.engine';
 
 @Component({
   standalone: true,
@@ -27,99 +33,171 @@ import { BulkImportSubmitEngineService } from '../../../../../shared/bulk-import
     CommonModule,
     ReactiveFormsModule,
     BulkImportShellComponent,
-
     MatFormFieldModule,
     MatInputModule,
     MatCheckboxModule,
     MatButtonModule,
-    MatIconModule
+    MatIconModule,
+    BulkFileAssignmentComponent
   ]
 })
 export class ProductBulkImportDialogComponent
-  extends BulkImportFormComponent<any, any, any>
-  implements OnInit {
+  extends BulkImportWithFilesComponent<any, any, any>
+  implements OnInit, OnDestroy {
 
   config = PRODUCT_BULK_IMPORT_CONFIG;
 
-  categories: any[] = [];
-  suppliers: any[] = [];
+  zipLoading = false;
 
   constructor(
     private productService: ProductService,
-    private categoryService: CategoryService,
-    private supplierService: SupplierService,
     private submitEngine: BulkImportSubmitEngineService,
-    private dialogRef: MatDialogRef<ProductBulkImportDialogComponent>
+    private dialogRef: MatDialogRef<ProductBulkImportDialogComponent>,
+    fileFactory: BulkFileFactoryService,
+    fileLifecycle: BulkFileLifecycleService,
+    zipEngine: BulkFileImportEngine
   ) {
-    super();
+    super(fileFactory, fileLifecycle, zipEngine);
   }
 
   ngOnInit() {
     this.initForm();
-    this.loadMeta();
   }
 
-  private loadMeta() {
-    Promise.all([
-      this.categoryService.getAll('flat', false).toPromise(),
-      this.supplierService.getAll(false).toPromise()
-    ]).then(([c, s]) => {
-      this.categories = c || [];
-      this.suppliers = s || [];
-    });
+  getRowVariants(index: number): string[] {
+
+    const value =
+      this.rows.at(index).get('variants')?.value ?? '';
+
+    return value
+      .split(',')
+      .map((v: string) => v.trim().toUpperCase())
+      .filter(Boolean);
   }
 
-  submit() {
-    if (this.form.invalid) return;
+  uppercaseVariants(index: number) {
 
-    const payload = {
-      items: this.rows.controls.map(r =>
-        this.config.mapRowToItem(r.value)
-      ),
-      options: {
-        dryRun: this.form.value.dryRun,
-        skipDuplicates: true
-      }
-    };
+    const control = this.rows.at(index).get('variants');
+    if (!control) return;
 
-    this.submitEngine.execute({
-      submitFn: req => this.productService.bulkImport(req),
-      payload,
-      rows: this.rows.controls,
-      dryRun: this.form.value.dryRun,
-      title: this.config.title,
-      confirmLabel: this.config.confirmLabel,
-      columns: this.config.previewColumns,
-      onErrorsApplied: res => {
-        this.cacheErrors(res);
+    const value = control.value ?? '';
 
-        if (this.config.mapPreviewRow && Array.isArray(res.data)) {
-          res.data = res.data.map(r => this.config.mapPreviewRow!(r));
-        }
-      },
-      onFinalSuccess: () => this.dialogRef.close(true),
-      onConfirmRetry: () => {
-        this.form.patchValue({ dryRun: false });
-        this.submit();
-      }
-    });
+    control.setValue(
+      value.toUpperCase(),
+      { emitEvent: false }
+    );
   }
+
+  trackByIndex(index: number) {
+    return index;
+  }
+
+  /* =========================================================
+   EXCEL / CSV IMPORT (Inherited Engine)
+========================================================= */
 
   async importExcel(file: File | undefined) {
     if (!file) return;
+
     const mode = await this.confirmMerge();
     if (!mode) return;
+
     super.importExcelFile(file, undefined, mode);
   }
 
   async importCsv(file: File | undefined) {
     if (!file) return;
+
     const mode = await this.confirmMerge();
     if (!mode) return;
+
     super.importCsvFile(file, mode);
   }
 
+  /* =========================================================
+   DIALOG CLOSE
+========================================================= */
+
   close() {
     this.dialogRef.close();
+  }
+
+  /* =========================================================
+     ROW NAMES (For unmatched assignment component)
+  ========================================================= */
+
+  get rowNames(): string[] {
+    return this.rows.value.map((r: any) => r.name ?? '');
+  }
+
+  /* =========================================================
+     DRY RUN (JSON ONLY)
+  ========================================================== */
+
+  submit() {
+
+    const payload = {
+
+      products: this.rows.value,
+
+      fileMetadata: this.buildFileMetadata(),
+
+      options: { dryRun: true }
+    };
+
+    const formData = new FormData();
+
+    formData.append(
+      'payload',
+      new Blob([JSON.stringify(payload)], { type: 'application/json' })
+    );
+
+    this.appendFilesToFormData(formData);
+
+    this.submitEngine.executeMultipart({
+      submitFn: fd => this.productService.bulkFullCreate(fd),
+      formData,
+      dryRun: true,
+      title: this.config.title,
+      confirmLabel: 'Confirm Import',
+      columns: this.config.previewColumns,
+      onConfirmRetry: () => this.submitBulk(),
+      onFinalSuccess: () => { }
+    });
+  }
+
+
+  /* =========================================================
+     FINAL MULTIPART COMMIT
+  ========================================================== */
+
+  submitBulk() {
+
+    const payload = {
+
+      products: this.rows.value,
+
+      fileMetadata: this.buildFileMetadata(),
+
+      options: { dryRun: false }
+    };
+
+    const formData = new FormData();
+
+    formData.append(
+      'payload',
+      new Blob([JSON.stringify(payload)], { type: 'application/json' })
+    );
+
+    this.appendFilesToFormData(formData);
+
+    this.submitEngine.executeMultipart({
+      submitFn: fd => this.productService.bulkFullCreate(fd),
+      formData,
+      dryRun: false,
+      title: this.config.title,
+      columns: this.config.previewColumns,
+      onFinalSuccess: () => this.dialogRef.close(true)
+    });
   }
 }

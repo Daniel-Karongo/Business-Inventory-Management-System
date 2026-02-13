@@ -32,6 +32,13 @@
   /* allows clean collapse */
 }
 
+.import-zone.drag-active {
+  border: 2px solid #1976d2;
+  background: rgba(25, 118, 210, 0.05);
+  box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.15);
+  transition: 120ms ease;
+}
+
 /* LEFT SIDE (Excel / CSV tiles) */
 .import-tiles {
   display: flex;
@@ -82,6 +89,10 @@
 .import-tile.csv mat-icon {
   color: #1565c0;
   /* strong blue */
+}
+
+.import-tile.zip mat-icon {
+  color: #6a1b9a; // archive purple
 }
 
 /* Disabled */

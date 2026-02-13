@@ -25,6 +25,8 @@ export const CUSTOMER_BULK_IMPORT_CONFIG: BulkImportConfig<
   csvFileName: 'customers-bulk-template.csv',
   excelFileName: 'customers-bulk-template.xlsx',
 
+  supportsArchiveImport: false,
+  
   headers: [
     'name',
     'phones',

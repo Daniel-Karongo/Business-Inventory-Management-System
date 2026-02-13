@@ -24,6 +24,9 @@ export const SUPPLIER_BULK_IMPORT_CONFIG: BulkImportConfig<
   csvFileName: 'suppliers-bulk-template.csv',
   excelFileName: 'suppliers-bulk-template.xlsx',
 
+  supportsArchiveImport: true,
+  supportsFileDescription: true,
+
   headers: [
     'name',
     'emails',

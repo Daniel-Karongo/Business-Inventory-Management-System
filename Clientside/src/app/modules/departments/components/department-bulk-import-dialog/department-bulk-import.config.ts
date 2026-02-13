@@ -25,6 +25,8 @@ export const DEPARTMENT_BULK_IMPORT_CONFIG: BulkImportConfig<
   csvFileName: 'departments-bulk-template.csv',
   excelFileName: 'departments-bulk-template.xlsx',
 
+  supportsArchiveImport: false,
+  
   headers: [
     'name',
     'description',

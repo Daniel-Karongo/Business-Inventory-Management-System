@@ -231,6 +231,21 @@ public class ProductController {
         );
     }
 
+    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @PostMapping(
+            value = "/bulk/full-create",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<BulkResult<ProductDTO>> bulkFullCreate(
+            @RequestPart("payload") ProductBulkFullCreateDTO dto,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files
+    ) throws IOException {
+
+        return ResponseEntity.ok(
+                bulkService.bulkFullCreate(dto, files)
+        );
+    }
+
     @PostMapping(value = "/full-create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ProductDTO fullCreate(
             @RequestPart("payload") ProductFullCreateDTO dto,

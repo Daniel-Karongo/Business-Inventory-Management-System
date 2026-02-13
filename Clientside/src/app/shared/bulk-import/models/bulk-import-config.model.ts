@@ -53,5 +53,8 @@ export interface BulkImportConfig<TRow, TItem, TResult> {
   mapRowToItem(row: TRow): TItem;
   mapPreviewRow?: (row: TResult) => any;
 
+  supportsArchiveImport?: boolean;
+  supportsFileDescription?: boolean;
+
   submit(request: BulkRequest<TItem>): any; // Observable<BulkResult<TResult>>
 }

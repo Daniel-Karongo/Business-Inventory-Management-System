@@ -1,6 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.service;
 
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -18,17 +20,29 @@ public class ProductSpecification {
             BigDecimal minPrice,
             BigDecimal maxPrice
     ) {
+
         return (root, query, cb) -> {
+
+            query.distinct(true); // ✅ Prevent duplicates when joins expand
 
             List<Predicate> predicates = new ArrayList<>();
 
-            // JOIN category ONCE (safe even if unused)
-            var categoryJoin = root.join("category", jakarta.persistence.criteria.JoinType.LEFT);
+            Join<Object, Object> categoryJoin = null;
 
+            boolean needsCategoryJoin =
+                    (categoryIds != null && !categoryIds.isEmpty()) ||
+                            (keyword != null && !keyword.isBlank());
+
+            if (needsCategoryJoin) {
+                categoryJoin = root.join("category", JoinType.LEFT);
+            }
+
+            // ✅ Category filter
             if (categoryIds != null && !categoryIds.isEmpty()) {
                 predicates.add(categoryJoin.get("id").in(categoryIds));
             }
 
+            // ✅ Name filter
             if (name != null && !name.isBlank()) {
                 predicates.add(cb.like(
                         cb.lower(root.get("name")),
@@ -36,6 +50,7 @@ public class ProductSpecification {
                 ));
             }
 
+            // ✅ Description filter
             if (description != null && !description.isBlank()) {
                 predicates.add(cb.like(
                         cb.lower(root.get("description")),
@@ -43,7 +58,7 @@ public class ProductSpecification {
                 ));
             }
 
-            // 🔥 KEYWORD SEARCH (name OR sku OR category)
+            // ✅ Keyword (name OR sku OR category)
             if (keyword != null && !keyword.isBlank()) {
                 String kw = "%" + keyword.toLowerCase() + "%";
 
@@ -54,12 +69,19 @@ public class ProductSpecification {
                 ));
             }
 
+            // ✅ Price filters
             if (minPrice != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("price"), minPrice));
+                predicates.add(cb.greaterThanOrEqualTo(
+                        root.get("price"),
+                        minPrice
+                ));
             }
 
             if (maxPrice != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("price"), maxPrice));
+                predicates.add(cb.lessThanOrEqualTo(
+                        root.get("price"),
+                        maxPrice
+                ));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));

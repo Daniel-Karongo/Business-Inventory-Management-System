@@ -48,3 +48,10 @@
   outline-offset: 4px;
   transition: outline 0.3s ease;
 }
+
+.unassigned-section {
+  border: 1px dashed var(--border);
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--surface);
+}

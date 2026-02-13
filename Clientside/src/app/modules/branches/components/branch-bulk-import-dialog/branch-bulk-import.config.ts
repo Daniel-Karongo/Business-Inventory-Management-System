@@ -23,6 +23,8 @@ export const BRANCH_BULK_IMPORT_CONFIG: BulkImportConfig<
   csvFileName: 'branches-bulk-template.csv',
   excelFileName: 'branches-bulk-template.xlsx',
 
+  supportsArchiveImport: false,
+
   headers: [
     'branchCode',
     'name',

@@ -25,6 +25,8 @@ export const SALE_BULK_IMPORT_CONFIG: BulkImportConfig<
   csvFileName: 'sales-bulk-template.csv',
   excelFileName: 'sales-bulk-template.xlsx',
 
+  supportsArchiveImport: false,
+  
   headers: [
     'receiptNo',
     'sku',

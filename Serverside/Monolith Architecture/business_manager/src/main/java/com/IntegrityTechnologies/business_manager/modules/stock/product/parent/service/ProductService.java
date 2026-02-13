@@ -107,11 +107,19 @@ public class ProductService {
     }
 
 
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "id",
+            "name",
+            "price",
+            "sku",
+            "createdAt"
+    );
+
     public Page<ProductDTO> getProductsAdvanced(
             List<Long> categoryIds,
             String name,
             String description,
-            String keyword, // ✅ NEW
+            String keyword,
             BigDecimal minPrice,
             BigDecimal maxPrice,
             int page,
@@ -120,22 +128,41 @@ public class ProductService {
             String direction,
             boolean includeDeleted
     ) {
-        Sort sort = direction.equalsIgnoreCase("desc")
-                ? Sort.by(sortBy).descending()
-                : Sort.by(sortBy).ascending();
 
-        Pageable pageable = PageRequest.of(page, size, sort);
-
-        Specification<Product> spec =
-                ProductSpecification.filterProducts(
-                        categoryIds, name, description, keyword, minPrice, maxPrice
-                );
-
-        if (!includeDeleted) {
-            spec = spec.and((r, q, cb) -> cb.isFalse(r.get("deleted")));
+        // ✅ Defensive sort field validation
+        if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
+            sortBy = "id";
         }
 
-        return productRepository.findAll(spec, pageable)
+        // ✅ Defensive direction validation
+        Sort.Direction sortDirection =
+                "desc".equalsIgnoreCase(direction)
+                        ? Sort.Direction.DESC
+                        : Sort.Direction.ASC;
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(sortDirection, sortBy)
+        );
+
+        Specification<Product> spec = ProductSpecification.filterProducts(
+                categoryIds,
+                name,
+                description,
+                keyword,
+                minPrice,
+                maxPrice
+        );
+
+        if (!includeDeleted) {
+            spec = spec.and((root, query, cb) ->
+                    cb.isFalse(root.get("deleted"))
+            );
+        }
+
+        return productRepository
+                .findAll(spec, pageable)
                 .map(productMapper::toDTO);
     }
 

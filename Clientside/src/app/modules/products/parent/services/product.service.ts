@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
 import { Product } from '../models/product.model';
 import { ProductVariant } from '../../variant/models/product-variant.model';
+import { BulkResult } from '../../../../shared/models/bulk-import.model';
 
 @Injectable({ providedIn: 'root' })
 export class ProductService {
@@ -34,6 +35,13 @@ export class ProductService {
   fullCreate(formData: FormData) {
     return this.http.post<Product>(
       `${this.base}/full-create`,
+      formData
+    );
+  }
+
+  bulkFullCreate(formData: FormData) {
+    return this.http.post<BulkResult<any>>(
+      `${this.base}/bulk/full-create`,
       formData
     );
   }
@@ -160,7 +168,7 @@ export class ProductService {
 
   /* =======================
    AUDITS
-======================= */
+  ======================= */
 
   getAudits(productId: string) {
     return this.http.get<any[]>(

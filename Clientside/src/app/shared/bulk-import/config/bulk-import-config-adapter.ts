@@ -31,6 +31,9 @@ export class BulkImportConfigAdapter {
       ];
     });
 
+    // 🔥 NEW — files live inside row form
+    group['files'] = [data?.files ?? []];
+
     group['_error'] = [''];
 
     return fb.group(group);

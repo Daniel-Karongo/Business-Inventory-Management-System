@@ -22,6 +22,9 @@ export const PRODUCT_BULK_IMPORT_CONFIG: BulkImportConfig<
   csvFileName: 'products-bulk-template.csv',
   excelFileName: 'products-bulk-template.xlsx',
 
+  supportsArchiveImport: true,
+  supportsFileDescription: false,
+
   headers: [
     'name',
     'description',
