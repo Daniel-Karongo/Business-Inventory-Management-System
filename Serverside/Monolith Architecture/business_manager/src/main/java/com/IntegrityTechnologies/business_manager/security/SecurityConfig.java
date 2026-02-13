@@ -54,8 +54,10 @@ public class SecurityConfig {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        // ⚠️ Must be explicit when allowCredentials = true
-        config.setAllowedOrigins(List.of("http://localhost:4200"));
+        config.setAllowedOriginPatterns(List.of(
+                "http://localhost:4200",
+                "https://*.ngrok-free.app"
+        ));
 
         config.setAllowedMethods(List.of(
                 "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
@@ -63,7 +65,6 @@ public class SecurityConfig {
 
         config.setAllowedHeaders(List.of("*"));
 
-        // Cookies are NOT exposed via headers; this is safe
         config.setAllowCredentials(true);
 
         config.setMaxAge(3600L);
@@ -82,56 +83,61 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-                // ---- CORS ----
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-                // ---- CSRF ----
-                // Disabled because:
-                // - JWT is HttpOnly
-                // - SameSite=Lax
-                // - API is stateless
                 .csrf(AbstractHttpConfigurer::disable)
-
-                // ---- STATELESS ----
-                .sessionManagement(
-                        session -> session.sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS
-                        )
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
 
                 // ---- AUTHORIZATION RULES ----
                 .authorizeHttpRequests(auth -> auth
 
-                        // 🔓 AUTH
+                        // ===== STATIC RESOURCES (CRITICAL FOR NGROK) =====
                         .requestMatchers(
-                                "/api/auth/login",
-                                "/api/auth/login/bulk",
-                                "/api/auth/password-reset/**",
-                                "/api/auth/forgot-password/**",
-                                "/api/auth/reset-password/**"
-                        ).permitAll()
-                        // 🔓 User Creation
-                                .requestMatchers(
-                                        "/api/users/register"
-                                ).permitAll()
-                        // 🔓 MPESA CALLBACKS (CRITICAL)
-                        .requestMatchers(
-                                "/api/payments/mpesa/stk/callback",
-                                "/api/payments/mpesa/c2b/**"
+                                "/",
+                                "/index.html",
+                                "/favicon.ico",
+                                "/*.js",
+                                "/*.css",
+                                "/*.ico",
+                                "/*.svg",
+                                "/*.png",
+                                "/*.jpg",
+                                "/*.jpeg",
+                                "/*.webp",
+                                "/assets/**",
+                                "/icons/**",
+                                "/media/**",
+                                "/manifest.webmanifest"
                         ).permitAll()
 
-                        // 🔓 PUBLIC (LOGIN UI DEPENDENCIES)
-                        .requestMatchers(HttpMethod.GET, "/api/branches").permitAll()
-
-                        // 🔓 SWAGGER
+                        // ===== SWAGGER =====
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui.html"
                         ).permitAll()
 
-                        // 🔐 EVERYTHING ELSE
-                        .anyRequest().authenticated()
+                        // ===== PUBLIC API =====
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/login/bulk",
+                                "/api/auth/password-reset/**",
+                                "/api/auth/forgot-password/**",
+                                "/api/auth/reset-password/**",
+                                "/api/users/register",
+                                "/api/payments/mpesa/stk/callback",
+                                "/api/payments/mpesa/c2b/**"
+                        ).permitAll()
+
+                        .requestMatchers(HttpMethod.GET, "/api/branches").permitAll()
+
+                        // ===== SECURE API =====
+                        .requestMatchers("/api/**").authenticated()
+
+                        .anyRequest().permitAll()
                 )
 
                 // ---- ERROR HANDLING ----

@@ -29,10 +29,13 @@ public class PermissionSecurityFilter extends OncePerRequestFilter {
         String method = request.getMethod();
         String path = request.getServletPath();
 
-        if (shouldIgnore(path)) {
+        // 🔥 Only apply ACL to API endpoints
+        if (!request.getRequestURI().startsWith("/api/")) {
             chain.doFilter(request, response);
             return;
         }
+
+        System.out.println("ACL PATH: " + path);
 
         Role role = SecurityUtils.currentRole();
 
@@ -62,13 +65,5 @@ public class PermissionSecurityFilter extends OncePerRequestFilter {
           "message":"Missing permission: %s"
         }
         """.formatted(code));
-    }
-
-    private boolean shouldIgnore(String path) {
-        return path.startsWith("/swagger-ui")
-                || path.startsWith("/v3/api-docs")
-                || path.startsWith("/api/auth")
-                || path.startsWith("/api/payments/mpesa")
-                || path.equals("/api/branches");
     }
 }

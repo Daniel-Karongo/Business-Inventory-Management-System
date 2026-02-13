@@ -1,8 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.person.function.auth.filter;
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.security.CustomUserDetails;
-import com.IntegrityTechnologies.business_manager.modules.person.function.auth.util.JwtUtil;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.service.CustomUserDetailsService;
+import com.IntegrityTechnologies.business_manager.modules.person.function.auth.util.JwtUtil;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -12,7 +12,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -41,50 +40,42 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 UUID tokenId = jwtUtil.extractTokenId(jwt);
 
-                // 🔐 Enforce session validity (UNCHANGED LOGIC)
                 boolean sessionValid =
                         userSessionRepository
                                 .findByTokenIdAndLogoutTimeIsNull(tokenId)
                                 .isPresent();
 
-                if (!sessionValid) {
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.getWriter().write(
-                            "{\"message\":\"Session expired or logged out\"}"
-                    );
-                    return;
+                if (sessionValid) {
+
+                    String username = jwtUtil.extractUsername(jwt);
+
+                    CustomUserDetails userDetails =
+                            (CustomUserDetails) userDetailsService.loadUserByUsername(username);
+
+                    if (jwtUtil.validateToken(jwt, userDetails.getUsername())) {
+
+                        UsernamePasswordAuthenticationToken authToken =
+                                new UsernamePasswordAuthenticationToken(
+                                        userDetails,
+                                        null,
+                                        userDetails.getAuthorities()
+                                );
+
+                        authToken.setDetails(
+                                new WebAuthenticationDetailsSource()
+                                        .buildDetails(request)
+                        );
+
+                        SecurityContextHolder
+                                .getContext()
+                                .setAuthentication(authToken);
+                    }
                 }
 
-                String username = jwtUtil.extractUsername(jwt);
-
-                CustomUserDetails userDetails =
-                        (CustomUserDetails) userDetailsService.loadUserByUsername(username);
-
-                if (jwtUtil.validateToken(jwt, userDetails.getUsername())) {
-
-                    UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(
-                                    userDetails,
-                                    null,
-                                    userDetails.getAuthorities()
-                            );
-
-                    authToken.setDetails(
-                            new WebAuthenticationDetailsSource()
-                                    .buildDetails(request)
-                    );
-
-                    SecurityContextHolder
-                            .getContext()
-                            .setAuthentication(authToken);
-                }
-
-            } catch (Exception ex) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write(
-                        "{\"message\":\"Invalid or expired token\"}"
-                );
-                return;
+            } catch (Exception ignored) {
+                // Do NOT send response here
+                // Just clear context and continue
+                SecurityContextHolder.clearContext();
             }
         }
 
@@ -112,20 +103,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String method = request.getMethod();
 
         return
-                // Swagger
-                path.startsWith("/swagger-ui")
-                        || path.startsWith("/v3/api-docs")
-                        || path.equals("/swagger-ui.html")
-
-                        // Auth
-                        || path.startsWith("/api/auth/login")
+                // Auth endpoints
+                path.startsWith("/api/auth/login")
                         || path.startsWith("/api/auth/password-reset")
 
-                        // ✅ MPESA CALLBACKS (CRITICAL)
+                        // MPESA
                         || path.equals("/api/payments/mpesa/stk/callback")
                         || path.startsWith("/api/payments/mpesa/c2b")
 
-                        // ✅ PUBLIC branches
+                        // Public branches
                         || (path.equals("/api/branches") && "GET".equals(method));
     }
 }

@@ -6,6 +6,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.function.auth.u
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -32,16 +33,25 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(
             @RequestBody AuthRequest request,
-            HttpServletResponse response
+            HttpServletResponse response,
+            HttpServletRequest servletRequest
     ) {
+
         AuthService.LoginResult result = authService.loginInternal(request);
+
+        boolean isSecure = servletRequest.isSecure();
 
         Cookie cookie = new Cookie("access_token", result.jwt());
         cookie.setHttpOnly(true);
-        cookie.setSecure(false); // ⚠️ true in production (HTTPS)
+        cookie.setSecure(isSecure);
         cookie.setPath("/");
         cookie.setMaxAge((int) jwtUtil.secondsUntilMidnight());
-        cookie.setAttribute("SameSite", "Lax");
+
+        if (isSecure) {
+            cookie.setAttribute("SameSite", "None");
+        } else {
+            cookie.setAttribute("SameSite", "Lax");
+        }
 
         response.addCookie(cookie);
 
