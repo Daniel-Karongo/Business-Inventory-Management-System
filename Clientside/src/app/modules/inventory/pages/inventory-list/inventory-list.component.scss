@@ -12,6 +12,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 /* Force full stretch inside page-shell slot */

@@ -49,15 +49,14 @@ export const appConfig: ApplicationConfig = {
       iconLoader.load();
     }),
 
-    // Bootstrap auth state from server (/api/auth/me)
     provideAppInitializer(() => {
       const auth = inject(AuthService);
-
-      return firstValueFrom(auth.loadMe())
-        .catch(() => auth.clearLocalState());
+      auth.loadMe().subscribe({
+        error: () => auth.clearLocalState()
+      });
     }), provideServiceWorker('ngsw-worker.js', {
-            enabled: !isDevMode(),
-            registrationStrategy: 'registerWhenStable:30000'
-          })
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000'
+    })
   ]
 };
