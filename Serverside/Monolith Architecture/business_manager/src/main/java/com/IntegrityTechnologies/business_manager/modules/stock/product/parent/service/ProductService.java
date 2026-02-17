@@ -34,19 +34,13 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service.ProductVariantService;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.transaction.annotation.Transactional;
-import java.io.IOException;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -58,7 +52,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -118,9 +111,12 @@ public class ProductService {
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
             "id",
             "name",
-            "price",
             "sku",
-            "createdAt"
+            "createdAt",
+            "updatedAt",      // ✅ ADD
+            "category.name",
+            "variantCount",
+            "deleted"
     );
 
     public Page<ProductDTO> getProductsAdvanced(
@@ -130,44 +126,38 @@ public class ProductService {
             String keyword,
             BigDecimal minPrice,
             BigDecimal maxPrice,
+            Boolean deleted,
             int page,
             int size,
             String sortBy,
             String direction,
-            boolean includeDeleted
-    ) {
+            boolean includeDeleted,
+            Integer minSuppliers,
+            Integer maxSuppliers,
+            UUID supplierId) {
 
-        // ✅ Defensive sort field validation
-        if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
+        if (sortBy == null || sortBy.isBlank()) {
             sortBy = "id";
         }
 
-        // ✅ Defensive direction validation
-        Sort.Direction sortDirection =
-                "desc".equalsIgnoreCase(direction)
-                        ? Sort.Direction.DESC
-                        : Sort.Direction.ASC;
+        Pageable pageable = PageRequest.of(page, size);
 
-        Pageable pageable = PageRequest.of(
-                page,
-                size,
-                Sort.by(sortDirection, sortBy)
-        );
-
-        Specification<Product> spec = ProductSpecification.filterProducts(
-                categoryIds,
-                name,
-                description,
-                keyword,
-                minPrice,
-                maxPrice
-        );
-
-        if (!includeDeleted) {
-            spec = spec.and((root, query, cb) ->
-                    cb.isFalse(root.get("deleted"))
-            );
-        }
+        Specification<Product> spec =
+                ProductSpecification.filterProducts(
+                        categoryIds,
+                        name,
+                        description,
+                        keyword,
+                        minPrice,
+                        maxPrice,
+                        deleted,
+                        includeDeleted,
+                        sortBy,
+                        direction,
+                        minSuppliers,
+                        maxSuppliers,
+                        supplierId
+                );
 
         return productRepository
                 .findAll(spec, pageable)
@@ -643,28 +633,41 @@ public class ProductService {
        ============================= */
 
     @Transactional
-    public ResponseEntity<ApiResponse> softDeleteProduct(UUID id) {
-        Product p = productRepository.findById(id).orElseThrow(() -> new ProductNotFoundException("Product not found"));
-        if (!p.getDeleted()) {
-            p.setDeleted(true);
-            p.setDeletedAt(LocalDateTime.now());
-            productRepository.save(p);
+    public ResponseEntity<ApiResponse> softDeleteProduct(UUID id, String reason) {
 
-            ProductAudit audit = new ProductAudit();
-            audit.setAction("SOFT_DELETE");
-            audit.setProductId(p.getId());
-            audit.setProductName(p.getName());
-            audit.setTimestamp(LocalDateTime.now());
-            audit.setPerformedBy(SecurityUtils.currentUsername());
-            productAuditRepository.save(audit);
+        Product p = productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
 
-            List<ProductImage> images = p.getImages();
+        if (Boolean.TRUE.equals(p.getDeleted())) {
+            return ResponseEntity.ok(
+                    new ApiResponse("success", "Product already soft-deleted")
+            );
+        }
+
+        p.setDeleted(true);
+        p.setDeletedAt(LocalDateTime.now());
+        productRepository.save(p);
+
+        // === PRODUCT AUDIT ===
+        ProductAudit audit = new ProductAudit();
+        audit.setAction("SOFT_DELETE");
+        audit.setProductId(p.getId());
+        audit.setProductName(p.getName());
+        audit.setTimestamp(LocalDateTime.now());
+        audit.setPerformedBy(SecurityUtils.currentUsername());
+        audit.setReason(reason);
+        productAuditRepository.save(audit);
+
+        // === IMAGE SOFT DELETE ===
+        if (p.getImages() != null) {
             List<ProductImageAudit> imageAudits = new ArrayList<>();
-            for(ProductImage image: images) {
+
+            for (ProductImage image : p.getImages()) {
+
                 image.setDeleted(true);
                 productImageRepository.save(image);
 
-                ProductImageAudit imageAudit = ProductImageAudit.builder()
+                imageAudits.add(ProductImageAudit.builder()
                         .action("IMAGE_SOFT_DELETED")
                         .fileName(image.getFileName())
                         .filePath(image.getFilePath())
@@ -672,62 +675,73 @@ public class ProductService {
                         .productName(p.getName())
                         .timestamp(LocalDateTime.now())
                         .performedBy(SecurityUtils.currentUsername())
-                        .build();
-                imageAudits.add(imageAudit);
+                        .reason(reason)
+                        .build());
             }
+
             productImageAuditRepository.saveAll(imageAudits);
-            return ResponseEntity.ok(new ApiResponse("success", "Preduct soft-deleted successfully"));
-        } else {
-            return ResponseEntity.ok(new ApiResponse("success", "Product already soft-deleted"));
         }
+
+        return ResponseEntity.ok(
+                new ApiResponse("success", "Product soft-deleted successfully")
+        );
     }
 
     @Transactional
-    public void bulkSoftDelete(List<UUID> ids) {
+    public void bulkSoftDelete(List<UUID> ids, String reason) {
+
         for (UUID id : ids) {
-            Product p = productRepository.findById(id)
-                    .orElseThrow(() -> new ProductNotFoundException("Product not found: " + id));
-            p.setDeleted(true);
-            p.setDeletedAt(LocalDateTime.now());
-            productRepository.save(p);
-        }
-    }
-
-    public void restoreProduct(UUID id) {
-        Product p = productRepository.findById(id).orElseThrow(() -> new ProductNotFoundException("Product not found"));
-        if (p.getDeleted()) {
-            p.setDeleted(false);
-            p.setDeletedAt(null);
-            productRepository.save(p);
-
-            ProductAudit audit = new ProductAudit();
-            audit.setAction("RESTORE");
-            audit.setProductId(p.getId());
-            audit.setProductName(p.getName());
-            audit.setTimestamp(LocalDateTime.now());
-            audit.setPerformedBy(SecurityUtils.currentUsername());
-            productAuditRepository.save(audit);
+            softDeleteProduct(id, reason);
         }
     }
 
     @Transactional
-    public void bulkRestore(List<UUID> ids) {
+    public void restoreProduct(UUID id, String reason) {
+
+        Product p = productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+
+        if (!Boolean.TRUE.equals(p.getDeleted())) return;
+
+        p.setDeleted(false);
+        p.setDeletedAt(null);
+        productRepository.save(p);
+
+        ProductAudit audit = new ProductAudit();
+        audit.setAction("RESTORE");
+        audit.setProductId(p.getId());
+        audit.setProductName(p.getName());
+        audit.setTimestamp(LocalDateTime.now());
+        audit.setPerformedBy(SecurityUtils.currentUsername());
+        audit.setReason(reason);
+        productAuditRepository.save(audit);
+    }
+
+    @Transactional
+    public void bulkRestore(List<UUID> ids, String reason) {
+
         for (UUID id : ids) {
-            Product p = productRepository.findById(id)
-                    .orElseThrow(() -> new ProductNotFoundException("Product not found: " + id));
-            p.setDeleted(false);
-            p.setDeletedAt(null);
-            productRepository.save(p);
+            restoreProduct(id, reason);
         }
     }
 
     @Transactional
-    public void hardDeleteProduct(UUID productId) throws IOException {
+    public void hardDeleteProduct(UUID productId, String reason) throws IOException {
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
 
-        // 1️⃣ Get all variant IDs
+        // === HARD DELETE AUDIT BEFORE REMOVAL ===
+        ProductAudit audit = new ProductAudit();
+        audit.setAction("HARD_DELETE");
+        audit.setProductId(product.getId());
+        audit.setProductName(product.getName());
+        audit.setTimestamp(LocalDateTime.now());
+        audit.setPerformedBy(SecurityUtils.currentUsername());
+        audit.setReason(reason);
+        productAuditRepository.save(audit);
+
+        // === VARIANTS ===
         List<ProductVariant> variants =
                 productVariantRepository.findByProduct_Id(productId);
 
@@ -736,57 +750,35 @@ public class ProductService {
                         .map(ProductVariant::getId)
                         .toList();
 
-        // ================================
-        // SALES + PAYMENTS
-        // ================================
-
+        // === SALES ===
         if (!variantIds.isEmpty()) {
-
-            // Delete payments via cascade by deleting sales
-
             saleLineItemRepository.deleteAllByProductVariantIdIn(variantIds);
-
             saleRepository.deleteSalesByVariantIds(variantIds);
         }
 
-        // ================================
-        // STOCK TRANSACTIONS
-        // ================================
-
+        // === STOCK ===
         stockTransactionRepository.deleteAllByProductId(productId);
 
-        // ================================
-        // INVENTORY
-        // ================================
-
+        // === INVENTORY ===
         inventoryItemRepository.deleteAllByProductId(productId);
 
-        // ================================
-        // VARIANT IMAGES
-        // ================================
-
+        // === VARIANTS CLEANUP ===
         for (ProductVariant v : variants) {
             v.getImages().clear();
         }
 
         productVariantRepository.deleteAllByProduct_Id(productId);
 
-        // ================================
-        // PRODUCT IMAGES
-        // ================================
-
+        // === PRODUCT IMAGES ===
         deleteProductImages(product);
         deleteProductUploadDirectory(productId);
 
-        // ================================
-        // PRODUCT
-        // ================================
-
+        // === PRODUCT ===
         productRepository.delete(product);
     }
 
 //    @Transactional
-//    public void hardDeleteProduct(UUID id) throws IOException {
+//    public void hardDeleteProduct(UUID id, String reason) throws IOException {
 //
 //        Product product = productRepository.findById(id)
 //                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
@@ -801,19 +793,42 @@ public class ProductService {
 //            );
 //        }
 //
-//        // 🔥 Audit BEFORE deletion
+//        // 🔥 AUDIT BEFORE deletion (CRITICAL)
 //        ProductAudit audit = new ProductAudit();
 //        audit.setAction("HARD_DELETE");
 //        audit.setProductId(product.getId());
 //        audit.setProductName(product.getName());
 //        audit.setTimestamp(LocalDateTime.now());
 //        audit.setPerformedBy(SecurityUtils.currentUsername());
+//        audit.setReason(reason);
 //        productAuditRepository.save(audit);
 //
-//        // 🔥 Delete variants explicitly (clearer than relying on cascade)
+//        // 🔥 AUDIT PRODUCT IMAGES BEFORE PHYSICAL DELETE
+//        if (product.getImages() != null) {
+//
+//            List<ProductImageAudit> imageAudits = new ArrayList<>();
+//
+//            for (ProductImage img : product.getImages()) {
+//
+//                imageAudits.add(ProductImageAudit.builder()
+//                        .action("IMAGE_DELETED_PERMANENTLY")
+//                        .fileName(img.getFileName())
+//                        .filePath(img.getFilePath())
+//                        .productId(product.getId())
+//                        .productName(product.getName())
+//                        .timestamp(LocalDateTime.now())
+//                        .performedBy(SecurityUtils.currentUsername())
+//                        .reason(reason)
+//                        .build());
+//            }
+//
+//            productImageAuditRepository.saveAll(imageAudits);
+//        }
+//
+//        // 🔥 Delete variants explicitly
 //        productVariantRepository.deleteAllByProduct_Id(id);
 //
-//        // 🔥 Delete images
+//        // 🔥 Delete images (physical files)
 //        deleteProductImages(product);
 //        deleteProductUploadDirectory(id);
 //
@@ -823,9 +838,10 @@ public class ProductService {
 
 
     @Transactional
-    public void bulkHardDelete(List<UUID> ids) throws IOException {
+    public void bulkHardDelete(List<UUID> ids, String reason) throws IOException {
+
         for (UUID id : ids) {
-            hardDeleteProduct(id); // reuse existing single-delete logic
+            hardDeleteProduct(id, reason);
         }
     }
 

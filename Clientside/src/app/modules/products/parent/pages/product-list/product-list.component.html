@@ -38,20 +38,61 @@
 
   <!-- ================= TOOLBAR ================= -->
   <div page-toolbar class="product-toolbar">
+    <div class="search">
+      <mat-form-field appearance="fill" class="search-field">
+        <mat-label>Search name, category or SKU</mat-label>
+        <input matInput (input)="onSearchChange($any($event.target).value)">
+        <button matSuffix mat-icon-button (click)="onSearchChange('')">
+          <mat-icon>close</mat-icon>
+        </button>
+      </mat-form-field>
+    </div>
+    <div class="filters">
+      <mat-form-field appearance="fill">
+        <mat-label>Category</mat-label>
+        <mat-select (selectionChange)="onCategoryChange($event.value)">
+          <mat-option [value]="null">All</mat-option>
+          <mat-option *ngFor="let c of categories" [value]="c.id">
+            {{ c.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
 
-    <mat-form-field appearance="fill" class="search-field">
-      <mat-label>Search name, category or SKU</mat-label>
-      <input matInput [(ngModel)]="searchTerm" (ngModelChange)="onSearchChange($event)">
+      <mat-form-field appearance="fill">
+        <mat-label>Supplier</mat-label>
+        <mat-select (selectionChange)="onSupplierChange($event.value)">
+          <mat-option [value]="null">All</mat-option>
+          <mat-option *ngFor="let s of suppliers" [value]="s.id">
+            {{ s.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
 
-      <button matSuffix mat-icon-button *ngIf="searchTerm" (click)="searchTerm=''; applySearch()">
-        <mat-icon>close</mat-icon>
-      </button>
-    </mat-form-field>
+      <mat-form-field appearance="fill">
+        <mat-label>Min Suppliers</mat-label>
+        <input matInput type="number" (input)="onMinSuppliersChange($any($event.target).value)">
+      </mat-form-field>
 
-    <mat-checkbox [checked]="showDeleted" (change)="toggleDeleted()">
-      Show deleted
-    </mat-checkbox>
+      <mat-form-field appearance="fill">
+        <mat-label>Max Suppliers</mat-label>
+        <input matInput type="number" (input)="onMaxSuppliersChange($any($event.target).value)">
+      </mat-form-field>
 
+      <!-- STATUS FILTER -->
+      <mat-form-field *ngIf="canManageDeleted" appearance="fill">
+        <mat-label>Status</mat-label>
+        <mat-select (selectionChange)="onStatusChange($event.value)">
+          <mat-option value="all">All</mat-option>
+          <mat-option value="active">Active</mat-option>
+          <mat-option value="deleted">Deleted</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- SHOW DELETED -->
+      <mat-checkbox *ngIf="canManageDeleted" (change)="onToggleShowDeleted($event.checked)">
+        Show deleted
+      </mat-checkbox>
+    </div>
   </div>
 
   <!-- ================= CONTENT ================= -->
@@ -167,9 +208,7 @@
               <span class="sortable-content">
                 Name
                 <mat-icon class="sort-icon">
-                  {{ sortField === 'name'
-                  ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-                  : 'unfold_more' }}
+                  {{ getSortIcon('name') }}
                 </mat-icon>
               </span>
             </th>
@@ -184,16 +223,16 @@
 
           <!-- CATEGORY -->
           <ng-container matColumnDef="category">
-            <th mat-header-cell *matHeaderCellDef (click)="sortBy('category')" class="sortable"
+            <th mat-header-cell *matHeaderCellDef (click)="sortBy('category.name')" class="sortable"
               matTooltip="Sort by category" matTooltipPosition="above">
+
               <span class="sortable-content">
                 Category
                 <mat-icon class="sort-icon">
-                  {{ sortField === 'category'
-                  ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-                  : 'unfold_more' }}
+                  {{ getSortIcon('category.name') }}
                 </mat-icon>
               </span>
+
             </th>
 
             <td mat-cell *matCellDef="let row">
@@ -203,8 +242,14 @@
 
           <!-- VARIANTS -->
           <ng-container matColumnDef="variants">
-            <th mat-header-cell *matHeaderCellDef>
-              Variants
+            <th mat-header-cell *matHeaderCellDef (click)="sortBy('variantCount')" class="sortable">
+
+              <span class="sortable-content">
+                Variants
+                <mat-icon class="sort-icon">
+                  {{ getSortIcon('variantCount') }}
+                </mat-icon>
+              </span>
             </th>
 
             <td mat-cell *matCellDef="let row">
@@ -219,9 +264,7 @@
               <span class="sortable-content">
                 SKU
                 <mat-icon class="sort-icon">
-                  {{ sortField === 'sku'
-                  ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-                  : 'unfold_more' }}
+                  {{ getSortIcon('sku') }}
                 </mat-icon>
               </span>
             </th>
@@ -233,8 +276,13 @@
 
           <!-- SUPPLIERS -->
           <ng-container matColumnDef="suppliers">
-            <th mat-header-cell *matHeaderCellDef>
-              Suppliers
+            <th mat-header-cell *matHeaderCellDef (click)="sortBy('supplierCount')" class="sortable">
+              <span class="sortable-content">
+                Suppliers
+                <mat-icon class="sort-icon">
+                  {{ getSortIcon('supplierCount') }}
+                </mat-icon>
+              </span>
             </th>
 
             <td mat-cell *matCellDef="let row">
@@ -249,9 +297,7 @@
               <span class="sortable-content">
                 Status
                 <mat-icon class="sort-icon">
-                  {{ sortField === 'deleted'
-                  ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-                  : 'unfold_more' }}
+                  {{ getSortIcon('deleted') }}
                 </mat-icon>
               </span>
             </th>
@@ -270,9 +316,7 @@
               <span class="sortable-content">
                 Updated
                 <mat-icon class="sort-icon">
-                  {{ sortField === 'updatedAt'
-                  ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-                  : 'unfold_more' }}
+                  {{ getSortIcon('updatedAt') }}
                 </mat-icon>
               </span>
             </th>
@@ -387,8 +431,8 @@
 
     </div>
     <div class="shared-paginator">
-      <mat-paginator [disabled]="loading" [length]="total" [pageSize]="size" [pageSizeOptions]="[5,10,20,50,100]"
-        showFirstLastButtons (page)="changePage($event)">
+      <mat-paginator [disabled]="loading" [length]="totalServerElements" [pageSize]="currentUiPageSize"
+        [pageSizeOptions]="[10,25,50,100]" showFirstLastButtons (page)="changePage($event)">
       </mat-paginator>
     </div>
   </div>

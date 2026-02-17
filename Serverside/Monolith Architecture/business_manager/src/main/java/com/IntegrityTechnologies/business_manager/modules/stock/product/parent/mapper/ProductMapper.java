@@ -33,6 +33,8 @@ public interface ProductMapper {
     @Mapping(target = "variants",
             expression = "java(mapVariants(product.getVariants()))")
     @Mapping(target = "minimumPercentageProfit", source = "minimumPercentageProfit")
+    @Mapping(target = "updatedAt",
+            expression = "java(product.getUpdatedAt() != null ? product.getUpdatedAt() : product.getCreatedAt())")
     ProductDTO toDTO(Product product);
 
 

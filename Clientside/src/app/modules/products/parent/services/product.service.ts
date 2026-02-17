@@ -60,32 +60,55 @@ export class ProductService {
     );
   }
 
-  bulkSoftDelete(ids: string[]) {
-    return this.http.delete(`${this.base}/soft/bulk`, { body: ids });
+  bulkSoftDelete(ids: string[], reason?: string | null) {
+    return this.http.delete(`${this.base}/soft/bulk`, {
+      body: { ids, reason }
+    });
   }
 
-  bulkRestore(ids: string[]) {
-    return this.http.put(`${this.base}/restore/bulk`, ids);
+  bulkRestore(ids: string[], reason?: string | null) {
+    return this.http.put(`${this.base}/restore/bulk`, {
+      ids,
+      reason
+    });
   }
 
-  bulkHardDelete(ids: string[]) {
-    return this.http.delete(`${this.base}/hard/bulk`, { body: ids });
+  bulkHardDelete(ids: string[], reason?: string | null) {
+    return this.http.delete(`${this.base}/hard/bulk`, {
+      body: { ids, reason }
+    });
   }
 
   update(id: string, payload: any) {
     return this.http.patch<Product>(`${this.base}/${id}`, payload);
   }
 
-  softDelete(id: string) {
-    return this.http.delete(`${this.base}/soft/${id}`);
+  softDelete(id: string, reason?: string | null) {
+    return this.http.delete(
+      `${this.base}/soft/${id}`,
+      {
+        params: reason ? { reason } : {}
+      }
+    );
   }
 
-  restore(id: string) {
-    return this.http.put(`${this.base}/restore/${id}`, {});
+  restore(id: string, reason?: string | null) {
+    return this.http.put(
+      `${this.base}/restore/${id}`,
+      {},
+      {
+        params: reason ? { reason } : {}
+      }
+    );
   }
 
-  hardDelete(id: string) {
-    return this.http.delete(`${this.base}/hard/${id}`);
+  hardDelete(id: string, reason?: string | null) {
+    return this.http.delete(
+      `${this.base}/hard/${id}`,
+      {
+        params: reason ? { reason } : {}
+      }
+    );
   }
 
   /* =======================

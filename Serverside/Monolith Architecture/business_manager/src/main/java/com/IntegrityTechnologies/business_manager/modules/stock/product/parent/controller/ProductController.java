@@ -1,6 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.controller;
 
+import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import com.IntegrityTechnologies.business_manager.common.PageWrapper;
+import com.IntegrityTechnologies.business_manager.common.bulk.BulkActionRequest;
 import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
 import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.*;
@@ -57,25 +59,42 @@ public class ProductController {
     @GetMapping("/advanced")
     public ResponseEntity<PageWrapper<ProductDTO>> getProductsAdvanced(
             @RequestParam(required = false) List<Long> categoryIds,
+            @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String description,
-            @RequestParam(required = false) String keyword, // ✅ NEW
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Double minPrice,
             @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false) Boolean deleted,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sortBy,
             @RequestParam(defaultValue = "asc") String direction,
-            @RequestParam(defaultValue = "false") boolean includeDeleted
-    ) {
+            @RequestParam(defaultValue = "false") boolean includeDeleted,
+            @RequestParam(required = false) Integer minSuppliers,
+            @RequestParam(required = false) Integer maxSuppliers,
+            @RequestParam(required = false) UUID supplierId
+            ) {
+        if (categoryId != null) {
+            categoryIds = List.of(categoryId);
+        }
+
         var result = productService.getProductsAdvanced(
                 categoryIds,
                 name,
                 description,
-                keyword, // ✅ pass through
+                keyword,
                 minPrice != null ? BigDecimal.valueOf(minPrice) : null,
                 maxPrice != null ? BigDecimal.valueOf(maxPrice) : null,
-                page, size, sortBy, direction, includeDeleted
+                deleted, // ✅ pass
+                page,
+                size,
+                sortBy,
+                direction,
+                includeDeleted,
+                minSuppliers,
+                maxSuppliers,
+                supplierId
         );
         return ResponseEntity.ok(new PageWrapper<>(result));
     }
@@ -320,25 +339,44 @@ public class ProductController {
     @PreAuthorize("hasRole('SUPERUSER')")
     @DeleteMapping("/hard/{id}")
     @Operation(summary = "Permanently delete a product and its images")
-    public ResponseEntity<Void> hardDeleteProduct(@PathVariable UUID id) throws IOException {
-        productService.hardDeleteProduct(id);
+    public ResponseEntity<Void> hardDeleteProduct(
+            @PathVariable UUID id,
+            @RequestParam(required = false) String reason
+    ) throws IOException {
+
+        productService.hardDeleteProduct(id, reason);
+
         return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
     @DeleteMapping("/soft/{id}")
     @Operation(summary = "Soft delete a product (mark as deleted)")
-    public ResponseEntity<?> softDeleteProduct(@PathVariable UUID id) {
-        return productService.softDeleteProduct(id);
+    public ResponseEntity<ApiResponse> softDeleteProduct(
+            @PathVariable UUID id,
+            @RequestParam(required = false) String reason
+    ) {
+
+        return productService.softDeleteProduct(id, reason);
     }
+
 
     @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
     @PutMapping("/restore/{id}")
     @Operation(summary = "Restore a soft-deleted product")
-    public ResponseEntity<Void> restoreProduct(@PathVariable UUID id) {
-        productService.restoreProduct(id);
+    public ResponseEntity<Void> restoreProduct(
+            @PathVariable UUID id,
+            @RequestParam(required = false) String reason
+    ) {
+
+        productService.restoreProduct(id, reason);
+
         return ResponseEntity.noContent().build();
     }
+
+    /* =============================
+   BULK DELETE & RESTORE
+   ============================= */
 
     /* =============================
    BULK DELETE & RESTORE
@@ -347,24 +385,43 @@ public class ProductController {
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @DeleteMapping("/soft/bulk")
     @Operation(summary = "Soft delete products in bulk")
-    public ResponseEntity<Void> bulkSoftDelete(@RequestBody List<UUID> ids) {
-        productService.bulkSoftDelete(ids);
+    public ResponseEntity<Void> bulkSoftDelete(
+            @RequestBody BulkActionRequest request
+    ) {
+        productService.bulkSoftDelete(
+                request.getIds(),
+                request.getReason()
+        );
         return ResponseEntity.noContent().build();
     }
+
 
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @PutMapping("/restore/bulk")
     @Operation(summary = "Restore soft-deleted products in bulk")
-    public ResponseEntity<Void> bulkRestore(@RequestBody List<UUID> ids) {
-        productService.bulkRestore(ids);
+    public ResponseEntity<Void> bulkRestore(
+            @RequestBody BulkActionRequest request
+    ) {
+        productService.bulkRestore(
+                request.getIds(),
+                request.getReason()
+        );
         return ResponseEntity.noContent().build();
     }
+
 
     @PreAuthorize("hasRole('SUPERUSER')")
     @DeleteMapping("/hard/bulk")
     @Operation(summary = "Hard delete products in bulk")
-    public ResponseEntity<Void> bulkHardDelete(@RequestBody List<UUID> ids) throws IOException {
-        productService.bulkHardDelete(ids);
+    public ResponseEntity<Void> bulkHardDelete(
+            @RequestBody BulkActionRequest request
+    ) throws IOException {
+
+        productService.bulkHardDelete(
+                request.getIds(),
+                request.getReason()
+        );
+
         return ResponseEntity.noContent().build();
     }
 
