@@ -1,10 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.user.service;
 
+import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
-import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
 import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.exception.*;
-import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.UserImageDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.mapper.UserImageMapper;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
@@ -17,16 +16,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.Comparator;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -38,7 +39,6 @@ public class UserImageService {
     private final UserRepository userRepository;
     private final UserImageRepository userImageRepository;
     private final UserImageAuditRepository userImageAuditRepository;
-    private final FileStorageProperties fileStorageProperties;
     private final FileStorageService fileStorageService;
     private final PrivilegesChecker privilegesChecker;
 
@@ -55,49 +55,35 @@ public class UserImageService {
     }
 
     /* ====================== SAVE FILES ====================== */
-    public Map<String, String> saveFiles(List<FIleUploadDTO> fileDTOs, String folderName, String baseDir) throws IOException {
+    public Map<String, String> saveFiles(List<FIleUploadDTO> fileDTOs, String folderName) throws IOException {
 
         Map<String, String> urls = new HashMap<>();
-        Path userDir = Paths.get(baseDir, folderName).toAbsolutePath().normalize();
 
-        // Create and hide folders
-        createAndHideBaseFolders(baseDir);
-        if (!Files.exists(userDir)) Files.createDirectories(userDir);
-        fileStorageService.hidePath(userDir);
+        Path userDir = fileStorageService.initDirectory(
+                fileStorageService.userRoot().resolve(folderName)
+        );
 
         for (FIleUploadDTO fileDTO : fileDTOs) {
+
             MultipartFile actualFile = fileDTO.getFile();
             if (actualFile.isEmpty()) continue;
+
             checkDiskSpace(userDir, actualFile.getSize());
 
             String fileName = System.currentTimeMillis() + "_" + actualFile.getOriginalFilename();
-            Path filePath = userDir.resolve(fileName);
-            actualFile.transferTo(filePath.toFile());
-            fileStorageService.hidePath(filePath);
 
-            // Use secure API path, not physical path
-            urls.put("/api/users/images/" + folderName + "/" + fileName, fileDTO.getDescription());
+            try (InputStream in = actualFile.getInputStream()) {
+
+                Path saved = fileStorageService.saveFile(userDir, fileName, in);
+                fileStorageService.secure(saved);
+            }
+
+            urls.put("/api/users/images/" + folderName + "/" + fileName,
+                    fileDTO.getDescription());
         }
 
         return urls;
     }
-
-    private void createAndHideBaseFolders(String baseDir) throws IOException {
-        Path basePath = Paths.get(baseDir).toAbsolutePath().normalize();
-        Path uploadsFolder = basePath.getParent();
-
-        if (uploadsFolder != null && !Files.exists(uploadsFolder)) {
-            Files.createDirectories(uploadsFolder);
-            fileStorageService.hidePath(uploadsFolder);
-        }
-
-        if (!Files.exists(basePath)) {
-            Files.createDirectories(basePath);
-        }
-        fileStorageService.hidePath(basePath);
-    }
-
-
 
     private void checkDiskSpace(Path path, long fileSize) {
         if (path.toFile().getFreeSpace() < fileSize) throw new StorageFullException("Not enough disk space to save file");
@@ -197,8 +183,10 @@ public class UserImageService {
 
             for (UserImage image : authorizedImages) {
 
-                Path filePath = Paths.get(fileStorageProperties.getUserUploadDir(), image.getFileName())
-                        .toAbsolutePath().normalize();
+                Path filePath = fileStorageService.userRoot()
+                        .resolve(image.getUser().getUploadFolder())
+                        .resolve(image.getFileName())
+                        .normalize();
 
                 if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
                     log.warn("Missing image file: {}", image.getFileName());
@@ -272,7 +260,9 @@ public class UserImageService {
             );
         }
 
-        Path userDir = Paths.get(fileStorageProperties.getUserUploadDir(), target.getUploadFolder()).toAbsolutePath().normalize();
+        Path userDir = fileStorageService.userRoot()
+                .resolve(target.getUploadFolder())
+                .normalize();
 
         // Create temp zip file
         File tempZip = File.createTempFile("user-images-", ".zip");
@@ -344,7 +334,9 @@ public class UserImageService {
         }
 
         // 4. Normalize path and ensure file exists
-        Path userDir = Paths.get(fileStorageProperties.getUserUploadDir(), target.getUploadFolder()).toAbsolutePath().normalize();
+        Path userDir = fileStorageService.userRoot()
+                .resolve(target.getUploadFolder())
+                .normalize();
         Path filePath = userDir.resolve(image.getFileName()).normalize();
 
         if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
@@ -500,8 +492,10 @@ public class UserImageService {
 
     public ResponseEntity<?> harddeleteUserImage(String identifier, String filename, Authentication authentication) throws IOException {
         User target = validateAccess(identifier, authentication, "delete");
-        Path filePath = Paths.get(fileStorageProperties.getUserUploadDir(), target.getUploadFolder(), filename).toAbsolutePath().normalize();
-
+        Path filePath = fileStorageService.userRoot()
+                .resolve(target.getUploadFolder())
+                .resolve(filename)
+                .normalize();
         if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
             throw new DirectoryNotFoundException("User", target.getUsername(), filePath.toString());
         }
@@ -509,8 +503,9 @@ public class UserImageService {
         Files.delete(filePath);
 
         // If user directory is empty after deletion, remove it
-        Path baseDir = Paths.get(fileStorageProperties.getUserUploadDir()).toAbsolutePath().normalize();
-        Path userDir = baseDir.resolve(target.getUploadFolder()).normalize();
+        Path userDir = fileStorageService.userRoot()
+                .resolve(target.getUploadFolder())
+                .normalize();
         try (var files = Files.list(userDir)) {
             if (!files.findAny().isPresent()) {
                 Files.deleteIfExists(userDir);
@@ -540,7 +535,9 @@ public class UserImageService {
 
     public ResponseEntity<?> harddeleteAllUserImages(String identifier, Authentication authentication) throws IOException {
         User target = validateAccess(identifier, authentication, "delete");
-        Path userDir = Paths.get(fileStorageProperties.getUserUploadDir(), target.getUploadFolder()).toAbsolutePath().normalize();
+        Path userDir = fileStorageService.userRoot()
+                .resolve(target.getUploadFolder())
+                .normalize();
 
         if (!Files.exists(userDir) || !Files.isDirectory(userDir)) {
             throw new DirectoryNotFoundException("User", target.getUsername(), userDir.toString());
@@ -568,10 +565,6 @@ public class UserImageService {
     }
 
     public void deleteUserUploadDirectory(Path userDir) throws IOException {
-        if (Files.exists(userDir) && Files.isDirectory(userDir)) {
-            Files.walk(userDir).sorted(Comparator.reverseOrder()).forEach(path -> {
-                try { Files.deleteIfExists(path); } catch (IOException e) { e.printStackTrace(); }
-            });
-        }
+        fileStorageService.deleteDirectory(userDir);
     }
 }

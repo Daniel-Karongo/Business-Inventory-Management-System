@@ -258,13 +258,105 @@ public class SupplierService {
         }
 
         // 9️⃣ Log supplier audit
-        logSupplierAuditAsync(supplier, "CREATED", null, null, null, "New supplier added");
+        logSupplierAuditAsync(supplier, "CREATED_BULK", null, null, null, "New supplier added");
 
         // 10️⃣ Return DTO
         return supplierMapper.toDTO(
                 supplierRepository.findById(supplier.getId())
                         .orElseThrow(() -> new IllegalStateException("Supplier not found after save"))
         );
+    }
+
+    @Transactional
+    public Supplier createMinimalSupplier(
+            String supplierName,
+            Category category
+    ) {
+
+        Optional<Supplier> existing =
+                supplierRepository.findByNameIgnoreCase(supplierName);
+
+    /* =======================================================
+       EXISTING SUPPLIER
+    ======================================================= */
+
+        if (existing.isPresent()) {
+
+            Supplier supplier = existing.get();
+
+            if (category.getSuppliers() == null) {
+                category.setSuppliers(new HashSet<>());
+            }
+
+            if (!category.getSuppliers().contains(supplier)) {
+                category.getSuppliers().add(supplier);
+                categoryRepository.save(category);
+
+                logSupplierAuditAsync(
+                        supplier,
+                        "UPDATED",
+                        "categories",
+                        null,
+                        String.valueOf(category.getId()),
+                        "Bulk import: linked supplier to category '" + category.getName() + "'"
+                );
+            }
+
+            return supplier;
+        }
+
+    /* =======================================================
+       CREATE MINIMAL SUPPLIER
+    ======================================================= */
+
+        Supplier supplier = Supplier.builder()
+                .name(supplierName)
+                .uploadFolder(UUID.randomUUID() + "_" + System.currentTimeMillis())
+                .deleted(false)
+                .build();
+
+        supplier.setCreatedAt(LocalDateTime.now());
+
+        supplier = supplierRepository.save(supplier);
+
+    /* =======================================================
+       AUDIT: CREATED
+    ======================================================= */
+
+        logSupplierAuditAsync(
+                supplier,
+                "CREATED",
+                null,
+                null,
+                null,
+                "Bulk import: minimal supplier auto-created"
+        );
+
+    /* =======================================================
+       ATTACH TO CATEGORY
+    ======================================================= */
+
+        if (category.getSuppliers() == null) {
+            category.setSuppliers(new HashSet<>());
+        }
+
+        category.getSuppliers().add(supplier);
+        categoryRepository.save(category);
+
+    /* =======================================================
+       AUDIT: CATEGORY LINK
+    ======================================================= */
+
+        logSupplierAuditAsync(
+                supplier,
+                "UPDATED",
+                "categories",
+                null,
+                String.valueOf(category.getId()),
+                "Bulk import: supplier linked to category '" + category.getName() + "'"
+        );
+
+        return supplier;
     }
 
     @Transactional
@@ -471,8 +563,11 @@ public class SupplierService {
         // 👇 DELETE FILES *after* transaction commits
         suppliers.forEach(s -> transactionalFileManager.runAfterCommit(() -> {
             try {
-                Path dir = supplierFileStorageService.getSupplierDirectory(s.getUploadFolder());
-                fileStorageService.deleteVisibleOrHiddenDirectory(dir);
+                Path dir = fileStorageService.supplierRoot()
+                        .resolve(s.getUploadFolder())
+                        .normalize();
+
+                fileStorageService.deleteDirectory(dir);
             } catch (Exception e) {
                 log.error("Failed to delete supplier directory {}: {}", s.getUploadFolder(), e.getMessage());
             }

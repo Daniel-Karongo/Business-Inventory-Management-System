@@ -32,21 +32,19 @@ import java.util.*;
 public class SupplierFileStorageService {
 
     private final FileStorageService fileStorageService;
-    private final FileStorageProperties properties;
     private final TransactionalFileManager transactionalFileManager;
 
     private Path root() {
-        return Paths.get(properties.getSupplierUploadDir()).toAbsolutePath().normalize();
+        return fileStorageService.supplierRoot();
     }
 
     /**
      * Ensure supplier directory exists and return it.
      */
     public Path getSupplierDirectory(String uploadFolder) throws IOException {
-        Path supplierDir = root().resolve(uploadFolder).normalize();
-        Files.createDirectories(supplierDir);
-        fileStorageService.hidePathIfSupported(supplierDir);
-        return supplierDir;
+        return fileStorageService.initDirectory(
+                root().resolve(uploadFolder)
+        );
     }
 
     /**
@@ -72,8 +70,7 @@ public class SupplierFileStorageService {
 
             try (InputStream in = file.getInputStream()) {
                 Path saved = fileStorageService.saveFile(dir, fileName, in);
-                transactionalFileManager.track(saved); // for rollback cleanup
-                fileStorageService.hidePath(saved);
+                transactionalFileManager.track(saved);
 
                 String publicUrl = "/api/suppliers/images/" + supplier.getUploadFolder() + "/" + fileName;
 
@@ -103,26 +100,6 @@ public class SupplierFileStorageService {
         Path pathToDelete = resolveImagePath(uploadFolder, filename);
         fileStorageService.deleteFile(pathToDelete);
     }
-
-    /**
-     * Delete a supplier directory immediately.
-     */
-    public void deleteSupplierDirectory(String uploadDir) throws IOException {
-        Path dir = root().resolve(uploadDir).normalize();
-        fileStorageService.deleteVisibleOrHiddenDirectory(dir);
-    }
-
-    /**
-     * Schedule supplier directory deletion after successful DB commit.
-     */
-    public void deleteSupplierDirectoryAfterCommit(String uploadDir) {
-        Path supplierDir = root().resolve(uploadDir).normalize();
-        fileStorageService.deleteDirectoryAfterCommit(supplierDir, "supplier");
-    }
-
-    /* ====================
-       Utilities
-       ==================== */
 
     private String sanitizeOriginalFileName(String original) {
         if (original == null || original.isBlank()) return "file";

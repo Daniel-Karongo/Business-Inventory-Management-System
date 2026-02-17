@@ -18,4 +18,6 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
 
     List<InventoryItem> findByProductVariant_Product_Id(UUID productId);
     Optional<InventoryItem> findFirstByProductVariantId(UUID productVariantId);
+    void deleteAllByProductId(UUID productId);
+    boolean existsByProductId(UUID id);
 }

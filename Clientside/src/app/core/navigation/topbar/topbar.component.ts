@@ -196,14 +196,21 @@ export class TopbarComponent implements OnInit {
   private finalizeLogoutCurrent() {
     this.auth.logout().subscribe(() => {
       this.auth.clearLocalState();
-      this.router.navigate(['/login']);
+      this.router.navigate(['/login'], {
+        replaceUrl: true,
+        queryParams: { reason: 'idle' }
+      });
+
     });
   }
 
   private finalizeLogoutAll() {
     this.auth.logoutAll().subscribe(() => {
       this.auth.clearLocalState();
-      this.router.navigate(['/login']);
+      this.router.navigate(['/login'], {
+        replaceUrl: true,
+        queryParams: { reason: 'idle' }
+      });
     });
   }
 }

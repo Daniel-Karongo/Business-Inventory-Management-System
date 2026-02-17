@@ -21,8 +21,8 @@
         <strong>{{ file.file.name }}</strong>
       </div>
 
-      <div class="entity-checkbox">
-        <mat-checkbox [(ngModel)]="file.assignToEntity">
+      <div class="entity-checkbox" *ngIf="file.assignedRowIndexes.length">
+        <mat-checkbox [(ngModel)]="file.assignToEntity" [disabled]="!file.assignedRowIndexes.length">
           Assign to entity
         </mat-checkbox>
       </div>

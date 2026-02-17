@@ -85,4 +85,6 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     @Modifying
     @Query(value = "DELETE FROM categories WHERE id = :categoryId", nativeQuery = true)
     void deleteCategoryById(@Param("categoryId") Long categoryId);
+
+    boolean existsByNameIgnoreCase(String categoryName);
 }

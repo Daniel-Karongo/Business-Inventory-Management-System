@@ -4,7 +4,6 @@ import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.common.PhoneAndEmailNormalizer;
 import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
-import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
 import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
@@ -52,7 +51,6 @@ public class UserService {
     private final UserAuditRepository userAuditRepository;
     private final UserImageAuditRepository userImageAuditRepository;
     private final PasswordEncoder passwordEncoder;
-    private final FileStorageProperties fileStorageProperties;
     private final UserImageService userImageService;
     private final PrivilegesChecker privilegesChecker;
     private final FileStorageService fileStorageService;
@@ -126,12 +124,10 @@ public class UserService {
         }
 
         // 5️⃣ Create actual folder on disk
-        Path baseUserUploadDir = Paths.get(fileStorageProperties.getUserUploadDir());
-        Path userFolderPath = baseUserUploadDir.resolve(uploadFolder);
-        // Create directories if they don't exist
-        if (!Files.exists(userFolderPath)) Files.createDirectories(userFolderPath);
-        fileStorageService.hidePath(userFolderPath);
-        // Track folder for rollback cleanup
+        Path userFolderPath = fileStorageService.initDirectory(
+                fileStorageService.userRoot().resolve(uploadFolder)
+        );
+
         transactionalFileManager.track(userFolderPath);
 
 
@@ -253,10 +249,9 @@ public class UserService {
 
         User target = validateAccess(identifier, auth, "update images");
 
-        Path userDir = Paths.get(
-                fileStorageProperties.getUserUploadDir(),
-                target.getUploadFolder()
-        ).toAbsolutePath().normalize();
+        Path userDir = fileStorageService.userRoot()
+                .resolve(target.getUploadFolder())
+                .normalize();
 
     /* =====================================================
        1) Optionally soft-delete existing images
@@ -509,18 +504,6 @@ public class UserService {
         user.setDeleted(false);
         userRepository.save(user);
 
-//        // Hide images
-//        Path userDir = Paths.get(fileStorageProperties.getUserUploadDir(), user.getUploadFolder())
-//                .toAbsolutePath().normalize();
-//        if (Files.exists(userDir)) {
-//            Files.walk(userDir)
-//                    .filter(Files::isRegularFile)
-//                    .forEach(path -> {
-//                        try { fileStorageService.hidePath(path); } catch (IOException e) { log.warn("Failed to unhide file: {}", path, e); }
-//                    });
-//            fileStorageService.hidePath(userDir);
-//        }
-
         // Restore images in DB & audit
         if (user.getImages() != null) {
             user.getImages().forEach(image -> {
@@ -612,8 +595,9 @@ public class UserService {
         }
 
         // Delete files from disk
-        Path userDir = Paths.get(fileStorageProperties.getUserUploadDir(), user.getUploadFolder())
-                .toAbsolutePath().normalize();
+        Path userDir = fileStorageService.userRoot()
+                .resolve(user.getUploadFolder())
+                .normalize();
 
         // Delete the user
         userRepository.deleteUserFromBranch(user.getId());
@@ -666,8 +650,7 @@ public class UserService {
 
         Map<String, String> uploadedUrls = userImageService.saveFiles(
                 newFiles,
-                target.getUploadFolder(),
-                fileStorageProperties.getUserUploadDir()
+                target.getUploadFolder()
         );
 
         for (String url : uploadedUrls.keySet()) {
@@ -891,15 +874,13 @@ public class UserService {
                                   UUID creatorId, String creatorUsername) throws IOException {
         if (files == null || files.isEmpty()) return;
 
-        // Base upload directory on disk
-        Path baseDir = Paths.get(fileStorageProperties.getUserUploadDir()).toAbsolutePath().normalize();
-        Path userUploadDir = baseDir.resolve(uploadFolder);
+        Path userUploadDir = fileStorageService.userRoot()
+                .resolve(uploadFolder)
+                .normalize();
 
-        // Track folder for rollback
         transactionalFileManager.track(userUploadDir);
 
-        // Save files via UserImageService (returns secure API paths)
-        Map<String, String> apiUrls = userImageService.saveFiles(files, uploadFolder, fileStorageProperties.getUserUploadDir());
+        Map<String, String> apiUrls = userImageService.saveFiles(files, uploadFolder);
 
         for (String apiUrl : apiUrls.keySet()) {
             // Extract the filename from API URL

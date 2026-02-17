@@ -92,20 +92,30 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
             @CookieValue(name = "access_token", required = false) String token,
+            HttpServletRequest request,
             HttpServletResponse response
     ) {
+
         if (token != null) {
             authService.logoutByToken(token);
         }
 
+        boolean isSecure = request.isSecure();
+
         Cookie cookie = new Cookie("access_token", "");
         cookie.setHttpOnly(true);
-        cookie.setSecure(false);
+        cookie.setSecure(isSecure);
         cookie.setPath("/");
         cookie.setMaxAge(0);
-        cookie.setAttribute("SameSite", "Lax");
+
+        if (isSecure) {
+            cookie.setAttribute("SameSite", "None");
+        } else {
+            cookie.setAttribute("SameSite", "Lax");
+        }
 
         response.addCookie(cookie);
+
         return ResponseEntity.ok().build();
     }
 

@@ -1,6 +1,5 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service;
 
-import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
 import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantDTO;
@@ -16,10 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.UUID;
 
 @Service
@@ -101,18 +97,23 @@ public class VariantBarcodeService {
     public Path generateBarcodeImage(String barcode, ProductVariant variant) {
 
         try {
-            Path dir = initAndHideVariantBarcodeDir(variant);
 
-            Files.createDirectories(dir);
-            fileStorageService.hidePathIfSupported(dir);
+            Path barcodeDir = fileStorageService.initDirectory(
+                    fileStorageService.productRoot()
+                            .resolve(variant.getProduct().getId().toString())
+                            .resolve("variants")
+                            .resolve(variant.getId().toString())
+                            .resolve("barcode")
+            );
 
-            Path output = dir.resolve(barcode + ".png");
+            Path output = barcodeDir.resolve(barcode + ".png");
 
             Code128Writer writer = new Code128Writer();
             BitMatrix matrix = writer.encode(barcode, BarcodeFormat.CODE_128, 400, 120);
             MatrixToImageWriter.writeToPath(matrix, "PNG", output);
 
-            fileStorageService.hidePathIfSupported(output);
+            fileStorageService.secure(output); // Make secure() public
+
             log.info("Barcode image created at {}", output);
 
             return output;
@@ -120,23 +121,5 @@ public class VariantBarcodeService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate barcode image", e);
         }
-    }
-
-    private Path initAndHideVariantBarcodeDir(ProductVariant variant) throws IOException {
-
-        Path barcodeDir =
-                fileStorageService.productRoot()
-                        .resolve(variant.getProduct().getId().toString())
-                        .resolve("variants")
-                        .resolve(variant.getId().toString())
-                        .resolve("barcode")
-                        .normalize();
-
-        fileStorageService.initDirectory(barcodeDir);
-
-        // One call is enough — UploadsInitializer already hid parents
-        fileStorageService.hidePathIfSupported(barcodeDir);
-
-        return barcodeDir;
     }
 }

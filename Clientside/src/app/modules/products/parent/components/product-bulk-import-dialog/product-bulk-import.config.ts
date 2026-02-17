@@ -46,7 +46,7 @@ export const PRODUCT_BULK_IMPORT_CONFIG: BulkImportConfig<
   previewColumns: [
     { key: 'name', label: 'Name' },
     { key: 'categoryName', label: 'Category' },
-    { key: 'variantNames', label: 'Variants' },
+    { key: 'variants', label: 'Variants' },
     { key: 'minimumPercentageProfit', label: 'Min % Profit' }
   ],
 
@@ -95,14 +95,22 @@ export const PRODUCT_BULK_IMPORT_CONFIG: BulkImportConfig<
     };
   },
 
-  mapPreviewRow(row: any) {
-    return {
-      ...row,
-      variantNames: Array.isArray(row.variants)
-        ? row.variants.map((v: any) => v.classification).filter(Boolean).join(', ')
-        : ''
-    };
-  },
+  mapPreviewRow: (row: any) => ({
+    ...row,
+    variants:
+      typeof row.variants === 'string'
+        ? row.variants
+        : Array.isArray(row.variants)
+          ? row.variants
+            .map((v: any) =>
+              typeof v === 'string'
+                ? v
+                : v?.classification ?? ''
+            )
+            .filter(Boolean)
+            .join(', ')
+          : ''
+  }),
 
   submit(_: BulkRequest<any>) {
     return null as any;

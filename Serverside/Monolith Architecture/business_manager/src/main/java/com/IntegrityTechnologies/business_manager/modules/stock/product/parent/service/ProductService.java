@@ -6,11 +6,15 @@ import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.exception.ProductNotFoundException;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleLineItemRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.service.CategoryService;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductCreateDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductFullCreateDTO;
@@ -33,7 +37,7 @@ import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
-import java.util.UUID;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
@@ -84,9 +88,13 @@ public class ProductService {
     private final ProductVariantService productVariantService;
     private final ProductVariantRepository productVariantRepository;
     private final ProductImageService productImageService;
+    private final InventoryItemRepository inventoryItemRepository;
+    private final SaleLineItemRepository saleLineItemRepository;
+    private final SaleRepository saleRepository;
+    private final StockTransactionRepository stockTransactionRepository;
 
     private Path productRoot() {
-        return Paths.get(fileStorageProperties.getProductUploadDir()).toAbsolutePath().normalize();
+        return fileStorageService.productRoot();
     }
 
     /* =============================
@@ -714,21 +722,105 @@ public class ProductService {
     }
 
     @Transactional
-    public void hardDeleteProduct(UUID id) throws IOException {
-        Product p = productRepository.findById(id).orElseThrow(() -> new ProductNotFoundException("Product not found"));
-        // audit before deletion
-        ProductAudit audit = new ProductAudit();
-        audit.setAction("HARD_DELETE");
-        audit.setProductId(p.getId());
-        audit.setProductName(p.getName());
-        audit.setTimestamp(LocalDateTime.now());
-        audit.setPerformedBy(SecurityUtils.currentUsername());
-        productAuditRepository.save(audit);
+    public void hardDeleteProduct(UUID productId) throws IOException {
 
-        deleteProductImages(p);
-        deleteProductUploadDirectory(p.getId());
-        productRepository.delete(p);
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+
+        // 1️⃣ Get all variant IDs
+        List<ProductVariant> variants =
+                productVariantRepository.findByProduct_Id(productId);
+
+        List<UUID> variantIds =
+                variants.stream()
+                        .map(ProductVariant::getId)
+                        .toList();
+
+        // ================================
+        // SALES + PAYMENTS
+        // ================================
+
+        if (!variantIds.isEmpty()) {
+
+            // Delete payments via cascade by deleting sales
+
+            saleLineItemRepository.deleteAllByProductVariantIdIn(variantIds);
+
+            saleRepository.deleteSalesByVariantIds(variantIds);
+        }
+
+        // ================================
+        // STOCK TRANSACTIONS
+        // ================================
+
+        stockTransactionRepository.deleteAllByProductId(productId);
+
+        // ================================
+        // INVENTORY
+        // ================================
+
+        inventoryItemRepository.deleteAllByProductId(productId);
+
+        // ================================
+        // VARIANT IMAGES
+        // ================================
+
+        for (ProductVariant v : variants) {
+            v.getImages().clear();
+        }
+
+        productVariantRepository.deleteAllByProduct_Id(productId);
+
+        // ================================
+        // PRODUCT IMAGES
+        // ================================
+
+        deleteProductImages(product);
+        deleteProductUploadDirectory(productId);
+
+        // ================================
+        // PRODUCT
+        // ================================
+
+        productRepository.delete(product);
     }
+
+//    @Transactional
+//    public void hardDeleteProduct(UUID id) throws IOException {
+//
+//        Product product = productRepository.findById(id)
+//                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+//
+//        // 🔥 BLOCK if inventory exists
+//        boolean hasInventory =
+//                inventoryItemRepository.existsByProductId(id);
+//
+//        if (hasInventory) {
+//            throw new IllegalStateException(
+//                    "Cannot hard delete product. Inventory records exist."
+//            );
+//        }
+//
+//        // 🔥 Audit BEFORE deletion
+//        ProductAudit audit = new ProductAudit();
+//        audit.setAction("HARD_DELETE");
+//        audit.setProductId(product.getId());
+//        audit.setProductName(product.getName());
+//        audit.setTimestamp(LocalDateTime.now());
+//        audit.setPerformedBy(SecurityUtils.currentUsername());
+//        productAuditRepository.save(audit);
+//
+//        // 🔥 Delete variants explicitly (clearer than relying on cascade)
+//        productVariantRepository.deleteAllByProduct_Id(id);
+//
+//        // 🔥 Delete images
+//        deleteProductImages(product);
+//        deleteProductUploadDirectory(id);
+//
+//        // 🔥 Delete product
+//        productRepository.delete(product);
+//    }
+
 
     @Transactional
     public void bulkHardDelete(List<UUID> ids) throws IOException {

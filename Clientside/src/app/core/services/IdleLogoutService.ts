@@ -20,16 +20,14 @@ export class IdleLogoutService implements OnDestroy {
     'touchstart'
   ];
 
-  /**
-   * 🔑 Bound handler — required to preserve `this`
-   */
   private readonly boundResetTimer = () => this.resetTimer();
 
   constructor(
     private auth: AuthService,
     private router: Router,
     private zone: NgZone
-  ) {}
+  ) {
+  }
 
   /* =========================
      PUBLIC API
@@ -64,30 +62,31 @@ export class IdleLogoutService implements OnDestroy {
   private resetTimer(): void {
     clearTimeout(this.timeoutId);
 
-    this.timeoutId = setTimeout(
-      () => this.logout(),
-      this.idleMs
-    );
+    this.timeoutId = setTimeout(() => {
+      this.logout();
+    }, this.idleMs);
   }
 
   private logout(): void {
     if (this.loggingOut) return;
-    this.loggingOut = true;
 
-    console.log('[IdleLogout] Logging out due to inactivity');
+    this.loggingOut = true;
+    this.stop();
 
     this.zone.run(() => {
       this.auth.logout().subscribe({
         next: () => this.finishLogout(),
-        error: () => this.finishLogout() // fail-safe
+        error: () => this.finishLogout()
       });
     });
   }
 
   private finishLogout(): void {
     this.auth.clearLocalState();
+    this.loggingOut = false;
 
     this.router.navigate(['/login'], {
+      replaceUrl: true,
       queryParams: { reason: 'idle' }
     });
   }

@@ -7,4 +7,6 @@ public class BulkOptions {
     private boolean dryRun = false;
     private boolean skipDuplicates = true;
     private boolean updateExisting;
+    private boolean createMissingCategories = false;
+    private boolean createMissingSuppliers = false;
 }

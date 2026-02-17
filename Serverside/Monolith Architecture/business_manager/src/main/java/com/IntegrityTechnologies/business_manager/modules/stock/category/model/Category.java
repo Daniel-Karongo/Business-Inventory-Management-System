@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -32,10 +33,12 @@ public class Category {
     private Category parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
-    private List<Category> subcategories;
+    @Builder.Default
+    private List<Category> subcategories = new ArrayList<>();
 
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = false)
-    private List<Product> products;
+    @Builder.Default
+    private List<Product> products = new ArrayList<>();;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
@@ -43,6 +46,7 @@ public class Category {
             joinColumns = @JoinColumn(name = "category_id"),
             inverseJoinColumns = @JoinColumn(name = "supplier_id")
     )
+    @Builder.Default
     private Set<Supplier> suppliers = new HashSet<>();
 
 

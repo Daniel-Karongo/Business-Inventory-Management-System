@@ -24,24 +24,4 @@ public class FileStorageProperties {
 
     /** Uploads directory under root (e.g. uploads) */
     private String uploadsDir;
-
-    /* ============================================================
-       LEGACY API (RESTORED FOR COMPATIBILITY)
-       ============================================================ */
-
-    public String getBaseUploadDir() {
-        return rootDir + "/" + uploadsDir;
-    }
-
-    public String getUserUploadDir() {
-        return getBaseUploadDir() + "/users";
-    }
-
-    public String getProductUploadDir() {
-        return getBaseUploadDir() + "/products";
-    }
-
-    public String getSupplierUploadDir() {
-        return getBaseUploadDir() + "/suppliers";
-    }
 }

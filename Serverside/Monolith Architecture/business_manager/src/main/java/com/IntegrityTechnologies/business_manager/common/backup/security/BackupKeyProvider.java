@@ -38,7 +38,7 @@ public class BackupKeyProvider {
                 new SecureRandom().nextBytes(raw);
                 key = Base64.getEncoder().encodeToString(raw);
                 Files.writeString(keyFile, key);
-                fileStorageService.hidePathIfSupported(keyFile);
+                fileStorageService.secure(keyFile);
             }
 
             log.info("🔐 Backup key loaded (fingerprint={})",

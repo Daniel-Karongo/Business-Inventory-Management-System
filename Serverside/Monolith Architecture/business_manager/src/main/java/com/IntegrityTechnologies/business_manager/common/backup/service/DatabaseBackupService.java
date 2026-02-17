@@ -115,7 +115,7 @@ public class DatabaseBackupService {
             Path zipped = BackupCompressionUtil.zip(sqlFile);
             Path finalFile = encryptionService.encrypt(zipped);
 
-            fileStorageService.hidePathIfSupported(finalFile);
+            fileStorageService.secure(finalFile);
 
             /* =========================================================
                Persist history (RELATIVE PATH ONLY)

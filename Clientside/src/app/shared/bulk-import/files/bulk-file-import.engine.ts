@@ -42,25 +42,40 @@ export class BulkFileImportEngine {
         this.utils.normalizeName(entry.name);
 
       let bestIndex: number | null = null;
-      let bestScore = Infinity;
+      let bestScore = 0;
 
       rows.forEach((row, index) => {
 
         const normalizedRow =
           this.utils.normalizeName(row.name);
 
+        if (!normalizedRow) return;
+
+        // 1️⃣ Direct containment match (strongest)
+        if (normalizedFile.includes(normalizedRow)) {
+          bestIndex = index;
+          bestScore = 1;
+          return;
+        }
+
+        // 2️⃣ Similarity ratio
         const distance =
           this.levenshtein(normalizedFile, normalizedRow);
 
-        if (distance < bestScore) {
-          bestScore = distance;
+        const maxLen =
+          Math.max(normalizedFile.length, normalizedRow.length);
+
+        const similarity =
+          1 - distance / maxLen;
+
+        if (similarity > bestScore) {
+          bestScore = similarity;
           bestIndex = index;
         }
       });
 
-      const MAX_DISTANCE = 6;
-
-      if (bestScore > MAX_DISTANCE) {
+      // Only auto-assign if ≥ 80% similarity
+      if (bestScore < 0.8) {
         bestIndex = null;
       }
 

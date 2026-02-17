@@ -49,5 +49,5 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
     List<StockTransaction> findByProductVariantIdAndBranchIdOrderByTimestampDesc(UUID variantId, UUID branchId);
 
     List<StockTransaction> findByTimestampBetween(LocalDateTime from, LocalDateTime to);
-
+    void deleteAllByProductId(UUID productId);
 }

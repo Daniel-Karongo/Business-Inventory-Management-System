@@ -3,7 +3,6 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.
 import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
 import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
-import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.FileAssignmentDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductImage;
@@ -24,7 +23,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,19 +34,14 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProductImageService {
 
-    private final ProductRepository productRepository;
-    private final ProductVariantRepository variantRepository;
     private final ProductImageRepository productImageRepository;
     private final ProductVariantImageService productVariantImageService;
-    private final FileStorageProperties fileStorageProperties;
     private final FileStorageService fileStorageService;
     private final TransactionalFileManager transactionalFileManager;
     private final ProductImageAuditRepository productImageAuditRepository;
 
     private Path productRoot() {
-        return Paths.get(fileStorageProperties.getProductUploadDir())
-                .toAbsolutePath()
-                .normalize();
+        return fileStorageService.productRoot();
     }
 
     @Transactional
@@ -105,8 +98,6 @@ public class ProductImageService {
                 productRoot().resolve(product.getId().toString())
         );
 
-        fileStorageService.hidePathIfSupported(productDir);
-
         List<ProductImage> newImages = new ArrayList<>();
 
         boolean hasPrimaryAlready =
@@ -141,23 +132,25 @@ public class ProductImageService {
             try (InputStream in = file.getInputStream()) {
                 saved = fileStorageService.saveFile(productDir, fileName, in);
                 transactionalFileManager.track(saved);
-                fileStorageService.hidePath(saved);
             }
 
             // ==============================
             // 3️⃣ Generate thumbnail
             // ==============================
 
-            String thumbnailFileName = "thumb_" + fileName;
+            String baseName = fileName.replaceAll("\\.[^.]+$", "");
+            String thumbnailFileName = "thumb_" + baseName + ".jpg";
             Path thumbnailPath = productDir.resolve(thumbnailFileName);
 
             Thumbnails.of(saved.toFile())
-                    .size(300, 300) // square grid ready
+                    .size(300, 300)
                     .outputFormat("jpg")
                     .toFile(thumbnailPath.toFile());
 
             transactionalFileManager.track(thumbnailPath);
-            fileStorageService.hidePath(thumbnailPath);
+
+            // 🔐 Secure thumbnail (since it was not created via saveFile)
+            fileStorageService.secure(thumbnailPath);
 
             // ==============================
             // 4️⃣ Determine primary image

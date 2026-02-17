@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.*;
+import java.nio.file.attribute.DosFileAttributeView;
 import java.util.Comparator;
 
 @Slf4j
@@ -21,10 +22,6 @@ public class FileStorageService {
     private Path storageRoot;
     private Path uploadsRoot;
 
-    /* ============================================================
-       INIT (RELATIVE TO JAR / IDE)
-       ============================================================ */
-
     @PostConstruct
     public void init() {
 
@@ -32,145 +29,80 @@ public class FileStorageService {
                 .toAbsolutePath()
                 .normalize();
 
-        storageRoot = resolveHidden(workingDir.resolve(props.getRootDir()));
-        uploadsRoot = resolveHidden(storageRoot.resolve(props.getUploadsDir()));
+        storageRoot = workingDir.resolve(props.getRootDir()).normalize();
+        uploadsRoot = storageRoot.resolve(props.getUploadsDir()).normalize();
 
-        try {
-            // 1️⃣ Storage root (hidden)
-            Files.createDirectories(storageRoot);
-            hidePathIfSupported(storageRoot);
+        createAndSecure(storageRoot);
+        createAndSecure(uploadsRoot);
 
-            // 2️⃣ Uploads root (hidden)
-            Files.createDirectories(uploadsRoot);
-            hidePathIfSupported(uploadsRoot);
-
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to init storage or uploads root", e);
-        }
-
-        log.info("📁 Storage root initialized at {}", storageRoot);
-        log.info("📁 Uploads root initialized at {}", uploadsRoot);
+        log.info("Storage initialized at {}", storageRoot);
     }
 
     /* ============================================================
-       ROOT ACCESSORS (UNCHANGED API)
+       MODULE ROOTS
        ============================================================ */
 
     public Path productRoot() {
-        return moduleRoot("products");
+        return moduleRoot(".products");
     }
 
     public Path userRoot() {
-        return moduleRoot("users");
+        return moduleRoot(".users");
     }
 
     public Path supplierRoot() {
-        return moduleRoot("suppliers");
+        return moduleRoot(".suppliers");
     }
 
     private Path moduleRoot(String name) {
-        Path dir = resolveHidden(uploadsRoot.resolve(name));
-        try {
-            Files.createDirectories(dir);
-            hidePathIfSupported(dir);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to init module dir: " + dir, e);
-        }
+        Path dir = uploadsRoot.resolve(name).normalize();
+        createAndSecure(dir);
         return dir;
     }
 
     /* ============================================================
-       INTERNAL STORAGE (BACKUPS ETC)
+       INTERNAL ROOT
        ============================================================ */
 
     public Path internalRoot(String name) {
-        Path dir = resolveHidden(storageRoot.resolve(name));
-        try {
-            Files.createDirectories(dir);
-            hidePathIfSupported(dir);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to init internal dir: " + dir, e);
-        }
+        Path dir = storageRoot.resolve("." + name).normalize();
+        createAndSecure(dir);
         return dir;
     }
 
-    public Path toRelative(Path absolutePath) {
-
-        Path normalized = absolutePath.normalize();
-
-        if (!normalized.startsWith(storageRoot)) {
-            throw new IllegalArgumentException("Path is outside storage root");
-        }
-
-        return storageRoot.relativize(normalized);
-    }
-    public Path resolveRelative(String relativePath) {
-
-        Path resolved = storageRoot
-                .resolve(relativePath)
-                .normalize();
-
-        if (!resolved.startsWith(storageRoot)) {
-            throw new IllegalArgumentException("Invalid backup path");
-        }
-
-        return resolved;
-    }
-
     /* ============================================================
-       LEGACY / COMPAT METHODS (RESTORED)
+       FILE OPERATIONS
        ============================================================ */
 
-    public void hidePathIfSupported(Path path) {
-        hidePath(path);
-    }
-
-    public void hidePath(Path path) {
-        if (!Files.exists(path)) return;
-
-        try {
-            if (isWindows()) {
-                Files.setAttribute(path, "dos:hidden", true, LinkOption.NOFOLLOW_LINKS);
-            }
-            // Linux/macOS: handled by dot-folders
-        } catch (Exception ignored) {}
-    }
-
-    public void deleteVisibleOrHiddenDirectory(Path dir) throws IOException {
-        deleteDirectory(dir);
-    }
-
-    /* ============================================================
-       FILE OPS (UNCHANGED)
-       ============================================================ */
-
-    public Path initDirectory(Path dir) throws IOException {
-        Files.createDirectories(dir);
-        hidePathIfSupported(dir);
+    public Path initDirectory(Path dir) {
+        createAndSecure(dir);
         return dir;
     }
 
-    public Path saveFile(Path dir, String filename, InputStream in) throws IOException {
+    public Path saveFile(Path dir, String filename, InputStream in)
+            throws IOException {
+
+        createAndSecure(dir);
+
         Path target = dir.resolve(filename).normalize();
-        Files.createDirectories(dir);
+        validateInsideStorage(target);
+
         Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
-        hidePathIfSupported(target);
+        secure(target);
+
         return target;
     }
 
     public void deleteFile(Path file) throws IOException {
         if (file == null) return;
+        validateInsideStorage(file);
         Files.deleteIfExists(file);
     }
 
-    public void deleteDirectoryAfterCommit(Path dir, String module) {
-        transactionalFileManager.runAfterCommit(() -> {
-            try { deleteDirectory(dir); }
-            catch (IOException ignored) {}
-        });
-    }
-
     public void deleteDirectory(Path dir) throws IOException {
+
+        validateInsideStorage(dir);
+
         if (!Files.exists(dir)) return;
 
         Files.walk(dir)
@@ -182,17 +114,60 @@ public class FileStorageService {
     }
 
     /* ============================================================
-       INTERNAL HELPERS (PRIVATE)
+       SECURITY CORE
        ============================================================ */
 
-    private Path resolveHidden(Path path) {
-        if (isWindows()) return path;
+    private void createAndSecure(Path dir) {
+        try {
+            Files.createDirectories(dir);
 
-        Path parent = path.getParent();
-        String name = path.getFileName().toString();
+            // 🔐 Secure ALL path segments inside storage
+            Path current = storageRoot;
 
-        if (name.startsWith(".")) return path;
-        return parent.resolve("." + name);
+            for (Path segment : storageRoot.relativize(dir)) {
+                current = current.resolve(segment);
+                secure(current);
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to initialize directory: " + dir, e);
+        }
+    }
+
+    public void secure(Path path) {
+
+        if (!Files.exists(path)) return;
+
+        try {
+            if (isWindows()) {
+                DosFileAttributeView view =
+                        Files.getFileAttributeView(path, DosFileAttributeView.class);
+
+                if (view != null) {
+                    view.setHidden(true);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not secure path: {}", path);
+        }
+    }
+
+    private void validateInsideStorage(Path path) {
+
+        if (!path.normalize().startsWith(storageRoot)) {
+            throw new SecurityException("Path outside storage root");
+        }
+    }
+
+    public Path toRelative(Path absolutePath) {
+        validateInsideStorage(absolutePath);
+        return storageRoot.relativize(absolutePath.normalize());
+    }
+
+    public Path resolveRelative(String relativePath) {
+        Path resolved = storageRoot.resolve(relativePath).normalize();
+        validateInsideStorage(resolved);
+        return resolved;
     }
 
     private boolean isWindows() {

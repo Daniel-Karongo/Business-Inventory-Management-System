@@ -153,29 +153,37 @@ export class BulkImportSubmitEngineService {
   executeMultipart<T>({
     submitFn,
     formData,
+    rows,
     title,
     dryRun,
     confirmLabel = 'Import Now',
     columns,
+    onPreviewTransform,
     onFinalSuccess,
-    onConfirmRetry
+    onConfirmRetry,
+    onErrorsApplied
   }: {
     submitFn: (fd: FormData) => Observable<BulkResult<T>>;
     formData: FormData;
+    rows: any[];
     title: string;
     dryRun: boolean;
     confirmLabel?: string;
     columns?: any[];
+    onPreviewTransform?: (res: BulkResult<T>) => void;
     onFinalSuccess: (res: BulkResult<T>) => void;
     onConfirmRetry?: () => void;
+    onErrorsApplied?: (res: BulkResult<T>) => void;
   }) {
 
     submitFn(formData).subscribe({
       next: res => {
 
+        onPreviewTransform?.(res);
+
         /* ================================
            FINAL SUCCESS (NON-DRY RUN)
-           ================================ */
+        ================================ */
 
         if (!dryRun && res.failed === 0) {
           this.snackbar.open(
@@ -187,9 +195,26 @@ export class BulkImportSubmitEngineService {
           return;
         }
 
+        /* =========================================
+          APPLY FIELD-LEVEL ERRORS (LIKE execute)
+        ========================================= */
+
+        rows.forEach(r =>
+          r.patchValue({ _error: '' }, { emitEvent: false })
+        );
+
+        res.errors?.forEach(e => {
+          const row = rows[e.row - 1];
+          if (row) {
+            row.patchValue({ _error: e.message });
+          }
+        });
+
+        onErrorsApplied?.(res);
+
         /* ================================
            PREVIEW OR FAILED
-           ================================ */
+        ================================ */
 
         const ref = this.dialog.open(BulkImportResultDialogComponent, {
           width: '1100px',
@@ -204,6 +229,9 @@ export class BulkImportSubmitEngineService {
         });
 
         ref.afterClosed().subscribe(confirm => {
+
+          onErrorsApplied?.(res); // restore for navigation
+
           if (confirm && onConfirmRetry) {
             onConfirmRetry();
           }

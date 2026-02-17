@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { ReactiveFormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 
 import { ProductService } from '../../services/product.service';
@@ -23,6 +23,7 @@ import { BulkImportWithFilesComponent } from '../../../../../shared/bulk-import/
 import { BulkFileFactoryService } from '../../../../../shared/bulk-import/files/bulk-file-factory.service';
 import { BulkFileLifecycleService } from '../../../../../shared/bulk-import/files/bulk-file-lifecycle.service';
 import { BulkFileImportEngine } from '../../../../../shared/bulk-import/files/bulk-file-import.engine';
+import { BulkImportResultDialogComponent } from '../../../../../shared/components/bulk-import-result-dialog/bulk-import-result-dialog.component';
 
 @Component({
   standalone: true,
@@ -32,6 +33,7 @@ import { BulkFileImportEngine } from '../../../../../shared/bulk-import/files/bu
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    FormsModule,
     BulkImportShellComponent,
     MatFormFieldModule,
     MatInputModule,
@@ -48,6 +50,8 @@ export class ProductBulkImportDialogComponent
   config = PRODUCT_BULK_IMPORT_CONFIG;
 
   zipLoading = false;
+  createMissingCategories = false;
+  createMissingSuppliers = false;
 
   constructor(
     private productService: ProductService,
@@ -134,15 +138,31 @@ export class ProductBulkImportDialogComponent
      DRY RUN (JSON ONLY)
   ========================================================== */
 
+  /* =========================================================
+     DRY RUN
+  ========================================================= */
+
   submit() {
 
     const payload = {
 
-      products: this.rows.value,
+      products: this.rows.value.map((r: any) => ({
+        ...r,
+        supplierNames: r.supplierNames
+          ? r.supplierNames.split(',').map((s: string) => s.trim()).filter(Boolean)
+          : [],
+        variants: r.variants
+          ? r.variants.split(',').map((v: string) => v.trim()).filter(Boolean)
+          : []
+      })),
 
       fileMetadata: this.buildFileMetadata(),
 
-      options: { dryRun: true }
+      options: {
+        dryRun: true,
+        createMissingCategories: this.createMissingCategories,
+        createMissingSuppliers: this.createMissingSuppliers
+      }
     };
 
     const formData = new FormData();
@@ -157,29 +177,49 @@ export class ProductBulkImportDialogComponent
     this.submitEngine.executeMultipart({
       submitFn: fd => this.productService.bulkFullCreate(fd),
       formData,
+      rows: this.rows.controls, // 🔥 CRITICAL
       dryRun: true,
       title: this.config.title,
       confirmLabel: 'Confirm Import',
       columns: this.config.previewColumns,
+      onPreviewTransform: res => {
+        if (this.config.mapPreviewRow && Array.isArray(res.data)) {
+          res.data = res.data.map(r =>
+            this.config.mapPreviewRow!(r)
+          );
+        }
+      },
+      onErrorsApplied: res => this.cacheErrors(res), // 🔥 match users
       onConfirmRetry: () => this.submitBulk(),
       onFinalSuccess: () => { }
     });
   }
 
-
   /* =========================================================
-     FINAL MULTIPART COMMIT
-  ========================================================== */
+     FINAL COMMIT
+  ========================================================= */
 
   submitBulk() {
 
     const payload = {
 
-      products: this.rows.value,
+      products: this.rows.value.map((r: any) => ({
+        ...r,
+        supplierNames: r.supplierNames
+          ? r.supplierNames.split(',').map((s: string) => s.trim()).filter(Boolean)
+          : [],
+        variants: r.variants
+          ? r.variants.split(',').map((v: string) => v.trim()).filter(Boolean)
+          : []
+      })),
 
       fileMetadata: this.buildFileMetadata(),
 
-      options: { dryRun: false }
+      options: {
+        dryRun: false,
+        createMissingCategories: this.createMissingCategories,
+        createMissingSuppliers: this.createMissingSuppliers
+      }
     };
 
     const formData = new FormData();
@@ -194,9 +234,18 @@ export class ProductBulkImportDialogComponent
     this.submitEngine.executeMultipart({
       submitFn: fd => this.productService.bulkFullCreate(fd),
       formData,
+      rows: this.rows.controls,
       dryRun: false,
       title: this.config.title,
       columns: this.config.previewColumns,
+      onPreviewTransform: res => {
+        if (this.config.mapPreviewRow && Array.isArray(res.data)) {
+          res.data = res.data.map(r =>
+            this.config.mapPreviewRow!(r)
+          );
+        }
+      },
+      onErrorsApplied: res => this.cacheErrors(res),
       onFinalSuccess: () => this.dialogRef.close(true)
     });
   }

@@ -1,6 +1,5 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service;
 
-import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
 import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
@@ -26,7 +25,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
@@ -39,7 +37,6 @@ public class ProductVariantImageService {
     private final ProductVariantRepository variantRepo;
     private final ProductVariantImageRepository imageRepo;
     private final FileStorageService fileStorageService;
-    private final FileStorageProperties props;
     private final TransactionalFileManager transactionalFileManager;
 
     /* ============================================================
@@ -47,9 +44,7 @@ public class ProductVariantImageService {
        ============================================================ */
 
     private Path root() {
-        return Paths.get(props.getProductUploadDir())
-                .toAbsolutePath()
-                .normalize();
+        return fileStorageService.productRoot();
     }
 
     /* ============================================================
@@ -74,13 +69,23 @@ public class ProductVariantImageService {
 
         if (file == null || file.isEmpty()) return;
 
-        Path variantDir = root()
-                .resolve(variant.getProduct().getId().toString())
-                .resolve("variants")
-                .resolve(variant.getId().toString());
+    /* ============================================================
+       1️⃣ CREATE SECURE VARIANT DIRECTORY (ALWAYS HIDDEN)
+       ============================================================ */
 
-        fileStorageService.initDirectory(variantDir);
-        fileStorageService.hidePathIfSupported(variantDir);
+        Path variantDir = fileStorageService.initDirectory(
+                root()
+                        .resolve(variant.getProduct().getId().toString())
+                        .resolve("variants")
+                        .resolve(variant.getId().toString())
+        );
+
+        // 🔐 Force-secure directory (important for Windows)
+        fileStorageService.secure(variantDir);
+
+    /* ============================================================
+       2️⃣ BUILD SAFE FILE NAME
+       ============================================================ */
 
         String sanitized = sanitize(file.getOriginalFilename());
 
@@ -91,36 +96,39 @@ public class ProductVariantImageService {
 
         Path saved;
 
-        /* =========================
-           SAVE ORIGINAL
-           ========================= */
+    /* ============================================================
+       3️⃣ SAVE ORIGINAL (ALREADY SECURED BY saveFile)
+       ============================================================ */
 
         try (InputStream in = file.getInputStream()) {
 
             saved = fileStorageService.saveFile(variantDir, fileName, in);
-
             transactionalFileManager.track(saved);
-            fileStorageService.hidePath(saved);
         }
 
-        /* =========================
-           GENERATE THUMBNAIL
-           ========================= */
+    /* ============================================================
+       4️⃣ GENERATE HIGH-QUALITY THUMBNAIL
+       ============================================================ */
 
-        String thumbnailName = "thumb_" + fileName;
+        String baseName = fileName.replaceAll("\\.[^.]+$", "");
+        String thumbnailName = "thumb_" + baseName + ".jpg";
         Path thumbnailPath = variantDir.resolve(thumbnailName);
 
         Thumbnails.of(saved.toFile())
                 .size(300, 300)
                 .outputFormat("jpg")
+                .outputQuality(0.95f)          // 🔥 MUCH higher quality
+                .keepAspectRatio(true)
                 .toFile(thumbnailPath.toFile());
 
         transactionalFileManager.track(thumbnailPath);
-        fileStorageService.hidePath(thumbnailPath);
 
-        /* =========================
-           SAVE METADATA
-           ========================= */
+        // 🔐 CRITICAL: secure thumbnail AFTER it is fully written
+        fileStorageService.secure(thumbnailPath);
+
+    /* ============================================================
+       5️⃣ SAVE METADATA
+       ============================================================ */
 
         imageRepo.save(
                 ProductVariantImage.builder()

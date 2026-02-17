@@ -10,10 +10,20 @@
 
     <div class="products-body">
 
-      <div bulk-options>
+      <div bulk-options class="bulk-options">
+
         <mat-checkbox formControlName="dryRun">
           Dry run (validate only)
         </mat-checkbox>
+
+        <mat-checkbox [(ngModel)]="createMissingCategories" [ngModelOptions]="{ standalone: true }">
+          Auto-create missing categories
+        </mat-checkbox>
+
+        <mat-checkbox [(ngModel)]="createMissingSuppliers" [ngModelOptions]="{ standalone: true }">
+          Auto-create missing suppliers
+        </mat-checkbox>
+
       </div>
 
       <div class="rows" formArrayName="rows">

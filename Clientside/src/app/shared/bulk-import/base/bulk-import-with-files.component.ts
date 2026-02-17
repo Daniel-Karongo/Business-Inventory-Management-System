@@ -333,6 +333,7 @@ export abstract class BulkImportWithFilesComponent<
 
         return this.allFiles.map(f => ({
             id: f.id,
+            fileName: f.file.name,
             assignedRowIndexes: f.assignedRowIndexes,
             rowVariantMap: f.rowVariantMap,
             assignToEntity: f.assignToEntity,

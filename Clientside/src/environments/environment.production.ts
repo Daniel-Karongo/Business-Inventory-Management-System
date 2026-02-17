@@ -1,7 +1,7 @@
 export const environment = {
   production: true,
 
-  idleLogoutMinutes: 60,
+  idleLogoutMinutes: 1,
 
   apiUrl: '/api',
 

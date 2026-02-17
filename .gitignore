@@ -79,7 +79,7 @@
 # === APPLICATION RUNTIME DATA (IGNORE ALL) ===
 #############################################
 
-/Serverside/Monolith Architecture/business_manager/data/
+/Serverside/Monolith Architecture/business_manager/.data/
 
 #############################################
 # === ANGULAR FRONTEND ===

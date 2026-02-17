@@ -237,12 +237,12 @@ public class ProductController {
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     public ResponseEntity<BulkResult<ProductDTO>> bulkFullCreate(
-            @RequestPart("payload") ProductBulkFullCreateDTO dto,
+            @RequestPart("payload") ProductBulkFrontendRequestDTO dto,
             @RequestPart(value = "files", required = false) List<MultipartFile> files
     ) throws IOException {
 
         return ResponseEntity.ok(
-                bulkService.bulkFullCreate(dto, files)
+                bulkService.bulkFullCreateFrontend(dto, files)
         );
     }
 

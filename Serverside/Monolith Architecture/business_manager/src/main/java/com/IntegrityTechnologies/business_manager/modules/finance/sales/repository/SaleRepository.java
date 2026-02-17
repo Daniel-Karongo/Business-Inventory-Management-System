@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -60,4 +61,15 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
         where s.receiptNo like :prefix%
     """)
     String findMaxReceiptNo(@Param("prefix") String prefix);
+
+    @Modifying
+    @Query("""
+    delete from Sale s 
+    where exists (
+        select 1 from SaleLineItem li 
+        where li.productVariantId in :variantIds
+    )
+""")
+    void deleteSalesByVariantIds(List<UUID> variantIds);
+
 }

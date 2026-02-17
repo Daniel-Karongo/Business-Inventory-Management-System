@@ -95,6 +95,7 @@ export class LoginComponent implements OnInit {
     ).subscribe({
       next: (res) => {
         this.snack.open('Login successful', undefined, { duration: 1200 });
+        console.log('Starting idle service...');
         this.idle.start();
         this.router.navigate(['/dashboard']);
       },

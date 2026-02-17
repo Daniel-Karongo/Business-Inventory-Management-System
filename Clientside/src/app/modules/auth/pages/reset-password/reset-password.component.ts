@@ -248,7 +248,10 @@ export class ResetPasswordComponent implements OnInit, OnDestroy {
   private finish() {
     this.clearTimer();
     this.loading = false;
-    this.router.navigate(['/login']);
+    this.router.navigate(['/login'], {
+      replaceUrl: true,
+      queryParams: { reason: 'idle' }
+    });
   }
 
   cancel() {
