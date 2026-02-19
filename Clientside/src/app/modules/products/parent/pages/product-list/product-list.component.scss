@@ -241,6 +241,17 @@
   font-size: 28px;
 }
 
+@media (max-width: 640px) {
+  .product-card.compact .card-thumb {
+    height: 75px;
+  }
+
+  .product-card.compact {
+    padding: 0.6rem;
+    gap: 0.4rem;
+  }
+}
+
 /* ===============================
    COMFORTABLE GRID MODE
 ================================= */
@@ -268,10 +279,11 @@
 }
 
 .product-card.deleted {
-  opacity: 0.75;
   border: 2px solid #dc2626;
   background: rgba(220, 38, 38, 0.08);
   position: relative;
+  opacity: 0.55;
+  // pointer-events: none;
 }
 
 .product-card.deleted::after {

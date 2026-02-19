@@ -10,9 +10,12 @@ import { MatSelectModule } from '@angular/material/select';
 export interface ReasonDialogData {
   title: string;
   message: string;
-  action: 'DISABLE' | 'RESTORE' | 'DELETE';
+  action?: 'DISABLE' | 'RESTORE' | 'DELETE';
   confirmText?: string;
   cancelText?: string;
+
+  reasons?: string[];
+  allowCustomReason?: boolean;
 }
 
 @Component({
@@ -32,44 +35,31 @@ export interface ReasonDialogData {
 })
 export class ReasonDialogComponent {
 
-  disableReasons = [
-    'Security risk', 'Policy violation', 'Left company', 'Temporary suspension',
-    'Incorrect details', 'Duplicate account'
-  ];
-
-  restoreReasons = [
-    'Mistaken disable', 'Issue resolved', 'Reinstated by management',
-    'Information updated', 'Investigation complete'
-  ];
-
-  deleteReasons = [
-    'GDPR / Data cleanup',
-    'Requested by management',
-    'Duplicate account',
-    'Never used',
-    'Fraudulent account'
-  ];
-
   selectedReason: string | null = null;
   customReason = '';
 
   constructor(
     private ref: MatDialogRef<ReasonDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: ReasonDialogData
-  ) {}
+  ) { }
 
   get reasonOptions(): string[] {
-    switch (this.data.action) {
-      case 'RESTORE': return this.restoreReasons;
-      case 'DELETE': return this.deleteReasons;
-      default: return this.disableReasons;
-    }
+    return this.data.reasons ?? [];
+  }
+
+  get allowCustom(): boolean {
+    return this.data.allowCustomReason !== false;
   }
 
   confirm() {
-    let reason = this.selectedReason === 'OTHER'
-      ? (this.customReason.trim() || null)
-      : this.selectedReason;
+
+    let reason: string | null = null;
+
+    if (this.selectedReason === 'OTHER') {
+      reason = this.customReason.trim() || null;
+    } else {
+      reason = this.selectedReason ?? null;
+    }
 
     this.ref.close({ confirmed: true, reason });
   }

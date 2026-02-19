@@ -161,18 +161,23 @@
 
         <div class="card-actions">
 
-          <button mat-icon-button matTooltip="Create Sale" (click)="createSale(p)">
+          <button mat-icon-button [disabled]="p.deleted" matTooltip="Create Sale" (click)="createSale(p)">
             <mat-icon>point_of_sale</mat-icon>
           </button>
 
-          <button mat-icon-button matTooltip="View" [routerLink]="['/products', p.id]">
+          <button mat-icon-button [disabled]="p.deleted" matTooltip="View" [routerLink]="['/products', p.id]">
             <mat-icon>visibility</mat-icon>
           </button>
 
-          <button mat-icon-button matTooltip="Edit" [routerLink]="['/products', p.id, 'edit']">
+          <button mat-icon-button [disabled]="p.deleted" matTooltip="Edit" [routerLink]="['/products', p.id, 'edit']">
             <mat-icon>edit</mat-icon>
           </button>
-
+          <button mat-icon-button matTooltip="{{ p.deleted ? 'Restore/Delete' : 'Disable' }}"
+            (click)="toggleProductStatus(p); $event.stopPropagation()">
+            <mat-icon>
+              {{ p.deleted ? 'toggle_off' : 'toggle_on' }}
+            </mat-icon>
+          </button>
         </div>
 
       </div>
@@ -331,16 +336,23 @@
             <th mat-header-cell *matHeaderCellDef [attr.aria-label]="'Product actions'"> Actions</th>
 
             <td mat-cell *matCellDef="let row">
-              <button mat-icon-button matTooltip="Create Sale" (click)="createSale(row); $event.stopPropagation()">
+              <button mat-icon-button [disabled]="row.deleted" matTooltip="Create Sale"
+                (click)="createSale(row); $event.stopPropagation()">
                 <mat-icon>point_of_sale</mat-icon>
               </button>
-              <button mat-icon-button matTooltip="View Product" [routerLink]="['/products', row.id]"
-                [state]="{ deleted: row.deleted }">
+              <button mat-icon-button [disabled]="row.deleted" matTooltip="View Product"
+                [routerLink]="['/products', row.id]" [state]="{ deleted: row.deleted }">
                 <mat-icon>visibility</mat-icon>
               </button>
-              <button mat-icon-button matTooltip="Edit Product" [routerLink]="['/products', row.id, 'edit']"
-                [state]="{ deleted: row.deleted }">
+              <button mat-icon-button [disabled]="row.deleted" matTooltip="Edit Product"
+                [routerLink]="['/products', row.id, 'edit']" [state]="{ deleted: row.deleted }">
                 <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button matTooltip="{{ row.deleted ? 'Restore/Delete' : 'Disable' }}"
+                (click)="toggleProductStatus(row); $event.stopPropagation()">
+                <mat-icon>
+                  {{ row.deleted ? 'toggle_off' : 'toggle_on' }}
+                </mat-icon>
               </button>
             </td>
           </ng-container>
@@ -408,16 +420,16 @@
 
           <div class="stacked-actions">
 
-            <button mat-icon-button matTooltip="Create Sale" (click)="createSale(p); $event.stopPropagation()">
+            <button mat-icon-button [disabled]="p.deleted" matTooltip="Create Sale" (click)="createSale(p); $event.stopPropagation()">
               <mat-icon>point_of_sale</mat-icon>
             </button>
 
-            <button mat-icon-button matTooltip="View" (click)="$event.stopPropagation()"
+            <button mat-icon-button [disabled]="p.deleted" matTooltip="View" (click)="$event.stopPropagation()"
               [routerLink]="['/products', p.id]">
               <mat-icon>visibility</mat-icon>
             </button>
 
-            <button mat-icon-button matTooltip="Edit" (click)="$event.stopPropagation()"
+            <button mat-icon-button [disabled]="p.deleted" matTooltip="Edit" (click)="$event.stopPropagation()"
               [routerLink]="['/products', p.id, 'edit']">
               <mat-icon>edit</mat-icon>
             </button>

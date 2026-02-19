@@ -21,7 +21,8 @@ import java.util.UUID;
         indexes = {
                 @Index(name = "idx_inventory_product", columnList = "product_id"),
                 @Index(name = "idx_inventory_variant", columnList = "product_variant_id"),
-                @Index(name = "idx_inventory_branch", columnList = "branch_id")
+                @Index(name = "idx_inventory_branch", columnList = "branch_id"),
+                @Index(name = "idx_inventory_deleted", columnList = "deleted")
         }
 )
 @Data
@@ -57,6 +58,9 @@ public class InventoryItem {
 
     private LocalDateTime lastUpdatedAt;
     private String lastUpdatedBy;
+
+    @Column(nullable = false)
+    private Boolean deleted = false;
 
     @Version
     private Long version;

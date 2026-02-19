@@ -12,6 +12,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { CustomerService } from '../../services/customer.service';
 import { SmsDialogComponent } from '../../../../shared/components/sms-dialog/sms-dialog.component';
 import { SmsService } from '../../../communication/services/sms.service';
+import { EntityActionService } from '../../../../shared/services/entity-action.service';
 
 @Component({
   standalone: true,
@@ -44,10 +45,11 @@ export class CustomerDetailsComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private service: CustomerService,
+    private entityAction: EntityActionService,
     private smsService: SmsService,
     private dialog: MatDialog,
     private snackbar: MatSnackBar
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id')!;
@@ -68,24 +70,29 @@ export class CustomerDetailsComponent implements OnInit {
   }
 
   toggleActive(): void {
+
     if (!this.customer) return;
 
-    if (!this.customer.deleted) {
-      if (!confirm(`Disable ${this.customer.name}?`)) return;
+    this.entityAction.toggleSingle(this.customer, {
+      entityName: 'Customer',
+      displayName: (c) => c.name,
 
-      this.service.softDelete(this.id).subscribe(() => {
-        this.snackbar.open('Customer disabled', 'Close', { duration: 2000 });
-        this.load();
-      });
+      disableReasons: [],
+      restoreReasons: [],
+      deleteReasons: [],
 
-    } else {
-      if (!confirm(`Restore ${this.customer.name}?`)) return;
+      disable: (id, reason) =>
+        this.service.softDelete(id, reason),
 
-      this.service.restore(this.id).subscribe(() => {
-        this.snackbar.open('Customer restored', 'Close', { duration: 2000 });
-        this.load();
-      });
-    }
+      restore: (id, reason) =>
+        this.service.restore(id, reason),
+
+      hardDelete: (id, reason) =>
+        this.service.hardDelete(id, reason),
+
+      reload: () => this.load()
+    });
+
   }
 
   sendSms(): void {

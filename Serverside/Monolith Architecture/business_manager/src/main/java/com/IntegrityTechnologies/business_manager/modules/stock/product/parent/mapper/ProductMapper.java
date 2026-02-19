@@ -12,15 +12,16 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import org.mapstruct.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 @Mapper(componentModel = "spring", uses = {UserMapper.class})
 public interface ProductMapper {
 
-    /* =============================
+    /* =========================================================
        ENTITY → DTO
-       ============================= */
+       ========================================================= */
 
     @Mapping(target = "categoryId",
             expression = "java(product.getCategory() != null ? product.getCategory().getId() : null)")
@@ -38,9 +39,9 @@ public interface ProductMapper {
     ProductDTO toDTO(Product product);
 
 
-    /* =============================
-       DTO → ENTITY
-       ============================= */
+    /* =========================================================
+       DTO → ENTITY (CREATE)
+       ========================================================= */
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "category", ignore = true)
@@ -51,9 +52,9 @@ public interface ProductMapper {
     Product toEntity(ProductCreateDTO dto);
 
 
-    /* =============================
+    /* =========================================================
        PARTIAL UPDATE
-       ============================= */
+       ========================================================= */
 
     @Mapping(target = "images", ignore = true)
     @Mapping(target = "category", ignore = true)
@@ -63,45 +64,74 @@ public interface ProductMapper {
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     Product applyUpdate(@MappingTarget Product existing, ProductUpdateDTO dto);
 
-    default List<String> mapImagesToUrls(List<ProductImage> images) {
-        if (images == null || images.isEmpty()) return List.of();
 
-        return images.stream()
-                .filter(img -> !Boolean.TRUE.equals(img.getDeleted()))
-                .map(ProductImage::getFilePath)
-                .toList();
-    }
     /* =========================================================
-       SUPPLIERS
+       IMAGE MAPPING (List Safe)
+       ========================================================= */
+
+    default List<String> mapImagesToUrls(List<ProductImage> images) {
+        if (images == null || images.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> urls = new ArrayList<>();
+
+        for (ProductImage img : images) {
+            if (!Boolean.TRUE.equals(img.getDeleted())) {
+                urls.add(img.getFilePath());
+            }
+        }
+
+        return urls;
+    }
+
+
+    /* =========================================================
+       SUPPLIER MAPPING (List Safe)
        ========================================================= */
 
     default List<SupplierMinimalDTO> mapSuppliersMinimal(Set<Supplier> suppliers) {
-        if (suppliers == null || suppliers.isEmpty()) return List.of();
+        if (suppliers == null || suppliers.isEmpty()) {
+            return List.of();
+        }
 
-        return suppliers.stream()
-                .map(s -> new SupplierMinimalDTO(s.getId(), s.getName()))
-                .toList();
+        List<SupplierMinimalDTO> result = new ArrayList<>();
+
+        for (Supplier s : suppliers) {
+            result.add(new SupplierMinimalDTO(
+                    s.getId(),
+                    s.getName()
+            ));
+        }
+
+        return result;
     }
 
-
     /* =========================================================
-       VARIANTS
+       VARIANT MAPPING (List Safe)
        ========================================================= */
 
     default List<ProductVariantDTO> mapVariants(List<ProductVariant> variants) {
-        if (variants == null || variants.isEmpty()) return List.of();
+        if (variants == null || variants.isEmpty()) {
+            return List.of();
+        }
 
-        return variants.stream()
-                .map(v -> ProductVariantDTO.builder()
-                        .id(v.getId())
-                        .classification(v.getClassification())
-                        .productId(v.getProduct().getId())
-                        .productName(v.getProduct().getName())
-                        .sku(v.getSku())
-                        .averageBuyingPrice(v.getAverageBuyingPrice())
-                        .minimumSellingPrice(v.getMinimumSellingPrice())
-                        .build()
-                )
-                .toList();
+        List<ProductVariantDTO> result = new ArrayList<>();
+
+        for (ProductVariant v : variants) {
+            result.add(
+                    ProductVariantDTO.builder()
+                            .id(v.getId())
+                            .classification(v.getClassification())
+                            .productId(v.getProduct() != null ? v.getProduct().getId() : null)
+                            .productName(v.getProduct() != null ? v.getProduct().getName() : null)
+                            .sku(v.getSku())
+                            .averageBuyingPrice(v.getAverageBuyingPrice())
+                            .minimumSellingPrice(v.getMinimumSellingPrice())
+                            .build()
+            );
+        }
+
+        return result;
     }
 }

@@ -24,20 +24,20 @@ import java.util.UUID;
                 @Index(name = "idx_product_sku", columnList = "sku")
         }
 )
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString(exclude = {"variants", "images", "suppliers", "category"})
 public class Product {
 
+    @EqualsAndHashCode.Include
     @Id
     @GeneratedValue
     @JdbcTypeCode(Types.BINARY)
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
-
-    /* =============================
-       CORE FIELDS
-       ============================= */
 
     @Column(nullable = false, unique = true)
     private String name;
@@ -49,28 +49,12 @@ public class Product {
 
     private Double minimumPercentageProfit;
 
-    /* =============================
-       VARIANTS
-       ============================= */
-
-    @OneToMany(
-            mappedBy = "product",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
+    @OneToMany(mappedBy = "product")
     private List<ProductVariant> variants = new ArrayList<>();
 
-    /* =============================
-       SUPPLIERS  (IMPORTANT)
-       ============================= */
+    @OneToMany(mappedBy = "product")
+    private List<ProductImage> images = new ArrayList<>();
 
-    /**
-     * Suppliers remain linked to the PRODUCT (not variants).
-     * This preserves:
-     * - purchasing workflows
-     * - category–supplier syncing
-     * - reporting consistency
-     */
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "products_suppliers",
@@ -79,28 +63,9 @@ public class Product {
     )
     private Set<Supplier> suppliers = new HashSet<>();
 
-    /* =============================
-       PRODUCT IMAGES (STILL VALID)
-       ============================= */
-
-    @OneToMany(
-            mappedBy = "product",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
-    private List<ProductImage> images = new ArrayList<>();
-
-    /* =============================
-       CATEGORY
-       ============================= */
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
-
-    /* =============================
-       SOFT DELETE + AUDIT
-       ============================= */
 
     @Column(nullable = false)
     private Boolean deleted = false;

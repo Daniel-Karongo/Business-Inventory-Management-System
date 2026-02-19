@@ -10,7 +10,10 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "stock_transactions", indexes = {@Index(name = "idx_stock_tx_product", columnList = "product_id")})
+@Table(name = "stock_transactions", indexes = {
+        @Index(name = "idx_stock_tx_product", columnList = "product_id"),
+        @Index(name = "idx_stock_tx_deleted", columnList = "deleted")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -54,6 +57,9 @@ public class StockTransaction {
     private LocalDateTime timestamp;
 
     private String performedBy;
+
+    @Column(nullable = false)
+    private Boolean deleted = false;
 
     public enum TransactionType {
         RECEIPT, // goods received from supplier

@@ -6,6 +6,7 @@ import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.exception.ProductNotFoundException;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleLineItemRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
@@ -13,6 +14,9 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.service.CategoryService;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.ProductRestoreOptions;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryItem;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.StockTransaction;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductCreateDTO;
@@ -31,17 +35,28 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.r
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantCreateDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariantAudit;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariantImage;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariantImageAudit;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantImageAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service.ProductVariantService;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -85,6 +100,12 @@ public class ProductService {
     private final SaleLineItemRepository saleLineItemRepository;
     private final SaleRepository saleRepository;
     private final StockTransactionRepository stockTransactionRepository;
+    private final ProductVariantAuditRepository productVariantAuditRepository;
+    private final ProductVariantImageRepository productVariantImageRepository;
+    private final ProductVariantImageAuditRepository productVariantImageAuditRepository;
+
+    @PersistenceContext
+    private EntityManager em;
 
     private Path productRoot() {
         return fileStorageService.productRoot();
@@ -391,7 +412,7 @@ public class ProductService {
     }
 
     public String generateVariantSku(Product product, String classification) {
-        return product.getSku() + "-" + classification.replaceAll(" ","-");
+        return product.getSku() + "-" + classification.replaceAll(" ", "-");
     }
 
     private void validateCreateDTOUniqueness(ProductCreateDTO dto) {
@@ -409,7 +430,7 @@ public class ProductService {
     /**
      * Generate SKU for a category using first 3 letters uppercase (alpha only),
      * padded/truncated to 3 chars, then a 6-digit sequence number (per-category).
-     *
+     * <p>
      * Example: ACT-000547
      */
 
@@ -464,7 +485,7 @@ public class ProductService {
 
         ProductVariant variant;
 
-        for(ProductVariantCreateDTO variantCreateDTO: dto.getVariants()) {
+        for (ProductVariantCreateDTO variantCreateDTO : dto.getVariants()) {
             variant = productVariantRepository.findByProductIdAndClassification(
                     id, variantCreateDTO.getClassification()
             ).orElse(null);
@@ -569,46 +590,70 @@ public class ProductService {
         productRepository.save(product);
     }
 
-    public void deleteProductImageByFilename(UUID productId, String filename) throws IOException {
-        Product p = productRepository.findById(productId).orElseThrow(() -> new ProductNotFoundException("Product not found"));
+    public void restoreProductImage(UUID productId, UUID productImageId, String reason) {
+        Product p = productRepository.findByIdAndDeletedFalse(productId).orElseThrow(() -> new ProductNotFoundException("Product not found"));
+        ProductImage img = productImageRepository.findById(productImageId).orElseThrow(() -> new EntityNotFoundException("Product image not found"));
+        img.setDeleted(false);
+        productImageRepository.save(img);
+        productImageAuditRepository.save(imageAuditForAction(p, img, "IMAGE_RESTORE_INDEPENDENTLY", reason == null ? "Restored by user" : reason));
+    }
+
+    public void deleteProductImageByFilename(UUID productId, String filename, Boolean soft) throws IOException {
+        Product p = productRepository.findByIdAndDeletedFalse(productId).orElseThrow(() -> new ProductNotFoundException("Product not found"));
         if (p.getImages() == null) return;
         for (ProductImage img : new ArrayList<>(p.getImages())) {
-            if (filename.equals(img.getFileName())) {
-                // delete physical file
-                try {
-                    // the stored filePath is API path; derive physical path
-                    Path physical = productRoot().resolve(p.getId().toString()).resolve(img.getFileName());
-                    Files.deleteIfExists(physical);
-                } catch (Exception ignored) {}
+            if (Boolean.TRUE.equals(soft)) {
+                img.setDeleted(true);
+                productImageRepository.save(img);
+                productImageAuditRepository.save(imageAuditForAction(p, img, "IMAGE_SOFT_DELETED_INDEPENDENTLY", "Deleted by user"));
+            } else {
+                if (filename.equals(img.getFileName())) {
+                    // delete physical file
+                    try {
+                        // the stored filePath is API path; derive physical path
+                        Path physical = productRoot().resolve(p.getId().toString()).resolve(img.getFileName());
+                        Files.deleteIfExists(physical);
+                    } catch (Exception ignored) {
+                    }
 
-                productImageRepository.delete(img);
-                p.getImages().remove(img);
+                    p.getImages().remove(img);
 
-                // audit
-                productImageAuditRepository.save(imageAuditForAction(p, img, "IMAGE_DELETED", "Deleted by user"));
+                    productImageRepository.delete(img);
+                    // audit
+                    productImageAuditRepository.save(imageAuditForAction(p, img, "IMAGE_HARD_DELETED_INDEPENDENTLY", "Deleted by user"));
+                }
             }
         }
         productRepository.save(p);
     }
 
-    public void deleteAllProductImages(UUID productId) throws IOException {
+    public void deleteAllProductImages(UUID productId, Boolean soft, String reason) throws IOException {
         Product p = productRepository.findById(productId).orElseThrow(() -> new ProductNotFoundException("Product not found"));
-        deleteProductImages(p);
-        deleteProductUploadDirectory(productId);
-        p.setImages(new ArrayList<>());
-        productRepository.save(p);
+        if (p.getImages() == null) return;
+        deleteProductImages(p, soft, reason);
 
-        productImageAuditRepository.save(imageAuditForAction(p, null, "ALL_IMAGES_DELETED", "All images deleted"));
+        if(Boolean.FALSE.equals(soft)) {
+            deleteProductUploadDirectory(productId);
+            p.setImages(new ArrayList<>());
+            productRepository.save(p);
+
+            productImageAuditRepository.save(imageAuditForAction(p, null, "ALL_IMAGES_DELETED", "All images deleted"));
+        }
     }
 
-    public void deleteProductImages(Product product) {
-        if (product.getImages() == null) return;
-            for (ProductImage img : new ArrayList<>(product.getImages())) {
+    public void deleteProductImages(Product product, Boolean soft, String reason) {
+        for (ProductImage img : new ArrayList<>(product.getImages())) {
+            if(Boolean.TRUE.equals(soft)) {
+                img.setDeleted(true);
+                productImageRepository.save(img);
+                productImageAuditRepository.save(imageAuditForAction(product, img, "IMAGE_SOFT_DELETED_INDEPENDENTLY", reason));
+            } else {
                 try {
                     ProductImageAudit audit = ProductImageAudit.builder()
                             .action("IMAGE_DELETED_PERMANENTLY")
                             .fileName(img.getFileName())
                             .filePath(img.getFilePath())
+                            .reason(reason)
                             .productId(product.getId())
                             .productName(product.getName())
                             .timestamp(LocalDateTime.now())
@@ -618,10 +663,12 @@ public class ProductService {
 
                     Path physical = productRoot().resolve(product.getId().toString()).resolve(img.getFileName());
                     Files.deleteIfExists(physical);
-                } catch (IOException ignored) {}
+                } catch (IOException ignored) {
+                }
                 productImageRepository.delete(img);
             }
         }
+    }
 
     public void deleteProductUploadDirectory(UUID productId) throws IOException {
         Path dir = productRoot().resolve(productId.toString());
@@ -633,167 +680,363 @@ public class ProductService {
        ============================= */
 
     @Transactional
-    public ResponseEntity<ApiResponse> softDeleteProduct(UUID id, String reason) {
+    public void softDeleteProduct(UUID productId, String reason) {
 
-        Product p = productRepository.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+        Product product = getProductOrThrow(productId);
 
-        if (Boolean.TRUE.equals(p.getDeleted())) {
-            return ResponseEntity.ok(
-                    new ApiResponse("success", "Product already soft-deleted")
+        if (Boolean.TRUE.equals(product.getDeleted())) {
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        String username = SecurityUtils.currentUsername();
+
+    /* ===========================
+       FETCH EVERYTHING FIRST
+       =========================== */
+
+        List<ProductImage> productImages =
+                productImageRepository.findByProduct_Id(productId);
+
+        List<ProductVariant> variants =
+                productVariantRepository.findByProduct_Id(productId);
+
+        List<UUID> variantIds = variants.stream()
+                .map(ProductVariant::getId)
+                .toList();
+
+        List<ProductVariantImage> variantImages =
+                variantIds.isEmpty()
+                        ? List.of()
+                        : productVariantImageRepository.findByVariantIdsWithVariant(variantIds);
+
+    /* ===========================
+       NOW PERFORM UPDATES
+       =========================== */
+
+        product.setDeleted(true);
+        product.setDeletedAt(now);
+
+        productImageRepository.softDeleteByProductId(productId);
+
+        if (!variantIds.isEmpty()) {
+            productVariantRepository.softDeleteByProductId(productId);
+            productVariantImageRepository.softDeleteByVariantIds(variantIds);
+            inventoryItemRepository.softDeleteByVariantIds(variantIds);
+            stockTransactionRepository.softDeleteByVariantIds(variantIds);
+        }
+
+    /* ===========================
+       AUDITS (USE PRE-FETCHED DATA)
+       =========================== */
+
+        productAuditRepository.save(
+                ProductAudit.builder()
+                        .action("SOFT_DELETE")
+                        .productId(product.getId())
+                        .productName(product.getName())
+                        .timestamp(now)
+                        .performedBy(username)
+                        .reason(reason)
+                        .build()
+        );
+
+        if (!productImages.isEmpty()) {
+            auditProductImages(productImages,
+                    "IMAGE_SOFT_DELETED_ALONG_WITH_PRODUCT",
+                    product,
+                    reason,
+                    now,
+                    username
             );
         }
 
-        p.setDeleted(true);
-        p.setDeletedAt(LocalDateTime.now());
-        productRepository.save(p);
-
-        // === PRODUCT AUDIT ===
-        ProductAudit audit = new ProductAudit();
-        audit.setAction("SOFT_DELETE");
-        audit.setProductId(p.getId());
-        audit.setProductName(p.getName());
-        audit.setTimestamp(LocalDateTime.now());
-        audit.setPerformedBy(SecurityUtils.currentUsername());
-        audit.setReason(reason);
-        productAuditRepository.save(audit);
-
-        // === IMAGE SOFT DELETE ===
-        if (p.getImages() != null) {
-            List<ProductImageAudit> imageAudits = new ArrayList<>();
-
-            for (ProductImage image : p.getImages()) {
-
-                image.setDeleted(true);
-                productImageRepository.save(image);
-
-                imageAudits.add(ProductImageAudit.builder()
-                        .action("IMAGE_SOFT_DELETED")
-                        .fileName(image.getFileName())
-                        .filePath(image.getFilePath())
-                        .productId(p.getId())
-                        .productName(p.getName())
-                        .timestamp(LocalDateTime.now())
-                        .performedBy(SecurityUtils.currentUsername())
-                        .reason(reason)
-                        .build());
-            }
-
-            productImageAuditRepository.saveAll(imageAudits);
+        if (!variants.isEmpty()) {
+            auditVariants(variants,
+                    "VARIANT_SOFT_DELETED_ALONG_WITH_PRODUCT",
+                    product,
+                    reason,
+                    now,
+                    username
+            );
         }
 
-        return ResponseEntity.ok(
-                new ApiResponse("success", "Product soft-deleted successfully")
-        );
+        if (!variantImages.isEmpty()) {
+            auditVariantImages(variantImages,
+                    "VARIANT_IMAGE_SOFT_DELETED_ALONG_WITH_PRODUCT",
+                    product,
+                    reason,
+                    now,
+                    username
+            );
+        }
     }
+
+/* =========================================================
+    BULK SOFT DELETE (All or Nothing)
+    ========================================================= */
 
     @Transactional
     public void bulkSoftDelete(List<UUID> ids, String reason) {
-
         for (UUID id : ids) {
             softDeleteProduct(id, reason);
         }
     }
 
-    @Transactional
-    public void restoreProduct(UUID id, String reason) {
-
-        Product p = productRepository.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
-
-        if (!Boolean.TRUE.equals(p.getDeleted())) return;
-
-        p.setDeleted(false);
-        p.setDeletedAt(null);
-        productRepository.save(p);
-
-        ProductAudit audit = new ProductAudit();
-        audit.setAction("RESTORE");
-        audit.setProductId(p.getId());
-        audit.setProductName(p.getName());
-        audit.setTimestamp(LocalDateTime.now());
-        audit.setPerformedBy(SecurityUtils.currentUsername());
-        audit.setReason(reason);
-        productAuditRepository.save(audit);
-    }
+/* =========================================================
+    RESTORE (Single)
+    ========================================================= */
 
     @Transactional
-    public void bulkRestore(List<UUID> ids, String reason) {
+    public void restoreProduct(UUID productId,
+                               String reason,
+                               ProductRestoreOptions options) {
 
-        for (UUID id : ids) {
-            restoreProduct(id, reason);
+        if (options.isRestoreInventory() && !options.isRestoreStockTransactions()) {
+            throw new IllegalArgumentException(
+                    "Cannot restore inventory without restoring stock transactions."
+            );
         }
-    }
 
-    @Transactional
-    public void hardDeleteProduct(UUID productId, String reason) throws IOException {
+        Product product = getProductOrThrow(productId);
 
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+        if (!Boolean.TRUE.equals(product.getDeleted())) {
+            return;
+        }
 
-        // === HARD DELETE AUDIT BEFORE REMOVAL ===
-        ProductAudit audit = new ProductAudit();
-        audit.setAction("HARD_DELETE");
-        audit.setProductId(product.getId());
-        audit.setProductName(product.getName());
-        audit.setTimestamp(LocalDateTime.now());
-        audit.setPerformedBy(SecurityUtils.currentUsername());
-        audit.setReason(reason);
-        productAuditRepository.save(audit);
+        LocalDateTime now = LocalDateTime.now();
+        String username = SecurityUtils.currentUsername();
 
-        // === VARIANTS ===
+        /* ---------- PRODUCT ---------- */
+
+        product.setDeleted(false);
+        product.setDeletedAt(null);
+
+        productAuditRepository.save(
+                ProductAudit.builder()
+                        .action("RESTORE")
+                        .productId(product.getId())
+                        .productName(product.getName())
+                        .timestamp(now)
+                        .performedBy(username)
+                        .reason(reason)
+                        .build()
+        );
+
+        /* ---------- PRODUCT IMAGES ---------- */
+
+        productImageRepository.restoreByProductId(productId);
+
+        List<ProductImage> productImages =
+                productImageRepository.findByProduct_Id(productId);
+
+        auditProductImages(productImages,
+                "IMAGE_RESTORED_ALONG_WITH_PRODUCT",
+                product,
+                reason,
+                now,
+                username
+        );
+
+        /* ---------- VARIANTS ---------- */
+
         List<ProductVariant> variants =
                 productVariantRepository.findByProduct_Id(productId);
 
-        List<UUID> variantIds =
+        if (!variants.isEmpty()) {
+
+            List<UUID> variantIds = variants.stream()
+                    .map(ProductVariant::getId)
+                    .toList();
+
+            productVariantRepository.restoreByProductId(productId);
+
+            auditVariants(variants,
+                    "VARIANT_RESTORED_ALONG_WITH_PRODUCT",
+                    product,
+                    reason,
+                    now,
+                    username
+            );
+
+            /* ---------- VARIANT IMAGES ---------- */
+
+            List<ProductVariantImage> variantImagesToRestore =
+                    productVariantImageRepository.findByVariantIdsWithVariant(variantIds)
+                            .stream()
+                            .filter(img -> Boolean.TRUE.equals(img.getDeleted()))
+                            .toList();
+
+            productVariantImageRepository.restoreByVariantIds(variantIds);
+
+            auditVariantImages(
+                    variantImagesToRestore,
+                    "VARIANT_IMAGE_RESTORED_ALONG_WITH_PRODUCT",
+                    product,
+                    reason,
+                    now,
+                    username
+            );
+
+            /* ---------- INVENTORY ---------- */
+
+            if (options != null && options.isRestoreInventory()) {
+                inventoryItemRepository.restoreByVariantIds(variantIds);
+            }
+
+            /* ---------- STOCK ---------- */
+
+            if (options != null && options.isRestoreStockTransactions()) {
+                stockTransactionRepository.restoreByVariantIds(variantIds);
+            }
+
+            /* ---------- RECALCULATE INVENTORY ---------- */
+
+            if (options != null && options.isRestoreInventory()) {
+                recalculateInventoryFromTransactions(variantIds, username);
+            }
+        }
+    }
+
+/* =========================================================
+    BULK RESTORE
+    ========================================================= */
+
+    @Transactional
+    public void bulkRestore(List<UUID> ids,
+                            String reason,
+                            ProductRestoreOptions options) {
+        for (UUID id : ids) {
+            restoreProduct(id, reason, options);
+        }
+    }
+
+/* =========================================================
+    INVENTORY RECALCULATION
+    ========================================================= */
+
+    private void recalculateInventoryFromTransactions(
+            List<UUID> variantIds,
+            String username
+    ) {
+
+        for (UUID variantId : variantIds) {
+
+            List<StockTransaction> transactions =
+                    stockTransactionRepository
+                            .findByProductVariantIdAndDeletedFalse(variantId);
+
+            long quantity = transactions.stream()
+                    .mapToLong(StockTransaction::getQuantityDelta)
+                    .sum();
+
+            List<InventoryItem> items =
+                    inventoryItemRepository.findByProductVariant_Id(variantId);
+
+            for (InventoryItem item : items) {
+                item.setDeleted(false);
+                item.setQuantityOnHand(quantity);
+                item.setQuantityReserved(0L);
+                item.setLastUpdatedAt(LocalDateTime.now());
+                item.setLastUpdatedBy(username);
+            }
+
+            inventoryItemRepository.saveAll(items);
+        }
+    }
+
+/* =========================================================
+    PRIVATE HELPERS
+    ========================================================= */
+
+    private Product getProductOrThrow(UUID id) {
+        return productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+    }
+
+    private void auditProductImages(List<ProductImage> images,
+                                    String action,
+                                    Product product,
+                                    String reason,
+                                    LocalDateTime now,
+                                    String username) {
+
+        if (images.isEmpty()) return;
+
+        productImageAuditRepository.saveAll(
+                images.stream()
+                        .map(img -> ProductImageAudit.builder()
+                                .action(action)
+                                .fileName(img.getFileName())
+                                .filePath(img.getFilePath())
+                                .productId(product.getId())
+                                .productName(product.getName())
+                                .timestamp(now)
+                                .performedBy(username)
+                                .reason(reason)
+                                .build())
+                        .toList()
+        );
+    }
+
+    private void auditVariants(List<ProductVariant> variants,
+                               String action,
+                               Product product,
+                               String reason,
+                               LocalDateTime now,
+                               String username) {
+
+        if (variants.isEmpty()) return;
+
+        productVariantAuditRepository.saveAll(
                 variants.stream()
-                        .map(ProductVariant::getId)
-                        .toList();
+                        .map(v -> ProductVariantAudit.builder()
+                                .action(action)
+                                .productId(product.getId())
+                                .productName(product.getName())
+                                .productVariantId(v.getId())
+                                .variantClassification(v.getClassification())
+                                .timestamp(now)
+                                .performedBy(username)
+                                .reason(reason)
+                                .build())
+                        .toList()
+        );
+    }
 
-        // === SALES ===
-        if (!variantIds.isEmpty()) {
-            saleLineItemRepository.deleteAllByProductVariantIdIn(variantIds);
-            saleRepository.deleteSalesByVariantIds(variantIds);
-        }
+    private void auditVariantImages(List<ProductVariantImage> images,
+                                    String action,
+                                    Product product,
+                                    String reason,
+                                    LocalDateTime now,
+                                    String username) {
 
-        // === STOCK ===
-        stockTransactionRepository.deleteAllByProductId(productId);
+        if (images.isEmpty()) return;
 
-        // === INVENTORY ===
-        inventoryItemRepository.deleteAllByProductId(productId);
-
-        // === VARIANTS CLEANUP ===
-        for (ProductVariant v : variants) {
-            v.getImages().clear();
-        }
-
-        productVariantRepository.deleteAllByProduct_Id(productId);
-
-        // === PRODUCT IMAGES ===
-        deleteProductImages(product);
-        deleteProductUploadDirectory(productId);
-
-        // === PRODUCT ===
-        productRepository.delete(product);
+        productVariantImageAuditRepository.saveAll(
+                images.stream()
+                        .map(img -> ProductVariantImageAudit.builder()
+                                .productVariantId(img.getVariant().getId())
+                                .productName(product.getName())
+                                .classification(img.getVariant().getClassification())
+                                .fileName(img.getFileName())
+                                .filePath(img.getFilePath())
+                                .action(action)
+                                .reason(reason)
+                                .timestamp(now)
+                                .performedBy(username)
+                                .build())
+                        .toList()
+        );
     }
 
 //    @Transactional
-//    public void hardDeleteProduct(UUID id, String reason) throws IOException {
+//    public void hardDeleteProduct(UUID productId, String reason) throws IOException {
 //
-//        Product product = productRepository.findById(id)
+//        Product product = productRepository.findById(productId)
 //                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
 //
-//        // 🔥 BLOCK if inventory exists
-//        boolean hasInventory =
-//                inventoryItemRepository.existsByProductId(id);
-//
-//        if (hasInventory) {
-//            throw new IllegalStateException(
-//                    "Cannot hard delete product. Inventory records exist."
-//            );
-//        }
-//
-//        // 🔥 AUDIT BEFORE deletion (CRITICAL)
+//        // === HARD DELETE AUDIT BEFORE REMOVAL ===
 //        ProductAudit audit = new ProductAudit();
 //        audit.setAction("HARD_DELETE");
 //        audit.setProductId(product.getId());
@@ -803,45 +1046,236 @@ public class ProductService {
 //        audit.setReason(reason);
 //        productAuditRepository.save(audit);
 //
-//        // 🔥 AUDIT PRODUCT IMAGES BEFORE PHYSICAL DELETE
-//        if (product.getImages() != null) {
+//        // === VARIANTS ===
+//        List<ProductVariant> variants =
+//                productVariantRepository.findByProduct_Id(productId);
 //
-//            List<ProductImageAudit> imageAudits = new ArrayList<>();
+//        List<UUID> variantIds =
+//                variants.stream()
+//                        .map(ProductVariant::getId)
+//                        .toList();
 //
-//            for (ProductImage img : product.getImages()) {
-//
-//                imageAudits.add(ProductImageAudit.builder()
-//                        .action("IMAGE_DELETED_PERMANENTLY")
-//                        .fileName(img.getFileName())
-//                        .filePath(img.getFilePath())
-//                        .productId(product.getId())
-//                        .productName(product.getName())
-//                        .timestamp(LocalDateTime.now())
-//                        .performedBy(SecurityUtils.currentUsername())
-//                        .reason(reason)
-//                        .build());
-//            }
-//
-//            productImageAuditRepository.saveAll(imageAudits);
+//        // === SALES ===
+//        if (!variantIds.isEmpty()) {
+//            saleLineItemRepository.deleteAllByProductVariantIdIn(variantIds);
+//            saleRepository.deleteSalesByVariantIds(variantIds);
 //        }
 //
-//        // 🔥 Delete variants explicitly
-//        productVariantRepository.deleteAllByProduct_Id(id);
+//        // === STOCK ===
+//        stockTransactionRepository.deleteAllByProductId(productId);
 //
-//        // 🔥 Delete images (physical files)
-//        deleteProductImages(product);
-//        deleteProductUploadDirectory(id);
+//        // === INVENTORY ===
+//        inventoryItemRepository.deleteAllByProductId(productId);
 //
-//        // 🔥 Delete product
+//        // === VARIANTS CLEANUP ===
+//        for (ProductVariant v : variants) {
+//            v.getImages().clear();
+//        }
+//
+//        productVariantRepository.deleteAllByProduct_Id(productId);
+//
+//        // === PRODUCT IMAGES ===
+//        deleteProductImages(product, false, "Deleted along with product");
+//        deleteProductUploadDirectory(productId);
+//
+//        // === PRODUCT ===
 //        productRepository.delete(product);
 //    }
 
+    @Transactional
+    public void hardDeleteProduct(UUID productId, String reason) {
+
+    /* =========================================================
+       1️⃣ LOCK PRODUCT (Prevents concurrent updates)
+       ========================================================= */
+
+        Product product = productRepository.findForUpdate(productId)
+                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+
+        LocalDateTime now = LocalDateTime.now();
+        String username = SecurityUtils.currentUsername();
+
+    /* =========================================================
+       2️⃣ FETCH EVERYTHING FIRST (DETACHED SNAPSHOTS)
+       ========================================================= */
+
+        List<ProductImage> productImages =
+                productImageRepository.findByProduct_Id(productId);
+
+        List<ProductVariant> variants =
+                productVariantRepository.findByProduct_Id(productId);
+
+        List<UUID> variantIds = variants.stream()
+                .map(ProductVariant::getId)
+                .toList();
+
+        List<ProductVariantImage> variantImages =
+                variantIds.isEmpty()
+                        ? List.of()
+                        : productVariantImageRepository.findByVariantIdsWithVariant(variantIds);
+
+    /* =========================================================
+       3️⃣ SAFETY CHECKS (BLOCK IF FINANCIAL HISTORY EXISTS)
+       ========================================================= */
+
+        boolean hasCompletedSales = false;
+
+        if (!variantIds.isEmpty()) {
+            hasCompletedSales =
+                    saleRepository.existsByVariantIdsAndStatus(
+                            variantIds,
+                            Sale.SaleStatus.COMPLETED
+                    );
+        }
+
+        boolean hasStock =
+                stockTransactionRepository.existsByProductId(productId);
+
+        boolean hasInventory =
+                inventoryItemRepository.existsByProductId(productId);
+
+        if (hasCompletedSales || hasStock || hasInventory) {
+            throw new IllegalStateException(
+                    "Cannot hard delete product with historical financial records."
+            );
+        }
+
+    /* =========================================================
+       4️⃣ AUDIT EVERYTHING BEFORE REMOVAL
+       ========================================================= */
+
+        productAuditRepository.save(
+                ProductAudit.builder()
+                        .action("HARD_DELETE")
+                        .productId(product.getId())
+                        .productName(product.getName())
+                        .timestamp(now)
+                        .performedBy(username)
+                        .reason(reason)
+                        .build()
+        );
+
+        if (!productImages.isEmpty()) {
+            productImageAuditRepository.saveAll(
+                    productImages.stream()
+                            .map(img -> ProductImageAudit.builder()
+                                    .action("IMAGE_DELETED_PERMANENTLY")
+                                    .fileName(img.getFileName())
+                                    .filePath(img.getFilePath())
+                                    .productId(product.getId())
+                                    .productName(product.getName())
+                                    .timestamp(now)
+                                    .performedBy(username)
+                                    .reason(reason)
+                                    .build())
+                            .toList()
+            );
+        }
+
+        if (!variants.isEmpty()) {
+            productVariantAuditRepository.saveAll(
+                    variants.stream()
+                            .map(v -> ProductVariantAudit.builder()
+                                    .action("VARIANT_HARD_DELETED")
+                                    .productId(product.getId())
+                                    .productName(product.getName())
+                                    .productVariantId(v.getId())
+                                    .variantClassification(v.getClassification())
+                                    .timestamp(now)
+                                    .performedBy(username)
+                                    .reason(reason)
+                                    .build())
+                            .toList()
+            );
+        }
+
+        if (!variantImages.isEmpty()) {
+            productVariantImageAuditRepository.saveAll(
+                    variantImages.stream()
+                            .map(img -> ProductVariantImageAudit.builder()
+                                    .action("VARIANT_IMAGE_DELETED_PERMANENTLY")
+                                    .productVariantId(img.getVariant().getId())
+                                    .productName(product.getName())
+                                    .classification(img.getVariant().getClassification())
+                                    .fileName(img.getFileName())
+                                    .filePath(img.getFilePath())
+                                    .timestamp(now)
+                                    .performedBy(username)
+                                    .reason(reason)
+                                    .build())
+                            .toList()
+            );
+        }
+
+    /* =========================================================
+       5️⃣ CAPTURE FILE PATHS FOR POST-COMMIT CLEANUP
+       ========================================================= */
+
+        List<Path> filesToDelete = new ArrayList<>();
+        Path productDir = productRoot().resolve(productId.toString());
+
+        for (ProductImage img : productImages) {
+            filesToDelete.add(productDir.resolve(img.getFileName()));
+        }
+
+        for (ProductVariantImage img : variantImages) {
+            filesToDelete.add(productDir.resolve(img.getFileName()));
+        }
+
+    /* =========================================================
+       6️⃣ BREAK MANY-TO-MANY SAFELY (NO COLLECTION MUTATION)
+       ========================================================= */
+
+        productRepository.detachSuppliers(productId);
+
+        if (!variantIds.isEmpty()) {
+            productVariantImageRepository.deleteByVariantIds(variantIds);
+            productVariantRepository.deleteByProductId(productId);
+        }
+
+        productImageRepository.deleteByProductId(productId);
+
+        /* sync context */
+        em.flush();
+        em.clear();
+
+        /* delete product */
+        productRepository.deleteById(productId);
+
+    /* =========================================================
+       8️ POST-COMMIT FILE CLEANUP (SAFE)
+       ========================================================= */
+
+        transactionalFileManager.runAfterCommit(() -> {
+
+            try {
+
+                for (Path file : filesToDelete) {
+                    try {
+                        fileStorageService.deleteFile(file);
+                    } catch (Exception ex) {
+                        log.warn("Failed to delete file {}", file, ex);
+                    }
+                }
+
+                try {
+                    fileStorageService.deleteDirectory(productDir);
+                } catch (Exception ex) {
+                    log.warn("Failed to delete directory {}", productDir, ex);
+                }
+
+            } catch (Exception e) {
+                log.error("Unexpected error during cleanup for product {}", productId, e);
+            }
+        });
+    }
 
     @Transactional
-    public void bulkHardDelete(List<UUID> ids, String reason) throws IOException {
-
+    public void bulkHardDelete(List<UUID> ids, String reason) {
         for (UUID id : ids) {
             hardDeleteProduct(id, reason);
+            em.flush();
+            em.clear();
         }
     }
 

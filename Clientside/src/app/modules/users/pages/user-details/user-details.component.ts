@@ -20,6 +20,16 @@ import { UserImageAdapter } from '../../services/user/user-image.adapter';
 import { UserAuditTimelineComponent } from '../user-audit-timeline/user-audit-timeline.component';
 import { UserRollcallsComponent } from '../user-rollcalls/user-rollcalls.component';
 
+import {
+  USER_ACTION_REASONS,
+  UserActionType
+} from '../../models/user-action-reasons.model';
+
+import {
+  EntityActionService,
+  EntityActionConfig
+} from '../../../../shared/services/entity-action.service';
+
 @Component({
   selector: 'app-user-details',
   standalone: true,
@@ -48,15 +58,19 @@ export class UserDetailsComponent implements OnInit {
   rollcallCount = 0;
   imageAdapter!: any;
 
+  private actionConfig!: EntityActionConfig<User>;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private userService: UserService,
     private auth: AuthService,
-    private snackbar: MatSnackBar
+    private snackbar: MatSnackBar,
+    private entityAction: EntityActionService
   ) { }
 
   ngOnInit() {
+
     const username = this.route.snapshot.paramMap.get('username');
     if (!username) return;
 
@@ -70,6 +84,7 @@ export class UserDetailsComponent implements OnInit {
       next: u => {
         this.user = u;
         this.loading = false;
+        this.initializeActionConfig();
         this.loadCounts();
       },
       error: () => {
@@ -79,7 +94,36 @@ export class UserDetailsComponent implements OnInit {
     });
   }
 
-  /* ---------------- Role Guards ---------------- */
+  /* ================= ACTION CONFIG ================= */
+
+  private initializeActionConfig() {
+
+    this.actionConfig = {
+      entityName: 'User',
+      displayName: (u) => u.username,
+
+      disableReasons: USER_ACTION_REASONS[UserActionType.DISABLE],
+      restoreReasons: USER_ACTION_REASONS[UserActionType.RESTORE],
+      deleteReasons: USER_ACTION_REASONS[UserActionType.DELETE],
+
+      disable: (id, reason) =>
+        this.userService.softDelete(id, reason),
+
+      restore: (id, reason) =>
+        this.userService.restore(id, reason),
+
+      hardDelete: (id, reason) =>
+        this.userService.hardDelete(id, reason),
+
+      reload: () => {
+        this.userService.get(this.user.username).subscribe(u => {
+          this.user = u;
+        });
+      }
+    };
+  }
+
+  /* ================= ROLE GUARDS ================= */
 
   canViewImages() {
     return ['ADMIN', 'SUPERUSER'].includes(this.role);
@@ -97,9 +141,14 @@ export class UserDetailsComponent implements OnInit {
     return this.role === 'SUPERUSER';
   }
 
-  /* ---------------- Badge Counts ---------------- */
+  canManageUser(): boolean {
+    return ['ADMIN', 'SUPERUSER'].includes(this.role);
+  }
+
+  /* ================= BADGE COUNTS ================= */
 
   private loadCounts() {
+
     if (this.canViewAudits()) {
       this.userService.auditsForUser(this.user.id!).subscribe(a =>
         this.auditCount = a?.length || 0
@@ -119,7 +168,7 @@ export class UserDetailsComponent implements OnInit {
     }
   }
 
-  /* ---------------- UI ---------------- */
+  /* ================= UI HELPERS ================= */
 
   initials(): string {
     return this.user.username.charAt(0).toUpperCase();
@@ -133,45 +182,16 @@ export class UserDetailsComponent implements OnInit {
     this.router.navigate(['/users', this.user.username, 'edit']);
   }
 
-  /* User Functions */
+  /* ================= ACTION HANDLER ================= */
 
-  canManageUser(): boolean {
-    return ['ADMIN', 'SUPERUSER'].includes(this.role);
+  toggleUser() {
+
+    if (!this.user) return;
+
+    this.entityAction.toggleSingle(
+      this.user,
+      this.actionConfig
+    );
   }
 
-  softDeleteUser() {
-    if (!confirm('Disable this user?')) return;
-
-    this.userService.softDelete(this.user.id!, 'Disabled from user details')
-      .subscribe({
-        next: () => {
-          this.user.deleted = true;
-          this.snackbar.open('User disabled', 'Close', { duration: 2000 });
-        }
-      });
-  }
-
-  hardDeleteUser() {
-    if (!confirm('Permanently delete this user?')) return;
-
-    this.userService.hardDelete(this.user.id!)
-      .subscribe({
-        next: () => {
-          this.user.deleted = true;
-          this.snackbar.open('User disabled', 'Close', { duration: 2000 });
-        }
-      });
-  }
-
-  restoreUser() {
-    if (!confirm('Restore this user?')) return;
-
-    this.userService.restore(this.user.id!, 'Restored from user details')
-      .subscribe({
-        next: () => {
-          this.user.deleted = false;
-          this.snackbar.open('User restored', 'Close', { duration: 2000 });
-        }
-      });
-  }
 }

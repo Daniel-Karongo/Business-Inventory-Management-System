@@ -1,0 +1,35 @@
+<h2 mat-dialog-title>Capture Photos</h2>
+
+<mat-dialog-content class="camera-body">
+
+    <div class="camera-preview">
+        <video #video autoplay playsinline></video>
+        <canvas #canvas hidden></canvas>
+    </div>
+
+    <div class="camera-controls">
+        <button mat-flat-button (click)="capture()">
+            <mat-icon>photo_camera</mat-icon>
+            Capture
+        </button>
+    </div>
+
+    <div class="captured-list" *ngIf="previews.length">
+
+        <div class="captured-card" *ngFor="let p of previews; let i = index">
+            <img [src]="p.url" />
+            <button mat-icon-button color="warn" (click)="remove(i)">
+                <mat-icon>delete</mat-icon>
+            </button>
+        </div>
+
+    </div>
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+    <button mat-button (click)="cancel()">Cancel</button>
+    <button mat-flat-button color="primary" (click)="confirm()" [disabled]="!captured.length">
+        Use Photos ({{ captured.length }})
+    </button>
+</mat-dialog-actions>

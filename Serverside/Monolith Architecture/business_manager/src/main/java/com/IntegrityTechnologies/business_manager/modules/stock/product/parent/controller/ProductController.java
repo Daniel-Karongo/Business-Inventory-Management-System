@@ -351,13 +351,16 @@ public class ProductController {
 
     @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
     @DeleteMapping("/soft/{id}")
-    @Operation(summary = "Soft delete a product (mark as deleted)")
     public ResponseEntity<ApiResponse> softDeleteProduct(
             @PathVariable UUID id,
             @RequestParam(required = false) String reason
     ) {
 
-        return productService.softDeleteProduct(id, reason);
+        productService.bulkSoftDelete(List.of(id), reason);
+
+        return ResponseEntity.ok(
+                new ApiResponse("success", reason)
+        );
     }
 
 
@@ -366,17 +369,17 @@ public class ProductController {
     @Operation(summary = "Restore a soft-deleted product")
     public ResponseEntity<Void> restoreProduct(
             @PathVariable UUID id,
-            @RequestParam(required = false) String reason
+            @RequestBody(required = false) ProductRestoreRequest request
     ) {
 
-        productService.restoreProduct(id, reason);
+        productService.restoreProduct(
+                id,
+                request != null ? request.getReason() : null,
+                request != null ? request.getRestoreOptions() : null
+        );
 
         return ResponseEntity.noContent().build();
     }
-
-    /* =============================
-   BULK DELETE & RESTORE
-   ============================= */
 
     /* =============================
    BULK DELETE & RESTORE
@@ -398,14 +401,16 @@ public class ProductController {
 
     @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     @PutMapping("/restore/bulk")
-    @Operation(summary = "Restore soft-deleted products in bulk")
     public ResponseEntity<Void> bulkRestore(
             @RequestBody BulkActionRequest request
     ) {
+
         productService.bulkRestore(
                 request.getIds(),
-                request.getReason()
+                request.getReason(),
+                request.getRestoreOptions()
         );
+
         return ResponseEntity.noContent().build();
     }
 
@@ -425,25 +430,41 @@ public class ProductController {
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasRole('SUPERUSER')")
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
     @DeleteMapping("/{id}/images/{filename}")
     @Operation(summary = "Delete a specific product image by filename")
     public ResponseEntity<Void> deleteProductImageByFilename(
             @PathVariable UUID id,
-            @PathVariable String filename
+            @PathVariable String filename,
+            @RequestParam(required = false, defaultValue = "true") Boolean soft
     ) throws IOException {
-        productService.deleteProductImageByFilename(id, filename);
+        productService.deleteProductImageByFilename(id, filename, soft);
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasRole('SUPERUSER')")
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
     @DeleteMapping("/{id}/images")
     @Operation(summary = "Delete all images for a product (and remove upload directory)")
-    public ResponseEntity<Void> deleteAllProductImages(@PathVariable UUID id) throws IOException {
-        productService.deleteAllProductImages(id);
+    public ResponseEntity<Void> deleteAllProductImages(
+        @PathVariable UUID id,
+        @RequestParam(required = false, defaultValue = "true") Boolean soft,
+        @RequestParam(required = false) String reason
+    ) throws IOException {
+        productService.deleteAllProductImages(id, soft, reason);
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
+    @PutMapping("/restore/{productId}/{productImageId}")
+    @Operation(summary = "Restore a soft-deleted product")
+    public ResponseEntity<Void> restoreProductImage(
+            @PathVariable UUID productId,
+            @PathVariable UUID productImageId,
+            @RequestParam(required = false) String reason
+    ) {
+        productService.restoreProductImage(productId, productImageId, reason);
+        return ResponseEntity.noContent().build();
+    }
 
 
 

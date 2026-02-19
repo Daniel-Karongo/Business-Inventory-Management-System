@@ -71,7 +71,7 @@ export class CustomerService {
       request
     );
   }
-  
+
   update(id: string, req: CustomerRequest) {
     return this.http.put<CustomerResponse>(`${this.base}/${id}`, req);
   }
@@ -84,32 +84,45 @@ export class CustomerService {
     return this.http.get<any[]>(`${this.base}/${id}/sales`);
   }
 
-  softDelete(id: string) {
-    return this.http.delete(`${this.base}/${id}`, { params: { soft: true } });
+  softDelete(id: string, reason: string | null) {
+    return this.http.delete(`${this.base}/${id}`, {
+      params: { soft: true },
+      body: reason ?? ''
+    });
   }
 
-  restore(id: string) {
-    return this.http.patch(`${this.base}/${id}/restore`, {});
+  restore(id: string, reason: string | null) {
+    return this.http.patch(`${this.base}/${id}/restore`, reason ?? '');
   }
 
-  softDeleteBulk(ids: string[]) {
-    return this.http.post(`${this.base}/bulk/soft-delete`, { ids });
-  }
-
-  restoreBulk(ids: string[]) {
-    return this.http.post(`${this.base}/bulk/restore`, { ids });
-  }
-
-  hardDelete(id: string) {
+  hardDelete(id: string, reason: string | null) {
     return this.http.delete<void>(
       `${this.base}/${id}`,
-      { params: { soft: 'false' } }
+      {
+        params: { soft: 'false' },
+        body: reason ?? ''
+      }
     );
   }
 
-  hardDeleteBulk(ids: string[]) {
-    return forkJoin(
-      ids.map(id => this.hardDelete(id))
-    );
+  softDeleteBulk(ids: string[], reason: string | null) {
+    return this.http.post(`${this.base}/bulk/soft-delete`, {
+      ids,
+      reason: reason ?? ''
+    });
+  }
+
+  restoreBulk(ids: string[], reason: string | null) {
+    return this.http.post(`${this.base}/bulk/restore`, {
+      ids,
+      reason: reason ?? ''
+    });
+  }
+
+  hardDeleteBulk(ids: string[], reason: string | null) {
+    return this.http.post(`${this.base}/bulk/hard-delete`, {
+      ids,
+      reason: reason ?? ''
+    });
   }
 }

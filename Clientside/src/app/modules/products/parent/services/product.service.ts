@@ -66,10 +66,18 @@ export class ProductService {
     });
   }
 
-  bulkRestore(ids: string[], reason?: string | null) {
+  bulkRestore(
+    ids: string[],
+    reason?: string | null,
+    restoreOptions?: {
+      restoreStockTransactions: boolean,
+      restoreInventory: boolean
+    }
+  ) {
     return this.http.put(`${this.base}/restore/bulk`, {
       ids,
-      reason
+      reason,
+      restoreOptions
     });
   }
 
@@ -92,12 +100,19 @@ export class ProductService {
     );
   }
 
-  restore(id: string, reason?: string | null) {
+  restore(
+    id: string,
+    reason?: string | null,
+    restoreOptions?: {
+      restoreStockTransactions: boolean;
+      restoreInventory: boolean;
+    }
+  ) {
     return this.http.put(
       `${this.base}/restore/${id}`,
-      {},
       {
-        params: reason ? { reason } : {}
+        reason,
+        restoreOptions
       }
     );
   }

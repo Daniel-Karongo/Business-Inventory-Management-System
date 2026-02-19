@@ -10,6 +10,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { BulkFileRowAssignmentDialogComponent }
     from '../files/bulk-file-row-assignment-dialog.component';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { BulkCameraCaptureService } from '../camera/bulk-camera-capture.service';
 
 @Directive()
 export abstract class BulkImportWithFilesComponent<
@@ -27,7 +28,8 @@ export abstract class BulkImportWithFilesComponent<
     constructor(
         protected fileFactory: BulkFileFactoryService,
         protected fileLifecycle: BulkFileLifecycleService,
-        protected zipEngine: BulkFileImportEngine
+        protected zipEngine: BulkFileImportEngine,
+        protected camera: BulkCameraCaptureService
     ) {
         super();
     }
@@ -344,6 +346,48 @@ export abstract class BulkImportWithFilesComponent<
     protected appendFilesToFormData(formData: FormData) {
         this.allFiles.forEach(f => {
             formData.append('files', f.file);
+        });
+    }
+
+    protected async capturePhotoForRow(
+        rowIndex: number,
+        entityType: string
+    ) {
+
+        const files = await this.camera.capture(entityType, rowIndex);
+        if (!files?.length) return;
+
+        files.forEach(file => {
+
+            const assigned =
+                this.fileFactory.createAssignedFile(file);
+
+            assigned.assignedRowIndexes = [rowIndex];
+            assigned.assignToEntity = true;
+
+            // 🔥 Assign to STANDARD / first variant
+            const variantsControl =
+                this.rows.at(rowIndex).get('variants')?.value ?? '';
+
+            const variants = variantsControl
+                .split(',')
+                .map((v: string) => v.trim().toUpperCase())
+                .filter(Boolean);
+
+            if (variants.length) {
+                assigned.rowVariantMap[rowIndex] = [variants[0]];
+            } else {
+                assigned.rowVariantMap[rowIndex] = ['STANDARD'];
+            }
+
+            this.allFiles.push(assigned);
+
+            const row = this.rows.at(rowIndex);
+            const ids = row.get('fileIds')?.value ?? [];
+
+            row.patchValue({
+                fileIds: [...ids, assigned.id]
+            });
         });
     }
 }

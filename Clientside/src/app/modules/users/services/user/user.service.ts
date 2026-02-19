@@ -96,43 +96,46 @@ export class UserService {
     return this.http.patch<User>(url, payload);
   }
 
-  /* ============================================================
-     DELETE / RESTORE USERS
-  ============================================================ */
   softDelete(id: string, reason: string | null) {
-    return this.http.delete(
-      `${environment.apiUrl}${environment.endpoints.users.softDelete(id)}`,
+    return this.http.delete(`${this.base}/${id}`, {
+      params: { soft: true },
+      body: reason ?? ''
+    });
+  }
+
+  restore(id: string, reason: string | null) {
+    return this.http.patch(`${this.base}/${id}/restore`, reason ?? '');
+  }
+
+  hardDelete(id: string, reason: string | null) {
+    return this.http.delete<void>(
+      `${this.base}/${id}`,
       {
-        body: reason ?? '' // send plain string
+        params: { soft: 'false' },
+        body: reason ?? ''
       }
     );
   }
 
-  softDeleteBulk(ids: string[], reason: string) {
-    const url = `${environment.apiUrl}${environment.endpoints.users.softDeleteBulk}`;
-    return this.http.delete(url, { body: { ids, reason } });
+  softDeleteBulk(ids: string[], reason: string | null) {
+    return this.http.post(`${this.base}/bulk/soft-delete`, {
+      ids,
+      reason: reason ?? ''
+    });
   }
 
-  restore(id: string, reason: string | null) {
-    return this.http.patch(
-      `${environment.apiUrl}${environment.endpoints.users.restore(id)}`,
-      reason ?? ''   // send plain string
-    );
+  restoreBulk(ids: string[], reason: string | null) {
+    return this.http.post(`${this.base}/bulk/restore`, {
+      ids,
+      reason: reason ?? ''
+    });
   }
 
-  restoreBulk(ids: string[], reason: string) {
-    const url = `${environment.apiUrl}${environment.endpoints.users.restoreBulk}`;
-    return this.http.patch(url, { ids, reason });
-  }
-
-  hardDelete(id: string) {
-    const url = `${environment.apiUrl}${environment.endpoints.users.hardDelete(id)}`;
-    return this.http.delete(url);
-  }
-
-  hardDeleteBulk(ids: string[]) {
-    const url = `${environment.apiUrl}${environment.endpoints.users.hardDeleteBulk}`;
-    return this.http.delete(url, { body: ids });
+  hardDeleteBulk(ids: string[], reason: string | null) {
+    return this.http.post(`${this.base}/bulk/hard-delete`, {
+      ids,
+      reason: reason ?? ''
+    });
   }
 
   /* ============================================================

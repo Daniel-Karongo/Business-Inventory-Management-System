@@ -1,28 +1,33 @@
-import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { Component, OnInit } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { Router, RouterModule } from '@angular/router';
 import { debounceTime } from 'rxjs/operators';
 
 import { SelectionModel } from '@angular/cdk/collections';
 
-import { MatTableModule } from '@angular/material/table';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { CustomerService } from '../../services/customer.service';
-import { CustomerResponse } from '../../models/customer.model';
-import { SmsDialogComponent } from '../../../../shared/components/sms-dialog/sms-dialog.component';
-import { SmsService } from '../../../communication/services/sms.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { SmsDialogComponent } from '../../../../shared/components/sms-dialog/sms-dialog.component';
+import { EntityActionConfig, EntityActionService } from '../../../../shared/services/entity-action.service';
+import { SmsService } from '../../../communication/services/sms.service';
 import { CustomerBulkImportDialogComponent } from '../../components/customer-bulk-import-dialog/customer-bulk-import-dialog.component';
+import {
+  CUSTOMER_ACTION_REASONS,
+  CustomerActionType
+} from '../../models/customer-action-reasons.model';
+import { CustomerResponse } from '../../models/customer.model';
+import { CustomerService } from '../../services/customer.service';
 
 @Component({
   standalone: true,
@@ -78,8 +83,29 @@ export class CustomerListComponent implements OnInit {
   /** SHOW DELETED TOGGLE */
   showDeleted = false;
 
+  private customerActionConfig: EntityActionConfig<CustomerResponse> = {
+
+    entityName: 'Customer',
+    displayName: (c) => c.name,
+
+    disableReasons: CUSTOMER_ACTION_REASONS[CustomerActionType.DISABLE],
+    restoreReasons: CUSTOMER_ACTION_REASONS[CustomerActionType.RESTORE],
+    deleteReasons: CUSTOMER_ACTION_REASONS[CustomerActionType.DELETE],
+
+    disable: (id, reason) => this.service.softDelete(id, reason),
+    restore: (id, reason) => this.service.restore(id, reason),
+    hardDelete: (id, reason) => this.service.hardDelete(id, reason),
+
+    disableBulk: (ids, reason) => this.service.softDeleteBulk(ids, reason),
+    restoreBulk: (ids, reason) => this.service.restoreBulk(ids, reason),
+    hardDeleteBulk: (ids, reason) => this.service.hardDeleteBulk(ids, reason),
+
+    reload: () => this.loadAllCustomersOnce()
+  };
+
   constructor(
     private service: CustomerService,
+    private entityAction: EntityActionService,
     private smsService: SmsService,
     private dialog: MatDialog,
     private router: Router,
@@ -273,56 +299,22 @@ export class CustomerListComponent implements OnInit {
     this.applyAll();
   }
 
-  /* =====================================================
-     BULK ACTIONS (PRESERVED)
-  ===================================================== */
+  toggleCustomer(c: CustomerResponse) {
+    this.entityAction.toggleSingle(c, this.customerActionConfig);
+  }
+
   bulkDisable() {
-    if (this.bulkState !== 'active') return;
-    if (!confirm('Disable selected customers?')) return;
-
-    this.selection.selected.forEach(c =>
-      this.service.softDelete(c.id).subscribe({
-        next: () => {
-          this.snackbar.open('Customers disabled successfully', 'Close', { duration: 2000 });
-          this.loadAllCustomersOnce();
-        },
-        error: () =>
-          this.snackbar.open('Failed to disable customers', 'Close', { duration: 2000 })
-      })
-    );
-
+    this.entityAction.bulkDisable(this.selection.selected, this.customerActionConfig);
   }
 
   bulkRestore() {
-    if (this.bulkState !== 'deleted') return;
-
-    this.selection.selected.forEach(c =>
-      this.service.restore(c.id).subscribe({
-        next: () => {
-          this.snackbar.open('Customers restored successfully', 'Close', { duration: 2000 });
-          this.loadAllCustomersOnce();
-        },
-        error: () =>
-          this.snackbar.open('Failed to restore customers', 'Close', { duration: 2000 })
-      })
-    );
+    this.entityAction.bulkRestore(this.selection.selected, this.customerActionConfig);
   }
 
   bulkHardDelete() {
-    if (this.bulkState !== 'deleted') return;
-    if (!confirm('Permanently delete selected customers?')) return;
-
-    this.selection.selected.forEach(c =>
-      this.service.hardDelete(c.id).subscribe({
-        next: () => {
-          this.snackbar.open('Customers deleted successfully', 'Close', { duration: 2000 });
-          this.loadAllCustomersOnce();
-        },
-        error: () =>
-          this.snackbar.open('Failed to delete customers', 'Close', { duration: 2000 })
-      })
-    );
+    this.entityAction.bulkHardDelete(this.selection.selected, this.customerActionConfig);
   }
+
 
   /* =====================================================
      ROW ACTIONS

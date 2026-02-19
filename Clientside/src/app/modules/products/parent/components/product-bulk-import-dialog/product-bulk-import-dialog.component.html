@@ -64,9 +64,19 @@
           <input type="file" multiple hidden #fileInput
             (change)="onRowFilesSelected(i, fileInput.files); fileInput.value = ''" />
 
-          <button mat-stroked-button (click)="fileInput.click()">
-            Upload Files
-          </button>
+          <div class="file-actions">
+
+            <button mat-stroked-button (click)="fileInput.click()">
+              <mat-icon>upload</mat-icon>
+              Upload Files
+            </button>
+
+            <button mat-stroked-button color="primary" (click)="capturePhotoForRow(i, 'product')">
+              <mat-icon>photo_camera</mat-icon>
+              Take Photo
+            </button>
+
+          </div>
 
           <app-bulk-file-assignment [files]="getRowFiles(i)" [rowIndex]="i" [rowVariants]="getRowVariants(i)"
             (remove)="onFileRemove($event)" (assign)="openAssignmentDialog($event)"

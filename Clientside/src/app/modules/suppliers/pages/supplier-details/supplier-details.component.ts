@@ -9,10 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { SupplierService } from '../../services/supplier.service';
-import {
-  Supplier,
-  SupplierAudit
-} from '../../models/supplier.model';
+import { Supplier, SupplierAudit } from '../../models/supplier.model';
 
 import { AuthService } from '../../../auth/services/auth.service';
 import { SupplierImageAdapter } from '../../services/supplier-image.adapter';
@@ -22,6 +19,16 @@ import { EntityImageManagerComponent } from
 import { Product } from '../../../products/parent/models/product.model';
 import { CategoryService } from '../../../categories/services/category.service';
 import { Category } from '../../../categories/models/category.model';
+
+import {
+  EntityActionService,
+  EntityActionConfig
+} from '../../../../shared/services/entity-action.service';
+
+import {
+  SUPPLIER_ACTION_REASONS,
+  SupplierActionType
+} from '../../models/supplier-action-reasons.model';
 
 @Component({
   selector: 'app-supplier-details',
@@ -42,15 +49,14 @@ export class SupplierDetailsComponent implements OnInit {
   supplier!: Supplier;
   supplierId!: string;
   loading = true;
-
   role = '';
 
   products: Product[] = [];
-  derivedCategories: { id: number; name: string }[] = [];
   audits: SupplierAudit[] = [];
+  categories: CategoryWithSupply[] = [];
 
   imageAdapter!: any;
-  categories: CategoryWithSupply[] = [];
+  private actionConfig!: EntityActionConfig<Supplier>;
 
   constructor(
     private route: ActivatedRoute,
@@ -58,11 +64,13 @@ export class SupplierDetailsComponent implements OnInit {
     private location: Location,
     private supplierService: SupplierService,
     private categoryService: CategoryService,
+    private entityAction: EntityActionService,
     private auth: AuthService,
     private snackbar: MatSnackBar
   ) { }
 
   ngOnInit(): void {
+
     this.auth.getCurrentUser().subscribe(u => {
       this.role = u?.role ?? '';
     });
@@ -82,6 +90,7 @@ export class SupplierDetailsComponent implements OnInit {
   /* ================= LOAD ================= */
 
   private loadSupplier(identifier: string, deleted: boolean) {
+
     this.loading = true;
 
     this.supplierService.getById(identifier, deleted).subscribe({
@@ -90,6 +99,7 @@ export class SupplierDetailsComponent implements OnInit {
         this.supplierId = s.id;
         this.loading = false;
 
+        this.initializeActionConfig();
         this.loadProducts();
         this.loadAudits();
       },
@@ -100,25 +110,33 @@ export class SupplierDetailsComponent implements OnInit {
     });
   }
 
-  private loadProducts() {
-    this.supplierService.productsSupplied(this.supplierId).subscribe(products => {
-      this.products = products || [];
-      this.computeCategoriesFromProducts();
-    });
+  private initializeActionConfig() {
+
+    this.actionConfig = {
+      entityName: 'Supplier',
+      displayName: (s) => s.name,
+
+      disableReasons: SUPPLIER_ACTION_REASONS[SupplierActionType.DISABLE],
+      restoreReasons: SUPPLIER_ACTION_REASONS[SupplierActionType.RESTORE],
+      deleteReasons: SUPPLIER_ACTION_REASONS[SupplierActionType.DELETE],
+
+      disable: (id, reason) =>
+        this.supplierService.softDelete(id, reason),
+
+      restore: (id, reason) =>
+        this.supplierService.restore(id, reason),
+
+      hardDelete: (id, reason) =>
+        this.supplierService.hardDelete(id, reason),
+
+      reload: () =>
+        this.loadSupplier(this.supplierId, this.supplier.deleted)
+    };
   }
 
-  private computeCategoriesFromProducts() {
-    const map = new Map<number, string>();
-
-    this.products.forEach(p => {
-      if (p.categoryId && p.categoryName) {
-        map.set(p.categoryId, p.categoryName);
-      }
-    });
-
-    this.derivedCategories = Array.from(map.entries()).map(
-      ([id, name]) => ({ id, name })
-    );
+  private loadProducts() {
+    this.supplierService.productsSupplied(this.supplierId)
+      .subscribe(products => this.products = products || []);
   }
 
   private loadAudits() {
@@ -135,33 +153,21 @@ export class SupplierDetailsComponent implements OnInit {
     });
   }
 
-  isSupplied(category: Category): boolean {
-    return !!category.suppliers?.some(s => s.id === this.supplierId);
-  }
+  /* ================= ROLE GUARDS ================= */
 
-  hasSuppliedDescendant(category: Category): boolean {
-    if (!category.subcategories?.length) return false;
-
-    return category.subcategories.some(
-      c => this.isSupplied(c) || this.hasSuppliedDescendant(c)
-    );
-  }
-
-  /* ================= PERMISSIONS ================= */
-
-  isSuperuser() {
-    return this.role === 'SUPERUSER';
-  }
-
-  canSoftDelete() {
+  canManageSupplier(): boolean {
     return ['ADMIN', 'SUPERUSER'].includes(this.role);
   }
 
-  canHardDelete() {
+  isSuperuser(): boolean {
     return this.role === 'SUPERUSER';
   }
 
-  /* ================= ACTIONS ================= */
+  /* ================= ACTION ================= */
+
+  toggleSupplier() {
+    this.entityAction.toggleSingle(this.supplier, this.actionConfig);
+  }
 
   back() {
     this.location.back();
@@ -174,31 +180,6 @@ export class SupplierDetailsComponent implements OnInit {
     );
   }
 
-  disableSupplier() {
-    this.supplierService
-      .softDelete(this.supplierId, 'Disabled from supplier details')
-      .subscribe(() => {
-        this.supplier.deleted = true;
-        this.snackbar.open('Supplier disabled', 'Close', { duration: 2000 });
-      });
-  }
-
-  restoreSupplier() {
-    this.supplierService
-      .restore(this.supplierId, 'Restored from supplier details')
-      .subscribe(() => {
-        this.supplier.deleted = false;
-        this.snackbar.open('Supplier restored', 'Close', { duration: 2000 });
-      });
-  }
-
-  hardDeleteSupplier() {
-    this.supplierService.hardDelete(this.supplierId).subscribe(() => {
-      this.snackbar.open('Supplier permanently deleted', 'Close', { duration: 2000 });
-      this.router.navigate(['/suppliers']);
-    });
-  }
-
   goProduct(id: string) {
     this.router.navigate(['/products', id]);
   }
@@ -208,7 +189,10 @@ export class SupplierDetailsComponent implements OnInit {
   }
 }
 
-// category-supply.model.ts
+/* ===========================================================
+   CATEGORY SUPPLY TYPES + UTIL (RESTORED)
+=========================================================== */
+
 export type CategorySupplyState =
   | 'DIRECT'
   | 'DERIVED'
@@ -221,7 +205,6 @@ export interface CategoryWithSupply extends Category {
   totalChildrenCount: number;
 }
 
-// category-supply.util.ts
 export function computeCategorySupplyState(
   category: Category,
   supplierId: string
@@ -232,7 +215,6 @@ export function computeCategorySupplyState(
   const isDirect =
     category.suppliers?.some(s => s.id === supplierId) ?? false;
 
-  // 1️⃣ DIRECT
   if (isDirect) {
     return {
       ...category,
@@ -245,7 +227,6 @@ export function computeCategorySupplyState(
     };
   }
 
-  // 2️⃣ LEAF
   if (children.length === 0) {
     return {
       ...category,
@@ -255,7 +236,6 @@ export function computeCategorySupplyState(
     };
   }
 
-  // 3️⃣ RECURSE
   const computedChildren = children.map(c =>
     computeCategorySupplyState(c, supplierId)
   );
@@ -264,7 +244,6 @@ export function computeCategorySupplyState(
     c => c.supplyState === 'DIRECT'
   ).length;
 
-  // 4️⃣ DERIVED = ALL children DIRECT
   if (directCount === computedChildren.length) {
     return {
       ...category,
@@ -275,7 +254,6 @@ export function computeCategorySupplyState(
     };
   }
 
-  // 5️⃣ PARTIAL = SOME children DIRECT
   if (directCount > 0) {
     return {
       ...category,
@@ -286,7 +264,6 @@ export function computeCategorySupplyState(
     };
   }
 
-  // 6️⃣ NONE
   return {
     ...category,
     supplyState: 'NONE',

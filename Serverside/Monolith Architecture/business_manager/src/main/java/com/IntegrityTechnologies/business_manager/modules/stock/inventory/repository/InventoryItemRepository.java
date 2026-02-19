@@ -2,6 +2,10 @@ package com.IntegrityTechnologies.business_manager.modules.stock.inventory.repos
 
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryItem;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,4 +24,21 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
     Optional<InventoryItem> findFirstByProductVariantId(UUID productVariantId);
     void deleteAllByProductId(UUID productId);
     boolean existsByProductId(UUID id);
+    @Transactional
+    @Modifying
+    @Query("""
+        update InventoryItem i
+        set i.deleted = true
+        where i.productVariant.id in :variantIds
+    """)
+    void softDeleteByVariantIds(@Param("variantIds") List<UUID> variantIds);
+
+    @Transactional
+    @Modifying
+    @Query("""
+        update InventoryItem i
+        set i.deleted = false
+        where i.productVariant.id in :variantIds
+    """)
+    void restoreByVariantIds(@Param("variantIds") List<UUID> variantIds);
 }

@@ -2,8 +2,11 @@ package com.IntegrityTechnologies.business_manager.modules.stock.inventory.repos
 
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.StockTransaction;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -43,11 +46,37 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
     List<StockTransaction> findByProductVariantIdOrderByTimestampDesc(UUID variantId);
 
     List<StockTransaction> findByBranchIdOrderByTimestampDesc(UUID branchId);
-
     List<StockTransaction> findByProductIdAndBranchIdOrderByTimestampDesc(UUID productId, UUID branchId);
-
     List<StockTransaction> findByProductVariantIdAndBranchIdOrderByTimestampDesc(UUID variantId, UUID branchId);
-
     List<StockTransaction> findByTimestampBetween(LocalDateTime from, LocalDateTime to);
+    List<StockTransaction> findByProductVariantIdAndDeletedFalse(UUID variantId);
     void deleteAllByProductId(UUID productId);
+    @Transactional
+    @Modifying
+    @Query("""
+    update StockTransaction s
+    set s.deleted = true
+    where s.productId = :productId
+""")
+    void softDeleteByProductId(@Param("productId") UUID productId);
+
+    @Transactional
+    @Modifying
+    @Query("""
+        update StockTransaction s
+        set s.deleted = true
+        where s.productVariantId in :variantIds
+    """)
+    void softDeleteByVariantIds(@Param("variantIds") List<UUID> variantIds);
+
+    @Transactional
+    @Modifying
+    @Query("""
+        update StockTransaction s
+        set s.deleted = false
+        where s.productVariantId in :variantIds
+    """)
+    void restoreByVariantIds(@Param("variantIds") List<UUID> variantIds);
+
+    boolean existsByProductId(UUID productId);
 }

@@ -163,14 +163,14 @@
 
 /* Compact density (enterprise tight mode) */
 .table-wrapper.compact .mat-mdc-row {
-  height: 30px;
+  height: 28px;
 }
 
 .table-wrapper.compact .mat-mdc-cell,
 .table-wrapper.compact .mat-mdc-header-cell {
-  padding-top: 2px !important;
-  padding-bottom: 2px !important;
-  font-size: 0.82rem;
+  padding-top: 1px !important;
+  padding-bottom: 1px !important;
+  font-size: 0.78rem;
 }
 
 /* Normal density */

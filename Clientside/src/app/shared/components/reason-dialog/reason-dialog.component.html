@@ -5,33 +5,41 @@
     {{ data.message }}
   </p>
 
-  <!-- Select predefined reason OR "Other" -->
-  <mat-form-field appearance="fill" class="w-full">
+  <mat-form-field appearance="fill" class="w-full" *ngIf="reasonOptions.length">
     <mat-label>Select a reason (optional)</mat-label>
 
     <mat-select [(ngModel)]="selectedReason">
+
       <mat-option *ngFor="let r of reasonOptions" [value]="r">
         {{ r }}
       </mat-option>
 
-      <mat-option value="OTHER">Other...</mat-option>
+      <mat-option *ngIf="allowCustom" value="OTHER">
+        Other...
+      </mat-option>
+
     </mat-select>
   </mat-form-field>
 
-  <!-- Custom reason when selecting "Other" -->
-  <mat-form-field appearance="fill" class="w-full" *ngIf="selectedReason === 'OTHER'">
+  <mat-form-field appearance="fill"
+                  class="w-full"
+                  *ngIf="selectedReason === 'OTHER'">
+
     <mat-label>Custom reason</mat-label>
+
     <textarea
-        matInput
-        cdkTextareaAutosize
-        cdkAutosizeMinRows="1"
-        cdkAutosizeMaxRows="6"
-        [(ngModel)]="customReason"
-        placeholder="Enter custom reason (optional)"
-    ></textarea>
+      matInput
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="1"
+      cdkAutosizeMaxRows="6"
+      [(ngModel)]="customReason"
+      placeholder="Enter custom reason">
+    </textarea>
+
   </mat-form-field>
 
   <div class="flex justify-end gap-2 mt-4">
+
     <button mat-stroked-button (click)="cancel()">
       {{ data.cancelText || 'Cancel' }}
     </button>
@@ -39,5 +47,6 @@
     <button mat-flat-button color="warn" (click)="confirm()">
       {{ data.confirmText || 'Confirm' }}
     </button>
+
   </div>
 </div>

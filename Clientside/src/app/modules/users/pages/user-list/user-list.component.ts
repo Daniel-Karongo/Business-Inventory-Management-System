@@ -1,33 +1,36 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { MatTableModule } from '@angular/material/table';
-import { MatPaginator, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSelectModule } from '@angular/material/select';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatSortModule } from '@angular/material/sort';
 import { SelectionModel } from '@angular/cdk/collections';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
+import { MatPaginator, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSortModule } from '@angular/material/sort';
+import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 
-import { UserService } from '../../services/user/user.service';
 import { User } from '../../models/user.model';
+import { UserService } from '../../services/user/user.service';
 
-import { ReasonDialogComponent } from '../../../../shared/components/reason-dialog/reason-dialog.component';
+import { canSeeDeleted } from '../../../../core/utils/permission.utils';
+import { EntityActionConfig, EntityActionService } from '../../../../shared/services/entity-action.service';
+import { AuthService } from '../../../auth/services/auth.service';
 import { BranchService } from '../../../branches/services/branch.service';
 import { DepartmentService } from '../../../departments/services/department.service';
-import { RoleService } from '../../services/role/role.service';
 import { UserBulkImportDialogComponent } from '../../components/user-bulk-import-dialog/user-bulk-import-dialog.component';
-import { AuthService } from '../../../auth/services/auth.service';
-import { canSeeDeleted } from '../../../../core/utils/permission.utils';
-
+import {
+  USER_ACTION_REASONS,
+  UserActionType
+} from '../../models/user-action-reasons.model';
+import { RoleService } from '../../services/role/role.service';
 
 @Component({
   selector: 'app-user-list',
@@ -89,12 +92,33 @@ export class UserListComponent implements OnInit {
 
   @ViewChild(MatPaginator) paginator?: MatPaginator;
 
+  private userActionConfig: EntityActionConfig<User> = {
+    entityName: 'User',
+    displayName: (u) => u.username,
+
+    disableReasons: USER_ACTION_REASONS[UserActionType.DISABLE],
+    restoreReasons: USER_ACTION_REASONS[UserActionType.RESTORE],
+    deleteReasons: USER_ACTION_REASONS[UserActionType.DELETE],
+
+    disable: (id, reason) => this.userService.softDelete(id, reason),
+    restore: (id, reason) => this.userService.restore(id, reason),
+    hardDelete: (id, reason) => this.userService.hardDelete(id, reason),
+
+    disableBulk: (ids, reason) => this.userService.softDeleteBulk(ids, reason),
+    restoreBulk: (ids, reason) => this.userService.restoreBulk(ids, reason),
+    hardDeleteBulk: (ids, reason) => this.userService.hardDeleteBulk(ids, reason),
+
+    reload: () => this.loadUsersOnce()
+  };
+
+
   constructor(
     private userService: UserService,
     private branchService: BranchService,
     private authService: AuthService,
     private departmentService: DepartmentService,
     private roleService: RoleService,
+    private entityAction: EntityActionService,
     private snackbar: MatSnackBar,
     private dialog: MatDialog,
     public router: Router
@@ -328,178 +352,20 @@ export class UserListComponent implements OnInit {
   }
 
   toggleActive(u: User) {
-
-    // ----------------- ACTIVE USER → DISABLE -----------------
-    if (!u.deleted) {
-      const dialogRef = this.dialog.open(ReasonDialogComponent, {
-        width: '420px',
-        data: {
-          title: 'Disable User?',
-          message: `Provide a reason for disabling ${u.username}.`,
-          action: 'DISABLE',
-          confirmText: 'Disable'
-        }
-      });
-
-      dialogRef.afterClosed().subscribe(result => {
-        if (!result?.confirmed) return;
-        this.userService.softDelete(u.id!, result.reason).subscribe({
-          next: () => { this.snackbar.open('User disabled', 'Close', { duration: 2000 }); this.loadUsersOnce(); }
-        });
-      });
-
-      return;
-    }
-
-    // ----------------- DISABLED USER → CHOOSE ACTION -----------------
-    const choiceRef = this.dialog.open(DisabledUserChoiceDialog);
-    choiceRef.afterClosed().subscribe(choice => {
-      if (!choice) return;
-
-      if (choice === 'RESTORE') {
-        this.openRestoreDialog(u);
-      } else if (choice === 'DELETE') {
-        this.openDeleteDialog(u);
-      }
-    });
-  }
-
-  openRestoreDialog(u: User) {
-    const ref = this.dialog.open(ReasonDialogComponent, {
-      width: '420px',
-      data: {
-        title: 'Restore User?',
-        message: `Provide a reason for restoring ${u.username}.`,
-        action: 'RESTORE',
-        confirmText: 'Restore'
-      }
-    });
-
-    ref.afterClosed().subscribe(result => {
-      if (!result?.confirmed) return;
-      this.userService.restore(u.id!, result.reason).subscribe({
-        next: () => { this.snackbar.open('User restored', 'Close', { duration: 2000 }); this.loadUsersOnce(); }
-      });
-    });
-  }
-
-  openDeleteDialog(u: User) {
-    const ref = this.dialog.open(ReasonDialogComponent, {
-      width: '420px',
-      data: {
-        title: 'Delete Permanently?',
-        message: `Provide an optional reason for deleting ${u.username}. This cannot be undone.`,
-        action: 'DELETE',
-        confirmText: 'Delete'
-      }
-    });
-
-    ref.afterClosed().subscribe(result => {
-      if (!result?.confirmed) return;
-      this.userService.hardDelete(u.id!).subscribe({
-        next: () => { this.snackbar.open('User permanently deleted', 'Close', { duration: 2000 }); this.loadUsersOnce(); }
-      });
-    });
-  }
-
-  private validateBulkStatus() {
-    const statuses = new Set(this.selection.selected.map(u => u.deleted));
-    if (statuses.size > 1) {
-      this.snackbar.open('Bulk action failed — selected users have mixed status', 'Close', { duration: 2500 });
-      return false;
-    }
-    return true;
+    this.entityAction.toggleSingle(u, this.userActionConfig);
   }
 
   // Bulk actions (disable)
   bulkDisable() {
-    if (!this.validateBulkStatus()) return;
-
-    const selected = this.selection.selected;
-    if (selected[0].deleted) {
-      this.snackbar.open('All selected users are already disabled', 'Close', { duration: 1500 });
-      return;
-    }
-
-    const ref = this.dialog.open(ReasonDialogComponent, {
-      width: '480px',
-      data: {
-        title: 'Disable Users?',
-        message: `Provide a reason for disabling ${selected.length} users.`,
-        action: 'DISABLE',
-        confirmText: 'Disable'
-      }
-    });
-
-    ref.afterClosed().subscribe(result => {
-      if (!result?.confirmed) return;
-      const ids = selected.map(u => u.id!);
-      this.userService.softDeleteBulk(ids, result.reason).subscribe({
-        next: () => { this.snackbar.open('Users disabled', 'Close', { duration: 2000 }); this.loadUsersOnce(); }
-      });
-    });
+    this.entityAction.bulkDisable(this.selection.selected, this.userActionConfig);
   }
 
   bulkRestore() {
-    if (!this.validateBulkStatus()) return;
-
-    const selected = this.selection.selected;
-    if (!selected[0].deleted) {
-      this.snackbar.open('Cannot restore active users', 'Close', { duration: 1800 });
-      return;
-    }
-
-    const ref = this.dialog.open(ReasonDialogComponent, {
-      width: '480px',
-      data: {
-        title: 'Restore Users?',
-        message: `Provide a reason for restoring ${selected.length} user(s).`,
-        action: 'RESTORE',
-        confirmText: 'Restore'
-      }
-    });
-
-    ref.afterClosed().subscribe(result => {
-      if (!result?.confirmed) return;
-      const ids = selected.map(u => u.id!);
-      this.userService.restoreBulk(ids, result.reason).subscribe({
-        next: () => { this.snackbar.open('Users restored', 'Close', { duration: 2000 }); this.loadUsersOnce(); }
-      });
-    });
+    this.entityAction.bulkRestore(this.selection.selected, this.userActionConfig);
   }
 
   bulkDelete() {
-    const selected = this.selection.selected;
-    if (this.bulkState !== 'deleted') {
-      this.snackbar.open('Only disabled users can be permanently deleted', 'Close', { duration: 2000 });
-      return;
-    }
-
-    const dialogRef = this.dialog.open(ReasonDialogComponent, {
-      width: '480px',
-      data: {
-        title: 'Delete Users Permanently?',
-        message: `You are about to permanently delete ${selected.length} user(s). This cannot be undone.`,
-        action: 'DELETE',
-        confirmText: 'Delete'
-      }
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (!result?.confirmed) return;
-
-      const ids = selected.map(u => u.id!);
-
-      this.userService.hardDeleteBulk(ids).subscribe({
-        next: () => {
-          this.snackbar.open('Users permanently deleted', 'Close', { duration: 2000 });
-          this.loadUsersOnce();
-        },
-        error: () => {
-          this.snackbar.open('Bulk delete failed', 'Close', { duration: 3000 });
-        }
-      });
-    });
+    this.entityAction.bulkHardDelete(this.selection.selected, this.userActionConfig);
   }
 
   // navigation helpers
@@ -542,21 +408,3 @@ export class UserListComponent implements OnInit {
     return rows;
   }
 }
-
-@Component({
-  standalone: true,
-  imports: [MatDialogModule, MatButtonModule, MatIconModule],
-  template: `
-    <h2 mat-dialog-title>User is disabled</h2>
-    <mat-dialog-content>
-      Choose what you want to do with this user.
-    </mat-dialog-content>
-
-    <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close="RESTORE">Restore</button>
-      <button mat-button color="warn" mat-dialog-close="DELETE">Delete Permanently</button>
-      <button mat-button mat-dialog-close>Cancel</button>
-    </mat-dialog-actions>
-  `
-})
-export class DisabledUserChoiceDialog { }

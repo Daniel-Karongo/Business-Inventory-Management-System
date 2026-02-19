@@ -79,28 +79,48 @@ export class SupplierService {
     );
   }
 
-  /* ============================================================
-     DELETE / RESTORE
-  ============================================================ */
+  softDelete(id: string, reason: string | null) {
+    return this.http.delete(`${this.base}/${id}`, {
+      params: { soft: true },
+      body: reason ?? ''
+    });
+  }
 
-  softDelete(id: string, reason: string) {
-    return this.http.delete(
-      `${this.base}/${id}/soft`,
-      { body: reason }
+  restore(id: string, reason: string | null) {
+    return this.http.patch(`${this.base}/${id}/restore`, reason ?? '');
+  }
+
+  hardDelete(id: string, reason: string | null) {
+    return this.http.delete<void>(
+      `${this.base}/${id}`,
+      {
+        params: { soft: 'false' },
+        body: reason ?? ''
+      }
     );
   }
 
-  restore(id: string, reason: string) {
-    return this.http.patch(
-      `${this.base}/restore/${id}`,
-      reason
-    );
+  /* ===== BULK ===== */
+
+  softDeleteBulk(ids: string[], reason: string | null) {
+    return this.http.post(`${this.base}/bulk/soft-delete`, {
+      ids,
+      reason: reason ?? ''
+    });
   }
 
-  hardDelete(id: string) {
-    return this.http.delete(
-      `${this.base}/${id}/hard`
-    );
+  restoreBulk(ids: string[], reason: string | null) {
+    return this.http.post(`${this.base}/bulk/restore`, {
+      ids,
+      reason: reason ?? ''
+    });
+  }
+
+  hardDeleteBulk(ids: string[], reason: string | null) {
+    return this.http.post(`${this.base}/bulk/hard-delete`, {
+      ids,
+      reason: reason ?? ''
+    });
   }
 
   /* ============================================================

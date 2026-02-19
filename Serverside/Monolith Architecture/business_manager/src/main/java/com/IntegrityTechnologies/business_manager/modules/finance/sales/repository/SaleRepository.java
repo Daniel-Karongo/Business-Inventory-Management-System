@@ -72,4 +72,15 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
 """)
     void deleteSalesByVariantIds(List<UUID> variantIds);
 
+    @Query("""
+        select count(s) > 0
+        from Sale s
+        join s.lineItems li
+        where li.productVariantId in :variantIds
+          and s.status = :status
+    """)
+    boolean existsByVariantIdsAndStatus(
+            @Param("variantIds") List<UUID> variantIds,
+            @Param("status") Sale.SaleStatus status
+    );
 }

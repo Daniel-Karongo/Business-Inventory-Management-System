@@ -1,10 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository;
 
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.*;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -29,6 +30,13 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
     List<Product> findAllByCategory_Id(Long categoryId);
     List<Product> findAllByCategory_IdIn(List<Long> categoryIds);
     Optional<Product> findByIdAndDeletedFalse(UUID productId);
-
     Optional<Product> findByNameIgnoreCase(String productName);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Product p where p.id = :id")
+    Optional<Product> findForUpdate(@Param("id") UUID id);
+
+    @Modifying
+    @Query(value = "DELETE FROM products_suppliers WHERE product_id = :productId", nativeQuery = true)
+    void detachSuppliers(@Param("productId") UUID productId);
 }

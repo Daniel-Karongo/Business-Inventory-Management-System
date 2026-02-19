@@ -1,28 +1,32 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { MatTableModule } from '@angular/material/table';
-import { MatPaginator, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSelectModule } from '@angular/material/select';
-import { MatDialog } from '@angular/material/dialog';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDialog } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
+import { MatPaginator, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { SelectionModel } from '@angular/cdk/collections';
 import { Router } from '@angular/router';
 
 import { finalize } from 'rxjs/operators';
 
-import { SupplierService } from '../../services/supplier.service';
-import { Supplier } from '../../models/supplier.model';
-import { ReasonDialogComponent } from '../../../../shared/components/reason-dialog/reason-dialog.component';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { EntityActionConfig, EntityActionService } from '../../../../shared/services/entity-action.service';
 import { SupplierBulkImportDialogComponent } from '../../components/supplier-bulk-import-dialog/supplier-bulk-import-dialog.component';
+import {
+  SUPPLIER_ACTION_REASONS,
+  SupplierActionType
+} from '../../models/supplier-action-reasons.model';
+import { Supplier } from '../../models/supplier.model';
+import { SupplierService } from '../../services/supplier.service';
 
 @Component({
   selector: 'app-supplier-list',
@@ -82,8 +86,29 @@ export class SupplierListComponent implements OnInit {
 
   @ViewChild(MatPaginator) paginator?: MatPaginator;
 
+  private supplierActionConfig: EntityActionConfig<Supplier> = {
+
+    entityName: 'Supplier',
+    displayName: (s) => s.name,
+
+    disableReasons: SUPPLIER_ACTION_REASONS[SupplierActionType.DISABLE],
+    restoreReasons: SUPPLIER_ACTION_REASONS[SupplierActionType.RESTORE],
+    deleteReasons: SUPPLIER_ACTION_REASONS[SupplierActionType.DELETE],
+
+    disable: (id, reason) => this.supplierService.softDelete(id, reason),
+    restore: (id, reason) => this.supplierService.restore(id, reason),
+    hardDelete: (id, reason) => this.supplierService.hardDelete(id, reason),
+
+    disableBulk: (ids, reason) => this.supplierService.softDeleteBulk(ids, reason),
+    restoreBulk: (ids, reason) => this.supplierService.restoreBulk(ids, reason),
+    hardDeleteBulk: (ids, reason) => this.supplierService.hardDeleteBulk(ids, reason),
+
+    reload: () => this.loadSuppliers()
+  };
+
   constructor(
     private supplierService: SupplierService,
+    private entityAction: EntityActionService,
     private snackbar: MatSnackBar,
     private dialog: MatDialog,
     public router: Router
@@ -234,68 +259,20 @@ export class SupplierListComponent implements OnInit {
     return states.has(true) ? 'deleted' : 'active';
   }
 
-  /* ============================================================
-     BULK ACTIONS
-  ============================================================ */
-
-  bulkDisable(): void {
-    if (this.bulkState !== 'active') {
-      this.snackbar.open('Selected suppliers have mixed status', 'Close', { duration: 2500 });
-      return;
-    }
-
-    const ref = this.dialog.open(ReasonDialogComponent, {
-      width: '420px',
-      data: {
-        title: 'Disable Suppliers?',
-        message: `Provide a reason for disabling ${this.selection.selected.length} suppliers.`,
-        action: 'DISABLE',
-        confirmText: 'Disable'
-      }
-    });
-
-    ref.afterClosed().subscribe(r => {
-      if (!r?.confirmed) return;
-
-      Promise.all(
-        this.selection.selected.map(s =>
-          this.supplierService.softDelete(s.id, r.reason).toPromise()
-        )
-      ).then(() => {
-        this.snackbar.open('Suppliers disabled', 'Close', { duration: 2000 });
-        this.loadSuppliers();
-      });
-    });
+  toggleSupplier(s: Supplier) {
+    this.entityAction.toggleSingle(s, this.supplierActionConfig);
   }
 
-  bulkRestore(): void {
-    if (this.bulkState !== 'deleted') {
-      this.snackbar.open('Only disabled suppliers can be restored', 'Close', { duration: 2500 });
-      return;
-    }
+  bulkDisable() {
+    this.entityAction.bulkDisable(this.selection.selected, this.supplierActionConfig);
+  }
 
-    const ref = this.dialog.open(ReasonDialogComponent, {
-      width: '420px',
-      data: {
-        title: 'Restore Suppliers?',
-        message: `Provide a reason for restoring ${this.selection.selected.length} suppliers.`,
-        action: 'RESTORE',
-        confirmText: 'Restore'
-      }
-    });
+  bulkRestore() {
+    this.entityAction.bulkRestore(this.selection.selected, this.supplierActionConfig);
+  }
 
-    ref.afterClosed().subscribe(r => {
-      if (!r?.confirmed) return;
-
-      Promise.all(
-        this.selection.selected.map(s =>
-          this.supplierService.restore(s.id, r.reason).toPromise()
-        )
-      ).then(() => {
-        this.snackbar.open('Suppliers restored', 'Close', { duration: 2000 });
-        this.loadSuppliers();
-      });
-    });
+  bulkHardDelete() {
+    this.entityAction.bulkHardDelete(this.selection.selected, this.supplierActionConfig);
   }
 
   /* ============================================================

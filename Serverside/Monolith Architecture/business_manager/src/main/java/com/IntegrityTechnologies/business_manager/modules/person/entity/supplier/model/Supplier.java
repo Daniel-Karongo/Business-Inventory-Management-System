@@ -15,18 +15,20 @@ import java.util.*;
                 @Index(name = "idx_supplier_name", columnList = "name"),
                 @Index(name = "idx_supplier_region", columnList = "region")
         })
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString(exclude = {"images", "email", "phoneNumber"})
 public class Supplier {
 
+    @EqualsAndHashCode.Include
     @Id
     @GeneratedValue
     @JdbcTypeCode(Types.BINARY)
     @Column(columnDefinition = "BINARY(16)")
-    @ToString.Exclude
     private UUID id;
 
     @Column(nullable = false, unique = true)

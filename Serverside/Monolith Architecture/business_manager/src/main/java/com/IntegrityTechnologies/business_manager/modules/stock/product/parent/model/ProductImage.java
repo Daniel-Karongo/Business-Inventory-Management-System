@@ -35,8 +35,13 @@ public class ProductImage {
     @Column(nullable = false)
     private Boolean primaryImage = false;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean deleted = false;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean deletedIndependently = false;
 
 
     private LocalDateTime uploadedAt;

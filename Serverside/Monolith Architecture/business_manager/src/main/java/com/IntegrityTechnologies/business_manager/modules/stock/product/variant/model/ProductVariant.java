@@ -6,9 +6,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 @Table(
@@ -49,7 +47,7 @@ public class ProductVariant {
     private String sku;
 
     @OneToMany(mappedBy = "variant", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ProductVariantImage> images = new ArrayList<>();
+    private Set<ProductVariantImage> images = new HashSet<>();
 
     @Column(nullable = false)
     private Boolean deleted = false;

@@ -24,6 +24,7 @@ import { BulkFileFactoryService } from '../../../../../shared/bulk-import/files/
 import { BulkFileLifecycleService } from '../../../../../shared/bulk-import/files/bulk-file-lifecycle.service';
 import { BulkFileImportEngine } from '../../../../../shared/bulk-import/files/bulk-file-import.engine';
 import { BulkImportResultDialogComponent } from '../../../../../shared/components/bulk-import-result-dialog/bulk-import-result-dialog.component';
+import { BulkCameraCaptureService } from '../../../../../shared/bulk-import/camera/bulk-camera-capture.service';
 
 @Component({
   standalone: true,
@@ -59,9 +60,10 @@ export class ProductBulkImportDialogComponent
     private dialogRef: MatDialogRef<ProductBulkImportDialogComponent>,
     fileFactory: BulkFileFactoryService,
     fileLifecycle: BulkFileLifecycleService,
-    zipEngine: BulkFileImportEngine
+    zipEngine: BulkFileImportEngine,
+    camera: BulkCameraCaptureService
   ) {
-    super(fileFactory, fileLifecycle, zipEngine);
+    super(fileFactory, fileLifecycle, zipEngine, camera);
   }
 
   ngOnInit() {

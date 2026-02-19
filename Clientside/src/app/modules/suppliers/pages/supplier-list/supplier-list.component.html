@@ -37,6 +37,11 @@
       Restore
     </button>
 
+    <button *ngIf="bulkState === 'deleted'" mat-flat-button color="warn" (click)="bulkHardDelete()">
+      Hard Delete
+    </button>
+
+
     <span *ngIf="bulkState === 'mixed'" class="text-red-500 font-medium">
       Mixed supplier status — action blocked
     </span>
@@ -190,6 +195,10 @@
           </button>
           <button mat-icon-button matTooltip="Edit" (click)="edit(s)">
             <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button matTooltip="{{ s.deleted ? 'Restore/Delete supplier' : 'Disable supplier' }}"
+            (click)="toggleSupplier(s)">
+            <mat-icon>{{ s.deleted ? 'toggle_off' : 'toggle_on' }}</mat-icon>
           </button>
         </td>
       </ng-container>

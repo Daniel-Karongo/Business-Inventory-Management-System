@@ -15,22 +15,15 @@
                 Edit
             </button>
 
-            <button mat-stroked-button color="warn" *ngIf="!supplier.deleted && canSoftDelete()"
-                (click)="disableSupplier()">
-                <mat-icon>block</mat-icon>
-                Disable
-            </button>
+            <button mat-stroked-button *ngIf="canManageSupplier()" [color]="supplier.deleted ? 'primary' : 'warn'"
+                (click)="toggleSupplier()">
 
-            <button mat-stroked-button color="primary" *ngIf="supplier.deleted && canSoftDelete()"
-                (click)="restoreSupplier()">
-                <mat-icon>restore</mat-icon>
-                Restore
-            </button>
+                <mat-icon>
+                    {{ supplier.deleted ? 'restore' : 'block' }}
+                </mat-icon>
 
-            <button mat-stroked-button color="warn" *ngIf="supplier.deleted && canHardDelete()"
-                (click)="hardDeleteSupplier()">
-                <mat-icon>delete_forever</mat-icon>
-                Delete permanently
+                {{ supplier.deleted ? 'Restore' : 'Disable' }}
+
             </button>
         </div>
     </div>

@@ -1,34 +1,38 @@
-import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
-import { MatTableModule } from '@angular/material/table';
-import { MatCheckboxModule } from '@angular/material/checkbox';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { MatPaginator, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { ViewChild } from '@angular/core';
+import { MatTableModule } from '@angular/material/table';
+import { RouterModule } from '@angular/router';
 
-import { ProductService } from '../../services/product.service';
-import { Product } from '../../models/product.model';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { FormsModule } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { ProductBulkImportDialogComponent } from '../../components/product-bulk-import-dialog/product-bulk-import-dialog.component';
-import { MatDialog } from '@angular/material/dialog';
-import { BreakpointObserver } from '@angular/cdk/layout';
 import { Router } from '@angular/router';
-import { FormsModule } from '@angular/forms';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { PageShellComponent } from '../../../../../shared/layout/page-shell/page-shell.component';
+import { BehaviorSubject, combineLatest, debounceTime, distinctUntilChanged, of, switchMap, tap } from 'rxjs';
 import { environment } from '../../../../../../environments/environment';
 import { FileViewerDialog } from '../../../../../shared/components/file-viewer/file-viewer.component';
-import { ReasonDialogComponent } from '../../../../../shared/components/reason-dialog/reason-dialog.component';
-import { CategoryService } from '../../../../categories/services/category.service';
-import { MatSelectModule } from '@angular/material/select';
-import { BehaviorSubject, combineLatest, debounceTime, switchMap, map, tap, distinctUntilChanged } from 'rxjs';
+import { PageShellComponent } from '../../../../../shared/layout/page-shell/page-shell.component';
+import { EntityActionConfig, EntityActionService } from '../../../../../shared/services/entity-action.service';
 import { AuthService } from '../../../../auth/services/auth.service';
+import { CategoryService } from '../../../../categories/services/category.service';
 import { SupplierMinimalDTO } from '../../../../suppliers/models/supplier.model';
 import { SupplierService } from '../../../../suppliers/services/supplier.service';
+import { ProductBulkImportDialogComponent } from '../../components/product-bulk-import-dialog/product-bulk-import-dialog.component';
+import {
+  PRODUCT_ACTION_REASONS,
+  ProductActionType
+} from '../../models/product-action-reasons.model';
+import { Product } from '../../models/product.model';
+import { ProductService } from '../../services/product.service';
+import { ProductRestoreOptionsDialog } from '../../components/product-restore-options/product-restore-options.dialog';
 
 @Component({
   selector: 'app-product-list',
@@ -115,11 +119,62 @@ export class ProductListComponent implements OnInit {
 
   @ViewChild(MatPaginator) paginator?: MatPaginator;
 
+  private productActionConfig: EntityActionConfig<Product> = {
+    entityName: 'Product',
+    displayName: (p) => p.name,
+
+    disableReasons: PRODUCT_ACTION_REASONS[ProductActionType.DISABLE],
+    restoreReasons: PRODUCT_ACTION_REASONS[ProductActionType.RESTORE],
+    deleteReasons: PRODUCT_ACTION_REASONS[ProductActionType.DELETE],
+
+    /* ================= SINGLE ================= */
+
+    disable: (id, reason) =>
+      this.productService.softDelete(id, reason),
+
+    restore: (id, reason) =>
+      this.openRestoreOptionsDialog().pipe(
+        switchMap(options => {
+          if (!options) return of(null);
+          return this.productService.restore(id, reason, options);
+        })
+      ),
+
+    hardDelete: (id, reason) =>
+      this.productService.hardDelete(id, reason),
+
+    /* ================= BULK ================= */
+
+    disableBulk: (ids, reason) =>
+      this.productService.bulkSoftDelete(ids, reason),
+
+    restoreBulk: (ids, reason) =>
+      this.openRestoreOptionsDialog().pipe(
+        switchMap(options => {
+          if (!options) return of(null);
+          return this.productService.bulkRestore(ids, reason, options);
+        })
+      ),
+
+    hardDeleteBulk: (ids, reason) =>
+      this.productService.bulkHardDelete(ids, reason),
+
+    /* ================= RELOAD ================= */
+
+    reload: () => {
+      this.resetAccumulation();
+      this.page$.next(0);
+      this.refresh$.next();
+      this.clearSelection();
+    }
+  };
+
   constructor(
     private productService: ProductService,
     private categoryService: CategoryService,
     private supplierService: SupplierService,
     private authService: AuthService,
+    private entityAction: EntityActionService,
     private snackbar: MatSnackBar,
     private dialog: MatDialog,
     private breakpoint: BreakpointObserver,
@@ -138,7 +193,7 @@ export class ProductListComponent implements OnInit {
     this.breakpoint.observe(['(max-width: 640px)']).subscribe(res => {
       this.isMobile = res.matches;
       this.viewMode = this.isMobile ? 'grid' : 'table';
-      this.density = this.isMobile ? 'comfortable' : 'compact';
+      this.density = this.isMobile ? 'compact' : this.density;
     });
 
     this.loadPreferences();
@@ -158,7 +213,7 @@ export class ProductListComponent implements OnInit {
       this.serverSize$,
       this.sortField$,
       this.sortDir$,
-      this.search$.pipe(debounceTime(800), distinctUntilChanged()),
+      this.search$.pipe(debounceTime(1000), distinctUntilChanged()),
       this.statusFilter$,
       this.categoryFilter$,
       this.showDeleted$,
@@ -250,6 +305,10 @@ export class ProductListComponent implements OnInit {
     const end = start + size;
 
     this.products = this.allProducts.slice(start, end);
+  }
+
+  private getSelectedProducts(): Product[] {
+    return this.allProducts.filter(p => this.selectedIds.has(p.id));
   }
 
   private resetAccumulation() {
@@ -415,7 +474,7 @@ export class ProductListComponent implements OnInit {
   get bulkState(): 'active' | 'deleted' | 'mixed' | null {
     if (!this.selectedIds.size) return null;
 
-    const selectedProducts = this.products
+    const selectedProducts = this.allProducts
       .filter(p => this.selectedIds.has(p.id));
 
     const states = new Set(selectedProducts.map(p => p.deleted));
@@ -529,146 +588,36 @@ export class ProductListComponent implements OnInit {
     });
   }
 
+  private openRestoreOptionsDialog() {
+    return this.dialog.open(ProductRestoreOptionsDialog, {
+      width: '450px',
+      disableClose: true
+    }).afterClosed();
+  }
+
+  toggleProductStatus(p: Product) {
+    this.entityAction.toggleSingle(p, this.productActionConfig);
+  }
+
   bulkSoftDelete() {
+    const selected = this.getSelectedProducts();
+    if (!selected.length) return;
 
-    if (this.bulkState !== 'active') {
-      this.snackbar.open(
-        'Bulk delete failed — selected products must all be active',
-        'Close',
-        { duration: 2500 }
-      );
-      return;
-    }
-
-    const ref = this.dialog.open(ReasonDialogComponent, {
-      width: '480px',
-      data: {
-        title: 'Confirm Soft Delete',
-        message: `You are about to disable ${this.selectedIds.size} product(s).`,
-        action: 'DISABLE',
-        confirmText: 'Disable',
-        cancelText: 'Cancel'
-      }
-    });
-
-    ref.afterClosed().subscribe(result => {
-
-      if (!result?.confirmed) return;
-
-      const ids = Array.from(this.selectedIds);
-
-      this.productService.bulkSoftDelete(ids, result.reason).subscribe({
-        next: () => {
-          this.selectedIds.clear(); // ✅ clear selection
-          this.snackbar.open(
-            `${ids.length} product(s) disabled successfully`,
-            'Close',
-            { duration: 2000 }
-          );
-          this.refresh$.next();
-        },
-        error: () => {
-          this.snackbar.open(
-            'Bulk soft delete failed',
-            'Close',
-            { duration: 3000 }
-          );
-        }
-      });
-
-    });
+    this.entityAction.bulkDisable(selected, this.productActionConfig);
   }
 
   bulkRestore() {
+    const selected = this.getSelectedProducts();
+    if (!selected.length) return;
 
-    if (this.bulkState !== 'deleted') {
-      this.snackbar.open(
-        'Bulk restore failed — selected products must all be deleted',
-        'Close',
-        { duration: 2500 }
-      );
-      return;
-    }
-
-    const ref = this.dialog.open(ReasonDialogComponent, {
-      width: '480px',
-      data: {
-        title: 'Confirm Restore',
-        message: `You are about to restore ${this.selectedIds.size} product(s).`,
-        action: 'RESTORE',
-        confirmText: 'Restore',
-        cancelText: 'Cancel'
-      }
-    });
-
-    ref.afterClosed().subscribe(result => {
-
-      if (!result?.confirmed) return;
-
-      const ids = Array.from(this.selectedIds);
-
-      this.productService.bulkRestore(ids, result.reason).subscribe({
-        next: () => {
-          this.selectedIds.clear(); // ✅ clear selection
-          this.snackbar.open(
-            `${ids.length} product(s) restored successfully`,
-            'Close',
-            { duration: 2000 }
-          );
-          this.refresh$.next();
-        },
-        error: () => {
-          this.snackbar.open(
-            'Bulk restore failed',
-            'Close',
-            { duration: 3000 }
-          );
-        }
-      });
-
-    });
+    this.entityAction.bulkRestore(selected, this.productActionConfig);
   }
 
   bulkHardDelete() {
+    const selected = this.getSelectedProducts();
+    if (!selected.length) return;
 
-    if (this.bulkState !== 'deleted') {
-      this.snackbar.open(
-        'Only deleted products can be permanently removed',
-        'Close',
-        { duration: 2500 }
-      );
-      return;
-    }
-
-    const ref = this.dialog.open(ReasonDialogComponent, {
-      width: '480px',
-      data: {
-        title: 'Confirm Permanent Deletion',
-        message: `You are about to permanently delete ${this.selectedIds.size} product(s). This action cannot be undone.`,
-        action: 'DELETE',
-        confirmText: 'Delete',
-        cancelText: 'Cancel'
-      }
-    });
-
-    ref.afterClosed().subscribe(result => {
-
-      if (!result?.confirmed) return;
-
-      const ids = Array.from(this.selectedIds);
-
-      this.productService.bulkHardDelete(ids, result.reason).subscribe({
-        next: () => {
-          this.selectedIds.clear();
-          this.snackbar.open('Products permanently deleted', 'Close', { duration: 2000 });
-          this.refresh$.next();
-        },
-        error: () => {
-          this.snackbar.open('Bulk hard delete failed', 'Close', { duration: 3000 });
-        }
-      });
-
-    });
+    this.entityAction.bulkHardDelete(selected, this.productActionConfig);
   }
 
   openBulkImport() {
@@ -679,6 +628,8 @@ export class ProductListComponent implements OnInit {
       autoFocus: false
     }).afterClosed().subscribe(result => {
       if (result === true) {
+        this.resetAccumulation();
+        this.page$.next(0);
         this.refresh$.next();
       }
     });

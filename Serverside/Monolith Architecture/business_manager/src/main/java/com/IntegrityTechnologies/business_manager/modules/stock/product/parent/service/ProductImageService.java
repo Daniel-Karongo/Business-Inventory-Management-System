@@ -170,6 +170,7 @@ public class ProductImageService {
                     .product(product)
                     .primaryImage(makePrimary)
                     .deleted(false)
+                    .deletedIndependently(false)
                     .build();
 
             newImages.add(pi);

@@ -36,7 +36,7 @@ public class Category {
     @Builder.Default
     private List<Category> subcategories = new ArrayList<>();
 
-    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = false)
+    @OneToMany(mappedBy = "category")
     @Builder.Default
     private List<Product> products = new ArrayList<>();;
 
