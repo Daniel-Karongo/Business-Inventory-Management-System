@@ -16,17 +16,51 @@ public class DashboardSummaryDTO {
     private UUID branchId;
     private LocalDate date;
 
-    private Kpis kpis;
-    private List<ChartPoint> salesByCategory;
+    private FinancialKpis financial;
+    private OperationalKpis operational;
+
     private List<ChartPoint> revenueTrend;
+    private List<ChartPoint> profitTrend;
+    private List<ChartPoint> vatTrend;
+    private List<ChartPoint> topBatches;
+
     private List<ActivityDTO> recentActivities;
 
     @Data
     @Builder
-    public static class Kpis {
-        private BigDecimal salesToday;
+    public static class FinancialKpis {
+
+        private BigDecimal netRevenueToday;
+        private BigDecimal grossProfitToday;
+
+        private BigDecimal vatPayable;
+        private BigDecimal accountsReceivable;
+        private BigDecimal accountsPayable;
+
+        private BigDecimal cashBalance;
         private BigDecimal inventoryValue;
-        private Long customers;
-        private Long salesCount;
+
+        private BigDecimal corporateTaxAccrued;
+
+        private BigDecimal grossMarginPercent;
+        private BigDecimal inventoryTurnover;
+        private BigDecimal burnRate;
+        private AgingBucketDTO arAging;
+        private AgingBucketDTO apAging;
+        private BigDecimal revenueBudgetVariance;
+        private BigDecimal expenseBudgetVariance;
+    }
+
+    @Data
+    @Builder
+    public static class OperationalKpis {
+
+        private Long salesCountToday;
+        private Long refundCountToday;
+
+        private Long lowStockCount;
+        private Long outOfStockCount;
+
+        private BigDecimal deadStockValue;
     }
 }

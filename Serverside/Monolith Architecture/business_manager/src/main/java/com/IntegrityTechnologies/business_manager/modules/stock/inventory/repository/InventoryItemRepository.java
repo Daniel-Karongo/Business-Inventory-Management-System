@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -41,4 +42,16 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
         where i.productVariant.id in :variantIds
     """)
     void restoreByVariantIds(@Param("variantIds") List<UUID> variantIds);
+
+    @Query("""
+        SELECT i FROM InventoryItem i
+        WHERE i.quantityOnHand > 0
+        AND NOT EXISTS (
+            SELECT t FROM StockTransaction t
+            WHERE t.productVariantId = i.productVariant.id
+            AND t.type = 'SALE'
+            AND t.timestamp >= :cutoff
+        )
+    """)
+    List<InventoryItem> findDeadStock(@Param("cutoff") LocalDateTime cutoff);
 }

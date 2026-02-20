@@ -20,12 +20,20 @@ public class ChartOfAccountsSeeder {
             seed("1000", "Cash", AccountType.ASSET);
             seed("1100", "Bank", AccountType.ASSET);
             seed("1200", "Inventory", AccountType.ASSET);
+            seed("1300", "Input VAT", AccountType.ASSET);
+            seed("1150", "M-Pesa Clearing Account", AccountType.ASSET);
+            seed("1500", "Accounts Receivable", AccountType.ASSET);
 
             seed("2000", "Accounts Payable", AccountType.LIABILITY);
+            seed("2100", "Output VAT", AccountType.LIABILITY);
+            seed("2200", "VAT Payable", AccountType.LIABILITY);
+            seed("2400", "Corporate Tax Payable", AccountType.LIABILITY);
+
             seed("3000", "Owner Equity", AccountType.EQUITY);
 
             seed("4000", "Sales Revenue", AccountType.INCOME);
             seed("5000", "Cost of Goods Sold", AccountType.EXPENSE);
+            seed("5100", "Corporate Tax Expense", AccountType.EXPENSE);
         };
     }
 

@@ -54,4 +54,6 @@ public class Sale {
     public enum SaleStatus {
         CREATED, COMPLETED, CANCELLED, REFUNDED
     }
+    @Column(precision = 19, scale = 2)
+    private BigDecimal costOfGoodsSold;
 }

@@ -60,6 +60,7 @@ public class InventoryItem {
     private String lastUpdatedBy;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean deleted = false;
 
     @Version

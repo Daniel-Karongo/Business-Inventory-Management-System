@@ -5,8 +5,10 @@ import com.IntegrityTechnologies.business_manager.config.OptimisticRetryRunner;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.config.AccountingProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentRequest;
@@ -40,6 +42,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final CustomerService customerService;
     private final InventoryService inventoryService;
     private final JournalEntryRepository journalEntryRepository;
+    private final AccountingProperties accountingProperties;
 
     /* ============================================================
        PROCESS PAYMENT
@@ -55,7 +58,6 @@ public class PaymentServiceImpl implements PaymentService {
         Sale sale = saleRepository.findById(req.getSaleId())
                 .orElseThrow(() -> new IllegalArgumentException("Sale not found: " + req.getSaleId()));
 
-        // 🔐 lock sale row
         saleRepository.lockForUpdate(sale.getId());
 
         BigDecimal saleTotal =
@@ -72,32 +74,16 @@ public class PaymentServiceImpl implements PaymentService {
         BigDecimal paymentAmount =
                 Optional.ofNullable(req.getAmount()).orElse(BigDecimal.ZERO);
 
-        if (paymentAmount.compareTo(BigDecimal.ZERO) <= 0) {
+        if (paymentAmount.compareTo(BigDecimal.ZERO) <= 0)
             throw new IllegalArgumentException("Payment amount must be > 0");
-        }
 
         BigDecimal remaining = saleTotal.subtract(alreadyPaid);
 
-        if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalStateException("Sale already fully paid");
-        }
-
-        if (paymentAmount.compareTo(remaining) > 0) {
+        if (paymentAmount.compareTo(remaining) > 0)
             throw new IllegalArgumentException("Payment exceeds remaining balance");
-        }
 
         boolean willBeFullyPaid =
                 alreadyPaid.add(paymentAmount).compareTo(saleTotal) >= 0;
-
-        // 🔐 idempotency for provider-based payments (Mpesa)
-        if (req.getProviderReference() != null) {
-            var existing =
-                    paymentRepository.findByProviderReference(req.getProviderReference());
-
-            if (existing != null && !existing.isEmpty()) {
-                return toDTO(existing.get(0));
-            }
-        }
 
         String txnCode =
                 req.getProviderReference() != null
@@ -109,80 +95,111 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setAmount(paymentAmount);
         payment.setMethod(req.getMethod());
         payment.setProviderReference(req.getProviderReference());
-        payment.setStatus("PENDING");
+        payment.setStatus("SUCCESS");
         payment.setTimestamp(LocalDateTime.now());
         payment.setNote(req.getNote());
         payment.setTransactionCode(txnCode);
 
         payment = paymentRepository.save(payment);
 
-        boolean autoClear =
-                "CASH".equalsIgnoreCase(req.getMethod())
-                        || ("MPESA".equalsIgnoreCase(req.getMethod())
-                        && req.getProviderReference() != null);
+        // -----------------------------------------
+        // Always clear receivable
+        // DR Cash/Bank/Mpesa
+        // CR Accounts Receivable
+        // -----------------------------------------
+        UUID debitAccount = switch (payment.getMethod().toUpperCase()) {
+            case "CASH" -> accountingAccounts.cash();
+            case "BANK" -> accountingAccounts.bank();
+            case "MPESA" -> accountingAccounts.mpesa();
+            default -> throw new IllegalArgumentException("Unsupported payment method");
+        };
 
-        if (autoClear) {
+        accountingFacade.post(
+                AccountingEvent.builder()
+                        .sourceModule("PAYMENT")
+                        .sourceId(payment.getId())
+                        .reference(payment.getTransactionCode())
+                        .description("Payment received")
+                        .performedBy(currentUser())
+                        .entries(List.of(
+                                AccountingEvent.Entry.builder()
+                                        .accountId(debitAccount)
+                                        .direction(EntryDirection.DEBIT)
+                                        .amount(payment.getAmount())
+                                        .build(),
 
-            if (!"SUCCESS".equalsIgnoreCase(payment.getStatus())) {
-                payment.setStatus("SUCCESS");
-                payment = paymentRepository.save(payment);
-            }
+                                AccountingEvent.Entry.builder()
+                                        .accountId(accountingAccounts.accountsReceivable())
+                                        .direction(EntryDirection.CREDIT)
+                                        .amount(payment.getAmount())
+                                        .build()
+                        ))
+                        .build()
+        );
 
-            // ✅ SINGLE journal per payment
-            if (!accountingFacade.isAlreadyPosted("PAYMENT", payment.getId())) {
+        // -----------------------------------------
+        // If PAYMENT mode → recognize revenue when fully paid
+        // -----------------------------------------
+        if (accountingProperties.getRevenueRecognitionMode()
+                == RevenueRecognitionMode.PAYMENT
+                && willBeFullyPaid
+                && !accountingFacade.isAlreadyPosted("SALE", sale.getId())) {
 
-                accountingFacade.post(
-                        AccountingEvent.builder()
-                                .sourceModule("PAYMENT")
-                                .sourceId(payment.getId())
-                                .reference(payment.getTransactionCode())
-                                .description("Payment received for sale " + sale.getId())
-                                .performedBy(currentUser())
-                                .entries(List.of(
-                                        AccountingEvent.Entry.builder()
-                                                .accountId(
-                                                        "CASH".equalsIgnoreCase(payment.getMethod())
-                                                                ? accountingAccounts.cash()
-                                                                : accountingAccounts.bank()
-                                                )
-                                                .direction(EntryDirection.DEBIT)
-                                                .amount(payment.getAmount())
-                                                .build(),
-                                        AccountingEvent.Entry.builder()
-                                                .accountId(accountingAccounts.revenue())
-                                                .direction(EntryDirection.CREDIT)
-                                                .amount(payment.getAmount())
-                                                .build()
-                                ))
-                                .build()
-                );
-            }
+            BigDecimal totalNet = sale.getLineItems().stream()
+                    .map(SaleLineItem::getNetAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal totalVat = sale.getLineItems().stream()
+                    .map(SaleLineItem::getVatAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            accountingFacade.post(
+                    AccountingEvent.builder()
+                            .sourceModule("SALE")
+                            .sourceId(sale.getId())
+                            .reference(sale.getReceiptNo())
+                            .description("Revenue recognized on payment")
+                            .performedBy(currentUser())
+                            .entries(List.of(
+                                    AccountingEvent.Entry.builder()
+                                            .accountId(accountingAccounts.accountsReceivable())
+                                            .direction(EntryDirection.DEBIT)
+                                            .amount(totalNet.add(totalVat))
+                                            .build(),
+
+                                    AccountingEvent.Entry.builder()
+                                            .accountId(accountingAccounts.revenue())
+                                            .direction(EntryDirection.CREDIT)
+                                            .amount(totalNet)
+                                            .build(),
+
+                                    AccountingEvent.Entry.builder()
+                                            .accountId(accountingAccounts.outputVat())
+                                            .direction(EntryDirection.CREDIT)
+                                            .amount(totalVat)
+                                            .build()
+                            ))
+                            .build()
+            );
         }
 
         sale.getPayments().add(payment);
-
-        if (sale.getPayments().stream()
-                .filter(p -> "SUCCESS".equalsIgnoreCase(p.getStatus()))
-                .map(Payment::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .compareTo(saleTotal) >= 0) {
-
-            sale.setStatus(Sale.SaleStatus.COMPLETED);
-        }
-
         saleRepository.save(sale);
 
-        // 👤 customer payment history (unchanged)
-        try {
-            if (sale.getCustomerId() != null) {
+        // -----------------------------------------
+        // Record customer payment history
+        // -----------------------------------------
+        if (sale.getCustomerId() != null) {
+            try {
                 customerService.recordPayment(
                         sale.getCustomerId(),
                         payment.getId(),
                         payment.getAmount(),
                         payment.getTimestamp()
                 );
+            } catch (Exception ex) {
+                log.warn("Failed to record customer payment history", ex);
             }
-        } catch (Exception ignored) {
         }
 
         return toDTO(payment);

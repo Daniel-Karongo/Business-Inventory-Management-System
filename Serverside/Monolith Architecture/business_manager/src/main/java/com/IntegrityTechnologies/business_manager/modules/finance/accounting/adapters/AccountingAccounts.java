@@ -44,4 +44,46 @@ public class AccountingAccounts {
         return accountRepository.findByCode("2000")
                 .orElseThrow().getId();
     }
+
+    public UUID accountsReceivable() {
+        return accountRepository.findByCode("1500")
+                .orElseThrow(() -> new IllegalStateException("Accounts Receivable missing"))
+                .getId();
+    }
+
+    public UUID inputVat() {
+        return accountRepository.findByCode("1300")
+                .orElseThrow(() -> new IllegalStateException("Input VAT account missing"))
+                .getId();
+    }
+
+    public UUID outputVat() {
+        return accountRepository.findByCode("2100")
+                .orElseThrow(() -> new IllegalStateException("Output VAT account missing"))
+                .getId();
+    }
+
+    public UUID vatPayable() {
+        return accountRepository.findByCode("2200")
+                .orElseThrow(() -> new IllegalStateException("VAT Payable account missing"))
+                .getId();
+    }
+
+    public UUID mpesa() {
+        return accountRepository.findByCode("1150")
+                .orElseThrow(() -> new IllegalStateException("M-Pesa account missing"))
+                .getId();
+    }
+
+    public UUID corporateTaxPayable() {
+        return accountRepository.findByCode("2400")
+                .orElseThrow(() -> new IllegalStateException("Corporate Tax Payable missing"))
+                .getId();
+    }
+
+    public UUID corporateTaxExpense() {
+        return accountRepository.findByCode("5100")
+                .orElseThrow(() -> new IllegalStateException("Corporate Tax Expense missing"))
+                .getId();
+    }
 }

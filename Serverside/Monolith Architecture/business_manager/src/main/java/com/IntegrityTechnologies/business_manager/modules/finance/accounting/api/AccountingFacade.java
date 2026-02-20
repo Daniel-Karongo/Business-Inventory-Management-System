@@ -2,17 +2,21 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.ap
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.controller.JournalController;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.Account;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.LedgerEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.policy.AccountingPolicy;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.engine.LedgerPostingService;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountingPeriodRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.TaxPeriodRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -25,9 +29,25 @@ public class AccountingFacade {
     private final LedgerPostingService postingService;
     private final JournalEntryRepository journalRepo;
     private final AccountingPolicy accountingPolicy;
+    private final TaxPeriodRepository taxPeriodRepository;
+    private final AccountingPeriodRepository accountingPeriodRepository;
 
     @Transactional
     public void post(AccountingEvent event) {
+
+        // --------------------------------------
+        // PERIOD LOCK CHECK
+        // --------------------------------------
+        LocalDate today = LocalDate.now();
+
+        accountingPeriodRepository
+                .findByStartDateLessThanEqualAndEndDateGreaterThanEqual(today, today)
+                .filter(AccountingPeriod::isClosed)
+                .ifPresent(p -> {
+                    throw new IllegalStateException(
+                            "Cannot post journal. Accounting period is closed."
+                    );
+                });
 
         JournalEntry journal = new JournalEntry();
 

@@ -5,7 +5,11 @@ import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundExcept
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.config.AccountingProperties;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.Payment;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.service.PaymentService;
@@ -13,6 +17,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineItem;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.Customer;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.repository.CustomerRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service.CustomerService;
@@ -47,6 +52,9 @@ public class SalesService {
     private final PaymentService paymentService;
     private final CustomerRepository customerRepository;
     private final ReceiptNumberService receiptNumberService;
+    private final TaxProperties taxProperties;
+    private final AccountingProperties accountingProperties;
+    private final JournalEntryRepository journalEntryRepository;
 
     /* ============================================================
        CREATE SALE
@@ -74,7 +82,34 @@ public class SalesService {
             BigDecimal unitPrice = Optional.ofNullable(li.getUnitPrice())
                     .orElse(v.getMinimumSellingPrice());
 
-            BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(li.getQuantity()));
+            BigDecimal gross = unitPrice.multiply(BigDecimal.valueOf(li.getQuantity()));
+
+            BigDecimal vatRate = taxProperties.isVatEnabled()
+                    ? taxProperties.getVatRate()
+                    : BigDecimal.ZERO;
+
+            BigDecimal net;
+            BigDecimal vat;
+
+            if (taxProperties.isVatEnabled()) {
+
+                if (taxProperties.isPricesVatInclusive()) {
+                    net = gross.divide(
+                            BigDecimal.ONE.add(vatRate),
+                            6,
+                            BigDecimal.ROUND_HALF_UP
+                    );
+                    vat = gross.subtract(net);
+                } else {
+                    net = gross;
+                    vat = net.multiply(vatRate);
+                    gross = net.add(vat);
+                }
+
+            } else {
+                net = gross;
+                vat = BigDecimal.ZERO;
+            }
 
             lines.add(SaleLineItem.builder()
                     .productVariantId(v.getId())
@@ -83,7 +118,10 @@ public class SalesService {
                     .branchId(li.getBranchId())
                     .unitPrice(unitPrice)
                     .quantity(li.getQuantity())
-                    .lineTotal(lineTotal)
+                    .lineTotal(gross)
+                    .netAmount(net)
+                    .vatAmount(vat)
+                    .vatRate(vatRate)
                     .build());
         }
 
@@ -117,6 +155,81 @@ public class SalesService {
         }
 
         return toDTO(saved);
+    }
+
+    @Transactional
+    public SaleDTO deliverSale(UUID saleId) {
+
+        Sale sale = saleRepository.findById(saleId)
+                .orElseThrow(() -> new EntityNotFoundException("Sale not found: " + saleId));
+
+        if (sale.getStatus() != Sale.SaleStatus.CREATED) {
+            return toDTO(sale);
+        }
+
+        // -----------------------------------------
+        // 1️⃣ Decrement stock (FIFO + COGS handled inside InventoryService)
+        // -----------------------------------------
+        for (SaleLineItem li : sale.getLineItems()) {
+            inventoryService.decrementVariantStock(
+                    li.getProductVariantId(),
+                    li.getBranchId(),
+                    li.getQuantity(),
+                    "SALE_DELIVERY:" + sale.getId()
+            );
+        }
+
+        // -----------------------------------------
+        // 2️⃣ If DELIVERY mode → post revenue accrual
+        // -----------------------------------------
+        if (accountingProperties.getRevenueRecognitionMode()
+                == RevenueRecognitionMode.DELIVERY) {
+
+            if (!accountingFacade.isAlreadyPosted("SALE", sale.getId())) {
+
+                BigDecimal totalNet = sale.getLineItems().stream()
+                        .map(SaleLineItem::getNetAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                BigDecimal totalVat = sale.getLineItems().stream()
+                        .map(SaleLineItem::getVatAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                accountingFacade.post(
+                        AccountingEvent.builder()
+                                .sourceModule("SALE")
+                                .sourceId(sale.getId())
+                                .reference(sale.getReceiptNo())
+                                .description("Revenue recognized on delivery")
+                                .performedBy(SecurityUtils.currentUsername())
+                                .entries(List.of(
+                                        AccountingEvent.Entry.builder()
+                                                .accountId(accountingAccounts.accountsReceivable())
+                                                .direction(EntryDirection.DEBIT)
+                                                .amount(totalNet.add(totalVat))
+                                                .build(),
+
+                                        AccountingEvent.Entry.builder()
+                                                .accountId(accountingAccounts.revenue())
+                                                .direction(EntryDirection.CREDIT)
+                                                .amount(totalNet)
+                                                .build(),
+
+                                        AccountingEvent.Entry.builder()
+                                                .accountId(accountingAccounts.outputVat())
+                                                .direction(EntryDirection.CREDIT)
+                                                .amount(totalVat)
+                                                .build()
+                                ))
+                                .build()
+                );
+            }
+        }
+
+        sale.setStatus(Sale.SaleStatus.COMPLETED);
+        saleRepository.save(sale);
+
+        return toDTO(sale);
     }
 
     /* ============================================================
@@ -206,15 +319,46 @@ public class SalesService {
             BigDecimal unitPrice = Optional.ofNullable(li.getUnitPrice())
                     .orElse(variant.getMinimumSellingPrice());
 
-            BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(li.getQuantity()));
+            BigDecimal gross = unitPrice.multiply(BigDecimal.valueOf(li.getQuantity()));
+
+            BigDecimal vatRate = taxProperties.isVatEnabled()
+                    ? taxProperties.getVatRate()
+                    : BigDecimal.ZERO;
+
+            BigDecimal net;
+            BigDecimal vat;
+
+            if (taxProperties.isVatEnabled()) {
+
+                if (taxProperties.isPricesVatInclusive()) {
+                    net = gross.divide(
+                            BigDecimal.ONE.add(vatRate),
+                            6,
+                            BigDecimal.ROUND_HALF_UP
+                    );
+                    vat = gross.subtract(net);
+                } else {
+                    net = gross;
+                    vat = net.multiply(vatRate);
+                    gross = net.add(vat);
+                }
+
+            } else {
+                net = gross;
+                vat = BigDecimal.ZERO;
+            }
 
             newLines.add(SaleLineItem.builder()
                     .productVariantId(variant.getId())
-                    .productName(variant.getClassification())
+                    .productName(variant.getProduct().getName() + " (" +
+                            (variant.getClassification() != null ? variant.getClassification() : "UNCLASSIFIED") + ")")
                     .branchId(li.getBranchId())
                     .unitPrice(unitPrice)
                     .quantity(li.getQuantity())
-                    .lineTotal(lineTotal)
+                    .lineTotal(gross)
+                    .netAmount(net)
+                    .vatAmount(vat)
+                    .vatRate(vatRate)
                     .build());
         }
 
@@ -290,39 +434,75 @@ public class SalesService {
             throw new IllegalStateException("Cannot refund a CANCELLED sale");
         }
 
+        String user = SecurityUtils.currentUsername();
+
     /* ============================================================
-       RETURN STOCK TO INVENTORY
-       ============================================================ */
-        for (SaleLineItem li : sale.getLineItems()) {
-            inventoryService.incrementVariantStock(
-                    li.getProductVariantId(),
-                    li.getBranchId(),
-                    li.getQuantity(),
-                    "REFUND:" + id
-            );
+       1️⃣ REVERSE SALE REVENUE JOURNAL (if exists)
+    ============================================================ */
+
+        journalEntryRepository
+                .findBySourceModuleAndSourceId("SALE", sale.getId())
+                .ifPresent(journal ->
+                        accountingFacade.reverseJournal(
+                                journal.getId(),
+                                "Sale refund",
+                                user
+                        )
+                );
+
+    /* ============================================================
+       2️⃣ REVERSE INVENTORY CONSUMPTION JOURNALS (FIFO COGS)
+    ============================================================ */
+
+        List<JournalEntry> consumptionJournals =
+                journalEntryRepository.findByReference("SALE_DELIVERY:" + sale.getId());
+
+        for (JournalEntry journal : consumptionJournals) {
+
+            if (!journal.isReversed()
+                    && "INVENTORY_CONSUMPTION".equals(journal.getSourceModule())) {
+
+                accountingFacade.reverseJournal(
+                        journal.getId(),
+                        "Inventory return (refund)",
+                        user
+                );
+            }
         }
 
     /* ============================================================
-       CALCULATE TOTAL PAID (SUCCESS PAYMENTS ONLY)
-       ============================================================ */
+       3️⃣ REVERSE PAYMENT JOURNALS
+    ============================================================ */
+
+        for (Payment payment : sale.getPayments()) {
+
+            if ("SUCCESS".equalsIgnoreCase(payment.getStatus())) {
+
+                journalEntryRepository
+                        .findBySourceModuleAndSourceId("PAYMENT", payment.getId())
+                        .ifPresent(journal ->
+                                accountingFacade.reverseJournal(
+                                        journal.getId(),
+                                        "Payment refund",
+                                        user
+                                )
+                        );
+
+                payment.setStatus("REFUNDED");
+            }
+        }
+
+    /* ============================================================
+       4️⃣ CUSTOMER REFUND RECORD (non-financial)
+    ============================================================ */
+
         BigDecimal totalPaid = sale.getPayments().stream()
-                .filter(p -> "SUCCESS".equalsIgnoreCase(p.getStatus()))
                 .map(Payment::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-    /* ============================================================
-       MARK PAYMENTS AS REFUNDED (NO ACCOUNTING HERE)
-       ============================================================ */
-        sale.getPayments().forEach(p -> {
-            if ("SUCCESS".equalsIgnoreCase(p.getStatus())) {
-                p.setStatus("REFUNDED");
-            }
-        });
+        if (sale.getCustomerId() != null
+                && totalPaid.compareTo(BigDecimal.ZERO) > 0) {
 
-    /* ============================================================
-       RECORD CUSTOMER REFUND (NON-FINANCIAL)
-       ============================================================ */
-        if (sale.getCustomerId() != null && totalPaid.compareTo(BigDecimal.ZERO) > 0) {
             customerService.recordRefund(
                     sale.getCustomerId(),
                     sale.getId(),
@@ -332,8 +512,9 @@ public class SalesService {
         }
 
     /* ============================================================
-       FINALIZE SALE STATE
-       ============================================================ */
+       5️⃣ FINALIZE STATE
+    ============================================================ */
+
         sale.setStatus(Sale.SaleStatus.REFUNDED);
         saleRepository.save(sale);
 

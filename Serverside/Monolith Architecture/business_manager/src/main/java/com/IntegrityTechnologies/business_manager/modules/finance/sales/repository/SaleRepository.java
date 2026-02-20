@@ -83,4 +83,15 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
             @Param("variantIds") List<UUID> variantIds,
             @Param("status") Sale.SaleStatus status
     );
+
+    @Query("""
+        SELECT 
+            DATEDIFF(CURRENT_DATE, s.createdAt),
+            (s.totalAmount - COALESCE(SUM(p.amount),0))
+        FROM Sale s
+        LEFT JOIN Payment p ON p.sale.id = s.id
+        WHERE s.status = 'COMPLETED'
+        GROUP BY s.id, s.createdAt, s.totalAmount
+    """)
+    List<Object[]> arAgingRaw();
 }

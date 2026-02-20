@@ -2,20 +2,23 @@ package com.IntegrityTechnologies.business_manager.modules.stock.inventory.servi
 
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import com.IntegrityTechnologies.business_manager.exception.OutOfStockException;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.InventoryAccountingAdapter;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.PeriodGuardService;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.controller.CategoryController;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.*;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryItem;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventorySnapshot;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.StockTransaction;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventorySnapshotRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.*;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductAudit;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductAuditRepository;
@@ -52,10 +55,16 @@ public class InventoryService {
     private final CategoryRepository categoryRepository;
     private final InventorySnapshotRepository inventorySnapshotRepository;
     private final ProductService productService;
+    private final InventoryBatchRepository batchRepository;
+    private final TaxProperties taxProperties;
+    private final PeriodGuardService periodGuardService;
 
     private static final int MAX_RETRIES = 5;
     private final ProductVariantService productVariantService;
     private final InventoryAccountingAdapter inventoryAccountingPort;
+    private final AccountingFacade accountingFacade;
+    private final AccountingAccounts accountingAccounts;
+    private final BatchConsumptionRepository batchConsumptionRepository;
 
     // ------------------------
     // EXISTING / CORE METHODS
@@ -63,7 +72,7 @@ public class InventoryService {
 
     @Transactional
     public ApiResponse receiveStock(ReceiveStockRequest req) {
-
+        periodGuardService.validateOpenPeriod(LocalDate.now());
         // -------------------------------------------------------------
         // 0. VALIDATION
         // -------------------------------------------------------------
@@ -125,10 +134,23 @@ public class InventoryService {
 
 
         // -------------------------------------------------------------
-        // 3. COMPUTE INCOMING COST + UNITS
-        // -------------------------------------------------------------
+// 3. COMPUTE INCOMING COST + UNITS (VAT-AWARE)
+// -------------------------------------------------------------
         long incomingUnits = 0;
         BigDecimal incomingCostTotal = BigDecimal.ZERO;
+        BigDecimal totalInputVat = BigDecimal.ZERO;
+
+        boolean vatEnabled = taxProperties.isVatEnabled();
+        BigDecimal systemVatRate = taxProperties.getVatRate();
+        boolean defaultInclusive = taxProperties.isPricesVatInclusive();
+
+        boolean vatInclusive = req.getVatInclusive() != null
+                ? req.getVatInclusive()
+                : defaultInclusive;
+
+        BigDecimal vatRate = req.getVatRate() != null
+                ? req.getVatRate()
+                : systemVatRate;
 
         Set<Supplier> suppliersUsed = new HashSet<>();
 
@@ -140,10 +162,37 @@ public class InventoryService {
             if (su.getUnitCost() == null)
                 throw new IllegalArgumentException("unitCost must be provided");
 
+            BigDecimal qty = BigDecimal.valueOf(su.getUnitsSupplied());
+            BigDecimal unitCost = su.getUnitCost();
+
+            BigDecimal gross = unitCost.multiply(qty);
+
+            BigDecimal net;
+            BigDecimal vat;
+
+            if (vatEnabled) {
+
+                if (vatInclusive) {
+                    net = gross.divide(
+                            BigDecimal.ONE.add(vatRate),
+                            6,
+                            RoundingMode.HALF_UP
+                    );
+                    vat = gross.subtract(net);
+                } else {
+                    net = gross;
+                    vat = net.multiply(vatRate);
+                    gross = net.add(vat);
+                }
+
+            } else {
+                net = gross;
+                vat = BigDecimal.ZERO;
+            }
+
             incomingUnits += su.getUnitsSupplied();
-            incomingCostTotal = incomingCostTotal.add(
-                    su.getUnitCost().multiply(BigDecimal.valueOf(su.getUnitsSupplied()))
-            );
+            incomingCostTotal = incomingCostTotal.add(net);
+            totalInputVat = totalInputVat.add(vat);
 
             supplierRepository.findByIdAndDeletedFalse(su.getSupplierId())
                     .ifPresent(suppliersUsed::add);
@@ -203,6 +252,22 @@ public class InventoryService {
 
         inventoryItemRepository.save(item);
 
+        // -------------------------------------------------------------
+        // CREATE FIFO BATCHES (PER SUPPLIER ENTRY)
+        // -------------------------------------------------------------
+        for (SupplierUnit su : req.getSuppliers()) {
+
+            InventoryBatch batch = InventoryBatch.builder()
+                    .productVariantId(variant.getId())
+                    .branchId(branch.getId())
+                    .unitCost(su.getUnitCost())
+                    .quantityReceived(su.getUnitsSupplied())
+                    .quantityRemaining(su.getUnitsSupplied())
+                    .receivedAt(LocalDateTime.now())
+                    .build();
+
+            batchRepository.save(batch);
+        }
 
         // -------------------------------------------------------------
         // 6. UPDATE VARIANT PRICING
@@ -283,11 +348,45 @@ public class InventoryService {
         BigDecimal totalValue =
                 newAvgCost.multiply(BigDecimal.valueOf(incomingUnits));
 
-        inventoryAccountingPort.recordInventoryReceipt(
-                variant.getId(),
-                totalValue,
-                req.getReference()
-        );
+        if (vatEnabled && totalInputVat.compareTo(BigDecimal.ZERO) > 0) {
+
+            accountingFacade.post(
+                    AccountingEvent.builder()
+                            .sourceModule("INVENTORY_RECEIPT")
+                            .sourceId(variant.getId())
+                            .reference(req.getReference())
+                            .description("Inventory receipt with VAT")
+                            .performedBy(getCurrentUsername())
+                            .entries(List.of(
+                                    AccountingEvent.Entry.builder()
+                                            .accountId(accountingAccounts.inventory())
+                                            .direction(EntryDirection.DEBIT)
+                                            .amount(incomingCostTotal)
+                                            .build(),
+
+                                    AccountingEvent.Entry.builder()
+                                            .accountId(accountingAccounts.inputVat())
+                                            .direction(EntryDirection.DEBIT)
+                                            .amount(totalInputVat)
+                                            .build(),
+
+                                    AccountingEvent.Entry.builder()
+                                            .accountId(accountingAccounts.accountsPayable())
+                                            .direction(EntryDirection.CREDIT)
+                                            .amount(incomingCostTotal.add(totalInputVat))
+                                            .build()
+                            ))
+                            .build()
+            );
+
+        } else {
+
+            inventoryAccountingPort.recordInventoryReceipt(
+                    variant.getId(),
+                    incomingCostTotal,
+                    req.getReference()
+            );
+        }
 
         // -------------------------------------------------------------
         // 9. RETURN RESPONSE
@@ -403,6 +502,7 @@ public class InventoryService {
 
     @Transactional
     public ApiResponse transferStock(TransferStockRequest req) {
+        periodGuardService.validateOpenPeriod(LocalDate.now());
 
         if (req.getProductVariantId() == null)
             throw new IllegalArgumentException("productVariantId is required");
@@ -669,9 +769,14 @@ public class InventoryService {
         }
     }
 
-    private void processStockDecrementVariant(UUID productVariantId, UUID branchId, long qty, String reference) {
+    private void processStockDecrementVariant(UUID productVariantId,
+                                              UUID branchId,
+                                              long qty,
+                                              String reference) {
+        periodGuardService.validateOpenPeriod(LocalDate.now());
 
-        InventoryItem item = inventoryItemRepository.findByProductVariant_IdAndBranchId(productVariantId, branchId)
+        InventoryItem item = inventoryItemRepository
+                .findByProductVariant_IdAndBranchId(productVariantId, branchId)
                 .orElseThrow(() -> new OutOfStockException("Inventory record not found"));
 
         long available = item.getQuantityOnHand() - item.getQuantityReserved();
@@ -679,32 +784,93 @@ public class InventoryService {
             throw new OutOfStockException("Insufficient stock in this branch");
         }
 
+        // -----------------------------------------
+        // FIFO BATCH CONSUMPTION
+        // -----------------------------------------
+        List<InventoryBatch> batches =
+                batchRepository
+                        .findByProductVariantIdAndBranchIdAndQuantityRemainingGreaterThanOrderByReceivedAtAsc(
+                                productVariantId,
+                                branchId,
+                                0L
+                        );
+
+        long remaining = qty;
+        BigDecimal totalCost = BigDecimal.ZERO;
+
+        for (InventoryBatch batch : batches) {
+
+            if (remaining <= 0) break;
+
+            long availableInBatch = batch.getQuantityRemaining();
+            long deduct = Math.min(availableInBatch, remaining);
+
+            batch.setQuantityRemaining(availableInBatch - deduct);
+
+            BigDecimal batchCost =
+                    batch.getUnitCost().multiply(BigDecimal.valueOf(deduct));
+
+            totalCost = totalCost.add(batchCost);
+
+            // 🔥 RECORD BATCH CONSUMPTION
+            batchConsumptionRepository.save(
+                    BatchConsumption.builder()
+                            .batchId(batch.getId())
+                            .saleId(extractSaleIdFromReference(reference))
+                            .productVariantId(productVariantId)
+                            .quantity(deduct)
+                            .unitCost(batch.getUnitCost())
+                            .build()
+            );
+
+            remaining -= deduct;
+        }
+
+        if (remaining > 0) {
+            throw new OutOfStockException("Insufficient stock in FIFO batches");
+        }
+
+        // -----------------------------------------
+        // UPDATE INVENTORY ITEM
+        // -----------------------------------------
         item.setQuantityOnHand(item.getQuantityOnHand() - qty);
         item.setLastUpdatedAt(LocalDateTime.now());
         item.setLastUpdatedBy(getCurrentUsername());
+
         inventoryItemRepository.save(item);
 
-        BigDecimal value =
-                item.getAverageCost().multiply(BigDecimal.valueOf(qty));
-
+        // -----------------------------------------
+        // ACCOUNTING — TRUE FIFO COGS
+        // -----------------------------------------
         inventoryAccountingPort.recordInventoryConsumption(
                 productVariantId,
-                value,
+                totalCost,
                 reference
         );
 
-        stockTransactionRepository.save(StockTransaction.builder()
-                .productId(item.getProductVariant().getProduct().getId())
-                .productVariantId(productVariantId)
-                .branchId(branchId)
-                .type(StockTransaction.TransactionType.SALE)
-                .quantityDelta(-qty)
-                .reference(reference)
-                .note("Sale decrement")
-                .timestamp(LocalDateTime.now())
-                .performedBy(getCurrentUsername())
-                .build()
+        // -----------------------------------------
+        // STOCK TRANSACTION
+        // -----------------------------------------
+        stockTransactionRepository.save(
+                StockTransaction.builder()
+                        .productId(item.getProductVariant().getProduct().getId())
+                        .productVariantId(productVariantId)
+                        .branchId(branchId)
+                        .type(StockTransaction.TransactionType.SALE)
+                        .quantityDelta(-qty)
+                        .reference(reference)
+                        .note("Sale decrement (FIFO)")
+                        .timestamp(LocalDateTime.now())
+                        .performedBy(getCurrentUsername())
+                        .build()
         );
+    }
+
+    private UUID extractSaleIdFromReference(String reference) {
+        if (reference != null && reference.startsWith("SALE_DELIVERY:")) {
+            return UUID.fromString(reference.replace("SALE_DELIVERY:", ""));
+        }
+        return null;
     }
 
     // ------------------------
@@ -712,6 +878,8 @@ public class InventoryService {
     // ------------------------
     @Transactional
     public ApiResponse adjustStockVariant(AdjustStockRequest req) {
+        periodGuardService.validateOpenPeriod(LocalDate.now());
+
         if (req.getProductVariantId() == null)
             throw new IllegalArgumentException("productVariantId is required");
         if (req.getBranchId() == null)

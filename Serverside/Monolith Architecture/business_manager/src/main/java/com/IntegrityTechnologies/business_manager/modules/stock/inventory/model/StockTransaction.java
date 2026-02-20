@@ -59,6 +59,7 @@ public class StockTransaction {
     private String performedBy;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean deleted = false;
 
     public enum TransactionType {

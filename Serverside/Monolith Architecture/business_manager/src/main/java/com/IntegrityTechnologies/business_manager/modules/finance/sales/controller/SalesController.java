@@ -39,6 +39,15 @@ public class SalesController {
         );
     }
 
+    /* ============================================================
+   DELIVER SALE (Triggers revenue in DELIVERY mode)
+   ============================================================ */
+    @PostMapping("/{id}/deliver")
+    public ResponseEntity<SaleDTO> deliverSale(@PathVariable UUID id) {
+        return ResponseEntity.ok(
+                OptimisticRetryRunner.runWithRetry(() -> salesService.deliverSale(id))
+        );
+    }
     @PostMapping
     public ResponseEntity<SaleDTO> createSale(@RequestBody SaleRequest req) {
         return ResponseEntity.ok(salesService.createSale(req));

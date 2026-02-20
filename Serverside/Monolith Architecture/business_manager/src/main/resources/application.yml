@@ -52,3 +52,15 @@ spring:
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000
+
+tax:
+  vat-enabled: true
+  vat-rate: 0.16
+  prices-vat-inclusive: true
+  corporate-tax-rate: 0.30
+  tax-mode: CORPORATE
+
+business:
+  accounting:
+    revenue-recognition: DELIVERY   # DELIVERY | PAYMENT
+

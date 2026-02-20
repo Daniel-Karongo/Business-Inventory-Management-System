@@ -26,8 +26,10 @@ public class SaleLineItem {
     private UUID branchId;
 
     private BigDecimal unitPrice;
-
     private Integer quantity;
-
     private BigDecimal lineTotal;
+
+    private BigDecimal netAmount;
+    private BigDecimal vatAmount;
+    private BigDecimal vatRate;
 }

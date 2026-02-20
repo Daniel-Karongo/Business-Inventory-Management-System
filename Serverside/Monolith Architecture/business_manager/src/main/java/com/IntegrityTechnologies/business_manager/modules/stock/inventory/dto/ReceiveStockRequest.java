@@ -17,4 +17,6 @@ public class ReceiveStockRequest {
     private List<SupplierUnit> suppliers;
     private String reference;
     private String note;
+    private Boolean vatInclusive;  // nullable → defaults to system setting
+    private BigDecimal vatRate;    // nullable → defaults to system rate
 }
