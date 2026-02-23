@@ -62,14 +62,25 @@ public class StockTransactionService {
     }
 
     private StockTransactionDTO toDTO(StockTransaction t) {
+
+        ProductVariant variant = productVariantRepository.findById(t.getProductVariantId())
+                .orElse(null);
+
+        String productName = variant != null ? variant.getProduct().getName() : null;
+        String variantName = variant != null ? variant.getClassification() : null;
+
+        String branchName = branchRepository.findById(t.getBranchId())
+                .map(b -> b.getName())
+                .orElse(null);
+
         return StockTransactionDTO.builder()
                 .id(t.getId())
                 .productId(t.getProductId())
-                .productName(productRepository.findById(t.getProductId()).get().getName())
+                .productName(productName)
                 .productVariantId(t.getProductVariantId())
-                .productVariantName(productVariantRepository.findById(t.getProductVariantId()).get().getClassification())
+                .productVariantName(variantName)
                 .branchId(t.getBranchId())
-                .branchName(branchRepository.findById(t.getBranchId()).get().getName())
+                .branchName(branchName)
                 .type(t.getType().name())
                 .quantityDelta(t.getQuantityDelta())
                 .unitCost(t.getUnitCost())

@@ -1,0 +1,94 @@
+<div class="page-container p-4">
+
+  <h2 class="text-xl font-semibold mb-6">
+    Corporate Tax Center (Consolidated)
+  </h2>
+
+  <!-- ================= ACCRUAL WIZARD ================= -->
+
+  <mat-card class="accrual-card">
+
+    <h3>Accrue Corporate Tax</h3>
+
+    <div class="accrual-grid">
+
+      <mat-form-field appearance="fill">
+        <mat-label>Period ID</mat-label>
+        <input matInput [(ngModel)]="periodId" />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>From</mat-label>
+        <input matInput type="date" [(ngModel)]="fromDate" />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>To</mat-label>
+        <input matInput type="date" [(ngModel)]="toDate" />
+      </mat-form-field>
+
+      <button
+        mat-flat-button
+        color="primary"
+        (click)="accrue()">
+        Accrue
+      </button>
+
+    </div>
+
+  </mat-card>
+
+  <!-- ================= HISTORY ================= -->
+
+  <div *ngIf="loading" class="loading-hint mt-4">
+    Loading filings...
+  </div>
+
+  <div *ngFor="let f of filings" class="filing-card">
+
+    <div class="header-row">
+      <div>
+        <div class="title">
+          Period ID: {{ f.periodId }}
+        </div>
+        <div class="meta">
+          Filed: {{ f.filedAt | date:'medium' }}
+        </div>
+      </div>
+
+      <div
+        class="status"
+        [class.paid]="f.paid"
+        [class.unpaid]="!f.paid">
+        {{ f.paid ? 'PAID' : 'UNPAID' }}
+      </div>
+    </div>
+
+    <div class="amount">
+      Tax Amount: {{ f.taxAmount | number:'1.2-2' }}
+    </div>
+
+    <div *ngIf="!f.paid" class="payment-row">
+
+      <mat-form-field appearance="fill">
+        <mat-label>Payment Account</mat-label>
+        <mat-select [(ngModel)]="selectedAccountId">
+          <mat-option *ngFor="let a of accounts" [value]="a.id">
+            {{ a.code }} — {{ a.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <button
+        mat-flat-button
+        color="primary"
+        [disabled]="!selectedAccountId"
+        (click)="pay(f)">
+        Pay
+      </button>
+
+    </div>
+
+  </div>
+
+</div>

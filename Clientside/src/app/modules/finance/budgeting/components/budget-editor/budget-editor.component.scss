@@ -1,0 +1,33 @@
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.budget-grid {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1200px;
+}
+
+.budget-grid th,
+.budget-grid td {
+  border: 1px solid var(--border);
+  padding: 6px;
+  text-align: right;
+}
+
+.budget-grid th:first-child,
+.budget-grid td:first-child {
+  text-align: left;
+  min-width: 220px;
+}
+
+.account-cell {
+  font-weight: 600;
+}
+
+input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: right;
+}

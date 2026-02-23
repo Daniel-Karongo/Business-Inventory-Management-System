@@ -1,0 +1,14 @@
+.page-container {
+  max-width: 1200px;
+  margin: auto;
+}
+
+.tax-card {
+  padding: 24px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.tax-card:hover {
+  transform: translateY(-3px);
+}

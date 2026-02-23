@@ -15,6 +15,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.service.PaymentService;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineBatchSelection;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineItem;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
@@ -37,6 +38,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -111,7 +113,7 @@ public class SalesService {
                 vat = BigDecimal.ZERO;
             }
 
-            lines.add(SaleLineItem.builder()
+            SaleLineItem line = SaleLineItem.builder()
                     .productVariantId(v.getId())
                     .productName(p.getName() + " (" +
                             (v.getClassification() != null ? v.getClassification() : "UNCLASSIFIED") + ")")
@@ -122,12 +124,32 @@ public class SalesService {
                     .netAmount(net)
                     .vatAmount(vat)
                     .vatRate(vatRate)
-                    .build());
+                    .build();
+
+            // 🔥 ADD THIS BLOCK — manual batch mapping
+            if (li.getBatchSelections() != null && !li.getBatchSelections().isEmpty()) {
+
+                for (BatchSelectionDto bs : li.getBatchSelections()) {
+
+                    SaleLineBatchSelection selection =
+                            SaleLineBatchSelection.builder()
+                                    .batchId(bs.getBatchId())
+                                    .quantity(bs.getQuantity())
+                                    .saleLineItem(line)
+                                    .build();
+
+                    line.getBatchSelections().add(selection);
+                }
+            }
+
+            lines.add(line);
         }
 
         BigDecimal computedTotal = lines.stream()
                 .map(SaleLineItem::getLineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        UUID branchId = extractSingleBranch(lines);
 
         Sale sale = Sale.builder()
                 .id(saleId)
@@ -175,7 +197,8 @@ public class SalesService {
                     li.getProductVariantId(),
                     li.getBranchId(),
                     li.getQuantity(),
-                    "SALE_DELIVERY:" + sale.getId()
+                    "SALE_DELIVERY:" + sale.getId(),
+                    li.getBatchSelections()
             );
         }
 
@@ -195,6 +218,8 @@ public class SalesService {
                         .map(SaleLineItem::getVatAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+                UUID branchId = extractSingleBranch(sale.getLineItems());
+
                 accountingFacade.post(
                         AccountingEvent.builder()
                                 .sourceModule("SALE")
@@ -202,6 +227,7 @@ public class SalesService {
                                 .reference(sale.getReceiptNo())
                                 .description("Revenue recognized on delivery")
                                 .performedBy(SecurityUtils.currentUsername())
+                                .branchId(branchId)
                                 .entries(List.of(
                                         AccountingEvent.Entry.builder()
                                                 .accountId(accountingAccounts.accountsReceivable())
@@ -492,6 +518,14 @@ public class SalesService {
             }
         }
 
+        for (SaleLineItem li : sale.getLineItems()) {
+
+            inventoryService.restoreConsumedBatches(
+                    sale.getId(),
+                    li.getBranchId(),
+                    li.getProductVariantId()
+            );
+        }
     /* ============================================================
        4️⃣ CUSTOMER REFUND RECORD (non-financial)
     ============================================================ */
@@ -633,5 +667,20 @@ public class SalesService {
                 )
                 .customer(customerDto)
                 .build();
+    }
+
+    private UUID extractSingleBranch(List<SaleLineItem> lines) {
+
+        Set<UUID> branches = lines.stream()
+                .map(SaleLineItem::getBranchId)
+                .collect(Collectors.toSet());
+
+        if (branches.size() != 1) {
+            throw new IllegalStateException(
+                    "A sale must belong to a single branch. Multiple branches detected."
+            );
+        }
+
+        return branches.iterator().next();
     }
 }

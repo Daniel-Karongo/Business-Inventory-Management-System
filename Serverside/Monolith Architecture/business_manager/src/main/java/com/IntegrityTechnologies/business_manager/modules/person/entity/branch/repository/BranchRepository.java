@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.branch.
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -13,6 +14,8 @@ import java.util.UUID;
 @Repository
 public interface BranchRepository extends JpaRepository<Branch, UUID> {
 
+    List<Branch> findByDeleted(Boolean deleted);
+    List<Branch> findByDeletedFalse();
     Optional<Branch> findByBranchCode(String branchCode);
     Optional<Branch> findByIdAndDeletedFalse(UUID id);
     Optional<Branch> findByIdAndDeletedTrue(UUID id);
@@ -47,4 +50,7 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
     boolean branchContainsDepartment(@Param("branchId") UUID branchId, @Param("departmentId") UUID departmentId);
 
     boolean existsByBranchCodeIgnoreCase(String branchCode);
+    @Modifying
+    @Query("UPDATE Branch b SET b.deleted = true WHERE b.id IN :ids")
+    void softDeleteBulk(@Param("ids") List<UUID> ids);
 }

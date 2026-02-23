@@ -11,6 +11,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.eng
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountingPeriodRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.TaxPeriodRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,11 +30,15 @@ public class AccountingFacade {
     private final LedgerPostingService postingService;
     private final JournalEntryRepository journalRepo;
     private final AccountingPolicy accountingPolicy;
-    private final TaxPeriodRepository taxPeriodRepository;
+    private final BranchRepository branchRepository;
     private final AccountingPeriodRepository accountingPeriodRepository;
 
     @Transactional
     public void post(AccountingEvent event) {
+
+        if (event.getBranchId() == null) {
+            throw new IllegalStateException("BranchId is required for accounting events");
+        }
 
         // --------------------------------------
         // PERIOD LOCK CHECK
@@ -56,6 +61,9 @@ public class AccountingFacade {
         journal.setSourceId(event.getSourceId());
         journal.setDescription(event.getDescription());
         journal.setPostedBy(event.getPerformedBy());
+        journal.setBranch(
+                branchRepository.getReferenceById(event.getBranchId())
+        );
 
         List<LedgerEntry> ledger = new ArrayList<>();
 
@@ -93,6 +101,7 @@ public class AccountingFacade {
         reversal.setSourceModule("JOURNAL_REVERSAL");
         reversal.setDescription("Reversal: " + reason);
         reversal.markPosted(user);
+        reversal.setBranch(original.getBranch());
 
         List<LedgerEntry> reversed =
                 accountingPolicy.reverse(original, reversal);

@@ -17,7 +17,7 @@ public class AccountingEvent {
     private String reference;
     private String description;
     private String performedBy;
-
+    private UUID branchId;
     private List<Entry> entries;
 
     @Getter

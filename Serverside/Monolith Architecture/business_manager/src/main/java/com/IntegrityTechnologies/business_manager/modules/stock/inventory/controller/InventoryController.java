@@ -130,6 +130,21 @@ public class InventoryController {
         return ResponseEntity.ok(new ApiResponse("success", "Inventory list for branch", items));
     }
 
+    @GetMapping("/variant/{variantId}/branch/{branchId}/suggest-batches")
+    public ResponseEntity<ApiResponse> suggestBatches(
+            @PathVariable UUID variantId,
+            @PathVariable UUID branchId,
+            @RequestParam long quantity
+    ) {
+
+        return ResponseEntity.ok(
+                new ApiResponse(
+                        "success",
+                        "Batch suggestion",
+                        inventoryService.suggestBatches(variantId, branchId, quantity)
+                )
+        );
+    }
     /** -------------------------
      * Reports & misc
      * ------------------------- */

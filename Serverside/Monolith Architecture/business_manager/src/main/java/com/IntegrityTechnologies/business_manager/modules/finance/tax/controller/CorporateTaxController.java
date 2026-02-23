@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -14,6 +15,11 @@ import java.util.UUID;
 public class CorporateTaxController {
 
     private final CorporateTaxService service;
+
+    @GetMapping
+    public List<CorporateTaxFiling> list() {
+        return service.listAll();
+    }
 
     @PostMapping("/accrue/{periodId}")
     public CorporateTaxFiling accrue(

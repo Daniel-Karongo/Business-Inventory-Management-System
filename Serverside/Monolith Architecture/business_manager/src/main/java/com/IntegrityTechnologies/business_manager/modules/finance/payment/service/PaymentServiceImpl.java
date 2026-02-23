@@ -114,9 +114,16 @@ public class PaymentServiceImpl implements PaymentService {
             default -> throw new IllegalArgumentException("Unsupported payment method");
         };
 
+        UUID branchId = sale.getLineItems().stream()
+                .map(SaleLineItem::getBranchId)
+                .findFirst()
+                .orElseThrow(() ->
+                        new IllegalStateException("Sale must have a branch"));
+
         accountingFacade.post(
                 AccountingEvent.builder()
                         .sourceModule("PAYMENT")
+                        .branchId(branchId)
                         .sourceId(payment.getId())
                         .reference(payment.getTransactionCode())
                         .description("Payment received")
@@ -160,6 +167,7 @@ public class PaymentServiceImpl implements PaymentService {
                             .reference(sale.getReceiptNo())
                             .description("Revenue recognized on payment")
                             .performedBy(currentUser())
+                            .branchId(branchId)
                             .entries(List.of(
                                     AccountingEvent.Entry.builder()
                                             .accountId(accountingAccounts.accountsReceivable())

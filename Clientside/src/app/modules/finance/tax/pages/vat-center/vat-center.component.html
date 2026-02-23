@@ -1,0 +1,70 @@
+<div class="page-container p-4">
+
+  <h2 class="text-xl font-semibold mb-4">
+    VAT Center (Consolidated)
+  </h2>
+
+  <div class="mb-4">
+    <input
+      type="text"
+      placeholder="Search by period ID..."
+      [(ngModel)]="search"
+      class="search-input"
+    />
+  </div>
+
+  <div *ngIf="loading" class="loading-hint">
+    Loading VAT filings...
+  </div>
+
+  <div *ngFor="let f of filtered()" class="vat-card">
+
+    <div class="header-row">
+      <div>
+        <div class="title">
+          Period:
+          {{ f.period?.startDate }} → {{ f.period?.endDate }}
+        </div>
+
+        <div class="meta">
+          Filed: {{ f.filedAt | date:'medium' }}
+        </div>
+      </div>
+
+      <div
+        class="status"
+        [class.paid]="f.paid"
+        [class.unpaid]="!f.paid">
+        {{ f.paid ? 'PAID' : 'UNPAID' }}
+      </div>
+    </div>
+
+    <div class="amount">
+      VAT Payable:
+      {{ f.vatPayable | number:'1.2-2' }}
+    </div>
+
+    <div *ngIf="!f.paid" class="payment-row">
+
+      <mat-form-field appearance="fill">
+        <mat-label>Payment Account</mat-label>
+        <mat-select [(ngModel)]="selectedAccountId">
+          <mat-option *ngFor="let a of accounts" [value]="a.id">
+            {{ a.code }} — {{ a.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <button
+        mat-flat-button
+        color="primary"
+        [disabled]="!selectedAccountId"
+        (click)="pay(f)">
+        Pay VAT
+      </button>
+
+    </div>
+
+  </div>
+
+</div>

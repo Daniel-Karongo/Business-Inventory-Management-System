@@ -7,18 +7,21 @@ public interface InventoryAccountingPort {
 
     void recordInventoryReceipt(
             UUID referenceId,
+            UUID branchId,
             BigDecimal value,
             String reference
     );
 
     void recordInventoryConsumption(
             UUID referenceId,
+            UUID branchId,
             BigDecimal value,
             String reference
     );
 
     void recordInventoryReturn(
             UUID referenceId,
+            UUID branchId,
             BigDecimal value,
             String reference
     );
@@ -29,12 +32,14 @@ public interface InventoryAccountingPort {
 
     void recordInventoryTransferOut(
             UUID referenceId,
+            UUID branchId,
             BigDecimal value,
             String reference
     );
 
     void recordInventoryTransferIn(
             UUID referenceId,
+            UUID branchId,
             BigDecimal value,
             String reference
     );

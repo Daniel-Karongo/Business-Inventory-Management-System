@@ -1,0 +1,42 @@
+<div class="controls flex gap-4 mb-4 flex-wrap">
+
+  <mat-form-field appearance="fill">
+    <mat-label>Fiscal Year</mat-label>
+    <input matInput type="number" [(ngModel)]="fiscalYear">
+  </mat-form-field>
+
+  <mat-form-field appearance="fill">
+    <mat-label>Branch</mat-label>
+    <mat-select [disabled]="auth.getSnapshot()?.role === 'EMPLOYEE'" [value]="selectedBranchId"
+      (selectionChange)="changeBranch($event.value)">
+      <mat-option [value]="null">Global</mat-option>
+      <mat-option *ngFor="let b of branches" [value]="b.id">
+        {{ b.name }}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+
+</div>
+
+<div class="table-wrapper">
+  <table class="budget-grid">
+    <thead>
+      <tr>
+        <th>Account</th>
+        <th *ngFor="let m of months">{{ m }}</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr *ngFor="let acc of accounts">
+        <td class="account-cell">
+          {{ acc.code }} — {{ acc.name }}
+        </td>
+
+        <td *ngFor="let m of months; let i = index">
+          <input type="number" [(ngModel)]="data[acc.id][i]" (blur)="save(acc.id, i)" />
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

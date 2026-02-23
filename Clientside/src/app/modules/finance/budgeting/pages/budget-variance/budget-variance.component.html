@@ -1,0 +1,56 @@
+<div class="variance-container">
+
+  <div class="controls">
+
+    <mat-form-field appearance="fill">
+      <mat-label>Year</mat-label>
+      <mat-select [(ngModel)]="year" (selectionChange)="load()">
+        <mat-option *ngFor="let y of [2023,2024,2025,2026]" [value]="y">
+          {{ y }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Month</mat-label>
+      <mat-select [(ngModel)]="month" (selectionChange)="load()">
+        <mat-option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]" [value]="m">
+          {{ m }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Account</mat-label>
+      <mat-select [(ngModel)]="accountId" (selectionChange)="load()">
+        <mat-option *ngFor="let a of accounts" [value]="a.id">
+          {{ a.code }} — {{ a.name }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-slide-toggle [(ngModel)]="consolidated" (change)="load()">
+      Consolidated
+    </mat-slide-toggle>
+
+  </div>
+
+  <div *ngIf="loading" class="loading">
+    Computing variance...
+  </div>
+
+  <div *ngIf="!loading && result">
+
+    <div class="card">
+      <div>Planned: {{ result.planned | number:'1.2-2' }}</div>
+      <div>Actual: {{ result.actual | number:'1.2-2' }}</div>
+      <div
+        [class.positive]="result.variance >= 0"
+        [class.negative]="result.variance < 0">
+        Variance: {{ result.variance | number:'1.2-2' }}
+      </div>
+    </div>
+
+  </div>
+
+</div>

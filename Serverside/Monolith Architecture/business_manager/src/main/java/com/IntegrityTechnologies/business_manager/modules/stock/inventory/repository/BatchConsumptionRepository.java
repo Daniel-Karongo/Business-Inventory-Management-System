@@ -26,4 +26,6 @@ public interface BatchConsumptionRepository extends JpaRepository<BatchConsumpti
         GROUP BY bc.batchId
     """)
     List<Object[]> topBatchProfitRaw();
+
+    List<BatchConsumption> findBySaleIdAndProductVariantId(UUID saleId, UUID variantId);
 }

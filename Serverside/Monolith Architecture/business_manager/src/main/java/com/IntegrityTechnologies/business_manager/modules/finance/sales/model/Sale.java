@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.sales.model;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.Payment;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -40,7 +41,6 @@ public class Sale {
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Payment> payments = new ArrayList<>();
-
 
     @Column(columnDefinition = "BINARY(16)")
     private UUID customerId;

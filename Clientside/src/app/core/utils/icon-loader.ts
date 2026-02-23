@@ -7,7 +7,7 @@ export class IconLoader {
   constructor(
     private registry: MatIconRegistry,
     private sanitizer: DomSanitizer
-  ) {}
+  ) { }
 
   load() {
     const icons = [
@@ -19,11 +19,15 @@ export class IconLoader {
       'reports',
       'payments',
       'customers',
+      'finance',
       'accounts',
       'users',
       'branches',
       'departments',
-      'access-control'
+      'access-control',
+      'budget',
+      'tax',
+      'payments'
     ];
 
     icons.forEach(name =>

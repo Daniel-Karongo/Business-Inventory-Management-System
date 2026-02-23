@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountingSignRules.*;
@@ -170,5 +171,9 @@ public class CorporateTaxService {
         filing.setPaid(true);
         filing.setPaidAt(LocalDateTime.now());
         filingRepository.save(filing);
+    }
+
+    public List<CorporateTaxFiling> listAll() {
+        return filingRepository.findAll();
     }
 }

@@ -22,8 +22,16 @@
 }
 
 .nav-item.active {
-  background: rgba(59,130,246,0.15);
+  background: rgba(59, 130, 246, 0.15);
   color: var(--success);
+}
+
+.group-header {
+  font-weight: 600;
+}
+
+.child-item {
+  font-size: 0.9rem;
 }
 
 /* ============================================================================

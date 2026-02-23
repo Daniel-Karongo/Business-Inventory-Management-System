@@ -188,7 +188,7 @@ public class InventoryValuationService {
         for (StockTransaction t : txns) {
             switch (t.getType()) {
                 case RECEIPT, ADJUSTMENT -> baseOnHand += t.getQuantityDelta();
-                case SALE -> baseOnHand -= t.getQuantityDelta();
+                case SALE -> baseOnHand += t.getQuantityDelta();
                 default -> {}
             }
         }
@@ -232,7 +232,8 @@ public class InventoryValuationService {
 
         for (StockTransaction r : receipts) {
             if (remaining <= 0) break;
-            long used = Math.min(remaining, r.getQuantityDelta());
+            long receiptQty = Math.max(r.getQuantityDelta(), 0);
+            long used = Math.min(remaining, receiptQty);
             total = total.add(r.getUnitCost().multiply(BigDecimal.valueOf(used)));
             remaining -= used;
         }
@@ -254,7 +255,8 @@ public class InventoryValuationService {
 
         for (StockTransaction r : receipts) {
             if (remaining <= 0) break;
-            long used = Math.min(remaining, r.getQuantityDelta());
+            long receiptQty = Math.max(r.getQuantityDelta(), 0);
+            long used = Math.min(remaining, receiptQty);
             total = total.add(r.getUnitCost().multiply(BigDecimal.valueOf(used)));
             remaining -= used;
         }

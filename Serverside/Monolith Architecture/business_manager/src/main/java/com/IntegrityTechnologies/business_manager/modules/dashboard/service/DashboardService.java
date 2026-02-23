@@ -10,8 +10,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.budget.domain.Budget;
-import com.IntegrityTechnologies.business_manager.modules.finance.budget.repository.BudgetRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.Budget;
+import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetMonthlySnapshotRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchAuditRepository;
@@ -56,6 +57,7 @@ public class DashboardService {
     private final SupplierAuditRepository supplierAuditRepository;
     private final BranchAuditRepository branchAuditRepository;
     private final DepartmentAuditRepository departmentAuditRepository;
+    private final BudgetMonthlySnapshotRepository budgetSnapshotRepository;
 
     /* ============================================================
        MAIN ENTRY
@@ -71,7 +73,7 @@ public class DashboardService {
         return DashboardSummaryDTO.builder()
                 .branchId(branchId)
                 .date(today)
-                .financial(buildFinancialKpis(start, end))
+                .financial(buildFinancialKpis(start, end, branchId))
                 .operational(buildOperationalKpis(branchId))
                 .revenueTrend(trends.get("revenue"))
                 .profitTrend(trends.get("profit"))
@@ -86,7 +88,8 @@ public class DashboardService {
     ============================================================ */
     private DashboardSummaryDTO.FinancialKpis buildFinancialKpis(
             LocalDateTime start,
-            LocalDateTime end
+            LocalDateTime end,
+            UUID branchId
     ) {
 
         Set<UUID> kpiAccounts = Set.of(
@@ -170,10 +173,10 @@ public class DashboardService {
                         : BigDecimal.ZERO;
 
         BigDecimal revenueBudgetVariance =
-                computeMonthlyBudgetVariance(accounts.revenue());
+                resolveSnapshotVariance(branchId, accounts.revenue());
 
         BigDecimal expenseBudgetVariance =
-                computeMonthlyBudgetVariance(accounts.cogs());
+                resolveSnapshotVariance(branchId, accounts.cogs());
 
         AgingBucketDTO aging = computeARAging();
 
@@ -359,32 +362,22 @@ public class DashboardService {
                 .toList();
     }
 
-    private BigDecimal computeMonthlyBudgetVariance(UUID accountId) {
+    private BigDecimal resolveSnapshotVariance(
+            UUID branchId,
+            UUID accountId
+    ) {
 
-        LocalDate start = LocalDate.now().withDayOfMonth(1);
-        LocalDate end = start.plusMonths(1).minusDays(1);
+        LocalDate now = LocalDate.now();
 
-        BigDecimal actual = ledgerRepo.netMovementForAccount(
-                accountId,
-                start.atStartOfDay(),
-                end.atTime(23,59,59),
-                DEBIT_NORMAL,
-                CREDIT_NORMAL,
-                DEBIT,
-                CREDIT
-        );
-
-        BigDecimal planned =
-                budgetRepository
-                        .findByAccountIdAndPeriodStartAndPeriodEnd(
-                                accountId,
-                                start,
-                                end
-                        )
-                        .map(Budget::getPlannedAmount)
-                        .orElse(BigDecimal.ZERO);
-
-        return actual.subtract(planned);
+        return budgetSnapshotRepository
+                .findByBranchIdAndFiscalYearAndMonthNumberAndAccountId(
+                        branchId,
+                        now.getYear(),
+                        now.getMonthValue(),
+                        accountId
+                )
+                .map(s -> s.getVariance())
+                .orElse(BigDecimal.ZERO);
     }
 
     private Map<UUID, BigDecimal> fetchMovements(

@@ -3,6 +3,9 @@ package com.IntegrityTechnologies.business_manager.modules.finance.sales.model;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 @Entity
 @Table(name = "sale_line_items")
@@ -28,6 +31,11 @@ public class SaleLineItem {
     private BigDecimal unitPrice;
     private Integer quantity;
     private BigDecimal lineTotal;
+    @OneToMany(mappedBy = "saleLineItem",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true)
+    @Builder.Default
+    private List<SaleLineBatchSelection> batchSelections = new ArrayList<>();
 
     private BigDecimal netAmount;
     private BigDecimal vatAmount;

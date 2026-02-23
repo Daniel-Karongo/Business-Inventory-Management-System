@@ -19,7 +19,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
     private final AccountingAccounts accounts;
 
     @Override
-    public void recordInventoryReceipt(UUID refId, BigDecimal value, String ref) {
+    public void recordInventoryReceipt(UUID refId, UUID branchId, BigDecimal value, String ref) {
 
         accountingFacade.post(
                 AccountingEvent.builder()
@@ -28,6 +28,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                         .reference(ref)
                         .description("Inventory received")
                         .performedBy("SYSTEM")
+                        .branchId(branchId)
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
                                         .accountId(accounts.inventory())
@@ -45,7 +46,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
     }
 
     @Override
-    public void recordInventoryConsumption(UUID refId, BigDecimal value, String ref) {
+    public void recordInventoryConsumption(UUID refId, UUID branchId, BigDecimal value, String ref) {
 
         accountingFacade.post(
                 AccountingEvent.builder()
@@ -54,6 +55,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                         .reference(ref)
                         .description("Inventory sold")
                         .performedBy("SYSTEM")
+                        .branchId(branchId)
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
                                         .accountId(accounts.cogs())
@@ -71,7 +73,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
     }
 
     @Override
-    public void recordInventoryReturn(UUID refId, BigDecimal value, String ref) {
+    public void recordInventoryReturn(UUID refId, UUID branchId, BigDecimal value, String ref) {
 
         accountingFacade.post(
                 AccountingEvent.builder()
@@ -80,6 +82,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                         .reference(ref)
                         .description("Inventory returned")
                         .performedBy("SYSTEM")
+                        .branchId(branchId)
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
                                         .accountId(accounts.inventory())
@@ -97,7 +100,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
     }
 
     @Override
-    public void recordInventoryTransferOut(UUID refId, BigDecimal value, String ref) {
+    public void recordInventoryTransferOut(UUID refId, UUID branchId, BigDecimal value, String ref) {
 
         accountingFacade.post(
                 AccountingEvent.builder()
@@ -106,6 +109,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                         .reference(ref)
                         .description("Inventory transferred out (source branch)")
                         .performedBy("SYSTEM")
+                        .branchId(branchId)
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
                                         .accountId(accounts.branchClearing())
@@ -123,7 +127,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
     }
 
     @Override
-    public void recordInventoryTransferIn(UUID refId, BigDecimal value, String ref) {
+    public void recordInventoryTransferIn(UUID refId, UUID branchId, BigDecimal value, String ref) {
 
         accountingFacade.post(
                 AccountingEvent.builder()
@@ -132,6 +136,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                         .reference(ref)
                         .description("Inventory transferred in (destination branch)")
                         .performedBy("SYSTEM")
+                        .branchId(branchId)
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
                                         .accountId(accounts.inventory())

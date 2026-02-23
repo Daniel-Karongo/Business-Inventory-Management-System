@@ -1,0 +1,48 @@
+<div class="page-container p-4">
+
+  <h2 class="text-xl font-semibold mb-4">
+    Supplier Payments
+  </h2>
+
+  <div class="payment-form">
+
+    <mat-form-field appearance="fill">
+      <mat-label>Supplier ID</mat-label>
+      <input matInput [(ngModel)]="supplierId">
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Amount</mat-label>
+      <input matInput type="number" [(ngModel)]="amount">
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Method</mat-label>
+      <mat-select [(ngModel)]="method">
+        <mat-option value="CASH">Cash</mat-option>
+        <mat-option value="BANK">Bank</mat-option>
+        <mat-option value="MPESA">Mpesa</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Reference</mat-label>
+      <input matInput [(ngModel)]="reference">
+    </mat-form-field>
+
+    <button mat-flat-button color="primary" (click)="pay()">
+      Pay Supplier
+    </button>
+
+  </div>
+
+  <div class="mt-6">
+    <div *ngFor="let p of payments" class="payment-row">
+      {{ p.supplierId }} |
+      {{ p.amount }} |
+      {{ p.method }} |
+      {{ p.paidAt | date:'short' }}
+    </div>
+  </div>
+
+</div>

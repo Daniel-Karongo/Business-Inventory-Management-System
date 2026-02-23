@@ -1,0 +1,54 @@
+.accrual-card {
+  margin-bottom: 24px;
+  padding: 18px;
+}
+
+.accrual-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  align-items: center;
+}
+
+.filing-card {
+  background: var(--surface);
+  padding: 18px;
+  margin-bottom: 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+.paid {
+  background: rgba(34,197,94,0.1);
+  color: #22c55e;
+}
+
+.unpaid {
+  background: rgba(239,68,68,0.1);
+  color: #ef4444;
+}
+
+.amount {
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+.payment-row {
+  margin-top: 12px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}

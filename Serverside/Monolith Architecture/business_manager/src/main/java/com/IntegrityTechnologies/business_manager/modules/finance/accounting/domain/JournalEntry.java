@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain;
 
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -36,6 +37,10 @@ public class JournalEntry {
 
     @OneToMany(mappedBy = "journalEntry", cascade = CascadeType.ALL)
     private List<LedgerEntry> ledgerEntries = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "branch_id", nullable = false)
+    private Branch branch;
 
     /* ============================================================
        STATE TRANSITIONS

@@ -1,0 +1,23 @@
+<div class="leaderboard">
+
+  <div class="row header">
+    <div>Branch</div>
+    <div>Planned</div>
+    <div>Actual</div>
+    <div>Variance</div>
+    <div>%</div>
+  </div>
+
+  <div class="row"
+       *ngFor="let r of data"
+       [class.positive]="r.variance > 0"
+       [class.negative]="r.variance < 0">
+
+    <div>{{ r.branchName }}</div>
+    <div>{{ r.planned | number:'1.2-2' }}</div>
+    <div>{{ r.actual | number:'1.2-2' }}</div>
+    <div>{{ r.variance | number:'1.2-2' }}</div>
+    <div>{{ r.variancePercent | number:'1.1-1' }}%</div>
+  </div>
+
+</div>

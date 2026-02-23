@@ -5,6 +5,7 @@ import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
 import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.dto.BranchBulkRow;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.dto.BranchDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.service.BranchBulkService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.service.BranchService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,6 +26,7 @@ public class BranchController {
 
     private final BranchService branchService;
     private final BranchBulkService bulkService;
+    private final BranchRepository branchRepository;
 
     @PostMapping("/import")
     public ResponseEntity<BulkResult<BranchDTO>> importBranches(
@@ -94,9 +96,13 @@ public class BranchController {
             @RequestParam Boolean soft,
             Authentication authentication
     ) {
-        for(UUID id: ids) {
-            branchService.deleteBranch(id, soft,authentication);
+
+        if (Boolean.TRUE.equals(soft)) {
+            branchRepository.softDeleteBulk(ids);
+        } else {
+            branchRepository.deleteAllById(ids);
         }
+
         return ResponseEntity.ok(new ApiResponse("success", "Branches deleted successfully"));
     }
 

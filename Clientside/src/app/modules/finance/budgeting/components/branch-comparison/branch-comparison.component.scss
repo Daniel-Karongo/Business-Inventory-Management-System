@@ -1,0 +1,23 @@
+.leaderboard {
+  max-width: 1000px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.header {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.positive {
+  background: rgba(34,197,94,0.08);
+}
+
+.negative {
+  background: rgba(239,68,68,0.08);
+}

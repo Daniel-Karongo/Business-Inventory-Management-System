@@ -23,15 +23,47 @@
 
   <!-- NAV -->
   <nav class="flex-1 overflow-y-auto py-4 space-y-1">
-    <a *ngFor="let item of nav" [routerLink]="item.route" routerLinkActive="active" class="nav-item"
-      [class.justify-center]="sidebar.isCollapsed$ | async"
-      [matTooltip]="(sidebar.isCollapsed$ | async) ? item.title : ''" matTooltipPosition="right"
-      matTooltipAppendTo="body">
 
-      <mat-icon class="nav-icon" [svgIcon]="item.icon"></mat-icon>
+    <ng-container *ngFor="let item of nav">
 
-      <span class="collapsed-label">{{ item.title }}</span>
-    </a>
+      <!-- SIMPLE LINK -->
+      <a *ngIf="!item.children" [routerLink]="item.route" routerLinkActive="active" class="nav-item"
+        [class.justify-center]="sidebar.isCollapsed$ | async"
+        [matTooltip]="(sidebar.isCollapsed$ | async) ? item.title : ''" matTooltipPosition="right"
+        matTooltipAppendTo="body">
+
+        <mat-icon class="nav-icon" [svgIcon]="item.icon"></mat-icon>
+        <span class="collapsed-label">{{ item.title }}</span>
+      </a>
+
+      <!-- GROUP -->
+      <div *ngIf="item.children">
+
+        <!-- GROUP HEADER -->
+        <div class="nav-item group-header" (click)="toggleGroup(item)"
+          [class.justify-center]="sidebar.isCollapsed$ | async">
+
+          <mat-icon class="nav-icon" [svgIcon]="item.icon"></mat-icon>
+          <span class="collapsed-label">{{ item.title }}</span>
+        </div>
+
+        <!-- CHILDREN -->
+        <div *ngIf="item.expanded && !(sidebar.isCollapsed$ | async)" class="ml-8 space-y-1">
+
+          <a *ngFor="let child of item.children" [routerLink]="child.route" routerLinkActive="active"
+            class="nav-item child-item">
+
+            <mat-icon class="nav-icon" [svgIcon]="child.icon"></mat-icon>
+            <span>{{ child.title }}</span>
+          </a>
+
+        </div>
+
+      </div>
+
+    </ng-container>
+
+    <!-- ACCESS CONTROL (SUPERUSER ONLY) -->
     <a *ngIf="isSuperuser()" routerLink="/admin/access-control" routerLinkActive="active" class="nav-item"
       [class.justify-center]="sidebar.isCollapsed$ | async"
       [matTooltip]="(sidebar.isCollapsed$ | async) ? 'Access Control' : ''" matTooltipPosition="right"
@@ -40,6 +72,7 @@
       <mat-icon class="nav-icon" svgIcon="access-control"></mat-icon>
       <span class="collapsed-label">Access Control</span>
     </a>
+
   </nav>
 
   <!-- FOOTER -->
