@@ -3,73 +3,163 @@
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
               http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
-              name="profit_and_loss"
-              pageWidth="595" pageHeight="842"
-              columnWidth="555"
-              leftMargin="20" rightMargin="20"
-              topMargin="30" bottomMargin="30">
+              name="profit_and_loss_enterprise"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
 
-    <!-- PARAMETERS -->
+    <!-- ================= STYLES ================= -->
+    <style name="TitleStyle" fontSize="18" isBold="true"/>
+    <style name="HeaderStyle" fontSize="13" isBold="true"/>
+    <style name="DetailStyle" fontSize="10"/>
+    <style name="TotalStyle" fontSize="11" isBold="true"/>
+
+    <!-- ================= PARAMETERS ================= -->
     <parameter name="FROM_DATE" class="java.lang.String"/>
     <parameter name="TO_DATE" class="java.lang.String"/>
+    <parameter name="COMPANY_NAME" class="java.lang.String"/>
+    <parameter name="GENERATED_BY" class="java.lang.String"/>
+    <parameter name="GENERATED_AT" class="java.util.Date"/>
 
-    <!-- SQL -->
+    <!-- ================= QUERY ================= -->
     <queryString>
         <![CDATA[
             SELECT
-                account_type AS category,
+                a.type AS account_type,
+                a.name AS account_name,
                 SUM(
                     CASE
-                        WHEN account_type = 'INCOME'  AND direction = 'CREDIT' THEN amount
-                        WHEN account_type = 'EXPENSE' AND direction = 'DEBIT'  THEN amount
+                        WHEN a.type = 'INCOME'  AND le.direction='CREDIT'
+                            THEN le.amount
+                        WHEN a.type = 'EXPENSE' AND le.direction='DEBIT'
+                            THEN le.amount
                         ELSE 0
                     END
                 ) AS amount
-            FROM vw_profit_and_loss
-            WHERE posting_date BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
-            GROUP BY account_type
-            ORDER BY account_type
+            FROM accounts a
+            JOIN ledger_entries le ON le.account_id = a.id
+            JOIN journal_entries je ON je.id = le.journal_entry_id
+            WHERE a.type IN ('INCOME','EXPENSE')
+              AND je.posted = true
+              AND je.reversed = false
+              AND DATE(le.posted_at) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+            GROUP BY a.type, a.name
+            HAVING amount <> 0
+            ORDER BY a.type DESC, a.name
         ]]>
     </queryString>
 
-    <!-- FIELDS -->
-    <field name="category" class="java.lang.String"/>
+    <field name="account_type" class="java.lang.String"/>
+    <field name="account_name" class="java.lang.String"/>
     <field name="amount" class="java.math.BigDecimal"/>
 
-    <!-- TITLE -->
+    <!-- ================= VARIABLES ================= -->
+    <variable name="RevenueTotal" class="java.math.BigDecimal" calculation="Sum">
+        <variableExpression><![CDATA[
+            $F{account_type}.equals("INCOME") ? $F{amount} : java.math.BigDecimal.ZERO
+        ]]></variableExpression>
+    </variable>
+
+    <variable name="ExpenseTotal" class="java.math.BigDecimal" calculation="Sum">
+        <variableExpression><![CDATA[
+            $F{account_type}.equals("EXPENSE") ? $F{amount} : java.math.BigDecimal.ZERO
+        ]]></variableExpression>
+    </variable>
+
+    <variable name="NetProfit" class="java.math.BigDecimal" calculation="Nothing">
+        <variableExpression><![CDATA[
+            $V{RevenueTotal}.subtract($V{ExpenseTotal})
+        ]]></variableExpression>
+    </variable>
+
+    <!-- ================= TITLE ================= -->
     <title>
-        <band height="50">
+        <band height="70">
+
             <textField>
-                <reportElement x="0" y="0" width="555" height="25"/>
-                <textElement textAlignment="Center">
-                    <font size="16" isBold="true"/>
-                </textElement>
+                <reportElement x="0" y="0" width="802" height="22"
+                               style="TitleStyle"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA[$P{COMPANY_NAME}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="28" width="802" height="18"
+                               style="HeaderStyle"/>
+                <textElement textAlignment="Center"/>
                 <textFieldExpression><![CDATA["PROFIT & LOSS STATEMENT"]]></textFieldExpression>
             </textField>
 
             <textField>
-                <reportElement x="0" y="30" width="555" height="15"/>
+                <reportElement x="0" y="48" width="802" height="15"/>
                 <textElement textAlignment="Center"/>
                 <textFieldExpression><![CDATA[
                     "Period: " + $P{FROM_DATE} + " to " + $P{TO_DATE}
                 ]]></textFieldExpression>
             </textField>
+
         </band>
     </title>
 
-    <!-- DETAIL -->
+    <!-- ================= DETAIL ================= -->
     <detail>
-        <band height="20">
+        <band height="18">
+
             <textField>
-                <reportElement x="0" y="0" width="350" height="20"/>
-                <textFieldExpression><![CDATA[$F{category}]]></textFieldExpression>
+                <reportElement x="0" y="0" width="500" height="18"
+                               style="DetailStyle"/>
+                <textFieldExpression><![CDATA[$F{account_name}]]></textFieldExpression>
             </textField>
 
-            <textField pattern="#,##0.00">
-                <reportElement x="350" y="0" width="205" height="20"/>
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="500" y="0" width="200" height="18"
+                               style="DetailStyle"/>
                 <textFieldExpression><![CDATA[$F{amount}]]></textFieldExpression>
             </textField>
+
         </band>
     </detail>
+
+    <!-- ================= FOOTER ================= -->
+    <pageFooter>
+        <band height="20">
+            <textField>
+                <reportElement x="0" y="0" width="450" height="15"/>
+                <textFieldExpression><![CDATA[
+                    "Generated by " + $P{GENERATED_BY}
+                ]]></textFieldExpression>
+            </textField>
+        </band>
+    </pageFooter>
+
+    <!-- ================= SUMMARY ================= -->
+    <summary>
+        <band height="80">
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="500" y="10" width="200" height="18"
+                               style="TotalStyle"/>
+                <textFieldExpression><![CDATA[$V{RevenueTotal}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="500" y="35" width="200" height="18"
+                               style="TotalStyle"/>
+                <textFieldExpression><![CDATA[$V{ExpenseTotal}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="500" y="60" width="200" height="18"
+                               style="TotalStyle"/>
+                <textFieldExpression><![CDATA[$V{NetProfit}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </summary>
 
 </jasperReport>

@@ -3,8 +3,8 @@ package com.IntegrityTechnologies.business_manager.modules.finance.tax.service;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.CorporateTaxFiling;
@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
+
+import static com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountingSignRules.*;
 
 @Service
 @RequiredArgsConstructor
@@ -45,18 +47,28 @@ public class CorporateTaxService {
         BigDecimal revenue = ledgerRepository.netMovementForAccount(
                 accounts.revenue(),
                 from,
-                to
-        ).abs();
+                to,
+                DEBIT_NORMAL,
+                CREDIT_NORMAL,
+                DEBIT,
+                CREDIT
+        );
 
         BigDecimal cogs = ledgerRepository.netMovementForAccount(
                 accounts.cogs(),
                 from,
-                to
-        ).abs();
+                to,
+                DEBIT_NORMAL,
+                CREDIT_NORMAL,
+                DEBIT,
+                CREDIT
+        );
 
         BigDecimal expenses = ledgerRepository.totalExpensesBetween(
                 from,
-                to
+                to,
+                AccountType.EXPENSE,
+                EntryDirection.DEBIT
         );
 
         BigDecimal profit =

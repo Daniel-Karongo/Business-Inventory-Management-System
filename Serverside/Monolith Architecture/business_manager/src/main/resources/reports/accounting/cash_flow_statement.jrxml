@@ -3,7 +3,7 @@
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
               http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
-              name="cash_flow_statement"
+              name="cash_flow_statement_enterprise"
               pageWidth="842"
               pageHeight="595"
               orientation="Landscape"
@@ -13,78 +13,169 @@
               topMargin="30"
               bottomMargin="30">
 
-    <!-- PARAMETERS -->
+    <!-- ================= STYLES ================= -->
+
+    <style name="TitleStyle" fontSize="18" isBold="true"/>
+    <style name="SectionStyle" fontSize="13" isBold="true"/>
+    <style name="DetailStyle" fontSize="10"/>
+    <style name="TotalStyle" fontSize="11" isBold="true"/>
+
+    <!-- ================= PARAMETERS ================= -->
+
     <parameter name="FROM_DATE" class="java.lang.String"/>
     <parameter name="TO_DATE" class="java.lang.String"/>
+    <parameter name="COMPANY_NAME" class="java.lang.String"/>
+    <parameter name="GENERATED_BY" class="java.lang.String"/>
+    <parameter name="GENERATED_AT" class="java.util.Date"/>
 
-    <!-- QUERY -->
+    <!-- ================= QUERY ================= -->
+
     <queryString>
         <![CDATA[
             SELECT
-                a.code AS account_code,
-                a.name AS account_name,
+                a.code,
+                a.name,
                 SUM(
                     CASE
-                        WHEN le.direction = 'DEBIT'  THEN le.amount
-                        WHEN le.direction = 'CREDIT' THEN -le.amount
+                        WHEN le.direction='DEBIT' THEN le.amount
+                        WHEN le.direction='CREDIT' THEN -le.amount
                     END
-                ) AS net_cash_flow
+                ) AS net_cash_movement
             FROM accounts a
-            JOIN ledger_entries le
-                 ON le.account_id = a.id
-            JOIN journal_entries je
-                 ON je.id = le.journal_entry_id
-            WHERE a.active = true
-              AND a.type = 'ASSET'
-              AND a.code IN ('1000','1100')
+            JOIN ledger_entries le ON le.account_id = a.id
+            JOIN journal_entries je ON je.id = le.journal_entry_id
+            WHERE a.code IN ('1000','1100') -- Cash & Bank accounts
               AND je.posted = true
               AND je.reversed = false
               AND DATE(le.posted_at) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
             GROUP BY a.code, a.name
+            HAVING net_cash_movement <> 0
             ORDER BY a.code
         ]]>
     </queryString>
 
-    <!-- FIELDS -->
-    <field name="account_code" class="java.lang.String"/>
-    <field name="account_name" class="java.lang.String"/>
-    <field name="net_cash_flow" class="java.math.BigDecimal"/>
+    <!-- ================= FIELDS ================= -->
 
-    <!-- TITLE -->
+    <field name="code" class="java.lang.String"/>
+    <field name="name" class="java.lang.String"/>
+    <field name="net_cash_movement" class="java.math.BigDecimal"/>
+
+    <!-- ================= VARIABLES ================= -->
+
+    <variable name="TotalCashMovement"
+              class="java.math.BigDecimal"
+              calculation="Sum">
+        <variableExpression><![CDATA[$F{net_cash_movement}]]></variableExpression>
+    </variable>
+
+    <!-- ================= TITLE ================= -->
+
     <title>
-        <band height="40">
+        <band height="75">
+
             <textField>
-                <reportElement x="0" y="0" width="802" height="25"/>
-                <textElement textAlignment="Center">
-                    <font size="15" isBold="true"/>
-                </textElement>
+                <reportElement x="0" y="0" width="802" height="22"
+                               style="TitleStyle"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA[$P{COMPANY_NAME}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="28" width="802" height="18"
+                               style="SectionStyle"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA["CASH FLOW STATEMENT"]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="48" width="802" height="15"/>
+                <textElement textAlignment="Center"/>
                 <textFieldExpression><![CDATA[
-                    "CASH FLOW STATEMENT (" + $P{FROM_DATE} + " to " + $P{TO_DATE} + ")"
+                    "Period: " + $P{FROM_DATE} + " to " + $P{TO_DATE}
                 ]]></textFieldExpression>
             </textField>
+
         </band>
     </title>
 
-    <!-- DETAIL -->
+    <!-- ================= COLUMN HEADER ================= -->
+
+    <columnHeader>
+        <band height="20">
+
+            <staticText>
+                <reportElement x="0" y="0" width="600" height="18"
+                               style="SectionStyle"/>
+                <text><![CDATA[Cash Account]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="600" y="0" width="202" height="18"
+                               style="SectionStyle"/>
+                <text><![CDATA[Net Movement]]></text>
+            </staticText>
+
+        </band>
+    </columnHeader>
+
+    <!-- ================= DETAIL ================= -->
+
     <detail>
         <band height="18">
 
             <textField>
-                <reportElement x="0" y="0" width="160" height="18"/>
-                <textFieldExpression><![CDATA[$F{account_code}]]></textFieldExpression>
+                <reportElement x="0" y="0" width="600" height="18"
+                               style="DetailStyle"/>
+                <textFieldExpression><![CDATA[
+                    $F{code} + " - " + $F{name}
+                ]]></textFieldExpression>
             </textField>
 
-            <textField>
-                <reportElement x="160" y="0" width="420" height="18"/>
-                <textFieldExpression><![CDATA[$F{account_name}]]></textFieldExpression>
-            </textField>
-
-            <textField pattern="#,##0.00">
-                <reportElement x="580" y="0" width="222" height="18"/>
-                <textFieldExpression><![CDATA[$F{net_cash_flow}]]></textFieldExpression>
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="600" y="0" width="202" height="18"
+                               style="DetailStyle"/>
+                <textFieldExpression><![CDATA[$F{net_cash_movement}]]></textFieldExpression>
             </textField>
 
         </band>
     </detail>
+
+    <!-- ================= PAGE FOOTER ================= -->
+
+    <pageFooter>
+        <band height="20">
+
+            <textField>
+                <reportElement x="0" y="0" width="450" height="15"/>
+                <textFieldExpression><![CDATA[
+                    "Generated by " + $P{GENERATED_BY}
+                    + " on "
+                    + new java.text.SimpleDateFormat("dd MMM yyyy HH:mm")
+                        .format($P{GENERATED_AT})
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="700" y="0" width="100" height="15"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA["Page " + $V{PAGE_NUMBER}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </pageFooter>
+
+    <!-- ================= SUMMARY ================= -->
+
+    <summary>
+        <band height="25">
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="600" y="0" width="202" height="20"
+                               style="TotalStyle"/>
+                <textFieldExpression><![CDATA[$V{TotalCashMovement}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </summary>
 
 </jasperReport>

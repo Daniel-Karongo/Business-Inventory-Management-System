@@ -3,93 +3,233 @@
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
               http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
-              name="general_ledger"
-              pageWidth="595" pageHeight="842"
-              columnWidth="555"
-              leftMargin="20" rightMargin="20"
-              topMargin="30" bottomMargin="30">
+              name="general_ledger_enterprise"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
 
-    <!-- PARAMETERS -->
+    <!-- ================= STYLES ================= -->
+
+    <style name="TitleStyle" fontSize="18" isBold="true"/>
+    <style name="HeaderStyle" fontSize="13" isBold="true"/>
+    <style name="ColumnHeaderStyle" fontSize="11" isBold="true"/>
+    <style name="DetailStyle" fontSize="10"/>
+    <style name="TotalStyle" fontSize="11" isBold="true"/>
+
+    <!-- ================= PARAMETERS ================= -->
+
     <parameter name="ACCOUNT_ID" class="java.lang.String"/>
+    <parameter name="ACCOUNT_NAME" class="java.lang.String"/>
     <parameter name="FROM_DATE" class="java.lang.String"/>
     <parameter name="TO_DATE" class="java.lang.String"/>
+    <parameter name="COMPANY_NAME" class="java.lang.String"/>
+    <parameter name="GENERATED_BY" class="java.lang.String"/>
+    <parameter name="GENERATED_AT" class="java.util.Date"/>
 
-    <!-- SQL -->
+    <!-- ================= QUERY ================= -->
+
     <queryString>
         <![CDATA[
             SELECT
-                posting_date           AS date,
-                journal_description    AS description,
-                debit,
-                credit,
-                SUM(debit - credit)
-                    OVER (PARTITION BY account_id
-                          ORDER BY posting_date, ledger_entry_id)
-                    AS balance
-            FROM vw_general_ledger
-            WHERE account_id = UUID_TO_BIN($P{ACCOUNT_ID})
-              AND posting_date >= $P{FROM_DATE}
-              AND posting_date < DATE_ADD($P{TO_DATE}, INTERVAL 1 DAY)
-            ORDER BY posting_date, ledger_entry_id
+                le.posted_at AS posting_date,
+                je.description,
+                CASE WHEN le.direction='DEBIT' THEN le.amount ELSE 0 END AS debit,
+                CASE WHEN le.direction='CREDIT' THEN le.amount ELSE 0 END AS credit,
+                SUM(
+                    CASE
+                        WHEN le.direction='DEBIT' THEN le.amount
+                        WHEN le.direction='CREDIT' THEN -le.amount
+                    END
+                ) OVER (ORDER BY le.posted_at, le.id) AS running_balance
+            FROM ledger_entries le
+            JOIN journal_entries je ON je.id = le.journal_entry_id
+            WHERE le.account_id = UUID_TO_BIN($P{ACCOUNT_ID})
+              AND je.posted = true
+              AND je.reversed = false
+              AND DATE(le.posted_at) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
+            ORDER BY le.posted_at, le.id
         ]]>
     </queryString>
 
-    <!-- FIELDS -->
-    <field name="date" class="java.sql.Timestamp"/>
+    <!-- ================= FIELDS ================= -->
+
+    <field name="posting_date" class="java.sql.Timestamp"/>
     <field name="description" class="java.lang.String"/>
     <field name="debit" class="java.math.BigDecimal"/>
     <field name="credit" class="java.math.BigDecimal"/>
-    <field name="balance" class="java.math.BigDecimal"/>
+    <field name="running_balance" class="java.math.BigDecimal"/>
 
-    <!-- TITLE -->
+    <!-- ================= VARIABLES ================= -->
+
+    <variable name="TotalDebit" class="java.math.BigDecimal" calculation="Sum">
+        <variableExpression><![CDATA[$F{debit}]]></variableExpression>
+    </variable>
+
+    <variable name="TotalCredit" class="java.math.BigDecimal" calculation="Sum">
+        <variableExpression><![CDATA[$F{credit}]]></variableExpression>
+    </variable>
+
+    <!-- ================= TITLE ================= -->
+
     <title>
-        <band height="60">
+        <band height="80">
+
             <textField>
-                <reportElement x="0" y="0" width="555" height="25"/>
-                <textElement textAlignment="Center">
-                    <font size="16" isBold="true"/>
-                </textElement>
+                <reportElement x="0" y="0" width="802" height="22"
+                               style="TitleStyle"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA[$P{COMPANY_NAME}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="28" width="802" height="18"
+                               style="HeaderStyle"/>
+                <textElement textAlignment="Center"/>
                 <textFieldExpression><![CDATA["GENERAL LEDGER"]]></textFieldExpression>
             </textField>
 
             <textField>
-                <reportElement x="0" y="30" width="555" height="15"/>
+                <reportElement x="0" y="48" width="802" height="15"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA[
+                    $P{ACCOUNT_NAME}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="63" width="802" height="15"/>
                 <textElement textAlignment="Center"/>
                 <textFieldExpression><![CDATA[
                     "Period: " + $P{FROM_DATE} + " to " + $P{TO_DATE}
                 ]]></textFieldExpression>
             </textField>
+
         </band>
     </title>
 
-    <!-- DETAIL -->
+    <!-- ================= COLUMN HEADER ================= -->
+
+    <columnHeader>
+        <band height="20">
+
+            <staticText>
+                <reportElement x="0" y="0" width="150" height="18"
+                               style="ColumnHeaderStyle"/>
+                <text><![CDATA[Date]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="150" y="0" width="300" height="18"
+                               style="ColumnHeaderStyle"/>
+                <text><![CDATA[Description]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="450" y="0" width="100" height="18"
+                               style="ColumnHeaderStyle"/>
+                <text><![CDATA[Debit]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="550" y="0" width="100" height="18"
+                               style="ColumnHeaderStyle"/>
+                <text><![CDATA[Credit]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="650" y="0" width="152" height="18"
+                               style="ColumnHeaderStyle"/>
+                <text><![CDATA[Balance]]></text>
+            </staticText>
+
+        </band>
+    </columnHeader>
+
+    <!-- ================= DETAIL ================= -->
+
     <detail>
         <band height="18">
-            <textField>
-                <reportElement x="0" y="0" width="80" height="18"/>
-                <textFieldExpression><![CDATA[$F{date}]]></textFieldExpression>
+
+            <textField pattern="dd MMM yyyy">
+                <reportElement x="0" y="0" width="150" height="18"
+                               style="DetailStyle"/>
+                <textFieldExpression><![CDATA[$F{posting_date}]]></textFieldExpression>
             </textField>
 
             <textField>
-                <reportElement x="80" y="0" width="215" height="18"/>
+                <reportElement x="150" y="0" width="300" height="18"
+                               style="DetailStyle"/>
                 <textFieldExpression><![CDATA[$F{description}]]></textFieldExpression>
             </textField>
 
-            <textField pattern="#,##0.00">
-                <reportElement x="295" y="0" width="80" height="18"/>
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="450" y="0" width="100" height="18"
+                               style="DetailStyle"/>
                 <textFieldExpression><![CDATA[$F{debit}]]></textFieldExpression>
             </textField>
 
-            <textField pattern="#,##0.00">
-                <reportElement x="375" y="0" width="80" height="18"/>
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="550" y="0" width="100" height="18"
+                               style="DetailStyle"/>
                 <textFieldExpression><![CDATA[$F{credit}]]></textFieldExpression>
             </textField>
 
-            <textField pattern="#,##0.00">
-                <reportElement x="455" y="0" width="100" height="18"/>
-                <textFieldExpression><![CDATA[$F{balance}]]></textFieldExpression>
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="650" y="0" width="152" height="18"
+                               style="DetailStyle"/>
+                <textFieldExpression><![CDATA[$F{running_balance}]]></textFieldExpression>
             </textField>
+
         </band>
     </detail>
+
+    <!-- ================= PAGE FOOTER ================= -->
+
+    <pageFooter>
+        <band height="20">
+
+            <textField>
+                <reportElement x="0" y="0" width="450" height="15"/>
+                <textFieldExpression><![CDATA[
+                    "Generated by " + $P{GENERATED_BY}
+                    + " on "
+                    + new java.text.SimpleDateFormat("dd MMM yyyy HH:mm")
+                        .format($P{GENERATED_AT})
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="700" y="0" width="100" height="15"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA["Page " + $V{PAGE_NUMBER}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </pageFooter>
+
+    <!-- ================= SUMMARY ================= -->
+
+    <summary>
+        <band height="25">
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="450" y="0" width="100" height="20"
+                               style="TotalStyle"/>
+                <textFieldExpression><![CDATA[$V{TotalDebit}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="550" y="0" width="100" height="20"
+                               style="TotalStyle"/>
+                <textFieldExpression><![CDATA[$V{TotalCredit}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </summary>
 
 </jasperReport>

@@ -151,13 +151,6 @@
 			<version>6.21.4</version>
 		</dependency>
 
-		<!-- JasperReports font support (optional but recommended) -->
-		<dependency>
-			<groupId>net.sf.jasperreports</groupId>
-			<artifactId>jasperreports</artifactId>
-			<version>6.21.4</version>
-		</dependency>
-
 		<!-- If you want to use POI for Excel export (optional) -->
 		<dependency>
 			<groupId>org.apache.poi</groupId>

@@ -108,6 +108,11 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                         .performedBy("SYSTEM")
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
+                                        .accountId(accounts.branchClearing())
+                                        .direction(EntryDirection.DEBIT)
+                                        .amount(value)
+                                        .build(),
+                                AccountingEvent.Entry.builder()
                                         .accountId(accounts.inventory())
                                         .direction(EntryDirection.CREDIT)
                                         .amount(value)
@@ -131,6 +136,11 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                                 AccountingEvent.Entry.builder()
                                         .accountId(accounts.inventory())
                                         .direction(EntryDirection.DEBIT)
+                                        .amount(value)
+                                        .build(),
+                                AccountingEvent.Entry.builder()
+                                        .accountId(accounts.branchClearing())
+                                        .direction(EntryDirection.CREDIT)
                                         .amount(value)
                                         .build()
                         ))

@@ -86,4 +86,10 @@ public class AccountingAccounts {
                 .orElseThrow(() -> new IllegalStateException("Corporate Tax Expense missing"))
                 .getId();
     }
+
+    public UUID branchClearing() {
+        return accountRepository.findByCode("2300")
+                .orElseThrow(() -> new IllegalStateException("Branch Clearing account missing"))
+                .getId();
+    }
 }

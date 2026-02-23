@@ -28,6 +28,7 @@ public class ChartOfAccountsSeeder {
             seed("2100", "Output VAT", AccountType.LIABILITY);
             seed("2200", "VAT Payable", AccountType.LIABILITY);
             seed("2400", "Corporate Tax Payable", AccountType.LIABILITY);
+            seed("2300", "Branch Clearing Account", AccountType.LIABILITY);
 
             seed("3000", "Owner Equity", AccountType.EQUITY);
 

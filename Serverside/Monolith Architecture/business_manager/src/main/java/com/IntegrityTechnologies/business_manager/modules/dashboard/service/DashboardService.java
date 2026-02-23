@@ -1,7 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.dashboard.service;
 
 import com.IntegrityTechnologies.business_manager.modules.dashboard.dto.*;
+import com.IntegrityTechnologies.business_manager.modules.dashboard.repository.DashboardDailySnapshotRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.budget.domain.Budget;
@@ -19,6 +22,9 @@ import java.math.RoundingMode;
 import java.time.*;
 import java.util.*;
 
+import static com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountingSignRules.*;
+
+
 @Service
 @RequiredArgsConstructor
 public class DashboardService {
@@ -32,6 +38,8 @@ public class DashboardService {
     private final SaleRepository saleRepository;
     private final BatchConsumptionRepository batchConsumptionRepository;
     private final BudgetRepository budgetRepository;
+    private final DashboardDailySnapshotRepository snapshotRepo;
+    private final DashboardSnapshotService snapshotService;
 
     /* ============================================================
        MAIN ENTRY
@@ -42,14 +50,16 @@ public class DashboardService {
         LocalDateTime start = today.atStartOfDay();
         LocalDateTime end = today.atTime(23,59,59);
 
+        Map<String, List<ChartPoint>> trends = build7DayTrends();
+
         return DashboardSummaryDTO.builder()
                 .branchId(branchId)
                 .date(today)
                 .financial(buildFinancialKpis(start, end))
                 .operational(buildOperationalKpis(branchId))
-                .revenueTrend(buildRevenueTrend())
-                .profitTrend(buildProfitTrend())
-                .vatTrend(buildVatTrend())
+                .revenueTrend(trends.get("revenue"))
+                .profitTrend(trends.get("profit"))
+                .vatTrend(trends.get("vat"))
                 .topBatches(top5ProfitableBatches())
                 .recentActivities(List.of())
                 .build();
@@ -63,15 +73,16 @@ public class DashboardService {
             LocalDateTime end
     ) {
 
-        BigDecimal revenueToday =
-                ledgerRepo.netMovementForAccount(
-                        accounts.revenue(), start, end
-                ).abs();
+        Set<UUID> kpiAccounts = Set.of(
+                accounts.revenue(),
+                accounts.cogs()
+        );
 
-        BigDecimal cogsToday =
-                ledgerRepo.netMovementForAccount(
-                        accounts.cogs(), start, end
-                ).abs();
+        Map<UUID, BigDecimal> movements =
+                fetchMovements(kpiAccounts, start, end);
+
+        BigDecimal revenueToday = movements.get(accounts.revenue());
+        BigDecimal cogsToday = movements.get(accounts.cogs());
 
         BigDecimal marginPercent =
                 revenueToday.compareTo(BigDecimal.ZERO) == 0
@@ -80,12 +91,16 @@ public class DashboardService {
                         .divide(revenueToday, 4, RoundingMode.HALF_UP)
                         .multiply(BigDecimal.valueOf(100));
 
+        LocalDate today = LocalDate.now();
+        LocalDate oneYearAgo = today.minusYears(1);
+
+        snapshotService.backfillMissingSnapshots(oneYearAgo, today);
+
+        BigDecimal todayCogs = movements.get(accounts.cogs());
+
         BigDecimal yearlyCogs =
-                ledgerRepo.netMovementForAccount(
-                        accounts.cogs(),
-                        LocalDate.now().minusYears(1).atStartOfDay(),
-                        LocalDateTime.now()
-                ).abs();
+                snapshotRepo.sumCogsBetween(oneYearAgo, today.minusDays(1))
+                        .add(todayCogs);
 
         BigDecimal inventoryValue =
                 (BigDecimal) valuationService.getTotalValuation()
@@ -96,11 +111,12 @@ public class DashboardService {
                         ? BigDecimal.ZERO
                         : yearlyCogs.divide(inventoryValue, 4, RoundingMode.HALF_UP);
 
-        BigDecimal expensesLast30 =
-                ledgerRepo.totalExpensesBetween(
-                        LocalDate.now().minusDays(30).atStartOfDay(),
-                        LocalDateTime.now()
-                );
+        BigDecimal expensesLast30 = ledgerRepo.totalExpensesBetween(
+                LocalDate.now().minusDays(30).atStartOfDay(),
+                LocalDateTime.now(),
+                AccountType.EXPENSE,
+                EntryDirection.DEBIT
+        );
 
         BigDecimal burnRate =
                 expensesLast30.divide(BigDecimal.valueOf(30), 2, RoundingMode.HALF_UP);
@@ -193,56 +209,50 @@ public class DashboardService {
     /* ============================================================
        REVENUE TREND (7 DAYS)
     ============================================================ */
-    private List<ChartPoint> buildRevenueTrend() {
+    private Map<String, List<ChartPoint>> build7DayTrends() {
 
-        List<ChartPoint> out = new ArrayList<>();
+        UUID revenueId = accounts.revenue();
+        UUID cogsId = accounts.cogs();
+        UUID vatId = accounts.outputVat();
 
-        for (int i = 6; i >= 0; i--) {
+        Set<UUID> trendAccounts = Set.of(revenueId, cogsId, vatId);
 
-            LocalDate date = LocalDate.now().minusDays(i);
+        Map<LocalDate, Map<UUID, BigDecimal>> data =
+                fetch7DayMovements(trendAccounts);
 
-            BigDecimal rev =
-                    ledgerRepo.netMovementForAccount(
-                            accounts.revenue(),
-                            date.atStartOfDay(),
-                            date.atTime(23,59,59)
-                    ).abs();
+        List<ChartPoint> revenueTrend = new ArrayList<>();
+        List<ChartPoint> profitTrend = new ArrayList<>();
+        List<ChartPoint> vatTrend = new ArrayList<>();
 
-            out.add(new ChartPoint(date.toString(), rev));
-        }
-
-        return out;
-    }
-
-    /* ============================================================
-       PROFIT TREND
-    ============================================================ */
-    private List<ChartPoint> buildProfitTrend() {
-
-        List<ChartPoint> out = new ArrayList<>();
+        LocalDate today = LocalDate.now();
 
         for (int i = 6; i >= 0; i--) {
 
-            LocalDate date = LocalDate.now().minusDays(i);
+            LocalDate date = today.minusDays(i);
+
+            Map<UUID, BigDecimal> day =
+                    data.getOrDefault(date, Collections.emptyMap());
 
             BigDecimal revenue =
-                    ledgerRepo.netMovementForAccount(
-                            accounts.revenue(),
-                            date.atStartOfDay(),
-                            date.atTime(23,59,59)
-                    ).abs();
+                    day.getOrDefault(revenueId, BigDecimal.ZERO);
 
             BigDecimal cogs =
-                    ledgerRepo.netMovementForAccount(
-                            accounts.cogs(),
-                            date.atStartOfDay(),
-                            date.atTime(23,59,59)
-                    ).abs();
+                    day.getOrDefault(cogsId, BigDecimal.ZERO);
 
-            out.add(new ChartPoint(date.toString(), revenue.subtract(cogs)));
+            BigDecimal vat =
+                    day.getOrDefault(vatId, BigDecimal.ZERO);
+
+            revenueTrend.add(new ChartPoint(date.toString(), revenue));
+            profitTrend.add(new ChartPoint(date.toString(), revenue.subtract(cogs)));
+            vatTrend.add(new ChartPoint(date.toString(), vat));
         }
 
-        return out;
+        Map<String, List<ChartPoint>> result = new LinkedHashMap<>();
+        result.put("revenue", revenueTrend);
+        result.put("profit", profitTrend);
+        result.put("vat", vatTrend);
+
+        return result;
     }
 
     private AgingBucketDTO computeARAging() {
@@ -282,7 +292,7 @@ public class DashboardService {
 
         UUID apAccountId = accounts.accountsPayable();
 
-        for (Object[] row : ledgerRepo.apAgingRaw(apAccountId)) {
+        for (Object[] row : ledgerRepo.apAgingRaw(apAccountId, CREDIT, DEBIT)) {
 
             int days = ((Number) row[0]).intValue();
             BigDecimal balance = (BigDecimal) row[1];
@@ -298,27 +308,6 @@ public class DashboardService {
         }
 
         return new AgingBucketDTO(current, d30, d60, d90, over90);
-    }
-
-    private List<ChartPoint> buildVatTrend() {
-
-        List<ChartPoint> out = new ArrayList<>();
-
-        for (int i = 6; i >= 0; i--) {
-
-            LocalDate date = LocalDate.now().minusDays(i);
-
-            BigDecimal vat =
-                    ledgerRepo.netMovementForAccount(
-                            accounts.outputVat(),
-                            date.atStartOfDay(),
-                            date.atTime(23,59,59)
-                    ).abs();
-
-            out.add(new ChartPoint(date.toString(), vat));
-        }
-
-        return out;
     }
 
     private BigDecimal computeDeadStockValue() {
@@ -359,12 +348,15 @@ public class DashboardService {
         LocalDate start = LocalDate.now().withDayOfMonth(1);
         LocalDate end = start.plusMonths(1).minusDays(1);
 
-        BigDecimal actual =
-                ledgerRepo.netMovementForAccount(
-                        accountId,
-                        start.atStartOfDay(),
-                        end.atTime(23,59,59)
-                );
+        BigDecimal actual = ledgerRepo.netMovementForAccount(
+                accountId,
+                start.atStartOfDay(),
+                end.atTime(23,59,59),
+                DEBIT_NORMAL,
+                CREDIT_NORMAL,
+                DEBIT,
+                CREDIT
+        );
 
         BigDecimal planned =
                 budgetRepository
@@ -377,5 +369,83 @@ public class DashboardService {
                         .orElse(BigDecimal.ZERO);
 
         return actual.subtract(planned);
+    }
+
+    private Map<UUID, BigDecimal> fetchMovements(
+            Set<UUID> accountIds,
+            LocalDateTime start,
+            LocalDateTime end
+    ) {
+
+        List<Object[]> rows = ledgerRepo.netMovementForAccountsBetween(
+                accountIds,
+                start,
+                end,
+                DEBIT_NORMAL,
+                CREDIT_NORMAL,
+                DEBIT,
+                CREDIT
+        );
+
+        Map<UUID, BigDecimal> result = new HashMap<>();
+
+        for (Object[] row : rows) {
+            result.put((UUID) row[0], (BigDecimal) row[1]);
+        }
+
+        // Ensure zero values for missing accounts
+        for (UUID id : accountIds) {
+            result.putIfAbsent(id, BigDecimal.ZERO);
+        }
+
+        return result;
+    }
+
+    private Map<LocalDate, Map<UUID, BigDecimal>> fetch7DayMovements(Set<UUID> accountIds) {
+
+        LocalDate today = LocalDate.now();
+        LocalDate startDate = today.minusDays(6);
+
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = today.atTime(23,59,59);
+
+        List<Object[]> rows =
+                ledgerRepo.netMovementGroupedByDateAndAccount(
+                        accountIds,
+                        start,
+                        end,
+                        DEBIT_NORMAL,
+                        CREDIT_NORMAL,
+                        DEBIT,
+                        CREDIT
+                );
+
+        Map<LocalDate, Map<UUID, BigDecimal>> result = new HashMap<>();
+
+        for (Object[] row : rows) {
+
+            Object rawDate = row[0];
+
+            LocalDate date;
+
+            if (rawDate instanceof java.sql.Date sqlDate) {
+                date = sqlDate.toLocalDate();
+            } else if (rawDate instanceof java.time.LocalDate localDate) {
+                date = localDate;
+            } else if (rawDate instanceof java.sql.Timestamp ts) {
+                date = ts.toLocalDateTime().toLocalDate();
+            } else {
+                throw new IllegalStateException("Unexpected date type: " + rawDate.getClass());
+            }
+
+            UUID accountId = (UUID) row[1];
+            BigDecimal amount = (BigDecimal) row[2];
+
+            result
+                    .computeIfAbsent(date, d -> new HashMap<>())
+                    .put(accountId, amount);
+        }
+
+        return result;
     }
 }

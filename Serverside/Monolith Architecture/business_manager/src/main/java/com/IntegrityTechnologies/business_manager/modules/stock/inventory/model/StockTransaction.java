@@ -54,6 +54,7 @@ public class StockTransaction {
 
     private String note;
 
+    @Column(nullable = false, updatable = false)
     private LocalDateTime timestamp;
 
     private String performedBy;
@@ -74,6 +75,12 @@ public class StockTransaction {
     }
 
     @Version
-    @Column(name = "version", nullable = false)
     private Long version;
+
+    @PrePersist
+    public void onCreate() {
+        if (timestamp == null) {
+            timestamp = LocalDateTime.now();
+        }
+    }
 }
