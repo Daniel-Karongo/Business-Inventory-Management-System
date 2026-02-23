@@ -22,6 +22,7 @@ import { IconLoader } from './core/utils/icon-loader';
 import { AuthService } from './modules/auth/services/auth.service';
 import { APP_DATE_FORMATS } from './core/services/date-formats';
 import { provideServiceWorker } from '@angular/service-worker';
+import { DatePipe } from '@angular/common';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -57,6 +58,8 @@ export const appConfig: ApplicationConfig = {
     }), provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000'
-    })
+    }),
+
+    DatePipe
   ]
 };

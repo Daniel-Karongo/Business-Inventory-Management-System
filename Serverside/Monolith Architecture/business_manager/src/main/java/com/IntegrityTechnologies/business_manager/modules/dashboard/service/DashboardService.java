@@ -1,6 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.dashboard.service;
 
-import com.IntegrityTechnologies.business_manager.modules.dashboard.dto.*;
+import com.IntegrityTechnologies.business_manager.modules.dashboard.dto.ActivityDTO;
+import com.IntegrityTechnologies.business_manager.modules.dashboard.dto.AgingBucketDTO;
+import com.IntegrityTechnologies.business_manager.modules.dashboard.dto.ChartPoint;
+import com.IntegrityTechnologies.business_manager.modules.dashboard.dto.DashboardSummaryDTO;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.repository.DashboardDailySnapshotRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
@@ -11,15 +14,22 @@ import com.IntegrityTechnologies.business_manager.modules.finance.budget.domain.
 import com.IntegrityTechnologies.business_manager.modules.finance.budget.repository.BudgetRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.BatchConsumptionRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryValuationService;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductAuditRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 import static com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountingSignRules.*;
@@ -40,6 +50,12 @@ public class DashboardService {
     private final BudgetRepository budgetRepository;
     private final DashboardDailySnapshotRepository snapshotRepo;
     private final DashboardSnapshotService snapshotService;
+    private final StockTransactionRepository stockTransactionRepository;
+    private final UserAuditRepository userAuditRepository;
+    private final ProductAuditRepository productAuditRepository;
+    private final SupplierAuditRepository supplierAuditRepository;
+    private final BranchAuditRepository branchAuditRepository;
+    private final DepartmentAuditRepository departmentAuditRepository;
 
     /* ============================================================
        MAIN ENTRY
@@ -61,7 +77,7 @@ public class DashboardService {
                 .profitTrend(trends.get("profit"))
                 .vatTrend(trends.get("vat"))
                 .topBatches(top5ProfitableBatches())
-                .recentActivities(List.of())
+                .recentActivities(buildRecentActivities(branchId))
                 .build();
     }
 
@@ -447,5 +463,85 @@ public class DashboardService {
         }
 
         return result;
+    }
+
+    private List<ActivityDTO> buildRecentActivities(UUID branchId) {
+
+        List<ActivityDTO> out = new ArrayList<>();
+
+        stockTransactionRepository
+                .findByBranchIdOrderByTimestampDesc(branchId)
+                .stream()
+                .limit(5)
+                .forEach(tx ->
+                        out.add(new ActivityDTO(
+                                "STOCK",
+                                tx.getType() + " " + tx.getQuantityDelta(),
+                                tx.getPerformedBy(),
+                                tx.getTimestamp()
+                        ))
+                );
+
+        userAuditRepository.findAll().stream()
+                .sorted(Comparator.comparing(a -> a.getTimestamp(), Comparator.reverseOrder()))
+                .limit(5)
+                .forEach(a ->
+                        out.add(new ActivityDTO(
+                                "USER",
+                                a.getAction() + " user " + a.getUsername(),
+                                a.getPerformedByUsername(),
+                                a.getTimestamp()
+                        ))
+                );
+        productAuditRepository.findAll().stream()
+                .sorted(Comparator.comparing(a -> a.getTimestamp(), Comparator.reverseOrder()))
+                .limit(5)
+                .forEach(a ->
+                        out.add(new ActivityDTO(
+                                "PRODUCT",
+                                a.getAction() + " product " + a.getProductName(),
+                                a.getPerformedBy(),
+                                a.getTimestamp()
+                        ))
+                );
+
+        supplierAuditRepository.findAll().stream()
+                .sorted(Comparator.comparing(a -> a.getTimestamp(), Comparator.reverseOrder()))
+                .limit(5)
+                .forEach(a ->
+                        out.add(new ActivityDTO(
+                                "SUPPLIER",
+                                a.getAction() + " supplier " + a.getSupplierName(),
+                                a.getPerformedBy(),
+                                a.getTimestamp()
+                        ))
+                );
+
+        branchAuditRepository.findAll().stream()
+                .sorted(Comparator.comparing(a -> a.getTimestamp(), Comparator.reverseOrder()))
+                .limit(5)
+                .forEach(a ->
+                        out.add(new ActivityDTO(
+                                "BRANCH",
+                                a.getAction() + " branch " + a.getBranchName(),
+                                a.getPerformedByUsername(),
+                                a.getTimestamp()
+                        ))
+                );
+
+        departmentAuditRepository.findAll().stream()
+                .sorted(Comparator.comparing(a -> a.getTimestamp(), Comparator.reverseOrder()))
+                .limit(5)
+                .forEach(a ->
+                        out.add(new ActivityDTO(
+                                "DEPARTMENT",
+                                a.getAction() + " department " + a.getDepartmentName(),
+                                a.getPerformedByUsername(),
+                                a.getTimestamp()
+                        ))
+                );
+
+        out.sort(Comparator.comparing(ActivityDTO::getTime).reversed());
+        return out.stream().limit(10).toList();
     }
 }

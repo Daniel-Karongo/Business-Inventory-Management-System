@@ -1,6 +1,68 @@
 <div class="space-y-4">
 
   <!-- =========================
+     DASHBOARD COMMAND BAR
+========================= -->
+  <div class="dashboard-toolbar">
+
+    <div class="toolbar-left">
+
+      <!-- Period -->
+      <mat-form-field appearance="fill" class="toolbar-field">
+        <mat-label>Period</mat-label>
+        <mat-select [(value)]="selectedPeriod" (selectionChange)="reload()">
+          <mat-option value="TODAY">Today</mat-option>
+          <mat-option value="7D">Last 7 Days</mat-option>
+          <mat-option value="30D">Last 30 Days</mat-option>
+          <mat-option value="MTD">Month To Date</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Branch -->
+      <mat-form-field appearance="fill" class="toolbar-field">
+        <mat-label>Branch</mat-label>
+
+        <mat-select [(value)]="selectedBranchId" (selectionChange)="reload()">
+
+          <mat-option *ngFor="let b of branches" [value]="b.id">
+            {{ b.name }}
+          </mat-option>
+
+        </mat-select>
+      </mat-form-field>
+
+    </div>
+
+    <div class="toolbar-right">
+
+      <!-- Snapshot -->
+      <div class="snapshot-info">
+        Snapshot:
+        <strong>{{ dateUtils.formatFull(summary?.date) }}</strong>
+      </div>
+
+      <!-- Stale indicator -->
+      <div *ngIf="isStale" class="stale-indicator">
+        Data may be outdated
+      </div>
+
+      <!-- Refresh -->
+      <button mat-icon-button (click)="reload()" matTooltip="Refresh">
+        <mat-icon>refresh</mat-icon>
+      </button>
+
+      <!-- Export -->
+      <button mat-stroked-button color="primary" (click)="exportExcel()">
+        Export Excel
+      </button>
+
+      <button mat-flat-button color="accent" (click)="exportBoardPack()">
+        Export PDF
+      </button>
+    </div>
+
+  </div>
+  <!-- =========================
        LOADING STATE
   ========================= -->
   <ng-container *ngIf="loading; else dashboardContent">
@@ -26,10 +88,72 @@
   <ng-template #dashboardContent>
 
     <!-- KPI ROW -->
+    <!-- =========================
+     FINANCIAL KPIs
+========================= -->
     <div class="kpi-section">
-      <div class="kpi-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="section-title">Financial Overview</div>
 
-        <app-stat-card *ngFor="let s of stats" [title]="s.title" [value]="s.value" [change]="s.change">
+      <div class="kpi-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <app-stat-card *ngFor="let s of financialStats" [title]="s.title" [value]="s.value" [variance]="s.variance"
+          (click)="s.title.includes('Variance') && openBudgetVariance()">
+        </app-stat-card>
+      </div>
+    </div>
+
+    <!-- =========================
+     AGING OVERVIEW
+========================= -->
+    <div class="kpi-section" *ngIf="summary?.financial">
+
+      <div class="section-title clickable" (click)="openARAging()">
+        Receivables Aging
+      </div>
+
+      <div class="aging-grid">
+        <div class="aging-chip" *ngFor="let bucket of [
+      { label: 'Current', value: arAging?.current },
+      { label: '0-30', value: arAging?.days30 },
+      { label: '31-60', value: arAging?.days60 },
+      { label: '61-90', value: arAging?.days90 },
+      { label: '90+', value: arAging?.over90 }
+    ]">
+          <div class="aging-label">{{ bucket.label }}</div>
+          <div class="aging-value">
+            {{ bucket.value | number:'1.0-2' }}
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title clickable mt-4" (click)="openAPAging()">
+        Payables Aging
+      </div>
+
+      <div class="aging-grid">
+        <div class="aging-chip" *ngFor="let bucket of [
+      { label: 'Current', value: apAging?.current },
+      { label: '0-30', value: apAging?.days30 },
+      { label: '31-60', value: apAging?.days60 },
+      { label: '61-90', value: apAging?.days90 },
+      { label: '90+', value: apAging?.over90 }
+    ]">
+          <div class="aging-label">{{ bucket.label }}</div>
+          <div class="aging-value">
+            {{ bucket.value | number:'1.0-2' }}
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- =========================
+     OPERATIONAL KPIs
+========================= -->
+    <div class="kpi-section">
+      <div class="section-title">Operational Overview</div>
+
+      <div class="kpi-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <app-stat-card *ngFor="let s of operationalStats" [title]="s.title" [value]="s.value">
         </app-stat-card>
       </div>
     </div>
@@ -38,20 +162,34 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
       <div class="lg:col-span-2 dashboard-panel h-96 no-bottom-padding">
-        <div class="panel-title">Revenue Trend</div>
+
+        <div class="panel-header">
+          <div class="panel-title">
+            Financial Trend
+          </div>
+
+          <!-- TOGGLE -->
+          <div class="chart-toggle">
+            <button [class.active]="chartMode === 'REVENUE'" (click)="chartMode = 'REVENUE'">
+              Revenue
+            </button>
+
+            <button [class.active]="chartMode === 'PROFIT'" (click)="chartMode = 'PROFIT'">
+              Profit
+            </button>
+
+            <button [class.active]="chartMode === 'VAT'" (click)="chartMode = 'VAT'">
+              VAT
+            </button>
+          </div>
+        </div>
 
         <div class="panel-content-scroll">
-          <app-revenue-line-chart [labels]="revenueLabels" [values]="revenueValues">
+          <app-revenue-line-chart [labels]="activeLabels" [values]="activeValues">
           </app-revenue-line-chart>
         </div>
-      </div>
 
-      <div class="dashboard-panel h-96">
-        <div class="panel-title">Sales by Category</div>
-        <app-sales-category-chart [labels]="categoryLabels" [values]="categoryValues">
-        </app-sales-category-chart>
       </div>
-
     </div>
 
     <!-- ACTIVITY -->

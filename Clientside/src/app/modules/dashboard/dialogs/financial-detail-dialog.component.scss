@@ -1,0 +1,66 @@
+:host {
+  display: block;
+}
+
+h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+/* =====================================================
+   TABLE STYLE
+===================================================== */
+
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.detail-table tr {
+  transition: background 0.1s ease;
+}
+
+.detail-table tr:hover {
+  background: var(--surface-hover);
+}
+
+.detail-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--surface-border);
+  font-size: 14px;
+}
+
+.detail-table td.value {
+  text-align: right;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* =====================================================
+   VARIANCE BLOCK (Professional Layout)
+===================================================== */
+
+.variance-block {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px;
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.variance-block div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.variance-block strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}

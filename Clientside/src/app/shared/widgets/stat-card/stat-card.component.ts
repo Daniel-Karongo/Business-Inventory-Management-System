@@ -11,5 +11,15 @@ import { CommonModule } from '@angular/common';
 export class StatCardComponent {
   @Input() title = '';
   @Input() value = '';
-  @Input() change = '';
+  @Input() variance?: number;
+
+  get varianceClass(): string {
+    if (this.variance == null) return '';
+    return this.variance >= 0 ? 'positive' : 'negative';
+  }
+
+  get varianceSymbol(): string {
+    if (this.variance == null) return '';
+    return this.variance >= 0 ? '↑' : '↓';
+  }
 }

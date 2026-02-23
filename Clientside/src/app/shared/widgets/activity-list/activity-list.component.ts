@@ -1,5 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DateUtilsService } from '../../../core/services/date-utils';
 
 export interface Activity {
   type: string;        // SALE | STOCK | USER | PRODUCT | SUPPLIER
@@ -17,6 +18,8 @@ export interface Activity {
 })
 export class ActivityListComponent {
   @Input() activities: Activity[] = [];
+
+  constructor(public dateUtils: DateUtilsService) { }
 
   badgeClass(type: string): string {
     switch (type) {

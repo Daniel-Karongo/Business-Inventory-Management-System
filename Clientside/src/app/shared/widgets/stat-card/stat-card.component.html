@@ -8,8 +8,11 @@
     {{ value }}
   </div>
 
-  <div *ngIf="change" class="stat-change">
-    {{ change }}
+  <div *ngIf="variance !== undefined" class="stat-change" [ngClass]="varianceClass">
+
+    {{ varianceSymbol }}
+    {{ value }}
+
   </div>
 
 </div>

@@ -21,8 +21,10 @@
 
       <!-- ROWS -->
       <tr *ngFor="let a of activities">
-        <td class="time">{{ a.time }}</td>
-
+        <td class="time">
+          {{ dateUtils.formatFull(a.time) }}
+        </td>
+        
         <td>
           <span class="badge" [ngClass]="badgeClass(a.type)">
             {{ a.type }}

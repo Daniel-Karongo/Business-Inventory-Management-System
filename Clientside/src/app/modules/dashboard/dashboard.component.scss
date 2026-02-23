@@ -2,97 +2,215 @@
   display: block;
 }
 
-/* =========================
-   KPI GRID
-========================= */
+/* =====================================================
+   DASHBOARD TOOLBAR (Enterprise Responsive Layout)
+===================================================== */
 
-.kpi-grid {
-  margin-top: 2px;
-  margin-bottom: 4px;
+.dashboard-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--surface-border);
 }
 
-/* =========================
+.toolbar-left {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.toolbar-field {
+  width: 180px;
+}
+
+.snapshot-info {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.snapshot-info strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.stale-indicator {
+  font-size: 12px;
+  font-weight: 600;
+  color: #dc2626;
+  padding: 4px 8px;
+  background: rgba(220, 38, 38, 0.08);
+  border-radius: 6px;
+}
+
+/* Mobile layout */
+@media (max-width: 768px) {
+  .dashboard-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar-left,
+  .toolbar-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .toolbar-field {
+    width: 100%;
+  }
+}
+
+/* =====================================================
+   KPI GRID
+===================================================== */
+
+.kpi-section {
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.kpi-grid {
+  margin-bottom: 8px;
+}
+
+/* =====================================================
    DASHBOARD PANELS
-========================= */
+===================================================== */
 
 .dashboard-panel {
   background: var(--surface-bg);
   border: 1px solid var(--surface-border);
   border-radius: var(--surface-radius);
   box-shadow: var(--surface-shadow);
-
-  padding: 14px 16px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
 }
 
-/* =========================
-   PANEL TITLES
-========================= */
-
-.panel-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-}
-
-/* =========================
-   RESPONSIVE HELPERS
-========================= */
-
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 16px;
-}
-
-.span-8 {
-  grid-column: span 8;
-}
-
-.span-4 {
-  grid-column: span 4;
-}
-
-.span-12 {
-  grid-column: span 12;
-}
-
-.dashboard-panel {
-  margin-top: 0;
-}
-
-.kpi-section {
-  margin-bottom: 4px;
-}
-
-/* Remove bottom padding ONLY where charts scroll */
 .dashboard-panel.no-bottom-padding {
   padding-bottom: 0;
 }
 
-/* Inner content owns scrolling + spacing */
+/* =====================================================
+   PANEL HEADER
+===================================================== */
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* =====================================================
+   CHART TOGGLE
+===================================================== */
+
+.chart-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.chart-toggle button {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--surface-border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chart-toggle button:hover {
+  background: var(--surface-hover);
+}
+
+.chart-toggle button.active {
+  background: var(--active);
+  color: white;
+  border-color: var(--active);
+}
+
+/* =====================================================
+   CHART SCROLL FIX (fix swallowed x-axis labels)
+===================================================== */
+
 .panel-content-scroll {
-  height: calc(100% - 32px); /* title space */
-  padding: 0 16px 14px 16px;
-  overflow: hidden;
+  height: calc(100% - 42px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 28px; // prevents label clipping
 }
 
-@media (max-width: 1024px) {
+/* =====================================================
+   AGING GRID
+===================================================== */
 
-  .span-8,
-  .span-4 {
-    grid-column: span 12;
-  }
+.aging-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
 }
 
-@media (max-width: 640px) {
-  .kpi-grid {
-    gap: 12px;
-  }
+.aging-chip {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s ease;
+}
 
-  .dashboard-panel.h-96 {
-    height: 320px;
-  }
+.aging-chip:hover {
+  border-color: var(--active);
+}
+
+.aging-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+
+.aging-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.clickable {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.clickable:hover {
+  color: var(--active);
 }

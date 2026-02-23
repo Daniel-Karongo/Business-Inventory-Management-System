@@ -1,0 +1,40 @@
+<h2 mat-dialog-title>{{ data.title }}</h2>
+
+<div mat-dialog-content>
+
+    <!-- Aging View -->
+    <div *ngIf="data.type === 'AR_AGING' || data.type === 'AP_AGING'">
+
+        <table class="detail-table">
+            <tr *ngFor="let b of agingBuckets">
+                <td>{{ b.label }}</td>
+                <td class="value">
+                    {{ b.value | number:'1.0-2' }}
+                </td>
+            </tr>
+        </table>
+
+    </div>
+
+    <!-- Budget Variance View -->
+    <div *ngIf="data.type === 'BUDGET'">
+
+        <div class="variance-block">
+            <div>
+                Revenue Variance:
+                <strong>{{ data.payload.revenue | number:'1.0-2' }}</strong>
+            </div>
+
+            <div>
+                Expense Variance:
+                <strong>{{ data.payload.expense | number:'1.0-2' }}</strong>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<div mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Close</button>
+</div>
