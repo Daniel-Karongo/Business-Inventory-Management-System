@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
 
 import { AuthService } from '../auth/services/auth.service';
 import { DashboardService } from './dashboard.service';
@@ -72,7 +72,8 @@ export class DashboardComponent implements OnInit {
     private authService: AuthService,
     private dialog: MatDialog,
     private branchService: BranchService,
-    public dateUtils: DateUtilsService
+    public dateUtils: DateUtilsService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
@@ -96,7 +97,15 @@ export class DashboardComponent implements OnInit {
           branchCode: b.branchCode!,
           name: b.name
         }));
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.error = 'Failed to load branches';
+        this.loading = false;
+
+        this.cdr.markForCheck();
       }
+      
     });
   }
 
@@ -121,10 +130,14 @@ export class DashboardComponent implements OnInit {
         this.loading = false;
         this.lastLoadedAt = new Date();
         this.selectedBranchId = branchId;
+
+        this.cdr.markForCheck();
       },
       error: () => {
         this.error = 'Failed to load dashboard';
         this.loading = false;
+
+        this.cdr.markForCheck();
       }
     });
   }

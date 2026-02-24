@@ -1,28 +1,27 @@
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   ApplicationConfig,
-  provideZoneChangeDetection,
+  inject, isDevMode,
   provideAppInitializer,
-  inject, isDevMode
+  provideZoneChangeDetection
 } from '@angular/core';
-import { provideRouter } from '@angular/router';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { provideAnimations } from '@angular/platform-browser/animations';
 import {
-  provideNativeDateAdapter,
+  MAT_DATE_FORMATS,
   MAT_DATE_LOCALE,
-  MAT_DATE_FORMATS
+  provideNativeDateAdapter
 } from '@angular/material/core';
-import { firstValueFrom } from 'rxjs';
+import { provideAnimations } from '@angular/platform-browser/animations';
+import { provideRouter } from '@angular/router';
 
 import { routes } from './app.routes';
-import { authInterceptor } from './modules/auth/interceptors/auth.interceptor';
 import { loggingInterceptor } from './core/interceptors/logging.interceptor';
+import { authInterceptor } from './modules/auth/interceptors/auth.interceptor';
 
+import { DatePipe } from '@angular/common';
+import { provideServiceWorker } from '@angular/service-worker';
+import { APP_DATE_FORMATS } from './core/services/date-formats';
 import { IconLoader } from './core/utils/icon-loader';
 import { AuthService } from './modules/auth/services/auth.service';
-import { APP_DATE_FORMATS } from './core/services/date-formats';
-import { provideServiceWorker } from '@angular/service-worker';
-import { DatePipe } from '@angular/common';
 
 export const appConfig: ApplicationConfig = {
   providers: [

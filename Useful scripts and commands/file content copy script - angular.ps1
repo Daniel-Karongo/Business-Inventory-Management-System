@@ -6,14 +6,16 @@ $basePath = Get-Location
 $outputFile = Join-Path $basePath "Selected_Modules_Combined.txt"
 
 $targetFolders = @(
-    "styles.scss",
-    "app\app.config.ts",
-    "app\app.routes.ts",
-    "app\core\layout",
-    "app\core\navigation",
-    "app\modules\dashboard",
-    "app\modules\accounts",
-    "app\shared\widgets"
+    "package.json",
+    "src\environments\environments.ts",
+    "src\styles.scss",
+    "src\app\app.config.ts",
+    "src\app\app.routes.ts",
+    "src\app\core\layout",
+    "src\app\core\navigation",
+    "src\app\modules\auth\services\auth.service.ts",
+    "src\app\modules\categories",
+    "src\app\modules\products"
 )
 
 # ================================

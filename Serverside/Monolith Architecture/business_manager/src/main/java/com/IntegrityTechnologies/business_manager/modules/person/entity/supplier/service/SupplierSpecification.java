@@ -12,8 +12,11 @@ public class SupplierSpecification {
 
     public static Specification<Supplier> inCategories(List<Long> categoryIds) {
         if (categoryIds == null || categoryIds.isEmpty()) return null;
+
         return (root, query, cb) -> {
-            Join<Object, Object> join = root.join("categories", JoinType.INNER);
+            var join = root.join("categorySuppliers", JoinType.INNER)
+                    .join("category", JoinType.INNER);
+
             return join.get("id").in(categoryIds);
         };
     }

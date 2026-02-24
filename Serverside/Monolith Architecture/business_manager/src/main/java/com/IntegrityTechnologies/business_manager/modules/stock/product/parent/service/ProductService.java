@@ -12,6 +12,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.reposito
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplier;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplierId;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.service.CategoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.ProductRestoreOptions;
@@ -555,14 +557,32 @@ public class ProductService {
     }
 
     private void syncCategorySuppliers(Category category, Set<Supplier> productSuppliers) {
-        if (productSuppliers == null || productSuppliers.isEmpty()) return;
 
-        Set<Supplier> categorySuppliers = category.getSuppliers();
+        if (category == null || productSuppliers == null || productSuppliers.isEmpty())
+            return;
 
         boolean changed = false;
+
         for (Supplier supplier : productSuppliers) {
-            if (!categorySuppliers.contains(supplier)) {
-                categorySuppliers.add(supplier);
+
+            boolean alreadyLinked = category.getCategorySuppliers()
+                    .stream()
+                    .anyMatch(rel ->
+                            rel.getSupplier().getId().equals(supplier.getId())
+                    );
+
+            if (!alreadyLinked) {
+
+                CategorySupplier relation = CategorySupplier.builder()
+                        .id(new CategorySupplierId(
+                                category.getId(),
+                                supplier.getId()
+                        ))
+                        .category(category)
+                        .supplier(supplier)
+                        .build();
+
+                category.getCategorySuppliers().add(relation);
                 changed = true;
             }
         }
@@ -571,12 +591,6 @@ public class ProductService {
             categoryRepository.save(category);
         }
     }
-
-
-
-
-
-
 
     /* =============================
        IMAGE HANDLING + AUDITING

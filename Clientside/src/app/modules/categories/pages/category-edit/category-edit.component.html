@@ -1,0 +1,17 @@
+<app-page-shell>
+
+  <div page-header>
+    <h2>Edit Category</h2>
+  </div>
+
+  <div page-content>
+
+    <app-category-form
+      *ngIf="!loading"
+      [initialData]="category"
+      (submitted)="handleSubmit($event)">
+    </app-category-form>
+
+  </div>
+
+</app-page-shell>

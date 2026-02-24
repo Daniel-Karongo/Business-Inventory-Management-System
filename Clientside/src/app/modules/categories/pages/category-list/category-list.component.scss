@@ -1,0 +1,207 @@
+/* ================= EMPTY STATE ================= */
+
+.empty-state {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* ================= HEADER ================= */
+
+.category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-left button.active {
+  background: rgba(59, 130, 246, 0.15);
+  border-radius: 6px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+/* Mobile header polish */
+@media (max-width: 640px) {
+
+  .category-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-left {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .header-right {
+    width: 100%;
+  }
+
+  .header-right button {
+    width: 100%;
+  }
+}
+
+/* ================= TOOLBAR ================= */
+
+.toolbar {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.toolbar mat-form-field {
+  min-width: 220px;
+  flex: 1;
+  max-width: 360px;
+}
+
+/* ================= BULK BAR ================= */
+
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: rgba(96, 165, 250, 0.08);
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.bulk-count {
+  font-weight: 600;
+  color: var(--active);
+}
+
+.cancel-selection {
+  margin-left: auto;
+  color: var(--text-secondary);
+}
+
+/* ================= TABLE ================= */
+
+.flat-wrapper {
+  margin-top: 1rem;
+  overflow-x: auto;
+  border-radius: 8px;
+}
+
+table {
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sort-icon {
+  font-size: 16px;
+}
+
+.clickable-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.clickable-row:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.mat-mdc-row.deleted-row td {
+  opacity: 0.6;
+  text-decoration: line-through;
+}
+
+/* ================= STATUS BADGES ================= */
+
+.status-badge {
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.status-active {
+  background: var(--status-active-bg);
+  color: var(--status-active-text);
+}
+
+.status-disabled {
+  background: var(--status-disabled-bg);
+  color: var(--status-disabled-text);
+}
+
+/* ================= LINKS ================= */
+
+a.link {
+  color: #2563eb;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+a.link:hover {
+  text-decoration: underline;
+  color: #1d4ed8;
+}
+
+/* ================= DENSITY ================= */
+
+.compact table td,
+.compact table th {
+  padding-top: 1px !important;
+  padding-bottom: 1px !important;
+  font-size: 0.78rem;
+  height: 28px;
+}
+
+.comfortable table td,
+.comfortable table th {
+  height: 46px;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 600px) {
+
+  .mat-column-suppliers,
+  .mat-column-parent {
+    display: none;
+  }
+
+  .bulk-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cancel-selection {
+    margin-left: 0;
+  }
+}

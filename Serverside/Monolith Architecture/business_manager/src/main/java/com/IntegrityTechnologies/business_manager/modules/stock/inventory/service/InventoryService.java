@@ -16,6 +16,8 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.controller.CategoryController;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplier;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplierId;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.*;
@@ -135,8 +137,8 @@ public class InventoryService {
 
 
         // -------------------------------------------------------------
-// 3. COMPUTE INCOMING COST + UNITS (VAT-AWARE)
-// -------------------------------------------------------------
+        // 3. COMPUTE INCOMING COST + UNITS (VAT-AWARE)
+        // -------------------------------------------------------------
         long incomingUnits = 0;
         BigDecimal incomingCostTotal = BigDecimal.ZERO;
         BigDecimal totalInputVat = BigDecimal.ZERO;
@@ -320,13 +322,34 @@ public class InventoryService {
         Set<Supplier> addedSuppliers = new HashSet<>();
 
         for (Supplier s : suppliersUsed) {
+
+            // 🔹 1. Sync product suppliers (still ManyToMany there)
             if (!product.getSuppliers().contains(s)) {
                 product.getSuppliers().add(s);
                 addedSuppliers.add(s);
             }
 
-            if (category != null && !category.getSuppliers().contains(s)) {
-                category.getSuppliers().add(s);
+            // 🔹 2. Sync category via join entity
+            if (category != null) {
+
+                boolean alreadyLinked = category.getCategorySuppliers()
+                        .stream()
+                        .anyMatch(rel ->
+                                rel.getSupplier().getId().equals(s.getId())
+                        );
+
+                if (!alreadyLinked) {
+                    CategorySupplier relation = CategorySupplier.builder()
+                            .id(new CategorySupplierId(
+                                    category.getId(),
+                                    s.getId()
+                            ))
+                            .category(category)
+                            .supplier(s)
+                            .build();
+
+                    category.getCategorySuppliers().add(relation);
+                }
             }
         }
 

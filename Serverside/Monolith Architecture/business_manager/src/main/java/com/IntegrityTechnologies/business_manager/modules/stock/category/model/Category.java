@@ -12,7 +12,17 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "categories")
+@Table(
+        name = "categories",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"parent_id", "name"})
+        },
+        indexes = {
+                @Index(name = "idx_category_parent", columnList = "parent_id"),
+                @Index(name = "idx_category_deleted", columnList = "deleted"),
+                @Index(name = "idx_category_path", columnList = "path")
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -23,7 +33,10 @@ public class Category {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Version
+    private Long version;
+
+    @Column(nullable = false)
     private String name;
 
     private String description;
@@ -36,19 +49,20 @@ public class Category {
     @Builder.Default
     private List<Category> subcategories = new ArrayList<>();
 
+    @Column(nullable = false, length = 255)
+    private String path;
+
     @OneToMany(mappedBy = "category")
     @Builder.Default
     private List<Product> products = new ArrayList<>();;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "supplier_categories",
-            joinColumns = @JoinColumn(name = "category_id"),
-            inverseJoinColumns = @JoinColumn(name = "supplier_id")
+    @OneToMany(
+            mappedBy = "category",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
     )
     @Builder.Default
-    private Set<Supplier> suppliers = new HashSet<>();
-
+    private Set<CategorySupplier> categorySuppliers = new HashSet<>();
 
     @Column(nullable = false)
     @Builder.Default

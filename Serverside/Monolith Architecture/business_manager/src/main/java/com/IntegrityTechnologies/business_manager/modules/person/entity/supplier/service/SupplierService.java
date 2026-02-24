@@ -6,8 +6,6 @@ import com.IntegrityTechnologies.business_manager.config.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.exception.CategoryNotFoundException;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
-import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
-import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierCreateDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierUpdateDTO;
@@ -21,16 +19,21 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplier;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplierId;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -226,7 +229,14 @@ public class SupplierService {
 
             // Add supplier to categories
             for (Category cat : categories) {
-                cat.getSuppliers().add(supplier);
+
+                CategorySupplier relation = CategorySupplier.builder()
+                        .id(new CategorySupplierId(cat.getId(), supplier.getId()))
+                        .category(cat)
+                        .supplier(supplier)
+                        .build();
+
+                cat.getCategorySuppliers().add(relation);
             }
 
             categoryRepository.saveAll(categories); // persist relationship
@@ -284,12 +294,24 @@ public class SupplierService {
 
             Supplier supplier = existing.get();
 
-            if (category.getSuppliers() == null) {
-                category.setSuppliers(new HashSet<>());
-            }
+            boolean alreadyLinked = category.getCategorySuppliers()
+                    .stream()
+                    .anyMatch(rel ->
+                            rel.getSupplier().getId().equals(supplier.getId())
+                    );
 
-            if (!category.getSuppliers().contains(supplier)) {
-                category.getSuppliers().add(supplier);
+            if (!alreadyLinked) {
+
+                CategorySupplier relation = CategorySupplier.builder()
+                        .id(new CategorySupplierId(
+                                category.getId(),
+                                supplier.getId()
+                        ))
+                        .category(category)
+                        .supplier(supplier)
+                        .build();
+
+                category.getCategorySuppliers().add(relation);
                 categoryRepository.save(category);
 
                 logSupplierAuditAsync(
@@ -333,14 +355,19 @@ public class SupplierService {
         );
 
     /* =======================================================
-       ATTACH TO CATEGORY
+       ATTACH TO CATEGORY (JOIN ENTITY)
     ======================================================= */
 
-        if (category.getSuppliers() == null) {
-            category.setSuppliers(new HashSet<>());
-        }
+        CategorySupplier relation = CategorySupplier.builder()
+                .id(new CategorySupplierId(
+                        category.getId(),
+                        supplier.getId()
+                ))
+                .category(category)
+                .supplier(supplier)
+                .build();
 
-        category.getSuppliers().add(supplier);
+        category.getCategorySuppliers().add(relation);
         categoryRepository.save(category);
 
     /* =======================================================
@@ -378,10 +405,12 @@ public class SupplierService {
 
         // 4️⃣ Update categories via Category entity only
         if (dto.getCategoryIds() != null) {
-            // Fetch all requested categories
+
+            // Clear old relations
+            existing.getCategorySuppliers().clear();
+
             List<Category> newCategories = categoryRepository.findAllById(dto.getCategoryIds());
 
-            // Validate all category IDs exist
             if (newCategories.size() != dto.getCategoryIds().size()) {
                 Set<Long> found = newCategories.stream().map(Category::getId).collect(Collectors.toSet());
                 dto.getCategoryIds().stream()
@@ -392,31 +421,22 @@ public class SupplierService {
                         });
             }
 
-            // Fetch all old categories that currently contain this supplier
-            List<Category> oldCategories = categoryRepository.findAll().stream()
-                    .filter(c -> c.getSuppliers().contains(existing))
-                    .toList();
-
-            // Remove supplier from old categories
-            for (Category cat : oldCategories) {
-                cat.getSuppliers().remove(existing);
-            }
-
-            // Add supplier to new categories
             for (Category cat : newCategories) {
-                cat.getSuppliers().add(existing);
+
+                CategorySupplier relation = CategorySupplier.builder()
+                        .id(new CategorySupplierId(cat.getId(), existing.getId()))
+                        .category(cat)
+                        .supplier(existing)
+                        .build();
+
+                existing.getCategorySuppliers().add(relation);
             }
 
-            // Persist all category changes
-            categoryRepository.saveAll(oldCategories);
-            categoryRepository.saveAll(newCategories);
-
-            // Audit category update
             logSupplierAuditAsync(
                     existing,
                     "UPDATED",
                     "categories",
-                    oldCategories.stream().map(Category::getId).toList().toString(),
+                    null,
                     dto.getCategoryIds().toString(),
                     "Updated supplier categories"
             );

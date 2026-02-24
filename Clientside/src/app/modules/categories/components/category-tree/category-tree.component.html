@@ -1,0 +1,38 @@
+<div class="tree">
+
+  <ng-container *ngFor="let cat of categories">
+
+    <div class="node" [class.deleted]="cat.deleted">
+
+      <div class="node-content clickable-node">
+
+        <button *ngIf="(cat.subcategories?.length ?? 0) > 0" mat-icon-button
+          (click)="$event.stopPropagation(); toggleExpand(cat.id)">
+          <mat-icon>
+            {{ expandedIds.has(cat.id) ? 'expand_more' : 'chevron_right' }}
+          </mat-icon>
+        </button>
+
+        <mat-checkbox [checked]="selectedIds.has(cat.id)" [indeterminate]="isIndeterminate(cat)"
+          (change)="toggleSelect(cat.id)">
+        </mat-checkbox>
+
+        <a [routerLink]="['/categories', cat.id]" class="tree-link" (click)="$event.stopPropagation()">
+          {{ cat.name }}
+        </a>
+
+      </div>
+
+      <div class="children" *ngIf="expandedIds.has(cat.id)">
+
+        <app-category-tree [categories]="cat.subcategories ?? []" [selectedIds]="selectedIds"
+          [expandedIds]="expandedIds" (select)="select.emit($event)">
+        </app-category-tree>
+
+      </div>
+
+    </div>
+
+  </ng-container>
+
+</div>

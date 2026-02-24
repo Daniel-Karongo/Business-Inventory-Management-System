@@ -1,0 +1,106 @@
+<app-page-shell>
+
+  <!-- ================= HEADER ================= -->
+  <div page-header>
+    <h2 *ngIf="category; else loadingTitle">
+      {{ category.name }}
+    </h2>
+
+    <ng-template #loadingTitle>
+      <h2 class="skeleton w-40 lg"></h2>
+    </ng-template>
+  </div>
+
+  <!-- ================= CONTENT ================= -->
+  <div page-content>
+
+    <!-- Loading -->
+    <div *ngIf="loading" class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+    </div>
+
+    <!-- Error -->
+    <div *ngIf="error && !loading" class="error-state">
+      {{ error }}
+    </div>
+
+    <!-- DETAILS -->
+    <div *ngIf="!loading && category" class="details-grid">
+
+      <!-- Description -->
+      <div class="field">
+        <label>Description</label>
+        <p>{{ category.description || '—' }}</p>
+      </div>
+
+      <!-- Status -->
+      <div class="field">
+        <label>Status</label>
+        <span
+          class="status-badge"
+          [ngClass]="category.deleted ? 'status-disabled' : 'status-active'">
+          {{ category.deleted ? 'Disabled' : 'Active' }}
+        </span>
+      </div>
+
+      <!-- Parent -->
+      <div class="field">
+        <label>Parent</label>
+        <p>{{ category.parentName || '—' }}</p>
+      </div>
+
+      <!-- Suppliers -->
+      <div class="field">
+        <label>Suppliers</label>
+
+        <div *ngIf="hasSuppliers; else noSuppliers" class="chip-container">
+          <mat-chip
+            *ngFor="let s of category.suppliers"
+            class="supplier-chip">
+            {{ s.name }}
+          </mat-chip>
+        </div>
+
+        <ng-template #noSuppliers>
+          <span>—</span>
+        </ng-template>
+      </div>
+
+      <!-- Subcategories -->
+      <div class="field">
+        <label>Subcategories</label>
+
+        <ul *ngIf="hasSubcategories; else noSubs">
+          <li *ngFor="let sub of category.subcategories">
+            {{ sub.name }}
+          </li>
+        </ul>
+
+        <ng-template #noSubs>
+          <span>—</span>
+        </ng-template>
+      </div>
+
+      <!-- Actions -->
+      <div class="actions">
+        <button
+          mat-flat-button
+          color="primary"
+          matTooltip="Edit this category"
+          (click)="edit()">
+          Edit
+        </button>
+
+        <button
+          mat-stroked-button
+          matTooltip="Back to category list"
+          (click)="back()">
+          Back
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+</app-page-shell>

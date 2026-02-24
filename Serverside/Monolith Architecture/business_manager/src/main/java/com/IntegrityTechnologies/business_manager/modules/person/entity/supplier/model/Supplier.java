@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model;
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplier;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -69,6 +70,13 @@ public class Supplier {
 
     private LocalDateTime deletedAt;
     private Boolean deleted;
+
+    @OneToMany(
+            mappedBy = "supplier",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private Set<CategorySupplier> categorySuppliers = new HashSet<>();
 
     @PrePersist
     public void onCreate() {

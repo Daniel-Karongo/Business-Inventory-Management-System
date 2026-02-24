@@ -47,7 +47,7 @@ public interface SupplierRepository extends JpaRepository<Supplier, UUID>, JpaSp
 
     // Bulk detach suppliers from categories
     @Modifying
-    @Query(value = "DELETE FROM supplier_categories WHERE supplier_id IN :supplierIds", nativeQuery = true)
+    @Query(value = "DELETE FROM category_suppliers WHERE supplier_id IN :supplierIds", nativeQuery = true)
     void detachFromCategoriesBulk(@Param("supplierIds") List<UUID> supplierIds);
 
     // Bulk detach suppliers from products

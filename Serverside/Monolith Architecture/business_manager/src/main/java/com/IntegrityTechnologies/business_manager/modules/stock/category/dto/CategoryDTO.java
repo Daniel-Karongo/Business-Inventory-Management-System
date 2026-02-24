@@ -26,6 +26,9 @@ public class CategoryDTO {
 
     private Long parentId; // parent category
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String parentName;
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private List<CategoryDTO> subcategories; // optional nested DTOs
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)

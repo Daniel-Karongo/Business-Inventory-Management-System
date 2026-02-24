@@ -1,0 +1,124 @@
+/* ================= LAYOUT ================= */
+
+.details-grid {
+  display: grid;
+  gap: 1.75rem;
+  max-width: 900px;
+}
+
+/* Responsive 2-column layout for large screens */
+@media (min-width: 768px) {
+  .details-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .actions {
+    grid-column: span 2;
+  }
+}
+
+/* ================= FIELD ================= */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.field p,
+.field ul {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* ================= STATUS BADGE ================= */
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  border-radius: 999px;
+  font-weight: 500;
+  width: max-content;
+}
+
+.status-active {
+  background: var(--status-active-bg);
+  color: var(--status-active-text);
+}
+
+.status-disabled {
+  background: var(--status-disabled-bg);
+  color: var(--status-disabled-text);
+}
+
+/* ================= CHIPS ================= */
+
+.chip-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.supplier-chip {
+  font-size: 0.8rem;
+}
+
+/* ================= ACTIONS ================= */
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+/* ================= STATES ================= */
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 3rem 0;
+}
+
+.error-state {
+  padding: 1.5rem;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+  font-weight: 500;
+}
+
+/* ================= SKELETON ================= */
+
+.skeleton {
+  height: 18px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--surface-hover) 25%,
+    rgba(255,255,255,0.18) 37%,
+    var(--surface-hover) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+.skeleton.w-40 {
+  width: 40%;
+}
+
+.skeleton.lg {
+  height: 28px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}

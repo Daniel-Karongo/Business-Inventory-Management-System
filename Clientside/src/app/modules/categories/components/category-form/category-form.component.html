@@ -1,0 +1,74 @@
+<div *ngIf="loading" class="loading-container">
+  <mat-spinner diameter="32"></mat-spinner>
+</div>
+
+<div *ngIf="error" class="error-state">
+  {{ error }}
+</div>
+
+<form
+  *ngIf="!loading"
+  [formGroup]="form"
+  (ngSubmit)="submit()"
+  class="form">
+
+  <!-- NAME -->
+  <mat-form-field appearance="fill">
+    <mat-label>Name</mat-label>
+    <input matInput formControlName="name">
+    <mat-error *ngIf="nameControl?.hasError('required')">
+      Name is required
+    </mat-error>
+    <mat-error *ngIf="nameControl?.hasError('maxlength')">
+      Name too long
+    </mat-error>
+  </mat-form-field>
+
+  <!-- DESCRIPTION -->
+  <mat-form-field appearance="fill">
+    <mat-label>Description</mat-label>
+    <textarea matInput rows="3" formControlName="description"></textarea>
+  </mat-form-field>
+
+  <!-- PARENT -->
+  <mat-form-field appearance="fill">
+    <mat-label>Parent Category</mat-label>
+    <mat-select formControlName="parentId">
+      <mat-option [value]="null">— None —</mat-option>
+      <mat-option *ngFor="let cat of categories" [value]="cat.id">
+        {{ cat.name }}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <!-- SUPPLIERS -->
+  <mat-form-field appearance="fill">
+    <mat-label>Suppliers</mat-label>
+    <mat-select formControlName="suppliersIds" multiple>
+      <mat-option *ngFor="let s of suppliers" [value]="s.id">
+        {{ s.name }}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <!-- ACTIONS -->
+  <div class="actions">
+
+    <button
+      mat-flat-button
+      color="primary"
+      type="submit"
+      [disabled]="form.invalid || submitting">
+
+      <span *ngIf="!submitting">Save Category</span>
+
+      <mat-spinner
+        *ngIf="submitting"
+        diameter="20">
+      </mat-spinner>
+
+    </button>
+
+  </div>
+
+</form>

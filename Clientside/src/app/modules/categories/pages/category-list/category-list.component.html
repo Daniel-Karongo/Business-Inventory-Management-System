@@ -1,0 +1,220 @@
+<app-page-shell>
+
+  <!-- ================= HEADER ================= -->
+  <div page-header>
+
+    <div class="category-header">
+
+      <div class="header-left">
+
+        <button mat-icon-button matTooltip="Tree View" [class.active]="viewMode === 'tree'" (click)="setView('tree')">
+          <mat-icon>account_tree</mat-icon>
+        </button>
+
+        <button mat-icon-button matTooltip="Table View" [class.active]="viewMode === 'flat'" (click)="setView('flat')">
+          <mat-icon>table_rows</mat-icon>
+        </button>
+
+        <button mat-icon-button matTooltip="Toggle Density" (click)="toggleDensity()">
+          <mat-icon>format_line_spacing</mat-icon>
+        </button>
+
+      </div>
+
+      <div class="header-right">
+        <button mat-flat-button color="primary" routerLink="/categories/create">
+          + Create Category
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ================= TOOLBAR ================= -->
+  <div page-toolbar class="toolbar">
+
+    <mat-form-field appearance="fill">
+      <mat-label>Search category</mat-label>
+      <input matInput (input)="onSearch($any($event.target).value)">
+    </mat-form-field>
+
+    <mat-form-field *ngIf="canManageDeleted" appearance="fill">
+      <mat-label>Status</mat-label>
+      <mat-select [value]="status$.value" (selectionChange)="onStatusChange($event.value)">
+
+        <mat-option value="all">All</mat-option>
+        <mat-option value="active">Active</mat-option>
+        <mat-option value="deleted">Deleted</mat-option>
+
+      </mat-select>
+    </mat-form-field>
+
+  </div>
+
+  <!-- ================= CONTENT ================= -->
+  <div page-content [ngClass]="density">
+
+    <!-- ================= BULK BAR ================= -->
+    <div *ngIf="hasSelection" class="bulk-bar">
+
+      <span class="bulk-count">
+        {{ selectedIds.size }} selected
+      </span>
+
+      <button mat-stroked-button color="warn" matTooltip="Soft delete selected categories recursively"
+        (click)="bulkDelete()">
+        Delete
+      </button>
+
+      <button mat-stroked-button color="primary" matTooltip="Restore selected categories recursively"
+        (click)="bulkRestore()">
+        Restore
+      </button>
+
+      <button mat-button class="cancel-selection" (click)="clearSelection()">
+        Cancel Selection
+      </button>
+
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="loading" class="loading-surface">
+      <div class="skeleton w-80"></div>
+      <div class="skeleton w-60"></div>
+      <div class="skeleton w-40"></div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!loading && viewMode === 'tree' && categories.length === 0" class="empty-state">
+      No categories found.
+    </div>
+
+    <div *ngIf="!loading && viewMode === 'flat' && flatCategories.length === 0" class="empty-state">
+      No categories found.
+    </div>
+
+    <!-- ================= TREE VIEW ================= -->
+    <app-category-tree *ngIf="viewMode === 'tree' && !loading" [categories]="categories" [selectedIds]="selectedIds"
+      [expandedIds]="expandedIds" (select)="toggleSelection($event)">
+    </app-category-tree>
+
+    <!-- ================= FLAT TABLE VIEW ================= -->
+    <div *ngIf="viewMode === 'flat' && !loading" class="flat-wrapper">
+
+      <table mat-table [dataSource]="pagedData">
+
+        <!-- SELECT -->
+        <ng-container matColumnDef="select">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let row">
+            <mat-checkbox (click)="$event.stopPropagation()" (change)="toggleRowSelection(row)"
+              [checked]="selectedIds.has(row.id)">
+            </mat-checkbox>
+          </td>
+        </ng-container>
+
+        <!-- NAME -->
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef (click)="sort('name')" class="sortable">
+
+            <span class="sortable-content">
+              Name
+              <mat-icon class="sort-icon">
+                {{ getSortIcon('name') }}
+              </mat-icon>
+            </span>
+
+          </th>
+
+          <td mat-cell *matCellDef="let row">
+            <a [routerLink]="['/categories', row.id]" (click)="$event.stopPropagation()" class="link">
+              {{ row.name }}
+            </a>
+          </td>
+        </ng-container>
+
+        <!-- PARENT -->
+        <ng-container matColumnDef="parent">
+          <th mat-header-cell *matHeaderCellDef (click)="sort('parentName')" class="sortable">
+
+            <span class="sortable-content">
+              Parent
+              <mat-icon class="sort-icon">
+                {{ getSortIcon('parentName') }}
+              </mat-icon>
+            </span>
+
+          </th>
+
+          <td mat-cell *matCellDef="let row">
+            {{ row.parentName || '—' }}
+          </td>
+        </ng-container>
+
+        <!-- SUPPLIERS -->
+        <ng-container matColumnDef="suppliers">
+          <th mat-header-cell *matHeaderCellDef (click)="sort('suppliers')" class="sortable">
+
+            <span class="sortable-content">
+              Suppliers
+              <mat-icon class="sort-icon">
+                {{ getSortIcon('suppliers') }}
+              </mat-icon>
+            </span>
+
+          </th>
+
+          <td mat-cell *matCellDef="let row">
+            {{ row.suppliers?.length || 0 }}
+          </td>
+        </ng-container>
+
+        <!-- STATUS -->
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef (click)="sort('deleted')" class="sortable">
+
+            <span class="sortable-content">
+              Status
+              <mat-icon class="sort-icon">
+                {{ getSortIcon('deleted') }}
+              </mat-icon>
+            </span>
+
+          </th>
+
+          <td mat-cell *matCellDef="let row">
+            <span class="status-badge" [ngClass]="row.deleted ? 'status-disabled' : 'status-active'">
+              {{ row.deleted ? 'Disabled' : 'Active' }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- ACTIONS -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let row">
+            <button mat-icon-button matTooltip="Edit category" [routerLink]="['/categories', row.id, 'edit']">
+              <mat-icon>edit</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <!-- ROWS -->
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+
+        <tr mat-row *matRowDef="let row; columns: displayedColumns" (click)="toggleRowSelection(row)"
+          [class.row-selected]="selectedIds.has(row.id)" [class.deleted-row]="row.deleted" class="clickable-row">
+        </tr>
+
+      </table>
+
+      <mat-paginator [length]="flatCategories.length" [pageSize]="pageSize" [pageSizeOptions]="[10,25,50]"
+        (page)="changePage($event)">
+      </mat-paginator>
+
+    </div>
+
+  </div>
+
+</app-page-shell>

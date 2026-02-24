@@ -79,6 +79,7 @@ export class SidebarComponent {
 
     const otherNav: NavItem[] = [
       { title: 'Inventory', route: '/inventory', icon: 'inventory' },
+      { title: 'Categories', route: '/categories', icon: 'categories', },
       { title: 'Products', route: '/products', icon: 'products' },
       { title: 'Suppliers', route: '/suppliers', icon: 'suppliers' },
       { title: 'Sales', route: '/sales', icon: 'sales' },

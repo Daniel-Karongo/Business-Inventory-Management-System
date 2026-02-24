@@ -15,25 +15,8 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     Optional<Category> findByNameIgnoreCase(String name);
 
-    // TREE QUERIES
-    @Query("SELECT DISTINCT c FROM Category c LEFT JOIN FETCH c.subcategories s WHERE c.deleted = false")
-    List<Category> findAllActiveWithSubcategories();
-
     @Query("SELECT c FROM Category c WHERE c.deleted = true")
     List<Category> findAllDeleted();
-
-    @Query("SELECT DISTINCT c FROM Category c LEFT JOIN FETCH c.subcategories s")
-    List<Category> findAllIncludingDeletedWithSubcategories();
-
-    @Query("SELECT c FROM Category c LEFT JOIN FETCH c.subcategories WHERE c.id = :id")
-    Optional<Category> findByIdWithSubcategories(@Param("id") Long id);
-
-    @Query("SELECT c FROM Category c LEFT JOIN FETCH c.subcategories WHERE c.deleted = false AND c.id = :id")
-    Optional<Category> findByIdWithSubcategoriesAndActive(@Param("id") Long id);
-
-    @Query("SELECT c FROM Category c LEFT JOIN FETCH c.subcategories WHERE c.deleted = true AND c.id = :id")
-    Optional<Category> findByIdWithSubcategoriesAndDeleted(@Param("id") Long id);
-
 
     // FLAT QUERIES
     @Query("SELECT c FROM Category c WHERE c.deleted = false")
@@ -49,8 +32,6 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     Optional<Category> findByIdAndDeletedTrue(Long id);
 
 
-    // SEARCH
-    // Search only active
     @Query("""
         SELECT c FROM Category c 
         WHERE c.deleted = false AND 
@@ -87,4 +68,35 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     void deleteCategoryById(@Param("categoryId") Long categoryId);
 
     boolean existsByNameIgnoreCase(String categoryName);
+    boolean existsByNameIgnoreCaseAndParent_Id(String name, Long parentId);
+    @Modifying
+    @Query("UPDATE Category c SET c.deleted = true, c.deletedAt = CURRENT_TIMESTAMP WHERE c.path LIKE CONCAT(:path, '%')")
+    void softDeleteByPath(@Param("path") String path);
+
+    @Modifying
+    @Query("UPDATE Category c SET c.deleted = false, c.deletedAt = NULL WHERE c.path LIKE CONCAT(:path, '%')")
+    void restoreByPath(@Param("path") String path);
+
+    @Modifying
+    @Query("DELETE FROM Category c WHERE c.path LIKE CONCAT(:path, '%')")
+    void hardDeleteByPath(@Param("path") String path);
+
+    @Query("SELECT c FROM Category c WHERE c.path LIKE CONCAT(:path, '%')")
+    List<Category> findSubtree(@Param("path") String path);
+
+    @Modifying
+    @Query("""
+        UPDATE Category c
+        SET c.path = CONCAT(:newPrefix, SUBSTRING(c.path, LENGTH(:oldPrefix) + 1))
+        WHERE c.path LIKE CONCAT(:oldPrefix, '%')
+    """)
+    void rewriteSubtreePath(@Param("oldPrefix") String oldPrefix,
+                            @Param("newPrefix") String newPrefix);
+
+    @Query("""
+        SELECT c FROM Category c
+        WHERE (:deleted IS NULL OR c.deleted = :deleted)
+        ORDER BY c.path
+    """)
+    List<Category> findAllOrderedByPath(@Param("deleted") Boolean deleted);
 }

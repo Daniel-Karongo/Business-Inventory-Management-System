@@ -2,9 +2,13 @@ package com.IntegrityTechnologies.business_manager.modules.stock.category.servic
 
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import com.IntegrityTechnologies.business_manager.exception.CategoryNotFoundException;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.dto.CategoryDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.mapper.CategoryMapper;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplier;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplierId;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.mapper.SupplierMapper;
@@ -28,23 +32,42 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
     private final SupplierMapper supplierMapper;
+    private final SupplierRepository supplierRepository;
 
     // ---------------- SAVE / UPDATE ----------------
     public CategoryDTO saveCategory(CategoryDTO dto) {
+
         Category category = dto.getId() != null
                 ? categoryRepository.findById(dto.getId()).orElse(new Category())
                 : new Category();
 
-        categoryRepository.findByNameIgnoreCase(dto.getName())
-                .ifPresent(existing -> {
-                    if (!existing.getId().equals(dto.getId())) {
-                        throw new IllegalArgumentException("Category name already exists: " + dto.getName());
-                    }
-                });
+        Long parentId = dto.getParentId();
+
+        boolean exists = categoryRepository
+                .existsByNameIgnoreCaseAndParent_Id(dto.getName(), parentId);
+
+        if (exists) {
+            if (dto.getId() == null) {
+                throw new IllegalArgumentException(
+                        "Category already exists under this parent: " + dto.getName()
+                );
+            }
+
+            Category existing = categoryRepository
+                    .findByNameIgnoreCase(dto.getName())
+                    .orElse(null);
+
+            if (existing != null && !existing.getId().equals(dto.getId())) {
+                throw new IllegalArgumentException(
+                        "Category already exists under this parent: " + dto.getName()
+                );
+            }
+        }
 
         categoryMapper.updateEntityFromDTO(dto, category);
 
         if (dto.getParentId() != null) {
+
             if (dto.getParentId().equals(dto.getId()))
                 throw new IllegalArgumentException("Category cannot be its own parent");
 
@@ -59,38 +82,96 @@ public class CategoryService {
             category.setParent(null);
         }
 
+        /*
+         * IMPORTANT FIX:
+         * Set temporary path before first save to satisfy NOT NULL constraint
+         */
+        category.setPath("/TEMP");
+
         category = categoryRepository.save(category);
 
+        /*
+         * Now generate correct path using ID
+         */
+        if (category.getParent() == null) {
+            category.setPath("/" + category.getId());
+        } else {
+            category.setPath(category.getParent().getPath() + "/" + category.getId());
+        }
+
+        category = categoryRepository.save(category);
+
+        /*
+         * Handle suppliers AFTER category ID exists
+         */
+        if (dto.getSuppliersIds() != null) {
+
+            category.getCategorySuppliers().clear();
+
+            for (UUID supplierId : dto.getSuppliersIds()) {
+
+                Supplier supplier = supplierRepository.findById(supplierId)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException("Supplier not found: " + supplierId)
+                        );
+
+                CategorySupplier relation = CategorySupplier.builder()
+                        .id(new CategorySupplierId(category.getId(), supplierId))
+                        .category(category)
+                        .supplier(supplier)
+                        .build();
+
+                category.getCategorySuppliers().add(relation);
+            }
+        }
+
         CategoryDTO result = categoryMapper.toDTO(category);
+
         result.setSubcategories(
                 category.getSubcategories() != null
-                        ? category.getSubcategories().stream().map(categoryMapper::toDTO).collect(Collectors.toList())
+                        ? category.getSubcategories()
+                        .stream()
+                        .map(categoryMapper::toDTO)
+                        .toList()
                         : List.of()
         );
+
         return result;
     }
 
     @Transactional
     public CategoryDTO updateCategoryRecursive(CategoryDTO dto) {
-        return updateCategoryRecursive(dto, false);
-    }
 
-    private CategoryDTO updateCategoryRecursive(CategoryDTO dto, boolean parentDeleted) {
         Category category = categoryRepository.findById(dto.getId())
                 .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
 
-        // Check for duplicate name
-        categoryRepository.findByNameIgnoreCase(dto.getName())
-                .ifPresent(existing -> {
-                    if (!existing.getId().equals(dto.getId())) {
-                        throw new IllegalArgumentException("Category name already exists: " + dto.getName());
-                    }
-                });
+        String oldPath = category.getPath();
+
+        Long parentId = dto.getParentId();
+
+        boolean exists = categoryRepository
+                .existsByNameIgnoreCaseAndParent_Id(dto.getName(), parentId);
+
+        if (exists) {
+
+            Category existing = categoryRepository
+                    .findByNameIgnoreCase(dto.getName())
+                    .orElse(null);
+
+            if (existing != null && !existing.getId().equals(dto.getId())) {
+                throw new IllegalArgumentException(
+                        "Category already exists under this parent: " + dto.getName()
+                );
+            }
+        }
 
         categoryMapper.updateEntityFromDTO(dto, category);
 
-        // Handle parent
+        /*
+         * HANDLE PARENT
+         */
         if (dto.getParentId() != null) {
+
             if (dto.getParentId().equals(dto.getId()))
                 throw new IllegalArgumentException("Category cannot be its own parent");
 
@@ -102,64 +183,73 @@ public class CategoryService {
 
             category.setParent(parent);
 
-            // Propagate deleted from parent
-            if (parent.isDeleted()) {
-                category.setDeleted(true);
-                category.setDeletedAt(LocalDateTime.now());
-            }
         } else {
             category.setParent(null);
         }
 
-        // If parentDeleted flag is true, override
-        if (parentDeleted) {
-            category.setDeleted(true);
-            category.setDeletedAt(LocalDateTime.now());
+        category = categoryRepository.save(category);
+
+        /*
+         * OPTIMIZED PATH REWRITE
+         */
+        String newPath;
+
+        if (category.getParent() == null) {
+            newPath = "/" + category.getId();
+        } else {
+            newPath = category.getParent().getPath() + "/" + category.getId();
+        }
+
+        if (!oldPath.equals(newPath)) {
+
+            categoryRepository.rewriteSubtreePath(oldPath, newPath);
+
+            category.setPath(newPath);
         }
 
         category = categoryRepository.save(category);
 
-        // ------------------ Propagate to all existing children in DB ------------------
-        if (category.getSubcategories() != null && !category.getSubcategories().isEmpty()) {
-            for (Category child : category.getSubcategories()) {
-                updateChildDeletedState(child, category.isDeleted());
+        /*
+         * SUPPLIER UPDATE
+         */
+        if (dto.getSuppliersIds() != null) {
+
+            category.getCategorySuppliers().clear();
+
+            for (UUID supplierId : dto.getSuppliersIds()) {
+
+                Supplier supplier = supplierRepository.findById(supplierId)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException("Supplier not found: " + supplierId)
+                        );
+
+                CategorySupplier relation = CategorySupplier.builder()
+                        .id(new CategorySupplierId(category.getId(), supplierId))
+                        .category(category)
+                        .supplier(supplier)
+                        .build();
+
+                category.getCategorySuppliers().add(relation);
             }
         }
 
         CategoryDTO result = categoryMapper.toDTO(category);
+
         result.setSubcategories(
                 category.getSubcategories() != null
-                        ? category.getSubcategories().stream().map(categoryMapper::toDTO).collect(Collectors.toList())
+                        ? category.getSubcategories()
+                        .stream()
+                        .map(categoryMapper::toDTO)
+                        .toList()
                         : List.of()
         );
+
         return result;
     }
 
     /**
      * Recursively propagate deleted/restored state to children from the parent.
      */
-    private void updateChildDeletedState(Category child, boolean parentDeleted) {
-        boolean changed = false;
-        if (parentDeleted && !child.isDeleted()) {
-            child.setDeleted(true);
-            child.setDeletedAt(LocalDateTime.now());
-            changed = true;
-        } else if (!parentDeleted && child.isDeleted()) {
-            child.setDeleted(false);
-            child.setDeletedAt(null);
-            changed = true;
-        }
-
-        if (changed) {
-            categoryRepository.save(child);
-        }
-
-        if (child.getSubcategories() != null && !child.getSubcategories().isEmpty()) {
-            for (Category sub : child.getSubcategories()) {
-                updateChildDeletedState(sub, parentDeleted);
-            }
-        }
-    }
 
     private boolean isChildOf(Category potentialParent, Category category) {
         if (potentialParent == null) return false;
@@ -185,26 +275,21 @@ public class CategoryService {
     }
 
     private List<CategoryDTO> buildTree(List<Category> categories) {
-        // Step 1: Map all categories to DTOs
-        Map<Long, CategoryDTO> dtoMap = categories.stream()
-                .map(categoryMapper::toDTO)
-                .collect(Collectors.toMap(CategoryDTO::getId, dto -> dto));
 
-        // Step 2: Group children by parent ID
-        Map<Long, List<CategoryDTO>> childrenMap = categories.stream()
+        Map<Long, Category> entityMap = categories.stream()
+                .collect(Collectors.toMap(Category::getId, c -> c));
+
+        Map<Long, List<Category>> childrenMap = categories.stream()
                 .filter(c -> c.getParent() != null)
-                .map(categoryMapper::toDTO)
-                .collect(Collectors.groupingBy(CategoryDTO::getParentId));
+                .collect(Collectors.groupingBy(c -> c.getParent().getId()));
 
-        // Step 3: Attach children recursively
-        dtoMap.values().forEach(dto -> {
-            List<CategoryDTO> children = childrenMap.getOrDefault(dto.getId(), new ArrayList<>());
-            dto.setSubcategories(children);
-        });
+        List<Category> roots = categories.stream()
+                .filter(c -> c.getParent() == null
+                        || !entityMap.containsKey(c.getParent().getId()))
+                .toList();
 
-        // Step 4: Return only root nodes (parent == null OR parent not in deleted list)
-        return dtoMap.values().stream()
-                .filter(dto -> dto.getParentId() == null || !dtoMap.containsKey(dto.getParentId()))
+        return roots.stream()
+                .map(root -> buildTreeRecursive(root, childrenMap))
                 .toList();
     }
 
@@ -216,12 +301,30 @@ public class CategoryService {
     }
 
     public List<CategoryDTO> getAllCategoriesTree(Boolean deleted) {
-        if(Boolean.FALSE.equals(deleted))
-            return buildTree(categoryRepository.findAllActiveWithSubcategories());
-        else if(Boolean.TRUE.equals(deleted))
-            return buildTree(categoryRepository.findAllDeleted());
-        else
-            return buildTree(categoryRepository.findAllIncludingDeletedWithSubcategories());
+
+        List<Category> ordered = categoryRepository.findAllOrderedByPath(deleted);
+
+        Map<Long, CategoryDTO> dtoMap = new LinkedHashMap<>();
+        List<CategoryDTO> roots = new ArrayList<>();
+
+        for (Category entity : ordered) {
+
+            CategoryDTO dto = categoryMapper.toDTO(entity);
+            dto.setSubcategories(new ArrayList<>());
+
+            dtoMap.put(dto.getId(), dto);
+
+            if (entity.getParent() == null) {
+                roots.add(dto);
+            } else {
+                CategoryDTO parentDto = dtoMap.get(entity.getParent().getId());
+                if (parentDto != null) {
+                    parentDto.getSubcategories().add(dto);
+                }
+            }
+        }
+
+        return roots;
     }
 
     public List<CategoryDTO> getAllCategoriesFlat(Boolean deleted) {
@@ -240,29 +343,35 @@ public class CategoryService {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
-        // Collect suppliers (strict OR including parents)
         Set<Supplier> suppliers = new HashSet<>();
 
         if (Boolean.TRUE.equals(strict)) {
-            // Strict → only this category
-            suppliers.addAll(category.getSuppliers());
+
+            suppliers.addAll(
+                    category.getCategorySuppliers().stream()
+                            .map(CategorySupplier::getSupplier)
+                            .toList()
+            );
+
         } else {
-            // Not strict → include all parent categories' suppliers as well
+
             Category current = category;
             while (current != null) {
-                suppliers.addAll(current.getSuppliers());
+
+                suppliers.addAll(
+                        current.getCategorySuppliers().stream()
+                                .map(CategorySupplier::getSupplier)
+                                .toList()
+                );
+
                 current = current.getParent();
             }
         }
 
-        // Apply deleted filter
         List<Supplier> filtered = suppliers.stream()
                 .filter(s ->
                         deleted == null
-                                ? true
-                                : deleted
-                                ? Boolean.TRUE.equals(s.getDeleted())
-                                : Boolean.FALSE.equals(s.getDeleted())
+                                || deleted.equals(s.getDeleted())
                 )
                 .toList();
 
@@ -277,19 +386,48 @@ public class CategoryService {
     }
 
     public CategoryDTO getCategoryTree(Long id, Boolean deleted) {
-        if(Boolean.FALSE.equals(deleted)) {
-            Category category = categoryRepository.findByIdWithSubcategoriesAndActive(id)
-                    .orElseThrow(() -> new CategoryNotFoundException("Category not found or inactive"));
-            return buildActiveCategoryTree(category);
-        } else if(Boolean.TRUE.equals(deleted)) {
-            Category category = categoryRepository.findByIdWithSubcategoriesAndDeleted(id)
-                    .orElseThrow(() -> new CategoryNotFoundException("Category not found or inactive"));
-            return buildActiveCategoryTree(category);
-        }else {
-            Category category = categoryRepository.findByIdWithSubcategories(id)
-                    .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
-            return buildCategoryTree(category);
+
+        Category root = categoryRepository.findById(id)
+                .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
+
+        if (deleted != null) {
+            if (deleted && !root.isDeleted())
+                throw new CategoryNotFoundException("Category not found or inactive");
+            if (!deleted && root.isDeleted())
+                throw new CategoryNotFoundException("Category not found or inactive");
         }
+
+        List<Category> subtree = categoryRepository.findSubtree(root.getPath());
+
+        return buildTree(subtree).stream()
+                .filter(dto -> dto.getId().equals(id))
+                .findFirst()
+                .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
+    }
+
+    private CategoryDTO buildCategoryTreeFromFlat(Category root, List<Category> all) {
+
+        Map<Long, List<Category>> childrenMap = all.stream()
+                .filter(c -> c.getParent() != null)
+                .collect(Collectors.groupingBy(c -> c.getParent().getId()));
+
+        return buildTreeRecursive(root, childrenMap);
+    }
+
+    private CategoryDTO buildTreeRecursive(Category category,
+                                           Map<Long, List<Category>> childrenMap) {
+
+        CategoryDTO dto = categoryMapper.toDTO(category);
+
+        List<Category> children = childrenMap.getOrDefault(category.getId(), List.of());
+
+        dto.setSubcategories(
+                children.stream()
+                        .map(child -> buildTreeRecursive(child, childrenMap))
+                        .toList()
+        );
+
+        return dto;
     }
 
     public CategoryDTO getCategoryFlat(Long id, Boolean deleted) {
@@ -341,103 +479,75 @@ public class CategoryService {
     // --------------------- SOFT DELETE ---------------------
 
     /** Internal helper: collect category + all subcategories */
-    private void collectCategoryAndChildren(Category category, List<Category> collector) {
-        collector.add(category);
-        if (category.getSubcategories() != null) {
-            category.getSubcategories().forEach(sub -> collectCategoryAndChildren(sub, collector));
-        }
-    }
+//    private void collectCategoryAndChildren(Category category, List<Category> collector) {
+//        collector.add(category);
+//        if (category.getSubcategories() != null) {
+//            category.getSubcategories().forEach(sub -> collectCategoryAndChildren(sub, collector));
+//        }
+//    }
 
     /** Soft delete a single category */
     @Transactional
     public ResponseEntity<ApiResponse> softDelete(Long id) {
+
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
-        List<Map<String, Object>> modified = new ArrayList<>();
-        List<Category> allCategories = new ArrayList<>();
-        collectCategoryAndChildren(category, allCategories);
+        categoryRepository.softDeleteByPath(category.getPath());
 
-        for (Category cat : allCategories) {
-            cat.setDeleted(true);
-            cat.setDeletedAt(LocalDateTime.now());
-            categoryRepository.save(cat);
-            modified.add(Map.of("id", cat.getId(), "name", cat.getName()));
-        }
-
-        return ResponseEntity.ok(new ApiResponse("success", "Category soft deleted", modified));
+        return ResponseEntity.ok(
+                new ApiResponse("success", "Category and subcategories soft deleted")
+        );
     }
 
     /** Soft delete categories in bulk */
     @Transactional
     public ResponseEntity<ApiResponse> softDeleteInBulk(List<Long> ids) {
-        List<Map<String, Object>> modifiedCategories = new ArrayList<>();
 
         for (Long id : ids) {
+
             Category category = categoryRepository.findById(id)
                     .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
-            List<Category> allCategories = new ArrayList<>();
-            collectCategoryAndChildren(category, allCategories);
-
-            for (Category cat : allCategories) {
-                cat.setDeleted(true);
-                cat.setDeletedAt(LocalDateTime.now());
-                categoryRepository.save(cat);
-                modifiedCategories.add(Map.of("id", cat.getId(), "name", cat.getName()));
-            }
+            categoryRepository.softDeleteByPath(category.getPath());
         }
 
-        return ResponseEntity.ok(new ApiResponse("success", "Categories soft deleted", modifiedCategories));
+        return ResponseEntity.ok(
+                new ApiResponse("success", "Categories and subcategories soft deleted")
+        );
     }
 
     /** ====================== HARD DELETE ====================== */
 
-    /** Internal recursive hard delete helper using native SQL */
-    @Transactional
-    public void hardDeleteCategoryInternalOptimized(Long categoryId, List<Map<String, Object>> deleted) {
-        deleted.add(Map.of("id", categoryId));
-
-        // Detach suppliers & products in bulk
-        categoryRepository.detachSuppliers(categoryId);
-        categoryRepository.detachProducts(categoryId);
-
-        // Recursively delete subcategories
-        List<Long> subIds = categoryRepository.findSubcategoryIds(categoryId);
-        for (Long subId : subIds) {
-            hardDeleteCategoryInternalOptimized(subId, deleted);
-        }
-
-        // Delete category itself
-        categoryRepository.deleteCategoryById(categoryId);
-    }
-
     /** Single-category hard delete */
     @Transactional
     public ResponseEntity<ApiResponse> hardDelete(Long id) {
-        List<Map<String, Object>> deleted = new ArrayList<>();
-        hardDeleteCategoryInternalOptimized(id, deleted);
 
-        return ResponseEntity.ok(new ApiResponse(
-                "success",
-                "Category permanently deleted",
-                deleted
-        ));
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
+
+        categoryRepository.hardDeleteByPath(category.getPath());
+
+        return ResponseEntity.ok(
+                new ApiResponse("success", "Category permanently deleted")
+        );
     }
 
     /** Bulk hard delete */
     @Transactional
     public ResponseEntity<ApiResponse> hardDeleteInBulk(List<Long> ids) {
-        List<Map<String, Object>> deletedCategories = new ArrayList<>();
+
         for (Long id : ids) {
-            hardDeleteCategoryInternalOptimized(id, deletedCategories);
+
+            Category category = categoryRepository.findById(id)
+                    .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
+
+            categoryRepository.hardDeleteByPath(category.getPath());
         }
 
-        return ResponseEntity.ok(new ApiResponse(
-                "success",
-                "Categories permanently deleted",
-                deletedCategories
-        ));
+        return ResponseEntity.ok(
+                new ApiResponse("success", "Categories permanently deleted")
+        );
     }
 
 
@@ -481,44 +591,34 @@ public class CategoryService {
     /** Restore category + all subcategories recursively */
     @Transactional
     public ResponseEntity<ApiResponse> restoreRecursively(Long id) {
+
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
-        List<Category> allCategories = new ArrayList<>();
-        collectCategoryAndChildren(category, allCategories);
+        categoryRepository.restoreByPath(category.getPath());
 
-        List<Map<String, Object>> restoredCategories = new ArrayList<>();
-        for (Category cat : allCategories) {
-            cat.setDeleted(false);
-            cat.setDeletedAt(null);
-            categoryRepository.save(cat);
-            restoredCategories.add(Map.of("id", cat.getId(), "name", cat.getName()));
-        }
-
-        return ResponseEntity.ok(new ApiResponse("success", "Category and subcategories restored", restoredCategories));
+        return ResponseEntity.ok(
+                new ApiResponse("success", "Category and subcategories restored")
+        );
     }
 
     /** Bulk recursive restore */
     @Transactional
     public ResponseEntity<ApiResponse> restoreCategoriesRecursivelyInBulk(List<Long> ids) {
-        List<Map<String, Object>> restoredCategories = new ArrayList<>();
 
         for (Long id : ids) {
+
             Category category = categoryRepository.findById(id)
-                    .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
+                    .orElseThrow(() ->
+                            new CategoryNotFoundException("Category not found: " + id)
+                    );
 
-            List<Category> allCategories = new ArrayList<>();
-            collectCategoryAndChildren(category, allCategories);
-
-            for (Category cat : allCategories) {
-                cat.setDeleted(false);
-                cat.setDeletedAt(null);
-                categoryRepository.save(cat);
-                restoredCategories.add(Map.of("id", cat.getId(), "name", cat.getName()));
-            }
+            categoryRepository.restoreByPath(category.getPath());
         }
 
-        return ResponseEntity.ok(new ApiResponse("success", "Categories and subcategories restored", restoredCategories));
+        return ResponseEntity.ok(
+                new ApiResponse("success", "Categories and subcategories restored")
+        );
     }
 
     // ---------------- SEARCH ----------------

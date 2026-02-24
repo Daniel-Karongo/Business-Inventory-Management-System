@@ -23,6 +23,7 @@ export const routes: Routes = [
 
       { path: 'dashboard', canMatch: [authGuard], loadChildren: () => import('./modules/dashboard/dashboard.routes').then(m => m.DASHBOARD_ROUTES) },
       { path: 'inventory', canMatch: [authGuard], loadChildren: () => import('./modules/inventory/inventory.routes').then(m => m.INVENTORY_ROUTES) },
+      { path: 'categories', canMatch: [authGuard], loadChildren: () => import('./modules/categories/categories.routes').then(m => m.CATEGORY_ROUTES) },
       { path: 'products', canMatch: [authGuard], loadChildren: () => import('./modules/products/products.routes').then(m => m.PRODUCT_ROUTES) },
       { path: 'suppliers', canMatch: [authGuard], loadChildren: () => import('./modules/suppliers/suppliers.routes').then(m => m.SUPPLIER_ROUTES) },
       { path: 'sales', canMatch: [authGuard], loadChildren: () => import('./modules/sales/sales.routes').then(m => m.SALES_ROUTES) },

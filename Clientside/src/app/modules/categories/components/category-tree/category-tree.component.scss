@@ -1,0 +1,40 @@
+.tree {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.node-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.node-content:hover {
+  background: rgba(59,130,246,0.08);
+}
+
+.children {
+  padding-left: 40px;
+  margin-left: 8px;
+  border-left: 1px dashed rgba(0,0,0,0.08);
+}
+
+/* Density */
+:host-context(.compact) .node-content {
+  padding: 3px 8px;
+  font-size: 0.82rem;
+}
+
+:host-context(.comfortable) .node-content {
+  padding: 8px 14px;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 600px) {
+  .children {
+    padding-left: 20px;
+  }
+}
