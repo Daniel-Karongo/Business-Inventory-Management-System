@@ -25,39 +25,28 @@
 
     <parameter name="FROM_DATE" class="java.lang.String"/>
     <parameter name="TO_DATE" class="java.lang.String"/>
+    <parameter name="BRANCH_NAME" class="java.lang.String"/>
     <parameter name="COMPANY_NAME" class="java.lang.String"/>
     <parameter name="GENERATED_BY" class="java.lang.String"/>
     <parameter name="GENERATED_AT" class="java.util.Date"/>
 
-    <!-- ================= QUERY ================= -->
-
-    <queryString>
-        <![CDATA[
-            SELECT
-                a.code,
-                a.name,
-                SUM(CASE WHEN le.direction='DEBIT'  THEN le.amount ELSE 0 END) AS debit,
-                SUM(CASE WHEN le.direction='CREDIT' THEN le.amount ELSE 0 END) AS credit
-            FROM ledger_entries le
-            JOIN journal_entries je ON je.id = le.journal_entry_id
-            JOIN accounts a ON a.id = le.account_id
-            WHERE je.posted = true
-              AND je.reversed = false
-              AND DATE(le.posted_at) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
-            GROUP BY a.code, a.name
-            HAVING debit <> 0 OR credit <> 0
-            ORDER BY a.code
-        ]]>
-    </queryString>
+    <!-- NO SQL -->
+    <queryString><![CDATA[]]></queryString>
 
     <!-- ================= FIELDS ================= -->
 
     <field name="code" class="java.lang.String"/>
     <field name="name" class="java.lang.String"/>
+    <field name="opening" class="java.math.BigDecimal"/>
     <field name="debit" class="java.math.BigDecimal"/>
     <field name="credit" class="java.math.BigDecimal"/>
+    <field name="closing" class="java.math.BigDecimal"/>
 
     <!-- ================= VARIABLES ================= -->
+
+    <variable name="TotalOpening" class="java.math.BigDecimal" calculation="Sum">
+        <variableExpression><![CDATA[$F{opening}]]></variableExpression>
+    </variable>
 
     <variable name="TotalDebit" class="java.math.BigDecimal" calculation="Sum">
         <variableExpression><![CDATA[$F{debit}]]></variableExpression>
@@ -67,10 +56,14 @@
         <variableExpression><![CDATA[$F{credit}]]></variableExpression>
     </variable>
 
+    <variable name="TotalClosing" class="java.math.BigDecimal" calculation="Sum">
+        <variableExpression><![CDATA[$F{closing}]]></variableExpression>
+    </variable>
+
     <!-- ================= TITLE ================= -->
 
     <title>
-        <band height="75">
+        <band height="85">
 
             <textField>
                 <reportElement x="0" y="0" width="802" height="22"
@@ -90,6 +83,14 @@
                 <reportElement x="0" y="48" width="802" height="15"/>
                 <textElement textAlignment="Center"/>
                 <textFieldExpression><![CDATA[
+                    $P{BRANCH_NAME} == null ? "Consolidated" : "Branch: " + $P{BRANCH_NAME}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="63" width="802" height="15"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA[
                     "Period: " + $P{FROM_DATE} + " to " + $P{TO_DATE}
                 ]]></textFieldExpression>
             </textField>
@@ -103,21 +104,33 @@
         <band height="20">
 
             <staticText>
-                <reportElement x="0" y="0" width="400" height="18"
+                <reportElement x="0" y="0" width="300" height="18"
                                style="ColumnHeaderStyle"/>
                 <text><![CDATA[Account]]></text>
             </staticText>
 
             <staticText>
-                <reportElement x="400" y="0" width="200" height="18"
+                <reportElement x="300" y="0" width="125" height="18"
+                               style="ColumnHeaderStyle"/>
+                <text><![CDATA[Opening]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="425" y="0" width="125" height="18"
                                style="ColumnHeaderStyle"/>
                 <text><![CDATA[Debit]]></text>
             </staticText>
 
             <staticText>
-                <reportElement x="600" y="0" width="202" height="18"
+                <reportElement x="550" y="0" width="125" height="18"
                                style="ColumnHeaderStyle"/>
                 <text><![CDATA[Credit]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="675" y="0" width="127" height="18"
+                               style="ColumnHeaderStyle"/>
+                <text><![CDATA[Closing]]></text>
             </staticText>
 
         </band>
@@ -129,7 +142,7 @@
         <band height="18">
 
             <textField>
-                <reportElement x="0" y="0" width="400" height="18"
+                <reportElement x="0" y="0" width="300" height="18"
                                style="DetailStyle"/>
                 <textFieldExpression><![CDATA[
                     $F{code} + " - " + $F{name}
@@ -137,43 +150,31 @@
             </textField>
 
             <textField pattern="#,##0.00;(#,##0.00)">
-                <reportElement x="400" y="0" width="200" height="18"
+                <reportElement x="300" y="0" width="125" height="18"
+                               style="DetailStyle"/>
+                <textFieldExpression><![CDATA[$F{opening}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="425" y="0" width="125" height="18"
                                style="DetailStyle"/>
                 <textFieldExpression><![CDATA[$F{debit}]]></textFieldExpression>
             </textField>
 
             <textField pattern="#,##0.00;(#,##0.00)">
-                <reportElement x="600" y="0" width="202" height="18"
+                <reportElement x="550" y="0" width="125" height="18"
                                style="DetailStyle"/>
                 <textFieldExpression><![CDATA[$F{credit}]]></textFieldExpression>
             </textField>
 
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="675" y="0" width="127" height="18"
+                               style="DetailStyle"/>
+                <textFieldExpression><![CDATA[$F{closing}]]></textFieldExpression>
+            </textField>
+
         </band>
     </detail>
-
-    <!-- ================= PAGE FOOTER ================= -->
-
-    <pageFooter>
-        <band height="20">
-
-            <textField>
-                <reportElement x="0" y="0" width="450" height="15"/>
-                <textFieldExpression><![CDATA[
-                    "Generated by " + $P{GENERATED_BY}
-                    + " on "
-                    + new java.text.SimpleDateFormat("dd MMM yyyy HH:mm")
-                        .format($P{GENERATED_AT})
-                ]]></textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="700" y="0" width="100" height="15"/>
-                <textElement textAlignment="Right"/>
-                <textFieldExpression><![CDATA["Page " + $V{PAGE_NUMBER}]]></textFieldExpression>
-            </textField>
-
-        </band>
-    </pageFooter>
 
     <!-- ================= SUMMARY ================= -->
 
@@ -181,15 +182,27 @@
         <band height="25">
 
             <textField pattern="#,##0.00;(#,##0.00)">
-                <reportElement x="400" y="0" width="200" height="20"
+                <reportElement x="300" y="0" width="125" height="20"
+                               style="TotalStyle"/>
+                <textFieldExpression><![CDATA[$V{TotalOpening}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="425" y="0" width="125" height="20"
                                style="TotalStyle"/>
                 <textFieldExpression><![CDATA[$V{TotalDebit}]]></textFieldExpression>
             </textField>
 
             <textField pattern="#,##0.00;(#,##0.00)">
-                <reportElement x="600" y="0" width="202" height="20"
+                <reportElement x="550" y="0" width="125" height="20"
                                style="TotalStyle"/>
                 <textFieldExpression><![CDATA[$V{TotalCredit}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="675" y="0" width="127" height="20"
+                               style="TotalStyle"/>
+                <textFieldExpression><![CDATA[$V{TotalClosing}]]></textFieldExpression>
             </textField>
 
         </band>

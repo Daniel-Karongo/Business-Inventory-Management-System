@@ -3,7 +3,7 @@
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
               http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
-              name="accounts_payable_summary"
+              name="accounts_payable_summary_enterprise"
               pageWidth="842"
               pageHeight="595"
               orientation="Landscape"
@@ -13,63 +13,147 @@
               topMargin="30"
               bottomMargin="30">
 
-    <queryString>
-        <![CDATA[
-            SELECT
-                sup.name AS supplier_name,
-                SUM(
-                    CASE
-                        WHEN le.direction = 'CREDIT' THEN le.amount
-                        WHEN le.direction = 'DEBIT'  THEN -le.amount
-                    END
-                ) AS payable_balance
-            FROM ledger_entries le
-            JOIN accounts a
-                 ON a.id = le.account_id
-            JOIN journal_entries je
-                 ON je.id = le.journal_entry_id
-            LEFT JOIN stock_transactions st
-                 ON st.reference = je.source_id
-            LEFT JOIN suppliers sup
-                 ON sup.id = st.supplier_id
-            WHERE a.code = '2000'
-              AND je.posted = true
-              AND je.reversed = false
-            GROUP BY sup.name
-            HAVING payable_balance > 0
-            ORDER BY payable_balance DESC
-        ]]>
-    </queryString>
+    <!-- ===================== STYLES ===================== -->
 
-    <field name="supplier_name" class="java.lang.String"/>
-    <field name="payable_balance" class="java.math.BigDecimal"/>
+    <style name="TitleStyle" fontSize="18" isBold="true"/>
+    <style name="SubHeaderStyle" fontSize="13" isBold="true"/>
+    <style name="ColumnHeaderStyle" fontSize="11" isBold="true"/>
+    <style name="DetailStyle" fontSize="10"/>
+    <style name="TotalStyle" fontSize="12" isBold="true"/>
+    <style name="GrandTotalStyle" fontSize="13" isBold="true"/>
+
+    <!-- ===================== PARAMETERS ===================== -->
+
+    <parameter name="COMPANY_NAME" class="java.lang.String"/>
+    <parameter name="GENERATED_BY" class="java.lang.String"/>
+    <parameter name="GENERATED_AT" class="java.util.Date"/>
+
+    <!-- Bean-based -->
+    <queryString><![CDATA[]]></queryString>
+
+    <!-- ===================== FIELDS ===================== -->
+
+    <field name="supplierName" class="java.lang.String"/>
+    <field name="payableBalance" class="java.math.BigDecimal"/>
+
+    <!-- ===================== VARIABLES ===================== -->
+
+    <variable name="TotalPayable"
+              class="java.math.BigDecimal"
+              calculation="Sum">
+        <variableExpression><![CDATA[$F{payableBalance}]]></variableExpression>
+    </variable>
+
+    <!-- ===================== TITLE ===================== -->
 
     <title>
-        <band height="40">
+        <band height="85">
+
+            <!-- Company -->
             <textField>
-                <reportElement x="0" y="0" width="802" height="25"/>
-                <textElement textAlignment="Center">
-                    <font size="15" isBold="true"/>
-                </textElement>
+                <reportElement x="0" y="0" width="802" height="22"
+                               style="TitleStyle"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA[$P{COMPANY_NAME}]]></textFieldExpression>
+            </textField>
+
+            <!-- Report Name -->
+            <textField>
+                <reportElement x="0" y="30" width="802" height="18"
+                               style="SubHeaderStyle"/>
+                <textElement textAlignment="Center"/>
                 <textFieldExpression><![CDATA["ACCOUNTS PAYABLE SUMMARY"]]></textFieldExpression>
             </textField>
+
         </band>
     </title>
 
+    <!-- ===================== COLUMN HEADER ===================== -->
+
+    <columnHeader>
+        <band height="22">
+
+            <staticText>
+                <reportElement x="0" y="0" width="600" height="18"
+                               style="ColumnHeaderStyle"/>
+                <text><![CDATA[Supplier]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="600" y="0" width="202" height="18"
+                               style="ColumnHeaderStyle"/>
+                <text><![CDATA[Outstanding Balance]]></text>
+            </staticText>
+
+        </band>
+    </columnHeader>
+
+    <!-- ===================== DETAIL ===================== -->
+
     <detail>
-        <band height="18">
+        <band height="20">
 
             <textField>
-                <reportElement x="0" y="0" width="520" height="18"/>
-                <textFieldExpression><![CDATA[$F{supplier_name}]]></textFieldExpression>
+                <reportElement x="0" y="0" width="600" height="18"
+                               style="DetailStyle"/>
+                <textFieldExpression><![CDATA[$F{supplierName}]]></textFieldExpression>
             </textField>
 
-            <textField pattern="#,##0.00">
-                <reportElement x="520" y="0" width="282" height="18"/>
-                <textFieldExpression><![CDATA[$F{payable_balance}]]></textFieldExpression>
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="600" y="0" width="202" height="18"
+                               style="DetailStyle"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{payableBalance}]]></textFieldExpression>
             </textField>
 
         </band>
     </detail>
+
+    <!-- ===================== PAGE FOOTER ===================== -->
+
+    <pageFooter>
+        <band height="20">
+
+            <textField>
+                <reportElement x="0" y="0" width="500" height="15"/>
+                <textFieldExpression><![CDATA[
+                    "Generated by " + $P{GENERATED_BY}
+                    + " on "
+                    + new java.text.SimpleDateFormat("dd MMM yyyy HH:mm")
+                        .format($P{GENERATED_AT})
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="700" y="0" width="100" height="15"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[
+                    "Page " + $V{PAGE_NUMBER}
+                ]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </pageFooter>
+
+    <!-- ===================== SUMMARY ===================== -->
+
+    <summary>
+        <band height="30">
+
+            <staticText>
+                <reportElement x="450" y="5" width="150" height="18"
+                               style="TotalStyle"/>
+                <text><![CDATA[Total Payables]]></text>
+            </staticText>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="600" y="5" width="202" height="20"
+                               style="GrandTotalStyle"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$V{TotalPayable}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </summary>
 
 </jasperReport>

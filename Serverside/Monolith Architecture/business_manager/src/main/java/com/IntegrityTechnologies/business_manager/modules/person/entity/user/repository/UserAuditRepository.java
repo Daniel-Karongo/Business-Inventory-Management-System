@@ -9,4 +9,5 @@ import java.util.UUID;
 public interface UserAuditRepository extends JpaRepository<UserAudit, UUID> {
     List<UserAudit> findByUserIdOrderByTimestampDesc(UUID userId);
     List<UserAudit> findByPerformedByIdOrderByTimestampDesc(UUID performedById);
+    List<UserAudit> findTop5ByOrderByTimestampDesc();
 }

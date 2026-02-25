@@ -12,7 +12,12 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "journal_entries")
+@Table(
+        name = "journal_entries",
+        indexes = {
+                @Index(name = "idx_journal_branch_status", columnList = "branch_id, posted, reversed")
+        }
+)
 @Getter
 @NoArgsConstructor
 @Setter

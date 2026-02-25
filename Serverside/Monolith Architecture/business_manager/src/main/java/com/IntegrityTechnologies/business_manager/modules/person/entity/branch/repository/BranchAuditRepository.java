@@ -12,4 +12,5 @@ public interface BranchAuditRepository extends JpaRepository<BranchAudit, UUID> 
     List<BranchAudit> findByBranchIdOrderByTimestampDesc(UUID branchID);
     List<BranchAudit> findByPerformedByIdOrderByTimestampDesc(UUID performedById);
     List<BranchAudit> findAllByOrderByTimestampDesc();
+    List<BranchAudit> findTop5ByOrderByTimestampDesc();
 }

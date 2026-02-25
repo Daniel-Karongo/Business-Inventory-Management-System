@@ -3,7 +3,7 @@
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
               http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
-              name="profit_and_loss_enterprise"
+              name="profit_and_loss_multi_branch_enterprise"
               pageWidth="842"
               pageHeight="595"
               orientation="Landscape"
@@ -13,16 +13,15 @@
               topMargin="30"
               bottomMargin="30">
 
-    <!-- ================= STYLES ================= -->
+    <!-- STYLES -->
 
     <style name="TitleStyle" fontSize="18" isBold="true"/>
     <style name="HeaderStyle" fontSize="13" isBold="true"/>
-    <style name="ColumnHeaderStyle" fontSize="11" isBold="true"/>
     <style name="NormalStyle" fontSize="10"/>
     <style name="BoldStyle" fontSize="11" isBold="true"/>
-    <style name="GrandTotalStyle" fontSize="13" isBold="true"/>
+    <style name="GrandStyle" fontSize="13" isBold="true"/>
 
-    <!-- ================= PARAMETERS ================= -->
+    <!-- PARAMETERS -->
 
     <parameter name="FROM_DATE" class="java.lang.String"/>
     <parameter name="TO_DATE" class="java.lang.String"/>
@@ -32,15 +31,16 @@
 
     <queryString><![CDATA[]]></queryString>
 
-    <!-- ================= FIELDS ================= -->
+    <!-- FIELDS -->
 
-    <field name="section" class="java.lang.String"/>
+    <field name="branchName" class="java.lang.String"/>
     <field name="label" class="java.lang.String"/>
     <field name="amount" class="java.math.BigDecimal"/>
-    <field name="bold" class="java.lang.Boolean"/>
-    <field name="grandTotal" class="java.lang.Boolean"/>
+    <field name="branchHeader" class="java.lang.Boolean"/>
+    <field name="branchTotal" class="java.lang.Boolean"/>
+    <field name="consolidatedTotal" class="java.lang.Boolean"/>
 
-    <!-- ================= TITLE ================= -->
+    <!-- TITLE -->
 
     <title>
         <band height="85">
@@ -54,7 +54,7 @@
             <textField>
                 <reportElement x="0" y="30" width="802" height="18" style="HeaderStyle"/>
                 <textElement textAlignment="Center"/>
-                <textFieldExpression><![CDATA["PROFIT & LOSS STATEMENT"]]></textFieldExpression>
+                <textFieldExpression><![CDATA["PROFIT & LOSS (MULTI-BRANCH)"]]></textFieldExpression>
             </textField>
 
             <textField>
@@ -68,45 +68,73 @@
         </band>
     </title>
 
-    <!-- ================= COLUMN HEADER ================= -->
-
-    <columnHeader>
-        <band height="20">
-
-            <staticText>
-                <reportElement x="0" y="0" width="600" height="18" style="ColumnHeaderStyle"/>
-                <text><![CDATA[Description]]></text>
-            </staticText>
-
-            <staticText>
-                <reportElement x="600" y="0" width="202" height="18" style="ColumnHeaderStyle"/>
-                <text><![CDATA[Amount]]></text>
-            </staticText>
-
-        </band>
-    </columnHeader>
-
-    <!-- ================= DETAIL ================= -->
+    <!-- DETAIL -->
 
     <detail>
         <band height="20">
 
+            <!-- Branch Header -->
+            <textField>
+                <reportElement x="0" y="0" width="802" height="18">
+                    <printWhenExpression><![CDATA[$F{branchHeader}]]></printWhenExpression>
+                    <styleExpression><![CDATA["BoldStyle"]]></styleExpression>
+                </reportElement>
+                <textFieldExpression><![CDATA[
+                    "Branch: " + $F{branchName}
+                ]]></textFieldExpression>
+            </textField>
+
+            <!-- Normal Row -->
             <textField>
                 <reportElement x="0" y="0" width="600" height="18">
-                    <styleExpression><![CDATA[
-                        $F{grandTotal} ? "GrandTotalStyle" :
-                        ($F{bold} ? "BoldStyle" : "NormalStyle")
-                    ]]></styleExpression>
+                    <printWhenExpression><![CDATA[
+                        !$F{branchHeader} && !$F{branchTotal} && !$F{consolidatedTotal}
+                    ]]></printWhenExpression>
                 </reportElement>
                 <textFieldExpression><![CDATA[$F{label}]]></textFieldExpression>
             </textField>
 
             <textField pattern="#,##0.00;(#,##0.00)">
                 <reportElement x="600" y="0" width="202" height="18">
-                    <styleExpression><![CDATA[
-                        $F{grandTotal} ? "GrandTotalStyle" :
-                        ($F{bold} ? "BoldStyle" : "NormalStyle")
-                    ]]></styleExpression>
+                    <printWhenExpression><![CDATA[
+                        !$F{branchHeader} && !$F{branchTotal} && !$F{consolidatedTotal}
+                    ]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{amount}]]></textFieldExpression>
+            </textField>
+
+            <!-- Branch Total -->
+            <textField>
+                <reportElement x="0" y="0" width="600" height="18">
+                    <printWhenExpression><![CDATA[$F{branchTotal}]]></printWhenExpression>
+                    <styleExpression><![CDATA["BoldStyle"]]></styleExpression>
+                </reportElement>
+                <textFieldExpression><![CDATA[
+                    "Total - " + $F{branchName}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="600" y="0" width="202" height="18">
+                    <printWhenExpression><![CDATA[$F{branchTotal}]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{amount}]]></textFieldExpression>
+            </textField>
+
+            <!-- Consolidated -->
+            <textField>
+                <reportElement x="0" y="0" width="600" height="18">
+                    <printWhenExpression><![CDATA[$F{consolidatedTotal}]]></printWhenExpression>
+                    <styleExpression><![CDATA["GrandStyle"]]></styleExpression>
+                </reportElement>
+                <textFieldExpression><![CDATA["CONSOLIDATED NET PROFIT"]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="600" y="0" width="202" height="18">
+                    <printWhenExpression><![CDATA[$F{consolidatedTotal}]]></printWhenExpression>
                 </reportElement>
                 <textElement textAlignment="Right"/>
                 <textFieldExpression><![CDATA[$F{amount}]]></textFieldExpression>
@@ -114,29 +142,5 @@
 
         </band>
     </detail>
-
-    <!-- ================= PAGE FOOTER ================= -->
-
-    <pageFooter>
-        <band height="20">
-
-            <textField>
-                <reportElement x="0" y="0" width="450" height="15"/>
-                <textFieldExpression><![CDATA[
-                    "Generated by " + $P{GENERATED_BY}
-                    + " on "
-                    + new java.text.SimpleDateFormat("dd MMM yyyy HH:mm")
-                        .format($P{GENERATED_AT})
-                ]]></textFieldExpression>
-            </textField>
-
-            <textField>
-                <reportElement x="700" y="0" width="100" height="15"/>
-                <textElement textAlignment="Right"/>
-                <textFieldExpression><![CDATA["Page " + $V{PAGE_NUMBER}]]></textFieldExpression>
-            </textField>
-
-        </band>
-    </pageFooter>
 
 </jasperReport>

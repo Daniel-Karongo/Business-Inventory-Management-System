@@ -11,4 +11,5 @@ import java.util.UUID;
 public interface SupplierAuditRepository extends JpaRepository<SupplierAudit, UUID> {
     List<SupplierAudit> findBySupplierIdOrderByTimestampDesc(UUID supplierId);
     List<SupplierAudit> findAllByOrderByTimestampDesc();
+    List<SupplierAudit> findTop5ByOrderByTimestampDesc();
 }

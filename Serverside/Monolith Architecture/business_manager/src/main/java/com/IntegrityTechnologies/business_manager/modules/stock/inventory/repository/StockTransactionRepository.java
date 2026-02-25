@@ -79,4 +79,6 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
     void restoreByVariantIds(@Param("variantIds") List<UUID> variantIds);
 
     boolean existsByProductId(UUID productId);
+
+    boolean existsByReferenceAndType(String reference, StockTransaction.TransactionType transactionType);
 }

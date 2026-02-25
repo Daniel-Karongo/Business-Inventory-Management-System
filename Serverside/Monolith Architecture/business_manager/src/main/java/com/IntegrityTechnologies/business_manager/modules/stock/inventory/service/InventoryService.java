@@ -88,6 +88,21 @@ public class InventoryService {
         if (req.getSuppliers() == null || req.getSuppliers().isEmpty())
             throw new IllegalArgumentException("At least one supplier must be provided");
 
+        // -------------------------------------------------------------
+        // IDEMPOTENCY CHECK (RECEIPT)
+        // -------------------------------------------------------------
+        if (req.getReference() != null &&
+                stockTransactionRepository.existsByReferenceAndType(
+                        req.getReference(),
+                        StockTransaction.TransactionType.RECEIPT
+                )) {
+
+            return new ApiResponse(
+                    "success",
+                    "Stock already received (idempotent replay)",
+                    null
+            );
+        }
 
         // -------------------------------------------------------------
         // 1. RESOLVE PRODUCT + BRANCH
@@ -591,6 +606,40 @@ public class InventoryService {
         decrementPhysicalOnly(variantId, fromBranch, quantity);
         incrementPhysicalOnly(variantId, toBranch, quantity);
 
+        // -----------------------------------------------------
+// ACCOUNTING: TRANSFER VALUE (BRANCH CLEARING)
+// -----------------------------------------------------
+
+        BigDecimal totalTransferValue = BigDecimal.ZERO;
+
+// Calculate value from moved batches
+        for (InventoryBatch sourceBatch : sourceBatches) {
+
+            long movedQty = sourceBatch.getQuantityReceived()
+                    - sourceBatch.getQuantityRemaining();
+
+            if (movedQty > 0) {
+                totalTransferValue = totalTransferValue.add(
+                        sourceBatch.getUnitCost()
+                                .multiply(BigDecimal.valueOf(movedQty))
+                );
+            }
+        }
+
+        inventoryAccountingPort.recordInventoryTransferOut(
+                variantId,
+                fromBranch,
+                totalTransferValue,
+                req.getReference()
+        );
+
+        inventoryAccountingPort.recordInventoryTransferIn(
+                variantId,
+                toBranch,
+                totalTransferValue,
+                req.getReference()
+        );
+
         return new ApiResponse("success", "Batch-aware transfer complete");
     }
 
@@ -1021,6 +1070,35 @@ public class InventoryService {
         item.setLastUpdatedAt(LocalDateTime.now());
         item.setLastUpdatedBy(getCurrentUsername());
         inventoryItemRepository.save(item);
+
+        // -----------------------------------------------------
+// ACCOUNTING: STOCK ADJUSTMENT
+// -----------------------------------------------------
+
+        BigDecimal valueImpact =
+                variant.getAverageBuyingPrice()
+                        .multiply(BigDecimal.valueOf(Math.abs(delta)));
+
+        if (delta > 0) {
+
+            // Stock increase (gain)
+            inventoryAccountingPort.recordInventoryReturn(
+                    variant.getId(),
+                    branch.getId(),
+                    valueImpact,
+                    req.getReference()
+            );
+
+        } else if (delta < 0) {
+
+            // Stock decrease (loss)
+            inventoryAccountingPort.recordInventoryConsumption(
+                    variant.getId(),
+                    branch.getId(),
+                    valueImpact,
+                    req.getReference()
+            );
+        }
 
         stockTransactionRepository.save(
                 StockTransaction.builder()

@@ -11,8 +11,13 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "dashboard_daily_snapshots",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"date"}))
+@Table(
+        name = "dashboard_daily_snapshots",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"date"}),
+        indexes = {
+                @Index(name = "idx_snapshot_date", columnList = "date")
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor

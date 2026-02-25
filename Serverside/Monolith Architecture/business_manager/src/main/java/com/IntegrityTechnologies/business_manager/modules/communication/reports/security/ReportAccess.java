@@ -63,6 +63,36 @@ public enum ReportAccess {
             "accounts_payable_summary", Role.ADMIN
     ),
 
+    /* ===================== ACCOUNTING (MULTI BRANCH) ===================== */
+
+    TRIAL_BALANCE_MULTI_BRANCH(
+            "trial_balance_multi_branch", Role.ADMIN
+    ),
+
+    GENERAL_LEDGER_MULTI_BRANCH(
+            "general_ledger_multi_branch", Role.ADMIN
+    ),
+
+    PROFIT_AND_LOSS_MULTI_BRANCH(
+            "profit_and_loss_multi_branch", Role.ADMIN
+    ),
+
+    BALANCE_SHEET_MULTI_BRANCH(
+            "balance_sheet_multi_branch", Role.ADMIN
+    ),
+
+    CASH_FLOW_STATEMENT_MULTI_BRANCH(
+            "cash_flow_statement_multi_branch", Role.ADMIN
+    ),
+
+    ACCOUNTS_RECEIVABLE_SUMMARY_MULTI_BRANCH(
+            "accounts_receivable_summary_multi_branch", Role.ADMIN
+    ),
+
+    ACCOUNTS_PAYABLE_SUMMARY_MULTI_BRANCH(
+            "accounts_payable_summary_multi_branch", Role.ADMIN
+    ),
+
     /* ===================== INVENTORY ===================== */
     STOCK_ON_HAND("stock_on_hand", Role.SUPERVISOR),
     INVENTORY_VALUATION_CURRENT(

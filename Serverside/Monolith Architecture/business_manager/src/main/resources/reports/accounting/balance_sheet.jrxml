@@ -13,59 +13,29 @@
               topMargin="30"
               bottomMargin="30">
 
-    <!-- ================= STYLES (MUST COME FIRST) ================= -->
+    <!-- ================= STYLES ================= -->
 
     <style name="TitleStyle" fontSize="18" isBold="true"/>
     <style name="SectionStyle" fontSize="13" isBold="true"/>
     <style name="ColumnHeaderStyle" fontSize="11" isBold="true"/>
     <style name="DetailStyle" fontSize="10"/>
     <style name="TotalStyle" fontSize="11" isBold="true"/>
+    <style name="GrandTotalStyle" fontSize="13" isBold="true"/>
 
     <!-- ================= PARAMETERS ================= -->
 
-    <parameter name="AS_AT_DATE" class="java.sql.Timestamp"/>
+    <parameter name="AS_AT_DATE" class="java.lang.String"/>
     <parameter name="COMPANY_NAME" class="java.lang.String"/>
     <parameter name="GENERATED_BY" class="java.lang.String"/>
     <parameter name="GENERATED_AT" class="java.util.Date"/>
 
-    <!-- ================= QUERY ================= -->
-
-    <queryString>
-        <![CDATA[
-            SELECT
-                a.code AS account_code,
-                a.name AS account_name,
-                a.type AS account_type,
-                SUM(
-                    CASE
-                        WHEN a.type IN ('ASSET','EXPENSE') AND le.direction='DEBIT'
-                            THEN le.amount
-                        WHEN a.type IN ('ASSET','EXPENSE') AND le.direction='CREDIT'
-                            THEN -le.amount
-                        WHEN a.type IN ('LIABILITY','EQUITY','INCOME') AND le.direction='CREDIT'
-                            THEN le.amount
-                        WHEN a.type IN ('LIABILITY','EQUITY','INCOME') AND le.direction='DEBIT'
-                            THEN -le.amount
-                    END
-                ) AS balance
-            FROM accounts a
-            JOIN ledger_entries le ON le.account_id = a.id
-            JOIN journal_entries je ON je.id = le.journal_entry_id
-            WHERE a.active = true
-              AND je.posted = true
-              AND je.reversed = false
-              AND le.posted_at <= $P{AS_AT_DATE}
-            GROUP BY a.code, a.name, a.type
-            HAVING balance <> 0
-            ORDER BY a.type, a.code
-        ]]>
-    </queryString>
+    <queryString><![CDATA[]]></queryString>
 
     <!-- ================= FIELDS ================= -->
 
-    <field name="account_code" class="java.lang.String"/>
-    <field name="account_name" class="java.lang.String"/>
-    <field name="account_type" class="java.lang.String"/>
+    <field name="section" class="java.lang.String"/>
+    <field name="code" class="java.lang.String"/>
+    <field name="name" class="java.lang.String"/>
     <field name="balance" class="java.math.BigDecimal"/>
 
     <!-- ================= VARIABLES ================= -->
@@ -74,7 +44,7 @@
               class="java.math.BigDecimal"
               calculation="Sum"
               resetType="Group"
-              resetGroup="AccountTypeGroup">
+              resetGroup="SectionGroup">
         <variableExpression><![CDATA[$F{balance}]]></variableExpression>
     </variable>
 
@@ -86,15 +56,15 @@
 
     <!-- ================= GROUP ================= -->
 
-    <group name="AccountTypeGroup">
-        <groupExpression><![CDATA[$F{account_type}]]></groupExpression>
+    <group name="SectionGroup">
+        <groupExpression><![CDATA[$F{section}]]></groupExpression>
 
         <groupHeader>
             <band height="24">
                 <textField>
                     <reportElement x="0" y="4" width="802" height="18"
                                    style="SectionStyle"/>
-                    <textFieldExpression><![CDATA[$F{account_type}]]></textFieldExpression>
+                    <textFieldExpression><![CDATA[$F{section}]]></textFieldExpression>
                 </textField>
             </band>
         </groupHeader>
@@ -133,9 +103,7 @@
                 <reportElement x="0" y="48" width="802" height="15"/>
                 <textElement textAlignment="Center"/>
                 <textFieldExpression><![CDATA[
-                    "As at " +
-                    new java.text.SimpleDateFormat("dd MMM yyyy")
-                        .format($P{AS_AT_DATE})
+                    "As at " + $P{AS_AT_DATE}
                 ]]></textFieldExpression>
             </textField>
 
@@ -176,13 +144,13 @@
             <textField>
                 <reportElement x="0" y="0" width="100" height="18"
                                style="DetailStyle"/>
-                <textFieldExpression><![CDATA[$F{account_code}]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$F{code}]]></textFieldExpression>
             </textField>
 
             <textField>
                 <reportElement x="100" y="0" width="500" height="18"
                                style="DetailStyle"/>
-                <textFieldExpression><![CDATA[$F{account_name}]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$F{name}]]></textFieldExpression>
             </textField>
 
             <textField pattern="#,##0.00;(#,##0.00)">
@@ -194,7 +162,7 @@
         </band>
     </detail>
 
-    <!-- ================= PAGE FOOTER (MUST COME BEFORE SUMMARY) ================= -->
+    <!-- ================= PAGE FOOTER ================= -->
 
     <pageFooter>
         <band height="20">
@@ -217,5 +185,17 @@
 
         </band>
     </pageFooter>
+
+    <!-- ================= SUMMARY ================= -->
+
+    <summary>
+        <band height="25">
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="600" y="0" width="202" height="20"
+                               style="GrandTotalStyle"/>
+                <textFieldExpression><![CDATA[$V{GrandTotal}]]></textFieldExpression>
+            </textField>
+        </band>
+    </summary>
 
 </jasperReport>

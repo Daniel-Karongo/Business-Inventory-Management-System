@@ -19,6 +19,7 @@
     <style name="SectionStyle" fontSize="13" isBold="true"/>
     <style name="DetailStyle" fontSize="10"/>
     <style name="TotalStyle" fontSize="11" isBold="true"/>
+    <style name="GrandTotalStyle" fontSize="13" isBold="true"/>
 
     <!-- ================= PARAMETERS ================= -->
 
@@ -28,44 +29,23 @@
     <parameter name="GENERATED_BY" class="java.lang.String"/>
     <parameter name="GENERATED_AT" class="java.util.Date"/>
 
-    <!-- ================= QUERY ================= -->
+    <!-- ================= BEAN BASED ================= -->
 
-    <queryString>
-        <![CDATA[
-            SELECT
-                a.code,
-                a.name,
-                SUM(
-                    CASE
-                        WHEN le.direction='DEBIT' THEN le.amount
-                        WHEN le.direction='CREDIT' THEN -le.amount
-                    END
-                ) AS net_cash_movement
-            FROM accounts a
-            JOIN ledger_entries le ON le.account_id = a.id
-            JOIN journal_entries je ON je.id = le.journal_entry_id
-            WHERE a.code IN ('1000','1100') -- Cash & Bank accounts
-              AND je.posted = true
-              AND je.reversed = false
-              AND DATE(le.posted_at) BETWEEN $P{FROM_DATE} AND $P{TO_DATE}
-            GROUP BY a.code, a.name
-            HAVING net_cash_movement <> 0
-            ORDER BY a.code
-        ]]>
-    </queryString>
+    <queryString><![CDATA[]]></queryString>
 
     <!-- ================= FIELDS ================= -->
 
     <field name="code" class="java.lang.String"/>
     <field name="name" class="java.lang.String"/>
-    <field name="net_cash_movement" class="java.math.BigDecimal"/>
+    <field name="netMovement" class="java.math.BigDecimal"/>
+    <field name="total" class="java.lang.Boolean"/>
 
     <!-- ================= VARIABLES ================= -->
 
     <variable name="TotalCashMovement"
               class="java.math.BigDecimal"
               calculation="Sum">
-        <variableExpression><![CDATA[$F{net_cash_movement}]]></variableExpression>
+        <variableExpression><![CDATA[$F{netMovement}]]></variableExpression>
     </variable>
 
     <!-- ================= TITLE ================= -->
@@ -127,14 +107,21 @@
                 <reportElement x="0" y="0" width="600" height="18"
                                style="DetailStyle"/>
                 <textFieldExpression><![CDATA[
+                    $F{code} == null ?
+                    $F{name} :
                     $F{code} + " - " + $F{name}
                 ]]></textFieldExpression>
             </textField>
 
             <textField pattern="#,##0.00;(#,##0.00)">
                 <reportElement x="600" y="0" width="202" height="18"
-                               style="DetailStyle"/>
-                <textFieldExpression><![CDATA[$F{net_cash_movement}]]></textFieldExpression>
+                               style="DetailStyle">
+                    <styleExpression><![CDATA[
+                        $F{total} ? "TotalStyle" : "DetailStyle"
+                    ]]></styleExpression>
+                </reportElement>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{netMovement}]]></textFieldExpression>
             </textField>
 
         </band>
@@ -171,7 +158,7 @@
 
             <textField pattern="#,##0.00;(#,##0.00)">
                 <reportElement x="600" y="0" width="202" height="20"
-                               style="TotalStyle"/>
+                               style="GrandTotalStyle"/>
                 <textFieldExpression><![CDATA[$V{TotalCashMovement}]]></textFieldExpression>
             </textField>
 

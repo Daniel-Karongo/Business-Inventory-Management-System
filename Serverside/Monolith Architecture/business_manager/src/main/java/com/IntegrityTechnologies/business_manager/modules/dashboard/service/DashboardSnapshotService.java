@@ -59,14 +59,19 @@ public class DashboardSnapshotService {
                 );
 
         BigDecimal vat =
-                balanceRepo.findByAccount_Id(accounts.vatPayable())
+                balanceRepo.findByAccountId(accounts.vatPayable())
                         .map(b -> b.getBalance())
                         .orElse(BigDecimal.ZERO);
 
         BigDecimal cash =
-                balanceRepo.findByAccount_Id(accounts.cash())
+                balanceRepo.findByAccountId(accounts.cash())
                         .map(b -> b.getBalance())
-                        .orElse(BigDecimal.ZERO);
+                        .orElse(BigDecimal.ZERO)
+                        .add(
+                                balanceRepo.findByAccountId(accounts.bank())
+                                        .map(b -> b.getBalance())
+                                        .orElse(BigDecimal.ZERO)
+                        );
 
         BigDecimal inventory =
                 (BigDecimal) valuationService.getTotalValuation()

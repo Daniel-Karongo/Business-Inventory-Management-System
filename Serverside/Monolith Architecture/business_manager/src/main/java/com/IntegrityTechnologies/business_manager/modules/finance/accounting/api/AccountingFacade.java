@@ -40,6 +40,19 @@ public class AccountingFacade {
             throw new IllegalStateException("BranchId is required for accounting events");
         }
 
+        if (event.getSourceModule() == null || event.getSourceId() == null) {
+            throw new IllegalStateException("SourceModule and SourceId are required for idempotency");
+        }
+
+        // --------------------------------------
+        // IDEMPOTENCY CHECK (CRITICAL)
+        // --------------------------------------
+        if (journalRepo.existsBySourceModuleAndSourceId(
+                event.getSourceModule(),
+                event.getSourceId())) {
+            return; // Already posted – safe exit
+        }
+
         // --------------------------------------
         // PERIOD LOCK CHECK
         // --------------------------------------

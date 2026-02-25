@@ -13,8 +13,10 @@ import java.util.UUID;
 @Table(
         name = "ledger_entries",
         indexes = {
-                @Index(columnList = "account_id"),
-                @Index(columnList = "journal_entry_id")
+                @Index(name = "idx_ledger_account", columnList = "account_id"),
+                @Index(name = "idx_ledger_account_posted", columnList = "account_id, posted_at"),
+                @Index(name = "idx_ledger_account_direction", columnList = "account_id, direction"),
+                @Index(name = "idx_ledger_journal", columnList = "journal_entry_id")
         }
 )
 @Getter

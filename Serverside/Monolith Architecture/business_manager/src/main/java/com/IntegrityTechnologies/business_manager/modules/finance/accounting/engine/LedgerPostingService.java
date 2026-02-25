@@ -35,10 +35,14 @@ public class LedgerPostingService {
         for (LedgerEntry entry : entries) {
 
             AccountBalance bal =
-                    balanceRepo.findByAccount_Id(entry.getAccount().getId())
+                    balanceRepo.findByAccount_IdAndBranch_Id(
+                                    entry.getAccount().getId(),
+                                    saved.getBranch().getId()
+                            )
                             .orElseGet(() -> {
                                 AccountBalance b = new AccountBalance();
                                 b.setAccount(entry.getAccount());
+                                b.setBranch(saved.getBranch());
                                 b.setBalance(BigDecimal.ZERO);
                                 return b;
                             });

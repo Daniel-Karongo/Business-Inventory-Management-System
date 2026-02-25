@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="accounts_receivable_summary_multi_branch_enterprise"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <!-- ================= STYLES ================= -->
+
+    <style name="TitleStyle" fontSize="18" isBold="true"/>
+    <style name="HeaderStyle" fontSize="13" isBold="true"/>
+    <style name="ColumnHeaderStyle" fontSize="11" isBold="true"/>
+    <style name="DetailStyle" fontSize="10"/>
+    <style name="BoldStyle" fontSize="11" isBold="true"/>
+    <style name="GrandStyle" fontSize="13" isBold="true"/>
+
+    <!-- ================= PARAMETERS ================= -->
+
+    <parameter name="FROM_DATE" class="java.lang.String"/>
+    <parameter name="TO_DATE" class="java.lang.String"/>
+    <parameter name="COMPANY_NAME" class="java.lang.String"/>
+    <parameter name="GENERATED_BY" class="java.lang.String"/>
+    <parameter name="GENERATED_AT" class="java.util.Date"/>
+
+    <queryString><![CDATA[]]></queryString>
+
+    <!-- ================= FIELDS ================= -->
+
+    <field name="branchName" class="java.lang.String"/>
+    <field name="customerName" class="java.lang.String"/>
+    <field name="totalSales" class="java.math.BigDecimal"/>
+    <field name="totalPayments" class="java.math.BigDecimal"/>
+    <field name="receivableBalance" class="java.math.BigDecimal"/>
+    <field name="branchHeader" class="java.lang.Boolean"/>
+    <field name="branchTotal" class="java.lang.Boolean"/>
+    <field name="consolidatedTotal" class="java.lang.Boolean"/>
+
+    <!-- ================= TITLE ================= -->
+
+    <title>
+        <band height="85">
+
+            <textField>
+                <reportElement x="0" y="0" width="802" height="22" style="TitleStyle"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA[$P{COMPANY_NAME}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="30" width="802" height="18" style="HeaderStyle"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA["ACCOUNTS RECEIVABLE (MULTI-BRANCH)"]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="55" width="802" height="15"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA[
+                    "Period: " + $P{FROM_DATE} + " to " + $P{TO_DATE}
+                ]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </title>
+
+    <!-- ================= DETAIL ================= -->
+
+    <detail>
+        <band height="20">
+
+            <!-- Branch Header -->
+            <textField>
+                <reportElement x="0" y="0" width="802" height="18">
+                    <printWhenExpression><![CDATA[$F{branchHeader}]]></printWhenExpression>
+                    <styleExpression><![CDATA["BoldStyle"]]></styleExpression>
+                </reportElement>
+                <textFieldExpression><![CDATA["Branch: " + $F{branchName}]]></textFieldExpression>
+            </textField>
+
+            <!-- Normal Row -->
+            <textField>
+                <reportElement x="0" y="0" width="300" height="18">
+                    <printWhenExpression><![CDATA[
+                        !$F{branchHeader} && !$F{branchTotal} && !$F{consolidatedTotal}
+                    ]]></printWhenExpression>
+                </reportElement>
+                <textFieldExpression><![CDATA[$F{customerName}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="300" y="0" width="170" height="18">
+                    <printWhenExpression><![CDATA[
+                        !$F{branchHeader} && !$F{branchTotal} && !$F{consolidatedTotal}
+                    ]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{totalSales}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="470" y="0" width="170" height="18">
+                    <printWhenExpression><![CDATA[
+                        !$F{branchHeader} && !$F{branchTotal} && !$F{consolidatedTotal}
+                    ]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{totalPayments}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="640" y="0" width="162" height="18">
+                    <printWhenExpression><![CDATA[
+                        !$F{branchHeader} && !$F{branchTotal} && !$F{consolidatedTotal}
+                    ]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{receivableBalance}]]></textFieldExpression>
+            </textField>
+
+            <!-- Branch Total -->
+            <textField>
+                <reportElement x="0" y="0" width="640" height="18">
+                    <printWhenExpression><![CDATA[$F{branchTotal}]]></printWhenExpression>
+                    <styleExpression><![CDATA["BoldStyle"]]></styleExpression>
+                </reportElement>
+                <textFieldExpression><![CDATA["Total - " + $F{branchName}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="640" y="0" width="162" height="18">
+                    <printWhenExpression><![CDATA[$F{branchTotal}]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{receivableBalance}]]></textFieldExpression>
+            </textField>
+
+            <!-- Consolidated -->
+            <textField>
+                <reportElement x="0" y="0" width="640" height="18">
+                    <printWhenExpression><![CDATA[$F{consolidatedTotal}]]></printWhenExpression>
+                    <styleExpression><![CDATA["GrandStyle"]]></styleExpression>
+                </reportElement>
+                <textFieldExpression><![CDATA["CONSOLIDATED RECEIVABLES"]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="640" y="0" width="162" height="18">
+                    <printWhenExpression><![CDATA[$F{consolidatedTotal}]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{receivableBalance}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </detail>
+
+</jasperReport>

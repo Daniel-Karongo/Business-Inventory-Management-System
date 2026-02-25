@@ -98,7 +98,7 @@ public class DashboardService {
         );
 
         Map<UUID, BigDecimal> movements =
-                fetchMovements(kpiAccounts, start, end);
+                fetchMovements(kpiAccounts, start, end, branchId);
 
         BigDecimal revenueToday = movements.get(accounts.revenue());
         BigDecimal cogsToday = movements.get(accounts.cogs());
@@ -141,33 +141,33 @@ public class DashboardService {
                 expensesLast30.divide(BigDecimal.valueOf(30), 2, RoundingMode.HALF_UP);
 
         BigDecimal vatPayable =
-                balanceRepo.findByAccount_Id(accounts.vatPayable())
+                balanceRepo.findByAccountId(accounts.vatPayable())
                         .map(b -> b.getBalance())
                         .orElse(BigDecimal.ZERO);
 
         BigDecimal ar =
-                balanceRepo.findByAccount_Id(accounts.accountsReceivable())
+                balanceRepo.findByAccountId(accounts.accountsReceivable())
                         .map(b -> b.getBalance())
                         .orElse(BigDecimal.ZERO);
 
         BigDecimal ap =
-                balanceRepo.findByAccount_Id(accounts.accountsPayable())
+                balanceRepo.findByAccountId(accounts.accountsPayable())
                         .map(b -> b.getBalance())
                         .orElse(BigDecimal.ZERO);
 
         BigDecimal cash =
-                balanceRepo.findByAccount_Id(accounts.cash())
+                balanceRepo.findByAccountId(accounts.cash())
                         .map(b -> b.getBalance())
                         .orElse(BigDecimal.ZERO)
                         .add(
-                                balanceRepo.findByAccount_Id(accounts.bank())
+                                balanceRepo.findByAccountId(accounts.bank())
                                         .map(b -> b.getBalance())
                                         .orElse(BigDecimal.ZERO)
                         );
 
         BigDecimal corporateTax =
                 taxProperties.getBusinessTaxMode().name().equals("CORPORATE")
-                        ? balanceRepo.findByAccount_Id(accounts.corporateTaxPayable())
+                        ? balanceRepo.findByAccountId(accounts.corporateTaxPayable())
                         .map(b -> b.getBalance())
                         .orElse(BigDecimal.ZERO)
                         : BigDecimal.ZERO;
@@ -383,13 +383,15 @@ public class DashboardService {
     private Map<UUID, BigDecimal> fetchMovements(
             Set<UUID> accountIds,
             LocalDateTime start,
-            LocalDateTime end
+            LocalDateTime end,
+            UUID branchId
     ) {
 
         List<Object[]> rows = ledgerRepo.netMovementForAccountsBetween(
                 accountIds,
                 start,
                 end,
+                branchId,
                 DEBIT_NORMAL,
                 CREDIT_NORMAL,
                 DEBIT,
@@ -475,9 +477,7 @@ public class DashboardService {
                         ))
                 );
 
-        userAuditRepository.findAll().stream()
-                .sorted(Comparator.comparing(a -> a.getTimestamp(), Comparator.reverseOrder()))
-                .limit(5)
+        userAuditRepository.findTop5ByOrderByTimestampDesc()
                 .forEach(a ->
                         out.add(new ActivityDTO(
                                 "USER",

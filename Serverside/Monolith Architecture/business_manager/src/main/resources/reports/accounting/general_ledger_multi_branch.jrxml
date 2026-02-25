@@ -3,7 +3,7 @@
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
               http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
-              name="general_ledger_enterprise"
+              name="general_ledger_multi_branch_enterprise"
               pageWidth="842"
               pageHeight="595"
               orientation="Landscape"
@@ -19,7 +19,9 @@
     <style name="HeaderStyle" fontSize="13" isBold="true"/>
     <style name="ColumnHeaderStyle" fontSize="11" isBold="true"/>
     <style name="DetailStyle" fontSize="10"/>
+    <style name="BoldStyle" fontSize="11" isBold="true"/>
     <style name="TotalStyle" fontSize="11" isBold="true"/>
+    <style name="GrandStyle" fontSize="13" isBold="true"/>
 
     <!-- ================= PARAMETERS ================= -->
 
@@ -34,20 +36,27 @@
 
     <!-- ================= FIELDS ================= -->
 
+    <field name="branchName" class="java.lang.String"/>
     <field name="postingDate" class="java.time.LocalDateTime"/>
     <field name="description" class="java.lang.String"/>
     <field name="debit" class="java.math.BigDecimal"/>
     <field name="credit" class="java.math.BigDecimal"/>
     <field name="runningBalance" class="java.math.BigDecimal"/>
+    <field name="branchHeader" class="java.lang.Boolean"/>
+    <field name="branchTotal" class="java.lang.Boolean"/>
 
     <!-- ================= VARIABLES ================= -->
 
     <variable name="TotalDebit" class="java.math.BigDecimal" calculation="Sum">
-        <variableExpression><![CDATA[$F{debit}]]></variableExpression>
+        <variableExpression><![CDATA[
+            $F{branchHeader} || $F{branchTotal} ? null : $F{debit}
+        ]]></variableExpression>
     </variable>
 
     <variable name="TotalCredit" class="java.math.BigDecimal" calculation="Sum">
-        <variableExpression><![CDATA[$F{credit}]]></variableExpression>
+        <variableExpression><![CDATA[
+            $F{branchHeader} || $F{branchTotal} ? null : $F{credit}
+        ]]></variableExpression>
     </variable>
 
     <!-- ================= TITLE ================= -->
@@ -62,19 +71,19 @@
             </textField>
 
             <textField>
-                <reportElement x="0" y="30" width="802" height="18" style="HeaderStyle"/>
+                <reportElement x="0" y="28" width="802" height="18" style="HeaderStyle"/>
                 <textElement textAlignment="Center"/>
-                <textFieldExpression><![CDATA["GENERAL LEDGER"]]></textFieldExpression>
+                <textFieldExpression><![CDATA["GENERAL LEDGER (MULTI-BRANCH)"]]></textFieldExpression>
             </textField>
 
             <textField>
-                <reportElement x="0" y="50" width="802" height="15"/>
+                <reportElement x="0" y="48" width="802" height="15"/>
                 <textElement textAlignment="Center"/>
                 <textFieldExpression><![CDATA[$P{ACCOUNT_NAME}]]></textFieldExpression>
             </textField>
 
             <textField>
-                <reportElement x="0" y="67" width="802" height="15"/>
+                <reportElement x="0" y="65" width="802" height="15"/>
                 <textElement textAlignment="Center"/>
                 <textFieldExpression><![CDATA[
                     "Period: " + $P{FROM_DATE} + " to " + $P{TO_DATE}
@@ -90,27 +99,32 @@
         <band height="22">
 
             <staticText>
-                <reportElement x="0" y="0" width="150" height="18" style="ColumnHeaderStyle"/>
+                <reportElement x="0" y="0" width="120" height="18" style="ColumnHeaderStyle"/>
+                <text><![CDATA[Branch]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="120" y="0" width="130" height="18" style="ColumnHeaderStyle"/>
                 <text><![CDATA[Date]]></text>
             </staticText>
 
             <staticText>
-                <reportElement x="150" y="0" width="300" height="18" style="ColumnHeaderStyle"/>
+                <reportElement x="250" y="0" width="250" height="18" style="ColumnHeaderStyle"/>
                 <text><![CDATA[Description]]></text>
             </staticText>
 
             <staticText>
-                <reportElement x="450" y="0" width="100" height="18" style="ColumnHeaderStyle"/>
+                <reportElement x="500" y="0" width="100" height="18" style="ColumnHeaderStyle"/>
                 <text><![CDATA[Debit]]></text>
             </staticText>
 
             <staticText>
-                <reportElement x="550" y="0" width="100" height="18" style="ColumnHeaderStyle"/>
+                <reportElement x="600" y="0" width="100" height="18" style="ColumnHeaderStyle"/>
                 <text><![CDATA[Credit]]></text>
             </staticText>
 
             <staticText>
-                <reportElement x="650" y="0" width="152" height="18" style="ColumnHeaderStyle"/>
+                <reportElement x="700" y="0" width="102" height="18" style="ColumnHeaderStyle"/>
                 <text><![CDATA[Balance]]></text>
             </staticText>
 
@@ -122,43 +136,84 @@
     <detail>
         <band height="20">
 
+            <!-- Branch Header -->
+            <textField>
+                <reportElement x="0" y="0" width="802" height="18">
+                    <printWhenExpression><![CDATA[$F{branchHeader}]]></printWhenExpression>
+                    <styleExpression><![CDATA["BoldStyle"]]></styleExpression>
+                </reportElement>
+                <textFieldExpression><![CDATA[
+                    "Branch: " + $F{branchName}
+                ]]></textFieldExpression>
+            </textField>
+
+            <!-- Normal Row -->
+            <textField>
+                <reportElement x="0" y="0" width="120" height="18" style="DetailStyle">
+                    <printWhenExpression><![CDATA[
+                        !$F{branchHeader} && !$F{branchTotal}
+                    ]]></printWhenExpression>
+                </reportElement>
+                <textFieldExpression><![CDATA[$F{branchName}]]></textFieldExpression>
+            </textField>
+
             <textField pattern="dd MMM yyyy HH:mm">
-                <reportElement x="0" y="0" width="150" height="18" style="DetailStyle"/>
+                <reportElement x="120" y="0" width="130" height="18" style="DetailStyle">
+                    <printWhenExpression><![CDATA[
+                        !$F{branchHeader} && !$F{branchTotal}
+                    ]]></printWhenExpression>
+                </reportElement>
                 <textFieldExpression><![CDATA[
                     java.sql.Timestamp.valueOf($F{postingDate})
                 ]]></textFieldExpression>
             </textField>
 
             <textField>
-                <reportElement x="150" y="0" width="300" height="18" style="DetailStyle"/>
+                <reportElement x="250" y="0" width="250" height="18" style="DetailStyle">
+                    <printWhenExpression><![CDATA[
+                        !$F{branchHeader} && !$F{branchTotal}
+                    ]]></printWhenExpression>
+                </reportElement>
                 <textFieldExpression><![CDATA[$F{description}]]></textFieldExpression>
             </textField>
 
             <textField pattern="#,##0.00;(#,##0.00)">
-                <reportElement x="450" y="0" width="100" height="18" style="DetailStyle"/>
+                <reportElement x="500" y="0" width="100" height="18" style="DetailStyle">
+                    <printWhenExpression><![CDATA[
+                        !$F{branchHeader} && !$F{branchTotal}
+                    ]]></printWhenExpression>
+                </reportElement>
                 <textFieldExpression><![CDATA[$F{debit}]]></textFieldExpression>
             </textField>
 
             <textField pattern="#,##0.00;(#,##0.00)">
-                <reportElement x="550" y="0" width="100" height="18" style="DetailStyle"/>
+                <reportElement x="600" y="0" width="100" height="18" style="DetailStyle">
+                    <printWhenExpression><![CDATA[
+                        !$F{branchHeader} && !$F{branchTotal}
+                    ]]></printWhenExpression>
+                </reportElement>
                 <textFieldExpression><![CDATA[$F{credit}]]></textFieldExpression>
             </textField>
 
             <textField pattern="#,##0.00;(#,##0.00)">
-                <reportElement x="650" y="0" width="152" height="18" style="DetailStyle"/>
+                <reportElement x="700" y="0" width="102" height="18" style="DetailStyle">
+                    <printWhenExpression><![CDATA[
+                        !$F{branchHeader} && !$F{branchTotal}
+                    ]]></printWhenExpression>
+                </reportElement>
                 <textFieldExpression><![CDATA[$F{runningBalance}]]></textFieldExpression>
             </textField>
 
         </band>
     </detail>
 
-    <!-- ================= FOOTER ================= -->
+    <!-- ================= PAGE FOOTER ================= -->
 
     <pageFooter>
         <band height="20">
 
             <textField>
-                <reportElement x="0" y="0" width="500" height="15"/>
+                <reportElement x="0" y="0" width="450" height="15"/>
                 <textFieldExpression><![CDATA[
                     "Generated by " + $P{GENERATED_BY}
                     + " on "
@@ -175,28 +230,5 @@
 
         </band>
     </pageFooter>
-
-    <!-- ================= SUMMARY ================= -->
-
-    <summary>
-        <band height="30">
-
-            <staticText>
-                <reportElement x="300" y="5" width="150" height="18" style="TotalStyle"/>
-                <text><![CDATA[Totals]]></text>
-            </staticText>
-
-            <textField pattern="#,##0.00;(#,##0.00)">
-                <reportElement x="450" y="5" width="100" height="20" style="TotalStyle"/>
-                <textFieldExpression><![CDATA[$V{TotalDebit}]]></textFieldExpression>
-            </textField>
-
-            <textField pattern="#,##0.00;(#,##0.00)">
-                <reportElement x="550" y="5" width="100" height="20" style="TotalStyle"/>
-                <textFieldExpression><![CDATA[$V{TotalCredit}]]></textFieldExpression>
-            </textField>
-
-        </band>
-    </summary>
 
 </jasperReport>

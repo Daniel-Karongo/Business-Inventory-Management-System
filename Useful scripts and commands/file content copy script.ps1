@@ -5,11 +5,11 @@ $basePath = Get-Location
 $outputFile = Join-Path $basePath "Selected_Modules_Combined.java"
 
 $targetFolders = @(
-    "modules\stock\inventory",
-    "modules\stock\product",
-    "modules\finance\sales",
-    "modules\finance\payment",
-    "modules\finance\accounting"
+    "java\com\IntegrityTechnologies\business_manager\modules\finance\accounting",
+    "java\com\IntegrityTechnologies\business_manager\modules\finance\budgeting",
+    "java\com\IntegrityTechnologies\business_manager\modules\dashboard",
+    "java\com\IntegrityTechnologies\business_manager\modules\communication\reports",
+    "resources\reports\accounting"
 )
 
 # ================================
@@ -22,8 +22,8 @@ foreach ($folder in $targetFolders) {
 
     if (Test-Path $fullPath) {
         Write-Host "Processing $fullPath"
-
-        Get-ChildItem -Path $fullPath -Recurse -Filter *.java | ForEach-Object {
+        
+        Get-ChildItem -Path $fullPath -Recurse -Include *.java, *.jrxml, *.xml, *.properties, *.yml -File | ForEach-Object {
 
             $builder.AppendLine("") | Out-Null
             $builder.AppendLine("============================================================") | Out-Null
@@ -50,7 +50,4 @@ Write-Host "Combined file created at: $outputFile"
 # ================================
 if (Get-Command code -ErrorAction SilentlyContinue) {
     code $outputFile
-}
-else {
-    notepad $outputFile
 }

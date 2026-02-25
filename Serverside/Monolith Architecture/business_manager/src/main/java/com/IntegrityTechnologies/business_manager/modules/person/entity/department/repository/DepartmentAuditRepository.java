@@ -12,4 +12,5 @@ public interface DepartmentAuditRepository extends JpaRepository<DepartmentAudit
     List<DepartmentAudit> findByDepartmentIdOrderByTimestampDesc(UUID departmentId);
     List<DepartmentAudit> findByPerformedByIdOrderByTimestampDesc(UUID performedById);
     List<DepartmentAudit> findAllByOrderByTimestampDesc();
+    List<DepartmentAudit> findTop5ByOrderByTimestampDesc();
 }

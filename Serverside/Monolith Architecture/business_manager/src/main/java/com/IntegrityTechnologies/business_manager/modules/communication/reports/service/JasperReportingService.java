@@ -11,6 +11,7 @@ import com.IntegrityTechnologies.business_manager.modules.communication.reports.
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import net.sf.jasperreports.engine.*;
+import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import net.sf.jasperreports.engine.export.JRCsvExporter;
 import net.sf.jasperreports.engine.export.ooxml.JRXlsxExporter;
 import net.sf.jasperreports.export.SimpleExporterInput;
@@ -44,6 +45,7 @@ public class JasperReportingService implements ReportingService {
 
     @Value("${app.company.logo-path:}")
     private String logoPath;
+    private final FinancialReportDataProvider financialReportDataProvider;
 
     @Override
     public void generate(ReportRequest request, OutputStream out) throws Exception {
@@ -109,8 +111,22 @@ public class JasperReportingService implements ReportingService {
             JasperReport report =
                     JasperCompileManager.compileReport(jrxml);
 
-            JasperPrint jp =
-                    JasperFillManager.fillReport(report, params, conn);
+            JasperPrint jp;
+
+            if (financialReportDataProvider.supports(request.getReportName())) {
+
+                JRBeanCollectionDataSource ds =
+                        financialReportDataProvider.provide(
+                                request.getReportName(),
+                                params
+                        );
+
+                jp = JasperFillManager.fillReport(report, params, ds);
+
+            } else {
+
+                jp = JasperFillManager.fillReport(report, params, conn);
+            }
 
             ReportFormat format =
                     request.getFormat() != null

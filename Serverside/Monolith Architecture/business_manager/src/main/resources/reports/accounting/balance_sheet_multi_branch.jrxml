@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports
+              http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="balance_sheet_multi_branch"
+              pageWidth="842"
+              pageHeight="595"
+              orientation="Landscape"
+              columnWidth="802"
+              leftMargin="20"
+              rightMargin="20"
+              topMargin="30"
+              bottomMargin="30">
+
+    <!-- ================= STYLES ================= -->
+
+    <style name="TitleStyle" fontSize="18" isBold="true"/>
+    <style name="HeaderStyle" fontSize="13" isBold="true"/>
+    <style name="NormalStyle" fontSize="10"/>
+    <style name="BoldStyle" fontSize="11" isBold="true"/>
+    <style name="GrandTotalStyle" fontSize="13" isBold="true"/>
+
+    <!-- ================= PARAMETERS ================= -->
+
+    <parameter name="AS_AT_DATE" class="java.lang.String"/>
+    <parameter name="COMPANY_NAME" class="java.lang.String"/>
+
+    <queryString><![CDATA[]]></queryString>
+
+    <!-- ================= FIELDS ================= -->
+
+    <field name="branchName" class="java.lang.String"/>
+    <field name="section" class="java.lang.String"/>
+    <field name="code" class="java.lang.String"/>
+    <field name="name" class="java.lang.String"/>
+    <field name="balance" class="java.math.BigDecimal"/>
+    <field name="branchHeader" class="java.lang.Boolean"/>
+    <field name="branchTotal" class="java.lang.Boolean"/>
+    <field name="consolidatedTotal" class="java.lang.Boolean"/>
+
+    <!-- ================= TITLE ================= -->
+
+    <title>
+        <band height="75">
+            <textField>
+                <reportElement x="0" y="0" width="802" height="22" style="TitleStyle"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA[$P{COMPANY_NAME}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="28" width="802" height="18" style="HeaderStyle"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA["BALANCE SHEET (MULTI-BRANCH)"]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="48" width="802" height="15"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA[
+                    "As at " + $P{AS_AT_DATE}
+                ]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <!-- ================= DETAIL ================= -->
+
+    <detail>
+        <band height="20">
+
+            <!-- Branch Header -->
+            <textField>
+                <reportElement x="0" y="0" width="802" height="18"
+                               style="BoldStyle">
+                    <printWhenExpression><![CDATA[$F{branchHeader}]]></printWhenExpression>
+                </reportElement>
+                <textFieldExpression><![CDATA[
+                    "Branch: " + $F{branchName}
+                ]]></textFieldExpression>
+            </textField>
+
+            <!-- Account Row -->
+            <textField>
+                <reportElement x="0" y="0" width="600" height="18">
+                    <printWhenExpression><![CDATA[
+                        !$F{branchHeader} && !$F{branchTotal} && !$F{consolidatedTotal}
+                    ]]></printWhenExpression>
+                </reportElement>
+                <textFieldExpression><![CDATA[
+                    $F{section} + " | " + $F{code} + " - " + $F{name}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="600" y="0" width="200" height="18">
+                    <printWhenExpression><![CDATA[
+                        !$F{branchHeader} && !$F{branchTotal} && !$F{consolidatedTotal}
+                    ]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{balance}]]></textFieldExpression>
+            </textField>
+
+            <!-- Branch Total -->
+            <textField>
+                <reportElement x="0" y="0" width="600" height="18"
+                               style="BoldStyle">
+                    <printWhenExpression><![CDATA[$F{branchTotal}]]></printWhenExpression>
+                </reportElement>
+                <textFieldExpression><![CDATA[
+                    "Total - " + $F{branchName}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="600" y="0" width="200" height="18"
+                               style="BoldStyle">
+                    <printWhenExpression><![CDATA[$F{branchTotal}]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{balance}]]></textFieldExpression>
+            </textField>
+
+            <!-- Consolidated -->
+            <textField>
+                <reportElement x="0" y="0" width="600" height="18"
+                               style="GrandTotalStyle">
+                    <printWhenExpression><![CDATA[$F{consolidatedTotal}]]></printWhenExpression>
+                </reportElement>
+                <textFieldExpression><![CDATA["CONSOLIDATED TOTAL"]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="600" y="0" width="200" height="18"
+                               style="GrandTotalStyle">
+                    <printWhenExpression><![CDATA[$F{consolidatedTotal}]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{balance}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </detail>
+
+</jasperReport>
