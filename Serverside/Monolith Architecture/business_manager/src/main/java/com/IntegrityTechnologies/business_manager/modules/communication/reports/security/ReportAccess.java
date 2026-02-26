@@ -183,11 +183,22 @@ public enum ReportAccess {
     }
 
     public static ReportAccess fromReportName(String reportName) {
+
         for (ReportAccess access : values()) {
             if (access.reportName.equals(reportName)) {
                 return access;
             }
         }
+
+        if (reportName.endsWith("_multi_branch")) {
+            String base = reportName.replace("_multi_branch", "");
+            for (ReportAccess access : values()) {
+                if (access.reportName.equals(base)) {
+                    return access;
+                }
+            }
+        }
+
         throw new IllegalArgumentException(
                 "No access rule defined for report: " + reportName
         );

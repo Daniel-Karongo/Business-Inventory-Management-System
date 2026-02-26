@@ -8,12 +8,13 @@ export class ReportsService {
 
   private base = environment.apiUrl + '/reports';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
-  generate(reportName: string, params: any): Observable<Blob> {
+  generate(reportName: string, parameters: any, format: string) {
+
     return this.http.post(
       `${this.base}/generate`,
-      { reportName, parameters: params },
+      { reportName, parameters, format },
       { responseType: 'blob' }
     );
   }

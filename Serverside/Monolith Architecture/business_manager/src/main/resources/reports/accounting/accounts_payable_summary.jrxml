@@ -12,6 +12,7 @@
               rightMargin="20"
               topMargin="30"
               bottomMargin="30">
+    <property name="net.sf.jasperreports.when.no.data.type" value="NoDataSection"/>
 
     <!-- ===================== STYLES ===================== -->
 
@@ -155,5 +156,15 @@
 
         </band>
     </summary>
+
+    <noData>
+        <band height="40">
+            <staticText>
+                <reportElement x="0" y="10" width="802" height="20"/>
+                <textElement textAlignment="Center"/>
+                <text><![CDATA[No supplier balances found for selected period.]]></text>
+            </staticText>
+        </band>
+    </noData>
 
 </jasperReport>

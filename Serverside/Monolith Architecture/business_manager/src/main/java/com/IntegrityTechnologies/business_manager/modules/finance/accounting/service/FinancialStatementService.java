@@ -1,16 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.service;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.Account;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.LedgerEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
-import java.util.function.Supplier;
-
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -22,114 +15,14 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountingSignRules.*;
+import static com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountingSignRules.CREDIT_NORMAL;
+import static com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountingSignRules.DEBIT_NORMAL;
 
 @Service
 @RequiredArgsConstructor
 public class FinancialStatementService {
 
     private final LedgerEntryRepository ledgerRepo;
-    private final BranchRepository branchRepository;
-
-    /* ============================================================
-       UNIVERSALS
-    ============================================================ */
-
-    public List<?> getTrialBalanceUniversal(
-            LocalDate from,
-            LocalDate to,
-            UUID branchId,
-            String mode
-    ) {
-        return switch (mode) {
-            case "MULTI_BRANCH" -> getTrialBalanceMultiBranch(from, to);
-            case "CONSOLIDATED" -> getTrialBalance(from, to, null);
-            default -> getTrialBalance(from, to, branchId);
-        };
-    }
-
-    public List<?> getGeneralLedgerUniversal(
-            UUID accountId,
-            LocalDate from,
-            LocalDate to,
-            UUID branchId,
-            String mode
-    ) {
-        return switch (mode) {
-            case "MULTI_BRANCH" -> getGeneralLedgerMultiBranch(accountId, from, to);
-            case "CONSOLIDATED" -> getGeneralLedger(accountId, from, to, null);
-            default -> getGeneralLedger(accountId, from, to, branchId);
-        };
-    }
-
-    public List<?> getProfitAndLossUniversal(
-            LocalDate from,
-            LocalDate to,
-            UUID branchId,
-            String mode
-    ) {
-        return switch (mode) {
-            case "MULTI_BRANCH" -> getProfitAndLossMultiBranch(from, to);
-            case "CONSOLIDATED" -> getProfitAndLoss(from, to, null);
-            default -> getProfitAndLoss(from, to, branchId);
-        };
-    }
-
-    public List<?> getBalanceSheetUniversal(
-            LocalDate asAt,
-            UUID branchId,
-            String mode
-    ) {
-        return switch (mode) {
-            case "MULTI_BRANCH" -> getBalanceSheetMultiBranch(asAt);
-            case "CONSOLIDATED" -> getBalanceSheet(asAt, null);
-            default -> getBalanceSheet(asAt, branchId);
-        };
-    }
-
-    public List<?> getCashFlowUniversal(
-            LocalDate from,
-            LocalDate to,
-            UUID branchId,
-            String mode
-    ) {
-        return switch (mode) {
-            case "MULTI_BRANCH" -> getCashFlowMultiBranch(from, to);
-            case "CONSOLIDATED" -> getCashFlow(from, to, null);
-            default -> getCashFlow(from, to, branchId);
-        };
-    }
-
-    public List<?> getAccountsReceivableUniversal(
-            LocalDate from,
-            LocalDate to,
-            UUID branchId,
-            String mode
-    ) {
-        return switch (mode) {
-            case "MULTI_BRANCH" -> getAccountsReceivableMultiBranch(from, to);
-            case "CONSOLIDATED" -> getAccountsReceivable(from, to, null);
-            default -> getAccountsReceivable(from, to, branchId);
-        };
-    }
-
-    public List<?> getAccountsPayableUniversal(
-            LocalDate from,
-            LocalDate to,
-            UUID branchId,
-            String mode
-    ) {
-        return switch (mode) {
-            case "MULTI_BRANCH" -> getAccountsPayableMultiBranch(from, to);
-            case "CONSOLIDATED" -> getAccountsPayable(from, to, null);
-            default -> getAccountsPayable(from, to, branchId);
-        };
-    }
-
-
-    /* ============================================================
-       INDIVIDUAL
-    ============================================================ */
 
     /* ============================================================
        TRIAL BALANCE (Enterprise)

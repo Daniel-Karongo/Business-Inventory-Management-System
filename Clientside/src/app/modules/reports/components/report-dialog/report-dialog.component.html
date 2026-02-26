@@ -11,6 +11,10 @@
     <div class="section-label">Report parameters</div>
 
     <div class="form-grid">
+      <!-- CONSOLIDATED OPTION -->
+      <mat-checkbox [(ngModel)]="consolidated">
+        Consolidated (All Branches)
+      </mat-checkbox>
 
       <ng-container *ngFor="let p of orderedParams">
 
@@ -23,7 +27,7 @@
         </mat-form-field>
 
         <!-- BRANCH -->
-        <mat-form-field *ngIf="p.type === 'BRANCH'" appearance="fill">
+        <mat-form-field *ngIf="p.type === 'BRANCH' && !consolidated" appearance="fill">
           <mat-label>{{ labelFor(p) }}</mat-label>
           <mat-select [(ngModel)]="params[p.name]">
             <mat-option *ngFor="let b of branches" [value]="b.id">
@@ -117,8 +121,18 @@
 
   <div class="footer-actions">
     <button mat-stroked-button mat-dialog-close>Cancel</button>
-    <button mat-flat-button color="primary" [disabled]="loading || isMissingRequired()" (click)="generate()">
-      Generate report
+    <button mat-flat-button color="primary" [disabled]="loading || isMissingRequired()" (click)="generate()"
+      class="generate-btn">
+
+      <ng-container *ngIf="!loading">
+        Generate report
+      </ng-container>
+
+      <ng-container *ngIf="loading">
+        <mat-progress-spinner diameter="18" mode="indeterminate" strokeWidth="3">
+        </mat-progress-spinner>
+      </ng-container>
+
     </button>
   </div>
 </mat-dialog-actions>

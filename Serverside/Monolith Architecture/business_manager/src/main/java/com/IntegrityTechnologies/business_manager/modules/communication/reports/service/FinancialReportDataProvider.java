@@ -6,6 +6,7 @@ import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -16,16 +17,13 @@ public class FinancialReportDataProvider {
     private final FinancialStatementService financialStatementService;
 
     public boolean supports(String reportName) {
-        return switch (reportName) {
-            case "trial_balance",
-                    "general_ledger",
-                    "profit_and_loss",
-                    "balance_sheet",
-                    "cash_flow_statement",
-                    "accounts_receivable_summary",
-                    "accounts_payable_summary" -> true;
-            default -> false;
-        };
+        return reportName.startsWith("trial_balance")
+                || reportName.startsWith("general_ledger")
+                || reportName.startsWith("profit_and_loss")
+                || reportName.startsWith("balance_sheet")
+                || reportName.startsWith("cash_flow_statement")
+                || reportName.startsWith("accounts_receivable_summary")
+                || reportName.startsWith("accounts_payable_summary");
     }
 
     public JRBeanCollectionDataSource provide(
@@ -33,75 +31,81 @@ public class FinancialReportDataProvider {
             Map<String, Object> params
     ) {
 
-        String mode = params.getOrDefault("REPORT_MODE", "SINGLE").toString();
+        boolean branchProvided =
+                params.containsKey("BRANCH_ID")
+                        && params.get("BRANCH_ID") != null;
 
-        UUID branchId = null;
-        if (params.containsKey("BRANCH_ID") && params.get("BRANCH_ID") != null) {
-            branchId = UUID.fromString(params.get("BRANCH_ID").toString());
-        }
-
-        LocalDate from = params.containsKey("FROM_DATE")
+        LocalDate from = params.get("FROM_DATE") != null
                 ? LocalDate.parse(params.get("FROM_DATE").toString())
                 : null;
 
-        LocalDate to = params.containsKey("TO_DATE")
+        LocalDate to = params.get("TO_DATE") != null
                 ? LocalDate.parse(params.get("TO_DATE").toString())
                 : null;
 
-        return switch (reportName) {
+        LocalDate asAt = params.get("AS_AT_DATE") != null
+                ? LocalDate.parse(params.get("AS_AT_DATE").toString())
+                : null;
 
-            case "trial_balance" ->
-                    new JRBeanCollectionDataSource(
-                            financialStatementService
-                                    .getTrialBalanceUniversal(from, to, branchId, mode)
-                    );
+        UUID branchId = branchProvided
+                ? UUID.fromString(params.get("BRANCH_ID").toString())
+                : null;
 
-            case "general_ledger" ->
-                    new JRBeanCollectionDataSource(
-                            financialStatementService
-                                    .getGeneralLedgerUniversal(
-                                            UUID.fromString(params.get("ACCOUNT_ID").toString()),
-                                            from,
-                                            to,
-                                            branchId,
-                                            mode)
-                    );
+        UUID accountId = params.get("ACCOUNT_ID") != null
+                ? UUID.fromString(params.get("ACCOUNT_ID").toString())
+                : null;
 
-            case "profit_and_loss" ->
-                    new JRBeanCollectionDataSource(
-                            financialStatementService
-                                    .getProfitAndLossUniversal(from, to, branchId, mode)
-                    );
+        List<?> data;
 
-            case "balance_sheet" -> {
-                LocalDate asAt =
-                        LocalDate.parse(params.get("AS_AT_DATE").toString());
+        switch (reportName) {
 
-                yield new JRBeanCollectionDataSource(
-                        financialStatementService
-                                .getBalanceSheetUniversal(asAt, branchId, mode)
-                );
+            case "trial_balance" -> {
+                data = branchProvided
+                        ? financialStatementService.getTrialBalance(from, to, branchId)
+                        : financialStatementService.getTrialBalanceMultiBranch(from, to);
             }
 
-            case "cash_flow_statement" ->
-                    new JRBeanCollectionDataSource(
-                            financialStatementService
-                                    .getCashFlowUniversal(from, to, branchId, mode)
-                    );
+            case "general_ledger" -> {
+                data = branchProvided
+                        ? financialStatementService.getGeneralLedger(accountId, from, to, branchId)
+                        : financialStatementService.getGeneralLedgerMultiBranch(accountId, from, to);
+            }
 
-            case "accounts_receivable_summary" ->
-                    new JRBeanCollectionDataSource(
-                            financialStatementService
-                                    .getAccountsReceivableUniversal(from, to, branchId, mode)
-                    );
+            case "profit_and_loss" -> {
+                data = branchProvided
+                        ? financialStatementService.getProfitAndLoss(from, to, branchId)
+                        : financialStatementService.getProfitAndLossMultiBranch(from, to);
+            }
 
-            case "accounts_payable_summary" ->
-                    new JRBeanCollectionDataSource(
-                            financialStatementService
-                                    .getAccountsPayableUniversal(from, to, branchId, mode)
-                    );
+            case "balance_sheet" -> {
+                data = branchProvided
+                        ? financialStatementService.getBalanceSheet(asAt, branchId)
+                        : financialStatementService.getBalanceSheetMultiBranch(asAt);
+            }
 
-            default -> throw new IllegalArgumentException("Unsupported financial report");
-        };
+            case "cash_flow_statement" -> {
+                data = branchProvided
+                        ? financialStatementService.getCashFlow(from, to, branchId)
+                        : financialStatementService.getCashFlowMultiBranch(from, to);
+            }
+
+            case "accounts_receivable_summary" -> {
+                data = branchProvided
+                        ? financialStatementService.getAccountsReceivable(from, to, branchId)
+                        : financialStatementService.getAccountsReceivableMultiBranch(from, to);
+            }
+
+            case "accounts_payable_summary" -> {
+                data = branchProvided
+                        ? financialStatementService.getAccountsPayable(from, to, branchId)
+                        : financialStatementService.getAccountsPayableMultiBranch(from, to);
+            }
+
+            default -> throw new IllegalArgumentException(
+                    "Unsupported financial report: " + reportName
+            );
+        }
+
+        return new JRBeanCollectionDataSource(data);
     }
 }

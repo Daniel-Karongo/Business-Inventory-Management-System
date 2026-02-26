@@ -17,81 +17,94 @@ import net.sf.jasperreports.engine.export.ooxml.JRXlsxExporter;
 import net.sf.jasperreports.export.SimpleExporterInput;
 import net.sf.jasperreports.export.SimpleOutputStreamExporterOutput;
 import net.sf.jasperreports.export.SimpleWriterExporterOutput;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Value;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-
 
 import javax.sql.DataSource;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.Connection;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class JasperReportingService implements ReportingService {
 
     private final DataSource dataSource;
+    private final FinancialReportDataProvider financialReportDataProvider;
 
     @Value("${app.company.name:Company}")
     private String companyName;
 
     @Value("${app.company.logo-path:}")
     private String logoPath;
-    private final FinancialReportDataProvider financialReportDataProvider;
 
     @Override
     public void generate(ReportRequest request, OutputStream out) throws Exception {
 
-        // 1. Resolve report definition
-        ReportDefinition def =
-                ReportRegistry.get(request.getReportName());
+        if (request.getReportName() == null) {
+            throw new IllegalArgumentException("Report name is required");
+        }
 
-        if (def == null) {
+        String baseReportKey = request.getReportName();
+
+        Map<String, Object> params =
+                request.getParameters() != null
+                        ? new HashMap<>(request.getParameters())
+                        : new HashMap<>();
+
+        boolean branchProvided =
+                params.containsKey("BRANCH_ID")
+                        && params.get("BRANCH_ID") != null;
+
+        ReportDefinition baseDef = ReportRegistry.get(baseReportKey);
+
+        if (baseDef == null) {
             throw new IllegalArgumentException(
-                    "Unknown report: " + request.getReportName()
+                    "Unknown report: " + baseReportKey
             );
         }
 
-        // 2. Enforce access control
+        // 🔥 Determine correct JRXML path dynamically
+        String jrxmlPath = baseDef.jrxmlPath();
+
+        if (!branchProvided) {
+            String multiPath = jrxmlPath.replace(".jrxml", "_multi_branch.jrxml");
+            ClassPathResource multiResource =
+                    new ClassPathResource(multiPath);
+
+            if (multiResource.exists()) {
+                jrxmlPath = multiPath;
+            }
+        }
+
+        // 🔐 Access check (always base report)
         ReportAccess access =
-                ReportAccess.fromReportName(request.getReportName());
+                ReportAccess.fromReportName(baseReportKey);
 
         if (!access.canAccess(SecurityUtils.currentRole())) {
             throw new SecurityException(
-                    "Access denied for report: " + request.getReportName()
+                    "Access denied for report: " + baseReportKey
             );
         }
 
-        // 3. Resolve parameters
-        Map<String, Object> params = new HashMap<>();
-
-        if (request.getParameters() != null) {
-            params.putAll(request.getParameters());
-        }
-
-        // ===== System parameters =====
         params.put("GENERATED_BY", SecurityUtils.currentUsername());
-        params.put("GENERATED_AT", LocalDateTime.now());
-        params.put("REPORT_NAME", request.getReportName());
+        params.put("GENERATED_AT", new java.util.Date());
         params.put("COMPANY_NAME", companyName);
 
-        if (logoPath != null && !logoPath.isBlank()) {
-            params.put(
-                    "LOGO_PATH",
-                    new ClassPathResource(logoPath).getInputStream()
-            );
-        }
+        enforceDateLimits(baseReportKey, params);
 
-        // 4. Validate required parameters
-        for (String required : def.requiredParams()) {
+        // 🔥 Smart parameter validation
+        for (String required : baseDef.requiredParams()) {
+
+            // Skip BRANCH_ID if consolidated
+            if (!branchProvided && required.equals("BRANCH_ID")) {
+                continue;
+            }
+
             if (!params.containsKey(required)) {
                 throw new IllegalArgumentException(
                         "Missing required parameter: " + required
@@ -99,25 +112,19 @@ public class JasperReportingService implements ReportingService {
             }
         }
 
-        enforceDateLimits(request.getReportName(), params);
-
-        // 5. Generate report
-        try (
-                InputStream jrxml =
-                        new ClassPathResource(def.jrxmlPath()).getInputStream();
-                Connection conn = dataSource.getConnection()
-        ) {
+        try (InputStream jrxml =
+                     new ClassPathResource(jrxmlPath).getInputStream()) {
 
             JasperReport report =
                     JasperCompileManager.compileReport(jrxml);
 
             JasperPrint jp;
 
-            if (financialReportDataProvider.supports(request.getReportName())) {
+            if (financialReportDataProvider.supports(baseReportKey)) {
 
                 JRBeanCollectionDataSource ds =
                         financialReportDataProvider.provide(
-                                request.getReportName(),
+                                baseReportKey,
                                 params
                         );
 
@@ -125,7 +132,9 @@ public class JasperReportingService implements ReportingService {
 
             } else {
 
-                jp = JasperFillManager.fillReport(report, params, conn);
+                try (Connection conn = dataSource.getConnection()) {
+                    jp = JasperFillManager.fillReport(report, params, conn);
+                }
             }
 
             ReportFormat format =
@@ -176,7 +185,6 @@ public class JasperReportingService implements ReportingService {
                 JasperReport report =
                         JasperCompileManager.compileReport(jrxml);
 
-                // Dummy parameters (null-safe)
                 Map<String, Object> params = new HashMap<>();
                 for (String p : def.requiredParams()) {
                     params.put(p, null);
@@ -222,5 +230,4 @@ public class JasperReportingService implements ReportingService {
             }
         }
     }
-
 }

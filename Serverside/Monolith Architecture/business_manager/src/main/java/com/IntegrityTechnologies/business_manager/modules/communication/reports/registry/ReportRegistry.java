@@ -16,18 +16,7 @@ public class ReportRegistry {
                                 "Balances by account over a period",
                                 "Accounting",
                                 "reports/accounting/trial_balance.jrxml",
-                                Set.of("FROM_DATE", "TO_DATE")
-                        )
-                ),
-
-                Map.entry("trial_balance_multi_branch",
-                        new ReportDefinition(
-                                "trial_balance_multi_branch",
-                                "Trial Balance (Multi-Branch)",
-                                "Trial balance grouped by branch with consolidated totals",
-                                "Accounting",
-                                "reports/accounting/trial_balance_multi_branch.jrxml",
-                                Set.of("FROM_DATE", "TO_DATE")
+                                Set.of("FROM_DATE", "TO_DATE", "BRANCH_ID")
                         )
                 ),
 
@@ -38,18 +27,7 @@ public class ReportRegistry {
                                 "Detailed account ledger",
                                 "Accounting",
                                 "reports/accounting/general_ledger.jrxml",
-                                Set.of("FROM_DATE", "TO_DATE", "ACCOUNT_ID")
-                        )
-                ),
-
-                Map.entry("general_ledger_multi_branch",
-                        new ReportDefinition(
-                                "general_ledger_multi_branch",
-                                "General Ledger (Multi-Branch)",
-                                "Detailed account ledger grouped by branch",
-                                "Accounting",
-                                "reports/accounting/general_ledger_multi_branch.jrxml",
-                                Set.of("FROM_DATE", "TO_DATE", "ACCOUNT_ID")
+                                Set.of("FROM_DATE", "TO_DATE", "ACCOUNT_ID", "BRANCH_ID")
                         )
                 ),
 
@@ -60,18 +38,7 @@ public class ReportRegistry {
                                 "Income versus expenses",
                                 "Accounting",
                                 "reports/accounting/profit_and_loss.jrxml",
-                                Set.of("FROM_DATE", "TO_DATE")
-                        )
-                ),
-
-                Map.entry("profit_and_loss_multi_branch",
-                        new ReportDefinition(
-                                "profit_and_loss_multi_branch",
-                                "Profit & Loss (Multi-Branch)",
-                                "Income versus expenses grouped by branch",
-                                "Accounting",
-                                "reports/accounting/profit_and_loss_multi_branch.jrxml",
-                                Set.of("FROM_DATE", "TO_DATE")
+                                Set.of("FROM_DATE", "TO_DATE", "BRANCH_ID")
                         )
                 ),
 
@@ -82,18 +49,7 @@ public class ReportRegistry {
                                 "Assets, liabilities and equity snapshot",
                                 "Accounting",
                                 "reports/accounting/balance_sheet.jrxml",
-                                Set.of("AS_AT_DATE")
-                        )
-                ),
-
-                Map.entry("balance_sheet_multi_branch",
-                        new ReportDefinition(
-                                "balance_sheet_multi_branch",
-                                "Balance Sheet (Multi-Branch)",
-                                "Balance sheet grouped by branch",
-                                "Accounting",
-                                "reports/accounting/balance_sheet_multi_branch.jrxml",
-                                Set.of("AS_AT_DATE")
+                                Set.of("AS_AT_DATE", "BRANCH_ID")
                         )
                 ),
 
@@ -104,18 +60,7 @@ public class ReportRegistry {
                                 "Cash inflows and outflows",
                                 "Accounting",
                                 "reports/accounting/cash_flow_statement.jrxml",
-                                Set.of("FROM_DATE", "TO_DATE")
-                        )
-                ),
-
-                Map.entry("cash_flow_statement_multi_branch",
-                        new ReportDefinition(
-                                "cash_flow_statement_multi_branch",
-                                "Cash Flow Statement (Multi-Branch)",
-                                "Cash inflows and outflows grouped by branch",
-                                "Accounting",
-                                "reports/accounting/cash_flow_statement_multi_branch.jrxml",
-                                Set.of("FROM_DATE", "TO_DATE")
+                                Set.of("FROM_DATE", "TO_DATE", "BRANCH_ID")
                         )
                 ),
 
@@ -126,18 +71,7 @@ public class ReportRegistry {
                                 "Outstanding customer balances",
                                 "Accounting",
                                 "reports/accounting/accounts_receivable_summary.jrxml",
-                                Set.of("FROM_DATE", "TO_DATE")
-                        )
-                ),
-
-                Map.entry("accounts_receivable_summary_multi_branch",
-                        new ReportDefinition(
-                                "accounts_receivable_summary_multi_branch",
-                                "Accounts Receivable (Multi-Branch)",
-                                "Outstanding customer balances grouped by branch",
-                                "Accounting",
-                                "reports/accounting/accounts_receivable_summary_multi_branch.jrxml",
-                                Set.of("FROM_DATE", "TO_DATE")
+                                Set.of("FROM_DATE", "TO_DATE", "BRANCH_ID")
                         )
                 ),
 
@@ -148,18 +82,7 @@ public class ReportRegistry {
                                 "Outstanding supplier balances",
                                 "Accounting",
                                 "reports/accounting/accounts_payable_summary.jrxml",
-                                Set.of()
-                        )
-                ),
-
-                Map.entry("accounts_payable_summary_multi_branch",
-                        new ReportDefinition(
-                                "accounts_payable_summary_multi_branch",
-                                "Accounts Payable (Multi-Branch)",
-                                "Outstanding supplier balances grouped by branch",
-                                "Accounting",
-                                "reports/accounting/accounts_payable_summary_multi_branch.jrxml",
-                                Set.of()
+                                Set.of("FROM_DATE", "TO_DATE", "BRANCH_ID")
                         )
                 ),
 

@@ -11,17 +11,41 @@
   <!-- CONTENT -->
   <div class="page-content">
 
-    <ng-container *ngFor="let group of (groupedReports | keyvalue)">
+    <!-- SEARCH -->
+    <div class="reports-search">
+      <mat-form-field appearance="fill" class="full-width-search">
+        <mat-label>Search report</mat-label>
+        <input matInput [(ngModel)]="searchTerm" placeholder="Search by title or description" />
+      </mat-form-field>
+    </div>
+
+    <!-- MOST USED -->
+    <div *ngIf="showMostUsed" class="most-used-section">
+
+      <h3 class="category-title">Most Frequently Used</h3>
+
+      <div class="reports-grid">
+        <div class="report-tile" *ngFor="let r of mostUsed" (click)="open(r)">
+          <div class="tile-icon">
+            <mat-icon>star</mat-icon>
+          </div>
+
+          <div class="tile-content">
+            <div class="tile-title">{{ r.title }}</div>
+            <div class="tile-desc">{{ r.description }}</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <ng-container *ngFor="let group of (filteredGroups | keyvalue)">
 
       <h3 class="category-title">{{ group.key }}</h3>
 
       <div class="reports-grid">
 
-        <div
-          class="report-tile"
-          *ngFor="let r of group.value"
-          (click)="open(r)"
-        >
+        <div class="report-tile" *ngFor="let r of group.value" (click)="open(r)">
           <div class="tile-icon">
             <mat-icon>assessment</mat-icon>
           </div>

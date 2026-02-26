@@ -43,6 +43,13 @@ mat-form-field {
   width: 100%;
 }
 
+.generate-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 140px;
+}
+
 /* ===== Dialog footer ===== */
 .dialog-footer {
   display: flex;

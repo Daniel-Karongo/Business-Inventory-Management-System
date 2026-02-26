@@ -22,6 +22,9 @@ import { CategoryService } from '../../../categories/services/category.service';
 import { ProductVariantService } from '../../../products/variant/services/product-variant.service';
 import { MatDialog } from '@angular/material/dialog';
 import { ReportErrorDialogComponent } from '../report-error-dialog/report-error-dialog.component';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 
 @Component({
@@ -36,7 +39,9 @@ import { ReportErrorDialogComponent } from '../report-error-dialog/report-error-
     MatSelectModule,
     MatButtonModule,
     MatDatepickerModule,
-    MatNativeDateModule
+    MatNativeDateModule,
+    MatCheckboxModule,
+    MatProgressSpinnerModule
   ]
 })
 export class ReportDialogComponent implements OnInit {
@@ -58,6 +63,8 @@ export class ReportDialogComponent implements OnInit {
   private DEFAULT_FROM = new Date(2025, 0, 1); // 01/01/2025
   private DEFAULT_TO = new Date(2027, 0, 1); // 01/01/2027
 
+  consolidated = false;
+
   constructor(
     @Inject(MAT_DIALOG_DATA) public report: ReportMetadata,
 
@@ -72,7 +79,8 @@ export class ReportDialogComponent implements OnInit {
     private reports: ReportsService,
     private auth: AuthService,
     private accountsSvc: AccountsService,
-    private branchesSvc: BranchService
+    private branchesSvc: BranchService,
+    private snack: MatSnackBar
   ) { }
 
   ngOnInit(): void {
@@ -186,20 +194,30 @@ export class ReportDialogComponent implements OnInit {
   generate() {
     this.loading = true;
 
-    const payload: any = { format: this.format };
+    const parameters: any = {};
 
     for (const p of this.orderedParams) {
       if (p.type === 'DATE') {
-        payload[p.name] = this.toIsoSafe(this.params[p.name]);
+        parameters[p.name] = this.toIsoSafe(this.params[p.name]);
       } else {
-        payload[p.name] = this.params[p.name];
+        parameters[p.name] = this.params[p.name];
       }
     }
 
-    this.reports.generate(this.report.key, payload).subscribe({
+    // 🔥 IMPORTANT: Remove branch when consolidated
+    if (this.consolidated) {
+      delete parameters['BRANCH_ID'];
+    }
+
+    const finalReportKey = this.report.key;
+
+    this.reports.generate(
+      finalReportKey,
+      parameters,
+      this.format
+    ).subscribe({
       next: blob => {
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
+        this.handleDownload(blob, finalReportKey);
         this.loading = false;
       },
       error: async err => {
@@ -210,8 +228,6 @@ export class ReportDialogComponent implements OnInit {
         if (err?.error instanceof Blob) {
           const text = await err.error.text();
           message = text || message;
-        } else if (typeof err?.error === 'string') {
-          message = err.error;
         }
 
         this.dialog.open(ReportErrorDialogComponent, {
@@ -220,5 +236,28 @@ export class ReportDialogComponent implements OnInit {
         });
       }
     });
+  }
+
+  private handleDownload(blob: Blob, reportKey: string) {
+
+    const extension =
+      this.format === 'PDF' ? 'pdf' :
+        this.format === 'XLSX' ? 'xlsx' :
+          'csv';
+
+    const fileName = `${reportKey}_${new Date().getTime()}.${extension}`;
+
+    if (this.format === 'PDF') {
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      return;
+    }
+
+    // Excel / CSV
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(link.href);
   }
 }

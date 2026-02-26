@@ -13,6 +13,8 @@
               topMargin="30"
               bottomMargin="30">
 
+    <property name="net.sf.jasperreports.when.no.data.type" value="AllSectionsNoDetail"/>
+
     <!-- ================= STYLES ================= -->
 
     <style name="TitleStyle" fontSize="18" isBold="true"/>

@@ -13,6 +13,8 @@
               topMargin="30"
               bottomMargin="30">
 
+    <property name="net.sf.jasperreports.when.no.data.type" value="NoDataSection"/>
+
     <!-- STYLES -->
 
     <style name="TitleStyle" fontSize="18" isBold="true"/>
@@ -136,5 +138,15 @@
 
         </band>
     </detail>
+
+    <noData>
+        <band height="40">
+            <staticText>
+                <reportElement x="0" y="10" width="802" height="20"/>
+                <textElement textAlignment="Center"/>
+                <text><![CDATA[No cash movement found for selected period.]]></text>
+            </staticText>
+        </band>
+    </noData>
 
 </jasperReport>
