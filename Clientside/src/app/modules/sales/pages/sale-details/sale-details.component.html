@@ -77,37 +77,67 @@
 
     <!-- ITEMS -->
     <div class="bg-[var(--surface)] rounded shadow">
-        <table mat-table [dataSource]="sale.items">
+        <table mat-table [dataSource]="sale.items" multiTemplateDataRows>
 
+            <!-- PRODUCT -->
             <ng-container matColumnDef="product">
                 <th mat-header-cell *matHeaderCellDef>Product</th>
-                <td mat-cell *matCellDef="let i">{{ i.productName }}</td>
+                <td mat-cell *matCellDef="let i">
+                    <div class="flex flex-col">
+                        <span>{{ i.productName }}</span>
+
+                        <!-- 🔥 Batch Breakdown -->
+                        <div *ngIf="i.batchConsumptions?.length" class="text-xs text-[var(--text-secondary)] mt-1">
+                            <div *ngFor="let bc of i.batchConsumptions">
+                                Batch {{ bc.batchId | slice:0:6 }}
+                                — {{ bc.quantity }}
+                                &#64; {{ bc.unitCost | currency:'KES ' }}
+                            </div>
+                        </div>
+
+                    </div>
+                </td>
             </ng-container>
 
+            <!-- BRANCH -->
             <ng-container matColumnDef="branch">
                 <th mat-header-cell *matHeaderCellDef>Branch</th>
-                <td mat-cell *matCellDef="let i">{{ i.branchId | slice:0:8 }}</td>
+                <td mat-cell *matCellDef="let i">
+                    {{ i.branchId | slice:0:8 }}
+                </td>
             </ng-container>
 
+            <!-- QTY -->
             <ng-container matColumnDef="qty">
                 <th mat-header-cell *matHeaderCellDef>Qty</th>
-                <td mat-cell *matCellDef="let i">{{ i.quantity }}</td>
+                <td mat-cell *matCellDef="let i">
+                    {{ i.quantity }}
+                </td>
             </ng-container>
 
+            <!-- PRICE -->
             <ng-container matColumnDef="price">
                 <th mat-header-cell *matHeaderCellDef>Unit</th>
-                <td mat-cell *matCellDef="let i">{{ i.unitPrice | currency:'KES ' }}</td>
+                <td mat-cell *matCellDef="let i">
+                    {{ i.unitPrice | currency:'KES ' }}
+                </td>
             </ng-container>
 
+            <!-- TOTAL -->
             <ng-container matColumnDef="total">
                 <th mat-header-cell *matHeaderCellDef>Total</th>
-                <td mat-cell *matCellDef="let i">{{ i.lineTotal | currency:'KES ' }}</td>
+                <td mat-cell *matCellDef="let i">
+                    {{ i.lineTotal | currency:'KES ' }}
+                </td>
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="lineColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: lineColumns;"></tr>
+
         </table>
     </div>
+
+
 
     <!-- PAYMENTS -->
     <div class="bg-[var(--surface)] rounded shadow p-4">
@@ -124,7 +154,7 @@
 
             <ng-container matColumnDef="date">
                 <th mat-header-cell *matHeaderCellDef>Date</th>
-                <td mat-cell *matCellDef="let p">{{ p.timestamp  | date:'dd/MM/yyyy hh:mm a' }}</td>
+                <td mat-cell *matCellDef="let p">{{ p.timestamp | date:'dd/MM/yyyy hh:mm a' }}</td>
             </ng-container>
 
             <ng-container matColumnDef="method">

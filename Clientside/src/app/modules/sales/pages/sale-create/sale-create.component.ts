@@ -1,38 +1,43 @@
-import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 
+import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 
+import { HttpClient } from '@angular/common/http';
+import { ElementRef, ViewChild } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { catchError, debounceTime, distinctUntilChanged, filter, of, switchMap } from 'rxjs';
+import { environment } from '../../../../../environments/environment';
+import { AuthService } from '../../../auth/services/auth.service';
+import { BranchService } from '../../../branches/services/branch.service';
+import { CustomerService } from '../../../customers/services/customer.service';
+import { InventoryService } from '../../../inventory/services/inventory.service';
+import { Product } from '../../../products/parent/models/product.model';
 import { ProductService } from '../../../products/parent/services/product.service';
 import { ProductVariantService } from '../../../products/variant/services/product-variant.service';
-import { BranchService } from '../../../branches/services/branch.service';
-import { SalesService } from '../../services/sales.service';
-import { InventoryService } from '../../../inventory/services/inventory.service';
-import { CustomerService } from '../../../customers/services/customer.service';
-import { catchError, debounceTime, distinctUntilChanged, filter, of, switchMap } from 'rxjs';
-import { AuthService } from '../../../auth/services/auth.service';
-import { ViewChild, ElementRef } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../../../environments/environment';
-import { MatDialog } from '@angular/material/dialog';
+import { BatchAllocationDialogComponent } from '../../dialogs/batch-allocation-dialog/batch-allocation-dialog.component';
 import { ProductSelectorDialogComponent } from '../../dialogs/product-selector-dialog/product-selector-dialog.component';
-import { Product } from '../../../products/parent/models/product.model';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { SalesService } from '../../services/sales.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 type SaleItemForm = FormGroup<{
   productId: FormControl<string | null>;
-  productName: FormControl<string | null>; // ✅ ADD
+  productName: FormControl<string | null>;
   productVariantId: FormControl<string | null>;
   branchId: FormControl<string | null>;
   quantity: FormControl<number>;
   unitPrice: FormControl<number | null>;
+  batchSelections: FormControl<
+    { batchId: string; quantity: number }[] | null
+  >;
 }>;
 
 @Component({
@@ -75,9 +80,14 @@ export class SaleCreateComponent implements OnInit {
 
   displayedColumns = ['product', 'branch', 'qty', 'price', 'total', 'remove'];
   variantsMap: Record<number, any[] | undefined> = {};
-  stockMap: Record<number, number | undefined> = {};
+  stockMap: Record<number, {
+    available: number;
+    batchCount?: number;
+    oldestBatchDate?: string | null;
+  } | undefined> = {};
 
   defaultBranchId: string | null = null;
+  costPreviewMap: Record<number, number> = {};
 
   constructor(
     private fb: FormBuilder,
@@ -91,7 +101,8 @@ export class SaleCreateComponent implements OnInit {
     private router: Router,
     private authService: AuthService,
     private http: HttpClient,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar,
   ) { }
 
   ngOnInit(): void {
@@ -227,6 +238,7 @@ export class SaleCreateComponent implements OnInit {
       branchId: string;
       quantity: number;
       unitPrice: number;
+      batchSelections: { batchId: string; quantity: number }[] | null;
     }>
   ): SaleItemForm {
     return this.fb.group({
@@ -236,9 +248,15 @@ export class SaleCreateComponent implements OnInit {
       branchId: this.fb.control<string | null>(init?.branchId ?? this.defaultBranchId, Validators.required),
       quantity: this.fb.control<number>(init?.quantity ?? 1, {
         nonNullable: true,
-        validators: [Validators.required, Validators.min(1)]
+        validators: [
+          Validators.required,
+          Validators.min(1)
+        ]
       }),
-      unitPrice: this.fb.control<number | null>(init?.unitPrice ?? null)
+      unitPrice: this.fb.control<number | null>(init?.unitPrice ?? null),
+      batchSelections: this.fb.control<
+        { batchId: string; quantity: number }[] | null
+      >(null)
     });
   }
 
@@ -288,7 +306,11 @@ export class SaleCreateComponent implements OnInit {
         acc[idx] = v;
         return acc;
       },
-      {} as Record<number, number | undefined>
+      {} as Record<number, {
+        available: number;
+        batchCount?: number;
+        oldestBatchDate?: string | null;
+      } | undefined>
     );
   }
 
@@ -307,7 +329,11 @@ export class SaleCreateComponent implements OnInit {
       payload
     ).subscribe({
       next: res => this.applyScannedVariant(res),
-      error: () => alert('Invalid barcode / SKU')
+      error: () => this.snackBar.open(
+        'Invalid barcode or SKU.',
+        'Close',
+        { duration: 3000 }
+      )
     });
 
     this.barcodeCtrl.setValue('');
@@ -378,7 +404,11 @@ export class SaleCreateComponent implements OnInit {
       );
 
       if (branchId) {
-        this.stockMap[emptyIndex] = res.quantityOnHand ?? 0;
+        this.stockMap[emptyIndex] = {
+          available: (res.quantityOnHand ?? 0) - (res.quantityReserved ?? 0),
+          batchCount: res.batchCount,
+          oldestBatchDate: res.oldestBatchDate
+        };
       }
 
       return;
@@ -404,7 +434,11 @@ export class SaleCreateComponent implements OnInit {
     );
 
     if (branchId) {
-      this.stockMap[i] = res.quantityOnHand ?? 0;
+      this.stockMap[i] = {
+        available: (res.quantityOnHand ?? 0) - (res.quantityReserved ?? 0),
+        batchCount: res.batchCount,
+        oldestBatchDate: res.oldestBatchDate
+      };
     }
   }
 
@@ -479,6 +513,54 @@ export class SaleCreateComponent implements OnInit {
     };
 
     scanLoop();
+  }
+
+  openBatchAllocation(i: number) {
+    const row = this.items.at(i).value;
+
+    if (!row.quantity || row.quantity <= 0) {
+      this.snackBar.open(
+        'Enter quantity before allocating batches.',
+        'Close',
+        { duration: 3000 }
+      );
+      return;
+    }
+
+    if (!row.productVariantId || !row.branchId) return;
+
+    this.dialog.open(BatchAllocationDialogComponent, {
+      width: '800px',
+      data: {
+        variantId: row.productVariantId,
+        branchId: row.branchId,
+        quantity: row.quantity,
+        existing: row.batchSelections
+      }
+    }).afterClosed().subscribe(result => {
+      if (!result) return;
+
+      this.items.at(i).patchValue({
+        batchSelections: result
+      });
+
+      const totalCost = result
+        .map((r: any) => r.quantity * r.unitCost)
+        .reduce((a: number, b: number) => a + b, 0);
+
+      const totalQty = result
+        .map((r: any) => r.quantity)
+        .reduce((a: number, b: number) => a + b, 0);
+
+      if (totalQty > 0) {
+        const weightedSellingPrice = totalCost / totalQty;
+
+        this.items.at(i).get('unitPrice')
+          ?.setValue(weightedSellingPrice);
+      }
+
+      this.costPreviewMap[i] = totalCost;
+    });
   }
 
   openProductSelector(rowIndex: number) {
@@ -624,16 +706,20 @@ export class SaleCreateComponent implements OnInit {
     const row = this.items.at(i);
     if (!row) return;
 
+    const branchId = row.get('branchId')?.value;
+    if (!branchId) return;
+
     const variant = this.variantsMap[i]?.find(v => v.id === variantId);
     if (!variant) return;
 
-    // ✅ auto-fill unit price
-    row.get('unitPrice')?.setValue(variant.minimumSellingPrice);
+    // 🔥 Always use FIFO selling price
+    this.inventoryService
+      .getFifoPrice(variantId, branchId)
+      .subscribe(price => {
+        row.get('unitPrice')?.setValue(price);
+      });
 
-    const branchId = row.get('branchId')?.value;
-    if (branchId) {
-      this.loadStock(i, variant.id, branchId);
-    }
+    this.loadStock(i, variantId, branchId);
   }
 
   loadStock(i: number, variantId: string, branchId: string) {
@@ -645,14 +731,18 @@ export class SaleCreateComponent implements OnInit {
         const available =
           stock.quantityOnHand - stock.quantityReserved;
 
-        this.stockMap[i] = available;
+        this.stockMap[i] = {
+          available,
+          batchCount: stock.batchCount,
+          oldestBatchDate: stock.oldestBatchDate
+        };
 
         const row = this.items.at(i);
         const qtyCtrl = row.get('quantity');
 
         if (!qtyCtrl) return;
 
-        if (qtyCtrl.value > available) {
+        if (qtyCtrl.value > (this.stockMap[i]?.available ?? 0)) {
           qtyCtrl.setErrors({ stockExceeded: true });
         } else {
           if (qtyCtrl.hasError('stockExceeded')) {
@@ -661,6 +751,14 @@ export class SaleCreateComponent implements OnInit {
             qtyCtrl.setErrors(Object.keys(errors).length ? errors : null);
           }
         }
+
+        qtyCtrl.valueChanges.subscribe(value => {
+          if (value > available) {
+            qtyCtrl.setErrors({ stockExceeded: true });
+          } else {
+            qtyCtrl.setErrors(null);
+          }
+        });
       });
   }
 
@@ -686,8 +784,44 @@ export class SaleCreateComponent implements OnInit {
     if (this.form.valid) this.submit();
   }
 
+  previewAllocation(i: number) {
+    const form = this.items.at(i);
+
+    const variantId = form.get('productVariantId')?.value;
+    const branchId = form.get('branchId')?.value;
+    const quantity = form.get('quantity')?.value ?? 0;
+    const selections = form.get('batchSelections')?.value ?? null;
+
+    if (!variantId || !branchId || quantity <= 0) {
+      return;
+    }
+
+    this.inventoryService.previewAllocation({
+      variantId,
+      branchId,
+      quantity,
+      selectedBatchIds: selections?.map(s => s.batchId) ?? null
+    }).subscribe(result => {
+      console.log(result);
+    });
+  }
+
   submit() {
     if (this.form.invalid) return;
+
+    for (let i = 0; i < this.items.length; i++) {
+      const stock = this.stockMap[i];
+      const qty = this.items.at(i).value.quantity ?? 0;
+
+      if (!stock || qty > stock.available) {
+        this.snackBar.open(
+          'Cannot sell more than available stock.',
+          'Close',
+          { duration: 3000 }
+        );
+        return;
+      }
+    }
 
     const customer = this.form.controls.customer.value;
     const items = this.items.controls.map(ctrl => ctrl.value);
@@ -697,7 +831,8 @@ export class SaleCreateComponent implements OnInit {
         productVariantId: r.productVariantId!,
         branchId: r.branchId!,
         quantity: r.quantity!,
-        unitPrice: r.unitPrice!
+        unitPrice: r.unitPrice!,
+        batchSelections: r.batchSelections ?? []
       }))
     };
 

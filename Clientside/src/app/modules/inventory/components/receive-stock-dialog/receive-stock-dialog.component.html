@@ -26,8 +26,7 @@
     <div *ngIf="form.value.variantMode === 'NEW'" class="grid-2">
       <mat-form-field appearance="fill">
         <mat-label>Variant Classification</mat-label>
-        <input matInput formControlName="classification"
-               placeholder="e.g. Size 42 / Red / 1L">
+        <input matInput formControlName="classification" placeholder="e.g. Size 42 / Red / 1L">
       </mat-form-field>
 
       <mat-form-field appearance="fill">
@@ -51,20 +50,24 @@
     </mat-form-field>
   </div>
 
+  <mat-form-field appearance="fill">
+    <mat-label>Selling Price Override (Optional)</mat-label>
+    <input matInput type="number" formControlName="sellingPrice">
+    <mat-hint>
+      If blank, minimum margin rule will apply.
+    </mat-hint>
+  </mat-form-field>
+  
   <!-- SUPPLIERS -->
   <div formArrayName="suppliers" class="suppliers">
 
-    <div *ngFor="let s of suppliers.controls; let i = index"
-         [formGroupName]="i"
-         class="supplier-card">
+    <div *ngFor="let s of suppliers.controls; let i = index" [formGroupName]="i" class="supplier-card">
 
       <div class="supplier-header">
         <span>Supplier {{ i + 1 }}</span>
 
-        <button mat-icon-button color="warn"
-                *ngIf="suppliers.length > 1"
-                (click)="removeSupplier(i)"
-                matTooltip="Remove supplier">
+        <button mat-icon-button color="warn" *ngIf="suppliers.length > 1" (click)="removeSupplier(i)"
+          matTooltip="Remove supplier">
           <mat-icon>delete</mat-icon>
         </button>
       </div>
@@ -90,12 +93,6 @@
           <mat-label>Unit Cost</mat-label>
           <input matInput type="number" formControlName="unitCost">
         </mat-form-field>
-
-        <mat-form-field appearance="fill">
-          <mat-label>Selling Price (optional)</mat-label>
-          <input matInput type="number" formControlName="sellingPrice">
-          <mat-hint>Overrides minimum selling price</mat-hint>
-        </mat-form-field>
       </div>
 
     </div>
@@ -109,9 +106,7 @@
 
 <mat-dialog-actions align="end" class="dialog-actions">
   <button mat-button (click)="close()">Cancel</button>
-  <button mat-flat-button color="primary"
-          [disabled]="loading || form.invalid"
-          (click)="submit()">
+  <button mat-flat-button color="primary" [disabled]="loading || form.invalid" (click)="submit()">
     Receive Stock
   </button>
 </mat-dialog-actions>

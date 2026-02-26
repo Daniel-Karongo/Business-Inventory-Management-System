@@ -1,0 +1,72 @@
+<h2 mat-dialog-title>Batch Allocation</h2>
+
+<div mat-dialog-content>
+
+    <mat-checkbox [checked]="useFifo" (change)="onFifoToggle($event.checked)">
+        Use Oldest Only (FIFO)
+    </mat-checkbox>
+    <button mat-stroked-button *ngIf="!useFifo" (click)="onFifoToggle(true)">
+        Reset to FIFO
+    </button>
+    <div class="text-xs text-gray-500 mb-2">
+        FIFO – Starting with oldest batch
+    </div>
+
+    <table mat-table [dataSource]="tableRows">
+
+        <ng-container matColumnDef="receivedAt">
+            <th mat-header-cell *matHeaderCellDef>Received</th>
+            <td mat-cell *matCellDef="let row">
+                {{ row.get('receivedAt')?.value | date:'dd/MM/yyyy' }}
+            </td>
+        </ng-container>
+
+        <ng-container matColumnDef="available">
+            <th mat-header-cell *matHeaderCellDef>Available</th>
+            <td mat-cell *matCellDef="let row">
+                {{ row.get('available')?.value }}
+            </td>
+        </ng-container>
+
+        <ng-container matColumnDef="unitCost">
+            <th mat-header-cell *matHeaderCellDef>Unit Cost</th>
+            <td mat-cell *matCellDef="let row">
+                {{ row.get('unitCost')?.value | currency:'KES ' }}
+            </td>
+        </ng-container>
+
+        <ng-container matColumnDef="allocate">
+            <th mat-header-cell *matHeaderCellDef>Allocate</th>
+            <td mat-cell *matCellDef="let row; let i = index">
+                <input type="number" min="0" [max]="row.get('available')?.value" [formControl]="quantityControl(i)"
+                    [readonly]="useFifo" class="w-20 border rounded px-2 py-1" />
+            </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+            [class.fifo-highlight]="row.get('isSuggested')?.value">
+        </tr>
+
+    </table>
+
+    <div class="mt-4 text-right font-medium" [class.text-red-600]="!isAllocationValid()">
+        Total Allocated: {{ totalAllocated() }} / {{ data.quantity }}
+    </div>
+
+    <div class="text-right font-medium mt-2">
+        Total Cost: {{ totalCost() | currency:'KES ' }}
+    </div>
+
+    <div *ngIf="costDeviation() !== 0" class="text-sm mt-2" [class.text-red-600]="costDeviation() > 0"
+        [class.text-green-600]="costDeviation() < 0">
+        Cost deviation:
+        {{ costDeviation() | currency:'KES ' }}
+    </div>
+
+</div>
+
+<div mat-dialog-actions align="end">
+    <button mat-button (click)="cancel()">Cancel</button>
+    <button mat-flat-button color="primary" (click)="save()">Confirm</button>
+</div>

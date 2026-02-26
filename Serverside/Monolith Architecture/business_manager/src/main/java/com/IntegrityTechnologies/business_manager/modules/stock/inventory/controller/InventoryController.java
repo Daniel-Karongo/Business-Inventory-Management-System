@@ -16,6 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -107,6 +108,47 @@ public class InventoryController {
      * READS — variant and product
      * ------------------------- */
 
+    @GetMapping("/variant/{variantId}/branch/{branchId}/batches")
+    public ApiResponse getBatches(
+            @PathVariable UUID variantId,
+            @PathVariable UUID branchId
+    ) {
+        return new ApiResponse(
+                "success",
+                "Batches retrieved",
+                inventoryService.getBatchesForVariantBranch(variantId, branchId)
+        );
+    }
+
+    @GetMapping("/batch/{batchId}/consumptions")
+    public ApiResponse getBatchConsumptions(
+            @PathVariable UUID batchId
+    ) {
+        return new ApiResponse(
+                "success",
+                "Batch consumptions retrieved",
+                inventoryService.getBatchConsumptions(batchId)
+        );
+    }
+
+    @PostMapping("/preview-allocation")
+    public ResponseEntity<ApiResponse> previewAllocation(
+            @RequestBody PreviewAllocationRequest req
+    ) {
+        return ResponseEntity.ok(
+                new ApiResponse(
+                        "success",
+                        "Preview allocation",
+                        inventoryService.previewAllocation(
+                                req.getVariantId(),
+                                req.getBranchId(),
+                                req.getQuantity(),
+                                req.getSelectedBatchIds()
+                        )
+                )
+        );
+    }
+
     @GetMapping("/variant/{variantId}")
     public ResponseEntity<ApiResponse> getVariantInventoryAcrossBranches(@PathVariable UUID variantId) {
         return ResponseEntity.ok(inventoryService.getInventoryForVariantBranch(variantId, null));
@@ -145,6 +187,16 @@ public class InventoryController {
                 )
         );
     }
+
+    @GetMapping("/variant/{variantId}/branch/{branchId}/fifo-price")
+    public ApiResponse getFifoPrice(
+            @PathVariable UUID variantId,
+            @PathVariable UUID branchId
+    ) {
+        BigDecimal price = inventoryService.getFifoSellingPrice(variantId, branchId);
+        return new ApiResponse("success", "FIFO unit cost", price);
+    }
+
     /** -------------------------
      * Reports & misc
      * ------------------------- */

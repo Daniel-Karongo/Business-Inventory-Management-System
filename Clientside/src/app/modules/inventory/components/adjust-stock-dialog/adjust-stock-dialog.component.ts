@@ -38,8 +38,19 @@ export class AdjustStockDialogComponent {
   ngOnInit() {
     this.form = this.fb.group({
       quantityDelta: [0, Validators.required],
+      unitCost: [null], // 🔹 NEW
       reason: ['', Validators.required],
       reference: ['', Validators.required]
+    });
+
+    this.form.get('quantityDelta')?.valueChanges.subscribe(val => {
+      const costControl = this.form.get('unitCost');
+      if (val > 0) {
+        costControl?.setValidators([Validators.required, Validators.min(0.01)]);
+      } else {
+        costControl?.clearValidators();
+      }
+      costControl?.updateValueAndValidity();
     });
   }
 
@@ -52,11 +63,16 @@ export class AdjustStockDialogComponent {
 
     this.loading = true;
 
-    const payload = {
+    const payload: any = {
       productVariantId: this.data.productVariantId,
       branchId: this.data.branchId,
       ...this.form.value
     };
+
+    // Only send unitCost if positive adjustment
+    if (payload.quantityDelta <= 0) {
+      delete payload.unitCost;
+    }
 
     this.inventoryService.adjustVariantStock(payload).subscribe({
       next: () => {

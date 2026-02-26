@@ -94,4 +94,11 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
         GROUP BY s.id, s.createdAt, s.totalAmount
     """)
     List<Object[]> arAgingRaw();
+
+    @Query("""
+        select max(cast(substring(s.receiptNo, 3) as long))
+        from Sale s
+        where s.receiptNo like 'R-%'
+    """)
+    Long findMaxReceiptNumeric();
 }

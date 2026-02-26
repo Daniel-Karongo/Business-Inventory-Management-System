@@ -22,6 +22,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.Tax
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.Customer;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.repository.CustomerRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service.CustomerService;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.BatchConsumptionDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.BatchConsumption;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.BatchConsumptionRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
@@ -57,6 +60,7 @@ public class SalesService {
     private final TaxProperties taxProperties;
     private final AccountingProperties accountingProperties;
     private final JournalEntryRepository journalEntryRepository;
+    private final BatchConsumptionRepository batchConsumptionRepository;
 
     /* ============================================================
        CREATE SALE
@@ -192,15 +196,35 @@ public class SalesService {
         // -----------------------------------------
         // 1️⃣ Decrement stock (FIFO + COGS handled inside InventoryService)
         // -----------------------------------------
+        BigDecimal totalCOGS = BigDecimal.ZERO;
+
         for (SaleLineItem li : sale.getLineItems()) {
+
             inventoryService.decrementVariantStock(
                     li.getProductVariantId(),
                     li.getBranchId(),
-                    li.getQuantity(),
+                    li.getQuantity().intValue(),
                     "SALE_DELIVERY:" + sale.getId(),
                     li.getBatchSelections()
             );
+
+            List<BatchConsumption> consumptions =
+                    batchConsumptionRepository
+                            .findBySaleIdAndProductVariantId(
+                                    sale.getId(),
+                                    li.getProductVariantId()
+                            );
+
+            for (BatchConsumption bc : consumptions) {
+                totalCOGS = totalCOGS.add(
+                        bc.getUnitCost()
+                                .multiply(BigDecimal.valueOf(bc.getQuantity()))
+                );
+            }
         }
+
+        sale.setCostOfGoodsSold(totalCOGS);
+        saleRepository.save(sale);
 
         // -----------------------------------------
         // 2️⃣ If DELIVERY mode → post revenue accrual
@@ -640,16 +664,39 @@ public class SalesService {
                 .status(sale.getStatus().name())
                 .customerId(sale.getCustomerId())
                 .items(
-                        sale.getLineItems().stream().map(li ->
-                                SaleLineItemDTO.builder()
-                                        .productVariantId(li.getProductVariantId())
-                                        .productName(li.getProductName())
-                                        .branchId(li.getBranchId())
-                                        .quantity(li.getQuantity())
-                                        .unitPrice(li.getUnitPrice())
-                                        .lineTotal(li.getLineTotal())
-                                        .build()
-                        ).toList()
+                        sale.getLineItems().stream().map(li -> {
+
+                            List<BatchConsumptionDTO> consumptions =
+                                    batchConsumptionRepository
+                                            .findBySaleIdAndProductVariantId(
+                                                    sale.getId(),
+                                                    li.getProductVariantId()
+                                            )
+                                            .stream()
+                                            .map(bc -> BatchConsumptionDTO.builder()
+                                                    .batchId(bc.getBatchId())
+                                                    .saleId(bc.getSaleId())
+                                                    .productVariantId(bc.getProductVariantId())
+                                                    .quantity(bc.getQuantity())
+                                                    .unitCost(bc.getUnitCost())
+                                                    .totalCost(
+                                                            bc.getUnitCost()
+                                                                    .multiply(BigDecimal.valueOf(bc.getQuantity()))
+                                                    )
+                                                    .build()
+                                            )
+                                            .toList();
+
+                            return SaleLineItemDTO.builder()
+                                    .productVariantId(li.getProductVariantId())
+                                    .productName(li.getProductName())
+                                    .branchId(li.getBranchId())
+                                    .quantity(li.getQuantity())
+                                    .unitPrice(li.getUnitPrice())
+                                    .lineTotal(li.getLineTotal())
+                                    .batchConsumptions(consumptions)
+                                    .build();
+                        }).toList()
                 )
                 .payments(
                         sale.getPayments().stream().map(p ->

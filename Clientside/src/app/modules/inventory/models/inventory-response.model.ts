@@ -14,5 +14,9 @@ export interface InventoryResponse {
   quantityOnHand: number;
   quantityReserved: number;
 
+  batchCount?: number;
+  oldestBatchDate?: string | null;
+  totalRemainingBatchValue?: number;
+
   lastUpdatedAt: string | null;
 }

@@ -1,1 +1,0 @@
-import{a as p}from"./chunk-L3RCXL5W.js";import{d as m}from"./chunk-PBEYJMJD.js";import{C as e,da as r,m as o,q as t}from"./chunk-IL4QWM46.js";var h=()=>{let i=r(p),u=r(m);return i.loadMe().pipe(t(()=>!0),e(()=>o(u.parseUrl("/login"))))};export{h as a};

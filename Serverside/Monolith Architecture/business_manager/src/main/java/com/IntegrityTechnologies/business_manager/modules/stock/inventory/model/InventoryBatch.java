@@ -37,6 +37,9 @@ public class InventoryBatch {
     @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal unitCost;
 
+    @Column(nullable = false, precision = 19, scale = 6)
+    private BigDecimal unitSellingPrice;
+
     @Column(nullable = false)
     private Long quantityReceived;
 

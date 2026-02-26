@@ -8,7 +8,6 @@ import { StockTransactionDTO } from '../models/stock-transaction.model';
 
 @Injectable({ providedIn: 'root' })
 export class InventoryService {
-
   private base = environment.apiUrl + environment.endpoints.inventory.base;
 
   constructor(private http: HttpClient) { }
@@ -29,6 +28,62 @@ export class InventoryService {
         `${this.base}/branch/${branchId}`
       )
       .pipe(map(res => res.data ?? []));
+  }
+
+  // ===========================
+  // BATCH ENDPOINTS
+  // ===========================
+
+  getBatches(variantId: string, branchId: string) {
+    return this.http.get<any>(
+      `${environment.apiUrl}/inventory/variant/${variantId}/branch/${branchId}/batches`
+    );
+  }
+
+  suggestBatches(variantId: string, branchId: string, quantity: number) {
+    return this.http.get<any>(
+      `${environment.apiUrl}/inventory/variant/${variantId}/branch/${branchId}/suggest-batches?quantity=${quantity}`
+    );
+  }
+
+  getBatchConsumptions(batchId: string) {
+    return this.http
+      .get<ApiResponse<any[]>>(
+        `${this.base}/batch/${batchId}/consumptions`
+      )
+      .pipe(map(res => res.data ?? []));
+  }
+
+  getFifoPrice(variantId: string, branchId: string) {
+    return this.http
+      .get<ApiResponse<number>>(
+        `${this.base}/variant/${variantId}/branch/${branchId}/fifo-price`
+      )
+      .pipe(map(res => res.data ?? 0));
+  }
+
+  getAllBatches(variantId: string, branchId: string) {
+    return this.http
+      .get<ApiResponse<any[]>>(
+        `${this.base}/variant/${variantId}/branch/${branchId}/batches`
+      )
+      .pipe(map(res => res.data ?? []));
+  }
+  
+  // ===========================
+  // PREVIEW ALLOCATION
+  // ===========================
+
+  previewAllocation(payload: {
+    variantId: string;
+    branchId: string;
+    quantity: number;
+    selectedBatchIds?: string[] | null;
+  }) {
+    return this.http.post<ApiResponse<any>>(
+      `${this.base}/preview-allocation`,
+      payload
+    ).pipe(map(res => res.data));
   }
 
   /** Used by Products → Variant List */

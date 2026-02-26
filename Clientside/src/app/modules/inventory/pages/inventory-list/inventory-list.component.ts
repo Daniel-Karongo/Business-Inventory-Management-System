@@ -70,9 +70,12 @@ export class InventoryListComponent implements OnInit {
     'onHand',
     'reserved',
     'available',
+    'batches',
+    'value',
     'updated',
     'actions'
   ];
+
   sortField?: 'productName'
     | 'productClassification'
     | 'productVariantSKU'

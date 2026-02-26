@@ -22,4 +22,7 @@ public class InventoryResponse {
     private Long quantityOnHand;
     private Long quantityReserved;
     private String lastUpdatedAt;
+    private Integer batchCount;
+    private String oldestBatchDate;
+    private BigDecimal totalRemainingBatchValue;
 }

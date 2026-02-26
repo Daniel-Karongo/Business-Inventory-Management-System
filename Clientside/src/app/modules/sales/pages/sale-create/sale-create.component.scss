@@ -1,20 +1,117 @@
+/* =========================================================
+   SALE CREATE — CARD BASED ENTERPRISE LAYOUT
+   ========================================================= */
+
+.surface-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* SECTION HEADER */
+.section-title {
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.section-sub {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+/* ROWS */
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.row-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  transition: background 120ms ease;
+}
+
+.row-card:hover {
+  background: var(--surface-hover);
+}
+
+/* ROW HEADER */
+.row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 6px;
+}
+
+/* GRID */
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+/* LINE TOTAL */
+.line-total {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+/* STOCK INFO */
+.stock-info {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* COST PREVIEW */
+.cost-preview {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+/* FOOTER */
+.sale-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.sale-total {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1024px) {
+  .grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .sale-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+}
+
 mat-form-field {
   width: 100%;
-}
-
-.mat-mdc-form-field-infix {
-  min-width: 0; // allow flex/grid to control width
-}
-
-input,
-mat-select {
-  white-space: nowrap;
-}
-
-.cursor-pointer {
-  cursor: pointer;
-}
-
-mat-form-field:hover input[readonly] {
-  background-color: rgba(0, 0, 0, 0.03);
 }
