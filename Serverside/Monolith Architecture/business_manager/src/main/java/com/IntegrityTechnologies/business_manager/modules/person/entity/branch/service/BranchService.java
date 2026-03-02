@@ -7,6 +7,10 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.m
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.MinimalUserDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserBranch;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserBranchId;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserBranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserDepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.dto.BranchDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.BranchAudit;
@@ -31,7 +35,8 @@ public class BranchService {
     private final BranchAuditRepository branchAuditRepository;
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
-
+    private final UserBranchRepository userBranchRepository;
+    private final UserDepartmentRepository userDepartmentRepository;
     @Transactional
     public BranchDTO create(BranchDTO request, Authentication authentication) {
 
@@ -39,25 +44,7 @@ public class BranchService {
             throw new IllegalArgumentException("Branch code " + request.getBranchCode() + " already exists");
         }
 
-        Set<User> users = new HashSet<>();
-        if (request.getUserIds() != null && !request.getUserIds().isEmpty()) {
-            users = request.getUserIds().stream()
-                    .map(userId -> userRepository.findByIdAndDeletedFalse(userId)
-                            .orElseThrow(() -> new RuntimeException("User not found: " + userId)))
-                    .collect(Collectors.toSet());
-        }
-
-        Set<Department> departments = new HashSet<>();
-        if (request.getDepartmentIds() != null && !request.getDepartmentIds().isEmpty()) {
-            departments = request.getDepartmentIds().stream()
-                    .map(departmentId -> departmentRepository.findByIdAndDeletedFalse(departmentId)
-                            .orElseThrow(() -> new RuntimeException("Department not found: " + departmentId)))
-                    .collect(Collectors.toSet());
-        }
-
         Branch branch = Branch.builder()
-                .users(users)
-                .departments(departments)
                 .branchCode(request.getBranchCode())
                 .name(request.getName())
                 .location(request.getLocation())
@@ -66,7 +53,24 @@ public class BranchService {
                 .deleted(false)
                 .build();
 
-        branchRepository.save(branch);
+        branch = branchRepository.save(branch);
+
+        // Assign users via UserBranch
+        if (request.getUserIds() != null) {
+            for (UUID userId : request.getUserIds()) {
+                User user = userRepository.findByIdAndDeletedFalse(userId)
+                        .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+                UserBranch relation = UserBranch.builder()
+                        .id(new UserBranchId(user.getId(), branch.getId()))
+                        .user(user)
+                        .branch(branch)
+                        .primaryBranch(false)
+                        .build();
+
+                userBranchRepository.save(relation);
+            }
+        }
 
         recordBranchAudit(branch, "CREATE", null, null, null, authentication, "Branch created");
 
@@ -138,12 +142,28 @@ public class BranchService {
 
         // ===== Users update safely =====
         if (request.getUserIds() != null) {
-            Set<User> users = request.getUserIds().stream()
-                    .map(userId -> userRepository.findByIdAndDeletedFalse(userId)
-                            .orElseThrow(() -> new EntityNotFoundException("User not found: " + userId)))
-                    .collect(Collectors.toSet());
 
-            branch.setUsers(users);
+            // Clear old relations
+            userBranchRepository.deleteAll(
+                    userBranchRepository.findAll().stream()
+                            .filter(ub -> ub.getBranch().getId().equals(branch.getId()))
+                            .toList()
+            );
+
+            for (UUID userId : request.getUserIds()) {
+
+                User user = userRepository.findByIdAndDeletedFalse(userId)
+                        .orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
+
+                UserBranch relation = UserBranch.builder()
+                        .id(new UserBranchId(user.getId(), branch.getId()))
+                        .user(user)
+                        .branch(branch)
+                        .primaryBranch(false)
+                        .build();
+
+                userBranchRepository.save(relation);
+            }
         }
 
         // ===== Departments update safely =====
@@ -172,6 +192,12 @@ public class BranchService {
 
             recordBranchAudit(branch, "SOFT_DELETE", "deleted", "false", "true", authentication, "Branch soft deleted");
         } else {
+            userBranchRepository.deleteByBranchId(id);
+            departmentRepository.findByBranch_Id(id)
+                    .forEach(d ->
+                            userDepartmentRepository.deleteByDepartmentId(d.getId())
+                    );
+
             branch = branchRepository.findById(id)
                     .orElseThrow(() ->
                             new EntityNotFoundException("Branch with id " + id + " not found or already deleted"));
@@ -193,17 +219,30 @@ public class BranchService {
     }
 
     private BranchDTO toResponse(Branch branch) {
+
+        Set<MinimalUserDTO> users =
+                userBranchRepository.findByBranchId(branch.getId())
+                        .stream()
+                        .map(ub -> MinimalUserDTO.from(ub.getUser()))
+                        .collect(Collectors.toSet());
+
+        Set<DepartmentMinimalDTO> departments =
+                departmentRepository.findByBranchId(branch.getId())
+                        .stream()
+                        .map(DepartmentMinimalDTO::from)
+                        .collect(Collectors.toSet());
+
         return BranchDTO.builder()
                 .id(branch.getId())
-                .users(branch.getUsers().stream().map(user -> MinimalUserDTO.from(user)).collect(Collectors.toSet()))
-                .departments(branch.getDepartments().stream().map(department -> DepartmentMinimalDTO.from(department)).collect(Collectors.toSet()))
-                .createdAt(branch.getCreatedAt())
                 .branchCode(branch.getBranchCode())
                 .name(branch.getName())
                 .location(branch.getLocation())
                 .phone(branch.getPhone())
                 .email(branch.getEmail())
+                .createdAt(branch.getCreatedAt())
                 .deleted(branch.getDeleted())
+                .users(users)
+                .departments(departments)
                 .build();
     }
 

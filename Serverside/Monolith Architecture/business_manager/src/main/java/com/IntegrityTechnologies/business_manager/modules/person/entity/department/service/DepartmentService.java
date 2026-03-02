@@ -6,16 +6,21 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.m
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.service.BranchService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.mapper.DepartmentMapper;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.DepartmentMembershipRole;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserDepartment;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserDepartmentId;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserDepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentMinimalDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.MinimalUserDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.DepartmentAudit;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.controller.CategoryController;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -36,124 +41,110 @@ public class DepartmentService {
     private final BranchRepository branchRepository;
     private final BranchService branchService;
     private final DepartmentMapper departmentMapper;
+    private final UserDepartmentRepository userDepartmentRepository;
 
     @Transactional
     public DepartmentDTO create(DepartmentDTO dto, Authentication authentication) {
-        if (departmentRepository.existsByNameIgnoreCase(dto.getName())) {
-            throw new IllegalArgumentException("Department with the name '"+ dto.getName() +"' already exists");
+
+        if (departmentRepository.existsByNameIgnoreCaseAndBranch_Id(
+                dto.getName(),
+                dto.getBranchId()
+        )) {
+            throw new IllegalArgumentException(
+                    "Department with name '" + dto.getName()
+                            + "' already exists in this branch");
         }
 
-        // Fetch users
-        Set<UUID> headIds = dto.getHeadIds() == null ? Set.of() : dto.getHeadIds();
-        Set<UUID> memberIds = dto.getMemberIds() == null ? Set.of() : dto.getMemberIds();
+        Branch branch = branchRepository.findByIdAndDeletedFalse(dto.getBranchId())
+                .orElseThrow(() -> new IllegalArgumentException("Branch not found"));
 
-        Set<User> heads = headIds.stream()
-                .map(id -> userRepository.findByIdAndDeletedFalse(id)
-                        .orElseThrow(() -> new IllegalArgumentException("Head user not found: " + id)))
-                .peek(user -> {
-                    // If user is not allowed to be head based on current role, promote to SUPERVISOR
-                    if (!privilegesChecker.isAuthorizedToBeHead(user)) {
-                        user.setRole(Role.SUPERVISOR);
-                        userRepository.save(user); // Persist the promotion
-                    }
-                })
-                .collect(Collectors.toSet());
-
-        Set<User> members = memberIds.stream()
-                .map(id -> userRepository.findByIdAndDeletedFalse(id)
-                        .orElseThrow(() -> new IllegalArgumentException("Member user not found: " + id)))
-                .collect(Collectors.toSet());
-
-        // Check for overlap between heads and members
-        Set<User> overlappingUsers = heads.stream()
-                .filter(members::contains)
-                .collect(Collectors.toSet());
-
-        if (!overlappingUsers.isEmpty()) {
-            String conflicts = overlappingUsers.stream()
-                    .map(User::getUsername)
-                    .collect(Collectors.joining(", "));
-            throw new IllegalArgumentException("Users cannot be both heads and members: " + conflicts);
-        }
-
-        Department d = Department.builder()
+        Department department = Department.builder()
                 .name(dto.getName())
                 .description(dto.getDescription())
-                .heads(heads)
-                .members(members)
+                .branch(branch)
                 .rollcallStartTime(dto.getRollcallStartTime())
                 .gracePeriodMinutes(dto.getGracePeriodMinutes())
+                .deleted(false)
                 .build();
 
-        Department department = departmentRepository.save(d);
+        department = departmentRepository.save(department);
 
-        syncBranches(dto, department, authentication);
+        assignUsersToDepartment(dto.getHeadIds(), department, DepartmentMembershipRole.HEAD);
+        assignUsersToDepartment(dto.getMemberIds(), department, DepartmentMembershipRole.MEMBER);
+
         logAudit(department, "CREATE", null, dto.toString(), authentication, null);
 
         return departmentMapper.toDTO(department);
     }
 
+    private void assignUsersToDepartment(
+            Set<UUID> userIds,
+            Department department,
+            DepartmentMembershipRole role
+    ) {
+
+        if (userIds == null) return;
+
+        for (UUID userId : userIds) {
+
+            User user = userRepository.findByIdAndDeletedFalse(userId)
+                    .orElseThrow(() ->
+                            new IllegalArgumentException("User not found: " + userId));
+
+            UserDepartment relation = UserDepartment.builder()
+                    .id(new UserDepartmentId(user.getId(), department.getId()))
+                    .user(user)
+                    .department(department)
+                    .role(role)
+                    .build();
+
+            userDepartmentRepository.save(relation);
+        }
+    }
 
     @Transactional
-    public DepartmentDTO updateDepartment(UUID departmentId, DepartmentDTO dto, Authentication authentication) {
-        Department d = getById(departmentId);
+    public DepartmentDTO updateDepartment(UUID departmentId,
+                                          DepartmentDTO dto,
+                                          Authentication authentication) {
 
-        if (!d.getName().equalsIgnoreCase(dto.getName()) &&
+        Department department = getById(departmentId);
+
+        if (!department.getName().equalsIgnoreCase(dto.getName()) &&
                 departmentRepository.existsByNameIgnoreCase(dto.getName())) {
-            throw new IllegalArgumentException("Department with the name '" + dto.getName() + "' already exists");
+            throw new IllegalArgumentException(
+                    "Department with the name '" + dto.getName() + "' already exists");
         }
 
-        Map<String, String> oldValues = mapDepartment(d);
+        Map<String, String> oldValues = mapDepartment(department);
 
-        Set<User> newHeads = fetchUsers(dto.getHeads());
-        Set<User> newMembers = fetchUsers(dto.getMembers());
-        checkOverlap(newHeads, newMembers);
+        department.setName(dto.getName());
+        department.setDescription(dto.getDescription());
+        department.setRollcallStartTime(dto.getRollcallStartTime());
+        department.setGracePeriodMinutes(dto.getGracePeriodMinutes());
 
-        // ------------------- AUDIT HEAD CHANGES -------------------
-        Set<User> addedHeads = new HashSet<>(newHeads);
-        addedHeads.removeAll(d.getHeads());
+        departmentRepository.save(department);
 
-        Set<User> removedHeads = new HashSet<>(d.getHeads());
-        removedHeads.removeAll(newHeads);
+        // 🔹 Remove old user relations
+        userDepartmentRepository.deleteAll(
+                userDepartmentRepository.findByDepartmentId(department.getId())
+        );
 
-        for (User added : addedHeads) {
-            logAudit(d, "ADD_HEAD", null, added.getUsername(), authentication, "Added head");
-        }
-        for (User removed : removedHeads) {
-            logAudit(d, "REMOVE_HEAD", removed.getUsername(), null, authentication, "Removed head");
-        }
+        // 🔹 Reassign users
+        assignUsersToDepartment(dto.getHeadIds(), department, DepartmentMembershipRole.HEAD);
+        assignUsersToDepartment(dto.getMemberIds(), department, DepartmentMembershipRole.MEMBER);
 
-        // ------------------- AUDIT MEMBER CHANGES -------------------
-        Set<User> addedMembers = new HashSet<>(newMembers);
-        addedMembers.removeAll(d.getMembers());
+        Map<String, String> newValues = mapDepartment(department);
 
-        Set<User> removedMembers = new HashSet<>(d.getMembers());
-        removedMembers.removeAll(newMembers);
-
-        for (User added : addedMembers) {
-            logAudit(d, "ADD_MEMBER", null, added.getUsername(), authentication, "Added member");
-        }
-        for (User removed : removedMembers) {
-            logAudit(d, "REMOVE_MEMBER", removed.getUsername(), null, authentication, "Removed member");
-        }
-
-        // ------------------- UPDATE OTHER FIELDS -------------------
-        d.setName(dto.getName());
-        d.setDescription(dto.getDescription());
-        d.setRollcallStartTime(dto.getRollcallStartTime());
-        d.setGracePeriodMinutes(dto.getGracePeriodMinutes());
-        d.setHeads(newHeads);
-        d.setMembers(newMembers);
-
-        Department updated = departmentRepository.save(d);
-
-        // Optional: audit general department info change
-        Map<String, String> newValues = mapDepartment(updated);
         if (!oldValues.equals(newValues)) {
-            logAudit(updated, "UPDATE", oldValues.toString(), newValues.toString(), authentication, "Updated department fields");
+            logAudit(department,
+                    "UPDATE",
+                    oldValues.toString(),
+                    newValues.toString(),
+                    authentication,
+                    "Department updated");
         }
 
-        return departmentMapper.toDTO(updated);
+        return departmentMapper.toDTO(department);
     }
 
     @Transactional
@@ -163,29 +154,31 @@ public class DepartmentService {
             Authentication authentication
     ) {
 
-        Set<User> heads = resolveUsers(dto.getHeadIds(), true);
-        Set<User> members = resolveUsers(dto.getMemberIds(), false);
-
-        checkOverlap(heads, members);
+        Map<String, String> oldValues = mapDepartment(existing);
 
         existing.setDescription(dto.getDescription());
         existing.setRollcallStartTime(dto.getRollcallStartTime());
         existing.setGracePeriodMinutes(dto.getGracePeriodMinutes());
-        existing.setHeads(heads);
-        existing.setMembers(members);
 
-        syncBranches(dto, existing, authentication);
+        departmentRepository.save(existing);
+
+        userDepartmentRepository.deleteAll(
+                userDepartmentRepository.findByDepartmentId(existing.getId())
+        );
+
+        assignUsersToDepartment(dto.getHeadIds(), existing, DepartmentMembershipRole.HEAD);
+        assignUsersToDepartment(dto.getMemberIds(), existing, DepartmentMembershipRole.MEMBER);
 
         logAudit(
                 existing,
                 "UPDATE",
-                null,
-                dto.toString(),
+                oldValues.toString(),
+                mapDepartment(existing).toString(),
                 authentication,
                 "Bulk import update"
         );
 
-        return departmentRepository.save(existing);
+        return existing;
     }
 
 
@@ -239,6 +232,10 @@ public class DepartmentService {
 
 
         } else {
+            userDepartmentRepository.deleteAll(
+                    userDepartmentRepository.findByDepartmentId(departmentId)
+            );
+
             Department d = departmentRepository.findById(departmentId)
                     .orElseThrow(() -> new EntityNotFoundException("Department not found"));
             departmentRepository.delete(d);
@@ -301,104 +298,31 @@ public class DepartmentService {
         }
     }
 
-    private void syncBranches(
-            DepartmentDTO dto,
-            Department department,
-            Authentication authentication
-    ) {
+    private Map<String, String> mapDepartment(Department department) {
 
-        Set<UUID> newBranchIds =
-                dto.getBranchIds() == null ? Set.of() : dto.getBranchIds();
-
-    /* =========================
-       RESOLVE NEW BRANCHES
-       ========================= */
-        Set<Branch> newBranches = newBranchIds.stream()
-                .map(id ->
-                        branchRepository.findByIdAndDeletedFalse(id)
-                                .orElseThrow(() ->
-                                        new IllegalArgumentException(
-                                                "Branch not found: " + id
-                                        )
-                                )
-                )
-                .collect(Collectors.toSet());
-
-    /* =========================
-       FETCH CURRENT BRANCHES (DB-AUTHORITATIVE)
-       ========================= */
-        List<Branch> currentBranches =
-                departmentRepository.findBranchesByDepartmentId(
-                        department.getId()
-                );
-
-        Set<UUID> currentBranchIds = currentBranches.stream()
-                .map(Branch::getId)
-                .collect(Collectors.toSet());
-
-    /* =========================
-       REMOVE FROM OLD BRANCHES
-       ========================= */
-        for (Branch oldBranch : currentBranches) {
-
-            if (!newBranchIds.contains(oldBranch.getId())) {
-
-                oldBranch.getDepartments().remove(department);
-                branchRepository.save(oldBranch);
-
-                branchService.recordBranchAudit(
-                        oldBranch,
-                        "UPDATE",
-                        "departments",
-                        department.getName(),
-                        null,
-                        authentication,
-                        "Department removed via bulk import"
-                );
-            }
-        }
-
-    /* =========================
-       ADD TO NEW BRANCHES
-       (SAFE JOIN-TABLE INSERT)
-       ========================= */
-        for (Branch newBranch : newBranches) {
-
-            if (!currentBranchIds.contains(newBranch.getId())) {
-
-                // 🔒 DB-level safety check (prevents duplicate PK)
-                boolean alreadyAssigned =
-                        branchRepository.branchContainsDepartment(
-                                newBranch.getId(),
-                                department.getId()
-                        );
-
-                if (!alreadyAssigned) {
-                    newBranch.getDepartments().add(department);
-                    branchRepository.save(newBranch);
-
-                    branchService.recordBranchAudit(
-                            newBranch,
-                            "UPDATE",
-                            "departments",
-                            null,
-                            department.getName(),
-                            authentication,
-                            "Department assigned via bulk import"
-                    );
-                }
-            }
-        }
-    }
-
-    private Map<String, String> mapDepartment(Department d) {
         Map<String, String> map = new HashMap<>();
-        map.put("name", d.getName());
-        map.put("description", d.getDescription());
-        map.put("rollcallStartTime", String.valueOf(d.getRollcallStartTime()));
-        map.put("gracePeriodMinutes", String.valueOf(d.getGracePeriodMinutes()));
-        map.put("heads", d.getHeads().stream().map(User::getUsername).collect(Collectors.joining(", ")));
-        map.put("members", d.getMembers().stream().map(User::getUsername).collect(Collectors.joining(", ")));
+
+        map.put("name", department.getName());
+        map.put("description", department.getDescription());
+        map.put("rollcallStartTime", String.valueOf(department.getRollcallStartTime()));
+        map.put("gracePeriodMinutes", String.valueOf(department.getGracePeriodMinutes()));
+
+        List<UserDepartment> relations =
+                userDepartmentRepository.findByDepartmentId(department.getId());
+
+        String heads = relations.stream()
+                .filter(r -> r.getRole() == DepartmentMembershipRole.HEAD)
+                .map(r -> r.getUser().getUsername())
+                .collect(Collectors.joining(", "));
+
+        String members = relations.stream()
+                .filter(r -> r.getRole() == DepartmentMembershipRole.MEMBER)
+                .map(r -> r.getUser().getUsername())
+                .collect(Collectors.joining(", "));
+
+        map.put("heads", heads);
+        map.put("members", members);
+
         return map;
     }
 

@@ -19,35 +19,41 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
     Optional<Branch> findByBranchCode(String branchCode);
     Optional<Branch> findByIdAndDeletedFalse(UUID id);
     Optional<Branch> findByIdAndDeletedTrue(UUID id);
-    @Query("SELECT u FROM Branch b JOIN b.users u WHERE b.id = :branchId")
+
+    @Query("""
+        SELECT ub.user
+        FROM UserBranch ub
+        WHERE ub.branch.id = :branchId
+          AND ub.user.deleted = false
+    """)
     List<User> findUsersByBranchId(@Param("branchId") UUID branchId);
     @Query("""
-       SELECT b 
-       FROM Branch b 
-       JOIN b.users u 
-       WHERE u.id = :userId
-       """)
-    List<Branch> findBranchesByUserId(@Param("userId") UUID userId);
-
-    @Query("""
-        SELECT DISTINCT b
-        FROM Branch b
-        JOIN b.users u
-        JOIN b.departments d
-        WHERE u.id = :userId
-          AND d.id = :deptId
+        SELECT ub.branch
+        FROM UserBranch ub
+        WHERE ub.user.id = :userId
+          AND ub.branch.deleted = false
     """)
-    List<Branch> findBranchesForUserAndDepartment(@Param("userId") UUID userId,
-                                                  @Param("deptId") UUID deptId);
-
-
+    List<Branch> findBranchesByUserId(@Param("userId") UUID userId);
     @Query("""
-    SELECT CASE WHEN COUNT(b) > 0 THEN TRUE ELSE FALSE END
-    FROM Branch b
-    JOIN b.departments d
-    WHERE b.id = :branchId AND d.id = :departmentId
-""")
-    boolean branchContainsDepartment(@Param("branchId") UUID branchId, @Param("departmentId") UUID departmentId);
+        SELECT DISTINCT ud.department.branch
+        FROM UserDepartment ud
+        WHERE ud.user.id = :userId
+          AND ud.department.id = :deptId
+          AND ud.department.deleted = false
+    """)
+    List<Branch> findBranchesForUserAndDepartment(
+            @Param("userId") UUID userId,
+            @Param("deptId") UUID deptId);
+    @Query("""
+        SELECT CASE WHEN COUNT(d) > 0 THEN TRUE ELSE FALSE END
+        FROM Department d
+        WHERE d.branch.id = :branchId
+          AND d.id = :departmentId
+          AND d.deleted = false
+    """)
+    boolean branchContainsDepartment(
+            @Param("branchId") UUID branchId,
+            @Param("departmentId") UUID departmentId);
 
     boolean existsByBranchCodeIgnoreCase(String branchCode);
     @Modifying

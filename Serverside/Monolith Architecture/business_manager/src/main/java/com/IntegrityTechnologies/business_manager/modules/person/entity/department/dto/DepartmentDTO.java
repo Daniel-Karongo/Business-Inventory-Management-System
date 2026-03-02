@@ -22,23 +22,23 @@ public class DepartmentDTO {
     private Integer gracePeriodMinutes;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private Set<UUID> headIds;
+    private UUID branchId;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private Set<MinimalUserDTO> heads;
+    private BranchMinimalDTO branch;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private Set<UUID> headIds;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Set<UUID> memberIds;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private Set<MinimalUserDTO> heads;
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Set<MinimalUserDTO> members;
 
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private Set<UUID> branchIds;
-
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private Set<BranchMinimalDTO> branches;
-
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private boolean deleted = false;
+    private boolean deleted;
 }

@@ -3,7 +3,9 @@ package com.IntegrityTechnologies.business_manager.modules.person.function.rollc
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.dto.EmailRequest;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.service.EmailService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.DepartmentMembershipRole;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserDepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.Rollcall;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,7 @@ import java.util.List;
 public class RollcallEmailNotifier {
 
     private final EmailService emailService;
+    private final UserDepartmentRepository userDepartmentRepository;
 
     public void notifyAbsent(
             Department dept,
@@ -24,10 +27,13 @@ public class RollcallEmailNotifier {
 
         if (dept == null) return;
 
-        List<String> emails = dept.getHeads().stream()
-                .flatMap(u -> u.getEmailAddresses().stream())
-                .filter(e -> e != null && !e.isBlank())
-                .toList();
+        List<String> emails =
+                userDepartmentRepository.findByDepartmentId(dept.getId())
+                        .stream()
+                        .filter(r -> r.getRole() == DepartmentMembershipRole.HEAD)
+                        .flatMap(r -> r.getUser().getEmailAddresses().stream())
+                        .filter(e -> e != null && !e.isBlank())
+                        .toList();
 
         if (emails.isEmpty()) return;
 

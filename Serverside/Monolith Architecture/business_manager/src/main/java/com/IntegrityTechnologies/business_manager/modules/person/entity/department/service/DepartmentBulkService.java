@@ -74,17 +74,20 @@ public class DepartmentBulkService {
                 }
 
                 // Resolve branches (by code)
-                Set<UUID> branchIds =
-                        row.getBranchCodes().stream()
-                                .map(code ->
-                                        branchRepository.findByBranchCode(code.trim())
-                                                .orElseThrow(() ->
-                                                        new IllegalArgumentException(
-                                                                "Unknown branchCode: " + code
-                                                        )
-                                                ).getId()
+                if (row.getBranchCodes().size() != 1) {
+                    throw new IllegalArgumentException(
+                            "Department must belong to exactly ONE branch"
+                    );
+                }
+
+                String branchCode = row.getBranchCodes().iterator().next();
+
+                UUID branchId = branchRepository.findByBranchCode(branchCode.trim())
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Unknown branchCode: " + branchCode
                                 )
-                                .collect(Collectors.toSet());
+                        ).getId();
 
                 // Resolve users
                 Set<UUID> headIds = resolveUsers(row.getHeadUsernames());
@@ -109,7 +112,7 @@ public class DepartmentBulkService {
                 DepartmentDTO dto = new DepartmentDTO();
                 dto.setName(name);
                 dto.setDescription(row.getDescription());
-                dto.setBranchIds(branchIds);
+                dto.setBranchId(branchId);
                 dto.setHeadIds(headIds);
                 dto.setMemberIds(memberIds);
 
@@ -210,18 +213,17 @@ public class DepartmentBulkService {
         preview.setRollcallStartTime(dto.getRollcallStartTime());
         preview.setGracePeriodMinutes(dto.getGracePeriodMinutes());
 
-        if (dto.getBranchIds() != null) {
-            preview.setBranches(
-                    dto.getBranchIds().stream()
-                            .map(id -> branchRepository.findById(id).orElse(null))
-                            .filter(Objects::nonNull)
-                            .map(b -> new BranchMinimalDTO(
-                                    b.getId(),
-                                    b.getBranchCode(),
-                                    b.getName()
-                            ))
-                            .collect(Collectors.toSet())
-            );
+        if (dto.getBranchId() != null) {
+            branchRepository.findById(dto.getBranchId())
+                    .ifPresent(b ->
+                            preview.setBranch(
+                                    new BranchMinimalDTO(
+                                            b.getId(),
+                                            b.getBranchCode(),
+                                            b.getName()
+                                    )
+                            )
+                    );
         }
 
         if (dto.getHeadIds() != null) {

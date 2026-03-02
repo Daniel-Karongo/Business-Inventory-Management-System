@@ -60,8 +60,8 @@ public class SystemInitializer {
 
             if (!linked) {
                 log.info("Linking GENERAL department to MAIN branch...");
-                mainBranch.getDepartments().add(generalDept);
-                branchRepository.save(mainBranch);
+                generalDept.setBranch(mainBranch);
+                departmentRepository.save(generalDept);
                 log.info("✅ GENERAL department linked to MAIN branch.");
             }
 

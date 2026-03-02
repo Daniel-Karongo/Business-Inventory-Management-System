@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.branch.
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserBranch;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -38,6 +39,20 @@ public class Branch {
     private String phone;
     private String email;
 
+    @OneToMany(
+            mappedBy = "branch",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @Builder.Default
+    private Set<UserBranch> userBranches = new HashSet<>();
+
+    @OneToMany(
+            mappedBy = "branch"
+    )
+    @Builder.Default
+    private Set<Department> departments = new HashSet<>();
+
     /* =========================
        AUDIT FIELDS
        ========================= */
@@ -49,34 +64,8 @@ public class Branch {
     private Boolean deleted = false;
 
     /* =========================
-       RELATIONSHIPS
-       ========================= */
-
-    @ToString.Exclude
-    @JsonIgnore
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "branch_users",
-            joinColumns = @JoinColumn(name = "branch_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    @Builder.Default
-    private Set<User> users = new HashSet<>();
-
-    @ToString.Exclude
-    @JsonIgnore
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "branch_departments",
-            joinColumns = @JoinColumn(name = "branch_id"),
-            inverseJoinColumns = @JoinColumn(name = "department_id")
-    )
-    @Builder.Default
-    private Set<Department> departments = new HashSet<>();
-
-    /* =========================
-       LIFECYCLE
-       ========================= */
+      LIFECYCLE
+    ========================= */
 
     @PrePersist
     protected void onCreate() {

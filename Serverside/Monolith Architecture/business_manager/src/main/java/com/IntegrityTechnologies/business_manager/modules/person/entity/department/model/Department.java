@@ -1,7 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.department.model;
 
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserDepartment;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -11,78 +11,51 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "departments")
-@Data
+@Table(
+        name = "departments",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_department_branch_name",
+                        columnNames = {"branch_id", "name"}
+                )
+        },
+        indexes = {
+                @Index(name = "idx_department_branch", columnList = "branch_id"),
+                @Index(name = "idx_department_deleted", columnList = "deleted")
+        }
+)
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString
 public class Department {
 
     @Id
     @GeneratedValue
     @Column(columnDefinition = "BINARY(16)")
-    @ToString.Exclude
     private UUID id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String name;
 
-    // Optional description
     private String description;
 
-    /**
-     * Department may have multiple heads (SUPERVISOR role expected).
-     */
-    @ToString.Exclude
-    @JsonIgnore
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "department_members",
-            joinColumns = @JoinColumn(name = "department_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "branch_id", nullable = false)
+    private Branch branch;
+
+    @OneToMany(
+            mappedBy = "department",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
     )
     @Builder.Default
-    private Set<User> members = new HashSet<>();
+    private Set<UserDepartment> userDepartments = new HashSet<>();
 
-    @ToString.Exclude
-    @JsonIgnore
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "department_heads",
-            joinColumns = @JoinColumn(name = "department_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    @Builder.Default
-    private Set<User> heads = new HashSet<>();
+    private LocalTime rollcallStartTime;
+    private Integer gracePeriodMinutes;
 
-        /**
-     * Rollcall schedule: when rollcall window opens for the department.
-     * Use LocalTime only (daily). You can extend to complex schedules.
-     */
-    private LocalTime rollcallStartTime;   // e.g. 09:00
-    private Integer gracePeriodMinutes;    // e.g. 15 -> those after are LATE
-
+    @Column(nullable = false)
     private boolean deleted = false;
-
-    // --- SAFE HELPERS ---
-    public void addMember(User user) {
-        if (user == null) return;
-        members.add(user);
-    }
-
-    public void removeMember(User user) {
-        if (user == null) return;
-        members.remove(user);
-    }
-
-    public void addHead(User user) {
-        if (user == null) return;
-        heads.add(user);
-    }
-
-    public void removeHead(User user) {
-        if (user == null) return;
-        heads.remove(user);
-    }
 }
