@@ -2,6 +2,8 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.branch.
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -16,6 +18,7 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
 
     List<Branch> findByDeleted(Boolean deleted);
     List<Branch> findByDeletedFalse();
+    Page<Branch> findByDeletedFalse(Pageable pageable);
     Optional<Branch> findByBranchCode(String branchCode);
     Optional<Branch> findByIdAndDeletedFalse(UUID id);
     Optional<Branch> findByIdAndDeletedTrue(UUID id);

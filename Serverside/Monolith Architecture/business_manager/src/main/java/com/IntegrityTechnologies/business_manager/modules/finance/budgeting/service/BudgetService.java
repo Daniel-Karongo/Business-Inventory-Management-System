@@ -1,13 +1,17 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.budgeting.service;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.enums.BudgetScenario;
+import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.enums.BudgetStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.dto.BranchComparisonDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.dto.CorporateVarianceDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetMonthlySnapshotRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetSnapshotStateRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +22,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountingSignRules.*;
 
@@ -29,6 +34,9 @@ public class BudgetService {
     private final BranchRepository branchRepository;
     private final LedgerEntryRepository ledgerRepository;
     private final BudgetMonthlySnapshotRepository snapshotRepository;
+    private final BudgetSnapshotStateRepository snapshotStateRepository;
+    private final AccountRepository accountRepository;
+    private final GovernanceAuditService auditService;
 
     /* ============================================================
        CREATE NEW BUDGET (AUTO VERSIONING)
@@ -57,7 +65,7 @@ public class BudgetService {
                 .fiscalYear(fiscalYear)
                 .versionNumber(nextVersion)
                 .scenario(scenario)
-                .locked(false)
+                .status(BudgetStatus.DRAFT)
                 .createdBy(username)
                 .build();
 
@@ -104,6 +112,9 @@ public class BudgetService {
 
         budget.ensureEditable();
 
+        var account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+
         BudgetLine line = budget.getLines()
                 .stream()
                 .filter(l -> l.getAccount().getId().equals(accountId))
@@ -111,10 +122,8 @@ public class BudgetService {
                 .orElseGet(() -> {
                     BudgetLine newLine = BudgetLine.builder()
                             .budget(budget)
-                            .account(new com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.Account())
+                            .account(account)
                             .build();
-
-                    newLine.getAccount().setId(accountId);
                     budget.getLines().add(newLine);
                     return newLine;
                 });
@@ -181,6 +190,18 @@ public class BudgetService {
             int monthNumber
     ) {
 
+        Optional<BudgetSnapshotState> state =
+                snapshotStateRepository
+                        .findByBranchIdAndFiscalYearAndMonthNumber(
+                                branchId,
+                                fiscalYear,
+                                monthNumber
+                        );
+
+        if (state.isPresent() && state.get().isLocked()) {
+            return; // idempotent safe exit instead of throwing
+        }
+        
         Optional<Budget> budgetOpt =
                 resolveActiveBudget(branchId, fiscalYear);
 
@@ -208,6 +229,7 @@ public class BudgetService {
                             accountId,
                             start.atStartOfDay(),
                             end.atTime(23,59,59),
+                            branchId,
                             DEBIT_NORMAL,
                             CREDIT_NORMAL,
                             DEBIT,
@@ -230,6 +252,15 @@ public class BudgetService {
                             .build()
             );
         }
+        snapshotStateRepository.save(
+                BudgetSnapshotState.builder()
+                        .branchId(branchId)
+                        .fiscalYear(fiscalYear)
+                        .monthNumber(monthNumber)
+                        .computedAt(LocalDateTime.now())
+                        .locked(true)
+                        .build()
+        );
     }
 
     private BigDecimal calculateVariance(
@@ -334,6 +365,18 @@ public class BudgetService {
                         accountId
                 );
 
+        Set<UUID> ids = rows.stream()
+                .map(r -> (UUID) r[0])
+                .collect(Collectors.toSet());
+
+        Map<UUID, String> branchMap =
+                branchRepository.findAllById(ids)
+                        .stream()
+                        .collect(Collectors.toMap(
+                                Branch::getId,
+                                Branch::getName
+                        ));
+
         List<BranchComparisonDTO> result = new ArrayList<>();
 
         for (Object[] row : rows) {
@@ -350,10 +393,7 @@ public class BudgetService {
                             .divide(planned, 4, java.math.RoundingMode.HALF_UP)
                             .multiply(BigDecimal.valueOf(100));
 
-            String branchName =
-                    branchRepository.findById(branchId)
-                            .map(b -> b.getName())
-                            .orElse("Unknown");
+            String branchName = branchMap.getOrDefault(branchId, "Unknown");
 
             result.add(
                     BranchComparisonDTO.builder()
@@ -367,11 +407,53 @@ public class BudgetService {
             );
         }
 
-        // Sort best performing first (highest positive variance)
         result.sort((a, b) ->
                 b.getVariance().compareTo(a.getVariance())
         );
 
         return result;
+    }
+
+    @Transactional
+    public void submitBudget(UUID budgetId, String user) {
+
+        Budget budget = budgetRepository.findById(budgetId)
+                .orElseThrow(() -> new IllegalArgumentException("Budget not found"));
+
+        if (budget.getStatus() != BudgetStatus.DRAFT) {
+            throw new IllegalStateException("Only DRAFT budgets can be submitted");
+        }
+
+        budget.setStatus(BudgetStatus.SUBMITTED);
+        budget.setSubmittedBy(user);
+        budget.setSubmittedAt(LocalDateTime.now());
+
+        auditService.log(
+                budget.getBranch() != null ? budget.getBranch().getId() : null,
+                "BUDGET_SUBMITTED",
+                user,
+                "Budget ID: " + budgetId
+        );
+    }
+
+    @Transactional
+    public void approveBudget(UUID budgetId, String adminUser) {
+
+        Budget budget = budgetRepository.findById(budgetId)
+                .orElseThrow(() -> new IllegalArgumentException("Budget not found"));
+
+        if (budget.getStatus() != BudgetStatus.SUBMITTED) {
+            throw new IllegalStateException("Only SUBMITTED budgets can be approved");
+        }
+
+        budget.setStatus(BudgetStatus.APPROVED);
+        budget.setApprovedBy(adminUser);
+        budget.setApprovedAt(LocalDateTime.now());
+        auditService.log(
+                budget.getBranch() != null ? budget.getBranch().getId() : null,
+                "BUDGET_APPROVED",
+                adminUser,
+                "Budget ID: " + budgetId
+        );
     }
 }

@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.*;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -27,9 +28,9 @@ public class DashboardSnapshotService {
     private final InventoryValuationService valuationService;
 
     @Transactional
-    public void compute(LocalDate date) {
+    public void compute(UUID branchId, LocalDate date) {
 
-        snapshotRepo.findByDate(date).ifPresent(s -> {
+        snapshotRepo.findByBranchIdAndDate(branchId, date).ifPresent(s -> {
             return;
         });
 
@@ -41,6 +42,7 @@ public class DashboardSnapshotService {
                         accounts.revenue(),
                         start,
                         end,
+                        branchId,
                         DEBIT_NORMAL,
                         CREDIT_NORMAL,
                         DEBIT,
@@ -52,6 +54,7 @@ public class DashboardSnapshotService {
                         accounts.cogs(),
                         start,
                         end,
+                        branchId,
                         DEBIT_NORMAL,
                         CREDIT_NORMAL,
                         DEBIT,
@@ -59,25 +62,33 @@ public class DashboardSnapshotService {
                 );
 
         BigDecimal vat =
-                balanceRepo.findByAccountId(accounts.vatPayable())
+                balanceRepo.findByAccount_IdAndBranch_Id(
+                                accounts.vatPayable(),
+                                branchId
+                        )
                         .map(b -> b.getBalance())
                         .orElse(BigDecimal.ZERO);
 
         BigDecimal cash =
-                balanceRepo.findByAccountId(accounts.cash())
+                balanceRepo.findByAccount_IdAndBranch_Id(accounts.cash(), branchId)
                         .map(b -> b.getBalance())
                         .orElse(BigDecimal.ZERO)
                         .add(
-                                balanceRepo.findByAccountId(accounts.bank())
+                                balanceRepo.findByAccount_IdAndBranch_Id(accounts.bank(), branchId)
+                                        .map(b -> b.getBalance())
+                                        .orElse(BigDecimal.ZERO)
+                        ).add(
+                                balanceRepo.findByAccount_IdAndBranch_Id(accounts.mpesa(), branchId)
                                         .map(b -> b.getBalance())
                                         .orElse(BigDecimal.ZERO)
                         );
 
         BigDecimal inventory =
-                (BigDecimal) valuationService.getTotalValuation()
+                (BigDecimal) valuationService.getBranchValuation(branchId)
                         .get("totalValuation");
 
         DashboardDailySnapshot snap = new DashboardDailySnapshot();
+        snap.setBranchId(branchId);
         snap.setDate(date);
         snap.setRevenue(revenue);
         snap.setCogs(cogs);
@@ -94,17 +105,17 @@ public class DashboardSnapshotService {
         }
     }
 
-    public void backfillMissingSnapshots(LocalDate from, LocalDate to) {
+    public void backfillMissingSnapshots(UUID branchId, LocalDate from, LocalDate to) {
 
         Set<LocalDate> existing =
-                new HashSet<>(snapshotRepo.findExistingDatesBetween(from, to));
+                new HashSet<>(snapshotRepo.findExistingDatesBetween(branchId, from, to));
 
         LocalDate date = from;
 
         while (!date.isAfter(to)) {
 
             if (!existing.contains(date)) {
-                compute(date);
+                compute(branchId, date);
             }
 
             date = date.plusDays(1);

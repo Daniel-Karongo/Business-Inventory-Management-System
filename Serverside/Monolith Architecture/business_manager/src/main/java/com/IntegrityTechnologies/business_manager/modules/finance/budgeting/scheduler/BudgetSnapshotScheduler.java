@@ -2,6 +2,8 @@ package com.IntegrityTechnologies.business_manager.modules.finance.budgeting.sch
 
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.config.BudgetSnapshotProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.service.BudgetService;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.TaskScheduler;
@@ -17,6 +19,7 @@ public class BudgetSnapshotScheduler {
     private final BudgetService budgetService;
     private final BudgetSnapshotProperties properties;
     private final TaskScheduler taskScheduler;
+    private final BranchRepository branchRepository;
 
     @PostConstruct
     public void scheduleDailySnapshot() {
@@ -30,8 +33,13 @@ public class BudgetSnapshotScheduler {
             int fiscalYear = now.getYear();
             int month = now.getMonthValue();
 
-            // Global snapshot
-            budgetService.computeMonthlySnapshot(null, fiscalYear, month);
+            branchRepository.findAll().forEach(branch ->
+                    budgetService.computeMonthlySnapshot(
+                            branch.getId(),
+                            fiscalYear,
+                            month
+                    )
+            );
         };
 
         taskScheduler.scheduleAtFixedRate(

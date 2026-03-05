@@ -5,7 +5,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.PeriodGuardService;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.CorporateTaxFiling;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.enums.BusinessTaxMode;
@@ -30,14 +32,23 @@ public class CorporateTaxService {
     private final AccountingFacade accountingFacade;
     private final AccountingAccounts accounts;
     private final TaxProperties taxProperties;
+    private final PeriodGuardService periodGuardService;
+    private final GovernanceAuditService auditService;
 
     @Transactional
     public CorporateTaxFiling accrueCorporateTax(
             UUID periodId,
+            UUID branchId,
             LocalDateTime from,
             LocalDateTime to,
             String user
     ) {
+
+        if (branchId == null) {
+            throw new IllegalArgumentException("branchId is required for corporate tax accrual");
+        }
+        periodGuardService.validateOpenPeriod(from.toLocalDate(), branchId);
+
         if (taxProperties.getBusinessTaxMode() != BusinessTaxMode.CORPORATE) {
             throw new IllegalStateException(
                     "Corporate tax accrual disabled. Business tax mode is "
@@ -45,10 +56,17 @@ public class CorporateTaxService {
             );
         }
 
+        if (filingRepository.existsByPeriodIdAndBranchId(periodId, branchId)) {
+            throw new IllegalStateException(
+                    "Corporate tax already accrued for this period and branch."
+            );
+        }
+
         BigDecimal revenue = ledgerRepository.netMovementForAccount(
                 accounts.revenue(),
                 from,
                 to,
+                branchId,
                 DEBIT_NORMAL,
                 CREDIT_NORMAL,
                 DEBIT,
@@ -59,6 +77,7 @@ public class CorporateTaxService {
                 accounts.cogs(),
                 from,
                 to,
+                branchId,
                 DEBIT_NORMAL,
                 CREDIT_NORMAL,
                 DEBIT,
@@ -68,6 +87,7 @@ public class CorporateTaxService {
         BigDecimal expenses = ledgerRepository.totalExpensesBetween(
                 from,
                 to,
+                branchId,
                 AccountType.EXPENSE,
                 EntryDirection.DEBIT
         );
@@ -75,61 +95,67 @@ public class CorporateTaxService {
         BigDecimal profit =
                 revenue.subtract(cogs).subtract(expenses);
 
-        if (profit.compareTo(BigDecimal.ZERO) <= 0) {
-            return CorporateTaxFiling.builder()
-                    .periodId(periodId)
-                    .taxableProfit(profit)
-                    .taxRate(taxProperties.getCorporateTaxRate())
-                    .taxAmount(BigDecimal.ZERO)
-                    .filedBy(user)
-                    .filedAt(LocalDateTime.now())
-                    .paid(false)
-                    .build();
+        BigDecimal taxRate = taxProperties.getCorporateTaxRate();
+        BigDecimal taxAmount = BigDecimal.ZERO;
+
+        if (profit.compareTo(BigDecimal.ZERO) > 0) {
+            taxAmount = profit.multiply(taxRate);
+
+            accountingFacade.post(
+                    AccountingEvent.builder()
+                            .eventId(UUID.randomUUID())
+                            .sourceModule("CORPORATE_TAX")
+                            .sourceId(periodId)
+                            .reference("CTAX-" + periodId + "-" + branchId)
+                            .description("Corporate tax accrual")
+                            .performedBy(user)
+                            .branchId(branchId)
+                            .entries(
+                                    List.of(
+                                            AccountingEvent.Entry.builder()
+                                                    .accountId(accounts.corporateTaxExpense())
+                                                    .direction(EntryDirection.DEBIT)
+                                                    .amount(taxAmount)
+                                                    .build(),
+
+                                            AccountingEvent.Entry.builder()
+                                                    .accountId(accounts.corporateTaxPayable())
+                                                    .direction(EntryDirection.CREDIT)
+                                                    .amount(taxAmount)
+                                                    .build()
+                                    )
+                            )
+                            .build()
+            );
         }
-
-        BigDecimal taxAmount =
-                profit.multiply(taxProperties.getCorporateTaxRate());
-
-        accountingFacade.post(
-                AccountingEvent.builder()
-                        .sourceModule("CORPORATE_TAX")
-                        .sourceId(periodId)
-                        .reference("CTAX-" + periodId)
-                        .description("Corporate tax accrual")
-                        .performedBy(user)
-                        .entries(
-                                java.util.List.of(
-                                        AccountingEvent.Entry.builder()
-                                                .accountId(accounts.corporateTaxExpense())
-                                                .direction(EntryDirection.DEBIT)
-                                                .amount(taxAmount)
-                                                .build(),
-
-                                        AccountingEvent.Entry.builder()
-                                                .accountId(accounts.corporateTaxPayable())
-                                                .direction(EntryDirection.CREDIT)
-                                                .amount(taxAmount)
-                                                .build()
-                                )
-                        )
-                        .build()
-        );
 
         CorporateTaxFiling filing = CorporateTaxFiling.builder()
                 .periodId(periodId)
+                .branchId(branchId)     // ✅ STORED HERE
                 .taxableProfit(profit)
-                .taxRate(taxProperties.getCorporateTaxRate())
+                .taxRate(taxRate)
                 .taxAmount(taxAmount)
                 .filedBy(user)
                 .filedAt(LocalDateTime.now())
                 .paid(false)
                 .build();
 
-        return filingRepository.save(filing);
+        CorporateTaxFiling saved = filingRepository.save(filing);
+        auditService.log(
+                branchId,
+                "CORPORATE_TAX_ACCRUED",
+                user,
+                "Period=" + periodId +
+                        ", taxableProfit=" + profit +
+                        ", taxAmount=" + taxAmount
+        );
+        
+        return saved;
     }
 
     @Transactional
     public void markPaid(UUID filingId, String user, UUID paymentAccount) {
+
         if (taxProperties.getBusinessTaxMode() != BusinessTaxMode.CORPORATE) {
             throw new IllegalStateException(
                     "Corporate tax payment disabled. Business tax mode is "
@@ -139,19 +165,24 @@ public class CorporateTaxService {
 
         CorporateTaxFiling filing =
                 filingRepository.findById(filingId)
-                        .orElseThrow();
+                        .orElseThrow(() ->
+                                new IllegalArgumentException("Corporate tax filing not found"));
 
         if (filing.isPaid()) return;
 
+        UUID branchId = filing.getBranchId();
+
         accountingFacade.post(
                 AccountingEvent.builder()
+                        .eventId(UUID.randomUUID())
                         .sourceModule("CORPORATE_TAX_PAYMENT")
                         .sourceId(filingId)
                         .reference("CTAX-PAY-" + filingId)
                         .description("Corporate tax payment")
                         .performedBy(user)
+                        .branchId(branchId)   // ✅ CRITICAL FIX
                         .entries(
-                                java.util.List.of(
+                                List.of(
                                         AccountingEvent.Entry.builder()
                                                 .accountId(accounts.corporateTaxPayable())
                                                 .direction(EntryDirection.DEBIT)
@@ -171,6 +202,13 @@ public class CorporateTaxService {
         filing.setPaid(true);
         filing.setPaidAt(LocalDateTime.now());
         filingRepository.save(filing);
+        auditService.log(
+                branchId,
+                "CORPORATE_TAX_PAID",
+                user,
+                "FilingId=" + filingId +
+                        ", amount=" + filing.getTaxAmount()
+        );
     }
 
     public List<CorporateTaxFiling> listAll() {

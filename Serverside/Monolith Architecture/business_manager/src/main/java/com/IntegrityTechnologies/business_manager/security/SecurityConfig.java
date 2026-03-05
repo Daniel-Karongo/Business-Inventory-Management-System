@@ -32,18 +32,20 @@ public class SecurityConfig {
     private final JwtExceptionHandlerFilter jwtExceptionHandlerFilter;
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
     private final PermissionSecurityFilter permissionSecurityFilter;
+    private final BranchContextFilter branchContextFilter;
 
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthFilter,
             JwtExceptionHandlerFilter jwtExceptionHandlerFilter,
             CustomAuthenticationEntryPoint authenticationEntryPoint,
-            PermissionSecurityFilter permissionSecurityFilter
-    ) {
+            PermissionSecurityFilter permissionSecurityFilter,
+            BranchContextFilter branchContextFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.jwtExceptionHandlerFilter = jwtExceptionHandlerFilter;
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.permissionSecurityFilter = permissionSecurityFilter;
+        this.branchContextFilter = branchContextFilter;
     }
 
     /* =====================================================
@@ -155,6 +157,10 @@ public class SecurityConfig {
                         UsernamePasswordAuthenticationFilter.class
                 ).addFilterAfter(
                         permissionSecurityFilter,
+                        JwtAuthenticationFilter.class
+                )
+                .addFilterAfter(
+                        branchContextFilter,
                         JwtAuthenticationFilter.class
                 )
         ;

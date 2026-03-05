@@ -7,6 +7,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.rep
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -22,36 +25,23 @@ public class LedgerController {
     private final LedgerEntryRepository ledgerRepo;
 
     @GetMapping("/{accountId}")
-    public List<LedgerRowResponse> ledger(@PathVariable UUID accountId) {
+    public Page<LedgerRowResponse> ledger(
+            @PathVariable UUID accountId,
+            @RequestParam(required = false) UUID branchId,
+            @PageableDefault(size = 100) Pageable pageable
+    ) {
 
         SecurityUtils.requireAtLeast(Role.EMPLOYEE);
 
-        List<LedgerEntry> entries =
-                ledgerRepo.findByAccountIdOrderByPostedAtAsc(accountId);
-
-        BigDecimal running = BigDecimal.ZERO;
-        List<LedgerRowResponse> response = new ArrayList<>();
-
-        for (LedgerEntry e : entries) {
-
-            if (e.getDirection() == EntryDirection.DEBIT) {
-                running = running.add(e.getAmount());
-            } else {
-                running = running.subtract(e.getAmount());
-            }
-
-            response.add(
-                    new LedgerRowResponse(
-                            e.getJournalEntry().getId(),
-                            e.getJournalEntry().getReference(),
-                            e.getPostedAt(),
-                            e.getDirection().name(),
-                            e.getAmount(),
-                            running
-                    )
-            );
-        }
-
-        return response;
+        return ledgerRepo
+                .findLedgerWithRunningBalance(accountId, branchId, pageable)
+                .map(p -> new LedgerRowResponse(
+                        p.getJournalId(),
+                        p.getReference(),
+                        p.getPostedAt(),
+                        p.getDirection(),
+                        p.getAmount(),
+                        p.getRunningBalance()
+                ));
     }
 }

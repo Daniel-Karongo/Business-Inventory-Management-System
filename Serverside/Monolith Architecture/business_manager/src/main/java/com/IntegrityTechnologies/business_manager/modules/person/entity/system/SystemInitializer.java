@@ -1,5 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.system;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.BranchAccountingSettings;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.BranchAccountingSettingsRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
@@ -21,6 +23,7 @@ public class SystemInitializer {
 
     private final BranchRepository branchRepository;
     private final DepartmentRepository departmentRepository;
+    private final BranchAccountingSettingsRepository accountingSettingsRepository;
 
     @Bean
     @Transactional
@@ -41,7 +44,16 @@ public class SystemInitializer {
                         log.info("✅ Default MAIN branch created.");
                         return b;
                     });
-
+            if (!accountingSettingsRepository.existsByBranchId(mainBranch.getId())) {
+                accountingSettingsRepository.save(
+                        BranchAccountingSettings.builder()
+                                .branchId(mainBranch.getId())
+                                .revenueRecognitionMode(
+                                        com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode.DELIVERY
+                                )
+                                .build()
+                );
+            }
             Department generalDept = departmentRepository.findByNameIgnoreCase("GENERAL")
                     .orElseGet(() -> {
                         log.warn("⚠️ No departments found. Creating default GENERAL department.");

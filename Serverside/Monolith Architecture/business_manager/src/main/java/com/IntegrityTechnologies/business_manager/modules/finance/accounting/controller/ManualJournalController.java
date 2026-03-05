@@ -2,6 +2,8 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.co
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.ManualJournalRequest;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.ManualJournalService;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +16,7 @@ public class ManualJournalController {
 
     @PostMapping
     public void post(@RequestBody ManualJournalRequest request) {
+        SecurityUtils.requireAtLeast(Role.EMPLOYEE);
         service.post(request);
     }
 }

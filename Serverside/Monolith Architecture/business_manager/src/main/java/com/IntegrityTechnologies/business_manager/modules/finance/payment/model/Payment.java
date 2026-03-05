@@ -8,7 +8,18 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "payments")
+@Table(
+        name = "payments",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_payment_provider_reference",
+                        columnNames = {"providerReference"}
+                )
+        },
+        indexes = {
+                @Index(name = "idx_payment_timestamp", columnList = "timestamp")
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -35,8 +46,9 @@ public class Payment {
     @Column(nullable = false)
     private LocalDateTime timestamp;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status;
+    private PaymentStatus status;
 
     private String note;
 

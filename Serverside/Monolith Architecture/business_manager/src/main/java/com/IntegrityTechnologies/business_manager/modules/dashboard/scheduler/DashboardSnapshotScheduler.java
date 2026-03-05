@@ -2,14 +2,19 @@ package com.IntegrityTechnologies.business_manager.modules.dashboard.scheduler;
 
 import com.IntegrityTechnologies.business_manager.modules.dashboard.config.DashboardSnapshotProperties;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.service.DashboardSnapshotService;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Component;
 
-import java.time.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class DashboardSnapshotScheduler {
@@ -17,6 +22,7 @@ public class DashboardSnapshotScheduler {
     private final DashboardSnapshotService snapshotService;
     private final DashboardSnapshotProperties properties;
     private final TaskScheduler taskScheduler;
+    private final BranchRepository branchRepository;
 
     @PostConstruct
     public void scheduleDailySnapshot() {
@@ -26,14 +32,31 @@ public class DashboardSnapshotScheduler {
         int minute = Integer.parseInt(parts[1]);
 
         Runnable task = () -> {
+
             LocalDate yesterday = LocalDate.now().minusDays(1);
-            snapshotService.compute(yesterday);
+
+            branchRepository.findByDeletedFalse().forEach(branch -> {
+
+                try {
+
+                    snapshotService.compute(
+                            branch.getId(),
+                            yesterday
+                    );
+
+                    log.info("Dashboard snapshot computed for branch={}", branch.getId());
+
+                } catch (Exception ex) {
+                    log.error("Snapshot failed for branch={}", branch.getId(), ex);
+                }
+
+            });
         };
 
         taskScheduler.scheduleAtFixedRate(
                 task,
                 nextExecution(hour, minute),
-                24 * 60 * 60 * 1000L   // 24 hours in ms
+                24 * 60 * 60 * 1000L
         );
     }
 

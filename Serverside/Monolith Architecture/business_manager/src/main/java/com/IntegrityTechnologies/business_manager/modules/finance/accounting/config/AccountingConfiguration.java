@@ -1,21 +1,23 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.config;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountingMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.policy.*;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
+@RequiredArgsConstructor
 public class AccountingConfiguration {
 
-    @Value("${accounting.mode:DOUBLE_ENTRY}")
-    private String accountingMode;
+    private final AccountingProperties properties;
 
     @Bean
     public AccountingPolicy accountingPolicy() {
-        return switch (accountingMode.toUpperCase()) {
-            case "SINGLE_ENTRY" -> new SingleEntryPolicy();
-            default -> new DoubleEntryPolicy();
+
+        return switch (properties.getMode()) {
+            case SINGLE_ENTRY -> new SingleEntryPolicy();
+            case DOUBLE_ENTRY -> new DoubleEntryPolicy();
         };
     }
 }

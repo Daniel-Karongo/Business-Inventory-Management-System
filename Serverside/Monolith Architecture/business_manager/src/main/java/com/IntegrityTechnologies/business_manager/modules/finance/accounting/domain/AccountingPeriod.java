@@ -8,10 +8,16 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "accounting_periods",
+@Table(
+        name = "accounting_periods",
         uniqueConstraints = @UniqueConstraint(
-                columnNames = {"startDate", "endDate"}
-        ))
+                name = "uk_branch_period",
+                columnNames = {"branchId", "startDate", "endDate"}
+        ),
+        indexes = {
+                @Index(name = "idx_period_branch_range", columnList = "branchId,startDate,endDate")
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -23,13 +29,30 @@ public class AccountingPeriod {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(nullable = false)
+    private UUID branchId;
+
+    @Column(nullable = false)
     private LocalDate startDate;
+
+    @Column(nullable = false)
     private LocalDate endDate;
 
-    private boolean closed;
+    @Column(nullable = false)
+    private boolean closed = false;
 
-    // 🔥 ADD THESE
-    private boolean taxAccrued;
+    @Column(nullable = false)
+    private boolean taxAccrued = false;
 
     private LocalDateTime taxAccruedAt;
+
+    private String reopenedBy;
+
+    private LocalDateTime reopenedAt;
+
+    private String reopenReason;
+
+    public void close() {
+        this.closed = true;
+    }
 }

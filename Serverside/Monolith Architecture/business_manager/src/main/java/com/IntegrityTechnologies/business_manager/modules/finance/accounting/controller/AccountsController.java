@@ -3,9 +3,11 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.co
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.Account;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -16,11 +18,11 @@ public class AccountsController {
     private final AccountRepository accountRepository;
 
     @GetMapping
-    public List<AccountResponse> listAccounts() {
-        return accountRepository.findAll().stream()
-                .filter(Account::isActive)
-                .map(AccountResponse::from)
-                .toList();
+    public Page<AccountResponse> listAccounts(
+            @PageableDefault(size = 50, sort = "code") Pageable pageable
+    ) {
+        return accountRepository.findByActiveTrue(pageable)
+                .map(AccountResponse::from);
     }
 
     @GetMapping("/{id}")

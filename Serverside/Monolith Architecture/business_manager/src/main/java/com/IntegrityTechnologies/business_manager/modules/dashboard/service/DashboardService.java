@@ -68,7 +68,7 @@ public class DashboardService {
         LocalDateTime start = today.atStartOfDay();
         LocalDateTime end = today.atTime(23,59,59);
 
-        Map<String, List<ChartPoint>> trends = build7DayTrends();
+        Map<String, List<ChartPoint>> trends = build7DayTrends(branchId);
 
         return DashboardSummaryDTO.builder()
                 .branchId(branchId)
@@ -113,13 +113,16 @@ public class DashboardService {
         LocalDate today = LocalDate.now();
         LocalDate oneYearAgo = today.minusYears(1);
 
-        snapshotService.backfillMissingSnapshots(oneYearAgo, today);
+        snapshotService.backfillMissingSnapshots(branchId, oneYearAgo, today);
 
         BigDecimal todayCogs = movements.get(accounts.cogs());
 
         BigDecimal yearlyCogs =
-                snapshotRepo.sumCogsBetween(oneYearAgo, today.minusDays(1))
-                        .add(todayCogs);
+                snapshotRepo.sumCogsBetween(
+                        branchId,
+                        oneYearAgo,
+                        today.minusDays(1)
+                );
 
         BigDecimal inventoryValue =
                 (BigDecimal) valuationService.getTotalValuation()
@@ -133,6 +136,7 @@ public class DashboardService {
         BigDecimal expensesLast30 = ledgerRepo.totalExpensesBetween(
                 LocalDate.now().minusDays(30).atStartOfDay(),
                 LocalDateTime.now(),
+                branchId,
                 AccountType.EXPENSE,
                 EntryDirection.DEBIT
         );
@@ -141,33 +145,33 @@ public class DashboardService {
                 expensesLast30.divide(BigDecimal.valueOf(30), 2, RoundingMode.HALF_UP);
 
         BigDecimal vatPayable =
-                balanceRepo.findByAccountId(accounts.vatPayable())
+                balanceRepo.findByAccount_IdAndBranch_Id(accounts.vatPayable(), branchId)
                         .map(b -> b.getBalance())
                         .orElse(BigDecimal.ZERO);
 
         BigDecimal ar =
-                balanceRepo.findByAccountId(accounts.accountsReceivable())
+                balanceRepo.findByAccount_IdAndBranch_Id(accounts.accountsReceivable(), branchId)
                         .map(b -> b.getBalance())
                         .orElse(BigDecimal.ZERO);
 
         BigDecimal ap =
-                balanceRepo.findByAccountId(accounts.accountsPayable())
+                balanceRepo.findByAccount_IdAndBranch_Id(accounts.accountsPayable(), branchId)
                         .map(b -> b.getBalance())
                         .orElse(BigDecimal.ZERO);
 
         BigDecimal cash =
-                balanceRepo.findByAccountId(accounts.cash())
+                balanceRepo.findByAccount_IdAndBranch_Id(accounts.cash(), branchId)
                         .map(b -> b.getBalance())
                         .orElse(BigDecimal.ZERO)
                         .add(
-                                balanceRepo.findByAccountId(accounts.bank())
+                                balanceRepo.findByAccount_IdAndBranch_Id(accounts.bank(), branchId)
                                         .map(b -> b.getBalance())
                                         .orElse(BigDecimal.ZERO)
                         );
 
         BigDecimal corporateTax =
                 taxProperties.getBusinessTaxMode().name().equals("CORPORATE")
-                        ? balanceRepo.findByAccountId(accounts.corporateTaxPayable())
+                        ? balanceRepo.findByAccount_IdAndBranch_Id(accounts.corporateTaxPayable(), branchId)
                         .map(b -> b.getBalance())
                         .orElse(BigDecimal.ZERO)
                         : BigDecimal.ZERO;
@@ -178,7 +182,7 @@ public class DashboardService {
         BigDecimal expenseBudgetVariance =
                 resolveSnapshotVariance(branchId, accounts.cogs());
 
-        AgingBucketDTO aging = computeARAging();
+        AgingBucketDTO aging = computeARAging(branchId);
 
         return DashboardSummaryDTO.FinancialKpis.builder()
                 .netRevenueToday(revenueToday)
@@ -193,7 +197,7 @@ public class DashboardService {
                 .inventoryValue(inventoryValue)
                 .corporateTaxAccrued(corporateTax)
                 .arAging(aging)
-                .apAging(computeAPAging())
+                .apAging(computeAPAging(branchId))
                 .revenueBudgetVariance(revenueBudgetVariance)
                 .expenseBudgetVariance(expenseBudgetVariance)
                 .build();
@@ -228,7 +232,7 @@ public class DashboardService {
     /* ============================================================
        REVENUE TREND (7 DAYS)
     ============================================================ */
-    private Map<String, List<ChartPoint>> build7DayTrends() {
+    private Map<String, List<ChartPoint>> build7DayTrends(UUID branchId) {
 
         UUID revenueId = accounts.revenue();
         UUID cogsId = accounts.cogs();
@@ -237,7 +241,7 @@ public class DashboardService {
         Set<UUID> trendAccounts = Set.of(revenueId, cogsId, vatId);
 
         Map<LocalDate, Map<UUID, BigDecimal>> data =
-                fetch7DayMovements(trendAccounts);
+                fetch7DayMovements(trendAccounts, branchId);
 
         List<ChartPoint> revenueTrend = new ArrayList<>();
         List<ChartPoint> profitTrend = new ArrayList<>();
@@ -274,7 +278,7 @@ public class DashboardService {
         return result;
     }
 
-    private AgingBucketDTO computeARAging() {
+    private AgingBucketDTO computeARAging(UUID branchId) {
 
         BigDecimal current = BigDecimal.ZERO;
         BigDecimal d30 = BigDecimal.ZERO;
@@ -282,7 +286,7 @@ public class DashboardService {
         BigDecimal d90 = BigDecimal.ZERO;
         BigDecimal over90 = BigDecimal.ZERO;
 
-        for (Object[] row : saleRepository.arAgingRaw()) {
+        for (Object[] row : saleRepository.arAgingRaw(branchId)) {
 
             int days = ((Number) row[0]).intValue();
             BigDecimal balance = (BigDecimal) row[1];
@@ -301,7 +305,7 @@ public class DashboardService {
         return new AgingBucketDTO(current, d30, d60, d90, over90);
     }
 
-    private AgingBucketDTO computeAPAging() {
+    private AgingBucketDTO computeAPAging(UUID branchId) {
 
         BigDecimal current = BigDecimal.ZERO;
         BigDecimal d30 = BigDecimal.ZERO;
@@ -311,7 +315,7 @@ public class DashboardService {
 
         UUID apAccountId = accounts.accountsPayable();
 
-        for (Object[] row : ledgerRepo.apAgingRaw(apAccountId, CREDIT, DEBIT)) {
+        for (Object[] row : ledgerRepo.apAgingRaw(apAccountId, branchId, CREDIT, DEBIT)) {
 
             int days = ((Number) row[0]).intValue();
             BigDecimal balance = (BigDecimal) row[1];
@@ -412,7 +416,10 @@ public class DashboardService {
         return result;
     }
 
-    private Map<LocalDate, Map<UUID, BigDecimal>> fetch7DayMovements(Set<UUID> accountIds) {
+    private Map<LocalDate, Map<UUID, BigDecimal>> fetch7DayMovements(
+            Set<UUID> accountIds,
+            UUID branchId
+    ) {
 
         LocalDate today = LocalDate.now();
         LocalDate startDate = today.minusDays(6);
@@ -425,6 +432,7 @@ public class DashboardService {
                         accountIds,
                         start,
                         end,
+                        branchId,
                         DEBIT_NORMAL,
                         CREDIT_NORMAL,
                         DEBIT,

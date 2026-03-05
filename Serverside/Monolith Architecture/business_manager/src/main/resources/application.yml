@@ -62,5 +62,13 @@ tax:
 
 business:
   accounting:
-    revenue-recognition: DELIVERY   # DELIVERY | PAYMENT
+    mode: DOUBLE_ENTRY  # DOUBLE_ENTRY | SINGLE_ENTRY
 
+accounting:
+  reconciliation:
+    enabled: true
+    cron: 0 0 2 * * ?
+    auto-repair: false
+  integrity:
+    enabled: true
+    cron: "0 0 2 * * ?"

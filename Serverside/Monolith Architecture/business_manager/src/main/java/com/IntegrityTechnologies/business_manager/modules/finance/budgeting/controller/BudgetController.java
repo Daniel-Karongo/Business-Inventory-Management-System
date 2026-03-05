@@ -5,6 +5,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.dto.
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.dto.CorporateVarianceDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.service.BudgetService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,9 +26,13 @@ public class BudgetController {
 
     @PostMapping
     public ApiResponse create(
-            @RequestParam(required = false) UUID branchId,
+            @RequestParam UUID branchId,
             @RequestParam int fiscalYear
     ) {
+
+        if (branchId == null) {
+            throw new IllegalArgumentException("BranchId required.");
+        }
 
         return new ApiResponse(
                 "success",
@@ -99,16 +106,24 @@ public class BudgetController {
     }
 
     @GetMapping("/compare")
-    public List<BranchComparisonDTO> compareBranches(
+    public Page<BranchComparisonDTO> compareBranches(
             @RequestParam int year,
             @RequestParam int month,
-            @RequestParam UUID accountId
+            @RequestParam UUID accountId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
     ) {
 
-        return budgetService.compareBranches(
-                year,
-                month,
-                accountId
+        List<BranchComparisonDTO> full =
+                budgetService.compareBranches(year, month, accountId);
+
+        int start = Math.min(page * size, full.size());
+        int end = Math.min(start + size, full.size());
+
+        return new PageImpl<>(
+                full.subList(start, end),
+                PageRequest.of(page, size),
+                full.size()
         );
     }
 }

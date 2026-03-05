@@ -13,9 +13,11 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "dashboard_daily_snapshots",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"date"}),
+        uniqueConstraints = @UniqueConstraint(
+                columnNames = {"branch_id", "date"}
+        ),
         indexes = {
-                @Index(name = "idx_snapshot_date", columnList = "date")
+                @Index(name = "idx_snapshot_branch_date", columnList = "branch_id,date")
         }
 )
 @Getter
@@ -27,6 +29,10 @@ public class DashboardDailySnapshot {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(name = "branch_id", nullable = false)
+    private UUID branchId;
+
+    @Column(nullable = false)
     private LocalDate date;
 
     @Column(precision = 19, scale = 2)

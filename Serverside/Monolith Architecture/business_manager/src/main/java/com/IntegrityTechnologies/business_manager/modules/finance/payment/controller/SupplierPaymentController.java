@@ -19,12 +19,13 @@ public class SupplierPaymentController {
 
     @PostMapping
     public SupplierPayment pay(
+            @RequestParam UUID branchId,
             @RequestParam UUID supplierId,
             @RequestParam BigDecimal amount,
             @RequestParam String method,
             @RequestParam(required = false) String reference
     ) {
-        return service.pay(supplierId, amount, method, reference);
+        return service.pay(branchId, supplierId, amount, method, reference);
     }
 
     @GetMapping

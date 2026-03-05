@@ -85,15 +85,26 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
     );
 
     @Query("""
-        SELECT 
-            DATEDIFF(CURRENT_DATE, s.createdAt),
-            (s.totalAmount - COALESCE(SUM(p.amount),0))
-        FROM Sale s
-        LEFT JOIN Payment p ON p.sale.id = s.id
-        WHERE s.status = 'COMPLETED'
-        GROUP BY s.id, s.createdAt, s.totalAmount
-    """)
-    List<Object[]> arAgingRaw();
+    SELECT 
+        FUNCTION('DATEDIFF', CURRENT_DATE, s.createdAt),
+        COALESCE(
+            SUM(
+                s.totalAmount -
+                COALESCE(
+                    (SELECT SUM(p.amount)
+                     FROM Payment p
+                     WHERE p.sale = s
+                       AND p.status = com.IntegrityTechnologies.business_manager.modules.finance.payment.model.PaymentStatus.SUCCESS),
+                0)
+            ),
+        0)
+    FROM Sale s
+    JOIN s.lineItems li
+    WHERE s.status = com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale.SaleStatus.COMPLETED
+      AND (:branchId IS NULL OR li.branchId = :branchId)
+    GROUP BY s.id, s.createdAt
+""")
+    List<Object[]> arAgingRaw(@Param("branchId") UUID branchId);
 
     @Query("""
         select max(cast(substring(s.receiptNo, 3) as long))

@@ -65,8 +65,6 @@ public interface DepartmentRepository extends JpaRepository<Department, UUID> {
 """)
     List<Branch> findBranchesByDepartmentId(@Param("deptId") UUID deptId);
 
-    Optional<Department> findByBranchId(UUID id);
-
     boolean existsByNameIgnoreCaseAndBranch_Id(String name, UUID branchId);
 
     List<Department> findByBranch_Id(UUID branchId);

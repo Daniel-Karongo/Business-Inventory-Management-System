@@ -19,13 +19,17 @@ public class VatReportService {
     private final LedgerEntryRepository ledgerRepo;
     private final AccountingAccounts accountingAccounts;
 
-    public VatReport generate(LocalDateTime from, LocalDateTime to) {
+    public VatReport generate(LocalDateTime from, LocalDateTime to, UUID branchId) {
 
         UUID outputVatId = accountingAccounts.outputVat();
         UUID inputVatId = accountingAccounts.inputVat();
 
         List<LedgerEntry> entries =
-                ledgerRepo.findByPostedAtBetween(from, to);
+                ledgerRepo.findByPostedAtBetweenAndJournalEntry_Branch_Id(
+                        from,
+                        to,
+                        branchId
+                );
 
         BigDecimal outputVat = entries.stream()
                 .filter(e -> e.getAccount().getId().equals(outputVatId))

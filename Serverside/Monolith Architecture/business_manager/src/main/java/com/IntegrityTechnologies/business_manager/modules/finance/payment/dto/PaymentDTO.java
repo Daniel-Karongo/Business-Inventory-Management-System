@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.payment.dto;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.PaymentStatus;
 import lombok.Builder;
 import lombok.Data;
 import java.math.BigDecimal;
@@ -12,7 +13,7 @@ public class PaymentDTO {
     private UUID paymentId;
     private BigDecimal amount;
     private String method;
-    private String status;
+    private PaymentStatus status;
     private String providerReference;
     private LocalDateTime timestamp;
     private String note;

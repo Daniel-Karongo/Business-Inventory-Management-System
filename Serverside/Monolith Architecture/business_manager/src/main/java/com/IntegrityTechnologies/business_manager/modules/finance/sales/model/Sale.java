@@ -11,7 +11,12 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "sales")
+@Table(
+        name = "sales",
+        indexes = {
+                @Index(name = "idx_sales_created_at", columnList = "createdAt")
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

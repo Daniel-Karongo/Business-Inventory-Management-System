@@ -23,6 +23,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
 
         accountingFacade.post(
                 AccountingEvent.builder()
+                        .eventId(UUID.randomUUID())
                         .sourceModule("INVENTORY_RECEIPT")
                         .sourceId(refId)
                         .reference(ref)
@@ -50,6 +51,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
 
         accountingFacade.post(
                 AccountingEvent.builder()
+                        .eventId(UUID.randomUUID())
                         .sourceModule("INVENTORY_CONSUMPTION")
                         .sourceId(refId)
                         .reference(ref)
@@ -77,6 +79,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
 
         accountingFacade.post(
                 AccountingEvent.builder()
+                        .eventId(UUID.randomUUID())
                         .sourceModule("INVENTORY_RETURN")
                         .sourceId(refId)
                         .reference(ref)
@@ -104,6 +107,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
 
         accountingFacade.post(
                 AccountingEvent.builder()
+                        .eventId(UUID.randomUUID())
                         .sourceModule("INVENTORY_TRANSFER_OUT")
                         .sourceId(refId)
                         .reference(ref)
@@ -131,6 +135,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
 
         accountingFacade.post(
                 AccountingEvent.builder()
+                        .eventId(UUID.randomUUID())
                         .sourceModule("INVENTORY_TRANSFER_IN")
                         .sourceId(refId)
                         .reference(ref)

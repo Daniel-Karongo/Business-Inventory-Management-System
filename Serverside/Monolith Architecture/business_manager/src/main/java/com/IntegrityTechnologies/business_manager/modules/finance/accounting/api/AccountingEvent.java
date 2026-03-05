@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,6 +20,8 @@ public class AccountingEvent {
     private String performedBy;
     private UUID branchId;
     private List<Entry> entries;
+    private LocalDate accountingDate;
+    private UUID eventId;
 
     @Getter
     @Builder

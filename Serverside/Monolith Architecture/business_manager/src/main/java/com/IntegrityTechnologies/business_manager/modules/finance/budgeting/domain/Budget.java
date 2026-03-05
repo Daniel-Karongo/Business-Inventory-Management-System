@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.enums.BudgetScenario;
+import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.enums.BudgetStatus;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import jakarta.persistence.*;
 import lombok.*;
@@ -50,8 +51,18 @@ public class Budget {
     @Column(nullable = false)
     private BudgetScenario scenario;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private boolean locked = false;
+    private BudgetStatus status;
+
+    private String submittedBy;
+    private LocalDateTime submittedAt;
+
+    private String approvedBy;
+    private LocalDateTime approvedAt;
+
+    private String archivedBy;
+    private LocalDateTime archivedAt;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -68,19 +79,20 @@ public class Budget {
     @PrePersist
     public void onCreate() {
         this.createdAt = LocalDateTime.now();
+        if (this.status == null) {
+            this.status = BudgetStatus.DRAFT;
+        }
     }
 
     public boolean isGlobal() {
         return branch == null;
     }
 
-    public void lock() {
-        this.locked = true;
-    }
-
     public void ensureEditable() {
-        if (locked) {
-            throw new IllegalStateException("Budget is locked and cannot be modified");
+        if (status != BudgetStatus.DRAFT) {
+            throw new IllegalStateException(
+                    "Budget is not editable in state: " + status
+            );
         }
     }
 }

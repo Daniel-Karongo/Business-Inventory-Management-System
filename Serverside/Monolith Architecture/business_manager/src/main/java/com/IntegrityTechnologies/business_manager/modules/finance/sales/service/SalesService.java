@@ -10,8 +10,10 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.RevenueRecognitionService;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.Payment;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.PaymentStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.service.PaymentService;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
@@ -53,14 +55,13 @@ public class SalesService {
     private final InventoryService inventoryService;
     private final CustomerService customerService;
     private final AccountingFacade accountingFacade;
-    private final AccountingAccounts accountingAccounts;
     private final PaymentService paymentService;
     private final CustomerRepository customerRepository;
     private final ReceiptNumberService receiptNumberService;
     private final TaxProperties taxProperties;
-    private final AccountingProperties accountingProperties;
     private final JournalEntryRepository journalEntryRepository;
     private final BatchConsumptionRepository batchConsumptionRepository;
+    private final RevenueRecognitionService revenueRecognitionService;
 
     /* ============================================================
        CREATE SALE
@@ -229,55 +230,57 @@ public class SalesService {
         // -----------------------------------------
         // 2️⃣ If DELIVERY mode → post revenue accrual
         // -----------------------------------------
-        if (accountingProperties.getRevenueRecognitionMode()
-                == RevenueRecognitionMode.DELIVERY) {
-
-            if (!accountingFacade.isAlreadyPosted("SALE", sale.getId())) {
-
-                BigDecimal totalNet = sale.getLineItems().stream()
-                        .map(SaleLineItem::getNetAmount)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-                BigDecimal totalVat = sale.getLineItems().stream()
-                        .map(SaleLineItem::getVatAmount)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-                UUID branchId = extractSingleBranch(sale.getLineItems());
-
-                accountingFacade.post(
-                        AccountingEvent.builder()
-                                .sourceModule("SALE")
-                                .sourceId(sale.getId())
-                                .reference(sale.getReceiptNo())
-                                .description("Revenue recognized on delivery")
-                                .performedBy(SecurityUtils.currentUsername())
-                                .branchId(branchId)
-                                .entries(List.of(
-                                        AccountingEvent.Entry.builder()
-                                                .accountId(accountingAccounts.accountsReceivable())
-                                                .direction(EntryDirection.DEBIT)
-                                                .amount(totalNet.add(totalVat))
-                                                .build(),
-
-                                        AccountingEvent.Entry.builder()
-                                                .accountId(accountingAccounts.revenue())
-                                                .direction(EntryDirection.CREDIT)
-                                                .amount(totalNet)
-                                                .build(),
-
-                                        AccountingEvent.Entry.builder()
-                                                .accountId(accountingAccounts.outputVat())
-                                                .direction(EntryDirection.CREDIT)
-                                                .amount(totalVat)
-                                                .build()
-                                ))
-                                .build()
-                );
-            }
-        }
-
+//        if (accountingProperties.getRevenueRecognitionMode()
+//                == RevenueRecognitionMode.DELIVERY) {
+//
+//            if (!accountingFacade.isAlreadyPosted("SALE", sale.getId())) {
+//
+//                BigDecimal totalNet = sale.getLineItems().stream()
+//                        .map(SaleLineItem::getNetAmount)
+//                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+//
+//                BigDecimal totalVat = sale.getLineItems().stream()
+//                        .map(SaleLineItem::getVatAmount)
+//                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+//
+//                UUID branchId = extractSingleBranch(sale.getLineItems());
+//
+//                accountingFacade.post(
+//                        AccountingEvent.builder()
+//                                .eventId(UUID.randomUUID())
+//                                .sourceModule("SALE")
+//                                .sourceId(sale.getId())
+//                                .reference(sale.getReceiptNo())
+//                                .description("Revenue recognized on delivery")
+//                                .performedBy(SecurityUtils.currentUsername())
+//                                .branchId(branchId)
+//                                .entries(List.of(
+//                                        AccountingEvent.Entry.builder()
+//                                                .accountId(accountingAccounts.accountsReceivable())
+//                                                .direction(EntryDirection.DEBIT)
+//                                                .amount(totalNet.add(totalVat))
+//                                                .build(),
+//
+//                                        AccountingEvent.Entry.builder()
+//                                                .accountId(accountingAccounts.revenue())
+//                                                .direction(EntryDirection.CREDIT)
+//                                                .amount(totalNet)
+//                                                .build(),
+//
+//                                        AccountingEvent.Entry.builder()
+//                                                .accountId(accountingAccounts.outputVat())
+//                                                .direction(EntryDirection.CREDIT)
+//                                                .amount(totalVat)
+//                                                .build()
+//                                ))
+//                                .build()
+//                );
+//            }
+//        }
         sale.setStatus(Sale.SaleStatus.COMPLETED);
         saleRepository.save(sale);
+
+        revenueRecognitionService.recognizeIfEligible(sale);
 
         return toDTO(sale);
     }
@@ -526,7 +529,7 @@ public class SalesService {
 
         for (Payment payment : sale.getPayments()) {
 
-            if ("SUCCESS".equalsIgnoreCase(payment.getStatus())) {
+            if (payment.getStatus() == PaymentStatus.SUCCESS) {
 
                 journalEntryRepository
                         .findBySourceModuleAndSourceId("PAYMENT", payment.getId())
@@ -538,7 +541,7 @@ public class SalesService {
                                 )
                         );
 
-                payment.setStatus("REFUNDED");
+                payment.setStatus(PaymentStatus.REFUNDED);
             }
         }
 

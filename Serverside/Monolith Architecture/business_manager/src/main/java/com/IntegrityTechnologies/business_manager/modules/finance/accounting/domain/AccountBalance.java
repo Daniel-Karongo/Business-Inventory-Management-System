@@ -15,7 +15,17 @@ import java.util.UUID;
         name = "account_balances",
         uniqueConstraints = @UniqueConstraint(
                 columnNames = {"account_id", "branch_id"}
-        )
+        ),
+        indexes = {
+                @Index(
+                        name = "idx_balance_branch_account",
+                        columnList = "branch_id, account_id"
+                ),
+                @Index(
+                        name = "idx_balance_updated",
+                        columnList = "updatedAt"
+                )
+        }
 )
 @Getter
 @Setter

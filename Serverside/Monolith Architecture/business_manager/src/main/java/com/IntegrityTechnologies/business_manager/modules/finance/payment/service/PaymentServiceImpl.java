@@ -1,18 +1,18 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.payment.service;
 
 import com.IntegrityTechnologies.business_manager.common.TxnCodeGenerator;
-import com.IntegrityTechnologies.business_manager.config.OptimisticRetryRunner;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.config.AccountingProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.RevenueRecognitionService;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentRequest;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.Payment;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.PaymentStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.repository.PaymentRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineItem;
@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -43,6 +44,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final InventoryService inventoryService;
     private final JournalEntryRepository journalEntryRepository;
     private final AccountingProperties accountingProperties;
+    private final RevenueRecognitionService revenueRecognitionService;
 
     /* ============================================================
        PROCESS PAYMENT
@@ -67,7 +69,7 @@ public class PaymentServiceImpl implements PaymentService {
                 sale.getPayments() == null
                         ? BigDecimal.ZERO
                         : sale.getPayments().stream()
-                        .filter(p -> "SUCCESS".equalsIgnoreCase(p.getStatus()))
+                        .filter(p -> p.getStatus() == PaymentStatus.SUCCESS)
                         .map(Payment::getAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -95,7 +97,7 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setAmount(paymentAmount);
         payment.setMethod(req.getMethod());
         payment.setProviderReference(req.getProviderReference());
-        payment.setStatus("SUCCESS");
+        payment.setStatus(PaymentStatus.SUCCESS);
         payment.setTimestamp(LocalDateTime.now());
         payment.setNote(req.getNote());
         payment.setTransactionCode(txnCode);
@@ -122,19 +124,20 @@ public class PaymentServiceImpl implements PaymentService {
 
         accountingFacade.post(
                 AccountingEvent.builder()
+                        .eventId(UUID.randomUUID())  // 🔥 REQUIRED
                         .sourceModule("PAYMENT")
-                        .branchId(branchId)
                         .sourceId(payment.getId())
                         .reference(payment.getTransactionCode())
                         .description("Payment received")
                         .performedBy(currentUser())
+                        .branchId(branchId)
+                        .accountingDate(LocalDate.now())
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
                                         .accountId(debitAccount)
                                         .direction(EntryDirection.DEBIT)
                                         .amount(payment.getAmount())
                                         .build(),
-
                                 AccountingEvent.Entry.builder()
                                         .accountId(accountingAccounts.accountsReceivable())
                                         .direction(EntryDirection.CREDIT)
@@ -147,49 +150,51 @@ public class PaymentServiceImpl implements PaymentService {
         // -----------------------------------------
         // If PAYMENT mode → recognize revenue when fully paid
         // -----------------------------------------
-        if (accountingProperties.getRevenueRecognitionMode()
-                == RevenueRecognitionMode.PAYMENT
-                && willBeFullyPaid
-                && !accountingFacade.isAlreadyPosted("SALE", sale.getId())) {
-
-            BigDecimal totalNet = sale.getLineItems().stream()
-                    .map(SaleLineItem::getNetAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            BigDecimal totalVat = sale.getLineItems().stream()
-                    .map(SaleLineItem::getVatAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            accountingFacade.post(
-                    AccountingEvent.builder()
-                            .sourceModule("SALE")
-                            .sourceId(sale.getId())
-                            .reference(sale.getReceiptNo())
-                            .description("Revenue recognized on payment")
-                            .performedBy(currentUser())
-                            .branchId(branchId)
-                            .entries(List.of(
-                                    AccountingEvent.Entry.builder()
-                                            .accountId(accountingAccounts.accountsReceivable())
-                                            .direction(EntryDirection.DEBIT)
-                                            .amount(totalNet.add(totalVat))
-                                            .build(),
-
-                                    AccountingEvent.Entry.builder()
-                                            .accountId(accountingAccounts.revenue())
-                                            .direction(EntryDirection.CREDIT)
-                                            .amount(totalNet)
-                                            .build(),
-
-                                    AccountingEvent.Entry.builder()
-                                            .accountId(accountingAccounts.outputVat())
-                                            .direction(EntryDirection.CREDIT)
-                                            .amount(totalVat)
-                                            .build()
-                            ))
-                            .build()
-            );
-        }
+//        if (accountingProperties.getRevenueRecognitionMode()
+//                == RevenueRecognitionMode.PAYMENT
+//                && willBeFullyPaid
+//                && !accountingFacade.isAlreadyPosted("SALE", sale.getId())) {
+//
+//            BigDecimal totalNet = sale.getLineItems().stream()
+//                    .map(SaleLineItem::getNetAmount)
+//                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+//
+//            BigDecimal totalVat = sale.getLineItems().stream()
+//                    .map(SaleLineItem::getVatAmount)
+//                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+//
+//            accountingFacade.post(
+//                    AccountingEvent.builder()
+//                    .eventId(UUID.randomUUID())
+//                            .sourceModule("SALE")
+//                            .sourceId(sale.getId())
+//                            .reference(sale.getReceiptNo())
+//                            .description("Revenue recognized on payment")
+//                            .performedBy(currentUser())
+//                            .branchId(branchId)
+//                            .entries(List.of(
+//                                    AccountingEvent.Entry.builder()
+//                                            .accountId(accountingAccounts.accountsReceivable())
+//                                            .direction(EntryDirection.DEBIT)
+//                                            .amount(totalNet.add(totalVat))
+//                                            .build(),
+//
+//                                    AccountingEvent.Entry.builder()
+//                                            .accountId(accountingAccounts.revenue())
+//                                            .direction(EntryDirection.CREDIT)
+//                                            .amount(totalNet)
+//                                            .build(),
+//
+//                                    AccountingEvent.Entry.builder()
+//                                            .accountId(accountingAccounts.outputVat())
+//                                            .direction(EntryDirection.CREDIT)
+//                                            .amount(totalVat)
+//                                            .build()
+//                            ))
+//                            .build()
+//            );
+//        }
+        revenueRecognitionService.recognizeIfEligible(sale);
 
         sale.getPayments().add(payment);
         saleRepository.save(sale);
@@ -235,7 +240,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         List<PaymentDTO> mapped = pageRes.stream()
                 .filter(p -> method == null || method.equalsIgnoreCase(p.getMethod()))
-                .filter(p -> status == null || status.equalsIgnoreCase(p.getStatus()))
+                .filter(p -> status == null || status.equalsIgnoreCase(p.getStatus().name()))
                 .filter(p -> saleId == null || (p.getSale() != null && saleId.equals(p.getSale().getId())))
                 .map(this::toDTO)
                 .toList();
@@ -253,7 +258,7 @@ public class PaymentServiceImpl implements PaymentService {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found"));
 
-        if (!"SUCCESS".equalsIgnoreCase(payment.getStatus())) {
+        if (payment.getStatus() != PaymentStatus.SUCCESS) {
             throw new IllegalStateException("Only SUCCESS payments can be refunded");
         }
 
@@ -272,7 +277,7 @@ public class PaymentServiceImpl implements PaymentService {
                 username
         );
 
-        payment.setStatus("REFUNDED");
+        payment.setStatus(PaymentStatus.REFUNDED);
         paymentRepository.save(payment);
 
         return toDTO(payment);
@@ -288,7 +293,7 @@ public class PaymentServiceImpl implements PaymentService {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found"));
 
-        if (!"SUCCESS".equalsIgnoreCase(payment.getStatus())) {
+        if (payment.getStatus() != PaymentStatus.SUCCESS) {
             throw new IllegalStateException("Only SUCCESS payments can be reversed");
         }
 
@@ -306,7 +311,7 @@ public class PaymentServiceImpl implements PaymentService {
                 username
         );
 
-        payment.setStatus("REFUNDED");
+        payment.setStatus(PaymentStatus.REFUNDED);
         payment.setNote(note != null ? note : "Payment reversed");
         paymentRepository.save(payment);
 
@@ -383,7 +388,7 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         return sale.getPayments().stream()
-                .filter(p -> "SUCCESS".equalsIgnoreCase(p.getStatus()))
+                .filter(p -> p.getStatus() == PaymentStatus.SUCCESS)
                 .map(Payment::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }

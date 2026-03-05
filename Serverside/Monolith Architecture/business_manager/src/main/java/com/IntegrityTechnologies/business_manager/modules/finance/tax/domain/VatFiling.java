@@ -8,7 +8,15 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "vat_filings")
+@Table(
+        name = "vat_filings",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_vat_period_branch",
+                        columnNames = {"period_id", "branchId"}
+                )
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -22,6 +30,9 @@ public class VatFiling {
 
     @ManyToOne(optional = false)
     private TaxPeriod period;
+
+    @Column(nullable = false)
+    private UUID branchId;
 
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal outputVat;

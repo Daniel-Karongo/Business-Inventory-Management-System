@@ -2,6 +2,8 @@ package com.IntegrityTechnologies.business_manager.modules.finance.budgeting.rep
 
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.Budget;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.enums.BudgetScenario;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -10,15 +12,19 @@ import java.util.UUID;
 
 public interface BudgetRepository extends JpaRepository<Budget, UUID> {
 
-    List<Budget> findByFiscalYearAndScenario(
-            int fiscalYear,
-            BudgetScenario scenario
+    List<Budget> findByBranchIsNullAndFiscalYear(
+            int fiscalYear
+    );
+    List<Budget> findByBranch_IdAndFiscalYear(
+            UUID branchId,
+            int fiscalYear
     );
 
-    List<Budget> findByBranch_IdAndFiscalYearAndScenario(
+    Page<Budget> findByBranch_IdAndFiscalYearAndScenario(
             UUID branchId,
             int fiscalYear,
-            BudgetScenario scenario
+            BudgetScenario scenario,
+            Pageable pageable
     );
 
     Optional<Budget> findTopByBranch_IdAndFiscalYearAndScenarioOrderByVersionNumberDesc(

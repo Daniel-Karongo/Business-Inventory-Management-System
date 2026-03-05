@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -18,6 +19,7 @@ import java.util.stream.Collectors;
 import static com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountingSignRules.CREDIT_NORMAL;
 import static com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountingSignRules.DEBIT_NORMAL;
 
+@Transactional(readOnly = true)
 @Service
 @RequiredArgsConstructor
 public class FinancialStatementService {

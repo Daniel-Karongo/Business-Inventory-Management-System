@@ -6,6 +6,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.tax.mapper.Tax
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.VatFilingRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.VatFilingService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,13 +24,18 @@ public class VatController {
     private final VatFilingRepository filingRepo;
 
     @PostMapping("/file/{periodId}")
-    public VatFilingDTO file(@PathVariable UUID periodId) {
+    public VatFilingDTO file(
+            @PathVariable UUID periodId,
+            @RequestParam UUID branchId
+    ) {
         TaxPeriod period = new TaxPeriod();
         period.setId(periodId);
+
         return TaxFilingMapper.toDto(
-                filingService.file(period, currentUser())
+                filingService.file(period, branchId, currentUser())
         );
     }
+
     @PostMapping("/pay/{filingId}")
     public void pay(
             @PathVariable UUID filingId,
@@ -41,8 +49,15 @@ public class VatController {
     }
 
     @GetMapping
-    public List<VatFiling> list() {
-        return filingRepo.findAll();
+    public Page<VatFiling> list(
+            @RequestParam UUID branchId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        return filingRepo.findByBranchId(branchId, pageable);
     }
 
     private String currentUser() {

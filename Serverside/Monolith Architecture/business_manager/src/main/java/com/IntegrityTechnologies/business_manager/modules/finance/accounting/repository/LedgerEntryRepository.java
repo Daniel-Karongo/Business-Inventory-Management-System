@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.re
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.LedgerEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.projection.LedgerRunningBalanceProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,12 +13,95 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 
 public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, UUID> {
     boolean existsByAccountId(UUID accountId);
     List<LedgerEntry> findByAccountIdOrderByPostedAtAsc(UUID accountId);
     List<LedgerEntry> findByPostedAtBetween(LocalDateTime from, LocalDateTime to);
+    Page<LedgerEntry> findByAccountId(UUID accountId, Pageable pageable);
+    @Query(value = """
+    SELECT 
+        je.id AS journalId,
+        je.reference AS reference,
+        le.posted_at AS postedAt,
+        le.direction AS direction,
+        le.amount AS amount,
 
+        SUM(
+            CASE
+                WHEN le.direction = 'DEBIT' THEN le.amount
+                ELSE -le.amount
+            END
+        ) OVER (
+            PARTITION BY le.account_id
+            ORDER BY le.posted_at, le.id
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS runningBalance
+
+    FROM ledger_entries le
+    JOIN journal_entries je ON je.id = le.journal_entry_id
+    WHERE le.account_id = :accountId
+      AND je.posted = true
+      AND je.reversed = false
+      AND (:branchId IS NULL OR je.branch_id = :branchId)
+    ORDER BY le.posted_at ASC, le.id ASC
+""",
+            countQuery = """
+    SELECT COUNT(*)
+    FROM ledger_entries le
+    JOIN journal_entries je ON je.id = le.journal_entry_id
+    WHERE le.account_id = :accountId
+      AND je.posted = true
+      AND je.reversed = false
+      AND (:branchId IS NULL OR je.branch_id = :branchId)
+""",
+            nativeQuery = true)
+    Page<LedgerRunningBalanceProjection> findLedgerWithRunningBalance(
+            @Param("accountId") UUID accountId,
+            @Param("branchId") UUID branchId,
+            Pageable pageable
+    );
+
+    @Query("""
+        SELECT COALESCE(
+            SUM(
+                CASE
+                    WHEN le.direction = :debit THEN le.amount
+                    ELSE -le.amount
+                END
+            ), 0)
+        FROM LedgerEntry le
+        WHERE le.account.id = :accountId
+          AND le.journalEntry.branch.id = :branchId
+    """)
+    BigDecimal computeNetBalance(
+            @Param("accountId") UUID accountId,
+            @Param("branchId") UUID branchId,
+            @Param("debit") EntryDirection debit
+    );
+
+    @Query("""
+        SELECT le.account.id,
+               COALESCE(SUM(
+                    CASE
+                        WHEN le.direction = :debit THEN le.amount
+                        ELSE -le.amount
+                    END
+               ), 0)
+        FROM LedgerEntry le
+        JOIN le.journalEntry je
+        WHERE je.branch.id = :branchId
+          AND je.posted = true
+          AND je.reversed = false
+        GROUP BY le.account.id
+    """)
+    List<Object[]> computeBranchBalances(
+            @Param("branchId") UUID branchId,
+            @Param("debit") EntryDirection debit
+    );
     @Query("""
        SELECT a.id,
               COALESCE(SUM(
@@ -59,28 +143,29 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, UUID> 
            CASE
                WHEN a.type IN (:debitNormalTypes) AND l.direction = :debitDirection
                    THEN l.amount
-    
                WHEN a.type IN (:debitNormalTypes) AND l.direction = :creditDirection
                    THEN -l.amount
-    
                WHEN a.type IN (:creditNormalTypes) AND l.direction = :creditDirection
                    THEN l.amount
-    
                WHEN a.type IN (:creditNormalTypes) AND l.direction = :debitDirection
                    THEN -l.amount
-    
                ELSE 0
            END
        ), 0)
        FROM LedgerEntry l
        JOIN l.account a
+       JOIN l.journalEntry je
        WHERE a.id = :accountId
          AND l.postedAt BETWEEN :start AND :end
+         AND je.posted = true
+         AND je.reversed = false
+         AND (:branchId IS NULL OR je.branch.id = :branchId)
     """)
     BigDecimal netMovementForAccount(
             @Param("accountId") UUID accountId,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
+            @Param("branchId") UUID branchId,
             @Param("debitNormalTypes") Set<AccountType> debitNormalTypes,
             @Param("creditNormalTypes") Set<AccountType> creditNormalTypes,
             @Param("debitDirection") EntryDirection debitDirection,
@@ -106,8 +191,12 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, UUID> 
         ), 0)
     FROM LedgerEntry l
     JOIN l.account a
+    JOIN l.journalEntry je
     WHERE a.id IN :accountIds
       AND l.postedAt BETWEEN :start AND :end
+      AND je.posted = true
+      AND je.reversed = false
+      AND (:branchId IS NULL OR je.branch.id = :branchId)
     GROUP BY FUNCTION('DATE', l.postedAt), a.id
     ORDER BY FUNCTION('DATE', l.postedAt)
 """)
@@ -115,6 +204,7 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, UUID> 
             @Param("accountIds") Set<UUID> accountIds,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
+            @Param("branchId") UUID branchId,
             @Param("debitNormalTypes") Set<AccountType> debitNormalTypes,
             @Param("creditNormalTypes") Set<AccountType> creditNormalTypes,
             @Param("debitDirection") EntryDirection debitDirection,
@@ -122,15 +212,20 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, UUID> 
     );
 
     @Query("""
-        SELECT COALESCE(SUM(l.amount), 0)
-        FROM LedgerEntry l
-        WHERE l.account.type = :expenseType
-          AND l.direction = :debitDirection
-          AND l.postedAt BETWEEN :from AND :to
-    """)
+    SELECT COALESCE(SUM(l.amount), 0)
+    FROM LedgerEntry l
+    JOIN l.journalEntry je
+    WHERE l.account.type = :expenseType
+      AND l.direction = :debitDirection
+      AND l.postedAt BETWEEN :from AND :to
+      AND je.posted = true
+      AND je.reversed = false
+      AND (:branchId IS NULL OR je.branch.id = :branchId)
+""")
     BigDecimal totalExpensesBetween(
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to,
+            @Param("branchId") UUID branchId,
             @Param("expenseType") AccountType expenseType,
             @Param("debitDirection") EntryDirection debitDirection
     );
@@ -148,10 +243,12 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, UUID> 
     WHERE l.account.id = :apAccountId
       AND j.posted = true
       AND j.reversed = false
+      AND (:branchId IS NULL OR j.branch.id = :branchId)
     GROUP BY j.id, j.postedAt
 """)
     List<Object[]> apAgingRaw(
             @Param("apAccountId") UUID apAccountId,
+            @Param("branchId") UUID branchId,
             @Param("creditDirection") EntryDirection creditDirection,
             @Param("debitDirection") EntryDirection debitDirection
     );
@@ -750,5 +847,20 @@ ORDER BY je.branch.name, je.reference
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
             @Param("apCode") String apCode
+    );
+
+    List<LedgerEntry> findByPostedAtBetweenAndJournalEntry_Branch_Id(LocalDateTime from, LocalDateTime to, UUID branchId);
+    @Query("""
+    SELECT l
+    FROM LedgerEntry l
+    JOIN l.journalEntry j
+    WHERE j.branch.id = :branchId
+      AND j.posted = true
+      AND j.reversed = false
+    ORDER BY l.postedAt ASC, l.id ASC
+""")
+    List<LedgerEntry> streamBranchLedger(
+            UUID branchId,
+            Pageable pageable
     );
 }

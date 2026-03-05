@@ -15,7 +15,15 @@ import java.util.UUID;
             @Index(name = "idx_mpesa_ref", columnList = "mpesaReceiptNumber")
         },
         uniqueConstraints = {
-            @UniqueConstraint(columnNames = "checkoutRequestId")
+            @UniqueConstraint(columnNames = "checkoutRequestId"),
+            @UniqueConstraint(
+                    name = "uk_mpesa_receipt",
+                    columnNames = {"mpesaReceiptNumber"}
+            ),
+            @UniqueConstraint(
+                    name = "uk_mpesa_checkout",
+                    columnNames = {"checkoutRequestId"}
+            )
 })
 @Data
 @NoArgsConstructor

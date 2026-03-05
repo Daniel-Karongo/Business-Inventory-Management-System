@@ -26,36 +26,42 @@ public class VatFilingService {
     private final AccountingAccounts accounts;
 
     @Transactional
-    public VatFiling file(TaxPeriod period, String user) {
+    public VatFiling file(TaxPeriod period, UUID branchId, String user) {
+
+        if (branchId == null) {
+            throw new IllegalArgumentException("BranchId required for VAT filing.");
+        }
+
+        if (filingRepo.existsByPeriod_IdAndBranchId(period.getId(), branchId)) {
+            throw new IllegalStateException("VAT already filed for this period and branch.");
+        }
 
         var report = reportService.generate(
                 period.getStartDate().atStartOfDay(),
-                period.getEndDate().atTime(23,59,59)
+                period.getEndDate().atTime(23,59,59),
+                branchId
         );
 
         BigDecimal outputVat = report.outputVat();
         BigDecimal inputVat = report.inputVat();
         BigDecimal payable = outputVat.subtract(inputVat);
 
-        // -----------------------------------
-        // VAT CLEARING JOURNAL
-        // -----------------------------------
         accountingFacade.post(
                 AccountingEvent.builder()
+                        .eventId(UUID.randomUUID())
+                        .sourceId(period.getId())
                         .sourceModule("VAT_CLEARING")
-                        .reference("VAT-CLEAR-" + period.getId())
+                        .reference("VAT-CLEAR-" + period.getId() + "-" + branchId)
                         .description("VAT clearing for period")
                         .performedBy(user)
-                        .entries(buildVatClearingEntries(
-                                outputVat,
-                                inputVat,
-                                payable
-                        ))
+                        .branchId(branchId)
+                        .entries(buildVatClearingEntries(outputVat, inputVat, payable))
                         .build()
         );
 
         VatFiling filing = VatFiling.builder()
                 .period(period)
+                .branchId(branchId)
                 .outputVat(outputVat)
                 .inputVat(inputVat)
                 .vatPayable(payable)
@@ -65,8 +71,6 @@ public class VatFilingService {
                 .build();
 
         filingRepo.save(filing);
-
-        period.setClosed(true);
 
         return filing;
     }
@@ -79,7 +83,6 @@ public class VatFilingService {
 
         List<AccountingEvent.Entry> entries = new ArrayList<>();
 
-        // Clear Output VAT
         if (outputVat.compareTo(BigDecimal.ZERO) > 0) {
             entries.add(AccountingEvent.Entry.builder()
                     .accountId(accounts.outputVat())
@@ -88,7 +91,6 @@ public class VatFilingService {
                     .build());
         }
 
-        // Clear Input VAT
         if (inputVat.compareTo(BigDecimal.ZERO) > 0) {
             entries.add(AccountingEvent.Entry.builder()
                     .accountId(accounts.inputVat())
@@ -97,7 +99,6 @@ public class VatFilingService {
                     .build());
         }
 
-        // Move net to VAT Payable (if positive)
         if (payable.compareTo(BigDecimal.ZERO) > 0) {
             entries.add(AccountingEvent.Entry.builder()
                     .accountId(accounts.vatPayable())
@@ -114,25 +115,23 @@ public class VatFilingService {
 
         if (filing.isPaid()) return;
 
-        if (paymentAccountId == null) {
-            throw new IllegalArgumentException("paymentAccountId is required");
-        }
-
         BigDecimal amount = filing.getVatPayable();
 
         accountingFacade.post(
                 AccountingEvent.builder()
+                        .eventId(UUID.randomUUID())
+                        .sourceId(filing.getId())
                         .sourceModule("VAT_PAYMENT")
                         .reference("VAT-PAY-" + filing.getId())
                         .description("VAT payment for period")
                         .performedBy(user)
+                        .branchId(filing.getBranchId())
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
                                         .accountId(accounts.vatPayable())
                                         .direction(EntryDirection.DEBIT)
                                         .amount(amount)
                                         .build(),
-
                                 AccountingEvent.Entry.builder()
                                         .accountId(paymentAccountId)
                                         .direction(EntryDirection.CREDIT)

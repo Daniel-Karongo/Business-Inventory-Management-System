@@ -3,6 +3,9 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.branch.
 import com.IntegrityTechnologies.business_manager.common.PhoneAndEmailNormalizer;
 import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.BranchAccountingSettings;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.BranchAccountingSettingsRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.MinimalUserDTO;
@@ -37,6 +40,8 @@ public class BranchService {
     private final DepartmentRepository departmentRepository;
     private final UserBranchRepository userBranchRepository;
     private final UserDepartmentRepository userDepartmentRepository;
+    private final BranchAccountingSettingsRepository branchAccountingSettingsRepository;
+
     @Transactional
     public BranchDTO create(BranchDTO request, Authentication authentication) {
 
@@ -54,6 +59,15 @@ public class BranchService {
                 .build();
 
         branch = branchRepository.save(branch);
+
+        branchAccountingSettingsRepository.save(
+                BranchAccountingSettings.builder()
+                        .branchId(branch.getId())
+                        .revenueRecognitionMode(
+                                RevenueRecognitionMode.DELIVERY
+                        )
+                        .build()
+        );
 
         // Assign users via UserBranch
         if (request.getUserIds() != null) {
@@ -227,7 +241,7 @@ public class BranchService {
                         .collect(Collectors.toSet());
 
         Set<DepartmentMinimalDTO> departments =
-                departmentRepository.findByBranchId(branch.getId())
+                departmentRepository.findByBranch_Id(branch.getId())
                         .stream()
                         .map(DepartmentMinimalDTO::from)
                         .collect(Collectors.toSet());

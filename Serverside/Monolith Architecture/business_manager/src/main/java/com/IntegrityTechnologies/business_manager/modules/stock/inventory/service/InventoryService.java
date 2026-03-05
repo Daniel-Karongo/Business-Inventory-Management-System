@@ -76,7 +76,10 @@ public class InventoryService {
     @Transactional
     public ApiResponse receiveStock(ReceiveStockRequest req) {
 
-        periodGuardService.validateOpenPeriod(LocalDate.now());
+        periodGuardService.validateOpenPeriod(
+                LocalDate.now(),
+                req.getBranchId()
+        );
 
         // -------------------------------------------------------------
         // 0. VALIDATION
@@ -379,6 +382,7 @@ public class InventoryService {
 
             accountingFacade.post(
                     AccountingEvent.builder()
+                            .eventId(UUID.randomUUID())
                             .sourceModule("INVENTORY_RECEIPT")
                             .branchId(branch.getId())
                             .sourceId(variant.getId())
@@ -533,7 +537,10 @@ public class InventoryService {
 
     @Transactional
     public ApiResponse transferStock(TransferStockRequest req) {
-        periodGuardService.validateOpenPeriod(LocalDate.now());
+        periodGuardService.validateOpenPeriod(
+                LocalDate.now(),
+                req.getFromBranchId()
+        );
 
         if (req.getProductVariantId() == null)
             throw new IllegalArgumentException("productVariantId is required");
@@ -823,7 +830,10 @@ public class InventoryService {
                                               long qty,
                                               String reference,
                                               List<SaleLineBatchSelection> manualSelections) {
-        periodGuardService.validateOpenPeriod(LocalDate.now());
+        periodGuardService.validateOpenPeriod(
+                LocalDate.now(),
+                branchId
+        );
 
         InventoryItem item = inventoryItemRepository
                 .findByProductVariant_IdAndBranchId(productVariantId, branchId)
@@ -969,7 +979,10 @@ public class InventoryService {
     // ------------------------
     @Transactional
     public ApiResponse adjustStockVariant(AdjustStockRequest req) {
-        periodGuardService.validateOpenPeriod(LocalDate.now());
+        periodGuardService.validateOpenPeriod(
+                LocalDate.now(),
+                req.getBranchId()
+        );
 
         if (req.getProductVariantId() == null)
             throw new IllegalArgumentException("productVariantId is required");

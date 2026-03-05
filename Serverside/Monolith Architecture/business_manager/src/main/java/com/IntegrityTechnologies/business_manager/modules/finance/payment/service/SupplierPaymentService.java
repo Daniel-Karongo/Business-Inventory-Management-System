@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +30,7 @@ public class SupplierPaymentService {
 
     @Transactional
     public SupplierPayment pay(
+            UUID branchId,
             UUID supplierId,
             BigDecimal amount,
             String method,
@@ -48,11 +50,14 @@ public class SupplierPaymentService {
         // -----------------------------------------
         accountingFacade.post(
                 AccountingEvent.builder()
+                        .eventId(UUID.randomUUID())   // 🔥 REQUIRED
                         .sourceModule("SUPPLIER_PAYMENT")
-                        .sourceId(supplierId)
+                        .sourceId(UUID.randomUUID())  // supplierId is NOT unique enough
                         .reference(reference)
                         .description("Supplier payment via " + method)
                         .performedBy(currentUser())
+                        .branchId(branchId)
+                        .accountingDate(LocalDate.now())
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
                                         .accountId(accounts.accountsPayable())

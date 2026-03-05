@@ -7,6 +7,15 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
+@Table(
+        name = "corporate_tax_filing",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_corp_tax_period_branch",
+                        columnNames = {"periodId", "branchId"}
+                )
+        }
+)
 @Getter
 @Setter
 @Builder
@@ -20,16 +29,16 @@ public class CorporateTaxFiling {
 
     private UUID periodId;
 
+    @Column(nullable = false)
+    private UUID branchId;
+
     private BigDecimal taxableProfit;
-
     private BigDecimal taxRate;
-
     private BigDecimal taxAmount;
 
     private boolean paid;
 
     private String filedBy;
-
     private LocalDateTime filedAt;
 
     private LocalDateTime paidAt;
