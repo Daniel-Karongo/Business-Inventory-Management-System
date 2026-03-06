@@ -1,25 +1,23 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.projection;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.event.EventListener;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 public class BalanceProjectionConsumer {
 
     private final AccountBalanceRepository balanceRepo;
-    private final ObjectMapper mapper;
     private final ProcessedKafkaEventRepository processedRepo;
 
     @KafkaListener(
@@ -27,38 +25,39 @@ public class BalanceProjectionConsumer {
             groupId = "balance-projection"
     )
     @Transactional
-    public void handle(String payload) {
+    @ConditionalOnProperty(name="spring.kafka.enabled", havingValue="true")
+    public void handleKafka(JournalPostedEvent event) {
+        process(event);
+    }
 
-        try {
+    @EventListener
+    @Transactional
+    public void handleSpring(JournalPostedEvent event) {
+        process(event);
+    }
 
-            JournalPostedEvent event =
-                    mapper.readValue(payload, JournalPostedEvent.class);
+    private void process(JournalPostedEvent event) {
 
-            if (processedRepo.existsById(event.journalId()))
-                return;
+        if (processedRepo.existsById(event.journalId()))
+            return;
 
-            for (LedgerEntryDTO entry : event.entries()) {
+        for (LedgerEntryDTO entry : event.entries()) {
 
-                BigDecimal delta =
-                        entry.direction() == EntryDirection.DEBIT
-                                ? entry.amount()
-                                : entry.amount().negate();
+            BigDecimal delta =
+                    entry.direction() == EntryDirection.DEBIT
+                            ? entry.amount()
+                            : entry.amount().negate();
 
-                balanceRepo.applyDelta(
-                        entry.accountId(),
-                        event.branchId(),
-                        delta
-                );
-            }
-
-            ProcessedKafkaEvent processed = new ProcessedKafkaEvent();
-            processed.setEventId(event.journalId());
-
-            processedRepo.save(processed);
-
-        } catch (Exception ex) {
-
-            throw new RuntimeException("Projection failed", ex);
+            balanceRepo.applyDelta(
+                    entry.accountId(),
+                    event.branchId(),
+                    delta
+            );
         }
+
+        ProcessedKafkaEvent processed = new ProcessedKafkaEvent();
+        processed.setEventId(event.journalId());
+
+        processedRepo.save(processed);
     }
 }

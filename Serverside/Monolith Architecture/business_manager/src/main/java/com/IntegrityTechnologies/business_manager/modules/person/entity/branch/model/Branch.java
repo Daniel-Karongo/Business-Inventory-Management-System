@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.branch.
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserBranch;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.Tenant;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -26,8 +27,11 @@ public class Branch {
     @Id
     @GeneratedValue
     @UuidGenerator
-    @ToString.Exclude
     private UUID id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "tenant_id", nullable = false)
+    private Tenant tenant;
 
     @Column(nullable = false, unique = true, updatable = false)
     private String branchCode;

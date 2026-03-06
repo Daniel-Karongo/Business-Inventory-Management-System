@@ -1,5 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.controller;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service.ProductVariantImageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.FileSystemResource;
@@ -18,6 +20,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/product-variants")
 @RequiredArgsConstructor
+@TenantUserOnly
 public class ProductVariantImageController {
 
     private final ProductVariantImageService service;
@@ -30,12 +33,15 @@ public class ProductVariantImageController {
         return service.getProductVariantImage(variantId, fileName);
     }
 
+    @TenantManagerOnly
     @PostMapping("/{variantId}/images")
     public ResponseEntity<Void> upload(
             @PathVariable UUID variantId,
             @RequestParam("files") List<MultipartFile> files
     ) throws IOException {
+
         service.uploadVariantImages(variantId, files);
+
         return ResponseEntity.noContent().build();
     }
 
@@ -45,6 +51,7 @@ public class ProductVariantImageController {
     ) throws IOException {
 
         File zip = service.zipVariantImages(variantId);
+
         Resource res = new FileSystemResource(zip);
 
         return ResponseEntity.ok()

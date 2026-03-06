@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.config;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,7 +42,17 @@ public class FileStorageService {
     /* ============================================================
        MODULE ROOTS
        ============================================================ */
+    public Path tenantRoot() {
 
+        String tenantId = TenantContext.getTenantId().toString();
+
+        Path dir = uploadsRoot.resolve("." + tenantId);
+
+        createAndSecure(dir);
+
+        return dir;
+
+    }
     public Path productRoot() {
         return moduleRoot(".products");
     }
@@ -55,9 +66,15 @@ public class FileStorageService {
     }
 
     private Path moduleRoot(String name) {
-        Path dir = uploadsRoot.resolve(name).normalize();
+
+        Path tenant = tenantRoot();
+
+        Path dir = tenant.resolve(name).normalize();
+
         createAndSecure(dir);
+
         return dir;
+
     }
 
     /* ============================================================

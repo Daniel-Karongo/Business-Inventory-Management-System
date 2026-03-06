@@ -17,6 +17,17 @@ public final class SecurityUtils {
     private SecurityUtils() {}
 
     /* ============================================================
+       AUTHENTICATION
+    ============================================================ */
+
+    public static Authentication currentAuthentication() {
+        try {
+            return SecurityContextHolder.getContext().getAuthentication();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    /* ============================================================
        USER INFO
     ============================================================ */
 
@@ -88,6 +99,18 @@ public final class SecurityUtils {
                     "Access denied: requires " + required + ", current role is " + current
             );
         }
+    }
+
+    public static boolean isSuperuser() {
+        return currentRole() == Role.SUPERUSER;
+    }
+
+    public static boolean isAdmin() {
+        return currentRole().canAccess(Role.ADMIN);
+    }
+
+    public static boolean isManager() {
+        return currentRole().canAccess(Role.MANAGER);
     }
 
     public static void requireAdmin() {

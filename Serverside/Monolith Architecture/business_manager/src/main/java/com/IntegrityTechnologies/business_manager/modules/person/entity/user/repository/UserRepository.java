@@ -16,6 +16,8 @@ import java.util.UUID;
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
 
+    int countByTenantId(UUID tenantId);
+
     /* ====================== BASIC LOOKUPS ====================== */
 
     Optional<User> findByUsername(String username);
@@ -191,4 +193,21 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Transactional
     @Query(value = "DELETE FROM department_members WHERE user_id = :userId", nativeQuery = true)
     int deleteUserFromDepartmentMembers(@Param("userId") UUID userId);
+
+    default Optional<User> findByIdentifierAndTenantId(
+            String identifier,
+            UUID tenantId
+    ) {
+
+        Optional<User> user = findByIdentifier(identifier);
+
+        if (user.isEmpty()) return Optional.empty();
+
+        if (!user.get().getTenant().getId().equals(tenantId)) {
+            return Optional.empty();
+        }
+
+        return user;
+
+    }
 }

@@ -15,7 +15,8 @@ import java.util.Optional;
 import java.util.UUID;
 @Repository
 public interface BranchRepository extends JpaRepository<Branch, UUID> {
-
+    int countByTenantId(UUID tenantId);
+    boolean existsByIdAndTenantId(UUID id, UUID tenantId);
     List<Branch> findByDeleted(Boolean deleted);
     List<Branch> findByDeletedFalse();
     Page<Branch> findByDeletedFalse(Pageable pageable);

@@ -1,10 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.events;
 
-import jakarta.persistence.LockModeType;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
@@ -15,19 +11,18 @@ import java.util.UUID;
 public interface EventOutboxRepository
         extends JpaRepository<EventOutbox, UUID> {
 
-    List<EventOutbox> findTop100ByProcessedFalseOrderByCreatedAtAsc();
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("""
-        SELECT e
-        FROM EventOutbox e
-        WHERE e.processed = false
-        ORDER BY e.createdAt
-    """)
-    List<EventOutbox> lockNextBatch(Pageable pageable);
+    @Query(value = """
+        SELECT *
+        FROM event_outbox
+        WHERE processed = false
+        ORDER BY created_at
+        LIMIT 200
+        FOR UPDATE SKIP LOCKED
+    """, nativeQuery = true)
+    List<EventOutbox> fetchBatch();
 
     @Modifying
-        @Query("""
+    @Query("""
         DELETE FROM EventOutbox e
         WHERE e.processed = true
         AND e.processedAt < :cutoff

@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.controller;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.StockTransactionDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.StockTransactionService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,6 +17,7 @@ import java.util.UUID;
 @RequestMapping("/api/stock/transactions")
 @RequiredArgsConstructor
 @Tag(name = "Stock Transactions")
+@TenantUserOnly
 public class StockTransactionController {
 
     private final StockTransactionService service;
@@ -24,21 +26,27 @@ public class StockTransactionController {
     public ResponseEntity<List<StockTransactionDTO>> getForProduct(
             @PathVariable UUID productId
     ) {
-        return ResponseEntity.ok(service.getByProduct(productId));
+        return ResponseEntity.ok(
+                service.getByProduct(productId)
+        );
     }
 
     @GetMapping("/variant/{variantId}")
     public ResponseEntity<List<StockTransactionDTO>> getForVariant(
             @PathVariable UUID variantId
     ) {
-        return ResponseEntity.ok(service.getByVariant(variantId));
+        return ResponseEntity.ok(
+                service.getByVariant(variantId)
+        );
     }
 
     @GetMapping("/branch/{branchId}")
     public ResponseEntity<List<StockTransactionDTO>> getForBranch(
             @PathVariable UUID branchId
     ) {
-        return ResponseEntity.ok(service.getByBranch(branchId));
+        return ResponseEntity.ok(
+                service.getByBranch(branchId)
+        );
     }
 
     @GetMapping("/product/{productId}/branch/{branchId}")
@@ -46,7 +54,9 @@ public class StockTransactionController {
             @PathVariable UUID productId,
             @PathVariable UUID branchId
     ) {
-        return ResponseEntity.ok(service.getByProductAndBranch(productId, branchId));
+        return ResponseEntity.ok(
+                service.getByProductAndBranch(productId, branchId)
+        );
     }
 
     @GetMapping("/variant/{variantId}/branch/{branchId}")
@@ -54,14 +64,23 @@ public class StockTransactionController {
             @PathVariable UUID variantId,
             @PathVariable UUID branchId
     ) {
-        return ResponseEntity.ok(service.getByVariantAndBranch(variantId, branchId));
+        return ResponseEntity.ok(
+                service.getByVariantAndBranch(variantId, branchId)
+        );
     }
 
     @GetMapping("/range")
     public ResponseEntity<List<StockTransactionDTO>> getByDateRange(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate from,
+
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate to
     ) {
-        return ResponseEntity.ok(service.getByDateRange(from, to));
+        return ResponseEntity.ok(
+                service.getByDateRange(from, to)
+        );
     }
 }

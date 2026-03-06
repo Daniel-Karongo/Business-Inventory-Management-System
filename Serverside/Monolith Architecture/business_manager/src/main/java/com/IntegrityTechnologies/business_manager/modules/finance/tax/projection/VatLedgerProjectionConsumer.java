@@ -1,13 +1,15 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.tax.projection;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.VatLedgerProjectionRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.VatLedgerProjection;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.VatLedgerProjectionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.event.EventListener;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +22,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class VatLedgerProjectionConsumer {
 
-    private final ObjectMapper mapper;
     private final VatLedgerProjectionRepository repo;
     private final AccountingAccounts accounts;
 
@@ -29,64 +30,69 @@ public class VatLedgerProjectionConsumer {
             groupId = "vat-ledger"
     )
     @Transactional
-    public void handle(String payload) {
+    @ConditionalOnProperty(
+            name = "spring.kafka.enabled",
+            havingValue = "true",
+            matchIfMissing = false
+    )
+    public void handleKafka(JournalPostedEvent event) {
+        process(event);
+    }
 
-        try {
+    @EventListener
+    @Transactional
+    public void handleSpring(JournalPostedEvent event) {
+        process(event);
+    }
 
-            JournalPostedEvent event =
-                    mapper.readValue(payload, JournalPostedEvent.class);
+    private void process(JournalPostedEvent event) {
 
-            UUID outputVat = accounts.get(event.branchId(), AccountRole.VAT_OUTPUT);
-            UUID inputVat = accounts.get(event.branchId(), AccountRole.VAT_INPUT);
+        UUID outputVat = accounts.get(event.branchId(), AccountRole.VAT_OUTPUT);
+        UUID inputVat = accounts.get(event.branchId(), AccountRole.VAT_INPUT);
 
-            for (LedgerEntryDTO entry : event.entries()) {
+        int year = LocalDate.now().getYear();
+        int month = LocalDate.now().getMonthValue();
 
-                if (!entry.accountId().equals(outputVat)
-                        && !entry.accountId().equals(inputVat))
-                    continue;
+        for (LedgerEntryDTO entry : event.entries()) {
 
-                BigDecimal delta =
-                        entry.direction().name().equals("DEBIT")
-                                ? entry.amount()
-                                : entry.amount().negate();
+            if (!entry.accountId().equals(outputVat)
+                    && !entry.accountId().equals(inputVat))
+                continue;
 
-                int year = LocalDate.now().getYear();
-                int month = LocalDate.now().getMonthValue();
+            BigDecimal delta =
+                    entry.direction() == EntryDirection.DEBIT
+                            ? entry.amount()
+                            : entry.amount().negate();
 
-                VatLedgerProjection projection =
-                        repo.findByBranchIdAndFiscalYearAndMonthNumber(
-                                event.branchId(),
-                                year,
-                                month
-                        ).orElse(
-                                VatLedgerProjection.builder()
-                                        .branchId(event.branchId())
-                                        .fiscalYear(year)
-                                        .monthNumber(month)
-                                        .outputVat(BigDecimal.ZERO)
-                                        .inputVat(BigDecimal.ZERO)
-                                        .build()
-                        );
-
-                if (entry.accountId().equals(outputVat)) {
-
-                    projection.setOutputVat(
-                            projection.getOutputVat().add(delta)
+            VatLedgerProjection projection =
+                    repo.findByBranchIdAndFiscalYearAndMonthNumber(
+                            event.branchId(),
+                            year,
+                            month
+                    ).orElse(
+                            VatLedgerProjection.builder()
+                                    .branchId(event.branchId())
+                                    .fiscalYear(year)
+                                    .monthNumber(month)
+                                    .outputVat(BigDecimal.ZERO)
+                                    .inputVat(BigDecimal.ZERO)
+                                    .build()
                     );
 
-                } else {
+            if (entry.accountId().equals(outputVat)) {
 
-                    projection.setInputVat(
-                            projection.getInputVat().add(delta)
-                    );
-                }
+                projection.setOutputVat(
+                        projection.getOutputVat().add(delta)
+                );
 
-                repo.save(projection);
+            } else {
+
+                projection.setInputVat(
+                        projection.getInputVat().add(delta)
+                );
             }
 
-        } catch (Exception ex) {
-
-            throw new RuntimeException("VAT projection failed", ex);
+            repo.save(projection);
         }
     }
 }

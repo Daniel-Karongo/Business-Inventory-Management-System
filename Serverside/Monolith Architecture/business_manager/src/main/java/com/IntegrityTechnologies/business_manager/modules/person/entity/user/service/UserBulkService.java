@@ -11,10 +11,9 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
-import com.IntegrityTechnologies.business_manager.security.acl.entity.RoleEntity;
-import com.IntegrityTechnologies.business_manager.security.acl.repository.RoleEntityRepository;
+import com.IntegrityTechnologies.business_manager.modules.acl.entity.RoleEntity;
+import com.IntegrityTechnologies.business_manager.modules.acl.repository.RoleEntityRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -131,7 +130,7 @@ public class UserBulkService {
                 }
 
                 roleEntityRepository
-                        .findByNameIgnoreCase(targetRole.name())
+                        .findByName(targetRole)
                         .filter(RoleEntity::isActive)
                         .orElseThrow(() ->
                                 new IllegalArgumentException(

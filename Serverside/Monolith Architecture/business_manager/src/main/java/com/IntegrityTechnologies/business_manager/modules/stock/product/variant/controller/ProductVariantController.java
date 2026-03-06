@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.controller;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service.*;
@@ -10,7 +11,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,6 +23,7 @@ import java.util.UUID;
 @RequestMapping("/api/product-variants")
 @RequiredArgsConstructor
 @Tag(name = "Product Variants")
+@TenantUserOnly
 public class ProductVariantController {
 
     private final ProductVariantService service;
@@ -31,7 +32,7 @@ public class ProductVariantController {
     private final VariantBarcodePdfService pdfService;
     private final BarcodeScanService scanService;
 
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @TenantManagerOnly
     @PostMapping
     public ResponseEntity<ProductVariantDTO> create(@RequestBody ProductVariantCreateDTO dto) {
         return ResponseEntity.ok(service.createVariant(dto));
@@ -61,7 +62,7 @@ public class ProductVariantController {
         );
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @TenantManagerOnly
     @PostMapping("/{id}/barcode")
     public ResponseEntity<ProductVariantDTO> generateBarcode(@PathVariable UUID id) {
         return ResponseEntity.ok(barcodeService.generateBarcodeIfMissing(id));
@@ -69,28 +70,34 @@ public class ProductVariantController {
 
     @GetMapping("/{id}/barcode/image")
     public ResponseEntity<Resource> downloadBarcodeImage(@PathVariable UUID id) {
+
         ProductVariant v = service.getEntity(id);
 
         if (v.getBarcodeImagePath() == null)
             throw new IllegalStateException("No barcode image for variant");
 
         File file = new File(v.getBarcodeImagePath());
+
         Resource res = new FileSystemResource(file);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_PNG)
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=barcode-" + v.getSku() + ".png")
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=barcode-" + v.getSku() + ".png"
+                )
                 .body(res);
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @TenantManagerOnly
     @PostMapping("/{id}/images")
     public ResponseEntity<Void> uploadImages(
             @PathVariable UUID id,
             @RequestParam("files") List<MultipartFile> files
     ) throws IOException {
+
         imageService.uploadVariantImages(id, files);
+
         return ResponseEntity.noContent().build();
     }
 
@@ -131,7 +138,7 @@ public class ProductVariantController {
         return pdfResponse(pdf, "product-" + productId + "-barcodes.pdf");
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @TenantManagerOnly
     @PutMapping("/{id}")
     public ResponseEntity<ProductVariantDTO> update(
             @PathVariable UUID id,
@@ -140,18 +147,25 @@ public class ProductVariantController {
         return ResponseEntity.ok(service.updateVariant(id, dto));
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN')")
+    @TenantAdminOnly
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
+
         service.deleteVariant(id);
+
         return ResponseEntity.noContent().build();
     }
 
     private ResponseEntity<Resource> pdfResponse(File file, String name) {
+
         Resource res = new FileSystemResource(file);
+
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + name)
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=" + name
+                )
                 .body(res);
     }
 }

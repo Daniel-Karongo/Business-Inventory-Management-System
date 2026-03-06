@@ -14,21 +14,24 @@
 //@RequiredArgsConstructor
 //public class UploadsInitializer {
 //
-//    private final FileStorageService fileStorageService;
+//    private final FileStorageService storage;
 //
 //    @PostConstruct
 //    public void init() {
+//
 //        try {
-//            Path uploadsRoot = fileStorageService.userRoot().getParent();
+//
+//            Path uploadsRoot = storage.userRoot().getParent();
 //
 //            Files.walk(uploadsRoot)
 //                    .sorted(Comparator.reverseOrder())
-//                    .forEach(fileStorageService::hidePathIfSupported);
+//                    .forEach(storage::secure);
 //
-//            log.info("✅ Uploads directory fully hidden (Windows-safe)");
+//            log.info("Uploads directory secured");
 //
 //        } catch (Exception e) {
-//            throw new RuntimeException("Failed initializing uploads", e);
+//            throw new RuntimeException("Uploads initialization failed", e);
 //        }
+//
 //    }
 //}

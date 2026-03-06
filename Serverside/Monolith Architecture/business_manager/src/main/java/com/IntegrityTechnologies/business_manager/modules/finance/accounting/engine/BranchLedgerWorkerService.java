@@ -2,7 +2,6 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.en
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.projection.BalanceProjectionConsumer;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -19,7 +18,6 @@ import java.util.concurrent.Executors;
 public class BranchLedgerWorkerService {
 
     private final BalanceProjectionConsumer projectionConsumer;
-    private final ObjectMapper mapper;
 
     private final ConcurrentHashMap<UUID, ExecutorService> workers =
             new ConcurrentHashMap<>();
@@ -36,22 +34,7 @@ public class BranchLedgerWorkerService {
     public void onJournalPosted(JournalPostedEvent event) {
 
         worker(event.branchId())
-                .submit(() -> {
-
-                    try {
-
-                        String payload = mapper.writeValueAsString(event);
-
-                        projectionConsumer.handle(payload);
-
-                    } catch (Exception e) {
-
-                        throw new RuntimeException(
-                                "Projection fallback failed",
-                                e
-                        );
-                    }
-                });
+                .submit(() -> projectionConsumer.handleSpring(event));
     }
 
     @PreDestroy

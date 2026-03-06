@@ -1,8 +1,10 @@
 package com.IntegrityTechnologies.business_manager.security;
 
-import com.IntegrityTechnologies.business_manager.modules.person.function.auth.filter.JwtAuthenticationFilter;
-import com.IntegrityTechnologies.business_manager.modules.person.function.auth.filter.JwtExceptionHandlerFilter;
-import com.IntegrityTechnologies.business_manager.security.acl.config.PermissionSecurityFilter;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.filter.RoleGuardFilter;
+import com.IntegrityTechnologies.business_manager.security.auth.filter.JwtAuthenticationFilter;
+import com.IntegrityTechnologies.business_manager.security.auth.filter.JwtExceptionHandlerFilter;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.filter.TenantContextFilter;
+import com.IntegrityTechnologies.business_manager.modules.acl.config.PermissionSecurityFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -33,19 +35,24 @@ public class SecurityConfig {
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
     private final PermissionSecurityFilter permissionSecurityFilter;
     private final BranchContextFilter branchContextFilter;
-
+    private final TenantContextFilter tenantContextFilter;
+    private final RoleGuardFilter roleGuardFilter;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthFilter,
             JwtExceptionHandlerFilter jwtExceptionHandlerFilter,
             CustomAuthenticationEntryPoint authenticationEntryPoint,
             PermissionSecurityFilter permissionSecurityFilter,
-            BranchContextFilter branchContextFilter) {
+            BranchContextFilter branchContextFilter,
+            TenantContextFilter tenantContextFilter,
+            RoleGuardFilter roleGuardFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.jwtExceptionHandlerFilter = jwtExceptionHandlerFilter;
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.permissionSecurityFilter = permissionSecurityFilter;
         this.branchContextFilter = branchContextFilter;
+        this.tenantContextFilter = tenantContextFilter;
+        this.roleGuardFilter = roleGuardFilter;
     }
 
     /* =====================================================
@@ -148,19 +155,36 @@ public class SecurityConfig {
                 )
 
                 // ---- FILTER ORDER ----
+
+                .addFilterBefore(
+                        tenantContextFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                )
+
                 .addFilterBefore(
                         jwtExceptionHandlerFilter,
                         UsernamePasswordAuthenticationFilter.class
                 )
+
                 .addFilterBefore(
                         jwtAuthFilter,
                         UsernamePasswordAuthenticationFilter.class
-                ).addFilterAfter(
+                )
+
+                .addFilterBefore(
                         branchContextFilter,
-                        JwtAuthenticationFilter.class)
-                .addFilterAfter(
+                        UsernamePasswordAuthenticationFilter.class
+                )
+
+                .addFilterBefore(
+                        roleGuardFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                )
+
+                .addFilterBefore(
                         permissionSecurityFilter,
-                        BranchContextFilter.class)
+                        UsernamePasswordAuthenticationFilter.class
+                )
         ;
 
         return http.build();

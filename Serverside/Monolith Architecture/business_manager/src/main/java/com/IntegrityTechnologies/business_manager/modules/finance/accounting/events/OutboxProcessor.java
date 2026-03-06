@@ -1,46 +1,112 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.events;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.scheduling.annotation.Scheduled;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OutboxProcessor {
 
     private final EventOutboxRepository outboxRepo;
-    private final KafkaEventPublisher kafkaPublisher;
+    private final AccountingEventPublisher publisher;
+    private final ObjectMapper mapper;
 
-    private static final int BATCH_SIZE = 100;
+    private static final int WORKERS = 4;
+    private static final int POLL_DELAY_MS = 200;
 
-    @Scheduled(fixedDelay = 1000)
+    private final ExecutorService executor =
+            Executors.newFixedThreadPool(WORKERS);
+
+    @PostConstruct
+    public void startWorkers() {
+
+        for (int i = 0; i < WORKERS; i++) {
+
+            executor.submit(this::runWorker);
+        }
+
+        log.info("OutboxProcessor started with {} workers", WORKERS);
+    }
+
+    private void runWorker() {
+
+        while (true) {
+
+            try {
+
+                processBatch();
+
+                Thread.sleep(POLL_DELAY_MS);
+
+            } catch (Exception e) {
+
+                log.error("Outbox worker error", e);
+
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ignored) {}
+            }
+        }
+    }
+
     @Transactional
-    public void processEvents() {
+    public void processBatch() {
 
         List<EventOutbox> events =
-                outboxRepo.lockNextBatch(PageRequest.of(0, BATCH_SIZE));
+                outboxRepo.fetchBatch();
+
+        if (events.isEmpty())
+            return;
 
         for (EventOutbox e : events) {
 
             try {
 
-                kafkaPublisher.publish(
+                Object event = deserialize(e);
+
+                publisher.publish(
                         e.getEventType(),
-                        e.getPayload()
+                        event
                 );
 
                 e.setProcessed(true);
                 e.setProcessedAt(LocalDateTime.now());
 
-            } catch (Exception ignored) {
+            } catch (Exception ex) {
+
+                log.error(
+                        "Failed to publish event {}",
+                        e.getId(),
+                        ex
+                );
             }
         }
 
         outboxRepo.saveAll(events);
+    }
+
+    private Object deserialize(EventOutbox e) throws Exception {
+
+        return switch (e.getEventType()) {
+
+            case "JOURNAL_POSTED" ->
+                    mapper.readValue(
+                            e.getPayload(),
+                            JournalPostedEvent.class
+                    );
+
+            default ->
+                    mapper.readTree(e.getPayload());
+        };
     }
 }

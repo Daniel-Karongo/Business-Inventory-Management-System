@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.user.model;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.Tenant;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -8,10 +9,19 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 @Entity
-@Table(name = "users",
+@Table(
+        name = "users",
         indexes = {
-                @Index(name = "idx_user_username", columnList = "username")
-        })
+                @Index(name = "idx_user_username", columnList = "username"),
+                @Index(name = "idx_user_tenant", columnList = "tenant_id")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uq_user_tenant_username",
+                        columnNames = {"tenant_id", "username"}
+                )
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -26,7 +36,11 @@ public class User {
     @ToString.Exclude
     private UUID id;
 
-    @Column(nullable = false, unique = true)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "tenant_id", nullable = false)
+    private Tenant tenant;
+
+    @Column(nullable = false)
     private String username;
 
     @Column(nullable = false)
@@ -37,7 +51,10 @@ public class User {
             name = "user_email_addresses",
             joinColumns = @JoinColumn(name = "user_id"),
             indexes = {
-                    @Index(name = "idx_email_unique", columnList = "email_address")
+                    @Index(
+                            name = "idx_email_tenant",
+                            columnList = "email_address"
+                    )
             }
     )
     @Column(name = "email_address")

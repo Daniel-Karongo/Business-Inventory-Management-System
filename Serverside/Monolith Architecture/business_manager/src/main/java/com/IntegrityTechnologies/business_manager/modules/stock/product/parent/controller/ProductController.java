@@ -5,6 +5,7 @@ import com.IntegrityTechnologies.business_manager.common.PageWrapper;
 import com.IntegrityTechnologies.business_manager.common.bulk.BulkActionRequest;
 import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
 import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductAudit;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductImageAudit;
@@ -17,16 +18,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.*;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -36,6 +33,7 @@ import java.util.UUID;
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
 @Slf4j
+@TenantUserOnly
 public class ProductController {
 
     private final ProductService productService;
@@ -44,10 +42,7 @@ public class ProductController {
     /* =============================
        BASIC READ
        ============================= */
-    @PreAuthorize("""
-    #deleted == false
-    or 
-    ( (#deleted == true  || #deleted == null) and hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER') )""")
+
     @GetMapping("")
     @Operation(summary = "Get all products")
     public ResponseEntity<List<ProductDTO>> getAllProducts(
@@ -74,7 +69,8 @@ public class ProductController {
             @RequestParam(required = false) Integer minSuppliers,
             @RequestParam(required = false) Integer maxSuppliers,
             @RequestParam(required = false) UUID supplierId
-            ) {
+    ) {
+
         if (categoryId != null) {
             categoryIds = List.of(categoryId);
         }
@@ -86,7 +82,7 @@ public class ProductController {
                 keyword,
                 minPrice != null ? BigDecimal.valueOf(minPrice) : null,
                 maxPrice != null ? BigDecimal.valueOf(maxPrice) : null,
-                deleted, // ✅ pass
+                deleted,
                 page,
                 size,
                 sortBy,
@@ -96,15 +92,11 @@ public class ProductController {
                 maxSuppliers,
                 supplierId
         );
+
         return ResponseEntity.ok(new PageWrapper<>(result));
     }
 
-    @PreAuthorize("""
-    #deleted == false 
-    or 
-    ( #deleted == true and hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER','SUPERVISOR') )""")
     @GetMapping("/{id}")
-    @Operation(summary = "Get a product by ID")
     public ResponseEntity<ProductDTO> getProductById(
             @PathVariable UUID id,
             @RequestParam(required = false) Boolean deleted
@@ -112,12 +104,7 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProductById(id, deleted));
     }
 
-    @PreAuthorize("""
-    #deleted == false 
-    or 
-    ( #deleted == true and hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER','SUPERVISOR') )""")
     @GetMapping("/sku/{sku}")
-    @Operation(summary = "Get a product by its sku")
     public ResponseEntity<ProductDTO> getProductBySKU(
             @PathVariable String sku,
             @RequestParam(required = false) Boolean deleted
@@ -125,9 +112,8 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProductBySKU(sku, deleted));
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
+    @TenantManagerOnly
     @GetMapping("/supplier/{supplierId}")
-    @Operation(summary = "Get all products supplied by a specific supplier")
     public ResponseEntity<List<ProductDTO>> getProductsBySupplier(
             @PathVariable UUID supplierId,
             @RequestParam(required = false) Boolean deleted
@@ -135,12 +121,7 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProductsBySupplier(supplierId, deleted));
     }
 
-    @PreAuthorize("""
-    #deleted == false 
-    or 
-    ( #deleted == true and hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER','SUPERVISOR') )""")
     @GetMapping("/category/{categoryId}")
-    @Operation(summary = "Get all products in a specific category")
     public ResponseEntity<List<ProductDTO>> getProductsByCategory(
             @PathVariable Long categoryId,
             @RequestParam(defaultValue = "true") Boolean strict,
@@ -149,28 +130,11 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProductsByCategory(categoryId, deleted, strict));
     }
 
-
-
-
-
-
-
-
-
-
-
-
     /* =============================
-   IMAGE DOWNLOAD ENDPOINTS
-   ============================= */
+       IMAGE DOWNLOAD
+       ============================= */
 
-    /** Return all image URLs for a single product */
-    @PreAuthorize("""
-    #deleted == false 
-    or 
-    ( #deleted == true and hasAnyRole('SUPERUSER', 'ADMIN') )""")
     @GetMapping("/{id}/images")
-    @Operation(summary = "Get image URLs for a product")
     public ResponseEntity<List<String>> getProductImageUrls(
             @PathVariable UUID id,
             @RequestParam(required = false) Boolean deleted
@@ -178,46 +142,42 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProductImageUrls(id, deleted));
     }
 
-    /** Return a ZIP of all image files for a single product */
-    @PreAuthorize("""
-    #deleted == false 
-    or 
-    ( #deleted == true and hasAnyRole('SUPERUSER', 'ADMIN') )""")
     @GetMapping("/{id}/images/zip")
-    @Operation(summary = "Download all images of a product as a ZIP")
     public ResponseEntity<Resource> downloadProductImagesZip(
             @PathVariable UUID id,
             @RequestParam(required = false) Boolean deleted
     ) throws IOException {
+
         File zip = productService.zipProductImages(id, deleted);
+
         Resource res = new FileSystemResource(zip);
+
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=product-" + id + "-images.zip")
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=product-" + id + "-images.zip")
                 .body(res);
     }
 
-    @PreAuthorize("""
-    #deleted == false 
-    or 
-    ( #deleted == true and hasAnyRole('SUPERUSER', 'ADMIN') )""")
     @GetMapping("/images/all/zip")
-    @Operation(summary = "Download all product images from the system as a ZIP")
     public ResponseEntity<Resource> downloadAllProductImagesZip(
             @RequestParam(required = false) Boolean deletedProducts,
             @RequestParam(required = false) Boolean deletedImages
     ) throws IOException {
+
         File zip = productService.zipAllProductImages(deletedProducts, deletedImages);
+
         Resource res = new FileSystemResource(zip);
+
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=all-product-images.zip")
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=all-product-images.zip")
                 .body(res);
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN')")
+    @TenantManagerOnly
     @GetMapping("/images/all")
-    @Operation(summary = "Get URLs for all product images in the system")
     public ResponseEntity<Map<UUID, List<String>>> getAllProductImageUrls() {
         return ResponseEntity.ok(productService.getAllProductImageUrls());
     }
@@ -227,30 +187,19 @@ public class ProductController {
         return productService.getProductThumbnail(id);
     }
 
-
-
-
-
-
-
-
-
-
     /* =============================
        CREATE / UPDATE
        ============================= */
 
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @TenantManagerOnly
     @PostMapping("/import")
     public ResponseEntity<BulkResult<ProductDTO>> importProducts(
             @RequestBody BulkRequest<ProductBulkRow> request
     ) {
-        return ResponseEntity.ok(
-                bulkService.importProducts(request)
-        );
+        return ResponseEntity.ok(bulkService.importProducts(request));
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @TenantManagerOnly
     @PostMapping(
             value = "/bulk/full-create",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
@@ -265,6 +214,7 @@ public class ProductController {
         );
     }
 
+    @TenantSupervisorOnly
     @PostMapping(value = "/full-create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ProductDTO fullCreate(
             @RequestPart("payload") ProductFullCreateDTO dto,
@@ -274,71 +224,49 @@ public class ProductController {
         return productService.fullCreate(dto, files);
     }
 
+    @TenantSupervisorOnly
     @PostMapping(value="/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ProductDTO> createProduct(
             @ModelAttribute("product") ProductCreateDTO dto
     ) throws IOException {
+
         ProductDTO created = productService.createProduct(dto);
+
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-//    @PostMapping(
-//            value = "/create/bulk",
-//            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
-//            produces = MediaType.APPLICATION_JSON_VALUE
-//    )
-//    public ResponseEntity<List<ProductDTO>> createProductInBulk(
-//            @ModelAttribute ProductBulkWithFilesDTO bulkDTO,
-//            Authentication authentication
-//    ) throws IOException {
-//        String creatorUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails ud)
-//                ? ud.getUsername()
-//                : null;
-//        List<ProductDTO> savedProductDTOs = new ArrayList<>();
-//
-//
-//        for (ProductCreateDTO productCreateDTO : bulkDTO.getProducts()) {
-//            savedProductDTOs.add(productService.createProduct(productCreateDTO));
-//        }
-//        return ResponseEntity.status(HttpStatus.CREATED).body(savedProductDTOs);
-//    }
-
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
+    @TenantSupervisorOnly
     @PatchMapping(value = "/{id}")
     public ResponseEntity<ProductDTO> updateProduct(
             @PathVariable UUID id,
             @RequestBody ProductUpdateDTO dto
     ) throws IOException {
+
         return ResponseEntity.ok(productService.updateProduct(id, dto));
     }
 
-   /* =============================
-   IMAGE MANAGEMENT
-   ============================= */
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
+    /* =============================
+       IMAGE MANAGEMENT
+       ============================= */
+
+    @TenantSupervisorOnly
     @PatchMapping("/{id}/images")
-    @Operation(summary = "Upload images for a product (appends to existing)")
-    public ResponseEntity<Void> uploadImages(@PathVariable UUID id,
-                                             @RequestParam("files") List<MultipartFile> files) throws IOException {
+    public ResponseEntity<Void> uploadImages(
+            @PathVariable UUID id,
+            @RequestParam("files") List<MultipartFile> files
+    ) throws IOException {
+
         productService.uploadProductImages(id, files);
+
         return ResponseEntity.noContent().build();
     }
-
-
-
-
-
-
-
-
 
     /* =============================
        DELETE / RESTORE
        ============================= */
 
-    @PreAuthorize("hasRole('SUPERUSER')")
+    @PlatformAdminOnly
     @DeleteMapping("/hard/{id}")
-    @Operation(summary = "Permanently delete a product and its images")
     public ResponseEntity<Void> hardDeleteProduct(
             @PathVariable UUID id,
             @RequestParam(required = false) String reason
@@ -349,7 +277,7 @@ public class ProductController {
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
+    @TenantSupervisorOnly
     @DeleteMapping("/soft/{id}")
     public ResponseEntity<ApiResponse> softDeleteProduct(
             @PathVariable UUID id,
@@ -358,15 +286,11 @@ public class ProductController {
 
         productService.bulkSoftDelete(List.of(id), reason);
 
-        return ResponseEntity.ok(
-                new ApiResponse("success", reason)
-        );
+        return ResponseEntity.ok(new ApiResponse("success", reason));
     }
 
-
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
+    @TenantSupervisorOnly
     @PutMapping("/restore/{id}")
-    @Operation(summary = "Restore a soft-deleted product")
     public ResponseEntity<Void> restoreProduct(
             @PathVariable UUID id,
             @RequestBody(required = false) ProductRestoreRequest request
@@ -382,24 +306,24 @@ public class ProductController {
     }
 
     /* =============================
-   BULK DELETE & RESTORE
-   ============================= */
+       BULK DELETE / RESTORE
+       ============================= */
 
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @TenantManagerOnly
     @DeleteMapping("/soft/bulk")
-    @Operation(summary = "Soft delete products in bulk")
     public ResponseEntity<Void> bulkSoftDelete(
             @RequestBody BulkActionRequest request
     ) {
+
         productService.bulkSoftDelete(
                 request.getIds(),
                 request.getReason()
         );
+
         return ResponseEntity.noContent().build();
     }
 
-
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @TenantManagerOnly
     @PutMapping("/restore/bulk")
     public ResponseEntity<Void> bulkRestore(
             @RequestBody BulkActionRequest request
@@ -414,10 +338,8 @@ public class ProductController {
         return ResponseEntity.noContent().build();
     }
 
-
-    @PreAuthorize("hasRole('SUPERUSER')")
+    @PlatformAdminOnly
     @DeleteMapping("/hard/bulk")
-    @Operation(summary = "Hard delete products in bulk")
     public ResponseEntity<Void> bulkHardDelete(
             @RequestBody BulkActionRequest request
     ) throws IOException {
@@ -430,73 +352,71 @@ public class ProductController {
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
+    @TenantSupervisorOnly
     @DeleteMapping("/{id}/images/{filename}")
-    @Operation(summary = "Delete a specific product image by filename")
     public ResponseEntity<Void> deleteProductImageByFilename(
             @PathVariable UUID id,
             @PathVariable String filename,
             @RequestParam(required = false, defaultValue = "true") Boolean soft
     ) throws IOException {
+
         productService.deleteProductImageByFilename(id, filename, soft);
+
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
+    @TenantSupervisorOnly
     @DeleteMapping("/{id}/images")
-    @Operation(summary = "Delete all images for a product (and remove upload directory)")
     public ResponseEntity<Void> deleteAllProductImages(
-        @PathVariable UUID id,
-        @RequestParam(required = false, defaultValue = "true") Boolean soft,
-        @RequestParam(required = false) String reason
+            @PathVariable UUID id,
+            @RequestParam(required = false, defaultValue = "true") Boolean soft,
+            @RequestParam(required = false) String reason
     ) throws IOException {
+
         productService.deleteAllProductImages(id, soft, reason);
+
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER', 'SUPERVISOR')")
+    @TenantSupervisorOnly
     @PutMapping("/restore/{productId}/{productImageId}")
-    @Operation(summary = "Restore a soft-deleted product")
     public ResponseEntity<Void> restoreProductImage(
             @PathVariable UUID productId,
             @PathVariable UUID productImageId,
             @RequestParam(required = false) String reason
     ) {
+
         productService.restoreProductImage(productId, productImageId, reason);
+
         return ResponseEntity.noContent().build();
     }
 
-
-
-
-
-
-
-
-
-
     /* =============================
-   PRODUCT AUDITS
-   ============================= */
+       PRODUCT AUDITS
+       ============================= */
 
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
+    @TenantManagerOnly
     @GetMapping("/{id}/audits")
-    @Operation(summary = "Get audit history for a single product")
-    public ResponseEntity<List<ProductAudit>> getProductAudits(@PathVariable UUID id) {
+    public ResponseEntity<List<ProductAudit>> getProductAudits(
+            @PathVariable UUID id
+    ) {
+
         return ResponseEntity.ok(productService.getProductAudits(id));
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
+    @TenantManagerOnly
     @GetMapping("/{id}/images/audits")
-    @Operation(summary = "Get audit history for all images of a single product")
-    public ResponseEntity<List<ProductImageAudit>> getProductImagesAudits(@PathVariable UUID id) {
+    public ResponseEntity<List<ProductImageAudit>> getProductImagesAudits(
+            @PathVariable UUID id
+    ) {
+
         return ResponseEntity.ok(productService.getProductImagesAudits(id));
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER')")
+    @PlatformAdminOnly
     @GetMapping("/images/all/audits")
-    @Operation(summary = "Get audit history for all product images in the system")
     public ResponseEntity<Map<UUID, List<ProductImageAudit>>> getAllProductImagesAudits() {
+
         return ResponseEntity.ok(productService.getAllProductImagesAudits());
     }
 }

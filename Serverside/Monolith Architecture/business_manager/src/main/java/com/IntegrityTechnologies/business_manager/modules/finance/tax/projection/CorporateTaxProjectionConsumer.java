@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.tax.projection;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
@@ -7,21 +8,20 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.rep
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.CorporateTaxLedgerProjection;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.CorporateTaxLedgerProjectionRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.event.EventListener;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 public class CorporateTaxProjectionConsumer {
 
-    private final ObjectMapper mapper;
     private final CorporateTaxLedgerProjectionRepository repo;
     private final AccountRepository accountRepository;
     private final TaxProperties taxProperties;
@@ -31,81 +31,88 @@ public class CorporateTaxProjectionConsumer {
             groupId = "corporate-tax-projection"
     )
     @Transactional
-    public void handle(String payload) {
+    @ConditionalOnProperty(
+            name="spring.kafka.enabled",
+            havingValue="true",
+            matchIfMissing=false
+    )
+    public void handleKafka(JournalPostedEvent event) {
 
-        try {
+        process(event);
+    }
 
-            JournalPostedEvent event =
-                    mapper.readValue(payload, JournalPostedEvent.class);
+    @EventListener
+    @Transactional
+    public void handleSpring(JournalPostedEvent event) {
 
-            int year = LocalDate.now().getYear();
-            int month = LocalDate.now().getMonthValue();
+        process(event);
+    }
 
-            CorporateTaxLedgerProjection projection =
-                    repo.findByBranchIdAndFiscalYearAndMonthNumber(
-                            event.branchId(),
-                            year,
-                            month
-                    ).orElse(
-                            CorporateTaxLedgerProjection.builder()
-                                    .branchId(event.branchId())
-                                    .fiscalYear(year)
-                                    .monthNumber(month)
-                                    .revenue(BigDecimal.ZERO)
-                                    .expenses(BigDecimal.ZERO)
-                                    .taxableProfit(BigDecimal.ZERO)
-                                    .estimatedTax(BigDecimal.ZERO)
-                                    .build()
-                    );
+    private void process(JournalPostedEvent event) {
 
-            for (LedgerEntryDTO entry : event.entries()) {
+        int year = LocalDate.now().getYear();
+        int month = LocalDate.now().getMonthValue();
 
-                var account =
-                        accountRepository.findById(entry.accountId()).orElse(null);
-
-                if (account == null) continue;
-
-                BigDecimal delta =
-                        entry.direction().name().equals("DEBIT")
-                                ? entry.amount()
-                                : entry.amount().negate();
-
-                if (account.getType() == AccountType.INCOME) {
-
-                    projection.setRevenue(
-                            projection.getRevenue().add(delta)
-                    );
-
-                } else if (account.getType() == AccountType.EXPENSE) {
-
-                    projection.setExpenses(
-                            projection.getExpenses().add(delta)
-                    );
-                }
-            }
-
-            BigDecimal profit =
-                    projection.getRevenue()
-                            .subtract(projection.getExpenses());
-
-            projection.setTaxableProfit(profit);
-
-            if (profit.compareTo(BigDecimal.ZERO) > 0) {
-
-                projection.setEstimatedTax(
-                        profit.multiply(taxProperties.getCorporateTaxRate())
+        CorporateTaxLedgerProjection projection =
+                repo.findByBranchIdAndFiscalYearAndMonthNumber(
+                        event.branchId(),
+                        year,
+                        month
+                ).orElse(
+                        CorporateTaxLedgerProjection.builder()
+                                .branchId(event.branchId())
+                                .fiscalYear(year)
+                                .monthNumber(month)
+                                .revenue(BigDecimal.ZERO)
+                                .expenses(BigDecimal.ZERO)
+                                .taxableProfit(BigDecimal.ZERO)
+                                .estimatedTax(BigDecimal.ZERO)
+                                .build()
                 );
 
-            } else {
+        for (LedgerEntryDTO entry : event.entries()) {
 
-                projection.setEstimatedTax(BigDecimal.ZERO);
+            var account =
+                    accountRepository.findById(entry.accountId()).orElse(null);
+
+            if (account == null) continue;
+
+            BigDecimal delta =
+                    entry.direction() == EntryDirection.DEBIT
+                            ? entry.amount()
+                            : entry.amount().negate();
+
+            if (account.getType() == AccountType.INCOME) {
+
+                projection.setRevenue(
+                        projection.getRevenue().add(delta)
+                );
+
+            } else if (account.getType() == AccountType.EXPENSE) {
+
+                projection.setExpenses(
+                        projection.getExpenses().add(delta)
+                );
             }
-
-            repo.save(projection);
-
-        } catch (Exception ex) {
-
-            throw new RuntimeException("Corporate tax projection failed", ex);
         }
+
+        BigDecimal profit =
+                projection.getRevenue()
+                        .subtract(projection.getExpenses());
+
+        projection.setTaxableProfit(profit);
+
+        if (profit.compareTo(BigDecimal.ZERO) > 0) {
+
+            projection.setEstimatedTax(
+                    profit.multiply(taxProperties.getCorporateTaxRate())
+            );
+
+        } else {
+
+            projection.setEstimatedTax(BigDecimal.ZERO);
+        }
+
+        repo.save(projection);
     }
 }
