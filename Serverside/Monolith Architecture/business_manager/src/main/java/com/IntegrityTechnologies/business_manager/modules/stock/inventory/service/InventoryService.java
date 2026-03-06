@@ -6,6 +6,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.ada
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.InventoryAccountingAdapter;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.PeriodGuardService;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineBatchSelection;
@@ -391,17 +392,17 @@ public class InventoryService {
                             .performedBy(getCurrentUsername())
                             .entries(List.of(
                                     AccountingEvent.Entry.builder()
-                                            .accountId(accountingAccounts.inventory())
+                                            .accountId(accountingAccounts.get(branch.getId(), AccountRole.INVENTORY))
                                             .direction(EntryDirection.DEBIT)
                                             .amount(incomingCostTotal)
                                             .build(),
                                     AccountingEvent.Entry.builder()
-                                            .accountId(accountingAccounts.inputVat())
+                                            .accountId(accountingAccounts.get(branch.getId(),AccountRole.VAT_INPUT))
                                             .direction(EntryDirection.DEBIT)
                                             .amount(totalInputVat)
                                             .build(),
                                     AccountingEvent.Entry.builder()
-                                            .accountId(accountingAccounts.accountsPayable())
+                                            .accountId(accountingAccounts.get(branch.getId(), AccountRole.VAT_PAYABLE))
                                             .direction(EntryDirection.CREDIT)
                                             .amount(incomingCostTotal.add(totalInputVat))
                                             .build()

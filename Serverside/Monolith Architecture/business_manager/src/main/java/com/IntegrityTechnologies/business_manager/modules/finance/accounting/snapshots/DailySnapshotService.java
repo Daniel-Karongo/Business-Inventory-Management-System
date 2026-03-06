@@ -1,115 +1,125 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.snapshots;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountBalance;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class DailySnapshotService {
 
-    private final AccountBalanceRepository balanceRepo;
+    private final LedgerEntryRepository ledgerRepo;
     private final DailyAccountBalanceSnapshotRepository snapshotRepo;
 
     @Transactional
     public void snapshotBranch(UUID branchId) {
 
-        int page = 0;
-        int size = 2000;
+        LocalDate snapshotDate = LocalDate.now().minusDays(1);
 
-        Page<AccountBalance> result;
+        LocalDateTime start = snapshotDate.atStartOfDay();
+        LocalDateTime end = snapshotDate.atTime(23,59,59);
 
-        do {
+        Map<UUID, BigDecimal> openingMap =
+                buildOpeningBalances(branchId, start);
 
-            result =
-                    balanceRepo.findByBranch_Id(
-                            branchId,
-                            PageRequest.of(page++, size)
-                    );
+        Map<UUID, BigDecimal> debitMap = new HashMap<>();
+        Map<UUID, BigDecimal> creditMap = new HashMap<>();
 
-            List<DailyAccountBalanceSnapshot> batch = new ArrayList<>();
+        List<Object[]> movement =
+                ledgerRepo.movementByAccountBetween(
+                        start,
+                        end,
+                        branchId,
+                        EntryDirection.DEBIT,
+                        EntryDirection.CREDIT
+                );
 
-            for (AccountBalance balance : result.getContent()) {
+        for (Object[] row : movement) {
 
-                DailyAccountBalanceSnapshot snapshot =
-                        new DailyAccountBalanceSnapshot();
+            UUID accountId = (UUID) row[0];
 
-                snapshot.setBranchId(branchId);
-                snapshot.setAccountId(balance.getAccount().getId());
-                snapshot.setSnapshotDate(LocalDate.now());
-                snapshot.setBalance(balance.getBalance());
-                snapshot.setCreatedAt(LocalDateTime.now());
+            BigDecimal debit = safe((BigDecimal) row[1]);
+            BigDecimal credit = safe((BigDecimal) row[2]);
 
-                batch.add(snapshot);
-            }
-
-            snapshotRepo.saveAll(batch);
-
-        } while (result.hasNext());
-    }
-
-    public void backfillSnapshots(UUID branchId) {
-
-        LocalDate lastSnapshot =
-                snapshotRepo
-                        .findTopByBranchIdOrderBySnapshotDateDesc(branchId)
-                        .map(DailyAccountBalanceSnapshot::getSnapshotDate)
-                        .orElse(LocalDate.now().minusDays(1));
-
-        LocalDate today = LocalDate.now();
-
-        while (lastSnapshot.isBefore(today)) {
-
-            lastSnapshot = lastSnapshot.plusDays(1);
-
-            snapshotBranchForDate(branchId, lastSnapshot);
+            debitMap.put(accountId, debit);
+            creditMap.put(accountId, credit);
         }
+
+        Set<UUID> accounts = new HashSet<>();
+        accounts.addAll(openingMap.keySet());
+        accounts.addAll(debitMap.keySet());
+        accounts.addAll(creditMap.keySet());
+
+        List<DailyAccountBalanceSnapshot> batch = new ArrayList<>();
+
+        for (UUID accountId : accounts) {
+
+            BigDecimal opening =
+                    openingMap.getOrDefault(accountId, BigDecimal.ZERO);
+
+            BigDecimal debit =
+                    debitMap.getOrDefault(accountId, BigDecimal.ZERO);
+
+            BigDecimal credit =
+                    creditMap.getOrDefault(accountId, BigDecimal.ZERO);
+
+            BigDecimal closing =
+                    opening.add(debit).subtract(credit);
+
+            DailyAccountBalanceSnapshot snap =
+                    new DailyAccountBalanceSnapshot();
+
+            snap.setBranchId(branchId);
+            snap.setAccountId(accountId);
+            snap.setSnapshotDate(snapshotDate);
+
+            snap.setOpeningBalance(opening);
+            snap.setDebitTotal(debit);
+            snap.setCreditTotal(credit);
+            snap.setClosingBalance(closing);
+
+            snap.setCreatedAt(LocalDateTime.now());
+
+            batch.add(snap);
+        }
+
+        snapshotRepo.saveAll(batch);
     }
 
-    @Transactional
-    public void snapshotBranchForDate(UUID branchId, LocalDate date) {
+    private Map<UUID, BigDecimal> buildOpeningBalances(
+            UUID branchId,
+            LocalDateTime start
+    ) {
 
-        int page = 0;
-        int size = 2000;
+        Map<UUID, BigDecimal> map = new HashMap<>();
 
-        Page<AccountBalance> result;
+        List<Object[]> rows =
+                ledgerRepo.balanceBeforeDate(
+                        start,
+                        branchId,
+                        EntryDirection.DEBIT,
+                        EntryDirection.CREDIT
+                );
 
-        do {
+        for (Object[] row : rows) {
 
-            result =
-                    balanceRepo.findByBranch_Id(
-                            branchId,
-                            PageRequest.of(page++, size)
-                    );
+            map.put(
+                    (UUID) row[0],
+                    safe((BigDecimal) row[1])
+            );
+        }
 
-            List<DailyAccountBalanceSnapshot> batch = new ArrayList<>();
+        return map;
+    }
 
-            for (AccountBalance balance : result.getContent()) {
-
-                DailyAccountBalanceSnapshot snapshot =
-                        new DailyAccountBalanceSnapshot();
-
-                snapshot.setBranchId(branchId);
-                snapshot.setAccountId(balance.getAccount().getId());
-                snapshot.setSnapshotDate(date);
-                snapshot.setBalance(balance.getBalance());
-                snapshot.setCreatedAt(LocalDateTime.now());
-
-                batch.add(snapshot);
-            }
-
-            snapshotRepo.saveAll(batch);
-
-        } while (result.hasNext());
+    private BigDecimal safe(BigDecimal val) {
+        return val == null ? BigDecimal.ZERO : val;
     }
 }

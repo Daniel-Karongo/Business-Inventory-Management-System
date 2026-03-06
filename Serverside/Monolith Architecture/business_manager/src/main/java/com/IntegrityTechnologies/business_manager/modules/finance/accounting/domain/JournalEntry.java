@@ -180,6 +180,8 @@ public class JournalEntry {
 
     @PreUpdate
     public void preventModification() {
-        throw new IllegalStateException("Journal entries are immutable");
+
+        if (posted)
+            throw new IllegalStateException("Posted journal entries are immutable");
     }
 }

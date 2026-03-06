@@ -10,9 +10,15 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "reconciliation_items",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_recon_run_account",
+                        columnNames = {"run_id", "account_id"}
+                )
+        },
         indexes = {
                 @Index(name = "idx_recon_item_run", columnList = "run_id"),
-                @Index(name = "idx_recon_item_account", columnList = "accountId")
+                @Index(name = "idx_recon_item_account", columnList = "account_id")
         }
 )
 @Getter
@@ -23,7 +29,7 @@ public class ReconciliationItem {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
+    @Column(name = "account_id", nullable = false)
     private UUID accountId;
 
     @Column(nullable = false, precision = 19, scale = 2)
@@ -51,5 +57,13 @@ public class ReconciliationItem {
         this.projectedBalance = projectedBalance;
         this.consistent = consistent;
         this.run = run;
+    }
+
+    public UUID getRunId() {
+        return run.getId();
+    }
+
+    public UUID getBranchId() {
+        return run.getBranchId();
     }
 }

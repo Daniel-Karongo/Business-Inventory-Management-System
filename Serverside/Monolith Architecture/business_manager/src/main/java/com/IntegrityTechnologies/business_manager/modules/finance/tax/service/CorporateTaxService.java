@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.tax.service;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
@@ -12,6 +13,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.Tax
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.CorporateTaxFiling;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.enums.BusinessTaxMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.CorporateTaxFilingRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.CorporateTaxLedgerProjectionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +36,7 @@ public class CorporateTaxService {
     private final TaxProperties taxProperties;
     private final PeriodGuardService periodGuardService;
     private final GovernanceAuditService auditService;
+    private final CorporateTaxLedgerProjectionRepository projectionRepository;
 
     @Transactional
     public CorporateTaxFiling accrueCorporateTax(
@@ -56,14 +59,17 @@ public class CorporateTaxService {
             );
         }
 
+        periodGuardService.validateOpenPeriod(from.toLocalDate(), branchId);
+
         if (filingRepository.existsByPeriodIdAndBranchId(periodId, branchId)) {
+
             throw new IllegalStateException(
-                    "Corporate tax already accrued for this period and branch."
+                    "Corporate tax already accrued for this period."
             );
         }
 
         BigDecimal revenue = ledgerRepository.netMovementForAccount(
-                accounts.revenue(),
+                accounts.get(branchId, AccountRole.REVENUE),
                 from,
                 to,
                 branchId,
@@ -74,7 +80,7 @@ public class CorporateTaxService {
         );
 
         BigDecimal cogs = ledgerRepository.netMovementForAccount(
-                accounts.cogs(),
+                accounts.get(branchId, AccountRole.COGS),
                 from,
                 to,
                 branchId,
@@ -92,8 +98,17 @@ public class CorporateTaxService {
                 EntryDirection.DEBIT
         );
 
-        BigDecimal profit =
-                revenue.subtract(cogs).subtract(expenses);
+        var projection =
+                projectionRepository
+                        .findByBranchIdAndFiscalYearAndMonthNumber(
+                                branchId,
+                                from.getYear(),
+                                from.getMonthValue()
+                        )
+                        .orElseThrow(() ->
+                                new IllegalStateException("Tax projection missing"));
+
+        BigDecimal profit = projection.getTaxableProfit();
 
         BigDecimal taxRate = taxProperties.getCorporateTaxRate();
         BigDecimal taxAmount = BigDecimal.ZERO;
@@ -113,13 +128,13 @@ public class CorporateTaxService {
                             .entries(
                                     List.of(
                                             AccountingEvent.Entry.builder()
-                                                    .accountId(accounts.corporateTaxExpense())
+                                                    .accountId(accounts.get(branchId, AccountRole.CORPORATE_TAX_EXPENSE))
                                                     .direction(EntryDirection.DEBIT)
                                                     .amount(taxAmount)
                                                     .build(),
 
                                             AccountingEvent.Entry.builder()
-                                                    .accountId(accounts.corporateTaxPayable())
+                                                    .accountId(accounts.get(branchId, AccountRole.CORPORATE_TAX_PAYABLE))
                                                     .direction(EntryDirection.CREDIT)
                                                     .amount(taxAmount)
                                                     .build()
@@ -184,7 +199,7 @@ public class CorporateTaxService {
                         .entries(
                                 List.of(
                                         AccountingEvent.Entry.builder()
-                                                .accountId(accounts.corporateTaxPayable())
+                                                .accountId(accounts.get(branchId, AccountRole.CORPORATE_TAX_PAYABLE))
                                                 .direction(EntryDirection.DEBIT)
                                                 .amount(filing.getTaxAmount())
                                                 .build(),

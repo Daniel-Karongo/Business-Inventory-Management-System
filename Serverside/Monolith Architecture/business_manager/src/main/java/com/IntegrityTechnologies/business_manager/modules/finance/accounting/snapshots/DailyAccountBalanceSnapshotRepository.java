@@ -14,6 +14,9 @@ public interface DailyAccountBalanceSnapshotRepository
             UUID branchId,
             LocalDate snapshotDate
     );
+
+    List<DailyAccountBalanceSnapshot> findBySnapshotDate(LocalDate snapshotDate);
+
     Optional<DailyAccountBalanceSnapshot>
     findTopByBranchIdOrderBySnapshotDateDesc(UUID branchId);
 }

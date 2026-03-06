@@ -1,17 +1,18 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.budgeting.service;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.*;
+import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.Budget;
+import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.BudgetLine;
+import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.BudgetMonth;
+import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.BudgetMonthlySnapshot;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.enums.BudgetScenario;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.enums.BudgetStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.dto.BranchComparisonDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.dto.CorporateVarianceDTO;
+import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.policy.BudgetPolicy;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetMonthlySnapshotRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetSnapshotStateRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountingSignRules.*;
 
 @Service
 @RequiredArgsConstructor
@@ -32,11 +30,10 @@ public class BudgetService {
 
     private final BudgetRepository budgetRepository;
     private final BranchRepository branchRepository;
-    private final LedgerEntryRepository ledgerRepository;
     private final BudgetMonthlySnapshotRepository snapshotRepository;
-    private final BudgetSnapshotStateRepository snapshotStateRepository;
     private final AccountRepository accountRepository;
     private final GovernanceAuditService auditService;
+    private final BudgetPolicy budgetPolicy;
 
     /* ============================================================
        CREATE NEW BUDGET (AUTO VERSIONING)
@@ -115,6 +112,8 @@ public class BudgetService {
         var account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new IllegalArgumentException("Account not found"));
 
+        budgetPolicy.validate(account);
+
         BudgetLine line = budget.getLines()
                 .stream()
                 .filter(l -> l.getAccount().getId().equals(accountId))
@@ -145,139 +144,6 @@ public class BudgetService {
                             .build()
             );
         }
-    }
-
-    /* ============================================================
-       RESOLVE BUDGET (BRANCH OVERRIDE → GLOBAL FALLBACK)
-       ============================================================ */
-
-    public Optional<Budget> resolveActiveBudget(
-            UUID branchId,
-            int fiscalYear
-    ) {
-
-        BudgetScenario scenario = BudgetScenario.BASELINE;
-
-        if (branchId != null) {
-            Optional<Budget> branchBudget =
-                    budgetRepository
-                            .findTopByBranch_IdAndFiscalYearAndScenarioOrderByVersionNumberDesc(
-                                    branchId,
-                                    fiscalYear,
-                                    scenario
-                            );
-
-            if (branchBudget.isPresent()) {
-                return branchBudget;
-            }
-        }
-
-        return budgetRepository
-                .findTopByBranchIsNullAndFiscalYearAndScenarioOrderByVersionNumberDesc(
-                        fiscalYear,
-                        scenario
-                );
-    }
-
-    /* ============================================================
-       SNAPSHOT GENERATION
-       ============================================================ */
-
-    @Transactional
-    public void computeMonthlySnapshot(
-            UUID branchId,
-            int fiscalYear,
-            int monthNumber
-    ) {
-
-        Optional<BudgetSnapshotState> state =
-                snapshotStateRepository
-                        .findByBranchIdAndFiscalYearAndMonthNumber(
-                                branchId,
-                                fiscalYear,
-                                monthNumber
-                        );
-
-        if (state.isPresent() && state.get().isLocked()) {
-            return; // idempotent safe exit instead of throwing
-        }
-        
-        Optional<Budget> budgetOpt =
-                resolveActiveBudget(branchId, fiscalYear);
-
-        if (budgetOpt.isEmpty()) return;
-
-        Budget budget = budgetOpt.get();
-
-        LocalDate start = LocalDate.of(fiscalYear, monthNumber, 1);
-        LocalDate end = start.plusMonths(1).minusDays(1);
-
-        for (BudgetLine line : budget.getLines()) {
-
-            UUID accountId = line.getAccount().getId();
-
-            BigDecimal planned =
-                    line.getMonths()
-                            .stream()
-                            .filter(m -> m.getMonthNumber() == monthNumber)
-                            .map(BudgetMonth::getPlannedAmount)
-                            .findFirst()
-                            .orElse(BigDecimal.ZERO);
-
-            BigDecimal actual =
-                    ledgerRepository.netMovementForAccount(
-                            accountId,
-                            start.atStartOfDay(),
-                            end.atTime(23,59,59),
-                            branchId,
-                            DEBIT_NORMAL,
-                            CREDIT_NORMAL,
-                            DEBIT,
-                            CREDIT
-                    );
-
-            BigDecimal variance =
-                    calculateVariance(line.getAccount().getType(), planned, actual);
-
-            snapshotRepository.save(
-                    BudgetMonthlySnapshot.builder()
-                            .branchId(branchId)
-                            .fiscalYear(fiscalYear)
-                            .monthNumber(monthNumber)
-                            .accountId(accountId)
-                            .planned(planned)
-                            .actual(actual)
-                            .variance(variance)
-                            .computedAt(LocalDateTime.now())
-                            .build()
-            );
-        }
-        snapshotStateRepository.save(
-                BudgetSnapshotState.builder()
-                        .branchId(branchId)
-                        .fiscalYear(fiscalYear)
-                        .monthNumber(monthNumber)
-                        .computedAt(LocalDateTime.now())
-                        .locked(true)
-                        .build()
-        );
-    }
-
-    private BigDecimal calculateVariance(
-            AccountType type,
-            BigDecimal planned,
-            BigDecimal actual
-    ) {
-
-        if (type == AccountType.INCOME) {
-            return actual.subtract(planned);
-        }
-
-        if (type == AccountType.EXPENSE) {
-            return planned.subtract(actual);
-        }
-
-        return actual.subtract(planned);
     }
 
     public CorporateVarianceDTO computeCorporateVariance(
@@ -317,19 +183,6 @@ public class BudgetService {
                         monthNumber,
                         accountId
                 );
-
-        // 🔥 If missing, compute automatically
-        if (snapshot.isEmpty()) {
-            computeMonthlySnapshot(branchId, fiscalYear, monthNumber);
-
-            snapshot =
-                    snapshotRepository.findByBranchIdAndFiscalYearAndMonthNumberAndAccountId(
-                            branchId,
-                            fiscalYear,
-                            monthNumber,
-                            accountId
-                    );
-        }
 
         return snapshot
                 .map(s -> CorporateVarianceDTO.builder()
@@ -455,5 +308,45 @@ public class BudgetService {
                 adminUser,
                 "Budget ID: " + budgetId
         );
+        initializeBudgetSnapshots(budget);
+    }
+
+    private void initializeBudgetSnapshots(Budget budget) {
+
+        UUID branchId =
+                budget.getBranch() != null
+                        ? budget.getBranch().getId()
+                        : null;
+
+        int year = budget.getFiscalYear();
+
+        for (BudgetLine line : budget.getLines()) {
+
+            UUID accountId = line.getAccount().getId();
+
+            line.getMonths().forEach(month -> {
+
+                snapshotRepository.findByBranchIdAndFiscalYearAndMonthNumberAndAccountId(
+                        branchId,
+                        year,
+                        month.getMonthNumber(),
+                        accountId
+                ).orElseGet(() ->
+                        snapshotRepository.save(
+                                BudgetMonthlySnapshot.builder()
+                                        .branchId(branchId)
+                                        .fiscalYear(year)
+                                        .monthNumber(month.getMonthNumber())
+                                        .accountId(accountId)
+                                        .planned(month.getPlannedAmount())
+                                        .actual(BigDecimal.ZERO)
+                                        .variance(month.getPlannedAmount().negate())
+                                        .updatedAt(LocalDateTime.now())
+                                        .build()
+                        )
+                );
+
+            });
+        }
     }
 }

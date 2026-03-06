@@ -6,6 +6,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.config.AccountingProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.RevenueRecognitionService;
@@ -109,18 +110,18 @@ public class PaymentServiceImpl implements PaymentService {
         // DR Cash/Bank/Mpesa
         // CR Accounts Receivable
         // -----------------------------------------
-        UUID debitAccount = switch (payment.getMethod().toUpperCase()) {
-            case "CASH" -> accountingAccounts.cash();
-            case "BANK" -> accountingAccounts.bank();
-            case "MPESA" -> accountingAccounts.mpesa();
-            default -> throw new IllegalArgumentException("Unsupported payment method");
-        };
-
         UUID branchId = sale.getLineItems().stream()
                 .map(SaleLineItem::getBranchId)
                 .findFirst()
                 .orElseThrow(() ->
                         new IllegalStateException("Sale must have a branch"));
+
+        UUID debitAccount = switch (payment.getMethod().toUpperCase()) {
+            case "CASH" -> accountingAccounts.get(branchId, AccountRole.CASH);
+            case "BANK" -> accountingAccounts.get(branchId, AccountRole.BANK);
+            case "MPESA" -> accountingAccounts.get(branchId, AccountRole.MPESA);
+            default -> throw new IllegalArgumentException("Unsupported payment method");
+        };
 
         accountingFacade.post(
                 AccountingEvent.builder()
@@ -139,7 +140,7 @@ public class PaymentServiceImpl implements PaymentService {
                                         .amount(payment.getAmount())
                                         .build(),
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accountingAccounts.accountsReceivable())
+                                        .accountId(accountingAccounts.get(branchId, AccountRole.ACCOUNTS_RECEIVABLE))
                                         .direction(EntryDirection.CREDIT)
                                         .amount(payment.getAmount())
                                         .build()

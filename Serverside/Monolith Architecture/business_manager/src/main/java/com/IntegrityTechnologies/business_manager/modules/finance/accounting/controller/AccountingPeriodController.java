@@ -2,11 +2,11 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.co
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.control.CloseChecklistService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.AccountingPeriodResponse;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountingPeriodRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.PeriodClosingService;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.control.
-CloseChecklistService.CloseChecklistResult;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.control.CloseChecklistService.CloseChecklistResult;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @RestController
@@ -28,24 +29,33 @@ public class AccountingPeriodController {
     private final CloseChecklistService checklistService;
 
     @GetMapping
-    public Page<AccountingPeriod> list(
+    public Page<AccountingPeriodResponse> list(
             @RequestParam UUID branchId,
             @PageableDefault(size = 24, sort = "startDate") Pageable pageable
     ) {
         SecurityUtils.requireAtLeast(Role.MANAGER);
-        return repository.findByBranchId(branchId, pageable);
+
+        return repository
+                .findByBranchId(branchId, pageable)
+                .map(AccountingPeriodResponse::from);
     }
 
     @PostMapping("/{id}/close")
     public void close(@PathVariable UUID id) {
+
         SecurityUtils.requireAdmin();
-        closingService.closePeriod(id, SecurityUtils.currentUsername());
+
+        closingService.closePeriod(
+                id,
+                SecurityUtils.currentUsername()
+        );
     }
 
     @GetMapping("/close-checklist")
     public CloseChecklistResult previewClose(
             @RequestParam UUID periodId
     ) {
+
         SecurityUtils.requireAtLeast(Role.MANAGER);
 
         AccountingPeriod period =
@@ -57,14 +67,20 @@ public class AccountingPeriodController {
                 period
         );
     }
+
     @PostMapping("/{id}/reopen")
-    public void reopen(@PathVariable UUID id,
-                       @RequestParam String reason) {
+    public void reopen(
+            @PathVariable UUID id,
+            @RequestParam String reason
+    ) {
 
         SecurityUtils.requireAdmin();
 
-        AccountingPeriod period = repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Period not found"));
+        AccountingPeriod period =
+                repository.findById(id)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException("Period not found")
+                        );
 
         if (!period.isClosed()) {
             throw new IllegalStateException("Period is already open");
@@ -79,6 +95,7 @@ public class AccountingPeriodController {
                         );
 
         if (laterClosedExists) {
+
             throw new IllegalStateException(
                     "Cannot reopen. A later period is already closed."
             );
@@ -86,7 +103,7 @@ public class AccountingPeriodController {
 
         period.setClosed(false);
         period.setReopenedBy(SecurityUtils.currentUsername());
-        period.setReopenedAt(java.time.LocalDateTime.now());
+        period.setReopenedAt(LocalDateTime.now());
         period.setReopenReason(reason);
 
         repository.save(period);

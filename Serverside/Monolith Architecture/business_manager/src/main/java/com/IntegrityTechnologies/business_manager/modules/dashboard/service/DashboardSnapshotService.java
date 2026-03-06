@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.dashboard.service;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.model.DashboardDailySnapshot;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.repository.DashboardDailySnapshotRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryValuationService;
@@ -30,16 +31,16 @@ public class DashboardSnapshotService {
     @Transactional
     public void compute(UUID branchId, LocalDate date) {
 
-        snapshotRepo.findByBranchIdAndDate(branchId, date).ifPresent(s -> {
+        if (snapshotRepo.findByBranchIdAndDate(branchId, date).isPresent()) {
             return;
-        });
+        }
 
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.atTime(23,59,59);
 
         BigDecimal revenue =
                 ledgerRepo.netMovementForAccount(
-                        accounts.revenue(),
+                        accounts.get(branchId, AccountRole.REVENUE),
                         start,
                         end,
                         branchId,
@@ -51,7 +52,7 @@ public class DashboardSnapshotService {
 
         BigDecimal cogs =
                 ledgerRepo.netMovementForAccount(
-                        accounts.cogs(),
+                        accounts.get(branchId, AccountRole.COGS),
                         start,
                         end,
                         branchId,
@@ -63,22 +64,22 @@ public class DashboardSnapshotService {
 
         BigDecimal vat =
                 balanceRepo.findByAccount_IdAndBranch_Id(
-                                accounts.vatPayable(),
+                                accounts.get(branchId, AccountRole.VAT_PAYABLE),
                                 branchId
                         )
                         .map(b -> b.getBalance())
                         .orElse(BigDecimal.ZERO);
 
         BigDecimal cash =
-                balanceRepo.findByAccount_IdAndBranch_Id(accounts.cash(), branchId)
+                balanceRepo.findByAccount_IdAndBranch_Id(accounts.get(branchId, AccountRole.CASH), branchId)
                         .map(b -> b.getBalance())
                         .orElse(BigDecimal.ZERO)
                         .add(
-                                balanceRepo.findByAccount_IdAndBranch_Id(accounts.bank(), branchId)
+                                balanceRepo.findByAccount_IdAndBranch_Id(accounts.get(branchId, AccountRole.BANK), branchId)
                                         .map(b -> b.getBalance())
                                         .orElse(BigDecimal.ZERO)
                         ).add(
-                                balanceRepo.findByAccount_IdAndBranch_Id(accounts.mpesa(), branchId)
+                                balanceRepo.findByAccount_IdAndBranch_Id(accounts.get(branchId, AccountRole.MPESA), branchId)
                                         .map(b -> b.getBalance())
                                         .orElse(BigDecimal.ZERO)
                         );

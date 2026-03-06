@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.se
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.control.CloseChecklistService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.AccountingPeriodClosedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.AccountingSystemStateService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountingPeriodRepository;
@@ -10,6 +11,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.enu
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.CorporateTaxService;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,7 @@ public class PeriodClosingService {
     private final GovernanceAuditService auditService;
     private final CloseChecklistService checklistService;
     private final TaxSystemStateService taxSystemStateService;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional
     public void closePeriod(UUID periodId, String user) {
@@ -117,6 +120,15 @@ public class PeriodClosingService {
                 "PERIOD_CLOSED",
                 user,
                 "Period ID: " + period.getId()
+        );
+
+        applicationEventPublisher.publishEvent(
+                new AccountingPeriodClosedEvent(
+                        period.getId(),
+                        period.getBranchId(),
+                        period.getStartDate().atStartOfDay(),
+                        period.getEndDate().atTime(23,59,59)
+                )
         );
 
         systemStateService.lockIfNecessary(period.getBranchId());

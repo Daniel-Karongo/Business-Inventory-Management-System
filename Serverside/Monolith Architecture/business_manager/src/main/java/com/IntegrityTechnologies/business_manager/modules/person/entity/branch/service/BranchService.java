@@ -6,6 +6,7 @@ import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundExcept
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.BranchAccountingSettings;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.BranchAccountingSettingsRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.seed.BranchChartOfAccountsService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.MinimalUserDTO;
@@ -41,6 +42,7 @@ public class BranchService {
     private final UserBranchRepository userBranchRepository;
     private final UserDepartmentRepository userDepartmentRepository;
     private final BranchAccountingSettingsRepository branchAccountingSettingsRepository;
+    private final BranchChartOfAccountsService coaService;
 
     @Transactional
     public BranchDTO create(BranchDTO request, Authentication authentication) {
@@ -68,6 +70,7 @@ public class BranchService {
                         )
                         .build()
         );
+        coaService.seedForBranch(branch.getId());
 
         // Assign users via UserBranch
         if (request.getUserIds() != null) {
@@ -91,6 +94,7 @@ public class BranchService {
         return toResponse(branch);
     }
 
+    @Transactional
     public List<BranchDTO> getAll(Boolean deleted) {
 
         List<Branch> branches;
@@ -108,6 +112,7 @@ public class BranchService {
                 .toList();
     }
 
+    @Transactional
     public BranchDTO getById(UUID id) {
         return branchRepository.findById(id)
                 .map(this::toResponse)

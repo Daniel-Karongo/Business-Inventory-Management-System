@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.controller;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.GovernanceAuditLogResponse;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditLog;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditLogRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
@@ -21,11 +22,12 @@ public class GovernanceAuditController {
     private final GovernanceAuditLogRepository repository;
 
     @GetMapping
-    public Page<GovernanceAuditLog> logs(
+    public Page<GovernanceAuditLogResponse> logs(
             @RequestParam UUID branchId,
             @PageableDefault(size = 100, sort = "performedAt") Pageable pageable
     ) {
         SecurityUtils.requireAtLeast(Role.ADMIN);
-        return repository.findByBranchId(branchId, pageable);
+        return repository.findByBranchId(branchId, pageable)
+                .map(GovernanceAuditLogResponse::from);
     }
 }

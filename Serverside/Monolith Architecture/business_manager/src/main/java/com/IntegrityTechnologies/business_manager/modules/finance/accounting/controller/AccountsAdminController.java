@@ -27,13 +27,20 @@ public class AccountsAdminController {
 
         SecurityUtils.requireAdmin();
 
-        accountRepository.findByCode(req.code())
+        accountRepository
+                .findByBranchIdAndCode(req.branchId(), req.code())
                 .ifPresent(a -> {
                     throw new IllegalStateException("Account code already exists");
                 });
 
         return accountRepository.save(
-                new Account(req.code(), req.name(), req.type())
+                new Account(
+                        req.branchId(),
+                        req.code(),
+                        req.name(),
+                        req.type(),
+                        req.role()
+                )
         );
     }
 
@@ -65,7 +72,7 @@ public class AccountsAdminController {
         Account acc = accountRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Account not found"));
 
-        if (ledgerRepo.existsByAccountId(id)) {
+        if (ledgerRepo.existsByAccount_Id(id)) {
             throw new IllegalStateException("Account has ledger entries");
         }
 

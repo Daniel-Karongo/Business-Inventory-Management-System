@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.system;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.BranchAccountingSettings;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.BranchAccountingSettingsRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.seed.BranchChartOfAccountsService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
@@ -24,7 +25,7 @@ public class SystemInitializer {
     private final BranchRepository branchRepository;
     private final DepartmentRepository departmentRepository;
     private final BranchAccountingSettingsRepository accountingSettingsRepository;
-
+    private final BranchChartOfAccountsService chartService;
     @Bean
     @Transactional
     public ApplicationRunner initializeDefaults() {
@@ -41,7 +42,11 @@ public class SystemInitializer {
                                 .email("main@default.com")
                                 .build();
                         branchRepository.save(b);
-                        log.info("✅ Default MAIN branch created.");
+
+                        chartService.seedForBranch(b.getId());
+
+                        log.info("✅ Default MAIN branch created with chart of accounts.");
+
                         return b;
                     });
             if (!accountingSettingsRepository.existsByBranchId(mainBranch.getId())) {

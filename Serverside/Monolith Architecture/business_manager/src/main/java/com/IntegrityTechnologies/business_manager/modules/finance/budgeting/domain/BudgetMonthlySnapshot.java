@@ -32,7 +32,7 @@ public class BudgetMonthlySnapshot {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    private UUID branchId; // null = global consolidated
+    private UUID branchId;
 
     private int fiscalYear;
 
@@ -49,5 +49,5 @@ public class BudgetMonthlySnapshot {
     @Column(precision = 19, scale = 2)
     private BigDecimal variance;
 
-    private LocalDateTime computedAt;
+    private LocalDateTime updatedAt;
 }

@@ -18,46 +18,46 @@ import org.springframework.data.domain.Pageable;
 
 
 public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, UUID> {
-    boolean existsByAccountId(UUID accountId);
+    boolean existsByAccount_Id(UUID accountId);
     List<LedgerEntry> findByAccountIdOrderByPostedAtAsc(UUID accountId);
     List<LedgerEntry> findByPostedAtBetween(LocalDateTime from, LocalDateTime to);
     Page<LedgerEntry> findByAccountId(UUID accountId, Pageable pageable);
     @Query(value = """
-    SELECT 
-        je.id AS journalId,
-        je.reference AS reference,
-        le.posted_at AS postedAt,
-        le.direction AS direction,
-        le.amount AS amount,
-
-        SUM(
-            CASE
-                WHEN le.direction = 'DEBIT' THEN le.amount
-                ELSE -le.amount
-            END
-        ) OVER (
-            PARTITION BY le.account_id
-            ORDER BY le.posted_at, le.id
-            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-        ) AS runningBalance
-
-    FROM ledger_entries le
-    JOIN journal_entries je ON je.id = le.journal_entry_id
-    WHERE le.account_id = :accountId
-      AND je.posted = true
-      AND je.reversed = false
-      AND (:branchId IS NULL OR je.branch_id = :branchId)
-    ORDER BY le.posted_at ASC, le.id ASC
-""",
-            countQuery = """
-    SELECT COUNT(*)
-    FROM ledger_entries le
-    JOIN journal_entries je ON je.id = le.journal_entry_id
-    WHERE le.account_id = :accountId
-      AND je.posted = true
-      AND je.reversed = false
-      AND (:branchId IS NULL OR je.branch_id = :branchId)
-""",
+        SELECT 
+            je.id AS journalId,
+            je.reference AS reference,
+            le.posted_at AS postedAt,
+            le.direction AS direction,
+            le.amount AS amount,
+    
+            SUM(
+                CASE
+                    WHEN le.direction = 'DEBIT' THEN le.amount
+                    ELSE -le.amount
+                END
+            ) OVER (
+                PARTITION BY le.account_id
+                ORDER BY le.posted_at, le.id
+                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+            ) AS runningBalance
+    
+        FROM ledger_entries le
+        JOIN journal_entries je ON je.id = le.journal_entry_id
+        WHERE le.account_id = :accountId
+          AND je.posted = true
+          AND je.reversed = false
+          AND (:branchId IS NULL OR je.branch_id = :branchId)
+        ORDER BY le.posted_at ASC, le.id ASC
+    """,
+                countQuery = """
+        SELECT COUNT(*)
+        FROM ledger_entries le
+        JOIN journal_entries je ON je.id = le.journal_entry_id
+        WHERE le.account_id = :accountId
+          AND je.posted = true
+          AND je.reversed = false
+          AND (:branchId IS NULL OR je.branch_id = :branchId)
+    """,
             nativeQuery = true)
     Page<LedgerRunningBalanceProjection> findLedgerWithRunningBalance(
             @Param("accountId") UUID accountId,
@@ -298,101 +298,62 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, UUID> 
     );
 
     @Query("""
-        SELECT a.code,
-               a.name,
-               SUM(
-                   CASE
-                       WHEN le.postedAt < :start
-                            AND a.type IN :debitNormal
-                            AND le.direction = :debit
-                            THEN le.amount
-                       WHEN le.postedAt < :start
-                            AND a.type IN :debitNormal
-                            AND le.direction = :credit
-                            THEN -le.amount
-                       WHEN le.postedAt < :start
-                            AND a.type IN :creditNormal
-                            AND le.direction = :credit
-                            THEN le.amount
-                       WHEN le.postedAt < :start
-                            AND a.type IN :creditNormal
-                            AND le.direction = :debit
-                            THEN -le.amount
-                       ELSE 0
-                   END
-               ) as opening,
-    
-               SUM(
-                   CASE
-                       WHEN le.postedAt BETWEEN :start AND :end
-                            AND le.direction = :debit
-                            THEN le.amount
-                       ELSE 0
-                   END
-               ) as periodDebit,
-    
-               SUM(
-                   CASE
-                       WHEN le.postedAt BETWEEN :start AND :end
-                            AND le.direction = :credit
-                            THEN le.amount
-                       ELSE 0
-                   END
-               ) as periodCredit
-    
-        FROM LedgerEntry le
-        JOIN le.account a
-        JOIN le.journalEntry je
+        SELECT 
+            a.id,
+            COALESCE(SUM(
+                CASE
+                    WHEN l.direction = :debit THEN l.amount
+                    ELSE 0
+                END
+            ),0),
+            COALESCE(SUM(
+                CASE
+                    WHEN l.direction = :credit THEN l.amount
+                    ELSE 0
+                END
+            ),0)
+        FROM LedgerEntry l
+        JOIN l.account a
+        JOIN l.journalEntry je
         WHERE je.posted = true
           AND je.reversed = false
+          AND l.postedAt BETWEEN :start AND :end
           AND (:branchId IS NULL OR je.branch.id = :branchId)
-        GROUP BY a.code, a.name
-        ORDER BY a.code
+        GROUP BY a.id
     """)
-    List<Object[]> enterpriseTrialBalance(
-            @Param("start") LocalDateTime start,
-            @Param("end") LocalDateTime end,
-            @Param("branchId") UUID branchId,
-            @Param("debitNormal") Set<AccountType> debitNormal,
-            @Param("creditNormal") Set<AccountType> creditNormal,
-            @Param("debit") EntryDirection debit,
-            @Param("credit") EntryDirection credit
-    );
-
-    @Query("""
-        SELECT je.branch.name,
-               a.code,
-               a.name,
-               SUM(
-                    CASE WHEN le.postedAt < :start THEN
-                        CASE
-                            WHEN a.type IN :debitNormal AND le.direction = :debit THEN le.amount
-                            WHEN a.type IN :debitNormal AND le.direction = :credit THEN -le.amount
-                            WHEN a.type IN :creditNormal AND le.direction = :credit THEN le.amount
-                            WHEN a.type IN :creditNormal AND le.direction = :debit THEN -le.amount
-                        END
-                    ELSE 0 END
-               ),
-               SUM(CASE WHEN le.postedAt BETWEEN :start AND :end AND le.direction = :debit THEN le.amount ELSE 0 END),
-               SUM(CASE WHEN le.postedAt BETWEEN :start AND :end AND le.direction = :credit THEN le.amount ELSE 0 END)
-        FROM LedgerEntry le
-        JOIN le.account a
-        JOIN le.journalEntry je
-        WHERE je.posted = true
-          AND je.reversed = false
-          AND le.postedAt <= :end
-        GROUP BY je.branch.name, a.code, a.name
-        ORDER BY je.branch.name, a.code
-    """)
-    List<Object[]> enterpriseTrialBalanceMultiBranch(
+    List<Object[]> movementByAccountBetween(
             LocalDateTime start,
             LocalDateTime end,
-            Set<AccountType> debitNormal,
-            Set<AccountType> creditNormal,
+            UUID branchId,
             EntryDirection debit,
             EntryDirection credit
     );
 
+    @Query("""
+        SELECT 
+            a.id,
+            COALESCE(SUM(
+                CASE
+                    WHEN l.direction = :debit THEN l.amount
+                    WHEN l.direction = :credit THEN -l.amount
+                    ELSE 0
+                END
+            ),0)
+        FROM LedgerEntry l
+        JOIN l.account a
+        JOIN l.journalEntry je
+        WHERE je.posted = true
+          AND je.reversed = false
+          AND l.postedAt < :before
+          AND (:branchId IS NULL OR je.branch.id = :branchId)
+        GROUP BY a.id
+    """)
+    List<Object[]> balanceBeforeDate(
+            LocalDateTime before,
+            UUID branchId,
+            EntryDirection debit,
+            EntryDirection credit
+    );
     @Query("""
             SELECT le
             FROM LedgerEntry le
@@ -432,37 +393,6 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, UUID> 
     );
 
     @Query("""
-    SELECT a.type,
-           a.name,
-           COALESCE(SUM(
-                CASE
-                    WHEN a.type = :incomeType AND le.direction = :credit THEN le.amount
-                    WHEN a.type = :expenseType AND le.direction = :debit THEN le.amount
-                    ELSE 0
-                END
-           ), 0)
-    FROM LedgerEntry le
-    JOIN le.account a
-    JOIN le.journalEntry je
-    WHERE je.posted = true
-      AND je.reversed = false
-      AND le.postedAt BETWEEN :start AND :end
-      AND (:branchId IS NULL OR je.branch.id = :branchId)
-      AND a.type IN :incomeExpenseTypes
-    GROUP BY a.type, a.name
-""")
-    List<Object[]> enterpriseProfitAndLoss(
-            @Param("start") LocalDateTime start,
-            @Param("end") LocalDateTime end,
-            @Param("branchId") UUID branchId,
-            @Param("incomeExpenseTypes") Set<AccountType> incomeExpenseTypes,
-            @Param("incomeType") AccountType incomeType,
-            @Param("expenseType") AccountType expenseType,
-            @Param("debit") EntryDirection debit,
-            @Param("credit") EntryDirection credit
-    );
-
-    @Query("""
     SELECT je.branch.name,
            a.type,
            a.name,
@@ -489,98 +419,6 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, UUID> 
             @Param("incomeExpenseTypes") Set<AccountType> incomeExpenseTypes,
             @Param("incomeType") AccountType incomeType,
             @Param("expenseType") AccountType expenseType
-    );
-
-    @Query("""
-        SELECT a.type,
-               a.code,
-               a.name,
-               COALESCE(SUM(
-                   CASE
-                       WHEN a.type IN :debitNormal
-                            AND le.direction = :debit
-                            THEN le.amount
-    
-                       WHEN a.type IN :debitNormal
-                            AND le.direction = :credit
-                            THEN -le.amount
-    
-                       WHEN a.type IN :creditNormal
-                            AND le.direction = :credit
-                            THEN le.amount
-    
-                       WHEN a.type IN :creditNormal
-                            AND le.direction = :debit
-                            THEN -le.amount
-    
-                       ELSE 0
-                   END
-               ), 0)
-        FROM LedgerEntry le
-        JOIN le.account a
-        JOIN le.journalEntry je
-        WHERE je.posted = true
-          AND je.reversed = false
-          AND le.postedAt <= :asAt
-          AND a.type IN :balanceSheetTypes
-          AND (:branchId IS NULL OR je.branch.id = :branchId)
-        GROUP BY a.type, a.code, a.name
-        HAVING COALESCE(SUM(le.amount),0) <> 0
-        ORDER BY a.type, a.code
-    """)
-    List<Object[]> enterpriseBalanceSheet(
-            @Param("asAt") LocalDateTime asAt,
-            @Param("branchId") UUID branchId,
-            @Param("balanceSheetTypes") Set<AccountType> balanceSheetTypes,
-            @Param("debitNormal") Set<AccountType> debitNormal,
-            @Param("creditNormal") Set<AccountType> creditNormal,
-            @Param("debit") EntryDirection debit,
-            @Param("credit") EntryDirection credit
-    );
-
-    @Query("""
-        SELECT je.branch.name,
-               a.type,
-               a.code,
-               a.name,
-               COALESCE(SUM(
-                   CASE
-                       WHEN a.type IN :debitNormal
-                            AND le.direction = :debit
-                            THEN le.amount
-    
-                       WHEN a.type IN :debitNormal
-                            AND le.direction = :credit
-                            THEN -le.amount
-    
-                       WHEN a.type IN :creditNormal
-                            AND le.direction = :credit
-                            THEN le.amount
-    
-                       WHEN a.type IN :creditNormal
-                            AND le.direction = :debit
-                            THEN -le.amount
-    
-                       ELSE 0
-                   END
-               ), 0)
-        FROM LedgerEntry le
-        JOIN le.account a
-        JOIN le.journalEntry je
-        WHERE je.posted = true
-          AND je.reversed = false
-          AND le.postedAt <= :asAt
-          AND a.type IN :balanceSheetTypes
-        GROUP BY je.branch.name, a.type, a.code, a.name
-        ORDER BY je.branch.name, a.type, a.code
-    """)
-    List<Object[]> enterpriseBalanceSheetMultiBranch(
-            @Param("asAt") LocalDateTime asAt,
-            @Param("balanceSheetTypes") Set<AccountType> balanceSheetTypes,
-            @Param("debitNormal") Set<AccountType> debitNormal,
-            @Param("creditNormal") Set<AccountType> creditNormal,
-            @Param("debit") EntryDirection debit,
-            @Param("credit") EntryDirection credit
     );
 
     @Query("""
@@ -862,5 +700,64 @@ ORDER BY je.branch.name, je.reference
     List<LedgerEntry> streamBranchLedger(
             UUID branchId,
             Pageable pageable
+    );
+
+    @Query("""
+        SELECT a.id,
+               COALESCE(SUM(
+                   CASE
+                       WHEN a.type IN :debitNormal AND le.direction = :debit THEN le.amount
+                       WHEN a.type IN :debitNormal AND le.direction = :credit THEN -le.amount
+                       WHEN a.type IN :creditNormal AND le.direction = :credit THEN le.amount
+                       WHEN a.type IN :creditNormal AND le.direction = :debit THEN -le.amount
+                       ELSE 0
+                   END
+               ),0)
+        FROM LedgerEntry le
+        JOIN le.account a
+        JOIN le.journalEntry je
+        WHERE je.posted = true
+          AND je.reversed = false
+          AND le.postedAt BETWEEN :start AND :end
+          AND (:branchId IS NULL OR je.branch.id = :branchId)
+        GROUP BY a.id
+    """)
+    List<Object[]> ledgerDeltaByAccount(
+            LocalDateTime start,
+            LocalDateTime end,
+            UUID branchId,
+            Set<AccountType> debitNormal,
+            Set<AccountType> creditNormal,
+            EntryDirection debit,
+            EntryDirection credit
+    );
+
+    @Query("""
+        SELECT je.branch.name,
+               a.id,
+               COALESCE(SUM(
+                   CASE
+                       WHEN a.type IN :debitNormal AND le.direction = :debit THEN le.amount
+                       WHEN a.type IN :debitNormal AND le.direction = :credit THEN -le.amount
+                       WHEN a.type IN :creditNormal AND le.direction = :credit THEN le.amount
+                       WHEN a.type IN :creditNormal AND le.direction = :debit THEN -le.amount
+                       ELSE 0
+                   END
+               ),0)
+        FROM LedgerEntry le
+        JOIN le.account a
+        JOIN le.journalEntry je
+        WHERE je.posted = true
+          AND je.reversed = false
+          AND le.postedAt BETWEEN :start AND :end
+        GROUP BY je.branch.name, a.id
+    """)
+    List<Object[]> ledgerDeltaByAccountMultiBranch(
+            LocalDateTime start,
+            LocalDateTime end,
+            Set<AccountType> debitNormal,
+            Set<AccountType> creditNormal,
+            EntryDirection debit,
+            EntryDirection credit
     );
 }

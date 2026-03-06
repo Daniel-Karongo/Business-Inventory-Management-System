@@ -1,7 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.tax.service;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.LedgerEntry;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
 import lombok.RequiredArgsConstructor;
@@ -9,8 +9,9 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
+
+import static com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountingSignRules.*;
 
 @Service
 @RequiredArgsConstructor
@@ -21,27 +22,32 @@ public class VatReportService {
 
     public VatReport generate(LocalDateTime from, LocalDateTime to, UUID branchId) {
 
-        UUID outputVatId = accountingAccounts.outputVat();
-        UUID inputVatId = accountingAccounts.inputVat();
+        UUID outputVatId = accountingAccounts.get(branchId, AccountRole.VAT_OUTPUT);
+        UUID inputVatId = accountingAccounts.get(branchId, AccountRole.VAT_INPUT);
 
-        List<LedgerEntry> entries =
-                ledgerRepo.findByPostedAtBetweenAndJournalEntry_Branch_Id(
+        BigDecimal outputVat =
+                ledgerRepo.netMovementForAccount(
+                        outputVatId,
                         from,
                         to,
-                        branchId
+                        branchId,
+                        DEBIT_NORMAL,
+                        CREDIT_NORMAL,
+                        DEBIT,
+                        CREDIT
                 );
 
-        BigDecimal outputVat = entries.stream()
-                .filter(e -> e.getAccount().getId().equals(outputVatId))
-                .filter(e -> e.getDirection() == EntryDirection.CREDIT)
-                .map(LedgerEntry::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal inputVat = entries.stream()
-                .filter(e -> e.getAccount().getId().equals(inputVatId))
-                .filter(e -> e.getDirection() == EntryDirection.DEBIT)
-                .map(LedgerEntry::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal inputVat =
+                ledgerRepo.netMovementForAccount(
+                        inputVatId,
+                        from,
+                        to,
+                        branchId,
+                        DEBIT_NORMAL,
+                        CREDIT_NORMAL,
+                        DEBIT,
+                        CREDIT
+                );
 
         BigDecimal payable = outputVat.subtract(inputVat);
 

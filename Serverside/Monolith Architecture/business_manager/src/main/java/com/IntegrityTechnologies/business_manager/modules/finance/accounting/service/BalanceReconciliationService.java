@@ -5,10 +5,13 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.ReconciliationResult;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +33,8 @@ public class BalanceReconciliationService {
     private final ReconciliationRunRepository runRepo;
     private final ReconciliationItemRepository itemRepo;
     private final GovernanceAuditService auditService;
+    private final AccountRepository accountRepository;
+    private final BranchRepository branchRepository;
 
     @Transactional
     public UUID runAndPersist(UUID branchId, boolean repair, String user) {
@@ -114,9 +119,20 @@ public class BalanceReconciliationService {
             inconsistencies++;
 
             if (repair) {
+
                 AccountBalance projection = new AccountBalance();
+
+                projection.setAccount(
+                        accountRepository.getReferenceById(accountId)
+                );
+
+                projection.setBranch(
+                        branchRepository.getReferenceById(branchId)
+                );
+
                 projection.setBalance(ledgerBalance);
                 projection.setUpdatedAt(LocalDateTime.now());
+
                 balanceRepo.save(projection);
             }
 

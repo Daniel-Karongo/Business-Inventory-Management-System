@@ -5,8 +5,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,4 +25,12 @@ public interface EventOutboxRepository
         ORDER BY e.createdAt
     """)
     List<EventOutbox> lockNextBatch(Pageable pageable);
+
+    @Modifying
+        @Query("""
+        DELETE FROM EventOutbox e
+        WHERE e.processed = true
+        AND e.processedAt < :cutoff
+    """)
+    void deleteProcessedBefore(LocalDateTime cutoff);
 }

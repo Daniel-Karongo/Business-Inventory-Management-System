@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.api;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.cache.AccountingLedgerUpdatedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.Account;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
@@ -13,6 +14,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.rep
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.PeriodGuardService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,7 @@ public class AccountingFacade {
     private final PeriodGuardService periodGuardService;
     private final Map<AccountingMode, AccountingPolicy> policies;
     private final AccountingSystemStateService stateService;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional
     public void post(AccountingEvent event) {
@@ -91,6 +94,9 @@ public class AccountingFacade {
 
         postingService.post(journal, ledger, event.getPerformedBy());
 
+        applicationEventPublisher.publishEvent(
+            new AccountingLedgerUpdatedEvent(event.getBranchId())
+        );
         // LOCK MODE AFTER FIRST JOURNAL
         stateService.lockIfNecessary(event.getBranchId());
     }
@@ -144,6 +150,9 @@ public class AccountingFacade {
         original.markReversed(postedReversal.getId());
 
         journalRepo.save(original);
+        applicationEventPublisher.publishEvent(
+                new AccountingLedgerUpdatedEvent(branchId)
+        );
     }
 
     @Transactional(readOnly = true)

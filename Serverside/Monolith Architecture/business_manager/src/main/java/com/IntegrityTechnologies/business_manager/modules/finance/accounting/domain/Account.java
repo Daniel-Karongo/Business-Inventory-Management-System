@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -11,8 +12,12 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "accounts",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_account_branch_code",
+                columnNames = {"branch_id", "code"}
+        ),
         indexes = {
-                @Index(name = "idx_account_code", columnList = "code")
+                @Index(name = "idx_account_branch_code", columnList = "branch_id, code")
         }
 )
 @Getter
@@ -24,11 +29,18 @@ public class Account {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "branch_id", nullable = false)
+    private UUID branchId;
+
+    @Column(nullable = false)
     private String code;
 
     @Column(nullable = false)
     private String name;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AccountRole role;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -40,9 +52,17 @@ public class Account {
     @Version
     private Long version;
 
-    public Account(String code, String name, AccountType type) {
+    public Account(
+            UUID branchId,
+            String code,
+            String name,
+            AccountType type,
+            AccountRole role
+    ) {
+        this.branchId = branchId;
         this.code = code;
         this.name = name;
         this.type = type;
+        this.role = role;
     }
 }

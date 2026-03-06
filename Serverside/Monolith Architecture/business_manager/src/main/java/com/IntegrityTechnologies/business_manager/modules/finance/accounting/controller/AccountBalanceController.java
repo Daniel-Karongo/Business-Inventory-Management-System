@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.controller;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountBalance;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.AccountBalanceResponse;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
@@ -20,12 +21,15 @@ public class AccountBalanceController {
     private final AccountBalanceRepository repository;
 
     @GetMapping
-    public Page<AccountBalance> all(
+    public Page<AccountBalanceResponse> all(
             @RequestParam UUID branchId,
-            @PageableDefault(size = 50, sort = "updatedAt") Pageable pageable
+            Pageable pageable
     ) {
         SecurityUtils.requireAtLeast(Role.MANAGER);
-        return repository.findByBranch_Id(branchId, pageable);
+
+        return repository
+                .findByBranch_Id(branchId, pageable)
+                .map(AccountBalanceResponse::from);
     }
 
     @GetMapping("/account/{accountId}")

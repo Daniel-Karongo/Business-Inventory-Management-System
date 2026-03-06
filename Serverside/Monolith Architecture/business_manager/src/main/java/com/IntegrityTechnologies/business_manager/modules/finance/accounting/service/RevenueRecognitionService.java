@@ -4,6 +4,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.ada
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.config.AccountingProperties;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.PaymentStatus;
@@ -80,17 +81,17 @@ public class RevenueRecognitionService {
                         )
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.accountsReceivable())
+                                        .accountId(accounts.get(branchId, AccountRole.ACCOUNTS_RECEIVABLE))
                                         .direction(EntryDirection.DEBIT)
                                         .amount(totalNet.add(totalVat))
                                         .build(),
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.revenue())
+                                        .accountId(accounts.get(branchId, AccountRole.REVENUE))
                                         .direction(EntryDirection.CREDIT)
                                         .amount(totalNet)
                                         .build(),
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.outputVat())
+                                        .accountId(accounts.get(branchId, AccountRole.VAT_OUTPUT))
                                         .direction(EntryDirection.CREDIT)
                                         .amount(totalVat)
                                         .build()

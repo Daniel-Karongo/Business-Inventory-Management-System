@@ -3,12 +3,12 @@ package com.IntegrityTechnologies.business_manager.modules.finance.payment.servi
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.domain.SupplierPayment;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.repository.SupplierPaymentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -41,7 +41,7 @@ public class SupplierPaymentService {
             throw new IllegalArgumentException("Amount must be greater than zero");
         }
 
-        UUID creditAccount = resolvePaymentAccount(method);
+        UUID creditAccount = resolvePaymentAccount(method, branchId);
 
         // -----------------------------------------
         // ACCOUNTING ENTRY
@@ -60,7 +60,7 @@ public class SupplierPaymentService {
                         .accountingDate(LocalDate.now())
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.accountsPayable())
+                                        .accountId(accounts.get(branchId, AccountRole.ACCOUNTS_PAYABLE))
                                         .direction(EntryDirection.DEBIT)
                                         .amount(amount)
                                         .build(),
@@ -85,12 +85,12 @@ public class SupplierPaymentService {
         return paymentRepository.save(payment);
     }
 
-    private UUID resolvePaymentAccount(String method) {
+    private UUID resolvePaymentAccount(String method, UUID branchId) {
 
         return switch (method.toUpperCase()) {
-            case "CASH" -> accounts.cash();
-            case "BANK" -> accounts.bank();
-            case "MPESA" -> accounts.mpesa();
+            case "CASH" -> accounts.get(branchId, AccountRole.CASH);
+            case "BANK" -> accounts.get(branchId, AccountRole.BANK);
+            case "MPESA" -> accounts.get(branchId, AccountRole.MPESA);
             default -> throw new IllegalArgumentException("Unsupported payment method");
         };
     }

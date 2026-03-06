@@ -6,14 +6,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
+@Transactional
 public interface AccountBalanceRepository
-        extends JpaRepository<AccountBalance, UUID> {
+        extends JpaRepository<AccountBalance, AccountBalance.AccountBalanceId> {
 
     Optional<AccountBalance> findByAccount_IdAndBranch_Id(
             UUID accountId,
@@ -33,13 +35,13 @@ public interface AccountBalanceRepository
     @Modifying
     @Query(value = """
         INSERT INTO account_balances
-            (id, account_id, branch_id, balance, updated_at, version)
+           (account_id, branch_id, balance, updated_at, version)
         VALUES
-            (UUID(), :accountId, :branchId, :delta, NOW(), 0)
+           (:accountId, :branchId, :delta, NOW(), 0)
         ON DUPLICATE KEY UPDATE
-            balance = balance + :delta,
-            updated_at = NOW(),
-            version = version + 1
+           balance = balance + :delta,
+           updated_at = NOW(),
+           version = version + 1
     """, nativeQuery = true)
     void applyDelta(
             @Param("accountId") UUID accountId,

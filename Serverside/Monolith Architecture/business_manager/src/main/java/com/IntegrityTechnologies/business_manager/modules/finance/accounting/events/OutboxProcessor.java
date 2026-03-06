@@ -1,9 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.events;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,35 +14,30 @@ import java.util.List;
 public class OutboxProcessor {
 
     private final EventOutboxRepository outboxRepo;
-    private final ApplicationEventPublisher publisher;
-    private final ObjectMapper mapper;
+    private final KafkaEventPublisher kafkaPublisher;
 
+    private static final int BATCH_SIZE = 100;
+
+    @Scheduled(fixedDelay = 1000)
     @Transactional
     public void processEvents() {
 
         List<EventOutbox> events =
-                outboxRepo.lockNextBatch(PageRequest.of(0, 100));
+                outboxRepo.lockNextBatch(PageRequest.of(0, BATCH_SIZE));
 
         for (EventOutbox e : events) {
 
             try {
 
-                if ("JOURNAL_POSTED".equals(e.getEventType())) {
-
-                    JournalPostedEvent event =
-                            mapper.readValue(
-                                    e.getPayload(),
-                                    JournalPostedEvent.class
-                            );
-                    outboxRepo.flush();
-                    publisher.publishEvent(event);
-                }
+                kafkaPublisher.publish(
+                        e.getEventType(),
+                        e.getPayload()
+                );
 
                 e.setProcessed(true);
                 e.setProcessedAt(LocalDateTime.now());
 
-            } catch (Exception ex) {
-                // leave event unprocessed for retry
+            } catch (Exception ignored) {
             }
         }
 

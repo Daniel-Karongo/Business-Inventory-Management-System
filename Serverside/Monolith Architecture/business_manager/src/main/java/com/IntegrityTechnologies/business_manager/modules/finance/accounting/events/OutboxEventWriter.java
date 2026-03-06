@@ -18,6 +18,7 @@ public class OutboxEventWriter {
         try {
 
             EventOutbox event = new EventOutbox();
+
             event.setEventType(eventType);
             event.setPayload(mapper.writeValueAsString(payload));
             event.setCreatedAt(LocalDateTime.now());
@@ -25,7 +26,11 @@ public class OutboxEventWriter {
             outboxRepo.save(event);
 
         } catch (Exception e) {
-            throw new RuntimeException("Failed to serialize outbox event", e);
+
+            throw new RuntimeException(
+                    "Failed to serialize outbox event",
+                    e
+            );
         }
     }
 }

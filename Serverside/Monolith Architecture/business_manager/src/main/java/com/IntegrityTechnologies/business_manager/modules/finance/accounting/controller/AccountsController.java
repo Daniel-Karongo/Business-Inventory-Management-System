@@ -19,9 +19,10 @@ public class AccountsController {
 
     @GetMapping
     public Page<AccountResponse> listAccounts(
+            @RequestParam UUID branchId,
             @PageableDefault(size = 50, sort = "code") Pageable pageable
     ) {
-        return accountRepository.findByActiveTrue(pageable)
+        return accountRepository.findByBranchIdAndActiveTrue(branchId, pageable)
                 .map(AccountResponse::from);
     }
 

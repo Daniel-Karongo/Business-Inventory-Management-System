@@ -5,6 +5,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -25,6 +27,15 @@ public class BranchContextFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         try {
+
+            Authentication auth =
+                    SecurityContextHolder.getContext().getAuthentication();
+
+            // Skip branch resolution for unauthenticated users
+            if (auth == null || !auth.isAuthenticated()) {
+                filterChain.doFilter(request, response);
+                return;
+            }
 
             String branchParam = request.getParameter("branchId");
 

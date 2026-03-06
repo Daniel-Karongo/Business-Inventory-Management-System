@@ -1,20 +1,12 @@
 package com.IntegrityTechnologies.business_manager.modules.dashboard.service;
 
 import com.IntegrityTechnologies.business_manager.modules.dashboard.dto.ActivityDTO;
-import com.IntegrityTechnologies.business_manager.modules.dashboard.dto.AgingBucketDTO;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.dto.ChartPoint;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.dto.DashboardSummaryDTO;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.repository.DashboardDailySnapshotRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.Budget;
-import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetMonthlySnapshotRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierAuditRepository;
@@ -28,27 +20,20 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
-
-import static com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountingSignRules.*;
 
 
 @Service
 @RequiredArgsConstructor
 public class DashboardService {
 
-    private final LedgerEntryRepository ledgerRepo;
     private final AccountingAccounts accounts;
     private final AccountBalanceRepository balanceRepo;
     private final InventoryValuationService valuationService;
     private final InventoryItemRepository inventoryItemRepository;
-    private final TaxProperties taxProperties;
-    private final SaleRepository saleRepository;
     private final BatchConsumptionRepository batchConsumptionRepository;
-    private final BudgetRepository budgetRepository;
     private final DashboardDailySnapshotRepository snapshotRepo;
     private final DashboardSnapshotService snapshotService;
     private final StockTransactionRepository stockTransactionRepository;
@@ -57,7 +42,6 @@ public class DashboardService {
     private final SupplierAuditRepository supplierAuditRepository;
     private final BranchAuditRepository branchAuditRepository;
     private final DepartmentAuditRepository departmentAuditRepository;
-    private final BudgetMonthlySnapshotRepository budgetSnapshotRepository;
 
     /* ============================================================
        MAIN ENTRY
@@ -65,19 +49,17 @@ public class DashboardService {
     public DashboardSummaryDTO getBranchDashboard(UUID branchId) {
 
         LocalDate today = LocalDate.now();
-        LocalDateTime start = today.atStartOfDay();
-        LocalDateTime end = today.atTime(23,59,59);
 
-        Map<String, List<ChartPoint>> trends = build7DayTrends(branchId);
+        snapshotService.compute(branchId, today);
 
         return DashboardSummaryDTO.builder()
                 .branchId(branchId)
                 .date(today)
-                .financial(buildFinancialKpis(start, end, branchId))
+                .financial(buildFinancialKpisFromSnapshots(branchId))
                 .operational(buildOperationalKpis(branchId))
-                .revenueTrend(trends.get("revenue"))
-                .profitTrend(trends.get("profit"))
-                .vatTrend(trends.get("vat"))
+                .revenueTrend(buildSnapshotTrend(branchId, "revenue"))
+                .profitTrend(buildSnapshotTrend(branchId, "profit"))
+                .vatTrend(buildSnapshotTrend(branchId, "vat"))
                 .topBatches(top5ProfitableBatches())
                 .recentActivities(buildRecentActivities(branchId))
                 .build();
@@ -86,121 +68,78 @@ public class DashboardService {
     /* ============================================================
        FINANCIAL KPIs (REAL-TIME BALANCE DRIVEN)
     ============================================================ */
-    private DashboardSummaryDTO.FinancialKpis buildFinancialKpis(
-            LocalDateTime start,
-            LocalDateTime end,
-            UUID branchId
-    ) {
-
-        Set<UUID> kpiAccounts = Set.of(
-                accounts.revenue(),
-                accounts.cogs()
-        );
-
-        Map<UUID, BigDecimal> movements =
-                fetchMovements(kpiAccounts, start, end, branchId);
-
-        BigDecimal revenueToday = movements.get(accounts.revenue());
-        BigDecimal cogsToday = movements.get(accounts.cogs());
-
-        BigDecimal marginPercent =
-                revenueToday.compareTo(BigDecimal.ZERO) == 0
-                        ? BigDecimal.ZERO
-                        : revenueToday.subtract(cogsToday)
-                        .divide(revenueToday, 4, RoundingMode.HALF_UP)
-                        .multiply(BigDecimal.valueOf(100));
+    private DashboardSummaryDTO.FinancialKpis buildFinancialKpisFromSnapshots(UUID branchId) {
 
         LocalDate today = LocalDate.now();
-        LocalDate oneYearAgo = today.minusYears(1);
 
-        snapshotService.backfillMissingSnapshots(branchId, oneYearAgo, today);
-
-        BigDecimal todayCogs = movements.get(accounts.cogs());
-
-        BigDecimal yearlyCogs =
-                snapshotRepo.sumCogsBetween(
-                        branchId,
-                        oneYearAgo,
-                        today.minusDays(1)
-                );
-
-        BigDecimal inventoryValue =
-                (BigDecimal) valuationService.getTotalValuation()
-                        .get("totalValuation");
-
-        BigDecimal inventoryTurnover =
-                inventoryValue.compareTo(BigDecimal.ZERO) == 0
-                        ? BigDecimal.ZERO
-                        : yearlyCogs.divide(inventoryValue, 4, RoundingMode.HALF_UP);
-
-        BigDecimal expensesLast30 = ledgerRepo.totalExpensesBetween(
-                LocalDate.now().minusDays(30).atStartOfDay(),
-                LocalDateTime.now(),
-                branchId,
-                AccountType.EXPENSE,
-                EntryDirection.DEBIT
-        );
-
-        BigDecimal burnRate =
-                expensesLast30.divide(BigDecimal.valueOf(30), 2, RoundingMode.HALF_UP);
-
-        BigDecimal vatPayable =
-                balanceRepo.findByAccount_IdAndBranch_Id(accounts.vatPayable(), branchId)
-                        .map(b -> b.getBalance())
-                        .orElse(BigDecimal.ZERO);
-
-        BigDecimal ar =
-                balanceRepo.findByAccount_IdAndBranch_Id(accounts.accountsReceivable(), branchId)
-                        .map(b -> b.getBalance())
-                        .orElse(BigDecimal.ZERO);
-
-        BigDecimal ap =
-                balanceRepo.findByAccount_IdAndBranch_Id(accounts.accountsPayable(), branchId)
-                        .map(b -> b.getBalance())
-                        .orElse(BigDecimal.ZERO);
-
-        BigDecimal cash =
-                balanceRepo.findByAccount_IdAndBranch_Id(accounts.cash(), branchId)
-                        .map(b -> b.getBalance())
-                        .orElse(BigDecimal.ZERO)
-                        .add(
-                                balanceRepo.findByAccount_IdAndBranch_Id(accounts.bank(), branchId)
-                                        .map(b -> b.getBalance())
-                                        .orElse(BigDecimal.ZERO)
+        var snap =
+                snapshotRepo.findByBranchIdAndDate(branchId, today)
+                        .orElseThrow(() ->
+                                new IllegalStateException("Dashboard snapshot missing")
                         );
 
-        BigDecimal corporateTax =
-                taxProperties.getBusinessTaxMode().name().equals("CORPORATE")
-                        ? balanceRepo.findByAccount_IdAndBranch_Id(accounts.corporateTaxPayable(), branchId)
-                        .map(b -> b.getBalance())
-                        .orElse(BigDecimal.ZERO)
-                        : BigDecimal.ZERO;
+        BigDecimal inventoryValue =
+                (BigDecimal) valuationService.getBranchValuation(branchId)
+                        .get("totalValuation");
 
-        BigDecimal revenueBudgetVariance =
-                resolveSnapshotVariance(branchId, accounts.revenue());
+        BigDecimal ar =
+                balanceRepo.findByAccount_IdAndBranch_Id(
+                        accounts.get(branchId, AccountRole.ACCOUNTS_RECEIVABLE),
+                        branchId
+                ).map(b -> b.getBalance()).orElse(BigDecimal.ZERO);
 
-        BigDecimal expenseBudgetVariance =
-                resolveSnapshotVariance(branchId, accounts.cogs());
+        BigDecimal ap =
+                balanceRepo.findByAccount_IdAndBranch_Id(
+                        accounts.get(branchId, AccountRole.ACCOUNTS_PAYABLE),
+                        branchId
+                ).map(b -> b.getBalance()).orElse(BigDecimal.ZERO);
 
-        AgingBucketDTO aging = computeARAging(branchId);
+        BigDecimal vat =
+                balanceRepo.findByAccount_IdAndBranch_Id(
+                        accounts.get(branchId, AccountRole.VAT_PAYABLE),
+                        branchId
+                ).map(b -> b.getBalance()).orElse(BigDecimal.ZERO);
 
         return DashboardSummaryDTO.FinancialKpis.builder()
-                .netRevenueToday(revenueToday)
-                .grossProfitToday(revenueToday.subtract(cogsToday))
-                .grossMarginPercent(marginPercent)
-                .inventoryTurnover(inventoryTurnover)
-                .burnRate(burnRate)
-                .vatPayable(vatPayable)
+                .netRevenueToday(snap.getRevenue())
+                .grossProfitToday(snap.getProfit())
+                .vatPayable(vat)
                 .accountsReceivable(ar)
                 .accountsPayable(ap)
-                .cashBalance(cash)
+                .cashBalance(snap.getCash())
                 .inventoryValue(inventoryValue)
-                .corporateTaxAccrued(corporateTax)
-                .arAging(aging)
-                .apAging(computeAPAging(branchId))
-                .revenueBudgetVariance(revenueBudgetVariance)
-                .expenseBudgetVariance(expenseBudgetVariance)
                 .build();
+    }
+
+    private List<ChartPoint> buildSnapshotTrend(UUID branchId, String metric) {
+
+        LocalDate today = LocalDate.now();
+        LocalDate start = today.minusDays(6);
+
+        List<ChartPoint> result = new ArrayList<>();
+
+        for (LocalDate d = start; !d.isAfter(today); d = d.plusDays(1)) {
+
+            var snap =
+                    snapshotRepo.findByBranchIdAndDate(branchId, d)
+                            .orElse(null);
+
+            BigDecimal value = BigDecimal.ZERO;
+
+            if (snap != null) {
+
+                value = switch (metric) {
+                    case "revenue" -> snap.getRevenue();
+                    case "profit" -> snap.getProfit();
+                    case "vat" -> snap.getVat();
+                    default -> BigDecimal.ZERO;
+                };
+            }
+
+            result.add(new ChartPoint(d.toString(), value));
+        }
+
+        return result;
     }
 
     /* ============================================================
@@ -232,107 +171,6 @@ public class DashboardService {
     /* ============================================================
        REVENUE TREND (7 DAYS)
     ============================================================ */
-    private Map<String, List<ChartPoint>> build7DayTrends(UUID branchId) {
-
-        UUID revenueId = accounts.revenue();
-        UUID cogsId = accounts.cogs();
-        UUID vatId = accounts.outputVat();
-
-        Set<UUID> trendAccounts = Set.of(revenueId, cogsId, vatId);
-
-        Map<LocalDate, Map<UUID, BigDecimal>> data =
-                fetch7DayMovements(trendAccounts, branchId);
-
-        List<ChartPoint> revenueTrend = new ArrayList<>();
-        List<ChartPoint> profitTrend = new ArrayList<>();
-        List<ChartPoint> vatTrend = new ArrayList<>();
-
-        LocalDate today = LocalDate.now();
-
-        for (int i = 6; i >= 0; i--) {
-
-            LocalDate date = today.minusDays(i);
-
-            Map<UUID, BigDecimal> day =
-                    data.getOrDefault(date, Collections.emptyMap());
-
-            BigDecimal revenue =
-                    day.getOrDefault(revenueId, BigDecimal.ZERO);
-
-            BigDecimal cogs =
-                    day.getOrDefault(cogsId, BigDecimal.ZERO);
-
-            BigDecimal vat =
-                    day.getOrDefault(vatId, BigDecimal.ZERO);
-
-            revenueTrend.add(new ChartPoint(date.toString(), revenue));
-            profitTrend.add(new ChartPoint(date.toString(), revenue.subtract(cogs)));
-            vatTrend.add(new ChartPoint(date.toString(), vat));
-        }
-
-        Map<String, List<ChartPoint>> result = new LinkedHashMap<>();
-        result.put("revenue", revenueTrend);
-        result.put("profit", profitTrend);
-        result.put("vat", vatTrend);
-
-        return result;
-    }
-
-    private AgingBucketDTO computeARAging(UUID branchId) {
-
-        BigDecimal current = BigDecimal.ZERO;
-        BigDecimal d30 = BigDecimal.ZERO;
-        BigDecimal d60 = BigDecimal.ZERO;
-        BigDecimal d90 = BigDecimal.ZERO;
-        BigDecimal over90 = BigDecimal.ZERO;
-
-        for (Object[] row : saleRepository.arAgingRaw(branchId)) {
-
-            int days = ((Number) row[0]).intValue();
-            BigDecimal balance = (BigDecimal) row[1];
-
-            if (balance == null || balance.compareTo(BigDecimal.ZERO) <= 0) {
-                continue;
-            }
-
-            if (days <= 30) current = current.add(balance);
-            else if (days <= 60) d30 = d30.add(balance);
-            else if (days <= 90) d60 = d60.add(balance);
-            else if (days <= 120) d90 = d90.add(balance);
-            else over90 = over90.add(balance);
-        }
-
-        return new AgingBucketDTO(current, d30, d60, d90, over90);
-    }
-
-    private AgingBucketDTO computeAPAging(UUID branchId) {
-
-        BigDecimal current = BigDecimal.ZERO;
-        BigDecimal d30 = BigDecimal.ZERO;
-        BigDecimal d60 = BigDecimal.ZERO;
-        BigDecimal d90 = BigDecimal.ZERO;
-        BigDecimal over90 = BigDecimal.ZERO;
-
-        UUID apAccountId = accounts.accountsPayable();
-
-        for (Object[] row : ledgerRepo.apAgingRaw(apAccountId, branchId, CREDIT, DEBIT)) {
-
-            int days = ((Number) row[0]).intValue();
-            BigDecimal balance = (BigDecimal) row[1];
-
-            if (balance == null || balance.compareTo(BigDecimal.ZERO) <= 0)
-                continue;
-
-            if (days <= 30) current = current.add(balance);
-            else if (days <= 60) d30 = d30.add(balance);
-            else if (days <= 90) d60 = d60.add(balance);
-            else if (days <= 120) d90 = d90.add(balance);
-            else over90 = over90.add(balance);
-        }
-
-        return new AgingBucketDTO(current, d30, d60, d90, over90);
-    }
-
     private BigDecimal computeDeadStockValue() {
 
         LocalDateTime cutoff = LocalDateTime.now().minusDays(60);
@@ -364,108 +202,6 @@ public class DashboardService {
                 .limit(5)
                 .map(e -> new ChartPoint(e.getKey().toString(), e.getValue()))
                 .toList();
-    }
-
-    private BigDecimal resolveSnapshotVariance(
-            UUID branchId,
-            UUID accountId
-    ) {
-
-        LocalDate now = LocalDate.now();
-
-        return budgetSnapshotRepository
-                .findByBranchIdAndFiscalYearAndMonthNumberAndAccountId(
-                        branchId,
-                        now.getYear(),
-                        now.getMonthValue(),
-                        accountId
-                )
-                .map(s -> s.getVariance())
-                .orElse(BigDecimal.ZERO);
-    }
-
-    private Map<UUID, BigDecimal> fetchMovements(
-            Set<UUID> accountIds,
-            LocalDateTime start,
-            LocalDateTime end,
-            UUID branchId
-    ) {
-
-        List<Object[]> rows = ledgerRepo.netMovementForAccountsBetween(
-                accountIds,
-                start,
-                end,
-                branchId,
-                DEBIT_NORMAL,
-                CREDIT_NORMAL,
-                DEBIT,
-                CREDIT
-        );
-
-        Map<UUID, BigDecimal> result = new HashMap<>();
-
-        for (Object[] row : rows) {
-            result.put((UUID) row[0], (BigDecimal) row[1]);
-        }
-
-        // Ensure zero values for missing accounts
-        for (UUID id : accountIds) {
-            result.putIfAbsent(id, BigDecimal.ZERO);
-        }
-
-        return result;
-    }
-
-    private Map<LocalDate, Map<UUID, BigDecimal>> fetch7DayMovements(
-            Set<UUID> accountIds,
-            UUID branchId
-    ) {
-
-        LocalDate today = LocalDate.now();
-        LocalDate startDate = today.minusDays(6);
-
-        LocalDateTime start = startDate.atStartOfDay();
-        LocalDateTime end = today.atTime(23,59,59);
-
-        List<Object[]> rows =
-                ledgerRepo.netMovementGroupedByDateAndAccount(
-                        accountIds,
-                        start,
-                        end,
-                        branchId,
-                        DEBIT_NORMAL,
-                        CREDIT_NORMAL,
-                        DEBIT,
-                        CREDIT
-                );
-
-        Map<LocalDate, Map<UUID, BigDecimal>> result = new HashMap<>();
-
-        for (Object[] row : rows) {
-
-            Object rawDate = row[0];
-
-            LocalDate date;
-
-            if (rawDate instanceof java.sql.Date sqlDate) {
-                date = sqlDate.toLocalDate();
-            } else if (rawDate instanceof java.time.LocalDate localDate) {
-                date = localDate;
-            } else if (rawDate instanceof java.sql.Timestamp ts) {
-                date = ts.toLocalDateTime().toLocalDate();
-            } else {
-                throw new IllegalStateException("Unexpected date type: " + rawDate.getClass());
-            }
-
-            UUID accountId = (UUID) row[1];
-            BigDecimal amount = (BigDecimal) row[2];
-
-            result
-                    .computeIfAbsent(date, d -> new HashMap<>())
-                    .put(accountId, amount);
-        }
-
-        return result;
     }
 
     private List<ActivityDTO> buildRecentActivities(UUID branchId) {

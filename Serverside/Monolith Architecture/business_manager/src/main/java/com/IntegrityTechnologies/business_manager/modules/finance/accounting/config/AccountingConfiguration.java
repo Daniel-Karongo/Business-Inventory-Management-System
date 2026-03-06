@@ -3,11 +3,13 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.co
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountingMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.policy.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @RequiredArgsConstructor
+@EnableCaching
 public class AccountingConfiguration {
 
     private final AccountingProperties properties;

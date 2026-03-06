@@ -6,11 +6,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.OutboxEventWriter;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.AccountingSystemStateService;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.security.JournalHashUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +21,6 @@ public class LedgerPostingService {
 
     private final JournalEntryRepository journalRepo;
     private final AccountingSystemStateService systemStateService;
-    private final ApplicationEventPublisher eventPublisher;
     private final OutboxEventWriter outboxWriter;
 
     @Transactional
@@ -37,24 +34,36 @@ public class LedgerPostingService {
             throw new IllegalStateException("Journal already posted");
 
         if (entries == null || entries.isEmpty())
-            throw new IllegalStateException("Journal must contain at least one ledger entry");
+            throw new IllegalStateException("Journal must contain entries");
 
         if (!journal.getLedgerEntries().isEmpty())
-            throw new IllegalStateException("Journal already has ledger entries attached");
+            throw new IllegalStateException("Entries already attached");
+
+        UUID branchId = journal.getBranch().getId();
+
+        for (LedgerEntry e : entries) {
+
+            if (!e.getAccount().getBranchId().equals(branchId)) {
+
+                throw new IllegalStateException(
+                        "Ledger entry account belongs to another branch"
+                );
+            }
+        }
 
         journal.getLedgerEntries().addAll(entries);
 
         journal.markPosted(performedBy);
 
-        systemStateService.lockIfNecessary(journal.getBranch().getId());
+        systemStateService.lockIfNecessary(branchId);
 
         JournalEntry saved = journalRepo.save(journal);
 
-        UUID branchId = saved.getBranch().getId();
+        branchId = saved.getBranch().getId();
 
         String previousHash =
                 journalRepo
-                        .findTopByBranch_IdAndPostedTrueAndIdNotOrderByPostedAtDesc(
+                        .findTopByBranch_IdAndPostedTrueAndIdNotOrderByPostedAtDescIdDesc(
                                 branchId,
                                 saved.getId()
                         )
@@ -84,8 +93,6 @@ public class LedgerPostingService {
                         saved.getBranch().getId(),
                         payloadEntries
                 );
-
-        eventPublisher.publishEvent(event);
 
         outboxWriter.write("JOURNAL_POSTED", event);
 

@@ -7,12 +7,14 @@ import com.IntegrityTechnologies.business_manager.security.acl.service.Permissio
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Optional;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class PermissionSecurityFilter extends OncePerRequestFilter {
@@ -35,7 +37,7 @@ public class PermissionSecurityFilter extends OncePerRequestFilter {
             return;
         }
 
-        System.out.println("ACL PATH: " + path);
+        log.debug("ACL check for {} {}", method, path);
 
         Role role = SecurityUtils.currentRole();
 

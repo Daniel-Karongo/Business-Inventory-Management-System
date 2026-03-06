@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.controller;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.ReconciliationItemResponse;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.ReconciliationResult;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.ReconciliationItem;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.ReconciliationItemRepository;
@@ -40,15 +41,15 @@ public class AccountingReconciliationController {
     }
 
     @GetMapping("/results")
-    public Page<ReconciliationItem> results(
+    public Page<ReconciliationItemResponse> results(
             @RequestParam UUID runId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "200") int size
     ) {
-        return itemRepo.findByRun_Id(
-                runId,
-                PageRequest.of(page, size)
-        );
+
+        return itemRepo
+                .findByRun_Id(runId, PageRequest.of(page, size))
+                .map(ReconciliationItemResponse::from);
     }
 
     @PostMapping

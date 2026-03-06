@@ -156,13 +156,11 @@ public class SecurityConfig {
                         jwtAuthFilter,
                         UsernamePasswordAuthenticationFilter.class
                 ).addFilterAfter(
-                        permissionSecurityFilter,
-                        JwtAuthenticationFilter.class
-                )
-                .addFilterAfter(
                         branchContextFilter,
-                        JwtAuthenticationFilter.class
-                )
+                        JwtAuthenticationFilter.class)
+                .addFilterAfter(
+                        permissionSecurityFilter,
+                        BranchContextFilter.class)
         ;
 
         return http.build();

@@ -1,11 +1,13 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.tax.service;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.*;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.VatFilingRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.TaxPeriod;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.VatFiling;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.VatFilingRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +38,13 @@ public class VatFilingService {
             throw new IllegalStateException("VAT already filed for this period and branch.");
         }
 
+        if (!period.isClosed()) {
+
+            throw new IllegalStateException(
+                    "VAT filing allowed only after tax period is closed."
+            );
+        }
+
         var report = reportService.generate(
                 period.getStartDate().atStartOfDay(),
                 period.getEndDate().atTime(23,59,59),
@@ -55,7 +64,7 @@ public class VatFilingService {
                         .description("VAT clearing for period")
                         .performedBy(user)
                         .branchId(branchId)
-                        .entries(buildVatClearingEntries(outputVat, inputVat, payable))
+                        .entries(buildVatClearingEntries(branchId, outputVat, inputVat, payable))
                         .build()
         );
 
@@ -76,6 +85,7 @@ public class VatFilingService {
     }
 
     private List<AccountingEvent.Entry> buildVatClearingEntries(
+            UUID branchId,
             BigDecimal outputVat,
             BigDecimal inputVat,
             BigDecimal payable
@@ -85,7 +95,7 @@ public class VatFilingService {
 
         if (outputVat.compareTo(BigDecimal.ZERO) > 0) {
             entries.add(AccountingEvent.Entry.builder()
-                    .accountId(accounts.outputVat())
+                    .accountId(accounts.get(branchId, AccountRole.VAT_OUTPUT))
                     .direction(EntryDirection.DEBIT)
                     .amount(outputVat)
                     .build());
@@ -93,7 +103,7 @@ public class VatFilingService {
 
         if (inputVat.compareTo(BigDecimal.ZERO) > 0) {
             entries.add(AccountingEvent.Entry.builder()
-                    .accountId(accounts.inputVat())
+                    .accountId(accounts.get(branchId, AccountRole.VAT_INPUT))
                     .direction(EntryDirection.CREDIT)
                     .amount(inputVat)
                     .build());
@@ -101,7 +111,7 @@ public class VatFilingService {
 
         if (payable.compareTo(BigDecimal.ZERO) > 0) {
             entries.add(AccountingEvent.Entry.builder()
-                    .accountId(accounts.vatPayable())
+                    .accountId(accounts.get(branchId, AccountRole.VAT_PAYABLE))
                     .direction(EntryDirection.CREDIT)
                     .amount(payable)
                     .build());
@@ -113,7 +123,14 @@ public class VatFilingService {
     @Transactional
     public void markPaid(VatFiling filing, String user, UUID paymentAccountId) {
 
-        if (filing.isPaid()) return;
+        if (filing.isPaid()) {
+
+            throw new IllegalStateException(
+                    "VAT filing already paid and locked."
+            );
+        }
+
+        UUID branchId = filing.getBranchId();
 
         BigDecimal amount = filing.getVatPayable();
 
@@ -125,10 +142,10 @@ public class VatFilingService {
                         .reference("VAT-PAY-" + filing.getId())
                         .description("VAT payment for period")
                         .performedBy(user)
-                        .branchId(filing.getBranchId())
+                        .branchId(branchId)
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.vatPayable())
+                                        .accountId(accounts.get(branchId, AccountRole.VAT_PAYABLE))
                                         .direction(EntryDirection.DEBIT)
                                         .amount(amount)
                                         .build(),

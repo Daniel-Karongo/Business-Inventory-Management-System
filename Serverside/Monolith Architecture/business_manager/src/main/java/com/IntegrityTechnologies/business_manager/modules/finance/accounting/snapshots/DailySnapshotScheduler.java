@@ -29,11 +29,9 @@ public class DailySnapshotScheduler {
                             PageRequest.of(page++, 50)
                     );
 
-            branches.forEach(branch -> {
-                snapshotService.backfillSnapshots(branch.getId());
-                snapshotService.snapshotBranch(branch.getId());
-
-            });
+            branches.forEach(branch ->
+                    snapshotService.snapshotBranch(branch.getId())
+            );
 
         } while (branches.hasNext());
     }

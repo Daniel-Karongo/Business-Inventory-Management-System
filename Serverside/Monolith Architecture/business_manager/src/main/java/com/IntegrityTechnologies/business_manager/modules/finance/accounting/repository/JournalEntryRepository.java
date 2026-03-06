@@ -14,7 +14,7 @@ public interface JournalEntryRepository extends JpaRepository<JournalEntry, UUID
 
     Optional<JournalEntry> findTopByBranch_IdAndPostedTrueOrderByPostedAtDesc(UUID branchId);
     Optional<JournalEntry>
-    findTopByBranch_IdAndPostedTrueAndIdNotOrderByPostedAtDesc(
+    findTopByBranch_IdAndPostedTrueAndIdNotOrderByPostedAtDescIdDesc(
             UUID branchId,
             UUID excludeId
     );
