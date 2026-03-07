@@ -5,7 +5,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.doma
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.enums.BudgetScenario;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.service.BudgetService;
-import com.IntegrityTechnologies.business_manager.security.BranchContext;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantSupervisorOnly;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -13,12 +14,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/budget-management")
 @RequiredArgsConstructor
+@TenantSupervisorOnly
 public class BudgetManagementController {
 
     private final BudgetRepository budgetRepository;
@@ -57,10 +58,9 @@ public class BudgetManagementController {
         return new ApiResponse("success", "Budget submitted", null);
     }
 
+    @TenantManagerOnly
     @PostMapping("/{id}/approve")
     public ApiResponse approve(@PathVariable UUID id) {
-
-        SecurityUtils.requireManager();
 
         budgetService.approveBudget(id, SecurityUtils.currentUsername());
 

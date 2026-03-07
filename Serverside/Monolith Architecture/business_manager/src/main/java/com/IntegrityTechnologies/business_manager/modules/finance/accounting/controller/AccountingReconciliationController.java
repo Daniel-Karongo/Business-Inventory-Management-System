@@ -7,7 +7,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.gov
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.ReconciliationState;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.ReconciliationStateRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.BalanceReconciliationService;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.security.BranchResolver;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -15,12 +16,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/accounting/reconciliation")
 @RequiredArgsConstructor
+@TenantManagerOnly
 public class AccountingReconciliationController {
 
     private final BalanceReconciliationService service;
@@ -28,12 +29,13 @@ public class AccountingReconciliationController {
     private final ReconciliationItemRepository itemRepo;
     private final BranchResolver branchResolver;
 
+    @TenantAdminOnly
     @PostMapping("/run")
     public UUID run(
             @RequestParam UUID branchId,
             @RequestParam(defaultValue = "false") boolean repair
     ) {
-        SecurityUtils.requireAtLeast(Role.ADMIN);
+
         UUID effectiveBranchId = branchResolver.resolveBranch(branchId);
         String user = SecurityUtils.currentUsername();
 
@@ -52,23 +54,24 @@ public class AccountingReconciliationController {
                 .map(ReconciliationItemResponse::from);
     }
 
+    @TenantAdminOnly
     @PostMapping
     public ReconciliationResult reconcile(
             @RequestParam UUID accountId,
             @RequestParam UUID branchId,
             @RequestParam(defaultValue = "false") boolean repair
     ) {
-        SecurityUtils.requireAtLeast(Role.ADMIN);
+
         UUID effectiveBranchId = branchResolver.resolveBranch(branchId);
         String user = SecurityUtils.currentUsername();
 
         return service.reconcileAccount(accountId, effectiveBranchId, repair, user);
     }
 
+    @TenantManagerOnly
     @GetMapping("/status")
     public ReconciliationStatus status(@RequestParam UUID branchId) {
 
-        SecurityUtils.requireAtLeast(Role.MANAGER);
         UUID effectiveBranchId = branchResolver.resolveBranch(branchId);
         ReconciliationState state =
                 stateRepository.findByBranchId(effectiveBranchId)
@@ -97,14 +100,14 @@ public class AccountingReconciliationController {
         );
     }
 
+    @TenantAdminOnly
     @PostMapping("/auto-repair")
     public void toggleAutoRepair(
             @RequestParam UUID branchId,
             @RequestParam boolean enabled
     ) {
-        UUID effectiveBranchId = branchResolver.resolveBranch(branchId);
-        SecurityUtils.requireAtLeast(Role.ADMIN);
 
+        UUID effectiveBranchId = branchResolver.resolveBranch(branchId);
         String user = SecurityUtils.currentUsername();
 
         service.setAutoRepair(effectiveBranchId, enabled, user);

@@ -4,8 +4,8 @@ import com.IntegrityTechnologies.business_manager.modules.acl.audit.AclAuditServ
 import com.IntegrityTechnologies.business_manager.modules.acl.entity.RolePermission;
 import com.IntegrityTechnologies.business_manager.modules.acl.repository.RolePermissionRepository;
 import com.IntegrityTechnologies.business_manager.modules.acl.service.PermissionCacheService;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.PlatformAdminOnly;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,7 +14,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/admin/acl/role-permissions")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('SUPERUSER')")
+@PlatformAdminOnly
 public class RolePermissionAdminController {
 
     private final RolePermissionRepository repo;

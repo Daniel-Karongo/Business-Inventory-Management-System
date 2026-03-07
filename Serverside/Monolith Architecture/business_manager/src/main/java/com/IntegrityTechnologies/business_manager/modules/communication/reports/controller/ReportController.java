@@ -4,6 +4,7 @@ import com.IntegrityTechnologies.business_manager.modules.communication.reports.
 import com.IntegrityTechnologies.business_manager.modules.communication.reports.dto.ReportRequest;
 import com.IntegrityTechnologies.business_manager.modules.communication.reports.dto.ReportTestResult;
 import com.IntegrityTechnologies.business_manager.modules.communication.reports.service.ReportingService;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -18,6 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/reports")
 @RequiredArgsConstructor
+@TenantUserOnly
 public class ReportController {
 
     private final ReportingService reportingService;
@@ -54,5 +56,4 @@ public class ReportController {
                 reportingService.testAllReports()
         );
     }
-
 }

@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.tenant.config;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchContext;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.*;
@@ -28,6 +29,7 @@ public class TenantHibernateFilterConfigurer implements Filter {
         try {
 
             UUID tenantId = TenantContext.getOrNull();
+            UUID branchId = BranchContext.getOrNull();
 
             if (tenantId != null) {
 
@@ -38,12 +40,25 @@ public class TenantHibernateFilterConfigurer implements Filter {
 
             }
 
+            if (branchId != null) {
+
+                org.hibernate.Filter branchFilter =
+                        session.enableFilter("branchFilter");
+
+                branchFilter.setParameter("branchId", branchId);
+
+            }
+
             chain.doFilter(request, response);
 
         } finally {
 
             if (session.getEnabledFilter("tenantFilter") != null) {
                 session.disableFilter("tenantFilter");
+            }
+
+            if (session.getEnabledFilter("branchFilter") != null) {
+                session.disableFilter("branchFilter");
             }
 
         }

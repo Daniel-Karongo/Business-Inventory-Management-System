@@ -3,8 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.co
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountBalance;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.AccountBalanceResponse;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +15,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/accounting/balances")
 @RequiredArgsConstructor
+@TenantManagerOnly
 public class AccountBalanceController {
 
     private final AccountBalanceRepository repository;
@@ -25,8 +25,6 @@ public class AccountBalanceController {
             @RequestParam UUID branchId,
             Pageable pageable
     ) {
-        SecurityUtils.requireAtLeast(Role.MANAGER);
-
         return repository
                 .findByBranch_Id(branchId, pageable)
                 .map(AccountBalanceResponse::from);
@@ -38,7 +36,6 @@ public class AccountBalanceController {
             @RequestParam UUID branchId,
             @PageableDefault(size = 50, sort = "updatedAt") Pageable pageable
     ) {
-        SecurityUtils.requireAtLeast(Role.MANAGER);
         return repository.findByAccount_IdAndBranch_Id(accountId, branchId, pageable);
     }
 }

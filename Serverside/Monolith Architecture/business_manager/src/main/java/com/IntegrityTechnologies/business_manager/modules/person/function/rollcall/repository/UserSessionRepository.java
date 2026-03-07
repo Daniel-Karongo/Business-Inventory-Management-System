@@ -15,6 +15,9 @@ public interface UserSessionRepository extends JpaRepository<UserSession, UUID> 
             UUID userId,
             LocalDate loginDate
     );
+    Optional<UserSession> findFirstByUserIdAndLogoutTimeIsNull(UUID userId);
+
+    boolean existsByUserIdAndBranchIdAndLogoutTimeIsNull(UUID userId, UUID branchId);
 
     // All active sessions (used for token expiry)
     List<UserSession> findByLogoutTimeIsNull();

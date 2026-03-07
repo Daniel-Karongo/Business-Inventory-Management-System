@@ -4,8 +4,8 @@ import com.IntegrityTechnologies.business_manager.modules.acl.entity.RolePermiss
 import com.IntegrityTechnologies.business_manager.modules.acl.repository.EndpointPermissionRepository;
 import com.IntegrityTechnologies.business_manager.modules.acl.repository.PermissionRepository;
 import com.IntegrityTechnologies.business_manager.modules.acl.repository.RolePermissionRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.PlatformAdminOnly;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedHashMap;
@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/admin/acl/summary")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('SUPERUSER')")
+@PlatformAdminOnly
 public class AclSummaryController {
 
     private final EndpointPermissionRepository endpointRepo;

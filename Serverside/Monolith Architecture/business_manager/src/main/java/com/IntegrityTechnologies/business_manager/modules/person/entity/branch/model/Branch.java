@@ -1,12 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model;
 
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserBranch;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.Tenant;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.TenantAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.LocalDateTime;
@@ -15,25 +14,33 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "branches")
+@Table(
+        name = "branches",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_branch_code_per_tenant",
+                        columnNames = {"tenant_id", "branch_code"}
+                )
+        },
+        indexes = {
+                @Index(name = "idx_branch_tenant", columnList = "tenant_id"),
+                @Index(name = "idx_branch_tenant_deleted", columnList = "tenant_id, deleted"),
+                @Index(name = "idx_branch_tenant_code", columnList = "tenant_id, branch_code")
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder(toBuilder = true)
 @ToString
-public class Branch {
-
+public class Branch extends TenantAwareEntity {
     @Id
     @GeneratedValue
     @UuidGenerator
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "tenant_id", nullable = false)
-    private Tenant tenant;
-
-    @Column(nullable = false, unique = true, updatable = false)
+    @Column(name = "branch_code", nullable = false, updatable = false)
     private String branchCode;
 
     @Column(nullable = false)
@@ -42,6 +49,10 @@ public class Branch {
     private String location;
     private String phone;
     private String email;
+
+    /* ========================================
+       RELATIONS
+    ======================================== */
 
     @OneToMany(
             mappedBy = "branch",
@@ -57,9 +68,9 @@ public class Branch {
     @Builder.Default
     private Set<Department> departments = new HashSet<>();
 
-    /* =========================
-       AUDIT FIELDS
-       ========================= */
+    /* ========================================
+       SYSTEM FIELDS
+    ======================================== */
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -67,15 +78,18 @@ public class Branch {
     @Column(nullable = false)
     private Boolean deleted = false;
 
-    /* =========================
-      LIFECYCLE
-    ========================= */
+    /* ========================================
+       LIFECYCLE
+    ======================================== */
 
     @PrePersist
     protected void onCreate() {
+
         this.createdAt = LocalDateTime.now();
+
         if (this.deleted == null) {
             this.deleted = false;
         }
+
     }
 }

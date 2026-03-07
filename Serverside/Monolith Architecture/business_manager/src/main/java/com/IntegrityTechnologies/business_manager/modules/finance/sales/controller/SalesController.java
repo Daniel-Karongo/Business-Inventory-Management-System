@@ -7,6 +7,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.Pa
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.service.SaleBulkService;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.service.SalesService;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,14 +21,11 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/sales")
 @RequiredArgsConstructor
+@TenantUserOnly
 public class SalesController {
 
     private final SalesService salesService;
     private final SaleBulkService saleBulkService;
-
-    /* ============================================================
-       CREATE SALE
-       ============================================================ */
 
     @PostMapping("/import")
     public ResponseEntity<BulkResult<SaleBulkPreviewRow>> importSales(
@@ -39,31 +37,23 @@ public class SalesController {
         );
     }
 
-    /* ============================================================
-   DELIVER SALE (Triggers revenue in DELIVERY mode)
-   ============================================================ */
     @PostMapping("/{id}/deliver")
     public ResponseEntity<SaleDTO> deliverSale(@PathVariable UUID id) {
         return ResponseEntity.ok(
                 OptimisticRetryRunner.runWithRetry(() -> salesService.deliverSale(id))
         );
     }
+
     @PostMapping
     public ResponseEntity<SaleDTO> createSale(@RequestBody SaleRequest req) {
         return ResponseEntity.ok(salesService.createSale(req));
     }
 
-    /* ============================================================
-       GET SALE SUMMARY
-       ============================================================ */
     @GetMapping("/{id}")
     public ResponseEntity<SaleDTO> getSale(@PathVariable UUID id) {
         return ResponseEntity.ok(salesService.getSale(id));
     }
 
-    /* ============================================================
-       LIST SALES
-       ============================================================ */
     @GetMapping
     public ResponseEntity<Page<SaleDTO>> listSales(
             @RequestParam(defaultValue = "0") int page,
@@ -79,9 +69,6 @@ public class SalesController {
         );
     }
 
-    /* ============================================================
-       UPDATE SALE (only in CREATED state)
-       ============================================================ */
     @PutMapping("/{id}")
     public ResponseEntity<SaleDTO> updateSale(
             @PathVariable UUID id,
@@ -93,9 +80,6 @@ public class SalesController {
         );
     }
 
-    /* ============================================================
-       CANCEL SALE (no refund, only if CREATED)
-       ============================================================ */
     @PostMapping("/{id}/cancel")
     public ResponseEntity<SaleDTO> cancelSale(@PathVariable UUID id) {
         return ResponseEntity.ok(
@@ -103,9 +87,6 @@ public class SalesController {
         );
     }
 
-    /* ============================================================
-       REFUND SALE (FULL REFUND)
-       ============================================================ */
     @PostMapping("/{id}/refund")
     public ResponseEntity<SaleDTO> refundSale(@PathVariable UUID id) {
         return ResponseEntity.ok(
@@ -113,9 +94,6 @@ public class SalesController {
         );
     }
 
-    /* ============================================================
-       CANCEL + REFUND (FULL WORKFLOW)
-       ============================================================ */
     @PostMapping("/{id}/cancel-refund")
     public ResponseEntity<SaleDTO> cancelAndRefundSale(@PathVariable UUID id) {
         return ResponseEntity.ok(
@@ -123,17 +101,11 @@ public class SalesController {
         );
     }
 
-    /* ============================================================
-       LIST PAYMENTS FOR THIS SALE
-       ============================================================ */
     @GetMapping("/{id}/payments")
     public ResponseEntity<Iterable<PaymentDTO>> getSalePayments(@PathVariable UUID id) {
         return ResponseEntity.ok(salesService.getSalePayments(id));
     }
 
-    /* ============================================================
-       RECEIPT ENDPOINT
-       ============================================================ */
     @GetMapping("/{id}/receipt")
     public ResponseEntity<SaleDTO> getReceipt(@PathVariable UUID id) {
         return ResponseEntity.ok(salesService.getReceipt(id));

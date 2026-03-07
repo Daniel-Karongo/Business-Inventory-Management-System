@@ -5,6 +5,7 @@ import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.TenantStatus;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.repository.TenantRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.resolver.TenantResolver;
+import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,12 +15,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 public class TenantContextFilter extends OncePerRequestFilter {
 
-    private final TenantResolver tenantResolver;
     private final TenantRepository tenantRepository;
 
     @Override
@@ -31,14 +32,18 @@ public class TenantContextFilter extends OncePerRequestFilter {
 
         try {
 
-            String tenantCode = tenantResolver.resolveTenantCode(request);
-
-            if (tenantCode == null) {
-                throw new RuntimeException("Missing tenant header");
+            if (SecurityUtils.isPlatformAdmin()) {
+                filterChain.doFilter(request, response);
+                return;
             }
 
-            Tenant tenant = tenantRepository
-                    .findByCode(tenantCode)
+            UUID tenantId = TenantContext.getOrNull();
+
+            if (tenantId == null) {
+                throw new SecurityException("Tenant not resolved from token");
+            }
+
+            Tenant tenant = tenantRepository.findById(tenantId)
                     .orElseThrow(() -> new RuntimeException("Tenant not found"));
 
             if (tenant.getStatus() != TenantStatus.ACTIVE
@@ -46,8 +51,6 @@ public class TenantContextFilter extends OncePerRequestFilter {
 
                 throw new RuntimeException("Tenant inactive");
             }
-
-            TenantContext.setTenantId(tenant.getId());
 
             filterChain.doFilter(request, response);
 

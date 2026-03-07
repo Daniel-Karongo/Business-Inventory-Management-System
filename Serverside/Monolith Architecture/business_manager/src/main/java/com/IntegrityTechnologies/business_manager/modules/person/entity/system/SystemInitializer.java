@@ -4,9 +4,18 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.BranchAccountingSettingsRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.seed.BranchChartOfAccountsService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.BranchAudit;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.DepartmentAudit;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserAudit;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.Tenant;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,10 +23,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalTime;
 import java.util.HashSet;
+import java.util.UUID;
 
 @Configuration
 @RequiredArgsConstructor
@@ -29,6 +40,11 @@ public class SystemInitializer {
     private final BranchAccountingSettingsRepository accountingSettingsRepository;
     private final BranchChartOfAccountsService chartService;
     private final TenantRepository tenantRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final BranchAuditRepository branchAuditRepository;
+    private final DepartmentAuditRepository departmentAuditRepository;
+    private final UserAuditRepository userAuditRepository;
 
     @Bean
     @Transactional
@@ -46,6 +62,8 @@ public class SystemInitializer {
 
             ensureGeneralDepartment(mainBranch);
 
+            ensureDefaultAdmin(tenant, mainBranch);
+
             log.info("🎉 System initialization complete.");
         };
     }
@@ -55,19 +73,28 @@ public class SystemInitializer {
         log.warn("⚠️ No branches found. Creating default MAIN branch.");
 
         Branch branch = Branch.builder()
-                .tenant(tenant)
+                .tenantId(tenant.getId())
                 .branchCode("MAIN")
                 .name("Main Branch")
                 .location("Default Location")
                 .phone("+254700000000")
                 .email("main@default.com")
+                .deleted(false)
                 .build();
 
         branchRepository.save(branch);
 
-        chartService.seedForBranch(branch.getId());
+        branchAuditRepository.save(
+                BranchAudit.builder()
+                        .branchId(branch.getId())
+                        .branchName(branch.getName())
+                        .action("CREATE")
+                        .reason("System initialization")
+                        .performedByUsername("system")
+                        .build()
+        );
 
-        log.info("✅ Default MAIN branch created with chart of accounts.");
+        chartService.seedForBranch(branch.getId());
 
         return branch;
     }
@@ -92,30 +119,56 @@ public class SystemInitializer {
         Department dept = departmentRepository.findByNameIgnoreCase("GENERAL")
                 .orElseGet(() -> {
 
-                    log.warn("⚠️ No departments found. Creating GENERAL department.");
-
                     Department d = Department.builder()
-                            .branch(branch)   // FIX: assign branch before save
+                            .branch(branch)
                             .name("GENERAL")
                             .description("Default general department")
                             .rollcallStartTime(LocalTime.of(9, 0))
                             .gracePeriodMinutes(15)
+                            .deleted(false)
                             .build();
 
                     departmentRepository.save(d);
 
-                    log.info("✅ Default GENERAL department created.");
+                    departmentAuditRepository.save(
+                            DepartmentAudit.builder()
+                                    .departmentId(d.getId())
+                                    .departmentName(d.getName())
+                                    .action("CREATE")
+                                    .reason("System initialization")
+                                    .performedByUsername("system")
+                                    .build()
+                    );
 
                     return d;
                 });
+    }
 
-        if (dept.getBranch() == null) {
+    private void ensureDefaultAdmin(Tenant tenant, Branch mainBranch) {
 
-            dept.setBranch(branch);
+        boolean exists = userRepository.existsByUsername("admin");
 
-            departmentRepository.save(dept);
+        if (exists) return;
 
-            log.info("✅ GENERAL department linked to MAIN branch.");
-        }
+        User admin = User.builder()
+                .tenantId(tenant.getId())
+                .username("admin")
+                .password(passwordEncoder.encode("admin123"))
+                .role(Role.SUPERUSER)
+                .uploadFolder(UUID.randomUUID().toString())
+                .deleted(false)
+                .build();
+
+        userRepository.save(admin);
+
+        userAuditRepository.save(
+                UserAudit.builder()
+                        .userId(admin.getId())
+                        .username(admin.getUsername())
+                        .action("CREATE")
+                        .reason("System initialization")
+                        .performedByUsername("system")
+                        .build()
+        );
     }
 }

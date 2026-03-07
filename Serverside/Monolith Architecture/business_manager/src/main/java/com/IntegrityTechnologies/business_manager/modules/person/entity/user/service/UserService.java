@@ -25,6 +25,8 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.mod
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -104,14 +106,16 @@ public class UserService {
         // 4️⃣ Build & save user
         User user = User.builder()
                 .username(dto.getUsername())
-                .password(dto.getPassword() != null ? passwordEncoder.encode(dto.getPassword()) : passwordEncoder.encode(""))
+                .password(dto.getPassword() != null
+                        ? passwordEncoder.encode(dto.getPassword())
+                        : passwordEncoder.encode(""))
                 .emailAddresses(new ArrayList<>(emails))
                 .phoneNumbers(new ArrayList<>(phones))
                 .idNumber(dto.getIdNumber())
                 .role(Role.valueOf(dto.getRole().trim().toUpperCase()))
                 .deleted(false)
-                .uploadFolder(uploadFolder) // ✅ set before save
-                .createdBy(creator)
+                .uploadFolder(uploadFolder)
+                .createdBy(creator != null ? creator.getId() : null)
                 .build();
 
         user = userRepository.save(user);
@@ -152,6 +156,7 @@ public class UserService {
 
     /* ====================== UPDATE USER ====================== */
     @Transactional
+    @CacheEvict(value = "users", key = "#identifier")
     public UserDTO updateUser(String identifier, UserDTO updatedData, Authentication authentication) throws IOException {
         String updaterUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails)
                 ? userDetails.getUsername()
@@ -292,6 +297,7 @@ public class UserService {
 
     /* ====================== GET USERS ====================== */
 
+    @Cacheable(value = "users", key = "#identifier")
     public UserDTO getUser(String identifier, Boolean deleted)  {
         User user;
 
@@ -307,6 +313,7 @@ public class UserService {
 
     }
 
+    @Cacheable(value = "users", key = "'all_' + #deleted")
     public List<UserDTO> getAllUsers(Boolean deleted) {
         List<User> users = new ArrayList<>();
         if(Boolean.FALSE.equals(deleted)) {
@@ -374,6 +381,7 @@ public class UserService {
     // ====================== SOFT DELETE ======================
 
     @Transactional
+    @CacheEvict(value = "users", key = "#identifier")
     public ResponseEntity<ApiResponse> softDeleteUser(UUID id, Authentication authentication, String reason) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
@@ -391,6 +399,7 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = "users", key = "#identifier")
     public ResponseEntity<ApiResponse> softDeleteUsersInBulk(List<UUID> userIds, String reason, Authentication authentication) {
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
         String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
@@ -451,6 +460,7 @@ public class UserService {
 // ====================== RESTORE ======================
 
     @Transactional
+    @CacheEvict(value = "users", key = "#identifier")
     public ResponseEntity<ApiResponse> restoreUser(UUID id, Authentication authentication, String reason) throws IOException {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
@@ -468,6 +478,7 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = "users", key = "#identifier")
     public ResponseEntity<ApiResponse> restoreUsersInBulk(List<UUID> userIds, String reason, Authentication authentication) throws IOException {
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
         String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
@@ -528,6 +539,7 @@ public class UserService {
 // ====================== HARD DELETE ======================
 
     @Transactional
+    @CacheEvict(value = "users", key = "#identifier")
     public ResponseEntity<ApiResponse> hardDeleteUser(UUID id, Authentication authentication) throws IOException {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
@@ -545,6 +557,7 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = "users", key = "#identifier")
     public ResponseEntity<ApiResponse> hardDeleteUsersInBulk(List<UUID> userIds, Authentication authentication) throws IOException {
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
         String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
@@ -949,24 +962,14 @@ public class UserService {
                 .idNumber(user.getIdNumber())
                 .role(user.getRole() != null ? user.getRole().name() : null)
                 .createdBy(user.getCreatedBy() != null
-                        ? user.getCreatedBy().getId() + " | " + user.getCreatedBy().getUsername()
+                        ? user.getCreatedBy().toString()
                         : null)
                 .lastModifiedBy(user.getUpdatedBy() != null
-                        ? user.getUpdatedBy().getId() + " | " + user.getUpdatedBy().getUsername()
+                        ? user.getUpdatedBy().toString()
                         : null)
                 .createdAt(user.getCreatedAt())
                 .lastModifiedAt(user.getUpdatedAt())
                 .deleted(Boolean.TRUE.equals(user.getDeleted()))
-                .idImageUrls(user.getImages() != null
-                        ? user.getImages().stream()
-                        .filter(img -> {
-                            if (deleted == null) return true;
-                            if (deleted) return Boolean.TRUE.equals(img.getDeleted());
-                            return !Boolean.TRUE.equals(img.getDeleted());
-                        })
-                        .map(UserImage::getFilePath)
-                        .toList()
-                        : List.of())
                 .build();
 
         List<UserDepartment> relations =

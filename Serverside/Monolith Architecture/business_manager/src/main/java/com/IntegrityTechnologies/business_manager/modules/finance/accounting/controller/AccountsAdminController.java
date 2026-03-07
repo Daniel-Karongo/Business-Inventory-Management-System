@@ -5,7 +5,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.Account;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,18 +14,14 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/accounts/admin")
 @RequiredArgsConstructor
+@TenantAdminOnly
 public class AccountsAdminController {
 
     private final AccountRepository accountRepository;
     private final LedgerEntryRepository ledgerRepo;
 
-    /* ============================================================
-       CREATE
-    ============================================================ */
     @PostMapping
     public Account create(@RequestBody CreateAccountRequest req) {
-
-        SecurityUtils.requireAdmin();
 
         accountRepository
                 .findByBranchIdAndCode(req.branchId(), req.code())
@@ -44,15 +40,11 @@ public class AccountsAdminController {
         );
     }
 
-    /* ============================================================
-       RENAME (SAFE)
-    ============================================================ */
     @PatchMapping("/{id}")
     public Account rename(
             @PathVariable UUID id,
             @RequestBody UpdateAccountRequest req
     ) {
-        SecurityUtils.requireAdmin();
 
         Account acc = accountRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Account not found"));
@@ -61,13 +53,8 @@ public class AccountsAdminController {
         return accountRepository.save(acc);
     }
 
-    /* ============================================================
-       DEACTIVATE (ONLY IF UNUSED)
-    ============================================================ */
     @PostMapping("/{id}/deactivate")
     public void deactivate(@PathVariable UUID id) {
-
-        SecurityUtils.requireAdmin();
 
         Account acc = accountRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Account not found"));

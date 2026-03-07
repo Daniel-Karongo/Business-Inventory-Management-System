@@ -80,9 +80,13 @@ public class DepartmentBulkService {
                     );
                 }
 
-                String branchCode = row.getBranchCodes().iterator().next();
+                String branchCode = row.getBranchCodes()
+                        .iterator()
+                        .next()
+                        .trim()
+                        .toUpperCase();
 
-                UUID branchId = branchRepository.findByBranchCode(branchCode.trim())
+                UUID branchId = branchRepository.findByBranchCodeIgnoreCase(branchCode)
                         .orElseThrow(() ->
                                 new IllegalArgumentException(
                                         "Unknown branchCode: " + branchCode
@@ -167,7 +171,10 @@ public class DepartmentBulkService {
             DepartmentDTO dto = pr.dto();
 
             Optional<Department> existing =
-                    departmentRepository.findByNameIgnoreCase(dto.getName());
+                    departmentRepository.findByNameIgnoreCaseAndBranch_Id(
+                            dto.getName(),
+                            dto.getBranchId()
+                    );
 
             DepartmentDTO saved;
 

@@ -7,22 +7,22 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerLineResponse;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
-import com.IntegrityTechnologies.business_manager.security.BranchContext;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/accounting/journals")
 @RequiredArgsConstructor
+@TenantManagerOnly
 public class JournalController {
 
     private final JournalEntryRepository repo;
@@ -34,7 +34,6 @@ public class JournalController {
             @RequestParam UUID branchId,
             @PageableDefault(size = 50, sort = "postedAt") Pageable pageable
     ) {
-        SecurityUtils.requireAtLeast(Role.EMPLOYEE);
 
         return repo.findByBranch_Id(branchId, pageable)
                 .map(this::toResponse);
@@ -43,16 +42,14 @@ public class JournalController {
     @GetMapping("/{id}")
     public JournalResponse get(@PathVariable UUID id) {
 
-        SecurityUtils.requireAtLeast(Role.EMPLOYEE);
-
         JournalEntry j = repo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Journal not found"));
 
         return toResponse(j);
     }
 
+    @TenantAdminOnly
     @PostMapping("/{id}/reverse")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPERUSER')")
     public void reverse(
             @PathVariable UUID id,
             @RequestBody JournalReversalRequest req

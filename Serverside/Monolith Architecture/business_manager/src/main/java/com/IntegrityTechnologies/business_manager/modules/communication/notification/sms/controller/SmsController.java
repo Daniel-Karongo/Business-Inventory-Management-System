@@ -6,11 +6,12 @@ import com.IntegrityTechnologies.business_manager.modules.communication.notifica
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.model.SmsMessage;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.service.SmsAccountService;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.service.SmsService;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,16 +21,19 @@ import java.util.UUID;
 @RequestMapping("/api/notification/sms")
 @RequiredArgsConstructor
 @Tag(name = "Smss")
+@TenantUserOnly
 public class SmsController {
 
     private final SmsService service;
     private final SmsAccountService smsAccountService;
 
+    @TenantManagerOnly
     @PostMapping("/send")
     public ResponseEntity<SmsMessage> send(@Valid @RequestBody SmsRequest req) {
         return ResponseEntity.ok(service.sendSms(req));
     }
 
+    @TenantManagerOnly
     @PostMapping("/send-bulk")
     public ResponseEntity<List<SmsMessage>> sendBulk(@RequestBody BulkSmsRequest req) {
         return ResponseEntity.ok(service.sendBulk(req.getMessages()));
@@ -42,6 +46,7 @@ public class SmsController {
         return ResponseEntity.ok(msg);
     }
 
+    @TenantManagerOnly
     @PostMapping("/admin/sms/account")
     public ResponseEntity<SmsAccount> updateSmsAccount(
             @RequestBody SmsAccount req) {

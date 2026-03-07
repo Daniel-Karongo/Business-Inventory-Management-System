@@ -3,8 +3,8 @@ package com.IntegrityTechnologies.business_manager.modules.acl.controller;
 import com.IntegrityTechnologies.business_manager.modules.acl.audit.AclAuditService;
 import com.IntegrityTechnologies.business_manager.modules.acl.entity.EndpointPermission;
 import com.IntegrityTechnologies.business_manager.modules.acl.repository.EndpointPermissionRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.PlatformAdminOnly;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,7 +12,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin/acl/endpoints")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('SUPERUSER')")
+@PlatformAdminOnly
 public class EndpointPermissionAdminController {
 
     private final EndpointPermissionRepository repo;

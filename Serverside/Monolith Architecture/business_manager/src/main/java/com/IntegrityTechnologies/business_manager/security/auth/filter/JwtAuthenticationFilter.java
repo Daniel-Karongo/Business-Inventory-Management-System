@@ -15,7 +15,6 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -48,34 +47,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             try {
 
-                UUID tenantId = jwtUtil.extractTenantId(jwt);
-
-                /* Verify tenant exists */
-                if (!tenantRepository.existsById(tenantId)) {
-                    throw new SecurityException("Invalid tenant in token");
-                }
-
-                TenantContext.setTenantId(tenantId);
-
-                UUID branchId = jwtUtil.extractBranchId(jwt);
-
-                boolean validBranch =
-                        branchRepository.existsByIdAndTenantId(branchId, tenantId);
-
-                if (!validBranch) {
-                    throw new SecurityException("Invalid branch in token");
-                }
-
-                BranchContext.set(branchId);
-
-                String tokenDevice = jwtUtil.extractDevice(jwt);
-                String requestDevice = DeviceFingerprintUtil.generate(request);
-
-                if (!tokenDevice.equals(requestDevice)) {
-                    throw new SecurityException("Token device mismatch");
-                }
-
                 if (SecurityContextHolder.getContext().getAuthentication() == null) {
+
+                    /* ==========================================
+                       DEVICE FINGERPRINT CHECK (FAST FAIL)
+                    ========================================== */
+
+                    String tokenDevice = jwtUtil.extractDevice(jwt);
+                    String requestDevice = DeviceFingerprintUtil.generate(request);
+
+                    if (!tokenDevice.equals(requestDevice)) {
+                        throw new SecurityException("Token device mismatch");
+                    }
+
+                    /* ==========================================
+                       TOKEN VALIDATION
+                    ========================================== */
+
+                    String username = jwtUtil.extractUsername(jwt);
+
+                    CustomUserDetails userDetails =
+                            (CustomUserDetails) userDetailsService
+                                    .loadUserByUsername(username);
+
+                    if (!jwtUtil.validateToken(jwt, userDetails.getUsername())) {
+                        throw new SecurityException("Invalid JWT");
+                    }
+
+                    /* ==========================================
+                       SESSION VALIDATION
+                    ========================================== */
 
                     UUID tokenId = jwtUtil.extractTokenId(jwt);
 
@@ -84,37 +85,66 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     .findByTokenIdAndLogoutTimeIsNull(tokenId)
                                     .isPresent();
 
-                    if (sessionValid) {
+                    if (!sessionValid) {
+                        throw new SecurityException("Session expired or revoked");
+                    }
 
-                        String username = jwtUtil.extractUsername(jwt);
+                    /* ==========================================
+                       TENANT VALIDATION
+                    ========================================== */
 
-                        CustomUserDetails userDetails =
-                                (CustomUserDetails) userDetailsService.loadUserByUsername(username);
+                    UUID tenantId = jwtUtil.extractTenantId(jwt);
 
-                        if (jwtUtil.validateToken(jwt, userDetails.getUsername())) {
+                    if (!tenantRepository.existsById(tenantId)) {
+                        throw new SecurityException("Invalid tenant in token");
+                    }
 
-                            UsernamePasswordAuthenticationToken authToken =
-                                    new UsernamePasswordAuthenticationToken(
-                                            userDetails,
-                                            null,
-                                            userDetails.getAuthorities()
-                                    );
+                    /* ==========================================
+                       BRANCH VALIDATION
+                    ========================================== */
 
-                            authToken.setDetails(
-                                    new WebAuthenticationDetailsSource()
-                                            .buildDetails(request)
+                    UUID branchId = jwtUtil.extractBranchId(jwt);
+
+                    boolean branchValid =
+                            branchRepository.existsByIdAndTenantId(branchId, tenantId);
+
+                    if (!branchValid) {
+                        throw new SecurityException("Invalid branch for tenant");
+                    }
+
+                    /* ==========================================
+                       CONTEXT INITIALIZATION
+                    ========================================== */
+
+                    TenantContext.setTenantId(tenantId);
+                    BranchContext.set(branchId);
+
+                    /* ==========================================
+                       AUTHENTICATION
+                    ========================================== */
+
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
                             );
 
-                            SecurityContextHolder
-                                    .getContext()
-                                    .setAuthentication(authToken);
-                        }
-                    }
+                    authToken.setDetails(
+                            new WebAuthenticationDetailsSource()
+                                    .buildDetails(request)
+                    );
+
+                    SecurityContextHolder
+                            .getContext()
+                            .setAuthentication(authToken);
                 }
 
             } catch (Exception ignored) {
 
                 SecurityContextHolder.clearContext();
+                TenantContext.clear();
+                BranchContext.clear();
 
             }
         }

@@ -56,6 +56,8 @@ public class RollcallService {
         Branch branch = branchRepository.findByIdAndDeletedFalse(branchId)
                 .orElseThrow(() -> new EntityNotFoundException("Branch not found"));
 
+        validateDepartmentBranch(departmentId, branchId);
+
         LocalDate today = LocalDate.now();
         LocalDateTime now = LocalDateTime.now();
 
@@ -96,6 +98,19 @@ public class RollcallService {
 
         Rollcall saved = rollcallRepository.save(login);
 
+        rollcallAuditRepository.save(
+                RollcallAudit.builder()
+                        .rollcallId(saved.getId())
+                        .userId(userId)
+                        .departmentId(departmentId)
+                        .branchId(branchId)
+                        .action("CREATE")
+                        .reason("Login rollcall recorded")
+                        .performedBy("SYSTEM")
+                        .timestamp(now)
+                        .build()
+        );
+
         return RollcallDTO.from(saved);
     }
 
@@ -115,6 +130,8 @@ public class RollcallService {
 
         Branch branch = branchRepository.findByIdAndDeletedFalse(branchId)
                 .orElseThrow(() -> new EntityNotFoundException("Branch not found"));
+
+        validateDepartmentBranch(departmentId, branchId);
 
         LocalDate today = LocalDate.now();
         LocalDateTime now = LocalDateTime.now();
@@ -187,6 +204,8 @@ public class RollcallService {
         Branch branch = branchRepository.findByIdAndDeletedFalse(branchId)
                 .orElseThrow(() -> new EntityNotFoundException("Branch not found"));
 
+        validateDepartmentBranch(departmentId, branchId);
+
         Optional<BiometricRecord> matched =
                 biometricService.verify(userId, type, rawTemplate);
 
@@ -197,18 +216,14 @@ public class RollcallService {
         LocalDate today = LocalDate.now();
 
         // ✅ BIOMETRIC first → LOGIN ignored
-        boolean hasLogin =
-                rollcallRepository.existsByUserIdAndDepartmentIdAndBranchIdAndRollcallDateAndMethod(
-                        userId, departmentId, branchId, today, RollcallMethod.LOGIN
-                );
+        Optional<Rollcall> login =
+                rollcallRepository
+                        .findByUserIdAndDepartmentIdAndBranchIdAndRollcallDateAndMethod(
+                                userId, departmentId, branchId, today, RollcallMethod.LOGIN
+                        );
 
-        if (hasLogin) {
-            return RollcallDTO.from(
-                    rollcallRepository
-                            .findByUserIdAndDepartmentIdAndBranchIdAndRollcallDateAndMethod(
-                                    userId, departmentId, branchId, today, RollcallMethod.LOGIN
-                            ).orElseThrow()
-            );
+        if (login.isPresent()) {
+            return RollcallDTO.from(login.get());
         }
 
         RollcallStatus status =
@@ -256,7 +271,10 @@ public class RollcallService {
             List<User> users = departmentRepository.findAllUsersInDepartment(d.getId());
 
             for (User u : users) {
-                for (Branch b : branchRepository.findBranchesByUserId(u.getId())) {
+                for (Branch b : branchRepository.findBranchesForUserAndDepartment(
+                        u.getId(),
+                        d.getId()
+                )) {
 
                     boolean alreadyHasRollcall =
                             rollcallRepository.existsByUserIdAndDepartmentIdAndBranchIdAndRollcallDate(
@@ -391,5 +409,19 @@ public class RollcallService {
         return now.isBefore(start.plusMinutes(grace))
                 ? RollcallStatus.PRESENT
                 : RollcallStatus.LATE;
+    }
+
+    private void validateDepartmentBranch(UUID departmentId, UUID branchId) {
+
+        if (departmentId == null) return;
+
+        boolean valid =
+                branchRepository.branchContainsDepartment(branchId, departmentId);
+
+        if (!valid) {
+            throw new IllegalArgumentException(
+                    "Department does not belong to branch"
+            );
+        }
     }
 }

@@ -4,10 +4,9 @@ import com.IntegrityTechnologies.business_manager.config.OptimisticRetryRunner;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentRequest;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.service.PaymentService;
-
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,13 +17,11 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/payments")
 @RequiredArgsConstructor
+@TenantUserOnly
 public class PaymentController {
 
     private final PaymentService paymentService;
 
-    /* ============================================================
-       MAKE PAYMENT
-       ============================================================ */
     @PostMapping
     public ResponseEntity<PaymentDTO> makePayment(@RequestBody PaymentRequest req) {
         return ResponseEntity.ok(
@@ -32,17 +29,11 @@ public class PaymentController {
         );
     }
 
-    /* ============================================================
-       GET PAYMENT BY ID
-       ============================================================ */
     @GetMapping("/{id}")
     public ResponseEntity<PaymentDTO> getPayment(@PathVariable UUID id) {
         return ResponseEntity.ok(paymentService.getPayment(id));
     }
 
-    /* ============================================================
-       LIST PAYMENTS
-       ============================================================ */
     @GetMapping
     public ResponseEntity<Page<PaymentDTO>> listPayments(
             @RequestParam(defaultValue = "0") int page,
@@ -56,9 +47,6 @@ public class PaymentController {
         );
     }
 
-    /* ============================================================
-       REFUND PAYMENT (SUCCESS only)
-       ============================================================ */
     @PostMapping("/{id}/refund")
     public ResponseEntity<PaymentDTO> refundPayment(@PathVariable UUID id) {
         return ResponseEntity.ok(
@@ -66,9 +54,6 @@ public class PaymentController {
         );
     }
 
-    /* ============================================================
-       REVERSE PAYMENT (undo, accounting + customer ledger)
-       ============================================================ */
     @PostMapping("/{id}/reverse")
     public ResponseEntity<PaymentDTO> reversePayment(
             @PathVariable UUID id,
@@ -79,9 +64,6 @@ public class PaymentController {
         );
     }
 
-    /* ============================================================
-       PAYMENT RECONCILIATION
-       ============================================================ */
     @GetMapping("/reconcile")
     public ResponseEntity<Object> reconcilePayments(
             @RequestParam String from,

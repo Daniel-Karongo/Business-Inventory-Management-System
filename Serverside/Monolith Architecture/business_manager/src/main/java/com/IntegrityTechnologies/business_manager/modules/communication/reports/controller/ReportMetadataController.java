@@ -6,6 +6,7 @@ import com.IntegrityTechnologies.business_manager.modules.communication.reports.
 import com.IntegrityTechnologies.business_manager.modules.communication.reports.security.ReportAccess;
 import com.IntegrityTechnologies.business_manager.modules.communication.reports.security.ReportLimitRegistry;
 import com.IntegrityTechnologies.business_manager.modules.communication.reports.security.ReportLimits;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/reports")
 @RequiredArgsConstructor
+@TenantUserOnly
 public class ReportMetadataController {
 
     @GetMapping("/definitions")
@@ -70,10 +72,8 @@ public class ReportMetadataController {
 
     private String inferType(String param) {
 
-        // ---- DATES ----
         if (param.endsWith("_DATE")) return "DATE";
 
-        // ---- ENTITIES (specific first!) ----
         if (param.contains("BRANCH")) return "BRANCH";
         if (param.contains("ACCOUNT")) return "ACCOUNT";
         if (param.contains("CUSTOMER")) return "CUSTOMER";
@@ -82,10 +82,8 @@ public class ReportMetadataController {
         if (param.contains("VARIANT")) return "VARIANT";
         if (param.contains("CATEGORY")) return "CATEGORY";
 
-        // ---- NUMERIC ----
         if (param.contains("THRESHOLD")) return "NUMBER";
 
-        // ---- FALLBACK ----
         return "TEXT";
     }
 }

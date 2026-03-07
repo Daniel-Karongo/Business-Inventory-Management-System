@@ -3,6 +3,8 @@ package com.IntegrityTechnologies.business_manager.modules.finance.tax.controlle
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.dto.TaxStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.CorporateTaxFilingRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.TaxSystemStateRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,6 +14,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/tax")
 @RequiredArgsConstructor
+@TenantManagerOnly
 public class TaxStatusController {
 
     private final TaxSystemStateRepository taxSystemStateRepository;

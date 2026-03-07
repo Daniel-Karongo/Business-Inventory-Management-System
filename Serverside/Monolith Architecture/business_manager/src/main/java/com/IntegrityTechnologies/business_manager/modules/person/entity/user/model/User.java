@@ -1,9 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.user.model;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.Tenant;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.AuditableTenantEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
+
 import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -12,33 +14,45 @@ import java.util.*;
 @Table(
         name = "users",
         indexes = {
-                @Index(name = "idx_user_username", columnList = "username"),
-                @Index(name = "idx_user_tenant", columnList = "tenant_id")
+
+                @Index(
+                        name = "idx_user_tenant_username",
+                        columnList = "tenant_id, username"
+                ),
+
+                @Index(
+                        name = "idx_user_tenant_role",
+                        columnList = "tenant_id, role"
+                ),
+
+                @Index(
+                        name = "idx_user_tenant_deleted",
+                        columnList = "tenant_id, deleted"
+                )
+
         },
+
         uniqueConstraints = {
+
                 @UniqueConstraint(
                         name = "uq_user_tenant_username",
                         columnNames = {"tenant_id", "username"}
                 )
+
         }
 )
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-@ToString
-public class User {
+@SuperBuilder(toBuilder = true)
+public class User extends AuditableTenantEntity {
 
     @Id
     @GeneratedValue
     @JdbcTypeCode(Types.BINARY)
     @Column(columnDefinition = "BINARY(16)")
-    @ToString.Exclude
     private UUID id;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "tenant_id", nullable = false)
-    private Tenant tenant;
 
     @Column(nullable = false)
     private String username;
@@ -49,73 +63,42 @@ public class User {
     @ElementCollection
     @CollectionTable(
             name = "user_email_addresses",
-            joinColumns = @JoinColumn(name = "user_id"),
-            indexes = {
-                    @Index(
-                            name = "idx_email_tenant",
-                            columnList = "email_address"
-                    )
-            }
+            joinColumns = @JoinColumn(name = "user_id")
     )
-    @Column(name = "email_address")
+    @Column(name = "email")
     private List<String> emailAddresses = new ArrayList<>();
 
     @ElementCollection
-    @CollectionTable(name = "user_phone_numbers", joinColumns = @JoinColumn(name = "user_id"))
-    @Column(name = "phone_number")
+    @CollectionTable(
+            name = "user_phone_numbers",
+            joinColumns = @JoinColumn(name = "user_id")
+    )
+    @Column(name = "phone")
     private List<String> phoneNumbers = new ArrayList<>();
 
-    @Column(unique = true)
     private String idNumber;
 
     @Enumerated(EnumType.STRING)
     private Role role;
 
-    @OneToMany(
-            mappedBy = "user",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
-    @Builder.Default
-    private Set<UserBranch> userBranches = new HashSet<>();
-
-    @OneToMany(
-            mappedBy = "user",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
-    @Builder.Default
-    private Set<UserDepartment> userDepartments = new HashSet<>();
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @Builder.Default
-    private List<UserImage> images = new ArrayList<>();
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String uploadFolder;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by_id")
-    private User createdBy;
-
-    private LocalDateTime createdAt;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "updated_by_id")
-    private User updatedBy;
-
-    private LocalDateTime updatedAt;
+    private Boolean deleted = false;
 
     private LocalDateTime deletedAt;
-    private Boolean deleted;
 
-    @PrePersist
-    public void onCreate() {
-        createdAt = LocalDateTime.now();
-        deleted = false;
-    }
+    /* ================================
+       RELATIONSHIPS
+    ================================= */
 
-    @PreUpdate
-    public void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserBranch> branches = new HashSet<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserDepartment> departments = new HashSet<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserImage> images = new ArrayList<>();
+
 }

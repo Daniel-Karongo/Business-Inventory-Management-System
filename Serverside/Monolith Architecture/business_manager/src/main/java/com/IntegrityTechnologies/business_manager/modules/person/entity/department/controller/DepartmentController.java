@@ -1,25 +1,23 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.department.controller;
 
 import com.IntegrityTechnologies.business_manager.common.ApiResponse;
-import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
 import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentBulkRow;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.department.mapper.DepartmentMapper;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.department.service.DepartmentBulkService;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.department.service.DepartmentService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentMinimalDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.mapper.DepartmentMapper;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.DepartmentAudit;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.service.DepartmentBulkService;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.service.DepartmentService;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,13 +25,18 @@ import java.util.UUID;
 @RequestMapping("/api/departments")
 @RequiredArgsConstructor
 @Tag(name = "Departments")
+@TenantUserOnly
 public class DepartmentController {
 
     private final DepartmentService departmentService;
     private final DepartmentMapper departmentMapper;
     private final DepartmentBulkService bulkService;
 
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    /* ====================================
+       IMPORT
+       ==================================== */
+
+    @TenantManagerOnly
     @PostMapping("/import")
     public ResponseEntity<BulkResult<DepartmentDTO>> importDepartments(
             @RequestBody BulkRequest<DepartmentBulkRow> request,
@@ -43,155 +46,197 @@ public class DepartmentController {
                 bulkService.importDepartments(request, authentication)
         );
     }
+
+    /* ====================================
+       CREATE
+       ==================================== */
+
+    @TenantManagerOnly
     @PostMapping
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     public ResponseEntity<DepartmentDTO> create(
             @RequestBody DepartmentDTO dto,
             Authentication authentication
     ) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(departmentService.create(dto, authentication));
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(departmentService.create(dto, authentication));
     }
 
-//    @PostMapping("/bulk")
-//    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
-//    public ResponseEntity<List<DepartmentDTO>> createDepartmentsInBulk(
-//            @RequestBody List<DepartmentDTO> dtos,
-//            Authentication authentication
-//    ) {
-//        List<DepartmentDTO> createdDTOs = new ArrayList<>();
-//        for(DepartmentDTO dto: dtos) {
-//            createdDTOs.add(departmentService.create(dto, authentication));
-//        }
-//        return ResponseEntity.status(HttpStatus.CREATED).body(createdDTOs);
-//    }
+    /* ====================================
+       UPDATE
+       ==================================== */
 
+    @TenantManagerOnly
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     public ResponseEntity<DepartmentDTO> updateDepartment(
             @PathVariable UUID id,
             @RequestBody DepartmentDTO dto,
             Authentication authentication
     ) {
-        DepartmentDTO updatedDto = departmentService.updateDepartment(id, dto, authentication);
-        return ResponseEntity.ok(updatedDto);
+
+        DepartmentDTO updated =
+                departmentService.updateDepartment(id, dto, authentication);
+
+        return ResponseEntity.ok(updated);
     }
 
+    /* ====================================
+       READ
+       ==================================== */
 
-
-
-
+    @TenantSupervisorOnly
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER','SUPERVISOR')")
-    public ResponseEntity<DepartmentDTO> get(@PathVariable UUID id) {
-        return ResponseEntity.ok(departmentMapper.toDTO(departmentService.getById(id)));
+    public ResponseEntity<DepartmentDTO> get(
+            @PathVariable UUID id
+    ) {
+
+        return ResponseEntity.ok(
+                departmentMapper.toDTO(
+                        departmentService.getById(id)
+                )
+        );
     }
 
-    // --- Get all departments ---
+    @TenantSupervisorOnly
     @GetMapping
-    @PreAuthorize("""
-    (#deleted == true or #deleted == null) and hasRole('SUPERUSER') 
-    or 
-    (#deleted == false and hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER','SUPERVISOR'))""")
     public ResponseEntity<List<DepartmentDTO>> getAllDepartments(
             @RequestParam(required = false) Boolean deleted
     ) {
-        return ResponseEntity.ok(departmentService.getAllDepartments(deleted));
+
+        return ResponseEntity.ok(
+                departmentService.getAllDepartments(deleted)
+        );
     }
 
+    @TenantManagerOnly
     @GetMapping("/user/{userId}")
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     public ResponseEntity<List<DepartmentMinimalDTO>> getUserDepartments(
             @PathVariable UUID userId
     ) {
-        return ResponseEntity.ok(departmentService.getAllDepartmentsForUser(userId));
+
+        return ResponseEntity.ok(
+                departmentService.getAllDepartmentsForUser(userId)
+        );
     }
 
+    /* ====================================
+       AUDITS
+       ==================================== */
+
+    @TenantManagerOnly
     @GetMapping("/{id}/audits")
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
-    public ResponseEntity<List<DepartmentAudit>> getDepartmentAudits(@PathVariable UUID id) {
-        return ResponseEntity.ok(departmentService.getDepartmentAudits(id));
+    public ResponseEntity<List<DepartmentAudit>> getDepartmentAudits(
+            @PathVariable UUID id
+    ) {
+
+        return ResponseEntity.ok(
+                departmentService.getDepartmentAudits(id)
+        );
     }
 
+    @TenantManagerOnly
     @GetMapping("/all/audits")
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     public ResponseEntity<List<DepartmentAudit>> getAllDepartmentsAudits() {
-        return ResponseEntity.ok(departmentService.getAllDepartmentsAudits());
+
+        return ResponseEntity.ok(
+                departmentService.getAllDepartmentsAudits()
+        );
     }
 
+    @TenantManagerOnly
     @GetMapping("/audits/performer/{id}")
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
-    public ResponseEntity<List<DepartmentAudit>> getDepartmentAuditsByPerformer(@PathVariable UUID id) {
-        return ResponseEntity.ok(departmentService.getDepartmentAuditsByPerformer(id));
+    public ResponseEntity<List<DepartmentAudit>> getDepartmentAuditsByPerformer(
+            @PathVariable UUID id
+    ) {
+
+        return ResponseEntity.ok(
+                departmentService.getDepartmentAuditsByPerformer(id)
+        );
     }
 
+    /* ====================================
+       DELETE
+       ==================================== */
 
-
-
-    // --- Delete a department ---
+    @TenantManagerOnly
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("""
-    #soft == false and hasRole('SUPERUSER')
-    or 
-    ( #soft == true and hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER'))""")
-    public ResponseEntity<?> deleteDepartment(
+    public ResponseEntity<ApiResponse> deleteDepartment(
             @PathVariable UUID id,
             @RequestParam(defaultValue = "true") Boolean soft,
             Authentication authentication
     ) {
+
         departmentService.deleteDepartment(id, soft, authentication);
-        ApiResponse response = new ApiResponse(
-                "success",
-                "Department" + (Boolean.TRUE.equals(soft) ? "soft" : "hard") + " deleted successfully"
-        );
+
+        ApiResponse response =
+                new ApiResponse(
+                        "success",
+                        "Department " + (Boolean.TRUE.equals(soft) ? "soft" : "hard") + " deleted successfully"
+                );
+
         return ResponseEntity.ok(response);
     }
+
+    @TenantManagerOnly
     @DeleteMapping("/delete/bulk")
-    @PreAuthorize("""
-    #soft == false and hasRole('SUPERUSER')
-    or 
-    ( #soft == true and hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER'))""")
-    public ResponseEntity<?> deleteDepartmentsInBulk (
+    public ResponseEntity<ApiResponse> deleteDepartmentsInBulk(
             @RequestBody List<UUID> ids,
             @RequestParam(defaultValue = "true") Boolean soft,
             Authentication authentication
     ) {
-        for(UUID id: ids) {
+
+        for (UUID id : ids) {
             departmentService.deleteDepartment(id, soft, authentication);
         }
-        ApiResponse response = new ApiResponse(
-                "success",
-                "Departments" + (Boolean.TRUE.equals(soft) ? "soft" : "hard") + " deleted successfully"
-        );
+
+        ApiResponse response =
+                new ApiResponse(
+                        "success",
+                        "Departments " + (Boolean.TRUE.equals(soft) ? "soft" : "hard") + " deleted successfully"
+                );
+
         return ResponseEntity.ok(response);
     }
 
+    /* ====================================
+       RESTORE
+       ==================================== */
+
+    @TenantManagerOnly
     @PatchMapping("/restore/{id}")
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
-    public ResponseEntity<?> restoreDepartment(
+    public ResponseEntity<ApiResponse> restoreDepartment(
             @PathVariable UUID id,
             Authentication authentication
     ) {
+
         departmentService.restoreDepartment(id, authentication);
-        ApiResponse response = new ApiResponse(
-                "success",
-                "Department restored successfully"
-        );
+
+        ApiResponse response =
+                new ApiResponse(
+                        "success",
+                        "Department restored successfully"
+                );
+
         return ResponseEntity.ok(response);
     }
 
+    @TenantManagerOnly
     @PatchMapping("/restore/bulk")
-    @PreAuthorize("hasAnyRole('SUPERUSER', 'ADMIN', 'MANAGER')")
-    public ResponseEntity<?> restoreDepartmentsInBulk(
+    public ResponseEntity<ApiResponse> restoreDepartmentsInBulk(
             @RequestBody List<UUID> ids,
             Authentication authentication
     ) {
-        for(UUID id: ids) {
+
+        for (UUID id : ids) {
             departmentService.restoreDepartment(id, authentication);
         }
-        ApiResponse response = new ApiResponse(
-                "success",
-                "Departments restored successfully"
-        );
+
+        ApiResponse response =
+                new ApiResponse(
+                        "success",
+                        "Departments restored successfully"
+                );
+
         return ResponseEntity.ok(response);
     }
 }

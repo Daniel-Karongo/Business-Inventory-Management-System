@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.platform.tenant.liste
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.TenantAwareEntity;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 
 import java.util.UUID;
 
@@ -24,4 +25,17 @@ public class TenantEntityListener {
         tenantAware.setTenantId(tenantId);
     }
 
+    @PreUpdate
+    public void protectTenant(Object entity) {
+
+        if (!(entity instanceof TenantAwareEntity tenantAware)) {
+            return;
+        }
+
+        UUID current = TenantContext.getTenantId();
+
+        if (!current.equals(tenantAware.getTenantId())) {
+            throw new SecurityException("Cross-tenant modification attempt");
+        }
+    }
 }

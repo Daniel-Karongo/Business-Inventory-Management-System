@@ -3,8 +3,8 @@ package com.IntegrityTechnologies.business_manager.modules.acl.controller;
 import com.IntegrityTechnologies.business_manager.modules.acl.audit.AclAuditService;
 import com.IntegrityTechnologies.business_manager.modules.acl.entity.UserBranchScope;
 import com.IntegrityTechnologies.business_manager.modules.acl.repository.UserBranchScopeRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.PlatformAdminOnly;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,7 +13,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/admin/acl/branch-scopes")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('SUPERUSER')")
+@PlatformAdminOnly
 public class BranchScopeAdminController {
 
     private final UserBranchScopeRepository repo;

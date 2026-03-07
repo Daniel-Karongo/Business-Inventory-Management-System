@@ -1,13 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.acl.controller;
 
-import com.IntegrityTechnologies.business_manager.modules.acl.service.PermissionCacheService;
 import com.IntegrityTechnologies.business_manager.modules.acl.audit.AclAuditService;
 import com.IntegrityTechnologies.business_manager.modules.acl.entity.RoleEntity;
-import com.IntegrityTechnologies.business_manager.modules.acl.repository.PermissionConditionRepository;
-import com.IntegrityTechnologies.business_manager.modules.acl.repository.RoleEntityRepository;
-import com.IntegrityTechnologies.business_manager.modules.acl.repository.RolePermissionRepository;
+import com.IntegrityTechnologies.business_manager.modules.acl.repository.*;
+import com.IntegrityTechnologies.business_manager.modules.acl.service.PermissionCacheService;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.PlatformAdminOnly;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,7 +14,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/admin/acl/roles")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('SUPERUSER')")
+@PlatformAdminOnly
 public class RoleAdminController {
 
     private final RoleEntityRepository repo;
@@ -52,6 +50,7 @@ public class RoleAdminController {
 
         RoleEntity before = repo.findById(id).orElseThrow();
         r.setId(id);
+
         RoleEntity saved = repo.save(r);
 
         audit.audit(
@@ -87,9 +86,9 @@ public class RoleAdminController {
                 "DEACTIVATE",
                 role,
                 null,
-                id.toString() +
-                        " (rolePermissions=" + permsDisabled +
-                        ", conditions=" + condsDisabled + ")"
+                id.toString()
+                        + " (rolePermissions=" + permsDisabled
+                        + ", conditions=" + condsDisabled + ")"
         );
     }
 }

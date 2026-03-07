@@ -55,7 +55,7 @@ public class DepartmentService {
                             + "' already exists in this branch");
         }
 
-        Branch branch = branchRepository.findByIdAndDeletedFalse(dto.getBranchId())
+        Branch branch = branchRepository.findById(dto.getBranchId())
                 .orElseThrow(() -> new IllegalArgumentException("Branch not found"));
 
         Department department = Department.builder()
@@ -110,7 +110,10 @@ public class DepartmentService {
         Department department = getById(departmentId);
 
         if (!department.getName().equalsIgnoreCase(dto.getName()) &&
-                departmentRepository.existsByNameIgnoreCase(dto.getName())) {
+                departmentRepository.existsByNameIgnoreCaseAndBranch_Id(
+                        dto.getName(),
+                        department.getBranch().getId()
+                )) {
             throw new IllegalArgumentException(
                     "Department with the name '" + dto.getName() + "' already exists");
         }
@@ -194,17 +197,20 @@ public class DepartmentService {
 
     // --- Get all active departments ---
     public List<DepartmentDTO> getAllDepartments(Boolean deleted) {
-        return departmentRepository.findAll().stream()
-                .filter(
-                        d ->
-                                deleted == null
-                                        ? true
-                                        : deleted
-                                        ? Boolean.TRUE.equals(d.isDeleted())
-                                        : Boolean.FALSE.equals(d.isDeleted())
-                )
-                .map(d -> departmentMapper.toDTO(d))
-                .collect(Collectors.toList());
+
+        List<Department> departments;
+
+        if (deleted == null) {
+            departments = departmentRepository.findAll();
+        } else if (deleted) {
+            departments = departmentRepository.findByDeletedTrue();
+        } else {
+            departments = departmentRepository.findByDeletedFalse();
+        }
+
+        return departments.stream()
+                .map(departmentMapper::toDTO)
+                .toList();
     }
 
     public List<DepartmentAudit> getAllDepartmentsAudits() {

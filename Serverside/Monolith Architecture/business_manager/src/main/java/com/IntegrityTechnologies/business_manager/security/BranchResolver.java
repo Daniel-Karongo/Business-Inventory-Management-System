@@ -14,17 +14,6 @@ public class BranchResolver {
 
     private final UserSessionRepository sessionRepository;
 
-    /**
-     * Hybrid Resolution Strategy:
-     *
-     * If branchId explicitly provided:
-     *      → validate user has active session in that branch
-     *      → return branchId
-     *
-     * If branchId null:
-     *      → ADMIN → return null (global aggregation)
-     *      → Others → return current session branch
-     */
     public UUID resolveBranch(UUID branchIdFromRequest) {
 
         UUID userId = SecurityUtils.currentUserId();
@@ -34,13 +23,15 @@ public class BranchResolver {
             throw new SecurityException("Unauthenticated user");
         }
 
+        /* ---------- Explicit branch ---------- */
+
         if (branchIdFromRequest != null) {
 
             boolean hasSession =
-                    sessionRepository
-                            .findAllByUserIdAndLogoutTimeIsNull(userId)
-                            .stream()
-                            .anyMatch(s -> s.getBranchId().equals(branchIdFromRequest));
+                    sessionRepository.existsByUserIdAndBranchIdAndLogoutTimeIsNull(
+                            userId,
+                            branchIdFromRequest
+                    );
 
             if (!hasSession) {
                 throw new SecurityException("User has no active session in branch");
@@ -49,19 +40,19 @@ public class BranchResolver {
             return branchIdFromRequest;
         }
 
-        // branchId not provided
+        /* ---------- Admin global access ---------- */
 
         if (role == Role.ADMIN) {
-            return null; // GLOBAL
+            return null;
         }
+
+        /* ---------- Resolve current session ---------- */
 
         UserSession session =
                 sessionRepository
-                        .findAllByUserIdAndLogoutTimeIsNull(userId)
-                        .stream()
-                        .findFirst()
+                        .findFirstByUserIdAndLogoutTimeIsNull(userId)
                         .orElseThrow(() ->
-                                new SecurityException("No active branch session found"));
+                                new SecurityException("No active branch session"));
 
         return session.getBranchId();
     }

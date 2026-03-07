@@ -50,6 +50,10 @@ public final class SecurityUtils {
         }
     }
 
+    public static boolean isPlatformAdmin() {
+        return Role.SUPERUSER.equals(currentRole());
+    }
+
     public static Role currentRole() {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();

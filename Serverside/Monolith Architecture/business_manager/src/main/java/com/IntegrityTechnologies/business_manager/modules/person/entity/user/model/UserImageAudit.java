@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.user.model;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.TenantAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -7,13 +8,28 @@ import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Entity
-@Table(name = "user_image_audits")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserImageAudit {
+@Entity
+@Table(
+        name = "user_image_audits",
+        indexes = {
+
+                @Index(
+                        name = "idx_user_image_audit_tenant",
+                        columnList = "tenant_id"
+                ),
+
+                @Index(
+                        name = "idx_user_image_audit_user",
+                        columnList = "user_id"
+                )
+
+        }
+)
+public class UserImageAudit extends TenantAwareEntity {
 
     @Id
     @GeneratedValue

@@ -1,10 +1,12 @@
 package com.IntegrityTechnologies.business_manager.security;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.security.filter.RoleGuardFilter;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.config.TenantHibernateFilterConfigurer;
 import com.IntegrityTechnologies.business_manager.security.auth.filter.JwtAuthenticationFilter;
 import com.IntegrityTechnologies.business_manager.security.auth.filter.JwtExceptionHandlerFilter;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.filter.TenantContextFilter;
 import com.IntegrityTechnologies.business_manager.modules.acl.config.PermissionSecurityFilter;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -157,18 +159,13 @@ public class SecurityConfig {
                 // ---- FILTER ORDER ----
 
                 .addFilterBefore(
-                        tenantContextFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                )
-
-                .addFilterBefore(
-                        jwtExceptionHandlerFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                )
-
-                .addFilterBefore(
                         jwtAuthFilter,
                         UsernamePasswordAuthenticationFilter.class
+                )
+
+                .addFilterAfter(
+                        tenantContextFilter,
+                        JwtAuthenticationFilter.class
                 )
 
                 .addFilterBefore(
@@ -206,5 +203,18 @@ public class SecurityConfig {
             AuthenticationConfiguration config
     ) throws Exception {
         return config.getAuthenticationManager();
+    }
+
+    @Bean
+    public FilterRegistrationBean<TenantHibernateFilterConfigurer> tenantHibernateFilter(
+            TenantHibernateFilterConfigurer filter) {
+
+        FilterRegistrationBean<TenantHibernateFilterConfigurer> registration =
+                new FilterRegistrationBean<>();
+
+        registration.setFilter(filter);
+        registration.setOrder(100);
+
+        return registration;
     }
 }

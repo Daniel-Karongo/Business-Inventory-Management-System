@@ -5,6 +5,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.tax.dto.VatFil
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.mapper.TaxFilingMapper;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.VatFilingRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.VatFilingService;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -12,12 +13,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/tax/vat")
 @RequiredArgsConstructor
+@TenantManagerOnly
 public class VatController {
 
     private final VatFilingService filingService;

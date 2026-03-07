@@ -203,7 +203,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
         if (user.isEmpty()) return Optional.empty();
 
-        if (!user.get().getTenant().getId().equals(tenantId)) {
+        if (!user.get().getTenantId().equals(tenantId)) {
             return Optional.empty();
         }
 

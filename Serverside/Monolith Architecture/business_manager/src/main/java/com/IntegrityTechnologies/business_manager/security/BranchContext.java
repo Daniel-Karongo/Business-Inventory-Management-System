@@ -18,9 +18,7 @@ public final class BranchContext {
         UUID branchId = CONTEXT.get();
 
         if (branchId == null) {
-            throw new IllegalStateException(
-                    "BranchContext not initialized for this thread"
-            );
+            return null;
         }
 
         return branchId;

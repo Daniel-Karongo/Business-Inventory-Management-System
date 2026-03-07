@@ -8,8 +8,8 @@ import com.IntegrityTechnologies.business_manager.modules.acl.repository.Permiss
 import com.IntegrityTechnologies.business_manager.modules.acl.repository.PermissionRepository;
 import com.IntegrityTechnologies.business_manager.modules.acl.repository.RoleEntityRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.PlatformAdminOnly;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,7 +19,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/admin/acl")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('SUPERUSER')")
+@PlatformAdminOnly
 public class PermissionConditionAdminController {
 
     private final PermissionConditionRepository conditionRepo;
@@ -27,9 +27,6 @@ public class PermissionConditionAdminController {
     private final RoleEntityRepository roleRepo;
     private final AclAuditService audit;
 
-    /* =====================================================
-       LIST CONDITIONS (permission + role)
-       ===================================================== */
     @GetMapping("/permissions/{permissionId}/conditions")
     public List<PermissionCondition> list(
             @PathVariable UUID permissionId,
@@ -45,18 +42,17 @@ public class PermissionConditionAdminController {
                 );
     }
 
-    /* =====================================================
-       CREATE CONDITION (OR row)
-       ===================================================== */
     @PostMapping("/permissions/{permissionId}/conditions")
     public PermissionCondition create(
             @PathVariable UUID permissionId,
             @RequestBody CreateConditionRequest req
     ) {
+
         Permission permission =
                 permissionRepo.findById(permissionId).orElseThrow();
 
-        Role roleEnum = Role.valueOf(req.role().toUpperCase());
+        Role roleEnum =
+                Role.valueOf(req.role().toUpperCase());
 
         RoleEntity role =
                 roleRepo.findByName(roleEnum)
@@ -68,7 +64,7 @@ public class PermissionConditionAdminController {
                                 .permission(permission)
                                 .role(role)
                                 .param(req.param())
-                                .operator("EQ") // locked for now
+                                .operator("EQ")
                                 .value(req.value())
                                 .active(true)
                                 .build()
@@ -85,14 +81,12 @@ public class PermissionConditionAdminController {
         return saved;
     }
 
-    /* =====================================================
-       SOFT DELETE CONDITION
-       ===================================================== */
     @DeleteMapping("/conditions/{conditionId}")
     public void softDelete(
             @PathVariable UUID conditionId,
             @RequestBody(required = false) Map<String, String> body
     ) {
+
         PermissionCondition before =
                 conditionRepo.findById(conditionId).orElseThrow();
 
@@ -108,9 +102,6 @@ public class PermissionConditionAdminController {
         );
     }
 
-    /* =====================================================
-       REQUEST DTO
-       ===================================================== */
     public record CreateConditionRequest(
             String role,
             String param,

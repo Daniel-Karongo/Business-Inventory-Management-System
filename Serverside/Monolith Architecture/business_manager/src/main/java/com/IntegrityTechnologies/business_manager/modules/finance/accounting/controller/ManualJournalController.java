@@ -2,21 +2,20 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.co
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.ManualJournalRequest;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.ManualJournalService;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/accounting/manual-journals")
 @RequiredArgsConstructor
+@TenantUserOnly
 public class ManualJournalController {
 
     private final ManualJournalService service;
 
     @PostMapping
     public void post(@RequestBody ManualJournalRequest request) {
-        SecurityUtils.requireAtLeast(Role.EMPLOYEE);
         service.post(request);
     }
 }

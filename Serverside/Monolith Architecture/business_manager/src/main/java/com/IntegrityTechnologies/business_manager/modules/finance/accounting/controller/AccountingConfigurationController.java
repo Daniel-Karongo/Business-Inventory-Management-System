@@ -6,7 +6,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.gov
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.BranchAccountingSettingsService;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +19,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/accounting/config")
 @RequiredArgsConstructor
+@TenantManagerOnly
 public class AccountingConfigurationController {
 
     private final TaxProperties taxProperties;
@@ -25,10 +28,9 @@ public class AccountingConfigurationController {
     private final BranchAccountingSettingsService branchSettingsService;
     private final TaxSystemStateService taxSystemStateService;
 
+    @TenantManagerOnly
     @GetMapping
     public ConfigResponse get(@RequestParam UUID branchId) {
-
-        SecurityUtils.requireAtLeast(Role.MANAGER);
 
         var taxState = taxSystemStateService.getOrCreate(branchId);
 
@@ -41,15 +43,13 @@ public class AccountingConfigurationController {
         );
     }
 
+    @TenantAdminOnly
     @PostMapping("/revenue-recognition")
     public void updateRevenueRecognition(
             @RequestParam UUID branchId,
             @RequestParam String mode
     ) {
 
-        SecurityUtils.requireAdmin();
-
-        // Prevent changes after journals exist
         lockService.ensureNoJournalsExist(branchId);
 
         var newMode =

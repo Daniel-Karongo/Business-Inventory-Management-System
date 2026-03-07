@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@DependsOn("permissionSeederService")
+//@DependsOn("permissionSeederService")
 @RequiredArgsConstructor
 public class AclCacheWarmup implements ApplicationRunner {
 

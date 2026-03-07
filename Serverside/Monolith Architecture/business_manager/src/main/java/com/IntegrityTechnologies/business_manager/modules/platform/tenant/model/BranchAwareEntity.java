@@ -1,8 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.tenant.model;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.listener.TenantEntityListener;
 import jakarta.persistence.Column;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,26 +14,20 @@ import org.hibernate.annotations.ParamDef;
 import java.util.UUID;
 
 @MappedSuperclass
-@EntityListeners(TenantEntityListener.class)
-
 @FilterDef(
-        name = "tenantFilter",
-        parameters = @ParamDef(name = "tenantId", type = UUID.class)
+        name = "branchFilter",
+        parameters = @ParamDef(name = "branchId", type = UUID.class)
 )
-
 @Filter(
-        name = "tenantFilter",
-        condition = "tenant_id = :tenantId"
+        name = "branchFilter",
+        condition = "branch_id = :branchId"
 )
-
 @Getter
 @Setter
 @SuperBuilder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-public abstract class TenantAwareEntity {
-
-    @Column(name = "tenant_id", nullable = false)
-    private UUID tenantId;
-
+public abstract class BranchAwareEntity extends TenantAwareEntity {
+    @Column(name = "branch_id")
+    private UUID branchId;
 }

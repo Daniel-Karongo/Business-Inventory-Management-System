@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.departm
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserDepartment;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -21,7 +22,8 @@ import java.util.UUID;
         },
         indexes = {
                 @Index(name = "idx_department_branch", columnList = "branch_id"),
-                @Index(name = "idx_department_deleted", columnList = "deleted")
+                @Index(name = "idx_department_deleted", columnList = "deleted"),
+                @Index(name = "idx_department_tenant", columnList = "tenant_id")
         }
 )
 @Getter
@@ -29,7 +31,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Department {
+public class Department extends BranchAwareEntity {
 
     @Id
     @GeneratedValue
@@ -42,7 +44,7 @@ public class Department {
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "branch_id", nullable = false)
+    @JoinColumn(name = "branch_id", nullable = false, insertable = false, updatable = false)
     private Branch branch;
 
     @OneToMany(
@@ -54,6 +56,7 @@ public class Department {
     private Set<UserDepartment> userDepartments = new HashSet<>();
 
     private LocalTime rollcallStartTime;
+
     private Integer gracePeriodMinutes;
 
     @Column(nullable = false)

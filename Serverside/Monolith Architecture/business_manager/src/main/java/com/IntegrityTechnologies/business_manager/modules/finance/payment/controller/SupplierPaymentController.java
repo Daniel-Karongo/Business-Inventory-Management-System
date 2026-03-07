@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.payment.contr
 
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.domain.SupplierPayment;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.service.SupplierPaymentService;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -13,6 +14,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/finance/supplier-payments")
 @RequiredArgsConstructor
+@TenantManagerOnly
 public class SupplierPaymentController {
 
     private final SupplierPaymentService service;

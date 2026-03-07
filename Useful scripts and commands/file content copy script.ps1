@@ -5,7 +5,7 @@ $basePath = Get-Location
 $outputFile = Join-Path $basePath "Selected_Modules_Combined.java"
 
 $targetFolders = @(
-    "java\com\IntegrityTechnologies\business_manager\modules\finance\accounting",
+    "java\com\IntegrityTechnologies\business_manager\modules\platform",
     "java\com\IntegrityTechnologies\business_manager\modules\finance\budgeting",
     "java\com\IntegrityTechnologies\business_manager\modules\dashboard",
     "java\com\IntegrityTechnologies\business_manager\modules\communication\reports",

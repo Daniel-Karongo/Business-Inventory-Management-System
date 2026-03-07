@@ -1,14 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.acl.controller;
 
-import com.IntegrityTechnologies.business_manager.modules.acl.service.PermissionCacheService;
 import com.IntegrityTechnologies.business_manager.modules.acl.audit.AclAuditService;
 import com.IntegrityTechnologies.business_manager.modules.acl.entity.Permission;
-import com.IntegrityTechnologies.business_manager.modules.acl.repository.EndpointPermissionRepository;
-import com.IntegrityTechnologies.business_manager.modules.acl.repository.PermissionConditionRepository;
-import com.IntegrityTechnologies.business_manager.modules.acl.repository.PermissionRepository;
-import com.IntegrityTechnologies.business_manager.modules.acl.repository.RolePermissionRepository;
+import com.IntegrityTechnologies.business_manager.modules.acl.repository.*;
+import com.IntegrityTechnologies.business_manager.modules.acl.service.PermissionCacheService;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.PlatformAdminOnly;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,7 +14,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/admin/acl/permissions")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('SUPERUSER')")
+@PlatformAdminOnly
 public class PermissionAdminController {
 
     private final AclAuditService audit;
@@ -53,6 +50,7 @@ public class PermissionAdminController {
 
         Permission before = permissionRepo.findById(id).orElseThrow();
         p.setId(id);
+
         Permission saved = permissionRepo.save(p);
 
         audit.audit(
@@ -73,9 +71,11 @@ public class PermissionAdminController {
 
         permissionRepo.softDelete(id);
         endpointRepo.softDeleteByPermissionId(id);
+
         rolePermRepo.findAll().stream()
                 .filter(rp -> rp.getPermission().getId().equals(id))
                 .forEach(rp -> rp.setActive(false));
+
         conditionRepo.softDeleteByPermissionId(id);
 
         cache.refresh();

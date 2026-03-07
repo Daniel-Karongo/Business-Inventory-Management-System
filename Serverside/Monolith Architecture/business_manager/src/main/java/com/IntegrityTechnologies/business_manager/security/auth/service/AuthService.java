@@ -106,7 +106,7 @@ public class AuthService {
         String deviceFingerprint = DeviceFingerprintUtil.generate(httpRequest);
 
         String token = jwtUtil.generateToken(
-                user.getTenant().getId(),
+                user.getTenantId(),
                 userId,
                 user.getUsername(),
                 user.getRole().name(),
@@ -242,9 +242,6 @@ public class AuthService {
                         userId,
                         session.getBranchId()
                 );
-
-        System.out.println("Hello");
-        System.out.println(branchRepository.findById(session.getBranchId()).get().getName());
 
         return new AuthResponse(
                 userId,

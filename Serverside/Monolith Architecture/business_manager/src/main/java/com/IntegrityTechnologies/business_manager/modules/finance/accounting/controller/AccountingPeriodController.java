@@ -7,7 +7,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.gov
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountingPeriodRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.PeriodClosingService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.control.CloseChecklistService.CloseChecklistResult;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,6 +23,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/accounting/periods")
 @RequiredArgsConstructor
+@TenantManagerOnly
 public class AccountingPeriodController {
 
     private final AccountingPeriodRepository repository;
@@ -28,22 +31,21 @@ public class AccountingPeriodController {
     private final GovernanceAuditService auditService;
     private final CloseChecklistService checklistService;
 
+    @TenantManagerOnly
     @GetMapping
     public Page<AccountingPeriodResponse> list(
             @RequestParam UUID branchId,
             @PageableDefault(size = 24, sort = "startDate") Pageable pageable
     ) {
-        SecurityUtils.requireAtLeast(Role.MANAGER);
 
         return repository
                 .findByBranchId(branchId, pageable)
                 .map(AccountingPeriodResponse::from);
     }
 
+    @TenantAdminOnly
     @PostMapping("/{id}/close")
     public void close(@PathVariable UUID id) {
-
-        SecurityUtils.requireAdmin();
 
         closingService.closePeriod(
                 id,
@@ -51,12 +53,11 @@ public class AccountingPeriodController {
         );
     }
 
+    @TenantManagerOnly
     @GetMapping("/close-checklist")
     public CloseChecklistResult previewClose(
             @RequestParam UUID periodId
     ) {
-
-        SecurityUtils.requireAtLeast(Role.MANAGER);
 
         AccountingPeriod period =
                 repository.findById(periodId)
@@ -68,13 +69,12 @@ public class AccountingPeriodController {
         );
     }
 
+    @TenantAdminOnly
     @PostMapping("/{id}/reopen")
     public void reopen(
             @PathVariable UUID id,
             @RequestParam String reason
     ) {
-
-        SecurityUtils.requireAdmin();
 
         AccountingPeriod period =
                 repository.findById(id)

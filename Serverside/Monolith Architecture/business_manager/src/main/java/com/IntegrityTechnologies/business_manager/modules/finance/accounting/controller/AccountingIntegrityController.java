@@ -2,8 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.co
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.security.JournalIntegrityAudit;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.security.JournalIntegrityService;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,14 +12,13 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/accounting/integrity")
 @RequiredArgsConstructor
+@TenantAdminOnly
 public class AccountingIntegrityController {
 
     private final JournalIntegrityService service;
 
     @GetMapping("/verify")
     public IntegrityResponse verifyNow(@RequestParam UUID branchId) {
-
-        SecurityUtils.requireAtLeast(Role.ADMIN);
 
         var result = service.verifyChain(branchId);
 
@@ -36,8 +34,6 @@ public class AccountingIntegrityController {
     @PostMapping("/audit")
     public IntegrityResponse runAndPersistAudit(@RequestParam UUID branchId) {
 
-        SecurityUtils.requireAtLeast(Role.ADMIN);
-
         JournalIntegrityAudit audit =
                 service.performAndPersistAudit(branchId);
 
@@ -52,8 +48,6 @@ public class AccountingIntegrityController {
 
     @GetMapping("/latest")
     public IntegrityResponse latest(@RequestParam UUID branchId) {
-
-        SecurityUtils.requireAtLeast(Role.ADMIN);
 
         JournalIntegrityAudit audit =
                 service.getLatestAudit(branchId);

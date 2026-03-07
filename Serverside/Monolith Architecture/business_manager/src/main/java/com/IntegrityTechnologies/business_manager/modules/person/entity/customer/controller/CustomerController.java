@@ -10,6 +10,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.customer
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.Gender;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service.CustomerBulkService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service.CustomerService;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -27,12 +27,17 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/customers")
 @RequiredArgsConstructor
+@TenantUserOnly
 public class CustomerController {
 
     private final CustomerService customerService;
     private final CustomerBulkService bulkService;
 
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    /* ====================================
+       IMPORT
+       ==================================== */
+
+    @TenantManagerOnly
     @PostMapping("/import")
     public ResponseEntity<BulkResult<CustomerResponse>> importCustomers(
             @RequestBody BulkRequest<CustomerBulkRow> request
@@ -41,13 +46,29 @@ public class CustomerController {
                 bulkService.importCustomers(request)
         );
     }
+
+    /* ====================================
+       CREATE
+       ==================================== */
+
     @PostMapping
-    public ResponseEntity<CustomerResponse> createCustomer(@Valid @RequestBody CustomerRequest req) {
-        CustomerResponse created = customerService.createCustomer(req);
-        return ResponseEntity.created(URI.create("/api/customers/" + created.getId())).body(created);
+    public ResponseEntity<CustomerResponse> createCustomer(
+            @Valid @RequestBody CustomerRequest req
+    ) {
+
+        CustomerResponse created =
+                customerService.createCustomer(req);
+
+        return ResponseEntity
+                .created(URI.create("/api/customers/" + created.getId()))
+                .body(created);
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    /* ====================================
+       LIST
+       ==================================== */
+
+    @TenantManagerOnly
     @GetMapping
     public ResponseEntity<Page<CustomerResponse>> listCustomers(
             @RequestParam(defaultValue = "0") int page,
@@ -56,88 +77,174 @@ public class CustomerController {
             @RequestParam(required = false) Gender gender,
             @RequestParam(required = false) Boolean deleted
     ) {
+
         return ResponseEntity.ok(
-                customerService.listCustomers(page, size, type, gender, deleted)
+                customerService.listCustomers(
+                        page,
+                        size,
+                        type,
+                        gender,
+                        deleted
+                )
         );
     }
 
+    /* ====================================
+       READ
+       ==================================== */
+
     @GetMapping("/{id}")
-    public ResponseEntity<CustomerResponse> getCustomer(@PathVariable UUID id) {
-        return ResponseEntity.ok(customerService.getCustomer(id));
+    public ResponseEntity<CustomerResponse> getCustomer(
+            @PathVariable UUID id
+    ) {
+
+        return ResponseEntity.ok(
+                customerService.getCustomer(id)
+        );
     }
 
     @GetMapping("/lookup")
-    public ResponseEntity<CustomerResponse> lookupByPhone(@RequestParam String phone) {
+    public ResponseEntity<CustomerResponse> lookupByPhone(
+            @RequestParam String phone
+    ) {
+
         return customerService.findByPhone(phone)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    /* ====================================
+       UPDATE
+       ==================================== */
+
+    @TenantSupervisorOnly
     @PutMapping("/{id}")
-    public ResponseEntity<CustomerResponse> updateCustomer(@PathVariable UUID id, @Valid @RequestBody CustomerRequest req) {
-        return ResponseEntity.ok(customerService.updateCustomer(id, req));
+    public ResponseEntity<CustomerResponse> updateCustomer(
+            @PathVariable UUID id,
+            @Valid @RequestBody CustomerRequest req
+    ) {
+
+        return ResponseEntity.ok(
+                customerService.updateCustomer(id, req)
+        );
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    /* ====================================
+       DELETE / RESTORE
+       ==================================== */
+
+    @TenantManagerOnly
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCustomer(
             @PathVariable UUID id,
             @RequestParam(defaultValue = "true") Boolean soft
     ) {
-        if (soft) customerService.softDelete(id);
-        else customerService.deleteCustomer(id);
+
+        if (soft) {
+            customerService.softDelete(id);
+        } else {
+            customerService.deleteCustomer(id);
+        }
+
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @TenantManagerOnly
     @PatchMapping("/{id}/restore")
-    public ResponseEntity<Void> restore(@PathVariable UUID id) {
+    public ResponseEntity<Void> restore(
+            @PathVariable UUID id
+    ) {
+
         customerService.restore(id);
+
         return ResponseEntity.ok().build();
     }
 
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    /* ====================================
+       SEARCH
+       ==================================== */
+
+    @TenantManagerOnly
     @GetMapping("/search")
     public ResponseEntity<Page<CustomerResponse>> search(
             @RequestParam String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        return ResponseEntity.ok(customerService.search(q, page, size));
-    }
 
-    @GetMapping("/{id}/payments")
-    public ResponseEntity<Object> customerPayments(@PathVariable UUID id) {
-        return ResponseEntity.ok(customerService.getCustomerPayments(id));
-    }
-
-    @GetMapping("/{id}/sales")
-    public ResponseEntity<Object> customerSales(@PathVariable UUID id) {
-        return ResponseEntity.ok(customerService.getCustomerSales(id));
-    }
-
-    @PostMapping("/send-to-customers")
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
-    public ResponseEntity<?> sendToCustomers(
-            @RequestBody CustomerSmsRequest req
-    ) {
         return ResponseEntity.ok(
-                customerService.sendToCustomers(req.getCustomerIds(), req.getMessage())
+                customerService.search(q, page, size)
         );
     }
 
+    /* ====================================
+       RELATED DATA
+       ==================================== */
+
+    @GetMapping("/{id}/payments")
+    public ResponseEntity<Object> customerPayments(
+            @PathVariable UUID id
+    ) {
+
+        return ResponseEntity.ok(
+                customerService.getCustomerPayments(id)
+        );
+    }
+
+    @GetMapping("/{id}/sales")
+    public ResponseEntity<Object> customerSales(
+            @PathVariable UUID id
+    ) {
+
+        return ResponseEntity.ok(
+                customerService.getCustomerSales(id)
+        );
+    }
+
+    /* ====================================
+       COMMUNICATION
+       ==================================== */
+
+    @TenantManagerOnly
+    @PostMapping("/send-to-customers")
+    public ResponseEntity<?> sendToCustomers(
+            @RequestBody CustomerSmsRequest req
+    ) {
+
+        return ResponseEntity.ok(
+                customerService.sendToCustomers(
+                        req.getCustomerIds(),
+                        req.getMessage()
+                )
+        );
+    }
+
+    /* ====================================
+       EXPORT
+       ==================================== */
+
+    @TenantManagerOnly
     @GetMapping("/export")
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
     public ResponseEntity<byte[]> exportCustomers(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String gender,
             @RequestParam(required = false, defaultValue = "false") Boolean deleted
     ) {
-        byte[] csv = customerService.exportCsv(q, type, gender, deleted);
+
+        byte[] csv =
+                customerService.exportCsv(
+                        q,
+                        type,
+                        gender,
+                        deleted
+                );
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=customers.csv")
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=customers.csv"
+                )
                 .contentType(MediaType.TEXT_PLAIN)
                 .body(csv);
     }

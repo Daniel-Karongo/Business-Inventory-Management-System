@@ -16,6 +16,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -98,27 +101,23 @@ public class UserImageService {
         User performedBy = privilegesChecker.getAuthenticatedUser(authentication);
 
         // Fetch all images *once*
-        List<UserImage> allImages = userImageRepository.findAll();
+        Pageable pageable = PageRequest.of(0, 500);
 
-        List<UserImage> authorizedImages = allImages.stream()
-                // 1️⃣ User-level filter: only images of users requester is allowed to access
-                .filter(img -> privilegesChecker.isAuthorized(performedBy, img.getUser()))
+        Page<UserImage> page;
 
-                // 2️⃣ Filter by user deleted flag
-                .filter(img -> {
-                    if (deletedUsers == null) return true;
-                    Boolean isUserDeleted = Boolean.TRUE.equals(img.getUser().getDeleted());
-                    return isUserDeleted.equals(deletedUsers);
-                })
+        List<UserImage> authorizedImages = new ArrayList<>();
 
-                // 3️⃣ Filter by image deleted flag
-                .filter(img -> {
-                    if (deletedImages == null) return true;
-                    Boolean isImageDeleted = Boolean.TRUE.equals(img.getDeleted());
-                    return isImageDeleted.equals(deletedImages);
-                })
+        do {
 
-                .toList();
+            page = userImageRepository.findAll(pageable);
+
+            page.getContent().stream()
+                    .filter(img -> privilegesChecker.isAuthorized(performedBy, img.getUser()))
+                    .forEach(authorizedImages::add);
+
+            pageable = page.nextPageable();
+
+        } while (page.hasNext());
 
         if (authorizedImages.isEmpty()) {
             throw new ImageNotFoundException("No accessible images found matching your filters.");
@@ -150,27 +149,23 @@ public class UserImageService {
         User performedBy = privilegesChecker.getAuthenticatedUser(authentication);
 
         // 1️⃣ Load images once
-        List<UserImage> allImages = userImageRepository.findAll();
+        Pageable pageable = PageRequest.of(0, 500);
 
-        List<UserImage> authorizedImages = allImages.stream()
-                // 2️⃣ Filter by role hierarchy (cannot access images of higher-role users)
-                .filter(img -> privilegesChecker.isAuthorized(performedBy, img.getUser()))
+        Page<UserImage> page;
 
-                // 3️⃣ Filter by *user* deleted flag
-                .filter(img -> {
-                    if (deletedUsers == null) return true;
-                    Boolean isUserDeleted = Boolean.TRUE.equals(img.getUser().getDeleted());
-                    return isUserDeleted.equals(deletedUsers);
-                })
+        List<UserImage> authorizedImages = new ArrayList<>();
 
-                // 4️⃣ Filter by *image* deleted flag
-                .filter(img -> {
-                    if (deletedImages == null) return true;
-                    Boolean isImageDeleted = Boolean.TRUE.equals(img.getDeleted());
-                    return isImageDeleted.equals(deletedImages);
-                })
+        do {
 
-                .toList();
+            page = userImageRepository.findByDeleted(null, pageable);
+
+            page.getContent().stream()
+                    .filter(img -> privilegesChecker.isAuthorized(performedBy, img.getUser()))
+                    .forEach(authorizedImages::add);
+
+            pageable = page.nextPageable();
+
+        } while (page.hasNext());
 
         if (authorizedImages.isEmpty()) {
             throw new ImageNotFoundException("No accessible images found matching your filters.");

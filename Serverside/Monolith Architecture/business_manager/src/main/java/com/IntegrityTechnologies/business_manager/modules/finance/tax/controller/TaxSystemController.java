@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.tax.controlle
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.TaxSystemState;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.TaxSystemStateRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
 import com.IntegrityTechnologies.business_manager.security.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/tax/system")
 @RequiredArgsConstructor
+@TenantAdminOnly
 public class TaxSystemController {
 
     private final TaxSystemStateRepository repository;
@@ -26,8 +28,6 @@ public class TaxSystemController {
             @RequestParam BigDecimal vatRate,
             @RequestParam BigDecimal corporateTaxRate
     ) {
-
-        SecurityUtils.requireAdmin();
 
         UUID branchId = BranchContext.get();
 
@@ -43,6 +43,7 @@ public class TaxSystemController {
         if (state.isLocked()) {
             throw new IllegalStateException("Tax system is locked.");
         }
+
         TaxSystemState saved = repository.save(state);
 
         auditService.log(
@@ -51,13 +52,12 @@ public class TaxSystemController {
                 SecurityUtils.currentUsername(),
                 "VAT enabled=" + vatEnabled + ", VAT rate=" + vatRate
         );
+
         return saved;
     }
 
     @PostMapping("/lock")
     public void lock() {
-
-        SecurityUtils.requireAdmin();
 
         UUID branchId = BranchContext.get();
 
@@ -67,7 +67,9 @@ public class TaxSystemController {
 
         state.setLocked(true);
         state.setLockedAt(LocalDateTime.now());
+
         repository.save(state);
+
         auditService.log(
                 branchId,
                 "TAX_SYSTEM_LOCKED",

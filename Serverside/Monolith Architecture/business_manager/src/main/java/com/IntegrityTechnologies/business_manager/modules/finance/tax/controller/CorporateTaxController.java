@@ -3,7 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.tax.controlle
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.CorporateTaxFiling;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.CorporateTaxFilingRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.CorporateTaxService;
-import com.IntegrityTechnologies.business_manager.security.BranchContext;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -12,12 +12,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/tax/corporate")
 @RequiredArgsConstructor
+@TenantManagerOnly
 public class CorporateTaxController {
 
     private final CorporateTaxService service;

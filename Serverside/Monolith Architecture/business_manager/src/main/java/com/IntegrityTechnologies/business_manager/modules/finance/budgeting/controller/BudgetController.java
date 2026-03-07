@@ -4,6 +4,7 @@ import com.IntegrityTechnologies.business_manager.common.ApiResponse;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.dto.BranchComparisonDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.dto.CorporateVarianceDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.service.BudgetService;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -16,13 +17,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/budgets")
 @RequiredArgsConstructor
+@TenantManagerOnly
 public class BudgetController {
 
     private final BudgetService budgetService;
-
-    /* ============================================================
-       CREATE BUDGET
-       ============================================================ */
 
     @PostMapping
     public ApiResponse create(
@@ -45,10 +43,6 @@ public class BudgetController {
         );
     }
 
-    /* ============================================================
-       UPSERT MONTH VALUE
-       ============================================================ */
-
     @PostMapping("/{budgetId}/lines")
     public ApiResponse upsertLine(
             @PathVariable UUID budgetId,
@@ -67,10 +61,6 @@ public class BudgetController {
         return new ApiResponse("success", "Budget month updated", null);
     }
 
-    /* ============================================================
-       BRANCH VARIANCE
-       ============================================================ */
-
     @GetMapping("/variance")
     public CorporateVarianceDTO branchVariance(
             @RequestParam UUID branchId,
@@ -86,10 +76,6 @@ public class BudgetController {
                 accountId
         );
     }
-
-    /* ============================================================
-       CORPORATE CONSOLIDATED VARIANCE
-       ============================================================ */
 
     @GetMapping("/consolidated")
     public CorporateVarianceDTO consolidated(

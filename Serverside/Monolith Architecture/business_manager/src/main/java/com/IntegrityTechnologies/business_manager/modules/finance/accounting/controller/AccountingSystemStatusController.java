@@ -10,14 +10,10 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.rep
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.security.JournalIntegrityAudit;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.security.JournalIntegrityAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.BranchAccountingSettingsService;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.security.BranchResolver;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -25,6 +21,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/accounting/system")
 @RequiredArgsConstructor
+@TenantManagerOnly
 public class AccountingSystemStatusController {
 
     private final AccountingSystemStateService systemStateService;
@@ -39,7 +36,6 @@ public class AccountingSystemStatusController {
     @GetMapping("/status")
     public SystemStatusResponse status(@RequestParam(required = false) UUID branchId) {
 
-        SecurityUtils.requireAtLeast(Role.MANAGER);
         UUID effectiveBranchId = branchResolver.resolveBranch(branchId);
 
         var state = systemStateService.getState(effectiveBranchId);
@@ -74,7 +70,6 @@ public class AccountingSystemStatusController {
                         .findByBranchId(effectiveBranchId)
                         .orElse(null);
 
-        // 🔥 Freshness enforcement window (24 hours)
         var cutoff = java.time.LocalDateTime.now().minusDays(1);
 
         boolean reconciliationConfigured = reconciliation != null;
