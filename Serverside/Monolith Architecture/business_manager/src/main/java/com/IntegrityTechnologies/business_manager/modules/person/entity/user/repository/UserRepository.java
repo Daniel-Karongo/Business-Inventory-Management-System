@@ -36,23 +36,35 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     /* ====================== UNIQUE CHECKS ====================== */
 
-    boolean existsByUsername(String username);
+    /* ====================== UNIQUE CHECKS (TENANT SAFE) ====================== */
 
-    boolean existsByIdNumber(String idNumber);
+    boolean existsByUsernameAndTenantId(String username, UUID tenantId);
 
-    @Query("""
-        SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END 
-        FROM User u JOIN u.emailAddresses e 
-        WHERE lower(e) = lower(:email)
-    """)
-    boolean existsByEmailAddress(@Param("email") String email);
+    boolean existsByIdNumberAndTenantId(String idNumber, UUID tenantId);
 
     @Query("""
-        SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END 
-        FROM User u JOIN u.phoneNumbers p 
-        WHERE p = :phone
-    """)
-    boolean existsByPhoneNumber(@Param("phone") String phone);
+    SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END
+    FROM User u
+    JOIN u.emailAddresses e
+    WHERE lower(e) = lower(:email)
+    AND u.tenantId = :tenantId
+""")
+    boolean existsByEmailAddressAndTenantId(
+            @Param("email") String email,
+            @Param("tenantId") UUID tenantId
+    );
+
+    @Query("""
+    SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END
+    FROM User u
+    JOIN u.phoneNumbers p
+    WHERE p = :phone
+    AND u.tenantId = :tenantId
+""")
+    boolean existsByPhoneNumberAndTenantId(
+            @Param("phone") String phone,
+            @Param("tenantId") UUID tenantId
+    );
 
 
     /* ====================== COLLECTION LOOKUP ====================== */
@@ -96,6 +108,30 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
 
     /* ====================== IDENTIFIER LOOKUP ====================== */
+    @Query("""
+        SELECT u FROM User u
+        LEFT JOIN FETCH u.branches
+        LEFT JOIN FETCH u.departments
+        WHERE u.tenantId = :tenantId
+        AND u.deleted = false
+        AND (
+                lower(u.username) = lower(:identifier)
+             OR lower(u.idNumber) = lower(:identifier)
+             OR EXISTS (
+                    SELECT 1 FROM u.emailAddresses e
+                    WHERE lower(e) = lower(:identifier)
+                )
+             OR EXISTS (
+                    SELECT 1 FROM u.phoneNumbers p
+                    WHERE p = :identifier
+                )
+        )
+        """)
+    Optional<User> findAuthUser(
+            @Param("tenantId") UUID tenantId,
+            @Param("identifier") String identifier
+    );
+
     /**
      * Full identifier resolver (UUID, email, phone, username, idNumber)
      * Phone is normalized externally before calling this method.
@@ -210,4 +246,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
         return user;
 
     }
+
+    Optional<User> findByUsernameAndTenantId(String adminUsername, UUID tenantId);
 }

@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
 public class UserBranch {
 
     @EmbeddedId
-    private UserBranchId id;
+    private UserBranchId id = new UserBranchId();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("userId")
@@ -40,6 +40,19 @@ public class UserBranch {
 
     @PrePersist
     public void onCreate() {
+
         assignedAt = LocalDateTime.now();
+
+        if (id == null) {
+            id = new UserBranchId();
+        }
+
+        if (user != null) {
+            id.setUserId(user.getId());
+        }
+
+        if (branch != null) {
+            id.setBranchId(branch.getId());
+        }
     }
 }

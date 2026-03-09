@@ -1,11 +1,14 @@
 package com.IntegrityTechnologies.business_manager.security;
 
+import com.IntegrityTechnologies.business_manager.modules.acl.config.PermissionSecurityFilter;
+import com.IntegrityTechnologies.business_manager.modules.platform.observability.filter.RequestMetricsFilter;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.filter.RoleGuardFilter;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.rate.TenantRateLimitFilter;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.config.TenantHibernateFilterConfigurer;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.filter.TenantContextFilter;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.filter.TenantResolutionFilter;
 import com.IntegrityTechnologies.business_manager.security.auth.filter.JwtAuthenticationFilter;
 import com.IntegrityTechnologies.business_manager.security.auth.filter.JwtExceptionHandlerFilter;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.filter.TenantContextFilter;
-import com.IntegrityTechnologies.business_manager.modules.acl.config.PermissionSecurityFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,6 +42,9 @@ public class SecurityConfig {
     private final BranchContextFilter branchContextFilter;
     private final TenantContextFilter tenantContextFilter;
     private final RoleGuardFilter roleGuardFilter;
+    private final TenantResolutionFilter tenantResolutionFilter;
+    private final RequestMetricsFilter requestMetricsFilter;
+    private final TenantRateLimitFilter tenantRateLimitFilter;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthFilter,
@@ -47,7 +53,7 @@ public class SecurityConfig {
             PermissionSecurityFilter permissionSecurityFilter,
             BranchContextFilter branchContextFilter,
             TenantContextFilter tenantContextFilter,
-            RoleGuardFilter roleGuardFilter) {
+            RoleGuardFilter roleGuardFilter, TenantResolutionFilter tenantResolutionFilter, RequestMetricsFilter requestMetricsFilter, TenantRateLimitFilter tenantRateLimitFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.jwtExceptionHandlerFilter = jwtExceptionHandlerFilter;
         this.authenticationEntryPoint = authenticationEntryPoint;
@@ -55,6 +61,9 @@ public class SecurityConfig {
         this.branchContextFilter = branchContextFilter;
         this.tenantContextFilter = tenantContextFilter;
         this.roleGuardFilter = roleGuardFilter;
+        this.tenantResolutionFilter = tenantResolutionFilter;
+        this.requestMetricsFilter = requestMetricsFilter;
+        this.tenantRateLimitFilter = tenantRateLimitFilter;
     }
 
     /* =====================================================
@@ -156,11 +165,35 @@ public class SecurityConfig {
                         ex.authenticationEntryPoint(authenticationEntryPoint)
                 )
 
-                // ---- FILTER ORDER ----
+                // =====================================================
+                // FILTER ORDER (TOP → BOTTOM)
+                // =====================================================
+                //
+                // 1 TenantResolutionFilter
+                // 2 RequestMetricsFilter
+                // 3 JwtAuthenticationFilter
+                // 4 TenantContextFilter
+                // 5 BranchContextFilter
+                // 6 RoleGuardFilter
+                // 7 PermissionSecurityFilter
+                //
 
                 .addFilterBefore(
-                        jwtAuthFilter,
+                        tenantResolutionFilter,
                         UsernamePasswordAuthenticationFilter.class
+                )
+
+                .addFilterAfter(
+                        requestMetricsFilter,
+                        TenantResolutionFilter.class
+                )
+                .addFilterAfter(
+                        tenantRateLimitFilter,
+                        RequestMetricsFilter.class
+                )
+                .addFilterAfter(
+                        jwtAuthFilter,
+                        TenantRateLimitFilter.class
                 )
 
                 .addFilterAfter(
@@ -168,19 +201,19 @@ public class SecurityConfig {
                         JwtAuthenticationFilter.class
                 )
 
-                .addFilterBefore(
+                .addFilterAfter(
                         branchContextFilter,
-                        UsernamePasswordAuthenticationFilter.class
+                        TenantContextFilter.class
                 )
 
-                .addFilterBefore(
+                .addFilterAfter(
                         roleGuardFilter,
-                        UsernamePasswordAuthenticationFilter.class
+                        BranchContextFilter.class
                 )
 
-                .addFilterBefore(
+                .addFilterAfter(
                         permissionSecurityFilter,
-                        UsernamePasswordAuthenticationFilter.class
+                        RoleGuardFilter.class
                 )
         ;
 

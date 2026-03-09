@@ -10,10 +10,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AuthRequest {
-
-    private String tenantCode;
     private UUID branchId;
     private String identifier;
     private String password;
-
 }

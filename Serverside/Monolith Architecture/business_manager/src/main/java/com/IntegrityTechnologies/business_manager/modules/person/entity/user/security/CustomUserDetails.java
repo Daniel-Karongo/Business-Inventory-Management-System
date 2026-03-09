@@ -14,13 +14,26 @@ import java.util.UUID;
 public class CustomUserDetails implements UserDetails {
 
     private final UUID id;
+    private final UUID tenantId;
+    private final UUID branchId;
+
     private final String username;
     private final String password;
     private final Role role;
     private final boolean enabled;
 
-    public CustomUserDetails(UUID id, String username, String password, Role role, boolean enabled) {
+    public CustomUserDetails(
+            UUID id,
+            UUID tenantId,
+            UUID branchId,
+            String username,
+            String password,
+            Role role,
+            boolean enabled
+    ) {
         this.id = id;
+        this.tenantId = tenantId;
+        this.branchId = branchId;
         this.username = username;
         this.password = password;
         this.role = role;
@@ -33,7 +46,10 @@ public class CustomUserDetails implements UserDetails {
     }
 
     @Override public boolean isAccountNonExpired() { return true; }
+
     @Override public boolean isAccountNonLocked() { return true; }
+
     @Override public boolean isCredentialsNonExpired() { return true; }
+
     @Override public boolean isEnabled() { return enabled; }
 }

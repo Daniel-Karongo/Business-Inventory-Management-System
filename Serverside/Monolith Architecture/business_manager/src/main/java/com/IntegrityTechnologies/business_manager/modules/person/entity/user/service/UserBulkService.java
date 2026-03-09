@@ -10,6 +10,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.departme
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.modules.acl.entity.RoleEntity;
 import com.IntegrityTechnologies.business_manager.modules.acl.repository.RoleEntityRepository;
@@ -104,7 +105,7 @@ public class UserBulkService {
                    ========================= */
 
                 if (options.isSkipDuplicates()
-                        && userRepository.existsByUsername(username)) {
+                        && userRepository.existsByUsernameAndTenantId(username, TenantContext.getTenantId())) {
                     throw new IllegalArgumentException(
                             "Username already exists: " + username
                     );

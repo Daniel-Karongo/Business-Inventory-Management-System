@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.modules.person.entity.user.config;
+package com.IntegrityTechnologies.business_manager.config;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.cache.CacheManager;
@@ -11,22 +11,41 @@ import java.time.Duration;
 
 @Configuration
 @EnableCaching
-public class UserCacheConfiguration {
+public class CacheConfiguration {
 
     @Bean
-    public CacheManager userCacheManager() {
+    public CacheManager cacheManager() {
 
         CaffeineCacheManager manager =
                 new CaffeineCacheManager(
+
+                        // USER MODULE
                         "users",
                         "roles",
-                        "departments"
+                        "departments",
+
+                        // TENANT MODULE
+                        "tenants",
+
+                        // FINANCIAL MODULE
+                        "trialBalance",
+                        "profitLoss",
+                        "balanceSheet",
+                        "cashFlow",
+                        "accountsReceivable",
+                        "accountsPayable"
                 );
 
         manager.setCaffeine(
                 Caffeine.newBuilder()
+
+                        // Prevent memory explosion
                         .maximumSize(50_000)
+
+                        // Good default TTL
                         .expireAfterWrite(Duration.ofMinutes(30))
+
+                        // Enables performance metrics
                         .recordStats()
         );
 

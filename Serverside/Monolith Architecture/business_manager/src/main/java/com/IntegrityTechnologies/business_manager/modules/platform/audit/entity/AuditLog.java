@@ -30,7 +30,8 @@ public class AuditLog {
 
     private UUID userId;
 
-    private String entityType;
+    @Enumerated(EnumType.STRING)
+    private AuditEntityType entityType;
 
     private UUID entityId;
 

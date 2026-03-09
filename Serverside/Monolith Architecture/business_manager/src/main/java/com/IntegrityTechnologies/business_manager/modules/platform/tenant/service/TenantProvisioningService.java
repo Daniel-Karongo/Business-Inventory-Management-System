@@ -1,14 +1,20 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.tenant.service;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.*;
+import com.IntegrityTechnologies.business_manager.modules.platform.audit.entity.AuditEntityType;
+import com.IntegrityTechnologies.business_manager.modules.platform.audit.service.AuditService;
+import com.IntegrityTechnologies.business_manager.modules.platform.subscription.entity.Plan;
+import com.IntegrityTechnologies.business_manager.modules.platform.subscription.entity.SubscriptionStatus;
+import com.IntegrityTechnologies.business_manager.modules.platform.subscription.entity.TenantSubscription;
+import com.IntegrityTechnologies.business_manager.modules.platform.subscription.repository.PlanRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.subscription.repository.TenantSubscriptionRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.Tenant;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.TenantStatus;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.repository.TenantRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.subscription.entity.*;
-import com.IntegrityTechnologies.business_manager.modules.platform.subscription.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -17,7 +23,9 @@ public class TenantProvisioningService {
     private final TenantRepository tenantRepository;
     private final PlanRepository planRepository;
     private final TenantSubscriptionRepository subscriptionRepository;
+    private final AuditService auditService;
 
+    @Transactional
     public Tenant provisionTenant(String name, String code) {
 
         if (tenantRepository.existsByCode(code)) {
@@ -33,8 +41,19 @@ public class TenantProvisioningService {
 
         tenantRepository.save(tenant);
 
+        auditService.log(
+                AuditEntityType.TENANT,
+                tenant.getId(),
+                "CREATE",
+                null,
+                code
+        );
+
         Plan plan = planRepository.findByCode("FREE")
-                .orElseThrow(() -> new IllegalStateException("Default plan missing"));
+                .orElseThrow(() ->
+                        new IllegalStateException(
+                                "Default plan 'FREE' missing. Seed subscription plans first."
+                        ));
 
         TenantSubscription subscription = TenantSubscription.builder()
                 .tenantId(tenant.getId())

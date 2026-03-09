@@ -1,12 +1,19 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.tenant.service;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.audit.entity.AuditEntityType;
+import com.IntegrityTechnologies.business_manager.modules.platform.audit.service.AuditService;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.bootstrap.TenantBootstrapService;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.dto.TenantCreateRequest;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.dto.TenantResponse;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.Tenant;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.TenantStatus;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.mapper.TenantMapper;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -14,42 +21,82 @@ import java.util.UUID;
 public class TenantServiceImpl implements TenantService {
 
     private final TenantRepository tenantRepository;
+    private final TenantBootstrapService tenantBootstrapService;
+    private final AuditService auditService;
+    private final TenantProvisioningService tenantProvisioningService;
+
+    /* ==========================================
+       CREATE TENANT
+    ========================================== */
 
     @Override
-    public Tenant createTenant(String name, String code) {
+    public TenantResponse createTenant(TenantCreateRequest request) {
 
-        if (tenantRepository.existsByCode(code)) {
+        if (tenantRepository.existsByCode(request.getCode())) {
             throw new RuntimeException("Tenant code already exists");
         }
 
-        Tenant tenant = Tenant.builder()
-                .name(name)
-                .code(code)
-                .status(TenantStatus.ACTIVE)
-                .platformTenant(false)
-                .build();
+        Tenant tenant = tenantProvisioningService.provisionTenant(
+                request.getName(),
+                request.getCode()
+        );
 
-        return tenantRepository.save(tenant);
+        tenantBootstrapService.bootstrapTenant(
+                tenant.getId(),
+                request.getAdminUsername() != null ? request.getAdminUsername() : "admin",
+                request.getAdminPassword() != null ? request.getAdminPassword() : "ChangeMe123!"
+        );
+
+        return TenantMapper.toDto(tenant);
     }
 
+    /* ==========================================
+       GET SINGLE TENANT
+    ========================================== */
+
     @Override
-    public Tenant getTenant(UUID id) {
-        return tenantRepository.findById(id)
+    public TenantResponse getTenant(UUID id) {
+
+        Tenant tenant = tenantRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Tenant not found"));
+
+        return TenantMapper.toDto(tenant);
     }
 
+    /* ==========================================
+       PAGINATED TENANTS
+    ========================================== */
+
     @Override
-    public List<Tenant> getAllTenants() {
-        return tenantRepository.findAll();
+    public Page<TenantResponse> getTenants(int page, int size) {
+
+        return tenantRepository
+                .findAll(PageRequest.of(page, size))
+                .map(TenantMapper::toDto);
+
     }
+
+    /* ==========================================
+       DEACTIVATE TENANT
+    ========================================== */
 
     @Override
     public void deactivateTenant(UUID id) {
 
-        Tenant tenant = getTenant(id);
+        Tenant tenant = tenantRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Tenant not found"));
 
         tenant.setStatus(TenantStatus.SUSPENDED);
 
         tenantRepository.save(tenant);
+
+        auditService.log(
+                AuditEntityType.TENANT,
+                tenant.getId(),
+                "DEACTIVATE",
+                tenant.getStatus().name(),
+                TenantStatus.SUSPENDED.name()
+        );
     }
+
 }

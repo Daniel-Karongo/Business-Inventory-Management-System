@@ -23,6 +23,8 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.departme
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.UserDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.*;
+import com.IntegrityTechnologies.business_manager.modules.platform.subscription.service.SubscriptionGuard;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -35,7 +37,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
@@ -56,15 +57,16 @@ public class UserService {
     private final FileStorageService fileStorageService;
     private final TransactionalFileManager transactionalFileManager;
     private final DepartmentRepository departmentRepository;
-    private final DepartmentService departmentService;
     private final BranchRepository branchRepository;
-    private final BranchService branchService;
     private final UserDepartmentRepository userDepartmentRepository;
     private final UserBranchRepository userBranchRepository;
+    private final SubscriptionGuard subscriptionGuard;
 
     /* ====================== REGISTER USER ====================== */
     @Transactional
     public UserDTO registerUser(UserDTO dto, Authentication authentication) throws IOException {
+        subscriptionGuard.checkUserLimit();
+
         String creatorUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails)
                 ? userDetails.getUsername()
                 : null;
@@ -79,10 +81,17 @@ public class UserService {
         checkEmailUniqueness(emails);
         checkPhoneUniqueness(phones);
 
-        if (userRepository.existsByUsername(dto.getUsername()))
+        if (userRepository.existsByUsernameAndTenantId(
+                dto.getUsername(),
+                TenantContext.getTenantId()
+        ))
             throw new InvalidUserDataException("Username already in use");
 
-        if (dto.getIdNumber() != null && userRepository.existsByIdNumber(dto.getIdNumber()))
+        if (dto.getIdNumber() != null &&
+                userRepository.existsByIdNumberAndTenantId(
+                        dto.getIdNumber(),
+                        TenantContext.getTenantId()
+                ))
             throw new InvalidUserDataException("ID number already in use");
 
         // 2️⃣ Resolve creator
@@ -156,7 +165,9 @@ public class UserService {
 
     /* ====================== UPDATE USER ====================== */
     @Transactional
-    @CacheEvict(value = "users", key = "#identifier")
+    @CacheEvict(
+        value = "users",
+        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#identifier)")
     public UserDTO updateUser(String identifier, UserDTO updatedData, Authentication authentication) throws IOException {
         String updaterUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails)
                 ? userDetails.getUsername()
@@ -182,7 +193,10 @@ public class UserService {
         // 4️⃣ Username
         if (updatedData.getUsername() != null && !updatedData.getUsername().isBlank()
                 && !updatedData.getUsername().equals(user.getUsername())) {
-            if (userRepository.existsByUsername(updatedData.getUsername()))
+            if (userRepository.existsByUsernameAndTenantId(
+                    updatedData.getUsername(),
+                    TenantContext.getTenantId()
+            ))
                 throw new InvalidUserDataException("Username already in use");
             changes.put("username", new String[]{user.getUsername(), updatedData.getUsername()});
             user.setUsername(updatedData.getUsername());
@@ -209,7 +223,10 @@ public class UserService {
         // 7️⃣ ID Number
         if (updatedData.getIdNumber() != null && !updatedData.getIdNumber().isBlank()
                 && !updatedData.getIdNumber().equals(user.getIdNumber())) {
-            if (userRepository.existsByIdNumber(updatedData.getIdNumber()))
+            if (userRepository.existsByIdNumberAndTenantId(
+                    updatedData.getIdNumber(),
+                    TenantContext.getTenantId()
+            ))
                 throw new InvalidUserDataException("ID number already in use");
             changes.put("idNumber", new String[]{user.getIdNumber(), updatedData.getIdNumber()});
             user.setIdNumber(updatedData.getIdNumber());
@@ -297,7 +314,10 @@ public class UserService {
 
     /* ====================== GET USERS ====================== */
 
-    @Cacheable(value = "users", key = "#identifier")
+    @Cacheable(
+            value = "users",
+            key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#identifier)"
+    )
     public UserDTO getUser(String identifier, Boolean deleted)  {
         User user;
 
@@ -313,7 +333,10 @@ public class UserService {
 
     }
 
-    @Cacheable(value = "users", key = "'all_' + #deleted")
+    @Cacheable(
+            value = "users",
+            key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).allUsers(#deleted)"
+    )
     public List<UserDTO> getAllUsers(Boolean deleted) {
         List<User> users = new ArrayList<>();
         if(Boolean.FALSE.equals(deleted)) {
@@ -381,7 +404,9 @@ public class UserService {
     // ====================== SOFT DELETE ======================
 
     @Transactional
-    @CacheEvict(value = "users", key = "#identifier")
+    @CacheEvict(
+        value = "users",
+        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#identifier)")
     public ResponseEntity<ApiResponse> softDeleteUser(UUID id, Authentication authentication, String reason) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
@@ -399,7 +424,9 @@ public class UserService {
     }
 
     @Transactional
-    @CacheEvict(value = "users", key = "#identifier")
+    @CacheEvict(
+        value = "users",
+        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#identifier)")
     public ResponseEntity<ApiResponse> softDeleteUsersInBulk(List<UUID> userIds, String reason, Authentication authentication) {
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
         String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
@@ -460,7 +487,9 @@ public class UserService {
 // ====================== RESTORE ======================
 
     @Transactional
-    @CacheEvict(value = "users", key = "#identifier")
+    @CacheEvict(
+        value = "users",
+        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#identifier)")
     public ResponseEntity<ApiResponse> restoreUser(UUID id, Authentication authentication, String reason) throws IOException {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
@@ -478,7 +507,9 @@ public class UserService {
     }
 
     @Transactional
-    @CacheEvict(value = "users", key = "#identifier")
+    @CacheEvict(
+        value = "users",
+        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#identifier)")
     public ResponseEntity<ApiResponse> restoreUsersInBulk(List<UUID> userIds, String reason, Authentication authentication) throws IOException {
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
         String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
@@ -539,7 +570,9 @@ public class UserService {
 // ====================== HARD DELETE ======================
 
     @Transactional
-    @CacheEvict(value = "users", key = "#identifier")
+    @CacheEvict(
+        value = "users",
+        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#identifier)")
     public ResponseEntity<ApiResponse> hardDeleteUser(UUID id, Authentication authentication) throws IOException {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
@@ -557,7 +590,9 @@ public class UserService {
     }
 
     @Transactional
-    @CacheEvict(value = "users", key = "#identifier")
+    @CacheEvict(
+        value = "users",
+        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#identifier)")
     public ResponseEntity<ApiResponse> hardDeleteUsersInBulk(List<UUID> userIds, Authentication authentication) throws IOException {
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
         String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
@@ -694,9 +729,13 @@ public class UserService {
 
 
     private void checkEmailUniqueness(Set<String> emails) {
+        UUID tenantId = TenantContext.getTenantId();
         for (String email : emails) {
-            if (userRepository.existsByEmailAddress(email))
-                throw new InvalidUserDataException("Email already in use: " + email);
+            if (userRepository.existsByEmailAddressAndTenantId(email, tenantId)) {
+                throw new InvalidUserDataException(
+                        "Email already in use: " + email
+                );
+            }
         }
     }
 
@@ -711,9 +750,13 @@ public class UserService {
     }
 
     private void checkPhoneUniqueness(Set<String> phones) {
+        UUID tenantId = TenantContext.getTenantId();
         for (String phone : phones) {
-            if (userRepository.existsByPhoneNumber(phone))
-                throw new InvalidUserDataException("Phone number already in use: " + phone);
+            if (userRepository.existsByPhoneNumberAndTenantId(phone, tenantId)) {
+                throw new InvalidUserDataException(
+                        "Phone number already in use: " + phone
+                );
+            }
         }
     }
 

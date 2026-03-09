@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.audit.service;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.audit.entity.AuditEntityType;
 import com.IntegrityTechnologies.business_manager.modules.platform.audit.entity.AuditLog;
 import com.IntegrityTechnologies.business_manager.modules.platform.audit.repository.AuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
@@ -17,17 +18,19 @@ public class AuditService {
     private final AuditRepository auditRepository;
 
     public void log(
-            String entityType,
+            AuditEntityType entityType,
             UUID entityId,
             String action,
             String before,
             String after
     ) {
 
+        UUID tenantId = TenantContext.getTenantIdOrNull();
+
         auditRepository.save(
 
                 AuditLog.builder()
-                        .tenantId(TenantContext.getTenantId())
+                        .tenantId(tenantId)
                         .userId(SecurityUtils.currentUserId())
                         .entityType(entityType)
                         .entityId(entityId)
@@ -40,5 +43,4 @@ public class AuditService {
         );
 
     }
-
 }

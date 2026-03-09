@@ -3,40 +3,44 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.user.se
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.security.CustomUserDetails;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
 
-    @Autowired
     public CustomUserDetailsService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
     @Override
-    public UserDetails loadUserByUsername(String identifier) throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String identifier)
+            throws UsernameNotFoundException {
 
-        var userOpt = userRepository.findByUsernameAndDeletedFalse(identifier)
-                .or(() -> userRepository.findByEmailElementIgnoreCaseAndDeletedFalse(identifier))
-                .or(() -> userRepository.findByIdNumberAndDeletedFalse(identifier));
+        UUID tenantId = TenantContext.getTenantId();
 
-        if (userOpt.isEmpty()) {
-            throw new UsernameNotFoundException("User not found: " + identifier);
-        }
-
-        var user = userOpt.get();
+        var user = userRepository
+                .findAuthUser(tenantId, identifier)
+                .orElseThrow(() ->
+                        new UsernameNotFoundException(
+                                "User not found: " + identifier
+                        )
+                );
 
         return new CustomUserDetails(
                 user.getId(),
+                user.getTenantId(),
+                null,
                 user.getUsername(),
                 user.getPassword(),
-                user.getRole() != null ? user.getRole() : Role.EMPLOYEE,
+                user.getRole() != null
+                        ? user.getRole()
+                        : Role.EMPLOYEE,
                 !Boolean.TRUE.equals(user.getDeleted())
         );
     }

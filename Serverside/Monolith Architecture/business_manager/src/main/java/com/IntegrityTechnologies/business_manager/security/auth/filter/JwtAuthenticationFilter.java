@@ -5,10 +5,12 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.sec
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.service.CustomUserDetailsService;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.repository.TenantRepository;
 import com.IntegrityTechnologies.business_manager.security.BranchContext;
+import com.IntegrityTechnologies.business_manager.security.auth.service.TokenBlacklistService;
 import com.IntegrityTechnologies.business_manager.security.auth.util.DeviceFingerprintUtil;
 import com.IntegrityTechnologies.business_manager.security.auth.util.JwtUtil;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -33,7 +35,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserSessionRepository userSessionRepository;
     private final TenantRepository tenantRepository;
     private final BranchRepository branchRepository;
-
+    private final TenantMetadataCache tenantMetadataCache;
+    private final TokenBlacklistService tokenBlacklistService;
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -46,23 +49,61 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (jwt != null) {
 
             try {
+                if (tokenBlacklistService.isTokenBlacklisted(jwt)) {
+                    throw new SecurityException("Token has been revoked");
+                }
 
-                if (SecurityContextHolder.getContext().getAuthentication() == null) {
+                var existingAuth = SecurityContextHolder.getContext().getAuthentication();
 
-                    /* ==========================================
-                       DEVICE FINGERPRINT CHECK (FAST FAIL)
-                    ========================================== */
+                if (existingAuth == null || !existingAuth.isAuthenticated()) {
+
+                /* ==========================================
+                   DEVICE FINGERPRINT CHECK
+                ========================================== */
 
                     String tokenDevice = jwtUtil.extractDevice(jwt);
                     String requestDevice = DeviceFingerprintUtil.generate(request);
 
-                    if (!tokenDevice.equals(requestDevice)) {
+                    if (tokenDevice == null || !tokenDevice.equals(requestDevice)) {
                         throw new SecurityException("Token device mismatch");
                     }
 
-                    /* ==========================================
-                       TOKEN VALIDATION
-                    ========================================== */
+                /* ==========================================
+                   TENANT EXTRACTION
+                ========================================== */
+
+                    UUID tenantId = jwtUtil.extractTenantId(jwt);
+
+                    if (!tenantMetadataCache.tenantExists(tenantId)) {
+                        throw new SecurityException("Invalid tenant in token");
+                    }
+
+                /* ==========================================
+                   BRANCH EXTRACTION
+                ========================================== */
+
+                    UUID branchId = jwtUtil.extractBranchId(jwt);
+
+                    boolean branchValid =
+                            tenantMetadataCache.branchExists(tenantId, branchId);
+
+                    if (!branchValid) {
+                        throw new SecurityException("Invalid branch for tenant");
+                    }
+
+                /* ==========================================
+                   CONTEXT INITIALIZATION
+                ========================================== */
+
+                    TenantContext.clear();
+                    BranchContext.clear();
+
+                    TenantContext.setTenantId(tenantId);
+                    BranchContext.set(branchId);
+
+                /* ==========================================
+                   USER RESOLUTION
+                ========================================== */
 
                     String username = jwtUtil.extractUsername(jwt);
 
@@ -74,9 +115,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         throw new SecurityException("Invalid JWT");
                     }
 
-                    /* ==========================================
-                       SESSION VALIDATION
-                    ========================================== */
+                /* ==========================================
+                   SESSION VALIDATION
+                ========================================== */
 
                     UUID tokenId = jwtUtil.extractTokenId(jwt);
 
@@ -89,39 +130,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         throw new SecurityException("Session expired or revoked");
                     }
 
-                    /* ==========================================
-                       TENANT VALIDATION
-                    ========================================== */
-
-                    UUID tenantId = jwtUtil.extractTenantId(jwt);
-
-                    if (!tenantRepository.existsById(tenantId)) {
-                        throw new SecurityException("Invalid tenant in token");
-                    }
-
-                    /* ==========================================
-                       BRANCH VALIDATION
-                    ========================================== */
-
-                    UUID branchId = jwtUtil.extractBranchId(jwt);
-
-                    boolean branchValid =
-                            branchRepository.existsByIdAndTenantId(branchId, tenantId);
-
-                    if (!branchValid) {
-                        throw new SecurityException("Invalid branch for tenant");
-                    }
-
-                    /* ==========================================
-                       CONTEXT INITIALIZATION
-                    ========================================== */
-
-                    TenantContext.setTenantId(tenantId);
-                    BranchContext.set(branchId);
-
-                    /* ==========================================
-                       AUTHENTICATION
-                    ========================================== */
+                /* ==========================================
+                   AUTHENTICATION
+                ========================================== */
 
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
@@ -140,12 +151,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             .setAuthentication(authToken);
                 }
 
-            } catch (Exception ignored) {
+            }catch (Exception ex) {
 
                 SecurityContextHolder.clearContext();
                 TenantContext.clear();
                 BranchContext.clear();
 
+                request.setAttribute("jwt_error", ex.getMessage());
             }
         }
 

@@ -1,17 +1,18 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.tenant.service;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.Tenant;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.dto.TenantCreateRequest;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.dto.TenantResponse;
+import org.springframework.data.domain.Page;
 
-import java.util.List;
 import java.util.UUID;
 
 public interface TenantService {
 
-    Tenant createTenant(String name, String code);
+    TenantResponse createTenant(TenantCreateRequest request);
 
-    Tenant getTenant(UUID id);
+    TenantResponse getTenant(UUID id);
 
-    List<Tenant> getAllTenants();
+    Page<TenantResponse> getTenants(int page, int size);
 
     void deactivateTenant(UUID id);
 

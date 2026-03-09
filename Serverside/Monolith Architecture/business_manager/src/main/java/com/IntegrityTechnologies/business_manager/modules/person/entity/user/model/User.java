@@ -28,17 +28,24 @@ import java.util.*;
                 @Index(
                         name = "idx_user_tenant_deleted",
                         columnList = "tenant_id, deleted"
+                ),
+
+                @Index(
+                        name = "idx_user_tenant_idnumber",
+                        columnList = "tenant_id, id_number"
                 )
-
         },
-
         uniqueConstraints = {
 
                 @UniqueConstraint(
                         name = "uq_user_tenant_username",
                         columnNames = {"tenant_id", "username"}
-                )
+                ),
 
+                @UniqueConstraint(
+                        name = "uq_user_tenant_idnumber",
+                        columnNames = {"tenant_id", "id_number"}
+                )
         }
 )
 @Getter
@@ -60,45 +67,91 @@ public class User extends AuditableTenantEntity {
     @Column(nullable = false)
     private String password;
 
+    /* =====================================
+       EMAIL ADDRESSES
+    ===================================== */
+
     @ElementCollection
     @CollectionTable(
             name = "user_email_addresses",
-            joinColumns = @JoinColumn(name = "user_id")
+            joinColumns = @JoinColumn(name = "user_id"),
+            uniqueConstraints = {
+                    @UniqueConstraint(
+                            name = "uq_user_email",
+                            columnNames = {"user_id", "email"}
+                    )
+            },
+            indexes = {
+                    @Index(name = "idx_user_email", columnList = "email")
+            }
     )
     @Column(name = "email")
+    @Builder.Default
     private List<String> emailAddresses = new ArrayList<>();
+
+
+    /* =====================================
+       PHONE NUMBERS
+    ===================================== */
 
     @ElementCollection
     @CollectionTable(
             name = "user_phone_numbers",
-            joinColumns = @JoinColumn(name = "user_id")
+            joinColumns = @JoinColumn(name = "user_id"),
+            uniqueConstraints = {
+                    @UniqueConstraint(
+                            name = "uq_user_phone",
+                            columnNames = {"user_id", "phone"}
+                    )
+            },
+            indexes = {
+                    @Index(name = "idx_user_phone", columnList = "phone")
+            }
     )
     @Column(name = "phone")
+    @Builder.Default
     private List<String> phoneNumbers = new ArrayList<>();
+
+
+    /* =====================================
+       BASIC INFO
+    ===================================== */
 
     private String idNumber;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private Role role;
 
     @Column(nullable = false)
     private String uploadFolder;
 
+    @Column(nullable = false)
+    @Builder.Default
     private Boolean deleted = false;
 
     private LocalDateTime deletedAt;
 
-    /* ================================
+
+    /* =====================================
        RELATIONSHIPS
-    ================================= */
+    ===================================== */
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private Set<UserBranch> branches = new HashSet<>();
 
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private Set<UserDepartment> departments = new HashSet<>();
 
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<UserImage> images = new ArrayList<>();
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean mustChangePassword = true;
 }

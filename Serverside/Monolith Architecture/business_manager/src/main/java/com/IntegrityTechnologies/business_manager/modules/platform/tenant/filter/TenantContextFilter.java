@@ -4,8 +4,8 @@ import com.IntegrityTechnologies.business_manager.modules.platform.tenant.contex
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.Tenant;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.TenantStatus;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.repository.TenantRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.resolver.TenantResolver;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,7 +21,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TenantContextFilter extends OncePerRequestFilter {
 
-    private final TenantRepository tenantRepository;
+    private final TenantMetadataCache tenantMetadataCache;
 
     @Override
     protected void doFilterInternal(
@@ -40,14 +40,15 @@ public class TenantContextFilter extends OncePerRequestFilter {
             UUID tenantId = TenantContext.getOrNull();
 
             if (tenantId == null) {
-                throw new SecurityException("Tenant not resolved from token");
+                filterChain.doFilter(request, response);
+                return;
             }
 
-            Tenant tenant = tenantRepository.findById(tenantId)
-                    .orElseThrow(() -> new RuntimeException("Tenant not found"));
+            TenantStatus status =
+                    tenantMetadataCache.getTenantStatus(tenantId);
 
-            if (tenant.getStatus() != TenantStatus.ACTIVE
-                    && tenant.getStatus() != TenantStatus.TRIAL) {
+            if (status != TenantStatus.ACTIVE
+                    && status != TenantStatus.TRIAL) {
 
                 throw new RuntimeException("Tenant inactive");
             }

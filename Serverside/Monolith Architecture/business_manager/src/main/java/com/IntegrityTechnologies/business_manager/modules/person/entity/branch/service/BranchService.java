@@ -23,6 +23,8 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.rep
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserDepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.service.SubscriptionGuard;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -46,6 +48,7 @@ public class BranchService {
     private final BranchChartOfAccountsService coaService;
     private final PrivilegesChecker privilegesChecker;
     private final SubscriptionGuard subscriptionGuard;
+    private final TenantMetadataCache tenantMetadataCache;
 
 
     /* =====================================================
@@ -54,7 +57,6 @@ public class BranchService {
 
     @Transactional
     public BranchDTO create(BranchDTO request, Authentication authentication) {
-
         subscriptionGuard.checkBranchLimit();
 
         if (branchRepository.existsByBranchCodeIgnoreCase(request.getBranchCode())) {
@@ -80,6 +82,8 @@ public class BranchService {
 
         recordAudit(branch, "CREATE", null, null, null, authentication, "Branch created");
 
+        tenantMetadataCache.invalidateTenant(TenantContext.getTenantId());
+        
         return toDTO(branch);
     }
 
@@ -146,6 +150,7 @@ public class BranchService {
 
         branchRepository.save(branch);
 
+        tenantMetadataCache.invalidateTenant(TenantContext.getTenantId());
         return toDTO(branch);
     }
 
@@ -182,6 +187,7 @@ public class BranchService {
             recordAudit(branch, "HARD_DELETE", null,
                     branch.toString(), null, authentication, "Branch permanently deleted");
         }
+        tenantMetadataCache.invalidateTenant(TenantContext.getTenantId());
     }
 
     /* =====================================================
@@ -201,6 +207,7 @@ public class BranchService {
 
         recordAudit(branch, "RESTORE", "deleted",
                 "true", "false", authentication, "Branch restored");
+        tenantMetadataCache.invalidateTenant(TenantContext.getTenantId());
     }
 
     /* =====================================================

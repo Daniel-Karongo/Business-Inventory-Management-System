@@ -27,6 +27,7 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
 
     /* ✅ ADD THIS METHOD (Fix error) */
     Optional<Branch> findByBranchCode(String branchCode);
+    Optional<Branch> findByTenantIdAndBranchCodeIgnoreCase(UUID tenantId, String branchCode);
 
     Optional<Branch> findByIdAndDeletedFalse(UUID id);
 
@@ -51,11 +52,11 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
     @Query("""
         SELECT DISTINCT ub.branch
         FROM UserBranch ub
-        JOIN FETCH ub.branch b
+        JOIN ub.branch b
         WHERE ub.user.id = :userId
           AND b.deleted = false
     """)
-    List<Branch> findBranchesByUserId(UUID userId);
+    List<Branch> findBranchesByUserId(@Param("userId") UUID userId);
 
 
     @Query("""

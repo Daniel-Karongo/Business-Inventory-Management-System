@@ -32,5 +32,6 @@ public class Plan {
     private boolean accountingEnabled;
 
     private boolean reportingEnabled;
+    private int requestsPerMinute;
 
 }

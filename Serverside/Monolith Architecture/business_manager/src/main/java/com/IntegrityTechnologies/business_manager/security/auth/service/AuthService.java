@@ -42,6 +42,7 @@ public class AuthService {
     private final DepartmentRepository departmentRepository;
     private final BranchRepository branchRepository;
     private final UserSessionRepository userSessionRepository;
+    private final TokenBlacklistService tokenBlacklistService;
 
     /* =====================================================
        INTERNAL LOGIN RESULT (shared by login & bulk-login)
@@ -58,14 +59,20 @@ public class AuthService {
 
         /* ---------- 1️⃣ Resolve user ---------- */
         User user = userRepository
-                .findByIdentifierAndTenantId(
-                        request.getIdentifier(),
-                        tenantId
+                .findAuthUser(
+                        tenantId,
+                        request.getIdentifier()
                 )
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+                .orElseThrow(() ->
+                        new UserNotFoundException("User not found")
+                );
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new BadCredentialsException("Invalid password");
+        }
+
+        if (Boolean.TRUE.equals(user.getMustChangePassword())) {
+            throw new BadCredentialsException("PASSWORD_CHANGE_REQUIRED");
         }
 
         authenticationManager.authenticate(
@@ -185,7 +192,12 @@ public class AuthService {
        LOGOUT BY TOKEN (COOKIE-BASED)
        ===================================================== */
     public void logoutByToken(String token) {
-        logout(jwtUtil.extractTokenId(token), false);
+
+        tokenBlacklistService.blacklistToken(token);
+
+        UUID tokenId = jwtUtil.extractTokenId(token);
+
+        logout(tokenId, false);
     }
 
     /* =====================================================
@@ -200,6 +212,7 @@ public class AuthService {
         LocalDateTime now = LocalDateTime.now();
 
         for (UserSession s : sessions) {
+            tokenBlacklistService.blacklistToken(s.getTokenId().toString());
             s.logout(now, auto);
             userSessionRepository.save(s);
 

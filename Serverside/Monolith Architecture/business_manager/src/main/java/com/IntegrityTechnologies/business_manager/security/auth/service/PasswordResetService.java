@@ -171,6 +171,9 @@ public class PasswordResetService {
     private void applyPasswordChange(User user, String newPassword) {
 
         user.setPassword(passwordEncoder.encode(newPassword));
+
+        user.setMustChangePassword(false);   // ✅ clear requirement
+
         userRepository.save(user);
 
         if (props.isInvalidateSessions()) {

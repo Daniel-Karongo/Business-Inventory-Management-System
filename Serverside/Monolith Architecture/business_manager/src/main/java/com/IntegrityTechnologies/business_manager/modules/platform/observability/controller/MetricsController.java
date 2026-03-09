@@ -22,4 +22,9 @@ public class MetricsController {
 
     }
 
+    @GetMapping("/errors")
+    public long totalErrors() {
+        return metrics.totalErrors();
+    }
+
 }

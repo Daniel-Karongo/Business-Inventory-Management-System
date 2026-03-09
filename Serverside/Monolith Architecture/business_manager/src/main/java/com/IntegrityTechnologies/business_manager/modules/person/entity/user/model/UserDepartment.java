@@ -27,7 +27,7 @@ import java.time.LocalDateTime;
 public class UserDepartment {
 
     @EmbeddedId
-    private UserDepartmentId id;
+    private UserDepartmentId id = new UserDepartmentId();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("userId")
@@ -50,9 +50,23 @@ public class UserDepartment {
 
     @PrePersist
     public void onCreate() {
+
         assignedAt = LocalDateTime.now();
+
         if (role == null) {
             role = DepartmentMembershipRole.MEMBER;
+        }
+
+        if (id == null) {
+            id = new UserDepartmentId();
+        }
+
+        if (user != null) {
+            id.setUserId(user.getId());
+        }
+
+        if (department != null) {
+            id.setDepartmentId(department.getId());
         }
     }
 }

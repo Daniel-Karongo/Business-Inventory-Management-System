@@ -1,7 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
-import com.IntegrityTechnologies.business_manager.security.BranchScoped;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -20,12 +19,12 @@ public interface JournalEntryRepository extends JpaRepository<JournalEntry, UUID
     );
 
     Page<JournalEntry> findByBranch_Id(
-            @BranchScoped UUID branchId,
+            UUID branchId,
             Pageable pageable
     );
 
     Page<JournalEntry> findByBranch_IdOrderByPostedAtDesc(
-            @BranchScoped UUID branchId,
+            UUID branchId,
             Pageable pageable
     );
 

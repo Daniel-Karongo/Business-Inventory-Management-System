@@ -3,6 +3,8 @@ package com.IntegrityTechnologies.business_manager.modules.platform.subscription
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -15,24 +17,31 @@ public class SubscriptionGuard {
     private final SubscriptionService subscriptionService;
     private final UserRepository userRepository;
     private final BranchRepository branchRepository;
+    private final TenantMetadataCache tenantMetadataCache;
 
     public void checkUserLimit() {
 
-        UUID tenantId = TenantContext.getTenantId();
-
-        int currentUsers =
-                userRepository.countByTenantId(tenantId);
-
-        int maxUsers =
-                subscriptionService.getPlan(tenantId).getMaxUsers();
-
-        if (currentUsers >= maxUsers) {
-            throw new IllegalStateException("User limit exceeded for subscription");
+        if (SecurityUtils.isPlatformAdmin()) {
+            return;
         }
 
+        UUID tenantId = TenantContext.getTenantId();
+
+        int currentUsers = userRepository.countByTenantId(tenantId);
+
+        var plan = tenantMetadataCache.getSubscriptionPlan(tenantId);
+
+        if (currentUsers >= plan.getMaxUsers()) {
+            throw new IllegalStateException(
+                    "User limit exceeded for subscription"
+            );
+        }
     }
 
     public void checkBranchLimit() {
+        if (SecurityUtils.isPlatformAdmin()) {
+            return;
+        }
 
         UUID tenantId = TenantContext.getTenantId();
 

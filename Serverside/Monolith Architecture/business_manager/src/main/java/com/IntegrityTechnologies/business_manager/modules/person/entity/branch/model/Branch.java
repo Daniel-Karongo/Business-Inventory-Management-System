@@ -76,6 +76,7 @@ public class Branch extends TenantAwareEntity {
     private LocalDateTime createdAt;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean deleted = false;
 
     /* ========================================

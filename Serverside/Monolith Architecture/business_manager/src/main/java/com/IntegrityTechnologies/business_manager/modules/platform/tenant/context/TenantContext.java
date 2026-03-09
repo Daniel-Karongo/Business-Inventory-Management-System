@@ -4,18 +4,17 @@ import java.util.UUID;
 
 public final class TenantContext {
 
-    private static final InheritableThreadLocal<UUID> CURRENT_TENANT =
-            new InheritableThreadLocal<>();
+    private static final ThreadLocal<UUID> TENANT = new ThreadLocal<>();
 
     private TenantContext(){}
 
     public static void setTenantId(UUID tenantId){
-        CURRENT_TENANT.set(tenantId);
+        TENANT.set(tenantId);
     }
 
     public static UUID getTenantId(){
 
-        UUID tenantId = CURRENT_TENANT.get();
+        UUID tenantId = TENANT.get();
 
         if (tenantId == null) {
             throw new IllegalStateException(
@@ -27,11 +26,20 @@ public final class TenantContext {
     }
 
     public static UUID getOrNull(){
-        return CURRENT_TENANT.get();
+        return TENANT.get();
     }
 
     public static void clear(){
-        CURRENT_TENANT.remove();
+        TENANT.remove();
     }
 
+    public static UUID getTenantIdOrNull() {
+
+        try {
+            return getTenantId();
+        } catch (Exception e) {
+            return null;
+        }
+
+    }
 }
