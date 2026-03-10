@@ -1,14 +1,11 @@
 package com.IntegrityTechnologies.business_manager.security;
 
-import com.IntegrityTechnologies.business_manager.common.SpringContext;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.security.CustomUserDetails;
+import com.IntegrityTechnologies.business_manager.security.auth.config.CustomUserDetails;
+import com.IntegrityTechnologies.business_manager.security.auth.config.PlatformUserDetails;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.UUID;
 
@@ -32,26 +29,51 @@ public final class SecurityUtils {
     ============================================================ */
 
     public static String currentUsername() {
-        try {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth == null) return "system";
-            Object p = auth.getPrincipal();
 
-            if (p instanceof org.springframework.security.core.userdetails.UserDetails u) {
-                return u.getUsername();
+        try {
+
+            Authentication auth = currentAuthentication();
+
+            if (auth == null) return "system";
+
+            Object principal = auth.getPrincipal();
+
+            if (principal instanceof CustomUserDetails cud) {
+                return cud.getUsername();
             }
-            if (p instanceof String s) {
+
+            if (principal instanceof PlatformUserDetails pud) {
+                return pud.getUsername();
+            }
+
+            if (principal instanceof String s) {
                 return s;
             }
-            return auth.getName() != null ? auth.getName() : "system";
+
+            return auth.getName();
 
         } catch (Exception e) {
             return "system";
         }
+
     }
 
     public static boolean isPlatformAdmin() {
-        return Role.SUPERUSER.equals(currentRole());
+
+        try {
+
+            Authentication auth = currentAuthentication();
+
+            if (auth == null) return false;
+
+            Object principal = auth.getPrincipal();
+
+            return principal instanceof PlatformUserDetails;
+
+        } catch (Exception e) {
+            return false;
+        }
+
     }
 
     public static Role currentRole() {
@@ -76,8 +98,11 @@ public final class SecurityUtils {
     }
 
     public static UUID currentUserId() {
+
         try {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+            Authentication auth = currentAuthentication();
+
             if (auth == null) return null;
 
             Object principal = auth.getPrincipal();
@@ -86,10 +111,16 @@ public final class SecurityUtils {
                 return cud.getId();
             }
 
+            if (principal instanceof PlatformUserDetails pud) {
+                return pud.getId();
+            }
+
             return null;
+
         } catch (Exception e) {
             return null;
         }
+
     }
 
     /* ============================================================

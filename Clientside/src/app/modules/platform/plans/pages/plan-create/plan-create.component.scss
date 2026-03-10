@@ -1,0 +1,73 @@
+.plan-create-page {
+
+  padding: 24px;
+
+  max-width: 900px;
+
+}
+
+.header {
+
+  margin-bottom: 28px;
+
+}
+
+.title h1 {
+
+  font-size: 22px;
+
+  margin: 0;
+
+}
+
+.title p {
+
+  font-size: 13px;
+
+  color: var(--text-secondary);
+
+}
+
+.form {
+
+  background: var(--surface);
+
+  border: 1px solid var(--border);
+
+  border-radius: 10px;
+
+  padding: 28px;
+
+}
+
+.grid {
+
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 20px;
+
+}
+
+.actions {
+
+  margin-top: 28px;
+
+  display: flex;
+
+  justify-content: flex-end;
+
+  gap: 16px;
+
+}
+
+@media (max-width: 900px) {
+
+  .grid {
+
+    grid-template-columns: 1fr;
+
+  }
+
+}

@@ -1,0 +1,50 @@
+.layout {
+  height: 100vh;
+}
+
+.sidebar {
+  width: 240px;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.logo {
+  padding: 20px;
+  font-weight: 600;
+  font-size: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+mat-nav-list a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+mat-nav-list a.active {
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.toolbar {
+  border-bottom: 1px solid var(--border);
+}
+
+.content {
+  padding: 24px;
+}
+
+@media (max-width: 900px) {
+
+  .sidebar {
+    width: 200px;
+  }
+
+}
+
+@media (max-width: 640px) {
+
+  .layout {
+    height: auto;
+  }
+
+}

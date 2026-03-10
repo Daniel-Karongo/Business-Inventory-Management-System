@@ -1,0 +1,40 @@
+<div class="subscription-page">
+
+  <div class="header">
+
+    <h1>Assign Tenant Plan</h1>
+
+  </div>
+
+  <div class="assign">
+
+    <mat-form-field appearance="fill">
+
+      <mat-label>Select Plan</mat-label>
+
+      <mat-select [(value)]="selectedPlan">
+
+        <mat-option
+          *ngFor="let plan of plans"
+          [value]="plan.code">
+
+          {{ plan.name }}
+
+        </mat-option>
+
+      </mat-select>
+
+    </mat-form-field>
+
+    <button
+      mat-flat-button
+      color="primary"
+      (click)="assignPlan()">
+
+      Apply Plan
+
+    </button>
+
+  </div>
+
+</div>

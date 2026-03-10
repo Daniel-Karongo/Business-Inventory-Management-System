@@ -1,0 +1,41 @@
+.analytics-page {
+
+  padding: 24px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 20px;
+
+}
+
+.header h1 {
+
+  margin: 0;
+
+  font-size: 22px;
+
+}
+
+table {
+
+  width: 100%;
+
+}
+
+mat-card {
+
+  padding: 20px;
+
+}
+
+@media (max-width: 768px) {
+
+  .analytics-page {
+
+    padding: 16px;
+
+  }
+
+}

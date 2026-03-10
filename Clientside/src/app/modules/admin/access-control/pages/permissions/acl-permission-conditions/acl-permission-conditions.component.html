@@ -1,4 +1,4 @@
-<div class="conditions-surface space-y-4">
+<!-- <div class="conditions-surface space-y-4">
 
     <div class="conditions-header">
         <h2 class="section-title">Permission Conditions</h2>
@@ -7,7 +7,6 @@
         </p>
     </div>
 
-    <!-- SELECTORS -->
     <div class="conditions-selectors">
 
         <ng-container *ngIf="!loadingPermissions; else permLoading">
@@ -41,7 +40,6 @@
         </mat-select>
     </div>
 
-    <!-- ACTIONS -->
     <div class="flex gap-2">
         <button mat-flat-button *ngIf="!editMode" (click)="enableEdit()">
             Enable Editing
@@ -53,14 +51,12 @@
         </ng-container>
     </div>
 
-    <!-- CONDITIONS -->
     <div class="surface" [class.loading-surface]="loadingConditions">
 
         <h3 class="section-title">
             Allow access if ANY of the following are true
         </h3>
 
-        <!-- Loading -->
         <div *ngIf="loadingConditions" class="space-y-2">
             <div class="skeleton w-60"></div>
             <div class="skeleton w-40"></div>
@@ -71,12 +67,10 @@
             </div>
         </div>
 
-        <!-- Empty -->
         <div *ngIf="!loadingConditions && !conditions.length" class="loading-hint">
             No conditions defined for this role
         </div>
 
-        <!-- Data -->
         <ul *ngIf="!loadingConditions && conditions.length" class="space-y-2">
             <li *ngFor="let c of conditions" class="condition-row">
                 <span>{{ c.param }} == {{ c.value }}</span>
@@ -88,4 +82,4 @@
         </ul>
 
     </div>
-</div>
+</div> -->

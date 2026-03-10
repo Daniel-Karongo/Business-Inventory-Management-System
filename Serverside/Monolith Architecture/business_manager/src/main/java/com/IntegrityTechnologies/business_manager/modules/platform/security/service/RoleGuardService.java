@@ -16,9 +16,23 @@ public class RoleGuardService {
 
         Role currentRole = SecurityUtils.currentRole();
 
+        /*
+         PLATFORM ADMIN ONLY
+         */
         if (annotation instanceof PlatformAdminOnly) {
-            return currentRole == Role.SUPERUSER;
+            return SecurityUtils.isPlatformAdmin();
         }
+
+        if (annotation instanceof PlatformSuperAdminOnly) {
+            return SecurityUtils.currentAuthentication()
+                    .getAuthorities()
+                    .stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_PLATFORM_SUPER_ADMIN"));
+        }
+
+        /*
+         TENANT ROLES
+         */
 
         if (annotation instanceof TenantAdminOnly) {
             return currentRole.canAccess(Role.ADMIN);

@@ -1,0 +1,58 @@
+<div class="tenant-create-page">
+
+  <div class="header">
+
+    <div class="title">
+      <h1>Create Tenant</h1>
+      <p>Provision a new SaaS tenant instance</p>
+    </div>
+
+  </div>
+
+  <form [formGroup]="form" class="form">
+
+    <div class="grid">
+
+      <mat-form-field appearance="fill">
+        <mat-label>Tenant Name</mat-label>
+        <input matInput formControlName="name">
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Tenant Code</mat-label>
+        <input matInput formControlName="code">
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Admin Username</mat-label>
+        <input matInput formControlName="adminUsername">
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Admin Password</mat-label>
+        <input matInput formControlName="adminPassword">
+      </mat-form-field>
+
+    </div>
+
+    <div class="actions">
+
+      <button mat-stroked-button type="button" (click)="cancel()">
+        Cancel
+      </button>
+
+      <button mat-flat-button
+              color="primary"
+              type="button"
+              [disabled]="loading"
+              (click)="submit()">
+
+        Create Tenant
+
+      </button>
+
+    </div>
+
+  </form>
+
+</div>

@@ -1,0 +1,76 @@
+<mat-sidenav-container class="layout">
+
+  <mat-sidenav
+    mode="side"
+    opened
+    class="sidebar">
+
+    <div class="logo">
+
+      <span>Platform Console</span>
+
+    </div>
+
+    <mat-nav-list>
+
+      <a mat-list-item routerLink="/platform" routerLinkActive="active">
+
+        <mat-icon>dashboard</mat-icon>
+
+        <span>Dashboard</span>
+
+      </a>
+
+      <a mat-list-item routerLink="/platform/tenants" routerLinkActive="active">
+
+        <mat-icon>apartment</mat-icon>
+
+        <span>Tenants</span>
+
+      </a>
+
+      <a mat-list-item routerLink="/platform/plans" routerLinkActive="active">
+
+        <mat-icon>workspace_premium</mat-icon>
+
+        <span>Plans</span>
+
+      </a>
+
+      <a mat-list-item routerLink="/platform/analytics" routerLinkActive="active">
+
+        <mat-icon>insights</mat-icon>
+
+        <span>Analytics</span>
+
+      </a>
+
+      <a mat-list-item routerLink="/platform/audit" routerLinkActive="active">
+
+        <mat-icon>history</mat-icon>
+
+        <span>Audit Logs</span>
+
+      </a>
+
+    </mat-nav-list>
+
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+
+    <mat-toolbar class="toolbar">
+
+      <span>Platform Administration</span>
+
+    </mat-toolbar>
+
+    <div class="content">
+
+      <router-outlet></router-outlet>
+
+    </div>
+
+  </mat-sidenav-content>
+
+</mat-sidenav-container>

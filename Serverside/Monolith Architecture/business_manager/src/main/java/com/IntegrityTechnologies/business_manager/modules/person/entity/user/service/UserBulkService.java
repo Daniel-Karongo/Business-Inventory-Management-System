@@ -12,8 +12,6 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.mod
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
-import com.IntegrityTechnologies.business_manager.modules.acl.entity.RoleEntity;
-import com.IntegrityTechnologies.business_manager.modules.acl.repository.RoleEntityRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -31,7 +29,6 @@ public class UserBulkService {
     private final UserRepository userRepository;
     private final BranchRepository branchRepository;
     private final DepartmentRepository departmentRepository;
-    private final RoleEntityRepository roleEntityRepository;
 
     private static final String DEFAULT_PASSWORD = "1234";
 
@@ -116,6 +113,7 @@ public class UserBulkService {
                    ========================= */
 
                 Role targetRole;
+
                 try {
                     targetRole = Role.valueOf(roleName);
                 } catch (Exception ex) {
@@ -129,15 +127,6 @@ public class UserBulkService {
                             "Insufficient privilege to assign role: " + targetRole
                     );
                 }
-
-                roleEntityRepository
-                        .findByName(targetRole)
-                        .filter(RoleEntity::isActive)
-                        .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Role inactive or not configured: " + targetRole
-                                )
-                        );
 
                 /* =========================
                    ORG RESOLUTION (OPTIONAL)

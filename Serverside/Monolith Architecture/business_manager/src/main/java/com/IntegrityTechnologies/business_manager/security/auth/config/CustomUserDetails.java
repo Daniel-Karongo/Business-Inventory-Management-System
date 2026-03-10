@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.modules.person.entity.user.security;
+package com.IntegrityTechnologies.business_manager.security.auth.config;
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import lombok.Getter;

@@ -93,6 +93,7 @@ public class AuthController {
     /* =====================================================
        LOGOUT (CURRENT SESSION)
        ===================================================== */
+
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
             @CookieValue(name = "access_token", required = false) String token,

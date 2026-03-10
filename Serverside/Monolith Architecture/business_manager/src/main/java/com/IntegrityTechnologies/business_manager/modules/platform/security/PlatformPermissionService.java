@@ -1,8 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.security;
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+import com.IntegrityTechnologies.business_manager.security.auth.config.PlatformUserDetails;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 @Component("platformSecurity")
@@ -14,9 +16,13 @@ public class PlatformPermissionService {
 
     public boolean isPlatformAdmin() {
 
-        Role role = SecurityUtils.currentRole();
+        Authentication auth = SecurityUtils.currentAuthentication();
 
-        return role == Role.SUPERUSER;
+        if (auth == null) return false;
+
+        Object principal = auth.getPrincipal();
+
+        return principal instanceof PlatformUserDetails;
 
     }
 

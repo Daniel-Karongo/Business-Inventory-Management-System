@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.security;
 
-import com.IntegrityTechnologies.business_manager.modules.acl.config.PermissionSecurityFilter;
+//import com.IntegrityTechnologies.business_manager.modules.acl.config.PermissionSecurityFilter;
+
 import com.IntegrityTechnologies.business_manager.modules.platform.observability.filter.RequestMetricsFilter;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.filter.RoleGuardFilter;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.rate.TenantRateLimitFilter;
@@ -8,7 +9,6 @@ import com.IntegrityTechnologies.business_manager.modules.platform.tenant.config
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.filter.TenantContextFilter;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.filter.TenantResolutionFilter;
 import com.IntegrityTechnologies.business_manager.security.auth.filter.JwtAuthenticationFilter;
-import com.IntegrityTechnologies.business_manager.security.auth.filter.JwtExceptionHandlerFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,9 +36,8 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
-    private final JwtExceptionHandlerFilter jwtExceptionHandlerFilter;
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
-    private final PermissionSecurityFilter permissionSecurityFilter;
+//    private final PermissionSecurityFilter permissionSecurityFilter;
     private final BranchContextFilter branchContextFilter;
     private final TenantContextFilter tenantContextFilter;
     private final RoleGuardFilter roleGuardFilter;
@@ -48,16 +47,14 @@ public class SecurityConfig {
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthFilter,
-            JwtExceptionHandlerFilter jwtExceptionHandlerFilter,
             CustomAuthenticationEntryPoint authenticationEntryPoint,
-            PermissionSecurityFilter permissionSecurityFilter,
+//            PermissionSecurityFilter permissionSecurityFilter,
             BranchContextFilter branchContextFilter,
             TenantContextFilter tenantContextFilter,
             RoleGuardFilter roleGuardFilter, TenantResolutionFilter tenantResolutionFilter, RequestMetricsFilter requestMetricsFilter, TenantRateLimitFilter tenantRateLimitFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
-        this.jwtExceptionHandlerFilter = jwtExceptionHandlerFilter;
         this.authenticationEntryPoint = authenticationEntryPoint;
-        this.permissionSecurityFilter = permissionSecurityFilter;
+//        this.permissionSecurityFilter = permissionSecurityFilter;
         this.branchContextFilter = branchContextFilter;
         this.tenantContextFilter = tenantContextFilter;
         this.roleGuardFilter = roleGuardFilter;
@@ -171,11 +168,11 @@ public class SecurityConfig {
                 //
                 // 1 TenantResolutionFilter
                 // 2 RequestMetricsFilter
-                // 3 JwtAuthenticationFilter
-                // 4 TenantContextFilter
-                // 5 BranchContextFilter
-                // 6 RoleGuardFilter
-                // 7 PermissionSecurityFilter
+                // 3 TenantRateLimitFilter
+                // 4 JwtAuthenticationFilter
+                // 5 TenantContextFilter
+                // 6 BranchContextFilter
+                // 7 RoleGuardFilter
                 //
 
                 .addFilterBefore(
@@ -183,41 +180,45 @@ public class SecurityConfig {
                         UsernamePasswordAuthenticationFilter.class
                 )
 
-                .addFilterAfter(
+                .addFilterBefore(
                         requestMetricsFilter,
-                        TenantResolutionFilter.class
+                        UsernamePasswordAuthenticationFilter.class
                 )
-                .addFilterAfter(
+
+                .addFilterBefore(
                         tenantRateLimitFilter,
-                        RequestMetricsFilter.class
+                        UsernamePasswordAuthenticationFilter.class
                 )
-                .addFilterAfter(
+
+                .addFilterBefore(
                         jwtAuthFilter,
-                        TenantRateLimitFilter.class
+                        UsernamePasswordAuthenticationFilter.class
                 )
 
-                .addFilterAfter(
+                .addFilterBefore(
                         tenantContextFilter,
-                        JwtAuthenticationFilter.class
+                        UsernamePasswordAuthenticationFilter.class
                 )
 
-                .addFilterAfter(
+                .addFilterBefore(
                         branchContextFilter,
-                        TenantContextFilter.class
+                        UsernamePasswordAuthenticationFilter.class
                 )
 
-                .addFilterAfter(
+                .addFilterBefore(
                         roleGuardFilter,
-                        BranchContextFilter.class
-                )
-
-                .addFilterAfter(
-                        permissionSecurityFilter,
-                        RoleGuardFilter.class
+                        UsernamePasswordAuthenticationFilter.class
                 )
         ;
 
         return http.build();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration config
+    ) throws Exception {
+        return config.getAuthenticationManager();
     }
 
     /* =====================================================
@@ -231,12 +232,6 @@ public class SecurityConfig {
     /* =====================================================
        AUTH MANAGER
        ===================================================== */
-    @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration config
-    ) throws Exception {
-        return config.getAuthenticationManager();
-    }
 
     @Bean
     public FilterRegistrationBean<TenantHibernateFilterConfigurer> tenantHibernateFilter(

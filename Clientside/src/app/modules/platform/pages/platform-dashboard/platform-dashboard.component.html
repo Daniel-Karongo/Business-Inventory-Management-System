@@ -1,0 +1,171 @@
+<div class="platform-page">
+
+  <div class="header">
+
+    <div class="title">
+      <h1>Platform Console</h1>
+      <p>SaaS administration and monitoring</p>
+    </div>
+
+  </div>
+
+  <!-- SYSTEM METRICS -->
+
+  <div class="metrics">
+
+    <mat-card class="metric">
+
+      <div class="metric-title">
+
+        <mat-icon>trending_up</mat-icon>
+
+        Total Requests
+
+      </div>
+
+      <div class="metric-value">
+
+        {{ totalRequests }}
+
+      </div>
+
+    </mat-card>
+
+    <mat-card class="metric">
+
+      <div class="metric-title">
+
+        <mat-icon>error</mat-icon>
+
+        Total Errors
+
+      </div>
+
+      <div class="metric-value">
+
+        {{ totalErrors }}
+
+      </div>
+
+    </mat-card>
+
+  </div>
+
+  <!-- MANAGEMENT -->
+
+  <div class="cards">
+
+    <mat-card class="card">
+
+      <div class="card-content">
+
+        <div class="icon tenants">
+          <mat-icon>apartment</mat-icon>
+        </div>
+
+        <div class="info">
+          <h3>Tenants</h3>
+          <p>Manage platform tenants</p>
+        </div>
+
+      </div>
+
+      <div class="actions">
+
+        <button mat-flat-button color="primary" routerLink="/platform/tenants">
+
+          Open
+
+        </button>
+
+      </div>
+
+    </mat-card>
+
+    <mat-card class="card">
+
+      <div class="card-content">
+
+        <div class="icon plans">
+          <mat-icon>workspace_premium</mat-icon>
+        </div>
+
+        <div class="info">
+          <h3>Plans</h3>
+          <p>Manage subscription plans</p>
+        </div>
+
+      </div>
+
+      <div class="actions">
+
+        <button mat-flat-button color="primary" routerLink="/platform/plans">
+
+          Open
+
+        </button>
+
+      </div>
+
+    </mat-card>
+
+    <mat-card class="card">
+
+      <div class="card-content">
+
+        <div class="icon plans">
+          <mat-icon>history</mat-icon>
+        </div>
+
+        <div class="info">
+          <h3>Audit Logs</h3>
+          <p>View platform activity logs</p>
+        </div>
+
+      </div>
+
+      <div class="actions">
+
+        <button mat-flat-button color="primary" routerLink="/platform/audit">
+
+          Open
+
+        </button>
+
+      </div>
+
+    </mat-card>
+
+  </div>
+
+  <!-- AUDIT -->
+
+  <div class="audit">
+
+    <h3>Recent Platform Activity</h3>
+
+    <div class="audit-row" *ngFor="let log of auditLogs">
+
+      <div class="entity">
+
+        {{ log.entityType }}
+
+      </div>
+
+      <div class="action">
+
+        {{ log.action }}
+
+      </div>
+
+      <div class="time">
+
+        {{ log.timestamp | date:'short' }}
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

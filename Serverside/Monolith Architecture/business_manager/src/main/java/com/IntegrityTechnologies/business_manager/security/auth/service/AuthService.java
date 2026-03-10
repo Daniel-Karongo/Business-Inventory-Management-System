@@ -6,6 +6,8 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.departme
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUserSession;
+import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserSessionRepository;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthRequest;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthResponse;
 import com.IntegrityTechnologies.business_manager.security.auth.util.DeviceFingerprintUtil;
@@ -14,6 +16,9 @@ import com.IntegrityTechnologies.business_manager.modules.person.function.rollca
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.service.RollcallService;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUser;
+import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
+import com.IntegrityTechnologies.business_manager.security.auth.model.UserType;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -43,6 +48,8 @@ public class AuthService {
     private final BranchRepository branchRepository;
     private final UserSessionRepository userSessionRepository;
     private final TokenBlacklistService tokenBlacklistService;
+    private final PlatformUserRepository platformUserRepository;
+    private final PlatformUserSessionRepository platformUserSessionRepository;
 
     /* =====================================================
        INTERNAL LOGIN RESULT (shared by login & bulk-login)
@@ -55,17 +62,84 @@ public class AuthService {
     @Transactional
     public LoginResult loginInternal(AuthRequest request, HttpServletRequest httpRequest) {
 
+        String identifier = request.getIdentifier();
+
+    /* =====================================================
+       1️⃣ TRY PLATFORM LOGIN
+    ===================================================== */
+
+        var platformUserOpt =
+                platformUserRepository.findByUsernameAndDeletedFalse(identifier);
+
+        if (platformUserOpt.isPresent()) {
+
+            PlatformUser platformUser = platformUserOpt.get();
+
+            if (!passwordEncoder.matches(request.getPassword(), platformUser.getPassword())) {
+                throw new BadCredentialsException("Invalid credentials");
+            }
+
+            if (!platformUser.isActive() || platformUser.isLocked()) {
+                throw new BadCredentialsException("Account disabled");
+            }
+
+            if (Boolean.TRUE.equals(platformUser.getMustChangePassword())) {
+                throw new BadCredentialsException("PASSWORD_CHANGE_REQUIRED");
+            }
+
+            UUID tokenId = UUID.randomUUID();
+            String deviceFingerprint = DeviceFingerprintUtil.generate(httpRequest);
+
+            String token = jwtUtil.generateToken(
+                    UserType.PLATFORM.name(),
+                    null,
+                    platformUser.getId(),
+                    platformUser.getUsername(),
+                    platformUser.getRole().name(),
+                    tokenId,
+                    null,
+                    deviceFingerprint
+            );
+
+            long activeSessions =
+                    platformUserSessionRepository
+                            .countByUserIdAndLogoutTimeIsNull(platformUser.getId());
+
+            if (activeSessions >= 1) {
+                throw new IllegalStateException("Too many active sessions");
+            }
+
+            PlatformUserSession session = PlatformUserSession.builder()
+                    .userId(platformUser.getId())
+                    .tokenId(tokenId)
+                    .loginDate(LocalDate.now())
+                    .loginTime(LocalDateTime.now())
+                    .autoLoggedOut(false)
+                    .build();
+
+            platformUserSessionRepository.save(session);
+
+            AuthResponse response = new AuthResponse(
+                    platformUser.getId(),
+                    platformUser.getUsername(),
+                    platformUser.getRole().name(),
+                    null,
+                    List.of(),
+                    UserType.PLATFORM
+            );
+
+            return new LoginResult(token, response);
+        }
+
+    /* =====================================================
+       2️⃣ TENANT LOGIN
+    ===================================================== */
+
         UUID tenantId = TenantContext.getTenantId();
 
-        /* ---------- 1️⃣ Resolve user ---------- */
         User user = userRepository
-                .findAuthUser(
-                        tenantId,
-                        request.getIdentifier()
-                )
-                .orElseThrow(() ->
-                        new UserNotFoundException("User not found")
-                );
+                .findAuthUser(tenantId, identifier)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new BadCredentialsException("Invalid password");
@@ -86,7 +160,6 @@ public class AuthService {
         UUID branchId = request.getBranchId();
         LocalDate today = LocalDate.now();
 
-        /* ---------- 2️⃣ Validate branch ---------- */
         branchRepository.findByIdAndDeletedFalse(branchId)
                 .orElseThrow(() -> new BadCredentialsException("Selected branch does not exist"));
 
@@ -98,7 +171,6 @@ public class AuthService {
             throw new BadCredentialsException("User is not assigned to this branch");
         }
 
-        /* ---------- 3️⃣ Enforce daily session cap ---------- */
         int activeCount =
                 userSessionRepository
                         .findByUserIdAndLoginDateAndLogoutTimeIsNull(userId, today)
@@ -108,11 +180,11 @@ public class AuthService {
             throw new IllegalStateException("Maximum active sessions reached for today");
         }
 
-        /* ---------- 4️⃣ Create JWT + session ---------- */
         UUID tokenId = UUID.randomUUID();
         String deviceFingerprint = DeviceFingerprintUtil.generate(httpRequest);
 
         String token = jwtUtil.generateToken(
+                UserType.TENANT.name(),
                 user.getTenantId(),
                 userId,
                 user.getUsername(),
@@ -133,7 +205,6 @@ public class AuthService {
 
         userSessionRepository.save(session);
 
-        /* ---------- 5️⃣ Rollcall LOGIN ---------- */
         List<Department> departments =
                 departmentRepository.findDepartmentsForUserInBranch(userId, branchId);
 
@@ -145,13 +216,13 @@ public class AuthService {
             }
         }
 
-        /* ---------- 6️⃣ Build SAFE response ---------- */
         AuthResponse response = new AuthResponse(
                 userId,
                 user.getUsername(),
                 user.getRole().name(),
                 branchId,
-                departments.stream().map(Department::getId).toList()
+                departments.stream().map(Department::getId).toList(),
+                UserType.TENANT
         );
 
         return new LoginResult(token, response);
@@ -195,6 +266,22 @@ public class AuthService {
 
         tokenBlacklistService.blacklistToken(token);
 
+        String userType = jwtUtil.extractUserType(token);
+
+        if ("PLATFORM".equals(userType)) {
+
+            UUID tokenId = jwtUtil.extractTokenId(token);
+
+            platformUserSessionRepository
+                    .findByTokenIdAndLogoutTimeIsNull(tokenId)
+                    .ifPresent(session -> {
+                        session.logout(LocalDateTime.now(), false);
+                        platformUserSessionRepository.save(session);
+                    });
+
+            return;
+        }
+
         UUID tokenId = jwtUtil.extractTokenId(token);
 
         logout(tokenId, false);
@@ -236,6 +323,34 @@ public class AuthService {
     @Transactional(readOnly = true)
     public AuthResponse resolveMe(String token) {
 
+        String userType = jwtUtil.extractUserType(token);
+
+    /* ==========================================
+       PLATFORM USER
+    ========================================== */
+
+        if ("PLATFORM".equals(userType)) {
+
+            UUID userId = jwtUtil.extractUserId(token);
+
+            PlatformUser user = platformUserRepository
+                    .findById(userId)
+                    .orElseThrow(() -> new RuntimeException("Platform user not found"));
+
+            return new AuthResponse(
+                    user.getId(),
+                    user.getUsername(),
+                    user.getRole().name(),
+                    null,
+                    List.of(),
+                    UserType.PLATFORM
+            );
+        }
+
+    /* ==========================================
+       TENANT USER
+    ========================================== */
+
         UUID userId = jwtUtil.extractUserId(token);
         UUID tokenId = jwtUtil.extractTokenId(token);
 
@@ -261,7 +376,8 @@ public class AuthService {
                 user.getUsername(),
                 user.getRole().name(),
                 session.getBranchId(),
-                departments.stream().map(Department::getId).toList()
+                departments.stream().map(Department::getId).toList(),
+                UserType.TENANT
         );
     }
 }

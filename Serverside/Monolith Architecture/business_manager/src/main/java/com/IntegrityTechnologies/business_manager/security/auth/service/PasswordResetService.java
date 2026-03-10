@@ -1,8 +1,11 @@
 package com.IntegrityTechnologies.business_manager.security.auth.service;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUser;
+import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
 import com.IntegrityTechnologies.business_manager.security.auth.config.PasswordResetProperties;
 import com.IntegrityTechnologies.business_manager.security.auth.model.PasswordResetAudit;
 import com.IntegrityTechnologies.business_manager.security.auth.model.PasswordResetToken;
+import com.IntegrityTechnologies.business_manager.security.auth.model.UserType;
 import com.IntegrityTechnologies.business_manager.security.auth.repository.PasswordResetAuditRepository;
 import com.IntegrityTechnologies.business_manager.security.auth.repository.PasswordResetTokenRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
@@ -30,6 +33,7 @@ public class PasswordResetService {
     private final PasswordResetAuditRepository auditRepo;
     private final PasswordEncoder passwordEncoder;
     private final AuthService authService;
+    private final PlatformUserRepository platformUserRepository;
 
     /* =====================================================
        RESET USING IDENTITY (NO TOKEN)
@@ -51,12 +55,26 @@ public class PasswordResetService {
             validateIdentity(user, idNumber, email, phone);
             applyPasswordChange(user, newPassword);
 
-            audit(user.getId(), "SIMPLE", identifier,
-                    "COMPLETED", "Identity reset");
+            audit(
+                    user.getId(),
+                    UserType.TENANT,
+                    user.getTenantId(),
+                    "IDENTITY",
+                    identifier,
+                    "COMPLETED",
+                    "Identity reset"
+            );
 
         } catch (RuntimeException ex) {
-            audit(user.getId(), "SIMPLE", identifier,
-                    "FAILED", ex.getMessage());
+            audit(
+                    user.getId(),
+                    UserType.TENANT,
+                    user.getTenantId(),
+                    "IDENTITY",
+                    identifier,
+                    "FAILED",
+                    ex.getMessage()
+            );
             throw ex;
         }
     }
@@ -87,8 +105,34 @@ public class PasswordResetService {
         token.incrementAttempts();
         tokenRepo.save(token);
 
-        User user = userRepository.findById(token.getUserId())
-                .orElseThrow();
+        if (token.getUserType() == UserType.PLATFORM) {
+
+            PlatformUser user = platformUserRepository
+                    .findById(token.getUserId())
+                    .orElseThrow();
+
+            user.setPassword(passwordEncoder.encode(newPassword));
+            user.setMustChangePassword(false);
+
+            platformUserRepository.save(user);
+
+            token.markUsed();
+            tokenRepo.save(token);
+
+            audit(
+                    user.getId(),
+                    UserType.PLATFORM,
+                    null,
+                    token.getChannel().name(),
+                    user.getUsername(),
+                    "COMPLETED",
+                    "Platform token reset"
+            );
+
+            return;
+        }
+
+        User user = userRepository.findById(token.getUserId()).orElseThrow();
 
         try {
             applyPasswordChange(user, newPassword);
@@ -96,14 +140,26 @@ public class PasswordResetService {
             token.markUsed();
             tokenRepo.save(token);
 
-            audit(user.getId(), token.getChannel().name(),
+            audit(
+                    user.getId(),
+                    UserType.TENANT,
+                    user.getTenantId(),
+                    token.getChannel().name(),
                     user.getUsername(),
-                    "COMPLETED", "Token reset");
+                    "COMPLETED",
+                    "Token reset"
+            );
 
         } catch (RuntimeException ex) {
-            audit(user.getId(), token.getChannel().name(),
+            audit(
+                    user.getId(),
+                    UserType.TENANT,
+                    user.getTenantId(),
+                    token.getChannel().name(),
                     user.getUsername(),
-                    "FAILED", ex.getMessage());
+                    "FAILED",
+                    ex.getMessage()
+            );
             throw ex;
         }
     }
@@ -114,6 +170,7 @@ public class PasswordResetService {
 
     public PasswordResetToken createToken(
             UUID userId,
+            UserType userType,
             PasswordResetToken.Channel channel,
             int expiryMinutes
     ) {
@@ -124,6 +181,7 @@ public class PasswordResetService {
 
         PasswordResetToken token = PasswordResetToken.builder()
                 .userId(userId)
+                .userType(userType)
                 .tokenHash(hash)
                 .channel(channel)
                 .attempts(0)
@@ -207,15 +265,21 @@ public class PasswordResetService {
     }
 
     private void recordFailure(PasswordResetToken token, String reason) {
-        audit(token.getUserId(),
+        audit(
+                token.getUserId(),
+                token.getUserType(),
+                null,
                 token.getChannel().name(),
                 "token",
                 "FAILED",
-                reason);
+                reason
+        );
     }
 
     private void audit(
             UUID userId,
+            UserType userType,
+            UUID tenantId,
             String channel,
             String identifier,
             String status,
@@ -224,6 +288,8 @@ public class PasswordResetService {
         auditRepo.save(
                 PasswordResetAudit.builder()
                         .userId(userId)
+                        .userType(userType)
+                        .tenantId(tenantId)
                         .channel(channel)
                         .identifierUsed(mask(identifier))
                         .status(status)

@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security.auth.dto;
 
+import com.IntegrityTechnologies.business_manager.security.auth.model.UserType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,9 +12,17 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AuthResponse {
+
     private UUID userId;
+
     private String username;
+
     private String role;
+
     private UUID branchId;
+
     private List<UUID> departmentIds;
+
+    private UserType userType;
+
 }

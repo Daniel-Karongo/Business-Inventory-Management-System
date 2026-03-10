@@ -39,29 +39,67 @@ public class RoleGuardFilter extends OncePerRequestFilter {
 
         Class<?> controllerClass = handlerMethod.getBeanType();
 
-        Annotation[] annotations = controllerClass.getAnnotations();
+    /*
+       1️⃣ METHOD annotations override everything
+    */
+        Annotation[] methodAnnotations =
+                handlerMethod.getMethod().getAnnotations();
 
-        for (Annotation ann : annotations) {
+        for (Annotation ann : methodAnnotations) {
 
-            if (ann instanceof PlatformAdminOnly
-                    || ann instanceof TenantAdminOnly
-                    || ann instanceof TenantManagerOnly
-                    || ann instanceof TenantSupervisorOnly
-                    || ann instanceof TenantUserOnly) {
+            if (isRoleGuardAnnotation(ann)) {
 
-                boolean allowed =
-                        roleGuardService.isAllowed(ann);
+                boolean allowed = roleGuardService.isAllowed(ann);
 
                 if (!allowed) {
                     deny(response);
                     return;
                 }
+
+                chain.doFilter(request, response);
+                return;
             }
         }
 
-        chain.doFilter(request, response);
+    /*
+       2️⃣ CONTROLLER annotations apply to all endpoints
+    */
+        Annotation[] classAnnotations = controllerClass.getAnnotations();
+
+        for (Annotation ann : classAnnotations) {
+
+            if (isRoleGuardAnnotation(ann)) {
+
+                boolean allowed = roleGuardService.isAllowed(ann);
+
+                if (!allowed) {
+                    deny(response);
+                    return;
+                }
+
+                chain.doFilter(request, response);
+                return;
+            }
+        }
+
+        /*
+           3️⃣ No annotation anywhere → deny
+        */
+        log.warn("SECURITY DENY: {} {} | no role annotation found",
+                request.getMethod(),
+                request.getRequestURI());
+        deny(response);
     }
 
+    private boolean isRoleGuardAnnotation(Annotation ann) {
+
+        return ann instanceof PlatformSuperAdminOnly
+                || ann instanceof PlatformAdminOnly
+                || ann instanceof TenantAdminOnly
+                || ann instanceof TenantManagerOnly
+                || ann instanceof TenantSupervisorOnly
+                || ann instanceof TenantUserOnly;
+    }
     private void deny(HttpServletResponse response) throws IOException {
 
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);

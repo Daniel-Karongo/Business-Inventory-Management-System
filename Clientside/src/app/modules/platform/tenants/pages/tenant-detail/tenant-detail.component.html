@@ -1,0 +1,103 @@
+<div class="tenant-detail-page" *ngIf="tenant">
+
+  <div class="header">
+
+    <div class="title">
+
+      <h1>{{ tenant.name }}</h1>
+
+      <p>Tenant ID: {{ tenant.id }}</p>
+
+    </div>
+
+  </div>
+
+  <div class="grid">
+
+    <!-- TENANT INFO -->
+
+    <mat-card class="card">
+
+      <h3>Tenant Information</h3>
+
+      <div class="row">
+        <span>Name</span>
+        <span>{{ tenant.name }}</span>
+      </div>
+
+      <div class="row">
+        <span>Code</span>
+        <span>{{ tenant.code }}</span>
+      </div>
+
+      <div class="row">
+        <span>Status</span>
+        <span class="status" [ngClass]="tenant.status.toLowerCase()">
+          {{ tenant.status }}
+        </span>
+      </div>
+
+      <div class="row">
+        <span>Created</span>
+        <span>{{ tenant.createdAt | date:'medium' }}</span>
+      </div>
+
+    </mat-card>
+
+    <!-- ACTIONS -->
+
+    <mat-card class="card">
+
+      <h3>Actions</h3>
+
+      <div class="actions">
+
+        <button
+          mat-stroked-button
+          color="primary"
+          [routerLink]="['/platform/tenants', tenant.id, 'subscription']">
+
+          Manage Subscription
+
+        </button>
+
+      </div>
+
+    </mat-card>
+
+  </div>
+
+  <!-- METRICS -->
+
+  <mat-card class="metrics">
+
+    <h3>Recent Usage Metrics</h3>
+
+    <table mat-table [dataSource]="metrics">
+
+      <ng-container matColumnDef="requests">
+        <th mat-header-cell *matHeaderCellDef>Requests</th>
+        <td mat-cell *matCellDef="let m">{{ m.requests }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="errors">
+        <th mat-header-cell *matHeaderCellDef>Errors</th>
+        <td mat-cell *matCellDef="let m">{{ m.errors }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="snapshotTime">
+        <th mat-header-cell *matHeaderCellDef>Time</th>
+        <td mat-cell *matCellDef="let m">
+          {{ m.snapshotTime | date:'short' }}
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+
+    </table>
+
+  </mat-card>
+
+</div>

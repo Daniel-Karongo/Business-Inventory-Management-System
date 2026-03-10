@@ -1,13 +1,16 @@
 package com.IntegrityTechnologies.business_manager.security.auth.controller;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
 import com.IntegrityTechnologies.business_manager.security.auth.config.PasswordResetProperties;
 import com.IntegrityTechnologies.business_manager.security.auth.model.PasswordResetToken;
+import com.IntegrityTechnologies.business_manager.security.auth.model.UserType;
 import com.IntegrityTechnologies.business_manager.security.auth.service.PasswordResetEmailService;
 import com.IntegrityTechnologies.business_manager.security.auth.service.PasswordResetService;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.service.SmsService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.security.auth.service.PasswordResetSmsService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,6 +19,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth/password-reset")
 @RequiredArgsConstructor
+@Slf4j
 public class PasswordResetController {
 
     private final PasswordResetProperties props;
@@ -24,6 +28,7 @@ public class PasswordResetController {
     private final PasswordResetEmailService emailService;
     private final PasswordResetSmsService smsResetService;
     private final SmsService smsService;
+    private final PlatformUserRepository platformUserRepository;
 
     @GetMapping("/options")
     public ResponseEntity<?> options() {
@@ -50,7 +55,20 @@ public class PasswordResetController {
         if (!props.getChannels().contains(selectedChannel)) {
             return ResponseEntity.badRequest().body("Channel not allowed");
         }
+        platformUserRepository
+                .findByUsernameAndDeletedFalse(identifier)
+                .ifPresent(platformUser -> {
 
+                    var token = service.createToken(
+                            platformUser.getId(),
+                            UserType.PLATFORM,
+                            PasswordResetToken.Channel.EMAIL,
+                            props.getEmail().getTokenExpiryMinutes()
+                    );
+
+                    // For platform users we log OTP only
+                    log.warn("Platform reset OTP for {} : {}", platformUser.getUsername(), token.getTokenHash());
+                });
         userRepository.findByIdentifier(identifier).ifPresent(user -> {
 
             switch (selectedChannel) {
@@ -60,6 +78,7 @@ public class PasswordResetController {
 
                     var token = service.createToken(
                             user.getId(),
+                            UserType.TENANT,
                             PasswordResetToken.Channel.EMAIL,
                             props.getEmail().getTokenExpiryMinutes()
                     );
@@ -71,9 +90,11 @@ public class PasswordResetController {
 
                     var token = service.createToken(
                             user.getId(),
+                            UserType.TENANT,
                             PasswordResetToken.Channel.SMS,
                             props.getSms().getTokenExpiryMinutes()
                     );
+
                     smsResetService.sendResetSms(user, token.getTokenHash());
                 }
 

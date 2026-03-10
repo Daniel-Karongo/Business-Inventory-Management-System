@@ -64,14 +64,14 @@
     </ng-container>
 
     <!-- ACCESS CONTROL (SUPERUSER ONLY) -->
-    <a *ngIf="isSuperuser()" routerLink="/admin/access-control" routerLinkActive="active" class="nav-item"
+    <!-- <a *ngIf="isSuperuser()" routerLink="/admin/access-control" routerLinkActive="active" class="nav-item"
       [class.justify-center]="sidebar.isCollapsed$ | async"
       [matTooltip]="(sidebar.isCollapsed$ | async) ? 'Access Control' : ''" matTooltipPosition="right"
       matTooltipAppendTo="body">
 
       <mat-icon class="nav-icon" svgIcon="access-control"></mat-icon>
       <span class="collapsed-label">Access Control</span>
-    </a>
+    </a> -->
 
   </nav>
 

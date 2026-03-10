@@ -1,0 +1,71 @@
+.audit-page {
+
+  padding: 24px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 20px;
+
+}
+
+.header {
+
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+}
+
+.title h1 {
+
+  margin: 0;
+
+  font-size: 22px;
+
+}
+
+.title p {
+
+  font-size: 13px;
+
+  color: var(--text-secondary);
+
+}
+
+.table-wrapper {
+
+  background: var(--surface);
+
+  border: 1px solid var(--border);
+
+  border-radius: 8px;
+
+  overflow-x: auto;
+
+}
+
+table {
+
+  width: 100%;
+
+}
+
+mat-paginator {
+
+  border-top: 1px solid var(--border);
+
+}
+
+@media (max-width: 900px) {
+
+  .audit-page {
+
+    padding: 16px;
+
+  }
+
+}

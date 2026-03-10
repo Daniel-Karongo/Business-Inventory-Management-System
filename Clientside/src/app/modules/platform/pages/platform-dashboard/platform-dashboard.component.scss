@@ -1,0 +1,227 @@
+.platform-page {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* =========================
+   HEADER
+========================= */
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.title p {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* =========================
+   METRICS GRID
+========================= */
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.metric {
+  padding: 24px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.metric-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.metric-title mat-icon {
+  font-size: 20px;
+}
+
+.metric-value {
+  margin-top: 12px;
+  font-size: 32px;
+  font-weight: 600;
+}
+
+/* =========================
+   MANAGEMENT CARDS
+========================= */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  padding: 22px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 130px;
+}
+
+.card-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.icon {
+  width: 46px;
+  height: 46px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 8px;
+  color: white;
+}
+
+.icon mat-icon {
+  font-size: 22px;
+}
+
+.icon.tenants {
+  background: #2563eb;
+}
+
+.icon.plans {
+  background: #7c3aed;
+}
+
+.info h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.info p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* =========================
+   AUDIT SECTION
+========================= */
+
+.audit {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.audit h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.audit-row {
+  display: grid;
+  grid-template-columns: 140px 140px 1fr;
+  align-items: center;
+
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.audit-row:last-child {
+  border-bottom: none;
+}
+
+.entity {
+  font-weight: 500;
+}
+
+.action {
+  color: var(--text-secondary);
+}
+
+.time {
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* =========================
+   TABLET
+========================= */
+
+@media (max-width: 1024px) {
+
+  .platform-page {
+    padding: 24px;
+  }
+
+  .audit-row {
+    grid-template-columns: 120px 120px 1fr;
+  }
+
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 640px) {
+
+  .platform-page {
+    padding: 18px;
+    gap: 24px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .metric-value {
+    font-size: 26px;
+  }
+
+  .card {
+    min-height: 120px;
+  }
+
+  .audit-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .time {
+    text-align: left;
+  }
+
+}

@@ -8,6 +8,12 @@ export const routes: Routes = [
   { path: 'login', loadComponent: () => import('./modules/auth/pages/login/login.component').then(m => m.LoginComponent) },
   { path: 'auth', loadChildren: () => import('./modules/auth/auth.routes').then(m => m.AUTH_ROUTES) },
   {
+    path: 'platform',
+    loadChildren: () =>
+      import('./modules/platform/platform.routes')
+        .then(m => m.PLATFORM_ROUTES)
+  },
+  {
     path: 'print/sales/:id',
     loadComponent: () =>
       import('./modules/sales/pages/sale-receipt/sale-receipt.component')
@@ -33,7 +39,7 @@ export const routes: Routes = [
       { path: 'branches', canMatch: [authGuard], loadChildren: () => import('./modules/branches/branches.routes').then(m => m.BRANCH_ROUTES) },
       { path: 'departments', canMatch: [authGuard], loadChildren: () => import('./modules/departments/departments.routes').then(m => m.DEPARTMENT_ROUTES) },
       { path: 'reports', canMatch: [authGuard], loadChildren: () => import('./modules/reports/reports.routes').then(m => m.REPORTS_ROUTES) },
-      { path: 'admin/access-control', canMatch: [authGuard], loadChildren: () => import('./modules/admin/access-control/access-control.routes').then(m => m.ACCESS_CONTROL_ROUTES) },
+      // { path: 'admin/access-control', canMatch: [authGuard], loadChildren: () => import('./modules/admin/access-control/access-control.routes').then(m => m.ACCESS_CONTROL_ROUTES) },
       { path: 'finance', loadChildren: () => import('./modules/finance/finance.routes').then(m => m.FINANCE_ROUTES) }
     ]
   },

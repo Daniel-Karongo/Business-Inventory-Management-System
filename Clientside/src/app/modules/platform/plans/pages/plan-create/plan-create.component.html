@@ -1,0 +1,88 @@
+<div class="plan-create-page">
+
+  <div class="header">
+
+    <div class="title">
+
+      <h1>Create Plan</h1>
+
+      <p>Define SaaS subscription limits</p>
+
+    </div>
+
+  </div>
+
+  <form [formGroup]="form" class="form">
+
+    <div class="grid">
+
+      <mat-form-field appearance="fill">
+        <mat-label>Code</mat-label>
+        <input matInput formControlName="code">
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Name</mat-label>
+        <input matInput formControlName="name">
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Max Users</mat-label>
+        <input matInput type="number" formControlName="maxUsers">
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Max Branches</mat-label>
+        <input matInput type="number" formControlName="maxBranches">
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Requests Per Minute</mat-label>
+        <input matInput type="number" formControlName="requestsPerMinute">
+      </mat-form-field>
+
+    </div>
+
+    <div class="features">
+
+      <mat-checkbox formControlName="inventoryEnabled">
+        Inventory Enabled
+      </mat-checkbox>
+
+      <mat-checkbox formControlName="accountingEnabled">
+        Accounting Enabled
+      </mat-checkbox>
+
+      <mat-checkbox formControlName="reportingEnabled">
+        Reporting Enabled
+      </mat-checkbox>
+
+    </div>
+
+    <div class="actions">
+
+      <button
+        mat-stroked-button
+        type="button"
+        (click)="cancel()">
+
+        Cancel
+
+      </button>
+
+      <button
+        mat-flat-button
+        color="primary"
+        type="button"
+        [disabled]="loading"
+        (click)="submit()">
+
+        Create Plan
+
+      </button>
+
+    </div>
+
+  </form>
+
+</div>

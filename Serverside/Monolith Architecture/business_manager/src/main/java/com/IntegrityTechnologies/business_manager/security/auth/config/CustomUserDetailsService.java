@@ -1,8 +1,7 @@
-package com.IntegrityTechnologies.business_manager.modules.person.entity.user.service;
+package com.IntegrityTechnologies.business_manager.security.auth.config;
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.security.CustomUserDetails;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;

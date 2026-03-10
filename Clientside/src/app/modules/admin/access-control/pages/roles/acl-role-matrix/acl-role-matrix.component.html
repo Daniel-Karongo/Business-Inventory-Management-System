@@ -1,9 +1,7 @@
-<div class="acl-matrix-root">
+<!-- <div class="acl-matrix-root">
 
-  <!-- SINGLE SCROLL CONTEXT -->
   <div class="acl-matrix-scroll">
 
-    <!-- STICKY CONTROLS -->
     <div class="acl-matrix-controls">
 
       <div class="acl-matrix-header">
@@ -43,7 +41,6 @@
     <div *ngIf="loadingMatrix" class="loading-hint">
       Loading role / permission matrix…
     </div>
-    <!-- TABLE -->
     <table class="matrix" [class.loading-surface]="loadingMatrix">
 
       <thead>
@@ -59,14 +56,12 @@
 
         <ng-container *ngFor="let group of groupedPermissions()">
 
-          <!-- MODULE ROW -->
           <tr class="module-row">
             <td class="perm-col" [attr.colspan]="orderedRoles().length + 1">
               {{ group[0] }}
             </td>
           </tr>
 
-          <!-- PERMISSIONS -->
           <tr *ngFor="let p of group[1]">
 
             <td class="perm-col">
@@ -97,4 +92,4 @@
     </table>
 
   </div>
-</div>
+</div> -->

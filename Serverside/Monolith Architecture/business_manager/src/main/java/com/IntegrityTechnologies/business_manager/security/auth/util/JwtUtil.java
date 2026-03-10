@@ -30,6 +30,7 @@ public class JwtUtil {
        TOKEN GENERATION (MIDNIGHT EXPIRY)
        ===================================================== */
     public String generateToken(
+            String userType,
             UUID tenantId,
             UUID userId,
             String username,
@@ -44,11 +45,12 @@ public class JwtUtil {
 
         return Jwts.builder()
                 .setClaims(Map.of(
-                        "tenantId", tenantId.toString(),
+                        "userType", userType,
+                        "tenantId", tenantId != null ? tenantId.toString() : "",
                         "userId", userId.toString(),
                         "role", role,
                         "tokenId", tokenId.toString(),
-                        "branchId", branchId.toString(),
+                        "branchId", branchId != null ? branchId.toString() : "",
                         "device", deviceFingerprint
                 ))
                 .setSubject(username)
@@ -74,6 +76,10 @@ public class JwtUtil {
     /* =====================================================
        EXTRACTORS
        ===================================================== */
+    public String extractUserType(String token) {
+        return extractAllClaims(token).get("userType", String.class);
+    }
+
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
@@ -88,18 +94,27 @@ public class JwtUtil {
         return extractAllClaims(token).get("device", String.class);
     }
     public UUID extractBranchId(String token) {
-        return UUID.fromString(
-                extractAllClaims(token).get("branchId", String.class)
-        );
+
+        String value = extractAllClaims(token).get("branchId", String.class);
+
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        return UUID.fromString(value);
     }
 
     public UUID extractTenantId(String token) {
 
-        return UUID.fromString(
-                extractAllClaims(token).get("tenantId", String.class)
-        );
+        String value = extractAllClaims(token).get("tenantId", String.class);
 
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        return UUID.fromString(value);
     }
+
     public String extractUserRole(String token) {
         return extractAllClaims(token).get("role", String.class);
     }
@@ -152,7 +167,7 @@ public class JwtUtil {
     }
 
     private Key getSignKey() {
-        byte[] decodedKey = Decoders.BASE64.decode(secretKey);
+        byte[] decodedKey = Decoders.BASE64.decode(secretKey.trim());
         return Keys.hmacShaKeyFor(decodedKey);
     }
 }
