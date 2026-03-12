@@ -1,11 +1,11 @@
 import { Routes } from '@angular/router';
-import { platformAdminGuard } from './guards/platform-admin.guard';
+import { platformModeGuard } from '../../core/guards/platform-mode.guard';
 
 export const PLATFORM_ROUTES: Routes = [
 
   {
     path: '',
-    canActivate: [platformAdminGuard],
+    canMatch: [platformModeGuard],
     loadComponent: () =>
       import('./layout/platform-layout.component')
         .then(m => m.PlatformLayoutComponent),

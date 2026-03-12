@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.security.auth.controller;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
 import com.IntegrityTechnologies.business_manager.security.auth.config.PasswordResetProperties;
+import com.IntegrityTechnologies.business_manager.security.auth.dto.ForceResetRequest;
 import com.IntegrityTechnologies.business_manager.security.auth.model.PasswordResetToken;
 import com.IntegrityTechnologies.business_manager.security.auth.model.UserType;
 import com.IntegrityTechnologies.business_manager.security.auth.service.PasswordResetEmailService;
@@ -132,6 +133,17 @@ public class PasswordResetController {
                     req.get("newPassword")
             );
         }
+
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/force")
+    public ResponseEntity<?> forceReset(@RequestBody ForceResetRequest request) {
+
+        service.forcePasswordReset(
+                request.getIdentifier(),
+                request.getNewPassword()
+        );
 
         return ResponseEntity.ok().build();
     }

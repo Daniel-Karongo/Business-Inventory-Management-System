@@ -53,6 +53,18 @@ public class FileStorageService {
         return dir;
 
     }
+    public Path brandingRoot() {
+
+        Path tenant = tenantRoot();
+
+        Path dir = tenant.resolve(".branding").normalize();
+
+        createAndSecure(dir);
+
+        return dir;
+
+    }
+
     public Path productRoot() {
         return moduleRoot(".products");
     }

@@ -1,25 +1,25 @@
 import { Routes } from '@angular/router';
 import { TenantListComponent } from './pages/tenant-list/tenant-list.component';
 import { TenantCreateComponent } from './pages/tenant-create/tenant-create.component';
-import { platformAdminGuard } from '../guards/platform-admin.guard';
+import { platformModeGuard } from '../../../core/guards/platform-mode.guard';
 
 export const TENANT_ROUTES: Routes = [
 
   {
     path: '',
     component: TenantListComponent,
-    canActivate: [platformAdminGuard]
+    canActivate: [platformModeGuard]
   },
 
   {
     path: 'create',
     component: TenantCreateComponent,
-    canActivate: [platformAdminGuard]
+    canActivate: [platformModeGuard]
   },
 
   {
     path: ':id',
-    canActivate: [platformAdminGuard],
+    canActivate: [platformModeGuard],
     loadComponent: () =>
       import('./pages/tenant-detail/tenant-detail.component')
         .then(m => m.TenantDetailComponent)

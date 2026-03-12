@@ -1,8 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
-import { AuthService } from '../../services/auth.service';
+import { AuthService, LoginRequest } from '../../services/auth.service';
 import { ActivatedRoute, Router } from '@angular/router';
-import { BranchService } from '../../../branches/services/branch.service';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { finalize } from 'rxjs/operators';
 
@@ -13,8 +12,11 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { LoginRequest } from '../../models';
 import { IdleLogoutService } from '../../../../core/services/IdleLogoutService';
+import { BranchService } from '../../../tenant/content/branches/services/branch.service';
+import { DomainContextService } from '../../../../core/services/domain-context.service';
+import { TenantBrandingService } from '../../../../core/services/tenant-branding.service';
+import { resolveTenantLanding } from '../../../../core/utils/role-landing.util';
 
 @Component({
   selector: 'app-login',
@@ -42,17 +44,21 @@ export class LoginComponent implements OnInit {
   private snack = inject(MatSnackBar);
   private route = inject(ActivatedRoute);
   private idle = inject(IdleLogoutService);
+  private domain = inject(DomainContextService);
+  private branding = inject(TenantBrandingService);
 
   form = this.fb.nonNullable.group({
     identifier: ['', Validators.required],
     password: ['', Validators.required],
-    branchId: ['', Validators.required]
+    branchId: ['']
   });
 
   branches: Array<{ id: string; name: string }> = [];
   hide = true;
   loading = false;
   currentYear = new Date().getFullYear();
+  isPlatform = this.domain.isPlatform;
+  logo$ = this.branding.logo$;
 
   ngOnInit() {
 
@@ -64,17 +70,36 @@ export class LoginComponent implements OnInit {
       );
     }
 
-    this.branchService.getAll().subscribe({
-      next: (data) => {
-        this.branches = (Array.isArray(data) ? data : []).map((b: any) => ({
-          id: b.id ?? '',
-          name: b.name ?? ''
-        }));
-      },
-      error: () => {
-        this.snack.open('Could not load branches', 'Close', { duration: 3500 });
-      }
-    });
+    if (!this.isPlatform) {
+
+      this.form.controls.branchId.addValidators(Validators.required);
+
+      this.branchService.getAll(false).subscribe({
+        next: (data) => {
+
+          const list = (Array.isArray(data) ? data : [])
+            .map((b: any) => ({
+              id: b.id ?? '',
+              name: b.name ?? ''
+            }));
+
+          this.branches = list;
+
+          if (list.length === 1) {
+            this.form.patchValue({ branchId: list[0].id });
+          }
+
+          if (list.length === 0) {
+            this.snack.open('No branches configured for this tenant.', 'Close', { duration: 4000 });
+          }
+
+        },
+        error: () => {
+          this.snack.open('Could not load branches', 'Close', { duration: 3500 });
+        }
+      });
+
+    }
   }
 
   onForgot() {
@@ -88,20 +113,59 @@ export class LoginComponent implements OnInit {
     }
 
     this.loading = true;
-    const payload = this.form.value as LoginRequest;
+    const payload: LoginRequest = {
+      identifier: this.form.value.identifier!,
+      password: this.form.value.password!,
+      branchId: this.domain.isPlatform
+        ? null as any
+        : this.form.value.branchId!
+    };
 
     this.auth.login(payload).pipe(
       finalize(() => (this.loading = false))
     ).subscribe({
       next: (res) => {
+        this.auth.setUser(res);
         this.snack.open('Login successful', undefined, { duration: 1200 });
         console.log('Starting idle service...');
         this.idle.start();
-        this.router.navigate(['/dashboard']);
+        console.log("Hello");
+        console.log(res);
+        if (res.userType === 'PLATFORM') {
+          console.log("PLATFORM");
+          this.router.navigateByUrl('/platform');
+        } else {
+
+          const landing = resolveTenantLanding(res.role);
+
+          this.router.navigateByUrl(landing);
+
+        }
       },
       error: (err) => {
-        const msg = err?.error?.message || 'Invalid login credentials';
-        this.snack.open(msg, 'Close', { duration: 5000 });
+
+        const msg = err?.error?.message ?? err?.error;
+
+        if (msg === 'PASSWORD_CHANGE_REQUIRED') {
+
+          this.router.navigate(
+            ['/auth/reset-password'],
+            {
+              state: {
+                forced: true,
+                identifier: this.form.value.identifier
+              }
+            }
+          );
+
+          return;
+        }
+
+        this.snack.open(
+          msg || 'Invalid login credentials',
+          'Close',
+          { duration: 5000 }
+        );
       }
     });
   }

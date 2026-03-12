@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.platform.security.rat
 
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.entity.Plan;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.service.SubscriptionService;
+import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -19,12 +20,11 @@ public class TenantRateLimiter {
     private static final long WINDOW_SECONDS = 60;
 
     private final Map<UUID, Counter> counters = new ConcurrentHashMap<>();
+    private final TenantMetadataCache tenantMetadataCache;
 
     public boolean allow(UUID tenantId) {
 
-        Plan plan = subscriptionService.getPlan(tenantId);
-
-        int limit = resolveLimit(plan);
+        int limit = resolveLimit(tenantId);
 
         Counter counter = counters.computeIfAbsent(
                 tenantId,
@@ -46,13 +46,11 @@ public class TenantRateLimiter {
         }
     }
 
-    private int resolveLimit(Plan plan) {
+    public int resolveLimit(UUID tenantId) {
 
-        if (plan == null) {
-            return 200;
-        }
-
-        return plan.getRequestsPerMinute();
+        return tenantMetadataCache
+                .getSubscriptionPlan(tenantId)
+                .getRequestsPerMinute();
     }
 
     private static class Counter {

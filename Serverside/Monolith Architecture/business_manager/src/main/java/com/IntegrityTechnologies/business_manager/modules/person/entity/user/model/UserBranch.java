@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 public class UserBranch {
 
     @EmbeddedId
+    @Builder.Default
     private UserBranchId id = new UserBranchId();
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -36,23 +37,23 @@ public class UserBranch {
     @Column(nullable = false)
     private boolean primaryBranch = false;
 
+    @Column(nullable = false, updatable = false)
     private LocalDateTime assignedAt;
 
     @PrePersist
     public void onCreate() {
-
         assignedAt = LocalDateTime.now();
+    }
 
-        if (id == null) {
-            id = new UserBranchId();
-        }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof UserBranch that)) return false;
+        return id != null && id.equals(that.id);
+    }
 
-        if (user != null) {
-            id.setUserId(user.getId());
-        }
-
-        if (branch != null) {
-            id.setBranchId(branch.getId());
-        }
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

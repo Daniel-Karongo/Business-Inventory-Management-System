@@ -1,7 +1,9 @@
 package com.IntegrityTechnologies.business_manager.security.auth.service;
 
+import com.IntegrityTechnologies.business_manager.exception.UserNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUser;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.auth.config.PasswordResetProperties;
 import com.IntegrityTechnologies.business_manager.security.auth.model.PasswordResetAudit;
 import com.IntegrityTechnologies.business_manager.security.auth.model.PasswordResetToken;
@@ -77,6 +79,38 @@ public class PasswordResetService {
             );
             throw ex;
         }
+    }
+
+    @Transactional
+    public void forcePasswordReset(String identifier, String newPassword) {
+
+        UUID tenantId = TenantContext.getOrNull();
+
+        /* PLATFORM CONTEXT */
+
+        if (tenantId == null) {
+
+            PlatformUser user =
+                    platformUserRepository
+                            .findByUsernameAndDeletedFalse(identifier)
+                            .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+            user.setPassword(passwordEncoder.encode(newPassword));
+            user.setMustChangePassword(false);
+
+            platformUserRepository.save(user);
+
+            return;
+        }
+
+        /* TENANT CONTEXT */
+
+        User user =
+                userRepository
+                        .findAuthUser(tenantId, identifier)
+                        .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        applyPasswordChange(user, newPassword);
     }
 
     /* =====================================================

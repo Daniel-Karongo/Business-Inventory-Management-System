@@ -31,6 +31,20 @@ public class RoleGuardService {
         }
 
         /*
+         HYBRID ROLES
+         */
+        if (annotation instanceof PlatformUserOrTenantManager) {
+
+            if (SecurityUtils.isPlatformAdmin()) {
+                return true;
+            }
+
+            Role role = SecurityUtils.currentRole();
+
+            return role.canAccess(Role.MANAGER);
+
+        }
+        /*
          TENANT ROLES
          */
 

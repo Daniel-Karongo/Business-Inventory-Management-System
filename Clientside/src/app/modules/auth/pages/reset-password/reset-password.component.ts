@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -34,8 +34,8 @@ export class ResetPasswordComponent implements OnInit, OnDestroy {
   private snack = inject(MatSnackBar);
 
   state = history.state as {
-    identifier: string;
-    channel: ResetChannel;
+    identifier?: string;
+    channel?: ResetChannel;
   };
 
   /* =========================
@@ -63,18 +63,60 @@ export class ResetPasswordComponent implements OnInit, OnDestroy {
     newPassword: [''],
     confirmPassword: ['']
   }, {
-    validators: form => {
-      const pw = form.get('newPassword')!.value;
-      const cpw = form.get('confirmPassword')!.value;
-      return pw && cpw && pw !== cpw ? { mismatch: true } : null;
+    validators: (form) => {
+
+      const pw = form.get('newPassword')?.value;
+      const cpw = form.get('confirmPassword')?.value;
+
+      if (!pw || !cpw) {
+        return null;
+      }
+
+      return pw === cpw ? null : { mismatch: true };
+
     }
   });
 
   /* =========================
      LIFECYCLE
      ========================= */
+  forced = false;
+  identifier = '';
+
   ngOnInit() {
-    this.startCountdown();
+
+    const nav = history.state || {};
+
+    this.forced = nav.forced === true;
+    this.identifier = nav.identifier ?? '';
+
+    if (this.forced) {
+
+      this.step = 'RESET';
+
+      // remove token validation because OTP step is skipped
+      this.form.controls.token.clearValidators();
+      this.form.controls.token.updateValueAndValidity();
+
+      // apply password validators
+      this.form.controls.newPassword.setValidators([
+        Validators.required,
+        Validators.minLength(4)
+      ]);
+
+      this.form.controls.confirmPassword.setValidators([
+        Validators.required
+      ]);
+
+      this.form.controls.newPassword.updateValueAndValidity();
+      this.form.controls.confirmPassword.updateValueAndValidity();
+
+    } else {
+
+      this.startCountdown();
+
+    }
+
   }
 
   ngOnDestroy() {
@@ -123,8 +165,8 @@ export class ResetPasswordComponent implements OnInit, OnDestroy {
      ========================= */
   resendCode() {
     this.reset.initiate({
-      identifier: this.state.identifier,
-      channel: this.state.channel
+      identifier: this.state?.identifier ?? this.identifier,
+      channel: this.state?.channel ?? 'EMAIL'
     }).subscribe({
       complete: () => { },
       error: () => { }
@@ -150,9 +192,47 @@ export class ResetPasswordComponent implements OnInit, OnDestroy {
      FINAL RESET
      ========================= */
   submit() {
+
     if (this.form.invalid) return;
 
     this.loading = true;
+
+    /* =========================
+       FORCED RESET
+    ========================= */
+
+    if (this.forced) {
+
+      const payload = {
+        identifier: this.identifier,
+        newPassword: this.form.value.newPassword!
+      };
+
+      this.reset.forceReset(payload).subscribe({
+        next: () => {
+          this.snack.open(
+            'Password changed successfully. Please login.',
+            'Close',
+            { duration: 3000 }
+          );
+          this.finish();
+        },
+        error: () => {
+          this.snack.open(
+            'Password reset failed.',
+            'Close',
+            { duration: 3500 }
+          );
+          this.loading = false;
+        }
+      });
+
+      return;
+    }
+
+    /* =========================
+       TOKEN RESET
+    ========================= */
 
     const payload = {
       token: this.form.value.token!,
@@ -209,11 +289,11 @@ export class ResetPasswordComponent implements OnInit, OnDestroy {
 
   get maskedDestination(): string {
     if (this.state.channel === 'EMAIL') {
-      return this.maskEmail(this.state.identifier);
+      return this.maskEmail(this.state?.identifier ?? this.identifier);
     }
 
     if (this.state.channel === 'SMS') {
-      return this.maskPhone(this.state.identifier);
+      return this.maskPhone(this.state?.identifier ?? this.identifier);
     }
 
     return 'your registered account details';
@@ -248,10 +328,7 @@ export class ResetPasswordComponent implements OnInit, OnDestroy {
   private finish() {
     this.clearTimer();
     this.loading = false;
-    this.router.navigate(['/login'], {
-      replaceUrl: true,
-      queryParams: { reason: 'idle' }
-    });
+    this.router.navigateByUrl('/login', { replaceUrl: true });
   }
 
   cancel() {

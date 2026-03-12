@@ -27,6 +27,7 @@ import java.time.LocalDateTime;
 public class UserDepartment {
 
     @EmbeddedId
+    @Builder.Default
     private UserDepartmentId id = new UserDepartmentId();
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -46,6 +47,7 @@ public class UserDepartment {
     @Column(nullable = false)
     private boolean primaryDepartment = false;
 
+    @Column(nullable = false, updatable = false)
     private LocalDateTime assignedAt;
 
     @PrePersist
@@ -56,17 +58,17 @@ public class UserDepartment {
         if (role == null) {
             role = DepartmentMembershipRole.MEMBER;
         }
+    }
 
-        if (id == null) {
-            id = new UserDepartmentId();
-        }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof UserDepartment that)) return false;
+        return id != null && id.equals(that.id);
+    }
 
-        if (user != null) {
-            id.setUserId(user.getId());
-        }
-
-        if (department != null) {
-            id.setDepartmentId(department.getId());
-        }
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

@@ -16,7 +16,6 @@ import java.util.UUID;
 public interface BranchRepository extends JpaRepository<Branch, UUID> {
 
     /* ================= BASIC LOOKUPS ================= */
-
     List<Branch> findByDeleted(Boolean deleted);
 
     List<Branch> findByDeletedFalse();

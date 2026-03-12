@@ -11,7 +11,7 @@ import java.util.UUID;
 
 public interface UserBranchRepository
         extends JpaRepository<UserBranch, UserBranchId> {
-
+    boolean existsByUser_IdAndBranch_Id(UUID userId, UUID branchId);
     List<UserBranch> findByBranchId(UUID branchId);
 
     List<UserBranch> findByUserId(UUID userId);

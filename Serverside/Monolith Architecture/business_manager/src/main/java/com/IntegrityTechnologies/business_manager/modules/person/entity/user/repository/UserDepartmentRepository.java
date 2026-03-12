@@ -14,6 +14,8 @@ import java.util.UUID;
 public interface UserDepartmentRepository
         extends JpaRepository<UserDepartment, UserDepartmentId> {
 
+    boolean existsByUser_IdAndDepartment_Id(UUID userId, UUID departmentId);
+
     @Modifying
     @Query("delete from UserDepartment ud where ud.user.id = :userId")
     void deleteByUserId(UUID userId);
@@ -22,23 +24,24 @@ public interface UserDepartmentRepository
 
     List<UserDepartment> findByDepartmentId(UUID departmentId);
 
-    @Query("""
-    SELECT ud FROM UserDepartment ud
-    JOIN FETCH ud.user
-    WHERE ud.department.id = :departmentId
-""")
+        @Query("""
+        SELECT ud FROM UserDepartment ud
+        JOIN FETCH ud.user
+        WHERE ud.department.id = :departmentId
+    """)
     List<UserDepartment> findByDepartmentIdWithUser(UUID departmentId);
 
     @Query("""
-    SELECT ud FROM UserDepartment ud
-    JOIN FETCH ud.department d
-    JOIN FETCH d.branch
-    WHERE ud.user.id = :userId
-""")
+        SELECT ud FROM UserDepartment ud
+        JOIN FETCH ud.department d
+        JOIN FETCH d.branch
+        WHERE ud.user.id = :userId
+    """)
     List<UserDepartment> findByUserIdWithDepartmentAndBranch(UUID userId);
+
     Page<UserDepartment> findByDepartmentId(UUID departmentId, Pageable pageable);
+
     @Modifying
     @Query("DELETE FROM UserDepartment ud WHERE ud.department.id = :departmentId")
     void deleteByDepartmentId(UUID departmentId);
-
 }

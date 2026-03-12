@@ -12,7 +12,6 @@ import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 
@@ -25,7 +24,6 @@ public class TenantProvisioningService {
     private final TenantSubscriptionRepository subscriptionRepository;
     private final AuditService auditService;
 
-    @Transactional
     public Tenant provisionTenant(String name, String code) {
 
         if (tenantRepository.existsByCode(code)) {

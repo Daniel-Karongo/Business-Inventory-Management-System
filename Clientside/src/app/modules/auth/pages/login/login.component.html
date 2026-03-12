@@ -4,7 +4,15 @@
     <!-- HEADER -->
     <header class="dialog-header">
       <div class="logo">
-        <span>BM</span>
+
+        <ng-container *ngIf="logo$ | async as logo; else fallbackLogo">
+          <img [src]="logo" class="h-12 w-auto object-contain" />
+        </ng-container>
+
+        <ng-template #fallbackLogo>
+          <span>BM</span>
+        </ng-template>
+
       </div>
 
       <div class="dialog-title">Business Manager</div>
@@ -33,7 +41,7 @@
           </button>
         </mat-form-field>
 
-        <mat-form-field appearance="fill">
+        <mat-form-field appearance="fill" *ngIf="!isPlatform && branches.length > 1">
           <mat-label>Branch</mat-label>
           <mat-select formControlName="branchId">
             <mat-option *ngFor="let b of branches" [value]="b.id">

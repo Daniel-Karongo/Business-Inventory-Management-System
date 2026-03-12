@@ -35,6 +35,10 @@ export class AuthService {
       .pipe(tap(me => this.me$.next(me)));
   }
 
+  setUser(me: MeResponse) {
+    this.me$.next(me);
+  }
+  
   getCurrentUser() {
     return this.me$.asObservable();
   }
@@ -93,4 +97,5 @@ export interface MeResponse {
   role: string;
   branchId: string;
   departmentIds: string[];
+  userType: 'PLATFORM' | 'TENANT';
 }

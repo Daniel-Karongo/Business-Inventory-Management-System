@@ -6,7 +6,6 @@ export type ResetChannel = 'EMAIL' | 'SMS' | 'IDENTITY';
 
 @Injectable({ providedIn: 'root' })
 export class PasswordResetService {
-
   private http = inject(HttpClient);
   private base = environment.apiUrl;
 
@@ -53,6 +52,13 @@ export class PasswordResetService {
   }) {
     return this.http.post(
       `${this.base}${environment.endpoints.auth.passwordReset.complete}`,
+      payload
+    );
+  }
+
+  forceReset(payload: { identifier: string; newPassword: string }) {
+    return this.http.post(
+      `${this.base}${environment.endpoints.auth.passwordReset.force}`,
       payload
     );
   }

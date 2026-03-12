@@ -46,25 +46,32 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
 
     private String resolveTenant(HttpServletRequest request) {
 
-        // 1️⃣ Header
+        // 1️⃣ Header override
         String header = request.getHeader(TENANT_HEADER);
         if (header != null && !header.isBlank()) {
             return header;
         }
 
-        // 2️⃣ Subdomain
+        // 2️⃣ Subdomain resolution
         String host = request.getServerName();
 
         if (host != null && host.contains(".")) {
+
             String subdomain = host.split("\\.")[0];
 
-            if (!subdomain.equalsIgnoreCase("www")) {
-                return subdomain;
+            // 🚨 PLATFORM IS NOT A TENANT
+            if (
+                    subdomain.equalsIgnoreCase("platform") ||
+                            subdomain.equalsIgnoreCase("www") ||
+                            subdomain.equalsIgnoreCase("localhost")
+            ) {
+                return null;
             }
+
+            return subdomain;
         }
 
         // 3️⃣ Path fallback
-
         String path = request.getRequestURI();
 
         if (path.startsWith("/t/")) {

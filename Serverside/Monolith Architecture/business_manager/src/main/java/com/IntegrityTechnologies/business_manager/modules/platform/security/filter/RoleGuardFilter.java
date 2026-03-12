@@ -95,6 +95,7 @@ public class RoleGuardFilter extends OncePerRequestFilter {
 
         return ann instanceof PlatformSuperAdminOnly
                 || ann instanceof PlatformAdminOnly
+                || ann instanceof PlatformUserOrTenantManager
                 || ann instanceof TenantAdminOnly
                 || ann instanceof TenantManagerOnly
                 || ann instanceof TenantSupervisorOnly

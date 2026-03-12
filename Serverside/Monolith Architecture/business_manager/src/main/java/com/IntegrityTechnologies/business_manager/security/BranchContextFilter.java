@@ -27,6 +27,10 @@ public class BranchContextFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         try {
+            if (SecurityUtils.isPlatformAdmin()) {
+                filterChain.doFilter(request, response);
+                return;
+            }
 
             Authentication auth =
                     SecurityContextHolder.getContext().getAuthentication();

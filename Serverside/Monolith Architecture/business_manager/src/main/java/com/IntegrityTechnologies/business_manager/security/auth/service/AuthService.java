@@ -21,12 +21,14 @@ import com.IntegrityTechnologies.business_manager.modules.platform.identity.repo
 import com.IntegrityTechnologies.business_manager.security.auth.model.UserType;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -37,7 +39,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private static final int MAX_SESSIONS_PER_DAY = 4;
+    private static final int TENANT_USERS_MAX_SESSIONS_PER_DAY = 5;
+    private static final int PLATFORM_USERS_MAX_SESSIONS_PER_DAY = 5;
 
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
@@ -84,7 +87,10 @@ public class AuthService {
             }
 
             if (Boolean.TRUE.equals(platformUser.getMustChangePassword())) {
-                throw new BadCredentialsException("PASSWORD_CHANGE_REQUIRED");
+                throw new ResponseStatusException(
+                        HttpStatus.PRECONDITION_REQUIRED,
+                        "PASSWORD_CHANGE_REQUIRED"
+                );
             }
 
             UUID tokenId = UUID.randomUUID();
@@ -105,7 +111,7 @@ public class AuthService {
                     platformUserSessionRepository
                             .countByUserIdAndLogoutTimeIsNull(platformUser.getId());
 
-            if (activeSessions >= 1) {
+            if (activeSessions >= PLATFORM_USERS_MAX_SESSIONS_PER_DAY) {
                 throw new IllegalStateException("Too many active sessions");
             }
 
@@ -146,7 +152,10 @@ public class AuthService {
         }
 
         if (Boolean.TRUE.equals(user.getMustChangePassword())) {
-            throw new BadCredentialsException("PASSWORD_CHANGE_REQUIRED");
+            throw new ResponseStatusException(
+                    HttpStatus.PRECONDITION_REQUIRED,
+                    "PASSWORD_CHANGE_REQUIRED"
+            );
         }
 
         authenticationManager.authenticate(
@@ -176,7 +185,7 @@ public class AuthService {
                         .findByUserIdAndLoginDateAndLogoutTimeIsNull(userId, today)
                         .size();
 
-        if (activeCount >= MAX_SESSIONS_PER_DAY) {
+        if (activeCount >= TENANT_USERS_MAX_SESSIONS_PER_DAY) {
             throw new IllegalStateException("Maximum active sessions reached for today");
         }
 

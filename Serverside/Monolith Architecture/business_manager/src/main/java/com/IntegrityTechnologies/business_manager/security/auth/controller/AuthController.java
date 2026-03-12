@@ -46,7 +46,7 @@ public class AuthController {
 
         Cookie cookie = new Cookie("access_token", result.jwt());
         cookie.setHttpOnly(true);
-        cookie.setSecure(isSecure);
+        cookie.setSecure(false);
         cookie.setPath("/");
         cookie.setMaxAge((int) jwtUtil.secondsUntilMidnight());
 
@@ -108,8 +108,9 @@ public class AuthController {
         boolean isSecure = request.isSecure();
 
         Cookie cookie = new Cookie("access_token", "");
+
         cookie.setHttpOnly(true);
-        cookie.setSecure(isSecure);
+        cookie.setSecure(false);
         cookie.setPath("/");
         cookie.setMaxAge(0);
 

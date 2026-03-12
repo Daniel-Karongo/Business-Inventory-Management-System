@@ -1,48 +1,64 @@
 import { Routes } from '@angular/router';
-import { MainLayoutComponent } from './core/layout/main-layout/main-layout.component';
-import { authGuard } from './modules/auth/guards/auth.guard';
+
+import { platformModeGuard } from './core/guards/platform-mode.guard';
+import { tenantModeGuard } from './core/guards/tenant-mode.guard';
 
 export const routes: Routes = [
 
-  // 🔓 PUBLIC ROUTES FIRST (unguarded)
-  { path: 'login', loadComponent: () => import('./modules/auth/pages/login/login.component').then(m => m.LoginComponent) },
-  { path: 'auth', loadChildren: () => import('./modules/auth/auth.routes').then(m => m.AUTH_ROUTES) },
+  /* ============================================================
+     ROOT ENTRY
+  ============================================================ */
+
+  {
+    path: '',
+    pathMatch: 'full',
+    redirectTo: 'auth'
+  },
+
+  /* ============================================================
+     AUTH MODULE (PUBLIC)
+  ============================================================ */
+
+  {
+    path: 'auth',
+    loadChildren: () =>
+      import('./modules/auth/auth.routes')
+        .then(m => m.AUTH_ROUTES)
+  },
+
+  /* ============================================================
+     PLATFORM MODE
+     platform.localhost:4200/platform
+  ============================================================ */
+
   {
     path: 'platform',
+    canMatch: [platformModeGuard],
     loadChildren: () =>
       import('./modules/platform/platform.routes')
         .then(m => m.PLATFORM_ROUTES)
   },
+
+  /* ============================================================
+     TENANT MODE
+     default.localhost:4200/app
+  ============================================================ */
+
   {
-    path: 'print/sales/:id',
-    loadComponent: () =>
-      import('./modules/sales/pages/sale-receipt/sale-receipt.component')
-        .then(m => m.SaleReceiptComponent)
+    path: 'app',
+    canMatch: [tenantModeGuard],
+    loadChildren: () =>
+      import('./modules/tenant/tenant.routes')
+        .then(m => m.TENANT_ROUTES)
   },
 
-  // 🔐 PROTECTED AREA
+  /* ============================================================
+     FALLBACK
+  ============================================================ */
+
   {
-    path: '',
-    component: MainLayoutComponent,
-    children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+    path: '**',
+    redirectTo: 'auth'
+  }
 
-      { path: 'dashboard', canMatch: [authGuard], loadChildren: () => import('./modules/dashboard/dashboard.routes').then(m => m.DASHBOARD_ROUTES) },
-      { path: 'inventory', canMatch: [authGuard], loadChildren: () => import('./modules/inventory/inventory.routes').then(m => m.INVENTORY_ROUTES) },
-      { path: 'categories', canMatch: [authGuard], loadChildren: () => import('./modules/categories/categories.routes').then(m => m.CATEGORY_ROUTES) },
-      { path: 'products', canMatch: [authGuard], loadChildren: () => import('./modules/products/products.routes').then(m => m.PRODUCT_ROUTES) },
-      { path: 'suppliers', canMatch: [authGuard], loadChildren: () => import('./modules/suppliers/suppliers.routes').then(m => m.SUPPLIER_ROUTES) },
-      { path: 'sales', canMatch: [authGuard], loadChildren: () => import('./modules/sales/sales.routes').then(m => m.SALES_ROUTES) },
-      { path: 'customers', canMatch: [authGuard], loadChildren: () => import('./modules/customers/customers.routes').then(m => m.CUSTOMER_ROUTES) },
-      { path: 'accounts', canMatch: [authGuard], loadChildren: () => import('./modules/accounts/accounts.routes').then(m => m.ACCOUNTS_ROUTES) },
-      { path: 'users', canMatch: [authGuard], loadChildren: () => import('./modules/users/users.routes').then(m => m.USER_ROUTES) },
-      { path: 'branches', canMatch: [authGuard], loadChildren: () => import('./modules/branches/branches.routes').then(m => m.BRANCH_ROUTES) },
-      { path: 'departments', canMatch: [authGuard], loadChildren: () => import('./modules/departments/departments.routes').then(m => m.DEPARTMENT_ROUTES) },
-      { path: 'reports', canMatch: [authGuard], loadChildren: () => import('./modules/reports/reports.routes').then(m => m.REPORTS_ROUTES) },
-      // { path: 'admin/access-control', canMatch: [authGuard], loadChildren: () => import('./modules/admin/access-control/access-control.routes').then(m => m.ACCESS_CONTROL_ROUTES) },
-      { path: 'finance', loadChildren: () => import('./modules/finance/finance.routes').then(m => m.FINANCE_ROUTES) }
-    ]
-  },
-
-  { path: '**', redirectTo: 'login' }
 ];

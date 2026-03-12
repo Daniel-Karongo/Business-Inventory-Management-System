@@ -31,4 +31,14 @@ public class TenantSettingsService {
                 );
     }
 
+    public void updateLogo(String logoPath) {
+
+        TenantSettings settings = getSettings();
+
+        settings.setLogoUrl(logoPath);
+
+        repository.save(settings);
+
+    }
+
 }

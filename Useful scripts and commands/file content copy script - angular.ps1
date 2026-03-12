@@ -11,14 +11,11 @@ $targetFolders = @(
     "src\styles.scss",
     "src\app\app.config.ts",
     "src\app\app.routes.ts",
-    "src\app\shared\bulk-import",
-    "src\app\shared\components\bulk-import-result-dialog",
-    "src\app\shared\layout",
-    "src\app\shared\models",
-    "src\app\shared\services",
-    "src\app\modules\inventory",
-    "src\app\modules\products",
-    "src\app\modules\sales"
+    "src\app\core\interceptors",
+    "src\app\core\layout",
+    "src\app\core\navigation",
+    "src\app\core\services",
+    "src\app\modules\auth"
 )
 
 # ================================

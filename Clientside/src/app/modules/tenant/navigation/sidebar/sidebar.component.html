@@ -1,0 +1,114 @@
+<div class="h-full flex flex-col bg-[var(--surface)] text-[var(--text-primary)]">
+
+  <!-- BRAND -->
+  <div class="p-4 border-b dark:border-gray-700 flex items-center gap-3"
+    [class.justify-center]="sidebar.isCollapsed$ | async">
+
+    <ng-container *ngIf="sidebar.isCollapsed$ | async; else expandedBrand">
+
+      <ng-container *ngIf="logo$ | async as logo; else fallbackCollapsed">
+        <img [src]="logo" class="w-10 h-10 object-contain" />
+      </ng-container>
+
+      <ng-template #fallbackCollapsed>
+        <div class="w-10 h-10 rounded-md bg-sky-600 text-white flex items-center justify-center font-bold">
+          BM
+        </div>
+      </ng-template>
+
+    </ng-container>
+
+    <!-- EXPANDED -->
+    <ng-template #expandedBrand>
+
+      <ng-container *ngIf="logo$ | async as logo; else fallbackExpanded">
+
+        <img [src]="logo" class="w-10 h-10 object-contain" />
+
+      </ng-container>
+
+      <ng-template #fallbackExpanded>
+
+        <div class="w-10 h-10 rounded-md bg-sky-600 text-white flex items-center justify-center font-bold">
+          BM
+        </div>
+
+      </ng-template>
+
+      <div>
+        <div class="text-lg font-semibold">Business Manager</div>
+        <div class="text-xs text-gray-500 dark:text-gray-400">Admin</div>
+      </div>
+
+    </ng-template>
+
+  </div>
+
+  <!-- NAV -->
+  <nav class="flex-1 overflow-y-auto py-4 space-y-1">
+
+    <ng-container *ngFor="let item of nav">
+
+      <!-- SIMPLE LINK -->
+      <a *ngIf="!item.children" [routerLink]="item.route" routerLinkActive="active" class="nav-item"
+        [class.justify-center]="sidebar.isCollapsed$ | async"
+        [matTooltip]="(sidebar.isCollapsed$ | async) ? item.title : ''" matTooltipPosition="right"
+        matTooltipAppendTo="body">
+
+        <mat-icon class="nav-icon" [svgIcon]="item.icon"></mat-icon>
+        <span class="collapsed-label">{{ item.title }}</span>
+      </a>
+
+      <!-- GROUP -->
+      <div *ngIf="item.children">
+
+        <!-- GROUP HEADER -->
+        <div class="nav-item group-header" (click)="toggleGroup(item)"
+          [class.justify-center]="sidebar.isCollapsed$ | async">
+
+          <mat-icon class="nav-icon" [svgIcon]="item.icon"></mat-icon>
+          <span class="collapsed-label">{{ item.title }}</span>
+        </div>
+
+        <!-- CHILDREN -->
+        <div *ngIf="item.expanded && !(sidebar.isCollapsed$ | async)" class="ml-8 space-y-1">
+
+          <a *ngFor="let child of item.children" [routerLink]="child.route" routerLinkActive="active"
+            class="nav-item child-item">
+
+            <mat-icon class="nav-icon" [svgIcon]="child.icon"></mat-icon>
+            <span>{{ child.title }}</span>
+          </a>
+
+        </div>
+
+      </div>
+
+    </ng-container>
+
+    <!-- ACCESS CONTROL (SUPERUSER ONLY) -->
+    <!-- <a *ngIf="isSuperuser()" routerLink="/admin/access-control" routerLinkActive="active" class="nav-item"
+      [class.justify-center]="sidebar.isCollapsed$ | async"
+      [matTooltip]="(sidebar.isCollapsed$ | async) ? 'Access Control' : ''" matTooltipPosition="right"
+      matTooltipAppendTo="body">
+
+      <mat-icon class="nav-icon" svgIcon="access-control"></mat-icon>
+      <span class="collapsed-label">Access Control</span>
+    </a> -->
+
+  </nav>
+
+  <!-- FOOTER -->
+  <div class="p-3 border-t dark:border-gray-700">
+    <div class="flex items-center" [class.justify-center]="sidebar.isCollapsed$ | async"
+      [class.justify-between]="!(sidebar.isCollapsed$ | async)">
+      <button (click)="sidebar.toggle()" class="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 transform transition"
+          [class.rotate-180]="!(sidebar.isCollapsed$ | async)" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+</div>

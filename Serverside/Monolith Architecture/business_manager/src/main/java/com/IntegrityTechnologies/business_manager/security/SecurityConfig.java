@@ -72,7 +72,8 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowedOriginPatterns(List.of(
-                "http://localhost:4200",
+                "http://localhost:*",
+                "http://*.localhost:*",
                 "https://*.ngrok-free.app"
         ));
 
@@ -90,6 +91,7 @@ public class SecurityConfig {
                 new UrlBasedCorsConfigurationSource();
 
         source.registerCorsConfiguration("/**", config);
+
         return source;
     }
 
@@ -146,7 +148,8 @@ public class SecurityConfig {
                                 "/api/auth/reset-password/**",
                                 "/api/users/register",
                                 "/api/payments/mpesa/stk/callback",
-                                "/api/payments/mpesa/c2b/**"
+                                "/api/payments/mpesa/c2b/**",
+                                "/api/platform/settings/logo"
                         ).permitAll()
 
                         .requestMatchers(HttpMethod.GET, "/api/branches").permitAll()

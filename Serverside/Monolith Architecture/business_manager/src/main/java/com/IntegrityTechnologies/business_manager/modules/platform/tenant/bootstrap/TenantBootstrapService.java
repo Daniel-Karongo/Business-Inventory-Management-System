@@ -4,16 +4,23 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.BranchAccountingSettingsRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.seed.BranchChartOfAccountsService;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.*;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.*;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.*;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.*;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.BranchAudit;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.DepartmentAudit;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.DepartmentMembershipRole;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.*;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.*;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserBranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserDepartmentRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalTime;
 import java.util.UUID;
@@ -30,12 +37,14 @@ public class TenantBootstrapService {
     private final DepartmentAuditRepository departmentAuditRepository;
     private final UserAuditRepository userAuditRepository;
 
+    private final UserDepartmentRepository userDepartmentRepository;
+    private final UserBranchRepository userBranchRepository;
+
     private final BranchAccountingSettingsRepository accountingSettingsRepository;
     private final BranchChartOfAccountsService chartService;
 
     private final PasswordEncoder passwordEncoder;
 
-    @Transactional
     public boolean bootstrapTenant(UUID tenantId, String adminUsername, String adminPassword) {
 
         /* =====================================
@@ -96,6 +105,8 @@ public class TenantBootstrapService {
                 .orElseGet(() -> {
 
                     Department d = Department.builder()
+                            .tenantId(tenantId)
+                            .branchId(branch.getId())
                             .branch(branch)
                             .name("GENERAL")
                             .description("Default general department")
@@ -159,11 +170,12 @@ public class TenantBootstrapService {
         /* =====================================
            5️⃣ ENSURE USER ↔ BRANCH
         ===================================== */
-        boolean adminChanged = adminCreated;
 
-        boolean branchAssigned = admin.getBranches()
-                .stream()
-                .anyMatch(b -> b.getBranch().getId().equals(branch.getId()));
+        boolean branchAssigned = userBranchRepository
+                .existsByUser_IdAndBranch_Id(
+                        admin.getId(),
+                        branch.getId()
+                );
 
         if (!branchAssigned) {
 
@@ -173,17 +185,19 @@ public class TenantBootstrapService {
                     .primaryBranch(true)
                     .build();
 
-            admin.getBranches().add(userBranch);
-            adminChanged = true;
+            userBranchRepository.save(userBranch);
         }
+
 
         /* =====================================
            6️⃣ ENSURE USER ↔ DEPARTMENT
         ===================================== */
 
-        boolean deptAssigned = admin.getDepartments()
-                .stream()
-                .anyMatch(d -> d.getDepartment().getId().equals(department.getId()));
+        boolean deptAssigned = userDepartmentRepository
+                .existsByUser_IdAndDepartment_Id(
+                        admin.getId(),
+                        department.getId()
+                );
 
         if (!deptAssigned) {
 
@@ -194,13 +208,9 @@ public class TenantBootstrapService {
                     .primaryDepartment(true)
                     .build();
 
-            admin.getDepartments().add(userDepartment);
-            adminChanged = true;
+            userDepartmentRepository.save(userDepartment);
         }
 
-        if (adminChanged) {
-            userRepository.save(admin);
-        }
         return adminCreated;
     }
 }

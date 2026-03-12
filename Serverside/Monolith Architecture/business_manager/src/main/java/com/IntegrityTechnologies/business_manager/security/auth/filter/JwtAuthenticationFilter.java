@@ -45,7 +45,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String jwt = extractTokenFromCookie(request);
 
-        if (jwt != null) {
+        if (jwt != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
             try {
 
@@ -174,6 +174,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             } catch (Exception ex) {
 
+                ex.printStackTrace();   // ADD THIS
+
                 SecurityContextHolder.clearContext();
                 TenantContext.clear();
                 BranchContext.clear();
@@ -211,6 +213,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         || path.startsWith("/api/auth/password-reset")
                         || path.equals("/api/payments/mpesa/stk/callback")
                         || path.startsWith("/api/payments/mpesa/c2b")
+                        || path.equals("/api/platform/settings/logo")
                         || (path.equals("/api/branches") && "GET".equals(method));
     }
 }

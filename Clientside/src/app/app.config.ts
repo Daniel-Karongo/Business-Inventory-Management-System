@@ -22,6 +22,8 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { APP_DATE_FORMATS } from './core/services/date-formats';
 import { IconLoader } from './core/utils/icon-loader';
 import { AuthService } from './modules/auth/services/auth.service';
+import { tenantInterceptor } from './core/interceptors/tenant.interceptor';
+import { TenantBrandingService } from './core/services/tenant-branding.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -32,7 +34,8 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(
       withInterceptors([
         authInterceptor,
-        loggingInterceptor
+        loggingInterceptor,
+        tenantInterceptor
       ])
     ),
 
@@ -59,6 +62,11 @@ export const appConfig: ApplicationConfig = {
       registrationStrategy: 'registerWhenStable:30000'
     }),
 
+    provideAppInitializer(() => {
+      const branding = inject(TenantBrandingService);
+      branding.loadLogo();
+    }),
+    
     DatePipe
   ]
 };

@@ -10,6 +10,6 @@ export const authGuard = () => {
 
   return auth.loadMe().pipe(
     map(() => true),
-    catchError(() => of(router.parseUrl('/login')))
+    catchError(() => of(router.parseUrl('/auth')))
   );
 };

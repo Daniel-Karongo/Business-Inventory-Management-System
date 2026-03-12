@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.platform.subscription
 
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.entity.Plan;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.entity.TenantSubscription;
+import com.IntegrityTechnologies.business_manager.modules.platform.subscription.repository.PlanRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.repository.TenantSubscriptionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -12,17 +13,13 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SubscriptionService {
 
-    private final TenantSubscriptionRepository subscriptionRepository;
+    private final PlanRepository planRepository;
 
     public Plan getPlan(UUID tenantId) {
 
-        TenantSubscription subscription =
-                subscriptionRepository
-                        .findByTenantId(tenantId)
-                        .orElseThrow(() ->
-                                new IllegalStateException("Tenant has no subscription"));
-
-        return subscription.getPlan();
+        return planRepository
+                .findPlanByTenantId(tenantId)
+                .orElseThrow(() ->
+                        new IllegalStateException("Tenant has no subscription"));
     }
-
 }

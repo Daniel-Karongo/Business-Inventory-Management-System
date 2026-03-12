@@ -14,14 +14,13 @@ public final class DeviceFingerprintUtil {
 
         try {
 
-            String ip = extractClientIp(request);
             String userAgent = request.getHeader("User-Agent");
 
             if (userAgent == null) {
                 userAgent = "unknown";
             }
 
-            String raw = ip + "|" + userAgent;
+            String raw = userAgent;
 
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
 
@@ -34,16 +33,5 @@ public final class DeviceFingerprintUtil {
             throw new RuntimeException("Failed to generate device fingerprint", e);
 
         }
-    }
-
-    private static String extractClientIp(HttpServletRequest request) {
-
-        String xfHeader = request.getHeader("X-Forwarded-For");
-
-        if (xfHeader == null || xfHeader.isBlank()) {
-            return request.getRemoteAddr();
-        }
-
-        return xfHeader.split(",")[0];
     }
 }

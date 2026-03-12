@@ -3,7 +3,7 @@ export const environment = {
 
   idleLogoutMinutes: 60,
 
-  apiUrl: 'http://localhost:8080/api',
+  apiUrl: `http://${window.location.hostname}:8080/api`,
 
   endpoints: {
     /* ============================================================
@@ -18,7 +18,8 @@ export const environment = {
         options: '/auth/password-reset/options',
         initiate: '/auth/password-reset/initiate',
         complete: '/auth/password-reset/complete',
-        verify: '/auth/password-reset/verify'
+        verify: '/auth/password-reset/verify',
+        force: '/auth/password-reset/force'
       }
     },
 
