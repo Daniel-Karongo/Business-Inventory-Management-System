@@ -7,6 +7,8 @@ import java.util.UUID;
 
 public interface AccountingSystemStateRepository
         extends JpaRepository<AccountingSystemState, UUID> {
-    Optional<AccountingSystemState> findTopByOrderByCreatedAtAsc();
-    Optional<AccountingSystemState> findByBranchId(UUID branchId);
+
+    Optional<AccountingSystemState>
+    findByTenantIdAndBranchId(UUID tenantId, UUID branchId);
+
 }

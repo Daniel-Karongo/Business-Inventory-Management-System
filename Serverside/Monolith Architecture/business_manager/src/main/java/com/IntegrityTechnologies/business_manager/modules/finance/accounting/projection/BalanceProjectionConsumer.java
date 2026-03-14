@@ -25,7 +25,7 @@ public class BalanceProjectionConsumer {
             groupId = "balance-projection"
     )
     @Transactional
-    @ConditionalOnProperty(name="spring.kafka.enabled", havingValue="true")
+    @ConditionalOnProperty(name = "spring.kafka.enabled", havingValue = "true")
     public void handleKafka(JournalPostedEvent event) {
         process(event);
     }
@@ -38,8 +38,10 @@ public class BalanceProjectionConsumer {
 
     private void process(JournalPostedEvent event) {
 
-        if (processedRepo.existsById(event.journalId()))
-            return;
+        if (processedRepo.existsByTenantIdAndEventId(
+                event.tenantId(),
+                event.journalId()
+        )) return;
 
         for (LedgerEntryDTO entry : event.entries()) {
 
@@ -49,6 +51,7 @@ public class BalanceProjectionConsumer {
                             : entry.amount().negate();
 
             balanceRepo.applyDelta(
+                    event.tenantId(),
                     entry.accountId(),
                     event.branchId(),
                     delta

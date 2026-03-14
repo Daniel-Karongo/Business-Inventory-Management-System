@@ -15,6 +15,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.m
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.controller.CategoryController;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplier;
@@ -70,6 +71,10 @@ public class InventoryService {
     private final AccountingAccounts accountingAccounts;
     private final BatchConsumptionRepository batchConsumptionRepository;
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+    
     // ------------------------
     // EXISTING / CORE METHODS
     // ------------------------
@@ -392,17 +397,17 @@ public class InventoryService {
                             .performedBy(getCurrentUsername())
                             .entries(List.of(
                                     AccountingEvent.Entry.builder()
-                                            .accountId(accountingAccounts.get(branch.getId(), AccountRole.INVENTORY))
+                                            .accountId(accountingAccounts.get(tenantId(), branch.getId(), AccountRole.INVENTORY))
                                             .direction(EntryDirection.DEBIT)
                                             .amount(incomingCostTotal)
                                             .build(),
                                     AccountingEvent.Entry.builder()
-                                            .accountId(accountingAccounts.get(branch.getId(),AccountRole.VAT_INPUT))
+                                            .accountId(accountingAccounts.get(tenantId(), branch.getId(),AccountRole.VAT_INPUT))
                                             .direction(EntryDirection.DEBIT)
                                             .amount(totalInputVat)
                                             .build(),
                                     AccountingEvent.Entry.builder()
-                                            .accountId(accountingAccounts.get(branch.getId(), AccountRole.VAT_PAYABLE))
+                                            .accountId(accountingAccounts.get(tenantId(), branch.getId(), AccountRole.VAT_PAYABLE))
                                             .direction(EntryDirection.CREDIT)
                                             .amount(incomingCostTotal.add(totalInputVat))
                                             .build()

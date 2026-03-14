@@ -6,7 +6,8 @@ import java.util.List;
 import java.util.UUID;
 
 public record JournalPostedEvent(
-        UUID journalId,
+        UUID tenantId,
         UUID branchId,
+        UUID journalId,
         List<LedgerEntryDTO> entries
 ) {}

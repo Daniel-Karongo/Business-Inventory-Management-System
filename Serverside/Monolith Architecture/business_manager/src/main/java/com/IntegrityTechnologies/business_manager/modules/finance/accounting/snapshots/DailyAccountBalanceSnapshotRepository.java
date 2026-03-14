@@ -19,4 +19,6 @@ public interface DailyAccountBalanceSnapshotRepository
 
     Optional<DailyAccountBalanceSnapshot>
     findTopByBranchIdOrderBySnapshotDateDesc(UUID branchId);
+
+    boolean existsByBranchIdAndSnapshotDate(UUID branchId, LocalDate snapshotDate);
 }

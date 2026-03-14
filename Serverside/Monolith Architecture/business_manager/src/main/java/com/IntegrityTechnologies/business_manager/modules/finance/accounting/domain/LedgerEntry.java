@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,29 +15,32 @@ import java.util.UUID;
         name = "ledger_entries",
         indexes = {
 
-                @Index(name = "idx_ledger_branch_account_posted", columnList = "branch_id, account_id, postedAt"),
+                @Index(name = "idx_ledger_tenant_branch_account_posted",
+                        columnList = "tenant_id,branch_id,account_id,postedAt"),
 
-                @Index(name = "idx_ledger_account_posted_direction", columnList = "account_id, postedAt, direction"),
+                @Index(name = "idx_ledger_account_posted_direction",
+                        columnList = "account_id,postedAt,direction"),
 
-                @Index(name = "idx_ledger_journal_account", columnList = "journal_entry_id, account_id"),
+                @Index(name = "idx_ledger_journal_account",
+                        columnList = "journal_entry_id,account_id"),
 
-                @Index(name = "idx_ledger_postedAt", columnList = "postedAt"),
+                @Index(name = "idx_ledger_postedAt",
+                        columnList = "postedAt"),
 
-                @Index(name = "idx_ledger_account_only", columnList = "account_id"),
+                @Index(name = "idx_ledger_account_only",
+                        columnList = "account_id"),
 
-                @Index(name = "idx_ledger_branch_postedAt_id", columnList = "branch_id, postedAt, id")
+                @Index(name = "idx_ledger_branch_postedAt_id",
+                        columnList = "branch_id,postedAt,id")
         }
 )
 @Getter
 @NoArgsConstructor
-public class LedgerEntry {
+public class LedgerEntry extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-
-    @Column(name = "branch_id", nullable = false)
-    private UUID branchId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "account_id", nullable = false)
@@ -57,18 +61,28 @@ public class LedgerEntry {
     private LocalDateTime postedAt;
 
     public LedgerEntry(
+            UUID tenantId,
+            UUID branchId,
             Account account,
             JournalEntry journalEntry,
             EntryDirection direction,
             BigDecimal amount
     ) {
 
+        if (!account.getTenantId().equals(tenantId))
+            throw new IllegalStateException("Account tenant mismatch");
+
+        if (!account.getBranchId().equals(branchId))
+            throw new IllegalStateException("Account branch mismatch");
+
+        this.setTenantId(tenantId);
+        this.setBranchId(branchId);
+
         this.account = account;
         this.journalEntry = journalEntry;
         this.direction = direction;
         this.amount = amount;
 
-        this.branchId = journalEntry.getBranch().getId();
         this.postedAt = journalEntry.getPostedAt();
     }
 

@@ -9,7 +9,10 @@ import java.util.UUID;
 
 public interface TaxPeriodRepository extends JpaRepository<TaxPeriod, UUID> {
 
-    Optional<TaxPeriod> findByClosedTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+    Optional<TaxPeriod>
+    findByTenantIdAndBranchIdAndClosedTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+            UUID tenantId,
+            UUID branchId,
             LocalDate date1,
             LocalDate date2
     );

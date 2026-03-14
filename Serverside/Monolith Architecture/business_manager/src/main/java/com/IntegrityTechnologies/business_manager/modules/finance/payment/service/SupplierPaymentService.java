@@ -7,6 +7,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.domain.SupplierPayment;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.repository.SupplierPaymentRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +28,10 @@ public class SupplierPaymentService {
     private final SupplierPaymentRepository paymentRepository;
     private final AccountingFacade accountingFacade;
     private final AccountingAccounts accounts;
+
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
 
     @Transactional
     public SupplierPayment pay(
@@ -60,7 +65,7 @@ public class SupplierPaymentService {
                         .accountingDate(LocalDate.now())
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(branchId, AccountRole.ACCOUNTS_PAYABLE))
+                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.ACCOUNTS_PAYABLE))
                                         .direction(EntryDirection.DEBIT)
                                         .amount(amount)
                                         .build(),
@@ -88,9 +93,9 @@ public class SupplierPaymentService {
     private UUID resolvePaymentAccount(String method, UUID branchId) {
 
         return switch (method.toUpperCase()) {
-            case "CASH" -> accounts.get(branchId, AccountRole.CASH);
-            case "BANK" -> accounts.get(branchId, AccountRole.BANK);
-            case "MPESA" -> accounts.get(branchId, AccountRole.MPESA);
+            case "CASH" -> accounts.get(tenantId(), branchId, AccountRole.CASH);
+            case "BANK" -> accounts.get(tenantId(), branchId, AccountRole.BANK);
+            case "MPESA" -> accounts.get(tenantId(), branchId, AccountRole.MPESA);
             default -> throw new IllegalArgumentException("Unsupported payment method");
         };
     }

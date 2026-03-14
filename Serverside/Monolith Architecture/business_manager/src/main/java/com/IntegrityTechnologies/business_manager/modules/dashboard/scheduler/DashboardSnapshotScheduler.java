@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.dashboard.scheduler;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.config.DashboardSnapshotProperties;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.service.DashboardSnapshotService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +36,9 @@ public class DashboardSnapshotScheduler {
 
             LocalDate yesterday = LocalDate.now().minusDays(1);
 
-            branchRepository.findByDeletedFalse().forEach(branch -> {
+            branchRepository.findByTenantIdAndDeletedFalse(
+                    TenantContext.getTenantId()
+            ).forEach(branch -> {
 
                 try {
 

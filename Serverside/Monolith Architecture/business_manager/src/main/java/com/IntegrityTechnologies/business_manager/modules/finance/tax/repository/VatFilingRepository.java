@@ -8,9 +8,31 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface VatFilingRepository extends JpaRepository<VatFiling, UUID> {
+public interface VatFilingRepository
+        extends JpaRepository<VatFiling, UUID> {
 
-    boolean existsByPeriod_IdAndBranchId(UUID periodId, UUID branchId);
-    Page<VatFiling> findByBranchId(UUID branchId, Pageable pageable);
-    Optional<VatFiling> findByPeriod_IdAndBranchId(UUID periodId, UUID branchId);
+    boolean existsByTenantIdAndPeriod_IdAndBranchId(
+            UUID tenantId,
+            UUID periodId,
+            UUID branchId
+    );
+
+    Page<VatFiling> findByTenantIdAndBranchId(
+            UUID tenantId,
+            UUID branchId,
+            Pageable pageable
+    );
+
+    Optional<VatFiling>
+    findByTenantIdAndPeriod_IdAndBranchId(
+            UUID tenantId,
+            UUID periodId,
+            UUID branchId
+    );
+
+    Optional<VatFiling>
+    findByTenantIdAndId(
+            UUID tenantId,
+            UUID id
+    );
 }

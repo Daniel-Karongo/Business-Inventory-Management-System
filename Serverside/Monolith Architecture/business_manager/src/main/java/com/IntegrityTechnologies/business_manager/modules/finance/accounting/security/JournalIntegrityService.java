@@ -2,6 +2,8 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.se
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -17,10 +19,12 @@ public class JournalIntegrityService {
 
     private final JournalEntryRepository journalRepo;
     private final JournalIntegrityAuditRepository auditRepository;
+    private final BranchTenantGuard branchTenantGuard;
 
     @Transactional(readOnly = true)
     public IntegrityResult verifyChain(UUID branchId) {
-
+        branchTenantGuard.validate(branchId);
+        UUID tenantId = TenantContext.getTenantId();
         int page = 0;
         int size = 2000;
 
@@ -32,7 +36,8 @@ public class JournalIntegrityService {
         while (true) {
 
             var batch =
-                    journalRepo.findByBranch_IdOrderByPostedAtAsc(
+                    journalRepo.findByTenantIdAndBranchIdAndPostedTrueOrderByPostedAtAsc(
+                            tenantId,
                             branchId,
                             PageRequest.of(page, size)
                     );

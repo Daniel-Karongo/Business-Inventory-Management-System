@@ -1,11 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.budgeting.projection;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetMonthlySnapshotRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.EventListener;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -26,11 +27,6 @@ public class BudgetVarianceProjectionConsumer {
             groupId = "budget-variance"
     )
     @Transactional
-    @ConditionalOnProperty(
-            name = "spring.kafka.enabled",
-            havingValue = "true",
-            matchIfMissing = false
-    )
     public void handleKafka(JournalPostedEvent event) {
         process(event);
     }
@@ -43,24 +39,38 @@ public class BudgetVarianceProjectionConsumer {
 
     private void process(JournalPostedEvent event) {
 
-        int year = LocalDate.now().getYear();
-        int month = LocalDate.now().getMonthValue();
+        try {
 
-        for (LedgerEntryDTO entry : event.entries()) {
+            TenantContext.setTenantId(event.tenantId());
 
-            BigDecimal delta =
-                    entry.direction() == EntryDirection.DEBIT
-                            ? entry.amount()
-                            : entry.amount().negate();
+            UUID tenantId = event.tenantId();
+            UUID branchId = event.branchId();
 
-            snapshotRepository.applyActualDelta(
-                    event.branchId(),
-                    year,
-                    month,
-                    entry.accountId(),
-                    delta,
-                    LocalDateTime.now()
-            );
+            int year = LocalDate.now().getYear();
+            int month = LocalDate.now().getMonthValue();
+
+            for (LedgerEntryDTO entry : event.entries()) {
+
+                BigDecimal delta =
+                        entry.direction() == EntryDirection.DEBIT
+                                ? entry.amount()
+                                : entry.amount().negate();
+
+                snapshotRepository.applyActualDelta(
+                        tenantId,
+                        branchId,
+                        year,
+                        month,
+                        entry.accountId(),
+                        delta,
+                        LocalDateTime.now()
+                );
+            }
+
+        } finally {
+
+            TenantContext.clear();
+
         }
     }
 }

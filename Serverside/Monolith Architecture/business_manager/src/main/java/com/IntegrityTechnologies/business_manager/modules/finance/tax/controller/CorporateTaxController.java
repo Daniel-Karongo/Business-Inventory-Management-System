@@ -4,11 +4,13 @@ import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.Cor
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.CorporateTaxFilingRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.CorporateTaxService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+
+import org.springframework.data.domain.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -22,21 +24,24 @@ public class CorporateTaxController {
 
     private final CorporateTaxService service;
     private final CorporateTaxFilingRepository repository;
+    private final BranchTenantGuard branchTenantGuard;
 
     @GetMapping
     public Page<CorporateTaxFiling> list(
-            @RequestParam(required = false) UUID branchId,
+            @RequestParam UUID branchId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
 
+        branchTenantGuard.validate(branchId);
+
         Pageable pageable = PageRequest.of(page, size);
 
-        if (branchId != null) {
-            return repository.findByBranchId(branchId, pageable);
-        }
-
-        return repository.findAll(pageable);
+        return repository.findByTenantIdAndBranchId(
+                TenantContext.getTenantId(),
+                branchId,
+                pageable
+        );
     }
 
     @PostMapping("/accrue/{periodId}")
@@ -46,6 +51,9 @@ public class CorporateTaxController {
             @RequestParam String from,
             @RequestParam String to
     ) {
+
+        branchTenantGuard.validate(branchId);
+
         return service.accrueCorporateTax(
                 periodId,
                 branchId,

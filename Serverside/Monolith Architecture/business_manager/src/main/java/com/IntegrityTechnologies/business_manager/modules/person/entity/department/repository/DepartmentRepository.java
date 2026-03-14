@@ -10,60 +10,93 @@ import java.util.*;
 
 public interface DepartmentRepository extends JpaRepository<Department, UUID> {
 
-    Optional<Department> findByIdAndDeletedFalse(UUID id);
+    /* =========================================================
+       SAFE FETCH
+    ========================================================= */
 
-    Optional<Department> findByIdAndDeletedTrue(UUID id);
+    Optional<Department> findByTenantIdAndId(UUID tenantId, UUID id);
 
-    boolean existsByNameIgnoreCaseAndBranch_Id(String name, UUID branchId);
+    Optional<Department> findByTenantIdAndIdAndDeletedFalse(UUID tenantId, UUID id);
 
-    List<Department> findByDeletedFalse();
+    Optional<Department> findByTenantIdAndIdAndDeletedTrue(UUID tenantId, UUID id);
 
-    List<Department> findByDeletedTrue();
+    boolean existsByTenantIdAndNameIgnoreCaseAndBranch_Id(
+            UUID tenantId,
+            String name,
+            UUID branchId
+    );
 
-    List<Department> findByBranch_Id(UUID branchId);
+    Optional<Department> findByTenantIdAndNameIgnoreCaseAndBranch_Id(
+            UUID tenantId,
+            String name,
+            UUID branchId
+    );
 
-    Optional<Department> findByNameIgnoreCaseAndBranch_Id(String name, UUID branchId);
+    /* =========================================================
+       LISTING
+    ========================================================= */
 
-    /* ✅ ADD THIS METHOD (Fix error) */
-    Optional<Department> findByNameIgnoreCase(String name);
+    List<Department> findByTenantIdAndDeletedFalse(UUID tenantId);
 
+    List<Department> findByTenantIdAndDeletedTrue(UUID tenantId);
 
-    @Query("""
-        SELECT d
-        FROM Department d
-        WHERE d.deleted = false
-    """)
-    List<Department> findAllActive();
+    List<Department> findByTenantIdAndBranch_Id(UUID tenantId, UUID branchId);
 
+    /* =========================================================
+       USERS
+    ========================================================= */
 
     @Query("""
         SELECT DISTINCT ud.user
         FROM UserDepartment ud
         WHERE ud.department.id = :deptId
+          AND ud.department.tenantId = :tenantId
           AND ud.department.deleted = false
           AND ud.user.deleted = false
     """)
-    List<User> findAllUsersInDepartment(@Param("deptId") UUID deptId);
-
+    List<User> findAllUsersInDepartment(
+            @Param("tenantId") UUID tenantId,
+            @Param("deptId") UUID deptId
+    );
 
     @Query("""
         SELECT DISTINCT ud.department
         FROM UserDepartment ud
         WHERE ud.user.id = :userId
+          AND ud.department.tenantId = :tenantId
           AND ud.department.deleted = false
     """)
-    Set<Department> findDepartmentsByUserId(@Param("userId") UUID userId);
+    Set<Department> findDepartmentsByUserId(
+            @Param("tenantId") UUID tenantId,
+            @Param("userId") UUID userId
+    );
 
     @Query("""
-    SELECT d
-    FROM UserDepartment ud
-    JOIN ud.department d
-    WHERE ud.user.id = :userId
-      AND d.branch.id = :branchId
-      AND d.deleted = false
-""")
+        SELECT d
+        FROM UserDepartment ud
+        JOIN ud.department d
+        WHERE ud.user.id = :userId
+          AND d.branch.id = :branchId
+          AND d.tenantId = :tenantId
+          AND d.deleted = false
+    """)
     List<Department> findDepartmentsForUserInBranch(
+            @Param("tenantId") UUID tenantId,
             @Param("userId") UUID userId,
             @Param("branchId") UUID branchId
+    );
+
+/* =========================================================
+   ACTIVE
+========================================================= */
+
+    @Query("""
+        SELECT d
+        FROM Department d
+        WHERE d.tenantId = :tenantId
+          AND d.deleted = false
+    """)
+    List<Department> findAllActive(
+            @Param("tenantId") UUID tenantId
     );
 }

@@ -1,13 +1,12 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain;
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 @Table(
@@ -15,13 +14,13 @@ import java.util.UUID;
         indexes = {
 
                 @Index(
-                        name = "idx_journal_branch_status_date",
-                        columnList = "branch_id, posted, reversed, accountingDate"
+                        name = "idx_journal_tenant_branch_status_date",
+                        columnList = "tenant_id,branch_id,posted,reversed,accountingDate"
                 ),
 
                 @Index(
-                        name = "idx_journal_branch_postedAt",
-                        columnList = "branch_id, postedAt"
+                        name = "idx_journal_tenant_branch_postedAt",
+                        columnList = "tenant_id,branch_id,postedAt"
                 ),
 
                 @Index(
@@ -35,15 +34,15 @@ import java.util.UUID;
                 ),
 
                 @Index(
-                        name = "idx_journal_branch_postedAt_hash",
-                        columnList = "branch_id, postedAt, hash"
+                        name = "idx_journal_tenant_branch_postedAt_hash",
+                        columnList = "tenant_id,branch_id,postedAt,hash"
                 )
         },
         uniqueConstraints = {
 
                 @UniqueConstraint(
                         name = "uk_journal_source",
-                        columnNames = {"sourceModule", "sourceId"}
+                        columnNames = {"sourceModule","sourceId"}
                 ),
 
                 @UniqueConstraint(
@@ -52,7 +51,7 @@ import java.util.UUID;
                 )
         }
 )
-public class JournalEntry {
+public class JournalEntry extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -81,6 +80,7 @@ public class JournalEntry {
 
     @Column(nullable = false, updatable = false)
     private UUID periodId;
+
     @Column(nullable = false, unique = true, updatable = false)
     private UUID accountingEventId;
 
@@ -97,7 +97,7 @@ public class JournalEntry {
     private List<LedgerEntry> ledgerEntries = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "branch_id", nullable = false)
+    @JoinColumn(name = "branch_id", nullable = false, insertable = false, updatable = false)
     private Branch branch;
 
     @Column(length = 64, updatable = false)
@@ -105,24 +105,28 @@ public class JournalEntry {
 
     @Column(length = 64, unique = true)
     private String hash;
+
     protected JournalEntry() {}
 
     public JournalEntry(
+            UUID tenantId,
+            UUID branchId,
             String reference,
             String sourceModule,
             UUID sourceId,
             String description,
-            Branch branch,
             LocalDate accountingDate,
             UUID accountingEventId,
             AccountingPeriod period
     ) {
 
+        this.setTenantId(tenantId);
+        this.setBranchId(branchId);
+
         this.reference = reference;
         this.sourceModule = sourceModule;
         this.sourceId = sourceId;
         this.description = description;
-        this.branch = branch;
         this.accountingDate = accountingDate;
         this.accountingEventId = accountingEventId;
         this.periodId = period.getId();

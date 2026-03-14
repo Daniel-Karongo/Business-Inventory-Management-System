@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,7 +24,7 @@ import java.util.UUID;
 )
 @Getter
 @NoArgsConstructor
-public class ReconciliationItem {
+public class ReconciliationItem extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -46,12 +47,18 @@ public class ReconciliationItem {
     private ReconciliationRun run;
 
     public ReconciliationItem(
+            UUID tenantId,
+            UUID branchId,
             UUID accountId,
             BigDecimal ledgerBalance,
             BigDecimal projectedBalance,
             boolean consistent,
             ReconciliationRun run
     ) {
+
+        this.setTenantId(tenantId);
+        this.setBranchId(branchId);
+
         this.accountId = accountId;
         this.ledgerBalance = ledgerBalance;
         this.projectedBalance = projectedBalance;
@@ -61,9 +68,5 @@ public class ReconciliationItem {
 
     public UUID getRunId() {
         return run.getId();
-    }
-
-    public UUID getBranchId() {
-        return run.getBranchId();
     }
 }

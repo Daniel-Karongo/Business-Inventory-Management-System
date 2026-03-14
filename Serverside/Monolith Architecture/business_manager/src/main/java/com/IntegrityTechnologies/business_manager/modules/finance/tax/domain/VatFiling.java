@@ -1,7 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.tax.domain;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -10,19 +12,17 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "vat_filings",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_vat_period_branch",
-                        columnNames = {"period_id", "branchId"}
-                )
-        }
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_vat_period_branch",
+                columnNames = {"tenant_id","branch_id","period_id"}
+        )
 )
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class VatFiling {
+@SuperBuilder
+public class VatFiling extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -30,9 +30,6 @@ public class VatFiling {
 
     @ManyToOne(optional = false)
     private TaxPeriod period;
-
-    @Column(nullable = false)
-    private UUID branchId;
 
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal outputVat;

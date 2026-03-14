@@ -9,6 +9,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.r
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.service.BranchBulkService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.service.BranchService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.*;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -135,7 +136,10 @@ public class BranchController {
     ) {
 
         if (Boolean.TRUE.equals(soft)) {
-            branchRepository.softDeleteBulk(ids);
+            branchRepository.softDeleteBulk(
+                    TenantContext.getTenantId(),
+                    ids
+            );
         } else {
             branchRepository.deleteAllById(ids);
         }

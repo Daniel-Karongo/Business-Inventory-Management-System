@@ -1,7 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.department.model;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
+import com.IntegrityTechnologies.business_manager.security.BranchContext;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 
 import java.sql.Types;
@@ -9,12 +13,37 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "department_audits")
-@Data
+@Table(
+        name = "department_audits",
+        indexes = {
+
+                @Index(
+                        name = "idx_dept_audit_tenant",
+                        columnList = "tenant_id"
+                ),
+
+                @Index(
+                        name = "idx_dept_audit_department",
+                        columnList = "department_id"
+                ),
+
+                @Index(
+                        name = "idx_dept_audit_performer",
+                        columnList = "performed_by_id"
+                ),
+
+                @Index(
+                        name = "idx_dept_audit_timestamp",
+                        columnList = "timestamp"
+                )
+        }
+)
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class DepartmentAudit {
+@SuperBuilder
+public class DepartmentAudit extends BranchAwareEntity {
 
     @Id
     @GeneratedValue
@@ -22,14 +51,23 @@ public class DepartmentAudit {
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
+    /* ===========================
+       TARGET
+    =========================== */
+
     @JdbcTypeCode(Types.BINARY)
-    @Column(columnDefinition = "BINARY(16)")
+    @Column(name = "department_id", columnDefinition = "BINARY(16)")
     private UUID departmentId;
 
     private String departmentName;
 
-    private String action;       // CREATE, UPDATE, DELETE, DEMOTE, PROMOTE, etc.
-    private String fieldChanged; // Optional, e.g., "name", "gracePeriodMinutes"
+    /* ===========================
+       CHANGE
+    =========================== */
+
+    private String action;
+
+    private String fieldChanged;
 
     @Column(length = 2000)
     private String oldValue;
@@ -37,13 +75,21 @@ public class DepartmentAudit {
     @Column(length = 2000)
     private String newValue;
 
-    private String reason;       // Optional reason for the change
+    private String reason;
+
+    /* ===========================
+       PERFORMER
+    =========================== */
 
     @JdbcTypeCode(Types.BINARY)
-    @Column(columnDefinition = "BINARY(16)")
+    @Column(name = "performed_by_id", columnDefinition = "BINARY(16)")
     private UUID performedById;
 
     private String performedByUsername;
+
+    /* ===========================
+       TIME
+    =========================== */
 
     private LocalDateTime timestamp;
 

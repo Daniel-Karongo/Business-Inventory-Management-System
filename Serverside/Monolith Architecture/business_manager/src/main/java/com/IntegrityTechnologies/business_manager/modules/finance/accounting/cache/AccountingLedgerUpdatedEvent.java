@@ -3,5 +3,6 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.ca
 import java.util.UUID;
 
 public record AccountingLedgerUpdatedEvent(
+        UUID tenantId,
         UUID branchId
 ) {}

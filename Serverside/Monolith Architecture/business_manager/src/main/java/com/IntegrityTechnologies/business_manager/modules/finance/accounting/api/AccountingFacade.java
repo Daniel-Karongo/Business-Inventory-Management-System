@@ -13,16 +13,14 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.rep
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.PeriodGuardService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -40,11 +38,15 @@ public class AccountingFacade {
     @Transactional
     public void post(AccountingEvent event) {
 
+        UUID tenantId = TenantContext.getTenantId();
+
         if (event.getEventId() == null)
             throw new IllegalArgumentException("EventId required");
 
-        if (journalRepo.existsByAccountingEventId(event.getEventId()))
-            return;
+        if (journalRepo.existsByTenantIdAndAccountingEventId(
+                tenantId,
+                event.getEventId()
+        )) return;
 
         if (event.getBranchId() == null)
             throw new IllegalStateException("BranchId required");
@@ -64,11 +66,12 @@ public class AccountingFacade {
                 );
 
         JournalEntry journal = new JournalEntry(
+                tenantId,
+                event.getBranchId(),
                 event.getReference(),
                 event.getSourceModule(),
                 event.getSourceId(),
                 event.getDescription(),
-                branchRepository.getReferenceById(event.getBranchId()),
                 accountingDate,
                 event.getEventId(),
                 period
@@ -78,10 +81,21 @@ public class AccountingFacade {
 
         for (var e : event.getEntries()) {
 
-            Account account = accountRepository.findById(e.getAccountId())
-                    .orElseThrow(() -> new IllegalStateException("Account not found"));
+            Account account =
+                    accountRepository
+                            .findByTenantIdAndBranchIdAndId(
+                                    tenantId,
+                                    event.getBranchId(),
+                                    e.getAccountId()
+                            )
+                            .orElseThrow(() ->
+                                    new IllegalStateException(
+                                            "Account not found in tenant and branch"
+                                    ));
 
             ledger.add(new LedgerEntry(
+                    tenantId,
+                    event.getBranchId(),
                     account,
                     journal,
                     e.getDirection(),
@@ -89,23 +103,30 @@ public class AccountingFacade {
             ));
         }
 
-        // POLICY VALIDATION HERE
         policy.validate(ledger);
 
         postingService.post(journal, ledger, event.getPerformedBy());
 
         applicationEventPublisher.publishEvent(
-            new AccountingLedgerUpdatedEvent(event.getBranchId())
+                new AccountingLedgerUpdatedEvent(
+                        tenantId,
+                        event.getBranchId()
+                )
         );
-        // LOCK MODE AFTER FIRST JOURNAL
+
         stateService.lockIfNecessary(event.getBranchId());
     }
 
     @Transactional
     public void reverseJournal(UUID journalId, String reason, String user) {
 
-        JournalEntry original = journalRepo.findById(journalId)
-                .orElseThrow(() -> new IllegalArgumentException("Journal not found"));
+        UUID tenantId = TenantContext.getTenantId();
+
+        JournalEntry original =
+                journalRepo
+                        .findByTenantIdAndId(tenantId, journalId)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException("Journal not found"));
 
         if (original.isReversed())
             throw new IllegalStateException("Journal already reversed");
@@ -128,11 +149,12 @@ public class AccountingFacade {
         UUID reversalEventId = UUID.randomUUID();
 
         JournalEntry reversal = new JournalEntry(
+                tenantId,
+                branchId,
                 "REV-" + original.getReference(),
                 "JOURNAL_REVERSAL",
                 UUID.randomUUID(),
                 "Reversal: " + reason,
-                original.getBranch(),
                 reversalDate,
                 reversalEventId,
                 reversalPeriod
@@ -150,13 +172,24 @@ public class AccountingFacade {
         original.markReversed(postedReversal.getId());
 
         journalRepo.save(original);
+
         applicationEventPublisher.publishEvent(
-                new AccountingLedgerUpdatedEvent(branchId)
+                new AccountingLedgerUpdatedEvent(
+                        tenantId,
+                        branchId
+                )
         );
     }
 
     @Transactional(readOnly = true)
     public boolean isAlreadyPosted(String sourceModule, UUID sourceId) {
-        return journalRepo.existsBySourceModuleAndSourceId(sourceModule, sourceId);
+
+        UUID tenantId = TenantContext.getTenantId();
+
+        return journalRepo.existsByTenantIdAndSourceModuleAndSourceId(
+                tenantId,
+                sourceModule,
+                sourceId
+        );
     }
 }

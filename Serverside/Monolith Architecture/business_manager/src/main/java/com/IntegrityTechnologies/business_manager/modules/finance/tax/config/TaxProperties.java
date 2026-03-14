@@ -11,7 +11,6 @@ import java.math.BigDecimal;
 @Component
 @ConfigurationProperties(prefix = "tax")
 public class TaxProperties {
-
     private boolean vatEnabled = true;
     private BigDecimal vatRate = new BigDecimal("0.16");
     private boolean pricesVatInclusive = true;

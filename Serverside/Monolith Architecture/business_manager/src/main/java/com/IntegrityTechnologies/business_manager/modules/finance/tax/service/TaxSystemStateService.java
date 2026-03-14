@@ -3,6 +3,8 @@ package com.IntegrityTechnologies.business_manager.modules.finance.tax.service;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.TaxSystemState;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.TaxSystemStateRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,15 +17,21 @@ public class TaxSystemStateService {
 
     private final TaxSystemStateRepository repository;
     private final TaxProperties defaults;
+    private final BranchTenantGuard branchTenantGuard;
 
     @Transactional
     public TaxSystemState getOrCreate(UUID branchId) {
-
-        return repository.findByBranchId(branchId)
+        branchTenantGuard.validate(branchId);
+        return repository.findByTenantIdAndBranchId(
+                        TenantContext.getTenantId(),
+                        branchId
+                )
                 .orElseGet(() -> {
 
-                    TaxSystemState state = new TaxSystemState();
-                    state.setBranchId(branchId);
+                    TaxSystemState state = TaxSystemState.builder()
+                            .tenantId(TenantContext.getTenantId())
+                            .branchId(branchId)
+                            .build();
 
                     // 🔥 Seed from YAML defaults
                     state.setTaxMode(defaults.getBusinessTaxMode());
@@ -38,7 +46,11 @@ public class TaxSystemStateService {
 
     @Transactional(readOnly = true)
     public TaxSystemState get(UUID branchId) {
-        return repository.findByBranchId(branchId)
+        branchTenantGuard.validate(branchId);
+        return repository.findByTenantIdAndBranchId(
+                        TenantContext.getTenantId(),
+                        branchId
+                )
                 .orElseThrow(() ->
                         new IllegalStateException("Tax system not configured for branch " + branchId));
     }

@@ -1,10 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountingMode;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -13,25 +12,24 @@ import java.util.UUID;
 @Table(
         name = "accounting_system_state",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_system_state_branch",
-                columnNames = "branchId"
+                name = "uk_system_state_tenant_branch",
+                columnNames = {"tenant_id","branch_id"}
         ),
-        indexes = @Index(
-                name = "idx_system_state_branch",
-                columnList = "branchId"
-        )
+        indexes = {
+                @Index(
+                        name = "idx_system_state_tenant_branch",
+                        columnList = "tenant_id,branch_id"
+                )
+        }
 )
 @Getter
 @Setter
 @NoArgsConstructor
-public class AccountingSystemState {
+public class AccountingSystemState extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-
-    @Column(nullable = false)
-    private UUID branchId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

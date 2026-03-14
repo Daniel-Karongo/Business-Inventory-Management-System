@@ -1,7 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.tax.domain;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -10,24 +12,21 @@ import java.util.UUID;
 @Table(
         name = "corporate_tax_ledger_projection",
         uniqueConstraints = @UniqueConstraint(
-                columnNames = {"branchId","fiscalYear","monthNumber"}
+                columnNames = {"tenant_id","branch_id","fiscalYear","monthNumber"}
         )
 )
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class CorporateTaxLedgerProjection {
+@SuperBuilder
+public class CorporateTaxLedgerProjection extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    private UUID branchId;
-
     private int fiscalYear;
-
     private int monthNumber;
 
     @Column(precision = 19, scale = 2)

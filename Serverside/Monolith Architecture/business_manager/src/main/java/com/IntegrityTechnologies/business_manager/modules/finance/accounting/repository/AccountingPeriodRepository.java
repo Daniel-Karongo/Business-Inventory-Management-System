@@ -1,39 +1,47 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 public interface AccountingPeriodRepository
         extends JpaRepository<AccountingPeriod, UUID> {
 
     Optional<AccountingPeriod>
-    findByStartDateLessThanEqualAndEndDateGreaterThanEqualAndBranchId(
+    findByTenantIdAndBranchIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+            UUID tenantId,
+            UUID branchId,
             LocalDate date1,
-            LocalDate date2,
-            UUID branchId
+            LocalDate date2
     );
 
     Optional<AccountingPeriod>
-    findByStartDateAndEndDateAndBranchId(
+    findByTenantIdAndBranchIdAndStartDateAndEndDate(
+            UUID tenantId,
+            UUID branchId,
             LocalDate start,
-            LocalDate end,
-            UUID branchId
+            LocalDate end
     );
 
     List<AccountingPeriod>
-    findByEndDateBeforeAndClosedFalseAndBranchId(
-            LocalDate date,
-            UUID branchId
+    findByTenantIdAndBranchIdAndEndDateBeforeAndClosedFalse(
+            UUID tenantId,
+            UUID branchId,
+            LocalDate date
     );
 
     List<AccountingPeriod>
-    findByBranchId(UUID branchId);
-    Page<AccountingPeriod> findByBranchId(UUID branchId, Pageable pageable);
+    findByTenantIdAndBranchId(UUID tenantId, UUID branchId);
+
+    Page<AccountingPeriod>
+    findByTenantIdAndBranchId(
+            UUID tenantId,
+            UUID branchId,
+            Pageable pageable
+    );
+
+    Optional<AccountingPeriod> findByTenantIdAndId(UUID tenantId, UUID id);
 }

@@ -2,6 +2,8 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.sn
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,23 +19,32 @@ public class DailySnapshotService {
 
     private final LedgerEntryRepository ledgerRepo;
     private final DailyAccountBalanceSnapshotRepository snapshotRepo;
+    private final BranchTenantGuard branchTenantGuard;
 
     @Transactional
     public void snapshotBranch(UUID branchId) {
 
+        branchTenantGuard.validate(branchId);
+
+        UUID tenantId = TenantContext.getTenantId();
         LocalDate snapshotDate = LocalDate.now().minusDays(1);
+
+        if (snapshotRepo.existsByBranchIdAndSnapshotDate(branchId, snapshotDate)) {
+            return;
+        }
 
         LocalDateTime start = snapshotDate.atStartOfDay();
         LocalDateTime end = snapshotDate.atTime(23,59,59);
 
         Map<UUID, BigDecimal> openingMap =
-                buildOpeningBalances(branchId, start);
+                buildOpeningBalances(tenantId, branchId, start);
 
         Map<UUID, BigDecimal> debitMap = new HashMap<>();
         Map<UUID, BigDecimal> creditMap = new HashMap<>();
 
         List<Object[]> movement =
                 ledgerRepo.movementByAccountBetween(
+                        tenantId,
                         start,
                         end,
                         branchId,
@@ -76,6 +87,7 @@ public class DailySnapshotService {
             DailyAccountBalanceSnapshot snap =
                     new DailyAccountBalanceSnapshot();
 
+            snap.setTenantId(tenantId);
             snap.setBranchId(branchId);
             snap.setAccountId(accountId);
             snap.setSnapshotDate(snapshotDate);
@@ -94,6 +106,7 @@ public class DailySnapshotService {
     }
 
     private Map<UUID, BigDecimal> buildOpeningBalances(
+            UUID tenantId,
             UUID branchId,
             LocalDateTime start
     ) {
@@ -102,6 +115,7 @@ public class DailySnapshotService {
 
         List<Object[]> rows =
                 ledgerRepo.balanceBeforeDate(
+                        tenantId,
                         start,
                         branchId,
                         EntryDirection.DEBIT,

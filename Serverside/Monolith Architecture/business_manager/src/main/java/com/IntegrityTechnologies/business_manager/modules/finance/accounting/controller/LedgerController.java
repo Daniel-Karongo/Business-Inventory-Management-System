@@ -4,6 +4,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +21,7 @@ import java.util.UUID;
 public class LedgerController {
 
     private final LedgerEntryRepository ledgerRepo;
+    private final BranchTenantGuard branchTenantGuard;
 
     @GetMapping("/{accountId}")
     public Page<LedgerRowResponse> ledger(
@@ -26,9 +29,13 @@ public class LedgerController {
             @RequestParam(required = false) UUID branchId,
             @PageableDefault(size = 100) Pageable pageable
     ) {
-
-        return ledgerRepo
-                .findLedgerWithRunningBalance(accountId, branchId, pageable)
+        branchTenantGuard.validate(branchId);
+        return ledgerRepo.findLedgerWithRunningBalance(
+                        TenantContext.getTenantId(),
+                        accountId,
+                        branchId,
+                        pageable
+                )
                 .map(p -> new LedgerRowResponse(
                         p.getJournalId(),
                         p.getReference(),

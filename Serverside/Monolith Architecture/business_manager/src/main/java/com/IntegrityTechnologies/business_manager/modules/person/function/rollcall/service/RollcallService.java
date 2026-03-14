@@ -16,6 +16,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.function.rollca
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.RollcallAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.RollcallRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -50,10 +51,12 @@ public class RollcallService {
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         Department dept = departmentId == null ? null :
-                departmentRepository.findByIdAndDeletedFalse(departmentId)
+                departmentRepository.findByTenantIdAndIdAndDeletedFalse(
+                        TenantContext.getTenantId(), departmentId)
                         .orElseThrow(() -> new EntityNotFoundException("Department not found"));
 
-        Branch branch = branchRepository.findByIdAndDeletedFalse(branchId)
+        Branch branch = branchRepository.findByTenantIdAndIdAndDeletedFalse(
+                TenantContext.getTenantId(), branchId)
                 .orElseThrow(() -> new EntityNotFoundException("Branch not found"));
 
         validateDepartmentBranch(departmentId, branchId);
@@ -125,10 +128,12 @@ public class RollcallService {
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         Department dept = departmentId == null ? null :
-                departmentRepository.findByIdAndDeletedFalse(departmentId)
+                departmentRepository.findByTenantIdAndIdAndDeletedFalse(
+                        TenantContext.getTenantId(), departmentId)
                         .orElseThrow(() -> new EntityNotFoundException("Department not found"));
 
-        Branch branch = branchRepository.findByIdAndDeletedFalse(branchId)
+        Branch branch = branchRepository.findByTenantIdAndIdAndDeletedFalse(
+                TenantContext.getTenantId(), branchId)
                 .orElseThrow(() -> new EntityNotFoundException("Branch not found"));
 
         validateDepartmentBranch(departmentId, branchId);
@@ -198,10 +203,12 @@ public class RollcallService {
         User user = userRepository.findByIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-        Department dept = departmentRepository.findByIdAndDeletedFalse(departmentId)
+        Department dept = departmentRepository.findByTenantIdAndIdAndDeletedFalse(
+        TenantContext.getTenantId(), departmentId)
                 .orElseThrow(() -> new EntityNotFoundException("Department not found"));
 
-        Branch branch = branchRepository.findByIdAndDeletedFalse(branchId)
+        Branch branch = branchRepository.findByTenantIdAndIdAndDeletedFalse(
+                TenantContext.getTenantId(), branchId)
                 .orElseThrow(() -> new EntityNotFoundException("Branch not found"));
 
         validateDepartmentBranch(departmentId, branchId);
@@ -263,15 +270,21 @@ public class RollcallService {
 
         List<RollcallDTO> created = new java.util.ArrayList<>();
 
-        List<Department> departments = departmentRepository.findAllActive();
+        List<Department> departments = departmentRepository.findAllActive(
+                TenantContext.getTenantId()
+        );
         LocalDate today = LocalDate.now();
         LocalDateTime now = LocalDateTime.now();
 
         for (Department d : departments) {
-            List<User> users = departmentRepository.findAllUsersInDepartment(d.getId());
+            List<User> users = departmentRepository.findAllUsersInDepartment(
+                    TenantContext.getTenantId(),
+                    d.getId()
+            );
 
             for (User u : users) {
                 for (Branch b : branchRepository.findBranchesForUserAndDepartment(
+                        TenantContext.getTenantId(),
                         u.getId(),
                         d.getId()
                 )) {
@@ -415,8 +428,11 @@ public class RollcallService {
 
         if (departmentId == null) return;
 
-        boolean valid =
-                branchRepository.branchContainsDepartment(branchId, departmentId);
+        boolean valid = branchRepository.branchContainsDepartment(
+                        TenantContext.getTenantId(),
+                        branchId,
+                        departmentId
+                );
 
         if (!valid) {
             throw new IllegalArgumentException(

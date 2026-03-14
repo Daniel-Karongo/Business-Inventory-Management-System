@@ -1,8 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -10,21 +12,26 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "branch_accounting_settings",
-        uniqueConstraints = @UniqueConstraint(columnNames = "branch_id")
+        uniqueConstraints = @UniqueConstraint(
+                columnNames = {"tenant_id","branch_id"}
+        ),
+        indexes = {
+                @Index(
+                        name = "idx_branch_accounting_settings_tenant_branch",
+                        columnList = "tenant_id,branch_id"
+                )
+        }
 )
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class BranchAccountingSettings {
+@SuperBuilder
+public class BranchAccountingSettings extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-
-    @Column(name = "branch_id", nullable = false, unique = true)
-    private UUID branchId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -37,7 +44,9 @@ public class BranchAccountingSettings {
 
     @PrePersist
     protected void onCreate() {
+
         createdAt = LocalDateTime.now();
+
         if (revenueRecognitionMode == null) {
             revenueRecognitionMode = RevenueRecognitionMode.DELIVERY;
         }

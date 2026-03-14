@@ -12,8 +12,9 @@ import java.util.UUID;
 @Table(
         name = "event_outbox",
         indexes = {
-                @Index(name = "idx_outbox_processed", columnList = "processed"),
-                @Index(name = "idx_outbox_created", columnList = "createdAt")
+                @Index(name = "idx_outbox_tenant_processed", columnList = "tenantId, processed"),
+                @Index(name = "idx_outbox_tenant_created", columnList = "tenantId, createdAt"),
+                @Index(name = "idx_outbox_processed_created", columnList = "processed, createdAt")
         }
 )
 @Getter
@@ -24,6 +25,12 @@ public class EventOutbox {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
+    @Column(nullable = false)
+    private UUID tenantId;
+
+    @Column(nullable = false)
+    private UUID branchId;
 
     @Column(nullable = false)
     private String eventType;

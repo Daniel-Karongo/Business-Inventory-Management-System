@@ -7,9 +7,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerLineResponse;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
-import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -28,35 +28,49 @@ public class JournalController {
     private final JournalEntryRepository repo;
     private final AccountingFacade accountingFacade;
     private final GovernanceAuditService governanceAuditService;
+    private final BranchTenantGuard branchTenantGuard;
 
     @GetMapping
     public Page<JournalResponse> list(
             @RequestParam UUID branchId,
             @PageableDefault(size = 50, sort = "postedAt") Pageable pageable
     ) {
+        UUID tenantId = TenantContext.getTenantId();
 
-        return repo.findByBranch_Id(branchId, pageable)
+        return repo
+                .findByTenantIdAndBranchIdOrderByPostedAtDesc(
+                        tenantId,
+                        branchId,
+                        pageable
+                )
                 .map(this::toResponse);
     }
 
     @GetMapping("/{id}")
     public JournalResponse get(@PathVariable UUID id) {
 
-        JournalEntry j = repo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Journal not found"));
+        UUID tenantId = TenantContext.getTenantId();
+
+        JournalEntry j =
+                repo.findByTenantIdAndId(tenantId, id)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException("Journal not found"));
 
         return toResponse(j);
     }
 
-    @TenantAdminOnly
     @PostMapping("/{id}/reverse")
     public void reverse(
             @PathVariable UUID id,
             @RequestBody JournalReversalRequest req
     ) {
 
-        JournalEntry journal = repo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Journal not found"));
+        UUID tenantId = TenantContext.getTenantId();
+
+        JournalEntry journal =
+                repo.findByTenantIdAndId(tenantId, id)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException("Journal not found"));
 
         UUID branchId = journal.getBranch().getId();
         String user = SecurityUtils.currentUsername();

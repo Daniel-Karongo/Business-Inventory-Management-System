@@ -49,6 +49,8 @@ public class DoubleEntryPolicy implements AccountingPolicy {
     ) {
         return original.getLedgerEntries().stream()
                 .map(e -> new LedgerEntry(
+                        reversal.getTenantId(),
+                        reversal.getBranchId(),
                         e.getAccount(),
                         reversal,
                         e.getDirection() == EntryDirection.DEBIT

@@ -7,6 +7,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.BranchAccountingSettingsRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.seed.BranchChartOfAccountsService;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.TaxSystemState;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.TaxSystemStateRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.dto.BranchDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.BranchAudit;
@@ -24,6 +27,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.rep
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.service.SubscriptionGuard;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -49,6 +53,9 @@ public class BranchService {
     private final PrivilegesChecker privilegesChecker;
     private final SubscriptionGuard subscriptionGuard;
     private final TenantMetadataCache tenantMetadataCache;
+    private final BranchTenantGuard branchTenantGuard;
+    private final TaxSystemStateRepository taxSystemStateRepository;
+    private final TaxProperties taxProperties;
 
 
     /* =====================================================
@@ -59,7 +66,10 @@ public class BranchService {
     public BranchDTO create(BranchDTO request, Authentication authentication) {
         subscriptionGuard.checkBranchLimit();
 
-        if (branchRepository.existsByBranchCodeIgnoreCase(request.getBranchCode())) {
+        if (branchRepository.existsByTenantIdAndBranchCodeIgnoreCase(
+                TenantContext.getTenantId(),
+                request.getBranchCode()
+        )) {
             throw new IllegalArgumentException(
                     "Branch code already exists: " + request.getBranchCode()
             );
@@ -94,14 +104,16 @@ public class BranchService {
     @Transactional(readOnly = true)
     public List<BranchDTO> getAll(Boolean deleted) {
 
+        UUID tenantId = TenantContext.getTenantId();
+
         List<Branch> branches;
 
         if (deleted == null) {
-            branches = branchRepository.findAll();
+            branches = branchRepository.findByTenantIdAndDeletedFalse(tenantId);
         } else if (deleted) {
-            branches = branchRepository.findByDeleted(true);
+            branches = branchRepository.findByTenantIdAndDeletedTrue(tenantId);
         } else {
-            branches = branchRepository.findByDeletedFalse();
+            branches = branchRepository.findByTenantIdAndDeletedFalse(tenantId);
         }
 
         return branches.stream()
@@ -112,7 +124,10 @@ public class BranchService {
     @Transactional(readOnly = true)
     public BranchDTO getById(UUID id) {
 
-        Branch branch = branchRepository.findById(id)
+        Branch branch = branchRepository.findByTenantIdAndId(
+                        TenantContext.getTenantId(),
+                        id
+                )
                 .orElseThrow(() ->
                         new EntityNotFoundException("Branch not found: " + id));
 
@@ -126,7 +141,10 @@ public class BranchService {
     @Transactional
     public BranchDTO update(UUID id, BranchDTO request, Authentication authentication) {
 
-        Branch branch = branchRepository.findByIdAndDeletedFalse(id)
+        Branch branch = branchRepository.findByTenantIdAndIdAndDeletedFalse(
+                        TenantContext.getTenantId(),
+                        id
+                )
                 .orElseThrow(() ->
                         new EntityNotFoundException("Branch not found: " + id));
 
@@ -162,7 +180,10 @@ public class BranchService {
     @Transactional
     public void deleteBranch(UUID id, Boolean soft, Authentication authentication) {
 
-        Branch branch = branchRepository.findById(id)
+        Branch branch = branchRepository.findByTenantIdAndId(
+                        TenantContext.getTenantId(),
+                        id
+                )
                 .orElseThrow(() ->
                         new EntityNotFoundException("Branch not found: " + id));
 
@@ -178,7 +199,10 @@ public class BranchService {
 
             userBranchRepository.deleteByBranchId(id);
 
-            departmentRepository.findByBranch_Id(id)
+            departmentRepository.findByTenantIdAndBranch_Id(
+                            TenantContext.getTenantId(),
+                            id
+                    )
                     .forEach(d ->
                             userDepartmentRepository.deleteByDepartmentId(d.getId()));
 
@@ -197,7 +221,10 @@ public class BranchService {
     @Transactional
     public void restoreBranch(UUID id, Authentication authentication) {
 
-        Branch branch = branchRepository.findByIdAndDeletedTrue(id)
+        Branch branch = branchRepository.findByTenantIdAndIdAndDeletedTrue(
+                        TenantContext.getTenantId(),
+                        id
+                )
                 .orElseThrow(() ->
                         new EntityNotFoundException("Deleted branch not found: " + id));
 
@@ -225,14 +252,42 @@ public class BranchService {
                         .build()
         );
 
-        coaService.seedForBranch(branch.getId());
+        coaService.seedForBranch(
+                TenantContext.getTenantId(),
+                branch.getId()
+        );
+
+    /* ===============================
+       TAX CONFIGURATION
+    =============================== */
+
+        if (taxSystemStateRepository.findByTenantIdAndBranchId(
+                TenantContext.getTenantId(),
+                branch.getId()
+        ).isEmpty()) {
+
+            taxSystemStateRepository.save(
+                    TaxSystemState.builder()
+                            .tenantId(TenantContext.getTenantId())
+                            .branchId(branch.getId())
+                            .taxMode(taxProperties.getBusinessTaxMode())
+                            .vatEnabled(taxProperties.isVatEnabled())
+                            .vatRate(taxProperties.getVatRate())
+                            .corporateTaxRate(taxProperties.getCorporateTaxRate())
+                            .locked(false)
+                            .build()
+            );
+        }
     }
 
     private void assignUsers(Branch branch, List<UUID> userIds) {
 
         if (userIds == null || userIds.isEmpty()) return;
 
-        List<User> users = userRepository.findAllById(userIds);
+        List<User> users = userRepository.findAllByTenantIdAndIdIn(
+                TenantContext.getTenantId(),
+                userIds
+        );
 
         for (User user : users) {
 
@@ -262,7 +317,10 @@ public class BranchService {
 
         Set<Department> departments = departmentIds.stream()
                 .map(id ->
-                        departmentRepository.findByIdAndDeletedFalse(id)
+                        departmentRepository.findByTenantIdAndIdAndDeletedFalse(
+                                        TenantContext.getTenantId(),
+                                        id
+                                )
                                 .orElseThrow(() ->
                                         new EntityNotFoundException("Department not found: " + id)))
                 .collect(Collectors.toSet());
@@ -299,7 +357,10 @@ public class BranchService {
                         .collect(Collectors.toSet());
 
         Set<DepartmentMinimalDTO> departments =
-                departmentRepository.findByBranch_Id(branch.getId())
+                departmentRepository.findByTenantIdAndBranch_Id(
+                                TenantContext.getTenantId(),
+                                branch.getId()
+                        )
                         .stream()
                         .map(DepartmentMinimalDTO::from)
                         .collect(Collectors.toSet());

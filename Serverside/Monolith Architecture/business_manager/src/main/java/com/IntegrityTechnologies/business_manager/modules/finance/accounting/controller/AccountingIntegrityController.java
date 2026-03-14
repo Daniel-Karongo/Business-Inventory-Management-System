@@ -2,7 +2,8 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.co
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.security.JournalIntegrityAudit;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.security.JournalIntegrityService;
-import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantSuperuserOnly;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,14 +13,15 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/accounting/integrity")
 @RequiredArgsConstructor
-@TenantAdminOnly
+@TenantSuperuserOnly
 public class AccountingIntegrityController {
 
     private final JournalIntegrityService service;
+    private final BranchTenantGuard branchTenantGuard;
 
     @GetMapping("/verify")
     public IntegrityResponse verifyNow(@RequestParam UUID branchId) {
-
+        branchTenantGuard.validate(branchId);
         var result = service.verifyChain(branchId);
 
         return new IntegrityResponse(
@@ -33,7 +35,7 @@ public class AccountingIntegrityController {
 
     @PostMapping("/audit")
     public IntegrityResponse runAndPersistAudit(@RequestParam UUID branchId) {
-
+        branchTenantGuard.validate(branchId);
         JournalIntegrityAudit audit =
                 service.performAndPersistAudit(branchId);
 
@@ -48,7 +50,7 @@ public class AccountingIntegrityController {
 
     @GetMapping("/latest")
     public IntegrityResponse latest(@RequestParam UUID branchId) {
-
+        branchTenantGuard.validate(branchId);
         JournalIntegrityAudit audit =
                 service.getLatestAudit(branchId);
 

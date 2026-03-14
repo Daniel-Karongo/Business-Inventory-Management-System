@@ -2,6 +2,8 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.se
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountingPeriodRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +16,7 @@ import java.util.UUID;
 public class PeriodGuardService {
 
     private final AccountingPeriodRepository repository;
+    private final BranchTenantGuard branchTenantGuard;
 
     @Transactional(readOnly = true)
     public AccountingPeriod validateOpenPeriod(LocalDate date, UUID branchId) {
@@ -22,12 +25,16 @@ public class PeriodGuardService {
             throw new IllegalStateException("BranchId required for period validation");
         }
 
+        branchTenantGuard.validate(branchId);
+
+        UUID tenantId = TenantContext.getTenantId();
+
         AccountingPeriod period =
-                repository
-                        .findByStartDateLessThanEqualAndEndDateGreaterThanEqualAndBranchId(
+                repository.findByTenantIdAndBranchIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                                tenantId,
+                                branchId,
                                 date,
-                                date,
-                                branchId
+                                date
                         )
                         .orElseThrow(() ->
                                 new IllegalStateException(

@@ -7,7 +7,10 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.VatLedgerProjection;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.VatLedgerProjectionRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.EventListener;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -47,31 +50,32 @@ public class VatLedgerProjectionConsumer {
 
     private void process(JournalPostedEvent event) {
 
-        UUID outputVat = accounts.get(event.branchId(), AccountRole.VAT_OUTPUT);
-        UUID inputVat = accounts.get(event.branchId(), AccountRole.VAT_INPUT);
+        try {
 
-        int year = LocalDate.now().getYear();
-        int month = LocalDate.now().getMonthValue();
+            TenantContext.setTenantId(event.tenantId());
 
-        for (LedgerEntryDTO entry : event.entries()) {
+            UUID tenantId = event.tenantId();
+            UUID branchId = event.branchId();
 
-            if (!entry.accountId().equals(outputVat)
-                    && !entry.accountId().equals(inputVat))
-                continue;
+            UUID outputVat =
+                    accounts.get(tenantId, branchId, AccountRole.VAT_OUTPUT);
 
-            BigDecimal delta =
-                    entry.direction() == EntryDirection.DEBIT
-                            ? entry.amount()
-                            : entry.amount().negate();
+            UUID inputVat =
+                    accounts.get(tenantId, branchId, AccountRole.VAT_INPUT);
+
+            int year = LocalDate.now().getYear();
+            int month = LocalDate.now().getMonthValue();
 
             VatLedgerProjection projection =
-                    repo.findByBranchIdAndFiscalYearAndMonthNumber(
-                            event.branchId(),
+                    repo.findByTenantIdAndBranchIdAndFiscalYearAndMonthNumber(
+                            tenantId,
+                            branchId,
                             year,
                             month
                     ).orElse(
                             VatLedgerProjection.builder()
-                                    .branchId(event.branchId())
+                                    .tenantId(tenantId)
+                                    .branchId(branchId)
                                     .fiscalYear(year)
                                     .monthNumber(month)
                                     .outputVat(BigDecimal.ZERO)
@@ -79,20 +83,36 @@ public class VatLedgerProjectionConsumer {
                                     .build()
                     );
 
-            if (entry.accountId().equals(outputVat)) {
+            for (LedgerEntryDTO entry : event.entries()) {
 
-                projection.setOutputVat(
-                        projection.getOutputVat().add(delta)
-                );
+                if (!entry.accountId().equals(outputVat)
+                        && !entry.accountId().equals(inputVat))
+                    continue;
 
-            } else {
+                BigDecimal delta =
+                        entry.direction() == EntryDirection.DEBIT
+                                ? entry.amount()
+                                : entry.amount().negate();
 
-                projection.setInputVat(
-                        projection.getInputVat().add(delta)
-                );
+                if (entry.accountId().equals(outputVat)) {
+
+                    projection.setOutputVat(
+                            projection.getOutputVat().add(delta)
+                    );
+
+                } else {
+
+                    projection.setInputVat(
+                            projection.getInputVat().add(delta)
+                    );
+                }
             }
 
             repo.save(projection);
+
+        } finally {
+
+            TenantContext.clear();
         }
     }
 }

@@ -10,6 +10,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.PaymentStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineItem;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,7 @@ public class RevenueRecognitionService {
     private final AccountingFacade accountingFacade;
     private final AccountingAccounts accounts;
     private final BranchAccountingSettingsService branchAccountingSettingsService;
+    private final BranchTenantGuard branchTenantGuard;
 
     @Transactional
     public void recognizeIfEligible(Sale sale) {
@@ -34,6 +37,8 @@ public class RevenueRecognitionService {
                 .map(SaleLineItem::getBranchId)
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("Sale has no branch"));
+
+        branchTenantGuard.validate(branchId);
 
         RevenueRecognitionMode mode =
                 branchAccountingSettingsService.getMode(branchId);
@@ -81,17 +86,17 @@ public class RevenueRecognitionService {
                         )
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(branchId, AccountRole.ACCOUNTS_RECEIVABLE))
+                                        .accountId(accounts.get(TenantContext.getTenantId(), branchId, AccountRole.ACCOUNTS_RECEIVABLE))
                                         .direction(EntryDirection.DEBIT)
                                         .amount(totalNet.add(totalVat))
                                         .build(),
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(branchId, AccountRole.REVENUE))
+                                        .accountId(accounts.get(TenantContext.getTenantId(), branchId, AccountRole.REVENUE))
                                         .direction(EntryDirection.CREDIT)
                                         .amount(totalNet)
                                         .build(),
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(branchId, AccountRole.VAT_OUTPUT))
+                                        .accountId(accounts.get(TenantContext.getTenantId(), branchId, AccountRole.VAT_OUTPUT))
                                         .direction(EntryDirection.CREDIT)
                                         .amount(totalVat)
                                         .build()

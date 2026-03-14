@@ -4,7 +4,6 @@ import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.doma
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -15,12 +14,22 @@ import java.util.UUID;
 public interface BudgetMonthlySnapshotRepository
         extends JpaRepository<BudgetMonthlySnapshot, UUID> {
 
-    Optional<BudgetMonthlySnapshot> findByBranchIdAndFiscalYearAndMonthNumberAndAccountId(
+    /* ---------------------------------------------------------
+       SAFE FETCH
+    --------------------------------------------------------- */
+
+    Optional<BudgetMonthlySnapshot>
+    findByTenantIdAndBranchIdAndFiscalYearAndMonthNumberAndAccountId(
+            UUID tenantId,
             UUID branchId,
             int fiscalYear,
             int monthNumber,
             UUID accountId
     );
+
+    /* ---------------------------------------------------------
+       CORPORATE VARIANCE (TENANT ONLY)
+    --------------------------------------------------------- */
 
     @Query("""
         SELECT 
@@ -28,34 +37,46 @@ public interface BudgetMonthlySnapshotRepository
             SUM(s.actual),
             SUM(s.variance)
         FROM BudgetMonthlySnapshot s
-        WHERE s.fiscalYear = :year
+        WHERE s.tenantId = :tenantId
+          AND s.fiscalYear = :year
           AND s.monthNumber = :month
           AND s.accountId = :accountId
     """)
     Object[] aggregateCorporateVariance(
-            @Param("year") int year,
-            @Param("month") int month,
-            @Param("accountId") UUID accountId
+            UUID tenantId,
+            int year,
+            int month,
+            UUID accountId
     );
 
+    /* ---------------------------------------------------------
+       BRANCH COMPARISON (TENANT ISOLATED)
+    --------------------------------------------------------- */
+
     @Query("""
-    SELECT 
-        s.branchId,
-        SUM(s.planned),
-        SUM(s.actual),
-        SUM(s.variance)
-    FROM BudgetMonthlySnapshot s
-    WHERE s.fiscalYear = :year
-      AND s.monthNumber = :month
-      AND s.accountId = :accountId
-      AND s.branchId IS NOT NULL
-    GROUP BY s.branchId
-""")
+        SELECT 
+            s.branchId,
+            SUM(s.planned),
+            SUM(s.actual),
+            SUM(s.variance)
+        FROM BudgetMonthlySnapshot s
+        WHERE s.tenantId = :tenantId
+          AND s.fiscalYear = :year
+          AND s.monthNumber = :month
+          AND s.accountId = :accountId
+          AND s.branchId IS NOT NULL
+        GROUP BY s.branchId
+    """)
     List<Object[]> aggregateByBranch(
-            @Param("year") int year,
-            @Param("month") int month,
-            @Param("accountId") UUID accountId
+            UUID tenantId,
+            int year,
+            int month,
+            UUID accountId
     );
+
+    /* ---------------------------------------------------------
+       APPLY ACTUAL DELTA (KAFKA / JOURNAL EVENTS)
+    --------------------------------------------------------- */
 
     @Modifying
     @Query("""
@@ -63,12 +84,14 @@ public interface BudgetMonthlySnapshotRepository
         SET s.actual = s.actual + :delta,
             s.variance = (s.actual + :delta) - s.planned,
             s.updatedAt = :now
-        WHERE s.branchId = :branchId
+        WHERE s.tenantId = :tenantId
+          AND s.branchId = :branchId
           AND s.fiscalYear = :year
           AND s.monthNumber = :month
           AND s.accountId = :accountId
     """)
     int applyActualDelta(
+            UUID tenantId,
             UUID branchId,
             int year,
             int month,

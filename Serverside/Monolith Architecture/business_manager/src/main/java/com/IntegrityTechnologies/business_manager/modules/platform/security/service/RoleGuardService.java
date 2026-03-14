@@ -47,6 +47,9 @@ public class RoleGuardService {
         /*
          TENANT ROLES
          */
+        if (annotation instanceof TenantSuperuserOnly) {
+            return currentRole.canAccess(Role.SUPERUSER);
+        }
 
         if (annotation instanceof TenantAdminOnly) {
             return currentRole.canAccess(Role.ADMIN);

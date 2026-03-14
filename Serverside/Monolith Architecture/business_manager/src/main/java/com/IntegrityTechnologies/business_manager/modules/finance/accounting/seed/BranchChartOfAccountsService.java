@@ -17,30 +17,31 @@ public class BranchChartOfAccountsService {
     private final AccountRepository repo;
 
     @Transactional
-    public void seedForBranch(UUID branchId) {
+    public void seedForBranch(UUID tenantId, UUID branchId) {
 
-        seed(branchId,"1000","Cash",AccountType.ASSET,AccountRole.CASH);
-        seed(branchId,"1100","Bank",AccountType.ASSET,AccountRole.BANK);
-        seed(branchId,"1150","M-Pesa Clearing Account",AccountType.ASSET,AccountRole.MPESA);
-        seed(branchId,"1200","Inventory",AccountType.ASSET,AccountRole.INVENTORY);
-        seed(branchId,"1300","Input VAT",AccountType.ASSET,AccountRole.VAT_INPUT);
-        seed(branchId,"1500","Accounts Receivable",AccountType.ASSET,AccountRole.ACCOUNTS_RECEIVABLE);
+        seed(tenantId, branchId,"1000","Cash",AccountType.ASSET,AccountRole.CASH);
+        seed(tenantId, branchId,"1100","Bank",AccountType.ASSET,AccountRole.BANK);
+        seed(tenantId, branchId,"1150","M-Pesa Clearing Account",AccountType.ASSET,AccountRole.MPESA);
+        seed(tenantId, branchId,"1200","Inventory",AccountType.ASSET,AccountRole.INVENTORY);
+        seed(tenantId, branchId,"1300","Input VAT",AccountType.ASSET,AccountRole.VAT_INPUT);
+        seed(tenantId, branchId,"1500","Accounts Receivable",AccountType.ASSET,AccountRole.ACCOUNTS_RECEIVABLE);
 
-        seed(branchId,"2000","Accounts Payable",AccountType.LIABILITY,AccountRole.ACCOUNTS_PAYABLE);
-        seed(branchId,"2100","Output VAT",AccountType.LIABILITY,AccountRole.VAT_OUTPUT);
-        seed(branchId,"2200","VAT Payable",AccountType.LIABILITY,AccountRole.VAT_PAYABLE);
-        seed(branchId,"2300","Branch Clearing",AccountType.LIABILITY,AccountRole.BRANCH_CLEARING);
-        seed(branchId,"2400","Corporate Tax Payable",AccountType.LIABILITY,AccountRole.CORPORATE_TAX_PAYABLE);
+        seed(tenantId, branchId,"2000","Accounts Payable",AccountType.LIABILITY,AccountRole.ACCOUNTS_PAYABLE);
+        seed(tenantId, branchId,"2100","Output VAT",AccountType.LIABILITY,AccountRole.VAT_OUTPUT);
+        seed(tenantId, branchId,"2200","VAT Payable",AccountType.LIABILITY,AccountRole.VAT_PAYABLE);
+        seed(tenantId, branchId,"2300","Branch Clearing",AccountType.LIABILITY,AccountRole.BRANCH_CLEARING);
+        seed(tenantId, branchId,"2400","Corporate Tax Payable",AccountType.LIABILITY,AccountRole.CORPORATE_TAX_PAYABLE);
 
-        seed(branchId,"3000","Owner Equity",AccountType.EQUITY,AccountRole.EQUITY);
+        seed(tenantId, branchId,"3000","Owner Equity",AccountType.EQUITY,AccountRole.EQUITY);
 
-        seed(branchId,"4000","Sales Revenue",AccountType.INCOME,AccountRole.REVENUE);
+        seed(tenantId, branchId,"4000","Sales Revenue",AccountType.INCOME,AccountRole.REVENUE);
 
-        seed(branchId,"5000","Cost Of Goods Sold",AccountType.EXPENSE,AccountRole.COGS);
-        seed(branchId,"5100","Corporate Tax Expense",AccountType.EXPENSE,AccountRole.CORPORATE_TAX_EXPENSE);
+        seed(tenantId, branchId,"5000","Cost Of Goods Sold",AccountType.EXPENSE,AccountRole.COGS);
+        seed(tenantId, branchId,"5100","Corporate Tax Expense",AccountType.EXPENSE,AccountRole.CORPORATE_TAX_EXPENSE);
     }
 
     private void seed(
+            UUID tenantId,
             UUID branchId,
             String code,
             String name,
@@ -48,9 +49,19 @@ public class BranchChartOfAccountsService {
             AccountRole role
     ) {
 
-        repo.findByBranchIdAndCode(branchId, code)
-                .orElseGet(() ->
-                        repo.save(new Account(branchId, code, name, type, role))
-                );
+        repo.findByTenantIdAndBranchIdAndCode(
+                tenantId,
+                branchId,
+                code
+        ).orElseGet(() ->
+                repo.save(new Account(
+                        tenantId,
+                        branchId,
+                        code,
+                        name,
+                        type,
+                        role
+                ))
+        );
     }
 }

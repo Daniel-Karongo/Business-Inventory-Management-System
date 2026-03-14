@@ -19,6 +19,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sa
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineItem;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service.CustomerService;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +48,10 @@ public class PaymentServiceImpl implements PaymentService {
     private final AccountingProperties accountingProperties;
     private final RevenueRecognitionService revenueRecognitionService;
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+    
     /* ============================================================
        PROCESS PAYMENT
        ============================================================ */
@@ -117,9 +122,9 @@ public class PaymentServiceImpl implements PaymentService {
                         new IllegalStateException("Sale must have a branch"));
 
         UUID debitAccount = switch (payment.getMethod().toUpperCase()) {
-            case "CASH" -> accountingAccounts.get(branchId, AccountRole.CASH);
-            case "BANK" -> accountingAccounts.get(branchId, AccountRole.BANK);
-            case "MPESA" -> accountingAccounts.get(branchId, AccountRole.MPESA);
+            case "CASH" -> accountingAccounts.get(tenantId(), branchId, AccountRole.CASH);
+            case "BANK" -> accountingAccounts.get(tenantId(), branchId, AccountRole.BANK);
+            case "MPESA" -> accountingAccounts.get(tenantId(), branchId, AccountRole.MPESA);
             default -> throw new IllegalArgumentException("Unsupported payment method");
         };
 
@@ -140,7 +145,7 @@ public class PaymentServiceImpl implements PaymentService {
                                         .amount(payment.getAmount())
                                         .build(),
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accountingAccounts.get(branchId, AccountRole.ACCOUNTS_RECEIVABLE))
+                                        .accountId(accountingAccounts.get(tenantId(), branchId, AccountRole.ACCOUNTS_RECEIVABLE))
                                         .direction(EntryDirection.CREDIT)
                                         .amount(payment.getAmount())
                                         .build()
@@ -267,8 +272,11 @@ public class PaymentServiceImpl implements PaymentService {
 
         // 🔁 reverse original PAYMENT journal
         JournalEntry originalJournal =
-                journalEntryRepository
-                        .findBySourceModuleAndSourceId("PAYMENT", payment.getId())
+                journalEntryRepository.findByTenantIdAndSourceModuleAndSourceId(
+                                tenantId(),
+                                "PAYMENT",
+                                payment.getId()
+                        )
                         .orElseThrow(() ->
                                 new IllegalStateException("Original payment journal not found"));
 
@@ -301,8 +309,11 @@ public class PaymentServiceImpl implements PaymentService {
         String username = currentUser();
 
         JournalEntry originalJournal =
-                journalEntryRepository
-                        .findBySourceModuleAndSourceId("PAYMENT", payment.getId())
+                journalEntryRepository.findByTenantIdAndSourceModuleAndSourceId(
+                                tenantId(),
+                                "PAYMENT",
+                                payment.getId()
+                        )
                         .orElseThrow(() ->
                                 new IllegalStateException("Original payment journal not found"));
 

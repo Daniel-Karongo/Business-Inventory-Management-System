@@ -1,14 +1,16 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.events;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -27,11 +29,34 @@ public class OutboxProcessor {
     private final ExecutorService executor =
             Executors.newFixedThreadPool(WORKERS);
 
+    @Transactional
+    public void processEvent(EventOutbox e) {
+
+        try {
+
+            TenantContext.setTenantId(e.getTenantId());
+
+            Object event = deserialize(e);
+
+            publisher.publish(
+                    e.getEventType(),
+                    event
+            );
+
+            e.setProcessed(true);
+            e.setProcessedAt(LocalDateTime.now());
+
+            outboxRepo.save(e);
+
+        } finally {
+
+            TenantContext.clear();
+        }
+    }
     @PostConstruct
     public void startWorkers() {
 
         for (int i = 0; i < WORKERS; i++) {
-
             executor.submit(this::runWorker);
         }
 
@@ -59,11 +84,9 @@ public class OutboxProcessor {
         }
     }
 
-    @Transactional
     public void processBatch() {
 
-        List<EventOutbox> events =
-                outboxRepo.fetchBatch();
+        List<EventOutbox> events = outboxRepo.fetchBatchGlobal();
 
         if (events.isEmpty())
             return;
@@ -72,15 +95,7 @@ public class OutboxProcessor {
 
             try {
 
-                Object event = deserialize(e);
-
-                publisher.publish(
-                        e.getEventType(),
-                        event
-                );
-
-                e.setProcessed(true);
-                e.setProcessedAt(LocalDateTime.now());
+                processEvent(e);
 
             } catch (Exception ex) {
 
@@ -91,22 +106,36 @@ public class OutboxProcessor {
                 );
             }
         }
-
-        outboxRepo.saveAll(events);
     }
 
-    private Object deserialize(EventOutbox e) throws Exception {
+    private Object deserialize(EventOutbox e) {
 
-        return switch (e.getEventType()) {
+        try {
 
-            case "JOURNAL_POSTED" ->
-                    mapper.readValue(
-                            e.getPayload(),
-                            JournalPostedEvent.class
-                    );
+            return switch (e.getEventType()) {
 
-            default ->
-                    mapper.readTree(e.getPayload());
-        };
+                case "JOURNAL_POSTED" ->
+                        mapper.readValue(
+                                e.getPayload(),
+                                JournalPostedEvent.class
+                        );
+
+                case "ACCOUNTING_PERIOD_CLOSED" ->
+                        mapper.readValue(
+                                e.getPayload(),
+                                AccountingPeriodClosedEvent.class
+                        );
+
+                default ->
+                        mapper.readTree(e.getPayload());
+            };
+
+        } catch (Exception ex) {
+
+            throw new RuntimeException(
+                    "Failed to deserialize outbox event " + e.getId(),
+                    ex
+            );
+        }
     }
 }

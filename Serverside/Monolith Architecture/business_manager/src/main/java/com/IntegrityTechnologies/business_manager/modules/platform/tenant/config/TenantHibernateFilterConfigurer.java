@@ -40,6 +40,12 @@ public class TenantHibernateFilterConfigurer implements Filter {
 
             }
 
+
+
+            /*
+               Branch filter only enabled if a specific branch is resolved.
+               Admin cross-branch reports must bypass this.
+            */
             if (branchId != null) {
 
                 org.hibernate.Filter branchFilter =

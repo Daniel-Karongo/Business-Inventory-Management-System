@@ -4,6 +4,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.AccountBalanceResponse;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,14 +21,19 @@ import java.util.UUID;
 public class AccountBalanceController {
 
     private final AccountBalanceRepository repository;
+    private final BranchTenantGuard branchTenantGuard;
 
     @GetMapping
     public Page<AccountBalanceResponse> all(
             @RequestParam UUID branchId,
             Pageable pageable
     ) {
+        branchTenantGuard.validate(branchId);
+
+        UUID tenantId = TenantContext.getTenantId();
+
         return repository
-                .findByBranch_Id(branchId, pageable)
+                .findByTenantIdAndBranch_Id(tenantId, branchId, pageable)
                 .map(AccountBalanceResponse::from);
     }
 
@@ -36,6 +43,15 @@ public class AccountBalanceController {
             @RequestParam UUID branchId,
             @PageableDefault(size = 50, sort = "updatedAt") Pageable pageable
     ) {
-        return repository.findByAccount_IdAndBranch_Id(accountId, branchId, pageable);
+        branchTenantGuard.validate(branchId);
+
+        UUID tenantId = TenantContext.getTenantId();
+
+        return repository.findByTenantIdAndAccount_IdAndBranch_Id(
+                tenantId,
+                accountId,
+                branchId,
+                pageable
+        );
     }
 }

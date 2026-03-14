@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -11,11 +12,14 @@ import java.util.UUID;
 @Table(
         name = "accounting_periods",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_branch_period",
-                columnNames = {"branchId", "startDate", "endDate"}
+                name = "uk_period_tenant_branch_range",
+                columnNames = {"tenant_id","branch_id","startDate","endDate"}
         ),
         indexes = {
-                @Index(name = "idx_period_branch_range", columnList = "branchId,startDate,endDate")
+                @Index(
+                        name = "idx_period_tenant_branch_range",
+                        columnList = "tenant_id,branch_id,startDate,endDate"
+                )
         }
 )
 @Getter
@@ -23,14 +27,11 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AccountingPeriod {
+public class AccountingPeriod extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-
-    @Column(nullable = false)
-    private UUID branchId;
 
     @Column(nullable = false)
     private LocalDate startDate;

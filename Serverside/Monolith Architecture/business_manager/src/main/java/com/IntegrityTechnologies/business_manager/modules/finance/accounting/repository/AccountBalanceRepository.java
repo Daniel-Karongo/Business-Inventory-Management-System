@@ -1,13 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountBalance;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.*;
+import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -17,39 +14,51 @@ import java.util.UUID;
 public interface AccountBalanceRepository
         extends JpaRepository<AccountBalance, AccountBalance.AccountBalanceId> {
 
-    Optional<AccountBalance> findByAccount_IdAndBranch_Id(
+    Optional<AccountBalance> findByTenantIdAndAccount_IdAndBranch_Id(
+            UUID tenantId,
             UUID accountId,
             UUID branchId
     );
 
-    Page<AccountBalance> findByBranch_Id(
+    Page<AccountBalance> findByTenantIdAndBranch_Id(
+            UUID tenantId,
             UUID branchId,
             Pageable pageable
     );
 
-    Page<AccountBalance> findByAccount_IdAndBranch_Id(
+    Page<AccountBalance> findByTenantIdAndAccount_IdAndBranch_Id(
+            UUID tenantId,
             UUID accountId,
             UUID branchId,
             Pageable pageable
     );
+
     @Modifying
     @Query(value = """
         INSERT INTO account_balances
-           (account_id, branch_id, balance, updated_at, version)
+           (tenant_id, account_id, branch_id, balance, updated_at, version)
         VALUES
-           (:accountId, :branchId, :delta, NOW(), 0)
+           (:tenantId, :accountId, :branchId, :delta, NOW(), 0)
         ON DUPLICATE KEY UPDATE
            balance = balance + :delta,
            updated_at = NOW(),
            version = version + 1
     """, nativeQuery = true)
     void applyDelta(
+            @Param("tenantId") UUID tenantId,
             @Param("accountId") UUID accountId,
             @Param("branchId") UUID branchId,
             @Param("delta") BigDecimal delta
     );
 
     @Modifying
-    @Query(value = "DELETE FROM account_balances WHERE branch_id = :branchId", nativeQuery = true)
-    void deleteBranchBalances(UUID branchId);
+    @Query(value = """
+        DELETE FROM account_balances
+        WHERE tenant_id = :tenantId
+          AND branch_id = :branchId
+    """, nativeQuery = true)
+    void deleteBranchBalances(
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId
+    );
 }

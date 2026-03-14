@@ -12,29 +12,53 @@ import java.util.UUID;
 
 public interface BudgetRepository extends JpaRepository<Budget, UUID> {
 
-    List<Budget> findByBranchIsNullAndFiscalYear(
+    /* ---------------------------------------------------------
+       SAFE FETCH
+    --------------------------------------------------------- */
+
+    Optional<Budget> findByTenantIdAndId(
+            UUID tenantId,
+            UUID id
+    );
+
+    /* ---------------------------------------------------------
+       GLOBAL BUDGETS
+    --------------------------------------------------------- */
+
+    List<Budget> findByTenantIdAndBranchIdIsNullAndFiscalYear(
+            UUID tenantId,
             int fiscalYear
     );
-    List<Budget> findByBranch_IdAndFiscalYear(
+
+    Optional<Budget> findTopByTenantIdAndBranchIdIsNullAndFiscalYearAndScenarioOrderByVersionNumberDesc(
+            UUID tenantId,
+            int fiscalYear,
+            BudgetScenario scenario
+    );
+
+    /* ---------------------------------------------------------
+       BRANCH BUDGETS
+    --------------------------------------------------------- */
+
+    List<Budget> findByTenantIdAndBranchIdAndFiscalYear(
+            UUID tenantId,
             UUID branchId,
             int fiscalYear
     );
 
-    Page<Budget> findByBranch_IdAndFiscalYearAndScenario(
+    Page<Budget> findByTenantIdAndBranchIdAndFiscalYearAndScenario(
+            UUID tenantId,
             UUID branchId,
             int fiscalYear,
             BudgetScenario scenario,
             Pageable pageable
     );
 
-    Optional<Budget> findTopByBranch_IdAndFiscalYearAndScenarioOrderByVersionNumberDesc(
+    Optional<Budget> findTopByTenantIdAndBranchIdAndFiscalYearAndScenarioOrderByVersionNumberDesc(
+            UUID tenantId,
             UUID branchId,
             int fiscalYear,
             BudgetScenario scenario
     );
 
-    Optional<Budget> findTopByBranchIsNullAndFiscalYearAndScenarioOrderByVersionNumberDesc(
-            int fiscalYear,
-            BudgetScenario scenario
-    );
 }

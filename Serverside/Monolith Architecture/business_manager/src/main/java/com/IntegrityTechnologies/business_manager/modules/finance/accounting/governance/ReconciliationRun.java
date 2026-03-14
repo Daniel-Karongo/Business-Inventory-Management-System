@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,24 +12,23 @@ import java.util.UUID;
 @Table(
         name = "reconciliation_runs",
         indexes = {
-                @Index(name = "idx_recon_run_branch", columnList = "branchId, startedAt")
+                @Index(
+                        name = "idx_recon_run_tenant_branch",
+                        columnList = "tenant_id,branch_id,startedAt"
+                )
         }
 )
 @Getter
 @NoArgsConstructor
-public class ReconciliationRun {
+public class ReconciliationRun extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(nullable = false)
-    private UUID branchId;
-
-    @Column(nullable = false)
     private LocalDateTime startedAt;
 
-    @Column
     private LocalDateTime completedAt;
 
     @Column(nullable = false)
@@ -40,13 +40,17 @@ public class ReconciliationRun {
     @Column(nullable = false)
     private long inconsistencies;
 
-    public ReconciliationRun(UUID branchId, boolean repairEnabled) {
-        this.branchId = branchId;
+    public ReconciliationRun(UUID tenantId, UUID branchId, boolean repairEnabled) {
+
+        this.setTenantId(tenantId);
+        this.setBranchId(branchId);
+
         this.repairEnabled = repairEnabled;
         this.startedAt = LocalDateTime.now();
     }
 
     public void complete(long total, long inconsistencies) {
+
         this.totalAccounts = total;
         this.inconsistencies = inconsistencies;
         this.completedAt = LocalDateTime.now();

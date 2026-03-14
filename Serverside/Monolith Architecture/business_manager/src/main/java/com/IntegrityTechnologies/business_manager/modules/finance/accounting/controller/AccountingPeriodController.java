@@ -1,15 +1,16 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.controller;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.control.CloseChecklistService;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.control.CloseChecklistService.CloseChecklistResult;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.AccountingPeriodResponse;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountingPeriodRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.PeriodClosingService;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.control.CloseChecklistService.CloseChecklistResult;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
-import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -30,6 +31,7 @@ public class AccountingPeriodController {
     private final PeriodClosingService closingService;
     private final GovernanceAuditService auditService;
     private final CloseChecklistService checklistService;
+    private final BranchTenantGuard branchTenantGuard;
 
     @TenantManagerOnly
     @GetMapping
@@ -38,8 +40,12 @@ public class AccountingPeriodController {
             @PageableDefault(size = 24, sort = "startDate") Pageable pageable
     ) {
 
+        branchTenantGuard.validate(branchId);
+
+        UUID tenantId = TenantContext.getTenantId();
+
         return repository
-                .findByBranchId(branchId, pageable)
+                .findByTenantIdAndBranchId(tenantId, branchId, pageable)
                 .map(AccountingPeriodResponse::from);
     }
 
@@ -53,15 +59,19 @@ public class AccountingPeriodController {
         );
     }
 
-    @TenantManagerOnly
+    @TenantAdminOnly
     @GetMapping("/close-checklist")
     public CloseChecklistResult previewClose(
             @RequestParam UUID periodId
     ) {
 
+        UUID tenantId = TenantContext.getTenantId();
+
         AccountingPeriod period =
-                repository.findById(periodId)
+                repository.findByTenantIdAndId(tenantId, periodId)
                         .orElseThrow();
+
+        branchTenantGuard.validate(period.getBranchId());
 
         return checklistService.validate(
                 period.getBranchId(),
@@ -76,22 +86,27 @@ public class AccountingPeriodController {
             @RequestParam String reason
     ) {
 
+        UUID tenantId = TenantContext.getTenantId();
+
         AccountingPeriod period =
-                repository.findById(id)
+                repository.findByTenantIdAndId(tenantId, id)
                         .orElseThrow(() ->
-                                new IllegalArgumentException("Period not found")
-                        );
+                                new IllegalArgumentException("Period not found"));
+        branchTenantGuard.validate(period.getBranchId());
 
         if (!period.isClosed()) {
             throw new IllegalStateException("Period is already open");
         }
 
         boolean laterClosedExists =
-                repository.findByBranchId(period.getBranchId())
+                repository.findByTenantIdAndBranchId(
+                                tenantId,
+                                period.getBranchId()
+                        )
                         .stream()
                         .anyMatch(p ->
-                                p.isClosed() &&
-                                        p.getStartDate().isAfter(period.getStartDate())
+                                p.isClosed()
+                                        && p.getStartDate().isAfter(period.getStartDate())
                         );
 
         if (laterClosedExists) {

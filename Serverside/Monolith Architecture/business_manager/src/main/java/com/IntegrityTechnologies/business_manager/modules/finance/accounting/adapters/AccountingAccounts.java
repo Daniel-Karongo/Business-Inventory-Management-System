@@ -15,22 +15,24 @@ public class AccountingAccounts {
 
     private final AccountRepository repo;
 
-    private final Map<UUID, Map<AccountRole, UUID>> cache = new ConcurrentHashMap<>();
+    private final Map<String, Map<AccountRole, UUID>> cache = new ConcurrentHashMap<>();
 
-    public UUID get(UUID branchId, AccountRole role) {
+    public UUID get(UUID tenantId, UUID branchId, AccountRole role) {
+
+        String key = tenantId + ":" + branchId;
 
         Map<AccountRole, UUID> branchMap =
-                cache.computeIfAbsent(branchId, id -> new ConcurrentHashMap<>());
+                cache.computeIfAbsent(key, k -> new ConcurrentHashMap<>());
 
         return branchMap.computeIfAbsent(role, r ->
-                repo.findByBranchIdAndRole(branchId, r)
+                repo.findByTenantIdAndBranchIdAndRole(tenantId, branchId, r)
                         .orElseThrow(() ->
                                 new IllegalStateException("Missing account role: " + r))
                         .getId()
         );
     }
 
-    public void clearCache(UUID branchId) {
-        cache.remove(branchId);
+    public void clearCache(UUID tenantId, UUID branchId) {
+        cache.remove(tenantId + ":" + branchId);
     }
 }

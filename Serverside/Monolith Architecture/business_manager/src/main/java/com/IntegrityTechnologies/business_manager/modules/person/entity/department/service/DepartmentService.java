@@ -20,7 +20,10 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.departme
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.MinimalUserDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.DepartmentAudit;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.controller.CategoryController;
+import com.IntegrityTechnologies.business_manager.security.BranchContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -39,23 +42,28 @@ public class DepartmentService {
     private final DepartmentAuditRepository departmentAuditRepository;
     private final PrivilegesChecker privilegesChecker;
     private final BranchRepository branchRepository;
-    private final BranchService branchService;
+    private final BranchTenantGuard branchTenantGuard;
     private final DepartmentMapper departmentMapper;
     private final UserDepartmentRepository userDepartmentRepository;
 
     @Transactional
     public DepartmentDTO create(DepartmentDTO dto, Authentication authentication) {
 
-        if (departmentRepository.existsByNameIgnoreCaseAndBranch_Id(
+        UUID tenantId = TenantContext.getTenantId();
+        branchTenantGuard.validate(dto.getBranchId());
+
+        if (departmentRepository.existsByTenantIdAndNameIgnoreCaseAndBranch_Id(
+                tenantId,
                 dto.getName(),
                 dto.getBranchId()
         )) {
             throw new IllegalArgumentException(
-                    "Department with name '" + dto.getName()
-                            + "' already exists in this branch");
+                    "Department with name '" + dto.getName() + "' already exists in this branch"
+            );
         }
 
-        Branch branch = branchRepository.findById(dto.getBranchId())
+        Branch branch = branchRepository
+                .findByTenantIdAndId(tenantId, dto.getBranchId())
                 .orElseThrow(() -> new IllegalArgumentException("Branch not found"));
 
         Department department = Department.builder()
@@ -87,9 +95,12 @@ public class DepartmentService {
 
         for (UUID userId : userIds) {
 
-            User user = userRepository.findByIdAndDeletedFalse(userId)
-                    .orElseThrow(() ->
-                            new IllegalArgumentException("User not found: " + userId));
+            UUID tenantId = TenantContext.getTenantId();
+
+            User user = userRepository
+                    .findByIdAndDeletedFalse(userId)
+                    .filter(u -> u.getTenantId().equals(tenantId))
+                    .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
             UserDepartment relation = UserDepartment.builder()
                     .id(new UserDepartmentId(user.getId(), department.getId()))
@@ -109,13 +120,19 @@ public class DepartmentService {
 
         Department department = getById(departmentId);
 
+        UUID tenantId = TenantContext.getTenantId();
+        branchTenantGuard.validate(department.getBranch().getId());
+
         if (!department.getName().equalsIgnoreCase(dto.getName()) &&
-                departmentRepository.existsByNameIgnoreCaseAndBranch_Id(
+                departmentRepository.existsByTenantIdAndNameIgnoreCaseAndBranch_Id(
+                        tenantId,
                         dto.getName(),
                         department.getBranch().getId()
                 )) {
+
             throw new IllegalArgumentException(
-                    "Department with the name '" + dto.getName() + "' already exists");
+                    "Department with the name '" + dto.getName() + "' already exists"
+            );
         }
 
         Map<String, String> oldValues = mapDepartment(department);
@@ -128,9 +145,7 @@ public class DepartmentService {
         departmentRepository.save(department);
 
         // 🔹 Remove old user relations
-        userDepartmentRepository.deleteAll(
-                userDepartmentRepository.findByDepartmentId(department.getId())
-        );
+        userDepartmentRepository.deleteByDepartmentId(department.getId());
 
         // 🔹 Reassign users
         assignUsersToDepartment(dto.getHeadIds(), department, DepartmentMembershipRole.HEAD);
@@ -165,9 +180,7 @@ public class DepartmentService {
 
         departmentRepository.save(existing);
 
-        userDepartmentRepository.deleteAll(
-                userDepartmentRepository.findByDepartmentId(existing.getId())
-        );
+        userDepartmentRepository.deleteByDepartmentId(existing.getId());
 
         assignUsersToDepartment(dto.getHeadIds(), existing, DepartmentMembershipRole.HEAD);
         assignUsersToDepartment(dto.getMemberIds(), existing, DepartmentMembershipRole.MEMBER);
@@ -187,25 +200,39 @@ public class DepartmentService {
 
 
     public List<DepartmentMinimalDTO> getAllDepartmentsForUser(UUID userId) {
-        Set<Department> departments = departmentRepository.findDepartmentsByUserId(userId);
-        return departments.stream().map(department -> DepartmentMinimalDTO.from(department)).toList();
+
+        UUID tenantId = TenantContext.getTenantId();
+
+        Set<Department> departments =
+                departmentRepository.findDepartmentsByUserId(tenantId, userId);
+
+        return departments.stream()
+                .map(DepartmentMinimalDTO::from)
+                .toList();
     }
 
     public Department getById(UUID id) {
-        return departmentRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Department not found"));
+
+        UUID tenantId = TenantContext.getTenantId();
+
+        return departmentRepository
+                .findByTenantIdAndId(tenantId, id)
+                .orElseThrow(() -> new EntityNotFoundException("Department not found"));
     }
 
     // --- Get all active departments ---
     public List<DepartmentDTO> getAllDepartments(Boolean deleted) {
 
+        UUID tenantId = TenantContext.getTenantId();
+
         List<Department> departments;
 
         if (deleted == null) {
-            departments = departmentRepository.findAll();
+            departments = departmentRepository.findByTenantIdAndDeletedFalse(tenantId);
         } else if (deleted) {
-            departments = departmentRepository.findByDeletedTrue();
+            departments = departmentRepository.findByTenantIdAndDeletedTrue(tenantId);
         } else {
-            departments = departmentRepository.findByDeletedFalse();
+            departments = departmentRepository.findByTenantIdAndDeletedFalse(tenantId);
         }
 
         return departments.stream()
@@ -214,36 +241,94 @@ public class DepartmentService {
     }
 
     public List<DepartmentAudit> getAllDepartmentsAudits() {
-        return departmentAuditRepository.findAllByOrderByTimestampDesc();
+
+        UUID tenantId = TenantContext.getTenantId();
+        UUID branchId = BranchContext.getOrNull();
+
+        if (branchId != null) {
+            return departmentAuditRepository
+                    .findByTenantIdAndBranchIdOrderByTimestampDesc(
+                            tenantId,
+                            branchId
+                    );
+        }
+
+        return departmentAuditRepository
+                .findByTenantIdOrderByTimestampDesc(tenantId);
     }
 
-    public List<DepartmentAudit> getDepartmentAudits(UUID id) {
-        return departmentAuditRepository.findByDepartmentIdOrderByTimestampDesc(id);
+    public List<DepartmentAudit> getDepartmentAudits(UUID departmentId) {
+
+        UUID tenantId = TenantContext.getTenantId();
+        UUID branchId = BranchContext.getOrNull();
+
+        if (branchId != null) {
+            return departmentAuditRepository
+                    .findByTenantIdAndBranchIdAndDepartmentIdOrderByTimestampDesc(
+                            tenantId,
+                            branchId,
+                            departmentId
+                    );
+        }
+
+        return departmentAuditRepository
+                .findByTenantIdAndDepartmentIdOrderByTimestampDesc(
+                        tenantId,
+                        departmentId
+                );
     }
 
-    public List<DepartmentAudit> getDepartmentAuditsByPerformer(UUID id) {
-        return departmentAuditRepository.findByPerformedByIdOrderByTimestampDesc(id);
+    public List<DepartmentAudit> getDepartmentAuditsByPerformer(UUID userId) {
+
+        UUID tenantId = TenantContext.getTenantId();
+        UUID branchId = BranchContext.getOrNull();
+
+        if (branchId != null) {
+            return departmentAuditRepository
+                    .findByTenantIdAndBranchIdAndPerformedByIdOrderByTimestampDesc(
+                            tenantId,
+                            branchId,
+                            userId
+                    );
+        }
+
+        return departmentAuditRepository
+                .findByTenantIdAndPerformedByIdOrderByTimestampDesc(
+                        tenantId,
+                        userId
+                );
     }
 
     // --- Delete a department (soft delete) ---
     @Transactional
     public void deleteDepartment(UUID departmentId, Boolean soft, Authentication authentication) {
-        if(Boolean.TRUE.equals(soft)) {
-            Department d = departmentRepository.findByIdAndDeletedFalse(departmentId)
+
+        UUID tenantId = TenantContext.getTenantId();
+
+        if (Boolean.TRUE.equals(soft)) {
+
+            Department d = departmentRepository
+                    .findByTenantIdAndIdAndDeletedFalse(tenantId, departmentId)
                     .orElseThrow(() -> new EntityNotFoundException("Department not found"));
+
+            branchTenantGuard.validate(d.getBranch().getId());
+
             d.setDeleted(true);
+
             departmentRepository.save(d);
 
             logAudit(d, "DELETE", mapDepartment(d).toString(), null, authentication, "Soft delete");
 
-
         } else {
-            userDepartmentRepository.deleteAll(
-                    userDepartmentRepository.findByDepartmentId(departmentId)
-            );
 
-            Department d = departmentRepository.findById(departmentId)
+            Department d = departmentRepository
+                    .findByTenantIdAndId(tenantId, departmentId)
                     .orElseThrow(() -> new EntityNotFoundException("Department not found"));
+
+            branchTenantGuard.validate(d.getBranch().getId());
+
+            userDepartmentRepository.deleteByDepartmentId(departmentId);
+
             departmentRepository.delete(d);
 
             logAudit(d, "DELETE", mapDepartment(d).toString(), null, authentication, "Hard delete");
@@ -252,57 +337,22 @@ public class DepartmentService {
 
     @Transactional
     public void restoreDepartment(UUID departmentId, Authentication authentication) {
-        Department d = departmentRepository.findByIdAndDeletedTrue(departmentId)
+
+        UUID tenantId = TenantContext.getTenantId();
+
+        Department d = departmentRepository
+                .findByTenantIdAndIdAndDeletedTrue(tenantId, departmentId)
                 .orElseThrow(() -> new EntityNotFoundException("No such deleted department found"));
+        branchTenantGuard.validate(d.getBranch().getId());
+
         d.setDeleted(false);
+
         departmentRepository.save(d);
 
         logAudit(d, "RESTORE", mapDepartment(d).toString(), null, authentication, "Department restore");
     }
 
-
-
-
-
     // HELPER METHODS
-
-    private Set<User> fetchUsers(Set<MinimalUserDTO> dtos) {
-        return dtos.stream()
-                .map(u -> userRepository.findByIdAndDeletedFalse(u.getId())
-                        .orElseThrow(() -> new IllegalArgumentException("User not found: " + (u.getId()))))
-                .peek(u -> {
-                    // If user is not allowed to be head based on current role, promote to SUPERVISOR
-                    if (!privilegesChecker.isAuthorizedToBeHead(u)) {
-                        u.setRole(Role.SUPERVISOR);
-                        userRepository.save(u); // Persist the promotion
-                    }
-                })
-                .collect(Collectors.toSet());
-    }
-
-    private Set<User> resolveUsers(Set<UUID> ids, boolean asHead) {
-        if (ids == null || ids.isEmpty()) return Set.of();
-
-        return ids.stream()
-                .map(id -> userRepository.findByIdAndDeletedFalse(id)
-                        .orElseThrow(() ->
-                                new IllegalArgumentException("User not found: " + id)))
-                .peek(user -> {
-                    if (asHead && !privilegesChecker.isAuthorizedToBeHead(user)) {
-                        user.setRole(Role.SUPERVISOR);
-                        userRepository.save(user);
-                    }
-                })
-                .collect(Collectors.toSet());
-    }
-
-    private void checkOverlap(Set<User> heads, Set<User> members) {
-        Set<User> overlap = heads.stream().filter(members::contains).collect(Collectors.toSet());
-        if (!overlap.isEmpty()) {
-            String conflicts = overlap.stream().map(User::getUsername).collect(Collectors.joining(", "));
-            throw new IllegalArgumentException("Users cannot be both heads and members: " + conflicts);
-        }
-    }
 
     private Map<String, String> mapDepartment(Department department) {
 
@@ -314,7 +364,11 @@ public class DepartmentService {
         map.put("gracePeriodMinutes", String.valueOf(department.getGracePeriodMinutes()));
 
         List<UserDepartment> relations =
-                userDepartmentRepository.findByDepartmentId(department.getId());
+                userDepartmentRepository
+                        .findByDepartmentIdWithUser(
+                                TenantContext.getTenantId(),
+                                department.getId()
+                        );
 
         String heads = relations.stream()
                 .filter(r -> r.getRole() == DepartmentMembershipRole.HEAD)

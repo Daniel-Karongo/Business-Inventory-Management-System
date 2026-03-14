@@ -4,6 +4,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.gov
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.TaxSystemState;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.TaxSystemStateRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -29,20 +30,26 @@ public class TaxSystemController {
             @RequestParam BigDecimal corporateTaxRate
     ) {
 
+        UUID tenantId = TenantContext.getTenantId();
         UUID branchId = BranchContext.get();
 
         TaxSystemState state =
-                repository.findByBranchId(branchId)
-                        .orElse(new TaxSystemState());
-
-        state.setBranchId(branchId);
-        state.setVatEnabled(vatEnabled);
-        state.setVatRate(vatRate);
-        state.setCorporateTaxRate(corporateTaxRate);
+                repository.findByTenantIdAndBranchId(tenantId, branchId)
+                        .orElseGet(() ->
+                                TaxSystemState.builder()
+                                        .tenantId(tenantId)
+                                        .branchId(branchId)
+                                        .locked(false)
+                                        .build()
+                        );
 
         if (state.isLocked()) {
             throw new IllegalStateException("Tax system is locked.");
         }
+
+        state.setVatEnabled(vatEnabled);
+        state.setVatRate(vatRate);
+        state.setCorporateTaxRate(corporateTaxRate);
 
         TaxSystemState saved = repository.save(state);
 
@@ -59,10 +66,11 @@ public class TaxSystemController {
     @PostMapping("/lock")
     public void lock() {
 
+        UUID tenantId = TenantContext.getTenantId();
         UUID branchId = BranchContext.get();
 
         TaxSystemState state =
-                repository.findByBranchId(branchId)
+                repository.findByTenantIdAndBranchId(tenantId, branchId)
                         .orElseThrow();
 
         state.setLocked(true);

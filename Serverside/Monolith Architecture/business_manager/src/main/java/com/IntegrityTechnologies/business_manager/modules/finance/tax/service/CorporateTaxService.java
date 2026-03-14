@@ -14,6 +14,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.Cor
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.enums.BusinessTaxMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.CorporateTaxFilingRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.CorporateTaxLedgerProjectionRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +39,11 @@ public class CorporateTaxService {
     private final PeriodGuardService periodGuardService;
     private final GovernanceAuditService auditService;
     private final CorporateTaxLedgerProjectionRepository projectionRepository;
+    private final BranchTenantGuard branchTenantGuard;
+
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
 
     @Transactional
     public CorporateTaxFiling accrueCorporateTax(
@@ -50,7 +57,7 @@ public class CorporateTaxService {
         if (branchId == null) {
             throw new IllegalArgumentException("branchId is required for corporate tax accrual");
         }
-        periodGuardService.validateOpenPeriod(from.toLocalDate(), branchId);
+        branchTenantGuard.validate(branchId);
 
         if (taxProperties.getBusinessTaxMode() != BusinessTaxMode.CORPORATE) {
             throw new IllegalStateException(
@@ -61,46 +68,21 @@ public class CorporateTaxService {
 
         periodGuardService.validateOpenPeriod(from.toLocalDate(), branchId);
 
-        if (filingRepository.existsByPeriodIdAndBranchId(periodId, branchId)) {
+        if (filingRepository.existsByTenantIdAndPeriodIdAndBranchId(
+                tenantId(),
+                periodId,
+                branchId
+        )) {
 
             throw new IllegalStateException(
                     "Corporate tax already accrued for this period."
             );
         }
 
-        BigDecimal revenue = ledgerRepository.netMovementForAccount(
-                accounts.get(branchId, AccountRole.REVENUE),
-                from,
-                to,
-                branchId,
-                DEBIT_NORMAL,
-                CREDIT_NORMAL,
-                DEBIT,
-                CREDIT
-        );
-
-        BigDecimal cogs = ledgerRepository.netMovementForAccount(
-                accounts.get(branchId, AccountRole.COGS),
-                from,
-                to,
-                branchId,
-                DEBIT_NORMAL,
-                CREDIT_NORMAL,
-                DEBIT,
-                CREDIT
-        );
-
-        BigDecimal expenses = ledgerRepository.totalExpensesBetween(
-                from,
-                to,
-                branchId,
-                AccountType.EXPENSE,
-                EntryDirection.DEBIT
-        );
-
         var projection =
                 projectionRepository
-                        .findByBranchIdAndFiscalYearAndMonthNumber(
+                        .findByTenantIdAndBranchIdAndFiscalYearAndMonthNumber(
+                                tenantId(),
                                 branchId,
                                 from.getYear(),
                                 from.getMonthValue()
@@ -128,13 +110,13 @@ public class CorporateTaxService {
                             .entries(
                                     List.of(
                                             AccountingEvent.Entry.builder()
-                                                    .accountId(accounts.get(branchId, AccountRole.CORPORATE_TAX_EXPENSE))
+                                                    .accountId(accounts.get(tenantId(), branchId, AccountRole.CORPORATE_TAX_EXPENSE))
                                                     .direction(EntryDirection.DEBIT)
                                                     .amount(taxAmount)
                                                     .build(),
 
                                             AccountingEvent.Entry.builder()
-                                                    .accountId(accounts.get(branchId, AccountRole.CORPORATE_TAX_PAYABLE))
+                                                    .accountId(accounts.get(tenantId(), branchId, AccountRole.CORPORATE_TAX_PAYABLE))
                                                     .direction(EntryDirection.CREDIT)
                                                     .amount(taxAmount)
                                                     .build()
@@ -145,8 +127,9 @@ public class CorporateTaxService {
         }
 
         CorporateTaxFiling filing = CorporateTaxFiling.builder()
+                .tenantId(tenantId())
+                .branchId(branchId)
                 .periodId(periodId)
-                .branchId(branchId)     // ✅ STORED HERE
                 .taxableProfit(profit)
                 .taxRate(taxRate)
                 .taxAmount(taxAmount)
@@ -179,13 +162,17 @@ public class CorporateTaxService {
         }
 
         CorporateTaxFiling filing =
-                filingRepository.findById(filingId)
+                filingRepository.findByTenantIdAndId(
+                                tenantId(),
+                                filingId
+                        )
                         .orElseThrow(() ->
                                 new IllegalArgumentException("Corporate tax filing not found"));
 
         if (filing.isPaid()) return;
 
         UUID branchId = filing.getBranchId();
+        branchTenantGuard.validate(branchId);
 
         accountingFacade.post(
                 AccountingEvent.builder()
@@ -199,7 +186,8 @@ public class CorporateTaxService {
                         .entries(
                                 List.of(
                                         AccountingEvent.Entry.builder()
-                                                .accountId(accounts.get(branchId, AccountRole.CORPORATE_TAX_PAYABLE))
+                                                .accountId(accounts.get(tenantId(),
+                                                        branchId, AccountRole.CORPORATE_TAX_PAYABLE))
                                                 .direction(EntryDirection.DEBIT)
                                                 .amount(filing.getTaxAmount())
                                                 .build(),

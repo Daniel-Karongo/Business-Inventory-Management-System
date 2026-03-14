@@ -9,6 +9,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sa
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
@@ -400,7 +401,10 @@ public class SaleBulkService {
                         .filter(s -> !s.isBlank())
                         .orElse("MAIN");
 
-        return branchRepository.findByBranchCode(code)
+        return branchRepository.findByTenantIdAndBranchCodeIgnoreCase(
+                        TenantContext.getTenantId(),
+                        code
+                )
                 .orElseThrow(() ->
                         new IllegalArgumentException("Unknown branchCode: " + code));
     }

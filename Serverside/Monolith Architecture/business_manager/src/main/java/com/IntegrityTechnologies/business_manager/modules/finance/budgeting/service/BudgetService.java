@@ -2,19 +2,15 @@ package com.IntegrityTechnologies.business_manager.modules.finance.budgeting.ser
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.Budget;
-import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.BudgetLine;
-import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.BudgetMonth;
-import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.BudgetMonthlySnapshot;
-import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.enums.BudgetScenario;
-import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.enums.BudgetStatus;
-import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.dto.BranchComparisonDTO;
-import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.dto.CorporateVarianceDTO;
+import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.*;
+import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.enums.*;
+import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.policy.BudgetPolicy;
-import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetMonthlySnapshotRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,10 +30,11 @@ public class BudgetService {
     private final AccountRepository accountRepository;
     private final GovernanceAuditService auditService;
     private final BudgetPolicy budgetPolicy;
+    private final BranchTenantGuard branchTenantGuard;
 
     /* ============================================================
-       CREATE NEW BUDGET (AUTO VERSIONING)
-       ============================================================ */
+       CREATE BUDGET
+    ============================================================ */
 
     @Transactional
     public Budget createBudget(
@@ -46,47 +43,46 @@ public class BudgetService {
             String username
     ) {
 
-        BudgetScenario scenario = BudgetScenario.BASELINE;
+        branchTenantGuard.validate(branchId);
 
-        int nextVersion = resolveNextVersion(branchId, fiscalYear, scenario);
+        Branch branch = branchRepository.findById(branchId)
+                .orElseThrow(() -> new IllegalArgumentException("Branch not found"));
 
-        Branch branch = null;
-
-        if (branchId != null) {
-            branch = branchRepository.findById(branchId)
-                    .orElseThrow(() -> new IllegalArgumentException("Branch not found"));
-        }
+        int nextVersion = resolveNextVersion(
+                        TenantContext.getTenantId(),
+                        branchId,
+                        fiscalYear,
+                        BudgetScenario.BASELINE
+                );
 
         Budget budget = Budget.builder()
                 .branch(branch)
                 .fiscalYear(fiscalYear)
                 .versionNumber(nextVersion)
-                .scenario(scenario)
+                .scenario(BudgetScenario.BASELINE)
                 .status(BudgetStatus.DRAFT)
                 .createdBy(username)
                 .build();
+
+        budget.setBranchId(branchId);
+        budget.setTenantId(branch.getTenantId());
 
         return budgetRepository.save(budget);
     }
 
     private int resolveNextVersion(
+            UUID tenantId,
             UUID branchId,
             int fiscalYear,
             BudgetScenario scenario
     ) {
 
-        if (branchId == null) {
-            return budgetRepository
-                    .findTopByBranchIsNullAndFiscalYearAndScenarioOrderByVersionNumberDesc(
-                            fiscalYear, scenario
-                    )
-                    .map(b -> b.getVersionNumber() + 1)
-                    .orElse(1);
-        }
-
         return budgetRepository
-                .findTopByBranch_IdAndFiscalYearAndScenarioOrderByVersionNumberDesc(
-                        branchId, fiscalYear, scenario
+                .findTopByTenantIdAndBranchIdAndFiscalYearAndScenarioOrderByVersionNumberDesc(
+                        tenantId,
+                        branchId,
+                        fiscalYear,
+                        scenario
                 )
                 .map(b -> b.getVersionNumber() + 1)
                 .orElse(1);
@@ -94,7 +90,7 @@ public class BudgetService {
 
     /* ============================================================
        UPSERT BUDGET LINE + MONTH
-       ============================================================ */
+    ============================================================ */
 
     @Transactional
     public void upsertBudgetMonth(
@@ -104,8 +100,10 @@ public class BudgetService {
             BigDecimal amount
     ) {
 
-        Budget budget = budgetRepository.findById(budgetId)
-                .orElseThrow(() -> new IllegalArgumentException("Budget not found"));
+        Budget budget = budgetRepository.findByTenantIdAndId(
+                TenantContext.getTenantId(),budgetId
+        )
+        .orElseThrow(() -> new IllegalArgumentException("Budget not found"));
 
         budget.ensureEditable();
 
@@ -119,11 +117,14 @@ public class BudgetService {
                 .filter(l -> l.getAccount().getId().equals(accountId))
                 .findFirst()
                 .orElseGet(() -> {
+
                     BudgetLine newLine = BudgetLine.builder()
                             .budget(budget)
                             .account(account)
                             .build();
+
                     budget.getLines().add(newLine);
+
                     return newLine;
                 });
 
@@ -134,8 +135,11 @@ public class BudgetService {
                         .findFirst();
 
         if (existing.isPresent()) {
+
             existing.get().setPlannedAmount(amount);
+
         } else {
+
             line.getMonths().add(
                     BudgetMonth.builder()
                             .budgetLine(line)
@@ -146,18 +150,32 @@ public class BudgetService {
         }
     }
 
+    /* ============================================================
+       VARIANCE
+    ============================================================ */
+
     public CorporateVarianceDTO computeCorporateVariance(
             int fiscalYear,
             int monthNumber,
             UUID accountId
     ) {
 
-        Object[] row = snapshotRepository
-                .aggregateCorporateVariance(fiscalYear, monthNumber, accountId);
+        Object[] row =
+                snapshotRepository.aggregateCorporateVariance(
+                        TenantContext.getTenantId(),
+                        fiscalYear,
+                        monthNumber,
+                        accountId
+                );
 
-        BigDecimal planned = row[0] != null ? (BigDecimal) row[0] : BigDecimal.ZERO;
-        BigDecimal actual = row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO;
-        BigDecimal variance = row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO;
+        BigDecimal planned =
+                row[0] != null ? (BigDecimal) row[0] : BigDecimal.ZERO;
+
+        BigDecimal actual =
+                row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO;
+
+        BigDecimal variance =
+                row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO;
 
         return CorporateVarianceDTO.builder()
                 .fiscalYear(fiscalYear)
@@ -176,8 +194,11 @@ public class BudgetService {
             UUID accountId
     ) {
 
+        branchTenantGuard.validate(branchId);
+
         Optional<BudgetMonthlySnapshot> snapshot =
-                snapshotRepository.findByBranchIdAndFiscalYearAndMonthNumberAndAccountId(
+                snapshotRepository.findByTenantIdAndBranchIdAndFiscalYearAndMonthNumberAndAccountId(
+                        TenantContext.getTenantId(),
                         branchId,
                         fiscalYear,
                         monthNumber,
@@ -213,14 +234,14 @@ public class BudgetService {
 
         List<Object[]> rows =
                 snapshotRepository.aggregateByBranch(
+                        TenantContext.getTenantId(),
                         fiscalYear,
                         monthNumber,
                         accountId
                 );
 
-        Set<UUID> ids = rows.stream()
-                .map(r -> (UUID) r[0])
-                .collect(Collectors.toSet());
+        Set<UUID> ids =
+                rows.stream().map(r -> (UUID) r[0]).collect(Collectors.toSet());
 
         Map<UUID, String> branchMap =
                 branchRepository.findAllById(ids)
@@ -235,23 +256,26 @@ public class BudgetService {
         for (Object[] row : rows) {
 
             UUID branchId = (UUID) row[0];
-            BigDecimal planned = row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO;
-            BigDecimal actual = row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO;
-            BigDecimal variance = row[3] != null ? (BigDecimal) row[3] : BigDecimal.ZERO;
+
+            BigDecimal planned =
+                    row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO;
+
+            BigDecimal actual =
+                    row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO;
+
+            BigDecimal variance =
+                    row[3] != null ? (BigDecimal) row[3] : BigDecimal.ZERO;
 
             BigDecimal variancePercent =
                     planned.compareTo(BigDecimal.ZERO) == 0
                             ? BigDecimal.ZERO
-                            : variance
-                            .divide(planned, 4, java.math.RoundingMode.HALF_UP)
+                            : variance.divide(planned, 4, java.math.RoundingMode.HALF_UP)
                             .multiply(BigDecimal.valueOf(100));
-
-            String branchName = branchMap.getOrDefault(branchId, "Unknown");
 
             result.add(
                     BranchComparisonDTO.builder()
                             .branchId(branchId)
-                            .branchName(branchName)
+                            .branchName(branchMap.getOrDefault(branchId, "Unknown"))
                             .planned(planned)
                             .actual(actual)
                             .variance(variance)
@@ -260,18 +284,22 @@ public class BudgetService {
             );
         }
 
-        result.sort((a, b) ->
-                b.getVariance().compareTo(a.getVariance())
-        );
+        result.sort((a, b) -> b.getVariance().compareTo(a.getVariance()));
 
         return result;
     }
 
+    /* ============================================================
+       WORKFLOW
+    ============================================================ */
+
     @Transactional
     public void submitBudget(UUID budgetId, String user) {
 
-        Budget budget = budgetRepository.findById(budgetId)
-                .orElseThrow(() -> new IllegalArgumentException("Budget not found"));
+        Budget budget =
+                budgetRepository.findByTenantIdAndId(
+                TenantContext.getTenantId(),budgetId
+        ).orElseThrow(() -> new IllegalArgumentException("Budget not found"));
 
         if (budget.getStatus() != BudgetStatus.DRAFT) {
             throw new IllegalStateException("Only DRAFT budgets can be submitted");
@@ -282,7 +310,7 @@ public class BudgetService {
         budget.setSubmittedAt(LocalDateTime.now());
 
         auditService.log(
-                budget.getBranch() != null ? budget.getBranch().getId() : null,
+                budget.getBranchId(),
                 "BUDGET_SUBMITTED",
                 user,
                 "Budget ID: " + budgetId
@@ -292,8 +320,10 @@ public class BudgetService {
     @Transactional
     public void approveBudget(UUID budgetId, String adminUser) {
 
-        Budget budget = budgetRepository.findById(budgetId)
-                .orElseThrow(() -> new IllegalArgumentException("Budget not found"));
+        Budget budget =
+                budgetRepository.findByTenantIdAndId(
+                TenantContext.getTenantId(),budgetId
+        ).orElseThrow(() -> new IllegalArgumentException("Budget not found"));
 
         if (budget.getStatus() != BudgetStatus.SUBMITTED) {
             throw new IllegalStateException("Only SUBMITTED budgets can be approved");
@@ -302,22 +332,25 @@ public class BudgetService {
         budget.setStatus(BudgetStatus.APPROVED);
         budget.setApprovedBy(adminUser);
         budget.setApprovedAt(LocalDateTime.now());
+
         auditService.log(
-                budget.getBranch() != null ? budget.getBranch().getId() : null,
+                budget.getBranchId(),
                 "BUDGET_APPROVED",
                 adminUser,
                 "Budget ID: " + budgetId
         );
+
         initializeBudgetSnapshots(budget);
     }
 
+    /* ============================================================
+       SNAPSHOT INITIALIZATION
+    ============================================================ */
+
     private void initializeBudgetSnapshots(Budget budget) {
 
-        UUID branchId =
-                budget.getBranch() != null
-                        ? budget.getBranch().getId()
-                        : null;
-
+        UUID branchId = budget.getBranchId();
+        UUID tenantId = budget.getTenantId();
         int year = budget.getFiscalYear();
 
         for (BudgetLine line : budget.getLines()) {
@@ -326,7 +359,8 @@ public class BudgetService {
 
             line.getMonths().forEach(month -> {
 
-                snapshotRepository.findByBranchIdAndFiscalYearAndMonthNumberAndAccountId(
+                snapshotRepository.findByTenantIdAndBranchIdAndFiscalYearAndMonthNumberAndAccountId(
+                        tenantId,
                         branchId,
                         year,
                         month.getMonthNumber(),
@@ -334,6 +368,7 @@ public class BudgetService {
                 ).orElseGet(() ->
                         snapshotRepository.save(
                                 BudgetMonthlySnapshot.builder()
+                                        .tenantId(tenantId)
                                         .branchId(branchId)
                                         .fiscalYear(year)
                                         .monthNumber(month.getMonthNumber())

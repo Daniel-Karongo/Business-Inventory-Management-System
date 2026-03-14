@@ -1,14 +1,13 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.controller;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.config.AccountingProperties;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.AccountingLockService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.BranchAccountingSettingsService;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
-import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
-import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -27,11 +26,11 @@ public class AccountingConfigurationController {
     private final GovernanceAuditService auditService;
     private final BranchAccountingSettingsService branchSettingsService;
     private final TaxSystemStateService taxSystemStateService;
+    private final BranchTenantGuard branchTenantGuard;
 
-    @TenantManagerOnly
     @GetMapping
     public ConfigResponse get(@RequestParam UUID branchId) {
-
+        branchTenantGuard.validate(branchId);
         var taxState = taxSystemStateService.getOrCreate(branchId);
 
         return new ConfigResponse(
@@ -43,18 +42,15 @@ public class AccountingConfigurationController {
         );
     }
 
-    @TenantAdminOnly
     @PostMapping("/revenue-recognition")
     public void updateRevenueRecognition(
             @RequestParam UUID branchId,
             @RequestParam String mode
     ) {
-
+        branchTenantGuard.validate(branchId);
         lockService.ensureNoJournalsExist(branchId);
 
-        var newMode =
-                com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode
-                        .valueOf(mode.toUpperCase());
+        var newMode = RevenueRecognitionMode.valueOf(mode.toUpperCase());
 
         branchSettingsService.updateMode(branchId, newMode);
 

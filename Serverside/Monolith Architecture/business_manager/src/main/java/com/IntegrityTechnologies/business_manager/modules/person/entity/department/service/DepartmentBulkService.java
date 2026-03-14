@@ -11,6 +11,8 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.departme
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.MinimalUserDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,7 @@ public class DepartmentBulkService {
     private final BranchRepository branchRepository;
     private final UserRepository userRepository;
     private final DepartmentMapper departmentMapper;
+    private final BranchTenantGuard branchTenantGuard;
 
     /**
      * ATOMIC BULK IMPORT
@@ -86,12 +89,17 @@ public class DepartmentBulkService {
                         .trim()
                         .toUpperCase();
 
-                UUID branchId = branchRepository.findByBranchCodeIgnoreCase(branchCode)
+                UUID tenantId = TenantContext.getTenantId();
+
+                UUID branchId = branchRepository
+                        .findByTenantIdAndBranchCodeIgnoreCase(tenantId, branchCode)
                         .orElseThrow(() ->
                                 new IllegalArgumentException(
                                         "Unknown branchCode: " + branchCode
                                 )
                         ).getId();
+
+                branchTenantGuard.validate(branchId);
 
                 // Resolve users
                 Set<UUID> headIds = resolveUsers(row.getHeadUsernames());
@@ -103,7 +111,7 @@ public class DepartmentBulkService {
                 if (!overlap.isEmpty()) {
                     String users = overlap.stream()
                             .map(id ->
-                                    userRepository.findById(id)
+                                    userRepository.findByIdAndDeletedFalse(id)
                                             .map(User::getUsername)
                                             .orElse(id.toString())
                             )
@@ -170,8 +178,11 @@ public class DepartmentBulkService {
 
             DepartmentDTO dto = pr.dto();
 
+            UUID tenantId = TenantContext.getTenantId();
+
             Optional<Department> existing =
-                    departmentRepository.findByNameIgnoreCaseAndBranch_Id(
+                    departmentRepository.findByTenantIdAndNameIgnoreCaseAndBranch_Id(
+                            tenantId,
                             dto.getName(),
                             dto.getBranchId()
                     );
@@ -220,8 +231,10 @@ public class DepartmentBulkService {
         preview.setRollcallStartTime(dto.getRollcallStartTime());
         preview.setGracePeriodMinutes(dto.getGracePeriodMinutes());
 
+        UUID tenantId = TenantContext.getTenantId();
+
         if (dto.getBranchId() != null) {
-            branchRepository.findById(dto.getBranchId())
+            branchRepository.findByTenantIdAndId(tenantId, dto.getBranchId())
                     .ifPresent(b ->
                             preview.setBranch(
                                     new BranchMinimalDTO(
@@ -236,7 +249,11 @@ public class DepartmentBulkService {
         if (dto.getHeadIds() != null) {
             preview.setHeads(
                     dto.getHeadIds().stream()
-                            .map(id -> userRepository.findById(id).orElse(null))
+                            .map(id -> userRepository
+                                    .findByIdAndDeletedFalse(id)
+                                    .filter(u -> u.getTenantId().equals(TenantContext.getTenantId()))
+                                    .orElse(null)
+                            )
                             .filter(Objects::nonNull)
                             .map(u -> new MinimalUserDTO(
                                     u.getId(),
@@ -249,7 +266,11 @@ public class DepartmentBulkService {
         if (dto.getMemberIds() != null) {
             preview.setMembers(
                     dto.getMemberIds().stream()
-                            .map(id -> userRepository.findById(id).orElse(null))
+                            .map(id -> userRepository
+                                    .findByIdAndDeletedFalse(id)
+                                    .filter(u -> u.getTenantId().equals(TenantContext.getTenantId()))
+                                    .orElse(null)
+                            )
                             .filter(Objects::nonNull)
                             .map(u -> new MinimalUserDTO(
                                     u.getId(),
@@ -283,17 +304,22 @@ public class DepartmentBulkService {
     ============================================================ */
 
     private Set<UUID> resolveUsers(Set<String> usernames) {
-        if (usernames == null || usernames.isEmpty()) return Set.of();
+
+        if (usernames == null || usernames.isEmpty())
+            return Set.of();
+
+        UUID tenantId = TenantContext.getTenantId();
 
         return usernames.stream()
                 .map(String::trim)
-                .map(username ->
-                        userRepository.findByUsernameAndDeletedFalse(username)
-                                .orElseThrow(() ->
-                                        new IllegalArgumentException(
-                                                "Unknown username: " + username
-                                        )
-                                ).getId()
+                .map(username -> userRepository
+                        .findByUsernameAndTenantId(username, tenantId)
+                        .filter(u -> !u.getDeleted())
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Unknown username: " + username
+                                )
+                        ).getId()
                 )
                 .collect(Collectors.toSet());
     }

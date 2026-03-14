@@ -8,6 +8,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.TaxPeriod;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.VatFiling;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.VatFilingRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,10 @@ public class VatFilingService {
     private final AccountingFacade accountingFacade;
     private final AccountingAccounts accounts;
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+
     @Transactional
     public VatFiling file(TaxPeriod period, UUID branchId, String user) {
 
@@ -34,7 +39,11 @@ public class VatFilingService {
             throw new IllegalArgumentException("BranchId required for VAT filing.");
         }
 
-        if (filingRepo.existsByPeriod_IdAndBranchId(period.getId(), branchId)) {
+        if (filingRepo.existsByTenantIdAndPeriod_IdAndBranchId(
+                tenantId(),
+                period.getId(),
+                branchId
+        )) {
             throw new IllegalStateException("VAT already filed for this period and branch.");
         }
 
@@ -69,6 +78,7 @@ public class VatFilingService {
         );
 
         VatFiling filing = VatFiling.builder()
+                .tenantId(tenantId())
                 .period(period)
                 .branchId(branchId)
                 .outputVat(outputVat)
@@ -95,7 +105,7 @@ public class VatFilingService {
 
         if (outputVat.compareTo(BigDecimal.ZERO) > 0) {
             entries.add(AccountingEvent.Entry.builder()
-                    .accountId(accounts.get(branchId, AccountRole.VAT_OUTPUT))
+                    .accountId(accounts.get(tenantId(), branchId, AccountRole.VAT_OUTPUT))
                     .direction(EntryDirection.DEBIT)
                     .amount(outputVat)
                     .build());
@@ -103,7 +113,7 @@ public class VatFilingService {
 
         if (inputVat.compareTo(BigDecimal.ZERO) > 0) {
             entries.add(AccountingEvent.Entry.builder()
-                    .accountId(accounts.get(branchId, AccountRole.VAT_INPUT))
+                    .accountId(accounts.get(tenantId(), branchId, AccountRole.VAT_INPUT))
                     .direction(EntryDirection.CREDIT)
                     .amount(inputVat)
                     .build());
@@ -111,7 +121,7 @@ public class VatFilingService {
 
         if (payable.compareTo(BigDecimal.ZERO) > 0) {
             entries.add(AccountingEvent.Entry.builder()
-                    .accountId(accounts.get(branchId, AccountRole.VAT_PAYABLE))
+                    .accountId(accounts.get(tenantId(), branchId, AccountRole.VAT_PAYABLE))
                     .direction(EntryDirection.CREDIT)
                     .amount(payable)
                     .build());
@@ -145,7 +155,7 @@ public class VatFilingService {
                         .branchId(branchId)
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(branchId, AccountRole.VAT_PAYABLE))
+                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.VAT_PAYABLE))
                                         .direction(EntryDirection.DEBIT)
                                         .amount(amount)
                                         .build(),

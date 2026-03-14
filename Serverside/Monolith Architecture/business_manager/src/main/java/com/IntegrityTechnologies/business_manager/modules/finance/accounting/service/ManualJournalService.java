@@ -8,6 +8,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.ManualJournalRequest;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.AccountingSystemStateService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,10 +24,11 @@ public class ManualJournalService {
     private final AccountingFacade accountingFacade;
     private final AccountRepository accountRepository;
     private final PeriodGuardService periodGuardService;
+    private final BranchTenantGuard branchTenantGuard;
 
     @Transactional
     public void post(ManualJournalRequest request) {
-
+        branchTenantGuard.validate(request.branchId());
         if (request.branchId() == null)
             throw new IllegalArgumentException("BranchId is required.");
 

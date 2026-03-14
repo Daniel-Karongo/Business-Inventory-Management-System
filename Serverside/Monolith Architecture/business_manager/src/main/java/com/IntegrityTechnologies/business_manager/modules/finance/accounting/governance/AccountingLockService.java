@@ -1,6 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +13,7 @@ import java.util.UUID;
 public class AccountingLockService {
 
     private final JournalEntryRepository journalRepo;
+    private final BranchTenantGuard branchTenantGuard;
 
     public void ensureNoJournalsExist(UUID branchId) {
 
@@ -18,7 +21,12 @@ public class AccountingLockService {
             throw new IllegalStateException("BranchId required");
         }
 
-        if (journalRepo.countByBranch_Id(branchId) > 0) {
+        branchTenantGuard.validate(branchId);
+
+        UUID tenantId = TenantContext.getTenantId();
+
+        if (journalRepo.countByTenantIdAndBranchId(tenantId, branchId) > 0) {
+
             throw new IllegalStateException(
                     "Accounting mode cannot be changed after journals exist for this branch."
             );

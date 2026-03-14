@@ -22,4 +22,9 @@ public class KafkaConfig {
     public NewTopic accountingEventsTopic() {
         return new NewTopic("accounting-events", 3, (short) 1);
     }
+
+    @Bean
+    public NewTopic accountingPeriodClosedTopic() {
+        return new NewTopic("accounting-period-closed", 6, (short) 2);
+    }
 }

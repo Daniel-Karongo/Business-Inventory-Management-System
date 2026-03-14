@@ -8,6 +8,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.rep
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -35,16 +37,19 @@ public class BalanceReconciliationService {
     private final GovernanceAuditService auditService;
     private final AccountRepository accountRepository;
     private final BranchRepository branchRepository;
+    private final BranchTenantGuard branchTenantGuard;
 
     @Transactional
     public UUID runAndPersist(UUID branchId, boolean repair, String user) {
-
+        branchTenantGuard.validate(branchId);
+        UUID tenantId = TenantContext.getTenantId();
         ReconciliationRun run =
-                runRepo.save(new ReconciliationRun(branchId, repair));
+                runRepo.save(new ReconciliationRun(tenantId, branchId, repair));
 
         // 1️⃣ Single aggregation query
         List<Object[]> ledgerData =
                 ledgerRepo.computeBranchBalances(
+                        tenantId,
                         branchId,
                         EntryDirection.DEBIT
                 );
@@ -65,7 +70,8 @@ public class BalanceReconciliationService {
         Page<AccountBalance> page;
 
         do {
-            page = balanceRepo.findByBranch_Id(
+            page = balanceRepo.findByTenantIdAndBranch_Id(
+                    tenantId,
                     branchId,
                     PageRequest.of(pageIndex++, 2000)
             );
@@ -91,6 +97,8 @@ public class BalanceReconciliationService {
                 }
 
                 batch.add(new ReconciliationItem(
+                        tenantId,
+                        branchId,
                         accountId,
                         ledgerBalance,
                         projected,
@@ -137,6 +145,8 @@ public class BalanceReconciliationService {
             }
 
             batch.add(new ReconciliationItem(
+                    tenantId,
+                    branchId,
                     accountId,
                     ledgerBalance,
                     BigDecimal.ZERO,
@@ -195,17 +205,24 @@ public class BalanceReconciliationService {
             boolean repair,
             String user
     ) {
+        branchTenantGuard.validate(branchId);
+        UUID tenantId = TenantContext.getTenantId();
 
         BigDecimal ledgerBalance =
                 ledgerRepo.computeNetBalance(
+                        tenantId,
                         accountId,
                         branchId,
                         EntryDirection.DEBIT
                 );
 
         AccountBalance projection =
-                balanceRepo.findByAccount_IdAndBranch_Id(accountId, branchId)
-                        .orElse(null);
+                balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
+                    tenantId,
+                    accountId,
+                    branchId
+                )
+                .orElse(null);
 
         BigDecimal projected =
                 projection != null ? projection.getBalance() : BigDecimal.ZERO;
@@ -244,7 +261,7 @@ public class BalanceReconciliationService {
 
     @Transactional
     public void setAutoRepair(UUID branchId, boolean enabled, String user) {
-
+        branchTenantGuard.validate(branchId);
         ReconciliationState state =
                 stateRepository.findByBranchId(branchId)
                         .orElseGet(() -> {
@@ -270,7 +287,9 @@ public class BalanceReconciliationService {
             int page,
             int size
     ) {
-        return balanceRepo.findByBranch_Id(
+        UUID tenantId = TenantContext.getTenantId();
+        return balanceRepo.findByTenantIdAndBranch_Id(
+                tenantId,
                 branchId,
                 PageRequest.of(page, size)
         );

@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.security;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,22 +12,21 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "journal_integrity_audits",
-        indexes = @Index(
-                name = "idx_integrity_branch_verified",
-                columnList = "branchId,verifiedAt"
-        )
+        indexes = {
+                @Index(
+                        name = "idx_integrity_tenant_branch_verified",
+                        columnList = "tenant_id,branch_id,verifiedAt"
+                )
+        }
 )
 @Getter
 @Setter
 @NoArgsConstructor
-public class JournalIntegrityAudit {
+public class JournalIntegrityAudit extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-
-    @Column(nullable = false)
-    private UUID branchId;
 
     @Column(nullable = false)
     private LocalDateTime verifiedAt;

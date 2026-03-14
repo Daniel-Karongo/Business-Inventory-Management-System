@@ -43,10 +43,11 @@ public class LedgerPostingService {
 
         for (LedgerEntry e : entries) {
 
-            if (!e.getAccount().getBranchId().equals(branchId)) {
+            if (!e.getAccount().getBranchId().equals(branchId)
+        || !e.getAccount().getTenantId().equals(journal.getTenantId())) {
 
                 throw new IllegalStateException(
-                        "Ledger entry account belongs to another branch"
+                        "Ledger entry account belongs to another branch or tenant"
                 );
             }
         }
@@ -58,12 +59,13 @@ public class LedgerPostingService {
         systemStateService.lockIfNecessary(branchId);
 
         JournalEntry saved = journalRepo.save(journal);
-
+        UUID tenantId = saved.getBranch().getTenantId();
         branchId = saved.getBranch().getId();
 
         String previousHash =
                 journalRepo
-                        .findTopByBranch_IdAndPostedTrueAndIdNotOrderByPostedAtDescIdDesc(
+                        .findTopByTenantIdAndBranchIdAndPostedTrueAndIdNotOrderByPostedAtDescIdDesc(
+                                tenantId,
                                 branchId,
                                 saved.getId()
                         )
@@ -89,12 +91,17 @@ public class LedgerPostingService {
 
         JournalPostedEvent event =
                 new JournalPostedEvent(
-                        saved.getId(),
+                        tenantId,
                         saved.getBranch().getId(),
+                        saved.getId(),
                         payloadEntries
                 );
 
-        outboxWriter.write("JOURNAL_POSTED", event);
+        outboxWriter.write(
+                "JOURNAL_POSTED",
+                saved.getBranch().getId(),
+                event
+        );
 
         return saved;
     }

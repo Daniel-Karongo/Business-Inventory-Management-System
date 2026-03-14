@@ -4,6 +4,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,13 +21,19 @@ import java.util.UUID;
 public class AccountsController {
 
     private final AccountRepository accountRepository;
+    private final BranchTenantGuard branchTenantGuard;
 
     @GetMapping
     public Page<AccountResponse> listAccounts(
             @RequestParam UUID branchId,
             @PageableDefault(size = 50, sort = "code") Pageable pageable
     ) {
-        return accountRepository.findByBranchIdAndActiveTrue(branchId, pageable)
+        branchTenantGuard.validate(branchId);
+        return accountRepository.findByTenantIdAndBranchIdAndActiveTrue(
+                        TenantContext.getTenantId(),
+                        branchId,
+                        pageable
+                )
                 .map(AccountResponse::from);
     }
 
@@ -33,6 +41,7 @@ public class AccountsController {
     public AccountResponse get(@PathVariable UUID id) {
         Account a = accountRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+        branchTenantGuard.validate(a.getBranchId());
         return AccountResponse.from(a);
     }
 

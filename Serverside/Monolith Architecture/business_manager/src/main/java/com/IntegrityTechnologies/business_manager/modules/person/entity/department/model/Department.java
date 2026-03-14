@@ -18,13 +18,30 @@ import java.util.UUID;
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_department_branch_name",
-                        columnNames = {"branch_id", "name"}
+                        columnNames = {"tenant_id","branch_id","name"}
                 )
         },
         indexes = {
-                @Index(name = "idx_department_branch", columnList = "branch_id"),
-                @Index(name = "idx_department_deleted", columnList = "deleted"),
-                @Index(name = "idx_department_tenant", columnList = "tenant_id")
+
+                @Index(
+                        name = "idx_department_tenant",
+                        columnList = "tenant_id"
+                ),
+
+                @Index(
+                        name = "idx_department_branch",
+                        columnList = "branch_id"
+                ),
+
+                @Index(
+                        name = "idx_department_deleted",
+                        columnList = "deleted"
+                ),
+
+                @Index(
+                        name = "idx_department_tenant_branch_name",
+                        columnList = "tenant_id,branch_id,name"
+                )
         }
 )
 @Getter

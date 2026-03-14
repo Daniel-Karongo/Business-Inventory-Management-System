@@ -10,10 +10,15 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.rep
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.security.JournalIntegrityAudit;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.security.JournalIntegrityAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.BranchAccountingSettingsService;
-import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.BranchResolver;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -21,7 +26,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/accounting/system")
 @RequiredArgsConstructor
-@TenantManagerOnly
+@TenantAdminOnly
 public class AccountingSystemStatusController {
 
     private final AccountingSystemStateService systemStateService;
@@ -32,29 +37,39 @@ public class AccountingSystemStatusController {
     private final ReconciliationStateRepository reconciliationRepository;
     private final BranchResolver branchResolver;
     private final BranchAccountingSettingsService branchAccountingSettingsService;
+    private final BranchTenantGuard branchTenantGuard;
 
     @GetMapping("/status")
     public SystemStatusResponse status(@RequestParam(required = false) UUID branchId) {
-
+        branchTenantGuard.validate(branchId);
         UUID effectiveBranchId = branchResolver.resolveBranch(branchId);
 
         var state = systemStateService.getState(effectiveBranchId);
 
         long totalAccounts = accountRepository.count();
-        long totalJournals = journalRepository.countByBranch_Id(effectiveBranchId);
+        UUID tenantId = TenantContext.getTenantId();
+
+        long totalJournals =
+                journalRepository.countByTenantIdAndBranchId(
+                        tenantId,
+                        effectiveBranchId
+                );
 
         LocalDate today = LocalDate.now();
 
         var openPeriod = periodRepository
-                .findByStartDateLessThanEqualAndEndDateGreaterThanEqualAndBranchId(
+                .findByTenantIdAndBranchIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                        tenantId,
+                        effectiveBranchId,
                         today,
-                        today,
-                        effectiveBranchId
+                        today
                 )
                 .orElse(null);
 
-        var lastClosed = periodRepository
-                .findByBranchId(effectiveBranchId)
+        var lastClosed = periodRepository.findByTenantIdAndBranchId(
+                        tenantId,
+                        effectiveBranchId
+                )
                 .stream()
                 .filter(AccountingPeriod::isClosed)
                 .max((a, b) -> a.getEndDate().compareTo(b.getEndDate()))

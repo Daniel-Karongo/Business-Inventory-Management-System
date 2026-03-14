@@ -169,10 +169,16 @@ public class AuthService {
         UUID branchId = request.getBranchId();
         LocalDate today = LocalDate.now();
 
-        branchRepository.findByIdAndDeletedFalse(branchId)
+        branchRepository.findByTenantIdAndIdAndDeletedFalse(
+                        TenantContext.getTenantId(),
+                        branchId
+                )
                 .orElseThrow(() -> new BadCredentialsException("Selected branch does not exist"));
 
-        boolean belongs = branchRepository.findBranchesByUserId(userId)
+        boolean belongs = branchRepository.findBranchesByUserId(
+                        TenantContext.getTenantId(),
+                        userId
+                )
                 .stream()
                 .anyMatch(b -> b.getId().equals(branchId));
 
@@ -215,7 +221,11 @@ public class AuthService {
         userSessionRepository.save(session);
 
         List<Department> departments =
-                departmentRepository.findDepartmentsForUserInBranch(userId, branchId);
+                departmentRepository.findDepartmentsForUserInBranch(
+                        TenantContext.getTenantId(),
+                        userId,
+                        branchId
+                );
 
         if (departments.isEmpty()) {
             rollcallService.recordLoginRollcall(userId, null, branchId);
@@ -257,7 +267,11 @@ public class AuthService {
         UUID branchId = session.getBranchId();
 
         List<Department> departments =
-                departmentRepository.findDepartmentsForUserInBranch(userId, branchId);
+                departmentRepository.findDepartmentsForUserInBranch(
+                        TenantContext.getTenantId(),
+                        userId,
+                        branchId
+                );
 
         if (departments.isEmpty()) {
             rollcallService.recordLogoutRollcall(userId, null, branchId);
@@ -314,7 +328,11 @@ public class AuthService {
 
             UUID branchId = s.getBranchId();
             List<Department> departments =
-                    departmentRepository.findDepartmentsForUserInBranch(userId, branchId);
+                    departmentRepository.findDepartmentsForUserInBranch(
+                            TenantContext.getTenantId(),
+                            userId,
+                            branchId
+                    );
 
             if (departments.isEmpty()) {
                 rollcallService.recordLogoutRollcall(userId, null, branchId);
@@ -376,6 +394,7 @@ public class AuthService {
 
         List<Department> departments =
                 departmentRepository.findDepartmentsForUserInBranch(
+                        TenantContext.getTenantId(),
                         userId,
                         session.getBranchId()
                 );

@@ -4,6 +4,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.BranchAccountingSettingsRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.seed.BranchChartOfAccountsService;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.TaxSystemState;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.TaxSystemStateRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.BranchAudit;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchAuditRepository;
@@ -42,6 +45,9 @@ public class TenantBootstrapService {
 
     private final BranchAccountingSettingsRepository accountingSettingsRepository;
     private final BranchChartOfAccountsService chartService;
+
+    private final TaxSystemStateRepository taxSystemStateRepository;
+    private final TaxProperties taxProperties;
 
     private final PasswordEncoder passwordEncoder;
 
@@ -84,9 +90,12 @@ public class TenantBootstrapService {
            2️⃣ ENSURE ACCOUNTING SETTINGS
         ===================================== */
 
-        if (!accountingSettingsRepository.existsByBranchId(branch.getId())) {
+        if (!accountingSettingsRepository.existsByTenantIdAndBranchId(tenantId, branch.getId())) {
 
-            chartService.seedForBranch(branch.getId());
+            chartService.seedForBranch(
+                    tenantId,
+                    branch.getId()
+            );
 
             accountingSettingsRepository.save(
                     BranchAccountingSettings.builder()
@@ -97,11 +106,36 @@ public class TenantBootstrapService {
         }
 
         /* =====================================
+           2️⃣B ENSURE TAX CONFIGURATION
+        ===================================== */
+
+        if (taxSystemStateRepository.findByTenantIdAndBranchId(
+                tenantId,
+                branch.getId()
+        ).isEmpty()) {
+
+            taxSystemStateRepository.save(
+                    TaxSystemState.builder()
+                            .tenantId(tenantId)
+                            .branchId(branch.getId())
+                            .taxMode(taxProperties.getBusinessTaxMode())
+                            .vatEnabled(taxProperties.isVatEnabled())
+                            .pricesVatInclusive(taxProperties.isPricesVatInclusive())
+                            .vatRate(taxProperties.getVatRate())
+                            .corporateTaxRate(taxProperties.getCorporateTaxRate())
+                            .locked(false)
+                            .build()
+            );
+        }
+        /* =====================================
            3️⃣ ENSURE GENERAL DEPARTMENT
         ===================================== */
 
-        Department department = departmentRepository
-                .findByNameIgnoreCaseAndBranch_Id("GENERAL", branch.getId())
+        Department department = departmentRepository.findByTenantIdAndNameIgnoreCaseAndBranch_Id(
+                        tenantId,
+                        "GENERAL",
+                        branch.getId()
+                )
                 .orElseGet(() -> {
 
                     Department d = Department.builder()

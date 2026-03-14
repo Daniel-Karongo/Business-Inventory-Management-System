@@ -6,6 +6,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.m
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.*;
 
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
@@ -151,8 +152,10 @@ public class InventoryBulkService {
        RESOLVE BRANCH
        ========================= */
 
-        Branch branch = branchRepository
-                .findByBranchCode(branchCode)
+        Branch branch = branchRepository.findByTenantIdAndBranchCodeIgnoreCase(
+                        TenantContext.getTenantId(),
+                        branchCode
+                )
                 .orElseThrow(() ->
                         new IllegalArgumentException(
                                 "Branch not found: " + branchCode

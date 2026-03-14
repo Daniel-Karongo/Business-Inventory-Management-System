@@ -8,7 +8,8 @@ import java.util.UUID;
 public interface ProjectionCheckpointRepository
         extends JpaRepository<ProjectionCheckpoint, UUID> {
 
-    Optional<ProjectionCheckpoint> findByProjectionNameAndBranchId(
+    Optional<ProjectionCheckpoint> findByTenantIdAndProjectionNameAndBranchId(
+            UUID tenantId,
             String projectionName,
             UUID branchId
     );

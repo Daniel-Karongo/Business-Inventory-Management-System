@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.UUID;
@@ -24,12 +25,17 @@ public interface UserDepartmentRepository
 
     List<UserDepartment> findByDepartmentId(UUID departmentId);
 
-        @Query("""
-        SELECT ud FROM UserDepartment ud
+    @Query("""
+        SELECT ud
+        FROM UserDepartment ud
         JOIN FETCH ud.user
         WHERE ud.department.id = :departmentId
+          AND ud.department.tenantId = :tenantId
     """)
-    List<UserDepartment> findByDepartmentIdWithUser(UUID departmentId);
+    List<UserDepartment> findByDepartmentIdWithUser(
+            @Param("tenantId") UUID tenantId,
+            @Param("departmentId") UUID departmentId
+    );
 
     @Query("""
         SELECT ud FROM UserDepartment ud
@@ -39,7 +45,17 @@ public interface UserDepartmentRepository
     """)
     List<UserDepartment> findByUserIdWithDepartmentAndBranch(UUID userId);
 
-    Page<UserDepartment> findByDepartmentId(UUID departmentId, Pageable pageable);
+    @Query("""
+        SELECT ud
+        FROM UserDepartment ud
+        WHERE ud.department.id = :departmentId
+          AND ud.department.tenantId = :tenantId
+    """)
+    Page<UserDepartment> findByDepartmentId(
+            @Param("tenantId") UUID tenantId,
+            @Param("departmentId") UUID departmentId,
+            Pageable pageable
+    );
 
     @Modifying
     @Query("DELETE FROM UserDepartment ud WHERE ud.department.id = :departmentId")

@@ -9,7 +9,13 @@ import java.util.UUID;
 public interface BranchAccountingSettingsRepository
         extends JpaRepository<BranchAccountingSettings, UUID> {
 
-    Optional<BranchAccountingSettings> findByBranchId(UUID branchId);
+    Optional<BranchAccountingSettings> findByTenantIdAndBranchId(
+            UUID tenantId,
+            UUID branchId
+    );
 
-    boolean existsByBranchId(UUID branchId);
+    boolean existsByTenantIdAndBranchId(
+            UUID tenantId,
+            UUID branchId
+    );
 }

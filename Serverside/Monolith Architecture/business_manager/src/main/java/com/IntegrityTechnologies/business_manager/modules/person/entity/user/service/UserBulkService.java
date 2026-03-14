@@ -136,17 +136,21 @@ public class UserBulkService {
 
                 if (row.getBranchCode() != null && row.getDepartmentName() != null) {
 
-                    Branch branch = branchRepository
-                            .findByBranchCode(row.getBranchCode())
+                    Branch branch = branchRepository.findByTenantIdAndBranchCodeIgnoreCase(
+                        TenantContext.getTenantId(),
+                        row.getBranchCode()
+                    )
                             .orElseThrow(() ->
                                     new IllegalArgumentException(
                                             "Unknown branchCode: " + row.getBranchCode()
                                     )
                             );
 
-                    Department department = departmentRepository
-                            .findByNameIgnoreCase(row.getDepartmentName())
-                            .orElseThrow(() ->
+                    Department department = departmentRepository.findByTenantIdAndNameIgnoreCaseAndBranch_Id(
+                            TenantContext.getTenantId(),
+                            row.getDepartmentName(),
+                            branch.getId()
+                    ).orElseThrow(() ->
                                     new IllegalArgumentException(
                                             "Unknown department: " + row.getDepartmentName()
                                     )

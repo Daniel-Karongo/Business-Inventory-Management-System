@@ -4,6 +4,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.accounting.InventoryAccountingPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,10 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
     private final AccountingFacade accountingFacade;
     private final AccountingAccounts accounts;
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+
     @Override
     public void recordInventoryReceipt(UUID refId, UUID branchId, BigDecimal value, String ref) {
 
@@ -33,12 +38,12 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                         .branchId(branchId)
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(branchId, AccountRole.INVENTORY))
+                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.INVENTORY))
                                         .direction(EntryDirection.DEBIT)
                                         .amount(value)
                                         .build(),
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(branchId, AccountRole.ACCOUNTS_PAYABLE))
+                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.ACCOUNTS_PAYABLE))
                                         .direction(EntryDirection.CREDIT)
                                         .amount(value)
                                         .build()
@@ -61,12 +66,12 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                         .branchId(branchId)
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(branchId, AccountRole.COGS))
+                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.COGS))
                                         .direction(EntryDirection.DEBIT)
                                         .amount(value)
                                         .build(),
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(branchId, AccountRole.INVENTORY))
+                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.INVENTORY))
                                         .direction(EntryDirection.CREDIT)
                                         .amount(value)
                                         .build()
@@ -89,12 +94,12 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                         .branchId(branchId)
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(branchId, AccountRole.INVENTORY))
+                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.INVENTORY))
                                         .direction(EntryDirection.DEBIT)
                                         .amount(value)
                                         .build(),
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(branchId, AccountRole.COGS))
+                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.COGS))
                                         .direction(EntryDirection.CREDIT)
                                         .amount(value)
                                         .build()
@@ -117,12 +122,12 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                         .branchId(branchId)
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(branchId, AccountRole.BRANCH_CLEARING))
+                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.BRANCH_CLEARING))
                                         .direction(EntryDirection.DEBIT)
                                         .amount(value)
                                         .build(),
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(branchId, AccountRole.INVENTORY))
+                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.INVENTORY))
                                         .direction(EntryDirection.CREDIT)
                                         .amount(value)
                                         .build()
@@ -145,12 +150,12 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                         .branchId(branchId)
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(branchId, AccountRole.INVENTORY))
+                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.INVENTORY))
                                         .direction(EntryDirection.DEBIT)
                                         .amount(value)
                                         .build(),
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(branchId, AccountRole.BRANCH_CLEARING))
+                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.BRANCH_CLEARING))
                                         .direction(EntryDirection.CREDIT)
                                         .amount(value)
                                         .build()

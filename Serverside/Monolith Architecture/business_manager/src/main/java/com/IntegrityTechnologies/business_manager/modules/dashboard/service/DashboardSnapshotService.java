@@ -6,8 +6,11 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.ada
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryValuationService;
+
 import static com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountingSignRules.*;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,19 +31,26 @@ public class DashboardSnapshotService {
     private final AccountBalanceRepository balanceRepo;
     private final InventoryValuationService valuationService;
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+
     @Transactional
     public void compute(UUID branchId, LocalDate date) {
 
-        if (snapshotRepo.findByBranchIdAndDate(branchId, date).isPresent()) {
+        UUID tenantId = tenantId();
+
+        if (snapshotRepo.findByTenantIdAndBranchIdAndDate(tenantId, branchId, date).isPresent()) {
             return;
         }
 
         LocalDateTime start = date.atStartOfDay();
-        LocalDateTime end = date.atTime(23,59,59);
+        LocalDateTime end = date.atTime(23, 59, 59);
 
         BigDecimal revenue =
                 ledgerRepo.netMovementForAccount(
-                        accounts.get(branchId, AccountRole.REVENUE),
+                        tenantId,
+                        accounts.get(tenantId, branchId, AccountRole.REVENUE),
                         start,
                         end,
                         branchId,
@@ -52,7 +62,8 @@ public class DashboardSnapshotService {
 
         BigDecimal cogs =
                 ledgerRepo.netMovementForAccount(
-                        accounts.get(branchId, AccountRole.COGS),
+                        tenantId,
+                        accounts.get(tenantId, branchId, AccountRole.COGS),
                         start,
                         end,
                         branchId,
@@ -63,23 +74,37 @@ public class DashboardSnapshotService {
                 );
 
         BigDecimal vat =
-                balanceRepo.findByAccount_IdAndBranch_Id(
-                                accounts.get(branchId, AccountRole.VAT_PAYABLE),
+                balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
+                                tenantId,
+                                accounts.get(tenantId, branchId, AccountRole.VAT_PAYABLE),
                                 branchId
                         )
                         .map(b -> b.getBalance())
                         .orElse(BigDecimal.ZERO);
 
         BigDecimal cash =
-                balanceRepo.findByAccount_IdAndBranch_Id(accounts.get(branchId, AccountRole.CASH), branchId)
+                balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
+                                tenantId,
+                                accounts.get(tenantId, branchId, AccountRole.CASH),
+                                branchId
+                        )
                         .map(b -> b.getBalance())
                         .orElse(BigDecimal.ZERO)
                         .add(
-                                balanceRepo.findByAccount_IdAndBranch_Id(accounts.get(branchId, AccountRole.BANK), branchId)
+                                balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
+                                                tenantId,
+                                                accounts.get(tenantId, branchId, AccountRole.BANK),
+                                                branchId
+                                        )
                                         .map(b -> b.getBalance())
                                         .orElse(BigDecimal.ZERO)
-                        ).add(
-                                balanceRepo.findByAccount_IdAndBranch_Id(accounts.get(branchId, AccountRole.MPESA), branchId)
+                        )
+                        .add(
+                                balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
+                                                tenantId,
+                                                accounts.get(tenantId, branchId, AccountRole.MPESA),
+                                                branchId
+                                        )
                                         .map(b -> b.getBalance())
                                         .orElse(BigDecimal.ZERO)
                         );
@@ -89,6 +114,7 @@ public class DashboardSnapshotService {
                         .get("totalValuation");
 
         DashboardDailySnapshot snap = new DashboardDailySnapshot();
+        snap.setTenantId(tenantId);
         snap.setBranchId(branchId);
         snap.setDate(date);
         snap.setRevenue(revenue);
@@ -102,14 +128,16 @@ public class DashboardSnapshotService {
         try {
             snapshotRepo.save(snap);
         } catch (Exception ignored) {
-            // another thread inserted it first — safe to ignore
+            // concurrent insert safe
         }
     }
 
     public void backfillMissingSnapshots(UUID branchId, LocalDate from, LocalDate to) {
 
+        UUID tenantId = tenantId();
+
         Set<LocalDate> existing =
-                new HashSet<>(snapshotRepo.findExistingDatesBetween(branchId, from, to));
+                new HashSet<>(snapshotRepo.findExistingDatesBetween(tenantId, branchId, from, to));
 
         LocalDate date = from;
 

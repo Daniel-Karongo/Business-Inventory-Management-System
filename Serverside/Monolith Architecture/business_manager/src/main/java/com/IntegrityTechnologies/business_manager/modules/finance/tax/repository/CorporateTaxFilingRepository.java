@@ -11,10 +11,27 @@ import java.util.UUID;
 public interface CorporateTaxFilingRepository
         extends JpaRepository<CorporateTaxFiling, UUID> {
 
-    boolean existsByPeriodIdAndBranchId(UUID periodId, UUID branchId);
+    boolean existsByTenantIdAndPeriodIdAndBranchId(
+            UUID tenantId,
+            UUID periodId,
+            UUID branchId
+    );
 
     Optional<CorporateTaxFiling>
-    findTopByBranchIdOrderByFiledAtDesc(UUID branchId);
+    findTopByTenantIdAndBranchIdOrderByFiledAtDesc(
+            UUID tenantId,
+            UUID branchId
+    );
 
-    Page<CorporateTaxFiling> findByBranchId(UUID branchId, Pageable pageable);
+    Page<CorporateTaxFiling> findByTenantIdAndBranchId(
+            UUID tenantId,
+            UUID branchId,
+            Pageable pageable
+    );
+
+    Optional<CorporateTaxFiling>
+    findByTenantIdAndId(
+            UUID tenantId,
+            UUID id
+    );
 }

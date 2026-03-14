@@ -4,6 +4,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.ada
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,13 +21,18 @@ public class VatReportService {
     private final LedgerEntryRepository ledgerRepo;
     private final AccountingAccounts accountingAccounts;
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+
     public VatReport generate(LocalDateTime from, LocalDateTime to, UUID branchId) {
 
-        UUID outputVatId = accountingAccounts.get(branchId, AccountRole.VAT_OUTPUT);
-        UUID inputVatId = accountingAccounts.get(branchId, AccountRole.VAT_INPUT);
+        UUID outputVatId = accountingAccounts.get(tenantId(), branchId, AccountRole.VAT_OUTPUT);
+        UUID inputVatId = accountingAccounts.get(tenantId(), branchId, AccountRole.VAT_INPUT);
 
         BigDecimal outputVat =
                 ledgerRepo.netMovementForAccount(
+                        tenantId(),
                         outputVatId,
                         from,
                         to,
@@ -39,6 +45,7 @@ public class VatReportService {
 
         BigDecimal inputVat =
                 ledgerRepo.netMovementForAccount(
+                        tenantId(),
                         inputVatId,
                         from,
                         to,

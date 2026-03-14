@@ -789,10 +789,17 @@ public class UserService {
             return false;
         }
 
-        Branch main = branchRepository.findByBranchCode("MAIN")
+        Branch main = branchRepository.findByTenantIdAndBranchCodeIgnoreCase(
+                        TenantContext.getTenantId(),
+                        "MAIN"
+                )
                 .orElseThrow(() -> new RuntimeException("Default MAIN branch missing"));
 
-        Department general = departmentRepository.findByNameIgnoreCase("GENERAL")
+        Department general = departmentRepository.findByTenantIdAndNameIgnoreCaseAndBranch_Id(
+                        TenantContext.getTenantId(),
+                        "GENERAL",
+                        main.getId()
+                )
                 .orElseThrow(() -> new RuntimeException("Default GENERAL department missing"));
 
         // 🔹 Ensure GENERAL belongs to MAIN
@@ -844,7 +851,7 @@ public class UserService {
             UUID departmentId = assignment.getDepartmentId();
 
             Department department = departmentRepository
-                    .findByIdAndDeletedFalse(departmentId)
+                    .findByTenantIdAndIdAndDeletedFalse(TenantContext.getTenantId(), departmentId)
                     .orElseThrow(() -> new EntityNotFoundException("Department not found"));
 
             if (!department.getBranch().getId().equals(branchId)) {

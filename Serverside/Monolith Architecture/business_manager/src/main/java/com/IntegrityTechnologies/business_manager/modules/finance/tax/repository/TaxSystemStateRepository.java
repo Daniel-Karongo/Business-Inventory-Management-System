@@ -9,5 +9,9 @@ import java.util.UUID;
 public interface TaxSystemStateRepository
         extends JpaRepository<TaxSystemState, UUID> {
 
-    Optional<TaxSystemState> findByBranchId(UUID branchId);
+    Optional<TaxSystemState>
+    findByTenantIdAndBranchId(
+            UUID tenantId,
+            UUID branchId
+    );
 }

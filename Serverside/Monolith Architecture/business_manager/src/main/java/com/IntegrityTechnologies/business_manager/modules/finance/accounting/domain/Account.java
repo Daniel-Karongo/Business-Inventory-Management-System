@@ -2,10 +2,9 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.do
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.UUID;
 
@@ -13,24 +12,24 @@ import java.util.UUID;
 @Table(
         name = "accounts",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_account_branch_code",
-                columnNames = {"branch_id", "code"}
+                name = "uk_account_tenant_branch_code",
+                columnNames = {"tenant_id","branch_id","code"}
         ),
         indexes = {
-                @Index(name = "idx_account_branch_code", columnList = "branch_id, code")
+                @Index(
+                        name = "idx_account_tenant_branch_code",
+                        columnList = "tenant_id,branch_id,code"
+                )
         }
 )
 @Getter
-@NoArgsConstructor
 @Setter
-public class Account {
+@NoArgsConstructor
+public class Account extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-
-    @Column(name = "branch_id", nullable = false)
-    private UUID branchId;
 
     @Column(nullable = false)
     private String code;
@@ -53,13 +52,15 @@ public class Account {
     private Long version;
 
     public Account(
+            UUID tenantId,
             UUID branchId,
             String code,
             String name,
             AccountType type,
             AccountRole role
     ) {
-        this.branchId = branchId;
+        this.setTenantId(tenantId);
+        this.setBranchId(branchId);
         this.code = code;
         this.name = name;
         this.type = type;

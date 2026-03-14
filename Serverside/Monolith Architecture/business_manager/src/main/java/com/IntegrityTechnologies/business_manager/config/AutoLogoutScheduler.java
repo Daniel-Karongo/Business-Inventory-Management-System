@@ -6,6 +6,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.departme
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.UserSession;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.service.RollcallService;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -49,7 +50,13 @@ public class AutoLogoutScheduler {
             UUID userId = session.getUserId();
             UUID branchId = session.getBranchId();
 
-            Set<Department> departments = departmentRepository.findDepartmentsByUserId(userId);
+            UUID tenantId = TenantContext.getTenantId();
+
+            Set<Department> departments =
+                    departmentRepository.findDepartmentsByUserId(
+                            tenantId,
+                            userId
+                    );
 
             if (departments.isEmpty()) {
                 rollcallService.recordLogoutRollcall(userId, null, branchId);

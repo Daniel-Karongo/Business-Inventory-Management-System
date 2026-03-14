@@ -29,6 +29,8 @@ public class KafkaAccountingEventPublisher implements AccountingEventPublisher {
 
             case "JOURNAL_POSTED" -> "journal-posted";
 
+            case "ACCOUNTING_PERIOD_CLOSED" -> "accounting-period-closed";
+
             default -> "accounting-events";
         };
     }

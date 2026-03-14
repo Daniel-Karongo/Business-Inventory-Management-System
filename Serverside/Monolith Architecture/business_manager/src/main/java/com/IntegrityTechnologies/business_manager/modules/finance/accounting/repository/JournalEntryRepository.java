@@ -1,45 +1,108 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 public interface JournalEntryRepository extends JpaRepository<JournalEntry, UUID> {
 
-    Optional<JournalEntry> findTopByBranch_IdAndPostedTrueOrderByPostedAtDesc(UUID branchId);
+    /* =========================================================
+       CHAIN LOOKUP
+    ========================================================= */
+
     Optional<JournalEntry>
-    findTopByBranch_IdAndPostedTrueAndIdNotOrderByPostedAtDescIdDesc(
+    findTopByTenantIdAndBranchIdAndPostedTrueOrderByPostedAtDesc(
+            UUID tenantId,
+            UUID branchId
+    );
+
+    Optional<JournalEntry>
+    findTopByTenantIdAndBranchIdAndPostedTrueAndIdNotOrderByPostedAtDescIdDesc(
+            UUID tenantId,
             UUID branchId,
             UUID excludeId
     );
 
-    Page<JournalEntry> findByBranch_Id(
+    /* =========================================================
+       JOURNAL PAGING
+    ========================================================= */
+
+    Page<JournalEntry>
+    findByTenantIdAndBranchId(
+            UUID tenantId,
             UUID branchId,
             Pageable pageable
     );
 
-    Page<JournalEntry> findByBranch_IdOrderByPostedAtDesc(
+    Page<JournalEntry>
+    findByTenantIdAndBranchIdOrderByPostedAtDesc(
+            UUID tenantId,
             UUID branchId,
             Pageable pageable
     );
 
-    Page<JournalEntry> findByBranch_IdOrderByPostedAtAsc(
+    Page<JournalEntry>
+    findByTenantIdAndBranchIdAndPostedTrueOrderByPostedAtAsc(
+            UUID tenantId,
             UUID branchId,
             Pageable pageable
     );
 
-    boolean existsBySourceModuleAndSourceId(String sourceModule, UUID sourceId);
+    /* =========================================================
+       SOURCE DUPLICATE PROTECTION
+    ========================================================= */
 
-    Optional<JournalEntry> findBySourceModuleAndSourceId(String sourceModule, UUID sourceId);
+    boolean existsByTenantIdAndSourceModuleAndSourceId(
+            UUID tenantId,
+            String sourceModule,
+            UUID sourceId
+    );
 
-    boolean existsByAccountingEventId(UUID eventId);
+    Optional<JournalEntry>
+    findByTenantIdAndSourceModuleAndSourceId(
+            UUID tenantId,
+            String sourceModule,
+            UUID sourceId
+    );
 
-    long countByBranch_Id(UUID branchId);
-    List<JournalEntry> findByReference(String reference);
-    Page<JournalEntry> findAll(Pageable pageable);
+    /* =========================================================
+       SAFE REFERENCE SEARCH
+    ========================================================= */
+
+    List<JournalEntry>
+    findByTenantIdAndBranchIdAndReference(
+            UUID tenantId,
+            UUID branchId,
+            String reference
+    );
+
+    /* =========================================================
+       EVENT DUPLICATE PROTECTION
+    ========================================================= */
+
+    boolean existsByTenantIdAndAccountingEventId(
+            UUID tenantId,
+            UUID eventId
+    );
+
+    /* =========================================================
+       METRICS
+    ========================================================= */
+
+    long countByTenantIdAndBranchId(
+            UUID tenantId,
+            UUID branchId
+    );
+
+    /* =========================================================
+       SAFE FETCH
+    ========================================================= */
+
+    Optional<JournalEntry>
+    findByTenantIdAndId(
+            UUID tenantId,
+            UUID id
+    );
 }

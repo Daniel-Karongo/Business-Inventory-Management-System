@@ -14,11 +14,6 @@ import java.util.UUID;
 public interface DashboardDailySnapshotRepository
         extends JpaRepository<DashboardDailySnapshot, UUID> {
 
-    Optional<DashboardDailySnapshot> findByBranchIdAndDate(
-            UUID branchId,
-            LocalDate date
-    );
-
     @Query("""
         SELECT COALESCE(SUM(s.cogs), 0)
         FROM DashboardDailySnapshot s
@@ -34,12 +29,20 @@ public interface DashboardDailySnapshotRepository
     @Query("""
         SELECT s.date
         FROM DashboardDailySnapshot s
-        WHERE s.branchId = :branchId
-          AND s.date BETWEEN :from AND :to
+        WHERE s.tenantId = :tenantId
+        AND s.branchId = :branchId
+        AND s.date BETWEEN :from AND :to
     """)
     List<LocalDate> findExistingDatesBetween(
-            @Param("branchId") UUID branchId,
-            @Param("from") LocalDate from,
-            @Param("to") LocalDate to
+            UUID tenantId,
+            UUID branchId,
+            LocalDate from,
+            LocalDate to
+    );
+
+    Optional<DashboardDailySnapshot> findByTenantIdAndBranchIdAndDate(
+            UUID tenantId,
+            UUID branchId,
+            LocalDate date
     );
 }

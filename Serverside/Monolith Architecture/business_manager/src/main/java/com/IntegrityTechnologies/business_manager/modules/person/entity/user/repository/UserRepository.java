@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,7 +34,17 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     List<User> findByDeletedTrue();
 
-
+    @Query("""
+        SELECT u
+        FROM User u
+        WHERE u.id IN :ids
+          AND u.tenantId = :tenantId
+          AND u.deleted = false
+    """)
+    List<User> findAllByTenantIdAndIdIn(
+            @Param("tenantId") UUID tenantId,
+            @Param("ids") Collection<UUID> ids
+    );
     /* ====================== UNIQUE CHECKS ====================== */
 
     /* ====================== UNIQUE CHECKS (TENANT SAFE) ====================== */

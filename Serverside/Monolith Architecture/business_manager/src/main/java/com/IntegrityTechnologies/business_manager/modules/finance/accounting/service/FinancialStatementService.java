@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.service;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.Account;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.LedgerEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
@@ -7,10 +8,17 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.rep
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.snapshots.DailyAccountBalanceSnapshot;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.snapshots.DailyAccountBalanceSnapshotRepository;
-import org.springframework.cache.annotation.Cacheable;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountRoleResolver;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.cache.AccountingCacheKey;
+import com.IntegrityTechnologies.business_manager.security.BranchFilterDisabler;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,21 +38,24 @@ public class FinancialStatementService {
 
     private final LedgerEntryRepository ledgerRepo;
     private final DailyAccountBalanceSnapshotRepository snapshotRepo;
-    private final AccountRepository accountRepo;
+    private final BranchFilterDisabler branchFilterDisabler;
+    private final BranchTenantGuard branchTenantGuard;
+    private final AccountRepository accountRepository;
+    private final AccountRoleResolver accountRoleResolver;
 
     /* ============================================================
        TRIAL BALANCE (Enterprise)
     ============================================================ */
     @Cacheable(
             value = "trialBalance",
-            key = "{#branchId,#from,#to}"
+            key = "T(com.IntegrityTechnologies.business_manager.modules.finance.accounting.cache.AccountingCacheKey).trialBalance(#branchId,#from,#to)"
     )
     public List<TrialBalanceRow> getTrialBalance(
             LocalDate from,
             LocalDate to,
             UUID branchId
     ) {
-
+        branchTenantGuard.validate(branchId);
         LocalDateTime start = from.atStartOfDay();
         LocalDateTime end = to.atTime(23,59,59);
 
@@ -56,16 +67,28 @@ public class FinancialStatementService {
                                 DailyAccountBalanceSnapshot::getClosingBalance
                         ));
 
+        UUID tenantId = TenantContext.getTenantId();
+
         Map<UUID, BigDecimal> deltaMap =
                 ledgerRepo.ledgerDeltaByAccount(
-                                start,end,branchId,
-                                DEBIT_NORMAL,CREDIT_NORMAL,
-                                EntryDirection.DEBIT,EntryDirection.CREDIT
-                        ).stream()
-                        .collect(Collectors.toMap(
-                                r -> (UUID) r[0],
-                                r -> safe((BigDecimal) r[1])
-                        ));
+                        tenantId,
+                        start,
+                        end,
+                        branchId,
+                        DEBIT_NORMAL,
+                        CREDIT_NORMAL,
+                        EntryDirection.DEBIT,
+                        EntryDirection.CREDIT
+                ).stream()
+                .collect(Collectors.toMap(
+                        r -> (UUID) r[0],
+                        r -> safe((BigDecimal) r[1])
+                ));
+
+        Map<UUID, Account> accountMap =
+                accountRepository.findByTenantIdAndBranchId(tenantId, branchId)
+                        .stream()
+                        .collect(Collectors.toMap(Account::getId, a -> a));
 
         List<TrialBalanceRow> result = new ArrayList<>();
 
@@ -79,11 +102,12 @@ public class FinancialStatementService {
             BigDecimal opening = openingMap.getOrDefault(accountId, BigDecimal.ZERO);
             BigDecimal movement = deltaMap.getOrDefault(accountId, BigDecimal.ZERO);
             BigDecimal closing = opening.add(movement);
+            Account account = accountMap.get(accountId);
 
             result.add(
                     TrialBalanceRow.builder()
-                            .code(accountId.toString())
-                            .name(accountId.toString())
+                            .code(account != null ? account.getCode() : accountId.toString())
+                            .name(account != null ? account.getName() : accountId.toString())
                             .opening(opening)
                             .debit(movement.max(BigDecimal.ZERO))
                             .credit(movement.min(BigDecimal.ZERO).abs())
@@ -97,81 +121,92 @@ public class FinancialStatementService {
 
     @Cacheable(
             value = "trialBalance",
-            key = "{'MULTI',#from,#to}"
+            key = "T(com.IntegrityTechnologies.business_manager.modules.finance.accounting.cache.AccountingCacheKey).trialBalanceMulti(#from,#to)"
     )
     public List<TrialBalanceMultiBranchRow> getTrialBalanceMultiBranch(
             LocalDate from,
             LocalDate to
     ) {
+        return branchFilterDisabler.runWithoutBranchFilter(() -> {
+            LocalDateTime start = from.atStartOfDay();
+            LocalDateTime end = to.atTime(23,59,59);
 
-        LocalDateTime start = from.atStartOfDay();
-        LocalDateTime end = to.atTime(23,59,59);
+            Map<String, List<TrialBalanceMultiBranchRow>> branchMap = new LinkedHashMap<>();
 
-        Map<String, List<TrialBalanceMultiBranchRow>> branchMap = new LinkedHashMap<>();
+            UUID tenantId = TenantContext.getTenantId();
 
-        List<Object[]> deltas =
-                ledgerRepo.ledgerDeltaByAccountMultiBranch(
-                        start,
-                        end,
-                        DEBIT_NORMAL,
-                        CREDIT_NORMAL,
-                        EntryDirection.DEBIT,
-                        EntryDirection.CREDIT
-                );
+            Map<UUID, Account> accountMap =
+                    accountRepository.findByTenantId(tenantId)
+                            .stream()
+                            .collect(Collectors.toMap(Account::getId, a -> a));
 
-        for (Object[] r : deltas) {
-
-            String branch = (String) r[0];
-            UUID accountId = (UUID) r[1];
-            BigDecimal movement = safe((BigDecimal) r[2]);
-
-            branchMap.computeIfAbsent(branch, b -> new ArrayList<>())
-                    .add(
-                            TrialBalanceMultiBranchRow.builder()
-                                    .branchName(branch)
-                                    .code(accountId.toString())
-                                    .name(accountId.toString())
-                                    .opening(BigDecimal.ZERO)
-                                    .debit(movement.max(BigDecimal.ZERO))
-                                    .credit(movement.min(BigDecimal.ZERO).abs())
-                                    .closing(movement)
-                                    .build()
+            List<Object[]> deltas =
+                    ledgerRepo.ledgerDeltaByAccountMultiBranch(
+                            tenantId,
+                            start,
+                            end,
+                            DEBIT_NORMAL,
+                            CREDIT_NORMAL,
+                            EntryDirection.DEBIT,
+                            EntryDirection.CREDIT
                     );
-        }
 
-        List<TrialBalanceMultiBranchRow> result = new ArrayList<>();
+            for (Object[] r : deltas) {
 
-        for (var entry : branchMap.entrySet()) {
+                String branch = (String) r[0];
+                UUID accountId = (UUID) r[1];
+                BigDecimal movement = safe((BigDecimal) r[2]);
 
-            BigDecimal branchDebit = BigDecimal.ZERO;
-            BigDecimal branchCredit = BigDecimal.ZERO;
+                Account account = accountMap.get(accountId);
 
-            result.add(
-                    TrialBalanceMultiBranchRow.builder()
-                            .branchName(entry.getKey())
-                            .branchTotal(false)
-                            .build()
-            );
-
-            for (var row : entry.getValue()) {
-
-                result.add(row);
-
-                branchDebit = branchDebit.add(row.getDebit());
-                branchCredit = branchCredit.add(row.getCredit());
+                branchMap.computeIfAbsent(branch, b -> new ArrayList<>())
+                        .add(
+                                TrialBalanceMultiBranchRow.builder()
+                                        .branchName(branch)
+                                        .code(account != null ? account.getCode() : accountId.toString())
+                                        .name(account != null ? account.getName() : accountId.toString())
+                                        .opening(BigDecimal.ZERO)
+                                        .debit(movement.max(BigDecimal.ZERO))
+                                        .credit(movement.min(BigDecimal.ZERO).abs())
+                                        .closing(movement)
+                                        .build()
+                        );
             }
 
-            result.add(
-                    TrialBalanceMultiBranchRow.builder()
-                            .branchName(entry.getKey())
-                            .debit(branchDebit)
-                            .credit(branchCredit)
-                            .branchTotal(true)
-                            .build()
-            );
-        }
+            List<TrialBalanceMultiBranchRow> result = new ArrayList<>();
 
-        return result;
+            for (var entry : branchMap.entrySet()) {
+
+                BigDecimal branchDebit = BigDecimal.ZERO;
+                BigDecimal branchCredit = BigDecimal.ZERO;
+
+                result.add(
+                        TrialBalanceMultiBranchRow.builder()
+                                .branchName(entry.getKey())
+                                .branchTotal(false)
+                                .build()
+                );
+
+                for (var row : entry.getValue()) {
+
+                    result.add(row);
+
+                    branchDebit = branchDebit.add(row.getDebit());
+                    branchCredit = branchCredit.add(row.getCredit());
+                }
+
+                result.add(
+                        TrialBalanceMultiBranchRow.builder()
+                                .branchName(entry.getKey())
+                                .debit(branchDebit)
+                                .credit(branchCredit)
+                                .branchTotal(true)
+                                .build()
+                );
+            }
+
+            return result;
+        });
     }
 
     public List<GeneralLedgerRow> getGeneralLedger(
@@ -181,54 +216,74 @@ public class FinancialStatementService {
             UUID branchId
     ) {
 
-        LocalDateTime start = from.atStartOfDay();
-        LocalDateTime end = to.atTime(23, 59, 59);
+        branchTenantGuard.validate(branchId);
 
-        List<LedgerEntry> entries =
-                ledgerRepo.findLedgerEntriesForGeneralLedger(
-                        accountId,
-                        end,
-                        branchId
-                );
+        LocalDateTime start = from.atStartOfDay();
+        LocalDateTime end = to.atTime(23,59,59);
+
+        UUID tenantId = TenantContext.getTenantId();
+
+        List<GeneralLedgerRow> result = new ArrayList<>();
 
         BigDecimal running = BigDecimal.ZERO;
         BigDecimal openingBalance = BigDecimal.ZERO;
 
-        List<GeneralLedgerRow> result = new ArrayList<>();
+        int page = 0;
 
-        for (LedgerEntry le : entries) {
+        Page<LedgerEntry> slice;
 
-            BigDecimal signedAmount;
+        do {
 
-            if (DEBIT_NORMAL.contains(le.getAccount().getType())) {
-                signedAmount = le.getDirection() == EntryDirection.DEBIT
-                        ? le.getAmount()
-                        : le.getAmount().negate();
-            } else {
-                signedAmount = le.getDirection() == EntryDirection.CREDIT
-                        ? le.getAmount()
-                        : le.getAmount().negate();
-            }
-
-            running = running.add(signedAmount);
-
-            if (le.getPostedAt().isBefore(start)) {
-                openingBalance = running;
-                continue;
-            }
-
-            result.add(
-                    GeneralLedgerRow.builder()
-                            .postingDate(le.getPostedAt())
-                            .description(le.getJournalEntry().getDescription())
-                            .debit(le.getDirection() == EntryDirection.DEBIT ? le.getAmount() : BigDecimal.ZERO)
-                            .credit(le.getDirection() == EntryDirection.CREDIT ? le.getAmount() : BigDecimal.ZERO)
-                            .runningBalance(running)
-                            .build()
+            slice = ledgerRepo.findLedgerEntriesForGeneralLedgerPaged(
+                    tenantId,
+                    accountId,
+                    branchId,
+                    end,
+                    PageRequest.of(page, 1000)
             );
-        }
 
-        // Insert explicit opening row
+            for (LedgerEntry le : slice.getContent()) {
+
+                BigDecimal signedAmount;
+
+                if (DEBIT_NORMAL.contains(le.getAccount().getType())) {
+
+                    signedAmount =
+                            le.getDirection() == EntryDirection.DEBIT
+                                    ? le.getAmount()
+                                    : le.getAmount().negate();
+
+                } else {
+
+                    signedAmount =
+                            le.getDirection() == EntryDirection.CREDIT
+                                    ? le.getAmount()
+                                    : le.getAmount().negate();
+                }
+
+                running = running.add(signedAmount);
+
+                if (le.getPostedAt().isBefore(start)) {
+
+                    openingBalance = running;
+                    continue;
+                }
+
+                result.add(
+                        GeneralLedgerRow.builder()
+                                .postingDate(le.getPostedAt())
+                                .description(le.getJournalEntry().getDescription())
+                                .debit(le.getDirection() == EntryDirection.DEBIT ? le.getAmount() : BigDecimal.ZERO)
+                                .credit(le.getDirection() == EntryDirection.CREDIT ? le.getAmount() : BigDecimal.ZERO)
+                                .runningBalance(running)
+                                .build()
+                );
+            }
+
+            page++;
+
+        } while (!slice.isLast());
+
         result.add(0,
                 GeneralLedgerRow.builder()
                         .postingDate(start)
@@ -247,74 +302,80 @@ public class FinancialStatementService {
             LocalDate from,
             LocalDate to
     ) {
+        return branchFilterDisabler.runWithoutBranchFilter(() -> {
+            LocalDateTime start = from.atStartOfDay();
+            LocalDateTime end = to.atTime(23,59,59);
 
-        LocalDateTime start = from.atStartOfDay();
-        LocalDateTime end = to.atTime(23,59,59);
+            UUID tenantId = TenantContext.getTenantId();
 
-        List<Object[]> rows =
-                ledgerRepo.enterpriseGeneralLedgerMultiBranch(
-                        accountId,
-                        end
+            List<Object[]> rows = ledgerRepo.enterpriseGeneralLedgerMultiBranch(
+                    tenantId,
+                    accountId,
+                    end
+            );
+
+            List<GeneralLedgerMultiBranchRow> result = new ArrayList<>();
+
+            Map<String, BigDecimal> runningMap = new LinkedHashMap<>();
+
+            for (Object[] r : rows) {
+
+                String branch = (String) r[0];
+                LocalDateTime postedAt = (LocalDateTime) r[1];
+                String description = (String) r[2];
+                EntryDirection direction = (EntryDirection) r[3];
+                BigDecimal amount = safe((BigDecimal) r[4]);
+                AccountType type = (AccountType) r[5];
+
+                BigDecimal signed;
+
+                if (DEBIT_NORMAL.contains(type)) {
+                    signed = direction == EntryDirection.DEBIT ? amount : amount.negate();
+                } else {
+                    signed = direction == EntryDirection.CREDIT ? amount : amount.negate();
+                }
+
+                runningMap.putIfAbsent(branch, BigDecimal.ZERO);
+
+                BigDecimal running = runningMap.get(branch).add(signed);
+                runningMap.put(branch, running);
+
+                if (postedAt.isBefore(start)) continue;
+
+                result.add(
+                        GeneralLedgerMultiBranchRow.builder()
+                                .branchName(branch)
+                                .postingDate(postedAt)
+                                .description(description)
+                                .debit(direction == EntryDirection.DEBIT ? amount : BigDecimal.ZERO)
+                                .credit(direction == EntryDirection.CREDIT ? amount : BigDecimal.ZERO)
+                                .runningBalance(running)
+                                .build()
                 );
-
-        List<GeneralLedgerMultiBranchRow> result = new ArrayList<>();
-
-        Map<String, BigDecimal> runningMap = new LinkedHashMap<>();
-
-        for (Object[] r : rows) {
-
-            String branch = (String) r[0];
-            LocalDateTime postedAt = (LocalDateTime) r[1];
-            String description = (String) r[2];
-            EntryDirection direction = (EntryDirection) r[3];
-            BigDecimal amount = safe((BigDecimal) r[4]);
-            AccountType type = (AccountType) r[5];
-
-            BigDecimal signed;
-
-            if (DEBIT_NORMAL.contains(type)) {
-                signed = direction == EntryDirection.DEBIT ? amount : amount.negate();
-            } else {
-                signed = direction == EntryDirection.CREDIT ? amount : amount.negate();
             }
 
-            runningMap.putIfAbsent(branch, BigDecimal.ZERO);
-
-            BigDecimal running = runningMap.get(branch).add(signed);
-            runningMap.put(branch, running);
-
-            if (postedAt.isBefore(start)) continue;
-
-            result.add(
-                    GeneralLedgerMultiBranchRow.builder()
-                            .branchName(branch)
-                            .postingDate(postedAt)
-                            .description(description)
-                            .debit(direction == EntryDirection.DEBIT ? amount : BigDecimal.ZERO)
-                            .credit(direction == EntryDirection.CREDIT ? amount : BigDecimal.ZERO)
-                            .runningBalance(running)
-                            .build()
-            );
-        }
-
-        return result;
+            return result;
+        });
     }
 
     @Cacheable(
             value = "profitLoss",
-            key = "{#branchId,#from,#to}"
+            key = "T(com.IntegrityTechnologies.business_manager.modules.finance.accounting.cache.AccountingCacheKey).profitLoss(#branchId,#from,#to)"
     )
     public List<ProfitAndLossRow> getProfitAndLoss(
             LocalDate from,
             LocalDate to,
             UUID branchId
     ) {
-
+        branchTenantGuard.validate(branchId);
         LocalDateTime start = from.atStartOfDay();
         LocalDateTime end = to.atTime(23,59,59);
 
+        UUID tenantId = TenantContext.getTenantId();
+
         List<Object[]> rows =
                 ledgerRepo.netMovementByAccountType(
+                        tenantId,
                         start,
                         end,
                         branchId,
@@ -360,84 +421,95 @@ public class FinancialStatementService {
 
     @Cacheable(
             value = "profitLoss",
-            key = "{'MULTI',#from,#to}"
+            key = "T(com.IntegrityTechnologies.business_manager.modules.finance.accounting.cache.AccountingCacheKey).profitLossMulti(#from,#to)"
     )
     public List<ProfitAndLossMultiBranchRow> getProfitAndLossMultiBranch(
             LocalDate from,
             LocalDate to
     ) {
+        return branchFilterDisabler.runWithoutBranchFilter(() -> {
+            LocalDateTime start = from.atStartOfDay();
+            LocalDateTime end = to.atTime(23,59,59);
 
-        LocalDateTime start = from.atStartOfDay();
-        LocalDateTime end = to.atTime(23,59,59);
+            UUID tenantId = TenantContext.getTenantId();
 
-        List<Object[]> rows =
-                ledgerRepo.enterpriseProfitAndLossMultiBranch(
-                        start,
-                        end,
-                        Set.of(AccountType.INCOME, AccountType.EXPENSE),
-                        AccountType.INCOME,
-                        AccountType.EXPENSE
-                );
-
-        Map<String, List<Object[]>> branchMap =
-                rows.stream()
-                        .collect(Collectors.groupingBy(
-                                r -> (String) r[0],
-                                LinkedHashMap::new,
-                                Collectors.toList()
-                        ));
-
-        List<ProfitAndLossMultiBranchRow> result = new ArrayList<>();
-
-        for (var entry : branchMap.entrySet()) {
-
-            String branch = entry.getKey();
-
-            result.add(
-                    ProfitAndLossMultiBranchRow.builder()
-                            .branchName(branch)
-                            .branchHeader(true)
-                            .build()
+            List<Object[]> rows = ledgerRepo.enterpriseProfitAndLossMultiBranch(
+                    tenantId,
+                    start,
+                    end,
+                    Set.of(AccountType.INCOME, AccountType.EXPENSE),
+                    AccountType.INCOME,
+                    AccountType.EXPENSE
             );
 
-            BigDecimal branchTotal = BigDecimal.ZERO;
+            Map<String, List<Object[]>> branchMap =
+                    rows.stream()
+                            .collect(Collectors.groupingBy(
+                                    r -> (String) r[0],
+                                    LinkedHashMap::new,
+                                    Collectors.toList()
+                            ));
 
-            for (Object[] r : entry.getValue()) {
+            List<ProfitAndLossMultiBranchRow> result = new ArrayList<>();
 
-                AccountType type = (AccountType) r[1];
-                BigDecimal amount = safe((BigDecimal) r[3]);
+            for (var entry : branchMap.entrySet()) {
+
+                String branch = entry.getKey();
 
                 result.add(
                         ProfitAndLossMultiBranchRow.builder()
                                 .branchName(branch)
-                                .label(type.name())
-                                .amount(amount)
+                                .branchHeader(true)
                                 .build()
                 );
 
-                branchTotal = branchTotal.add(amount);
+                BigDecimal branchTotal = BigDecimal.ZERO;
+
+                for (Object[] r : entry.getValue()) {
+
+                    AccountType type = (AccountType) r[1];
+                    BigDecimal amount = safe((BigDecimal) r[3]);
+
+                    result.add(
+                            ProfitAndLossMultiBranchRow.builder()
+                                    .branchName(branch)
+                                    .label(type.name())
+                                    .amount(amount)
+                                    .build()
+                    );
+
+                    branchTotal = branchTotal.add(amount);
+                }
+
+                result.add(
+                        ProfitAndLossMultiBranchRow.builder()
+                                .branchName(branch)
+                                .amount(branchTotal)
+                                .branchTotal(true)
+                                .build()
+                );
             }
 
-            result.add(
-                    ProfitAndLossMultiBranchRow.builder()
-                            .branchName(branch)
-                            .amount(branchTotal)
-                            .branchTotal(true)
-                            .build()
-            );
-        }
-
-        return result;
+            return result;
+        });
     }
 
     @Cacheable(
             value = "balanceSheet",
-            key = "{#branchId,#asAt}"
+            key = "T(com.IntegrityTechnologies.business_manager.modules.finance.accounting.cache.AccountingCacheKey).balanceSheet(#branchId,#asAt)"
     )
     public List<BalanceSheetRow> getBalanceSheet(
             LocalDate asAt,
             UUID branchId
     ) {
+        branchTenantGuard.validate(branchId);
+
+        UUID tenantId = TenantContext.getTenantId();
+
+        Map<UUID, Account> accountMap =
+                accountRepository.findByTenantIdAndBranchId(tenantId, branchId)
+                        .stream()
+                        .collect(Collectors.toMap(Account::getId, a -> a));
 
         Map<UUID, BigDecimal> snapshotMap =
                 snapshotRepo.findByBranchIdAndSnapshotDate(branchId, asAt)
@@ -454,11 +526,12 @@ public class FinancialStatementService {
         for (var entry : snapshotMap.entrySet()) {
 
             BigDecimal balance = entry.getValue();
+            Account account = accountMap.get(entry.getKey());
 
             result.add(
                     BalanceSheetRow.builder()
-                            .code(entry.getKey().toString())
-                            .name(entry.getKey().toString())
+                            .code(account != null ? account.getCode() : entry.getKey().toString())
+                            .name(account != null ? account.getName() : entry.getKey().toString())
                             .balance(balance)
                             .build()
             );
@@ -478,81 +551,94 @@ public class FinancialStatementService {
 
     @Cacheable(
             value = "balanceSheet",
-            key = "{'MULTI',#asAt}"
+            key = "T(com.IntegrityTechnologies.business_manager.modules.finance.accounting.cache.AccountingCacheKey).balanceSheetMulti(#asAt)"
     )
     public List<BalanceSheetMultiBranchRow> getBalanceSheetMultiBranch(
             LocalDate asAt
     ) {
+        return branchFilterDisabler.runWithoutBranchFilter(() -> {
+            List<DailyAccountBalanceSnapshot> snaps =
+                    snapshotRepo.findBySnapshotDate(asAt);
 
-        List<DailyAccountBalanceSnapshot> snaps =
-                snapshotRepo.findBySnapshotDate(asAt);
+            Map<String, List<DailyAccountBalanceSnapshot>> grouped =
+                    snaps.stream()
+                            .collect(Collectors.groupingBy(
+                                    s -> s.getBranchId().toString()
+                            ));
+            UUID tenantId = TenantContext.getTenantId();
 
-        Map<String, List<DailyAccountBalanceSnapshot>> grouped =
-                snaps.stream()
-                        .collect(Collectors.groupingBy(
-                                s -> s.getBranchId().toString()
-                        ));
+            Map<UUID, Account> accountMap =
+                    accountRepository.findByTenantId(tenantId)
+                            .stream()
+                            .collect(Collectors.toMap(Account::getId, a -> a));
 
-        List<BalanceSheetMultiBranchRow> result = new ArrayList<>();
+            List<BalanceSheetMultiBranchRow> result = new ArrayList<>();
 
-        for (var entry : grouped.entrySet()) {
+            for (var entry : grouped.entrySet()) {
 
-            String branch = entry.getKey();
-
-            result.add(
-                    BalanceSheetMultiBranchRow.builder()
-                            .branchName(branch)
-                            .branchHeader(true)
-                            .build()
-            );
-
-            BigDecimal branchTotal = BigDecimal.ZERO;
-
-            for (var s : entry.getValue()) {
+                String branch = entry.getKey();
 
                 result.add(
                         BalanceSheetMultiBranchRow.builder()
                                 .branchName(branch)
-                                .code(s.getAccountId().toString())
-                                .name(s.getAccountId().toString())
-                                .balance(s.getClosingBalance())
+                                .branchHeader(true)
                                 .build()
                 );
 
-                branchTotal = branchTotal.add(s.getClosingBalance());
+                BigDecimal branchTotal = BigDecimal.ZERO;
+
+                for (var s : entry.getValue()) {
+                    Account account = accountMap.get(s.getAccountId());
+
+                    result.add(
+                            BalanceSheetMultiBranchRow.builder()
+                                    .branchName(branch)
+                                    .code(account != null ? account.getCode() : s.getAccountId().toString())
+                                    .name(account != null ? account.getName() : s.getAccountId().toString())
+                                    .balance(s.getClosingBalance())
+                                    .build()
+                    );
+
+                    branchTotal = branchTotal.add(s.getClosingBalance());
+                }
+
+                result.add(
+                        BalanceSheetMultiBranchRow.builder()
+                                .branchName(branch)
+                                .balance(branchTotal)
+                                .branchTotal(true)
+                                .build()
+                );
             }
 
-            result.add(
-                    BalanceSheetMultiBranchRow.builder()
-                            .branchName(branch)
-                            .balance(branchTotal)
-                            .branchTotal(true)
-                            .build()
-            );
-        }
-
-        return result;
+            return result;
+        });
     }
 
     @Cacheable(
             value = "cashFlow",
-            key = "{#branchId,#from,#to}"
+            key = "T(com.IntegrityTechnologies.business_manager.modules.finance.accounting.cache.AccountingCacheKey).cashFlow(#branchId,#from,#to)"
     )
     public List<CashFlowRow> getCashFlow(
             LocalDate from,
             LocalDate to,
             UUID branchId
     ) {
-
+        branchTenantGuard.validate(branchId);
         LocalDateTime start = from.atStartOfDay();
         LocalDateTime end = to.atTime(23,59,59);
 
+        UUID tenantId = TenantContext.getTenantId();
+
+        Set<String> cashCodes = accountRoleResolver.resolveCashAccounts(tenantId, branchId);
+
         List<Object[]> rows =
                 ledgerRepo.enterpriseCashFlow(
+                        tenantId,
                         start,
                         end,
                         branchId,
-                        Set.of("1000","1100","1150"),
+                        cashCodes,
                         EntryDirection.DEBIT,
                         EntryDirection.CREDIT
                 );
@@ -590,93 +676,102 @@ public class FinancialStatementService {
 
     @Cacheable(
             value = "cashFlow",
-            key = "{'MULTI',#from,#to}"
+            key = "T(com.IntegrityTechnologies.business_manager.modules.finance.accounting.cache.AccountingCacheKey).cashFlowMulti(#from,#to)"
     )
     public List<CashFlowMultiBranchRow> getCashFlowMultiBranch(
             LocalDate from,
             LocalDate to
     ) {
+        return branchFilterDisabler.runWithoutBranchFilter(() -> {
+            LocalDateTime start = from.atStartOfDay();
+            LocalDateTime end = to.atTime(23,59,59);
 
-        LocalDateTime start = from.atStartOfDay();
-        LocalDateTime end = to.atTime(23,59,59);
+            UUID tenantId = TenantContext.getTenantId();
+            Set<String> cashCodes = accountRoleResolver.resolveCashAccountsMultiBranch(tenantId);
 
-        List<Object[]> rows =
-                ledgerRepo.enterpriseCashFlowMultiBranch(
-                        start,
-                        end,
-                        Set.of("1000","1100","1150"),
-                        EntryDirection.DEBIT,
-                        EntryDirection.CREDIT
-                );
+            List<Object[]> rows =
+                    ledgerRepo.enterpriseCashFlowMultiBranch(
+                            tenantId,
+                            start,
+                            end,
+                            cashCodes,
+                            EntryDirection.DEBIT,
+                            EntryDirection.CREDIT
+                    );
 
-        Map<String, List<Object[]>> branchMap =
-                rows.stream()
-                        .collect(Collectors.groupingBy(
-                                r -> (String) r[0],
-                                LinkedHashMap::new,
-                                Collectors.toList()
-                        ));
+            Map<String, List<Object[]>> branchMap =
+                    rows.stream()
+                            .collect(Collectors.groupingBy(
+                                    r -> (String) r[0],
+                                    LinkedHashMap::new,
+                                    Collectors.toList()
+                            ));
 
-        List<CashFlowMultiBranchRow> result = new ArrayList<>();
+            List<CashFlowMultiBranchRow> result = new ArrayList<>();
 
-        for (var entry : branchMap.entrySet()) {
+            for (var entry : branchMap.entrySet()) {
 
-            String branch = entry.getKey();
-
-            result.add(
-                    CashFlowMultiBranchRow.builder()
-                            .branchName(branch)
-                            .branchHeader(true)
-                            .build()
-            );
-
-            BigDecimal branchTotal = BigDecimal.ZERO;
-
-            for (Object[] r : entry.getValue()) {
-
-                BigDecimal movement = safe((BigDecimal) r[3]);
+                String branch = entry.getKey();
 
                 result.add(
                         CashFlowMultiBranchRow.builder()
                                 .branchName(branch)
-                                .code((String) r[1])
-                                .name((String) r[2])
-                                .netMovement(movement)
+                                .branchHeader(true)
                                 .build()
                 );
 
-                branchTotal = branchTotal.add(movement);
+                BigDecimal branchTotal = BigDecimal.ZERO;
+
+                for (Object[] r : entry.getValue()) {
+
+                    BigDecimal movement = safe((BigDecimal) r[3]);
+
+                    result.add(
+                            CashFlowMultiBranchRow.builder()
+                                    .branchName(branch)
+                                    .code((String) r[1])
+                                    .name((String) r[2])
+                                    .netMovement(movement)
+                                    .build()
+                    );
+
+                    branchTotal = branchTotal.add(movement);
+                }
+
+                result.add(
+                        CashFlowMultiBranchRow.builder()
+                                .branchName(branch)
+                                .netMovement(branchTotal)
+                                .branchTotal(true)
+                                .build()
+                );
             }
 
-            result.add(
-                    CashFlowMultiBranchRow.builder()
-                            .branchName(branch)
-                            .netMovement(branchTotal)
-                            .branchTotal(true)
-                            .build()
-            );
-        }
-
-        return result;
+            return result;
+        });
     }
 
-    @Cacheable(value = "accountsReceivable",
-            key = "{#branchId,#from,#to}")
+    @Cacheable(
+            value = "accountsReceivable",
+            key = "T(com.IntegrityTechnologies.business_manager.modules.finance.accounting.cache.AccountingCacheKey).receivables(#branchId,#from,#to)"
+    )
     public List<AccountsReceivableRow> getAccountsReceivable(
             LocalDate from,
             LocalDate to,
             UUID branchId
     ) {
-
+        branchTenantGuard.validate(branchId);
         LocalDateTime start = from.atStartOfDay();
         LocalDateTime end = to.atTime(23,59,59);
+        UUID tenantId = TenantContext.getTenantId();
 
         List<Object[]> rows =
                 ledgerRepo.enterpriseAccountsReceivable(
+                        tenantId,
                         start,
                         end,
                         branchId,
-                        "1500"
+                        accountRoleResolver.resolveReceivableAccount(tenantId, branchId)
                 );
 
         List<AccountsReceivableRow> result = new ArrayList<>();
@@ -712,103 +807,110 @@ public class FinancialStatementService {
 
     @Cacheable(
             value = "accountsReceivable",
-            key = "{'MULTI',#from,#to}"
+            key = "T(com.IntegrityTechnologies.business_manager.modules.finance.accounting.cache.AccountingCacheKey).receivablesMulti(#from,#to)"
     )
     public List<AccountsReceivableMultiBranchRow> getAccountsReceivableMultiBranch(
             LocalDate from,
             LocalDate to
     ) {
+        return branchFilterDisabler.runWithoutBranchFilter(() -> {
+            LocalDateTime start = from.atStartOfDay();
+            LocalDateTime end = to.atTime(23,59,59);
 
-        LocalDateTime start = from.atStartOfDay();
-        LocalDateTime end = to.atTime(23,59,59);
+            UUID tenantId = TenantContext.getTenantId();
 
-        List<Object[]> rows =
-                ledgerRepo.enterpriseAccountsReceivableMultiBranch(
-                        start,
-                        end,
-                        "1500"
-                );
+            List<Object[]> rows =
+                    ledgerRepo.enterpriseAccountsReceivableMultiBranch(
+                            tenantId,
+                            start,
+                            end,
+                            accountRoleResolver.resolveReceivableAccountsMultiBranch(tenantId)
+                    );
 
-        Map<String, List<Object[]>> branchMap =
-                rows.stream()
-                        .collect(Collectors.groupingBy(
-                                r -> (String) r[0],
-                                LinkedHashMap::new,
-                                Collectors.toList()
-                        ));
+            Map<String, List<Object[]>> branchMap =
+                    rows.stream()
+                            .collect(Collectors.groupingBy(
+                                    r -> (String) r[0],
+                                    LinkedHashMap::new,
+                                    Collectors.toList()
+                            ));
 
-        List<AccountsReceivableMultiBranchRow> result = new ArrayList<>();
-        BigDecimal consolidated = BigDecimal.ZERO;
+            List<AccountsReceivableMultiBranchRow> result = new ArrayList<>();
+            BigDecimal consolidated = BigDecimal.ZERO;
 
-        for (var entry : branchMap.entrySet()) {
+            for (var entry : branchMap.entrySet()) {
 
-            String branchName = entry.getKey();
-
-            result.add(
-                    AccountsReceivableMultiBranchRow.builder()
-                            .branchName(branchName)
-                            .branchHeader(true)
-                            .build()
-            );
-
-            BigDecimal branchTotal = BigDecimal.ZERO;
-
-            for (Object[] r : entry.getValue()) {
-
-                String reference = (String) r[1];
-                BigDecimal opening = safe((BigDecimal) r[2]);
-                BigDecimal movement = safe((BigDecimal) r[3]);
-
-                BigDecimal closing = opening.add(movement);
-                branchTotal = branchTotal.add(closing);
+                String branchName = entry.getKey();
 
                 result.add(
                         AccountsReceivableMultiBranchRow.builder()
                                 .branchName(branchName)
-                                .reference(reference)
-                                .balance(closing)
+                                .branchHeader(true)
+                                .build()
+                );
+
+                BigDecimal branchTotal = BigDecimal.ZERO;
+
+                for (Object[] r : entry.getValue()) {
+
+                    String reference = (String) r[1];
+                    BigDecimal opening = safe((BigDecimal) r[2]);
+                    BigDecimal movement = safe((BigDecimal) r[3]);
+
+                    BigDecimal closing = opening.add(movement);
+                    branchTotal = branchTotal.add(closing);
+
+                    result.add(
+                            AccountsReceivableMultiBranchRow.builder()
+                                    .branchName(branchName)
+                                    .reference(reference)
+                                    .balance(closing)
+                                    .build()
+                    );
+                }
+
+                consolidated = consolidated.add(branchTotal);
+
+                result.add(
+                        AccountsReceivableMultiBranchRow.builder()
+                                .branchName(branchName)
+                                .balance(branchTotal)
+                                .branchTotal(true)
                                 .build()
                 );
             }
 
-            consolidated = consolidated.add(branchTotal);
-
             result.add(
                     AccountsReceivableMultiBranchRow.builder()
-                            .branchName(branchName)
-                            .balance(branchTotal)
-                            .branchTotal(true)
+                            .balance(consolidated)
+                            .consolidatedTotal(true)
                             .build()
             );
-        }
 
-        result.add(
-                AccountsReceivableMultiBranchRow.builder()
-                        .balance(consolidated)
-                        .consolidatedTotal(true)
-                        .build()
-        );
-
-        return result;
+            return result;
+        });
     }
 
-    @Cacheable(value = "accountsPayable",
-            key = "{#branchId,#from,#to}")
+    @Cacheable(
+            value = "accountsPayable",
+            key = "T(com.IntegrityTechnologies.business_manager.modules.finance.accounting.cache.AccountingCacheKey).payables(#branchId,#from,#to)"
+    )
     public List<AccountsPayableRow> getAccountsPayable(
             LocalDate from,
             LocalDate to,
             UUID branchId
     ) {
-
+        branchTenantGuard.validate(branchId);
         LocalDateTime start = from.atStartOfDay();
         LocalDateTime end = to.atTime(23,59,59);
-
+        UUID tenantId = TenantContext.getTenantId();
         List<Object[]> rows =
                 ledgerRepo.enterpriseAccountsPayable(
+                        tenantId,
                         start,
                         end,
                         branchId,
-                        "2000"
+                        accountRoleResolver.resolvePayableAccount(tenantId, branchId)
                 );
 
         List<AccountsPayableRow> result = new ArrayList<>();
@@ -844,84 +946,88 @@ public class FinancialStatementService {
 
     @Cacheable(
             value = "accountsPayable",
-            key = "{'MULTI',#from,#to}"
+            key = "T(com.IntegrityTechnologies.business_manager.modules.finance.accounting.cache.AccountingCacheKey).payablesMulti(#from,#to)"
     )
     public List<AccountsPayableMultiBranchRow> getAccountsPayableMultiBranch(
             LocalDate from,
             LocalDate to
     ) {
+        return branchFilterDisabler.runWithoutBranchFilter(() -> {
+            LocalDateTime start = from.atStartOfDay();
+            LocalDateTime end = to.atTime(23,59,59);
 
-        LocalDateTime start = from.atStartOfDay();
-        LocalDateTime end = to.atTime(23,59,59);
+            UUID tenantId = TenantContext.getTenantId();
 
-        List<Object[]> rows =
-                ledgerRepo.enterpriseAccountsPayableMultiBranch(
-                        start,
-                        end,
-                        "2000"
-                );
+            List<Object[]> rows =
+                    ledgerRepo.enterpriseAccountsPayableMultiBranch(
+                            tenantId,
+                            start,
+                            end,
+                            accountRoleResolver.resolvePayableAccountsMultiBranch(tenantId)
+                    );
 
-        Map<String, List<Object[]>> branchMap =
-                rows.stream()
-                        .collect(Collectors.groupingBy(
-                                r -> (String) r[0],
-                                LinkedHashMap::new,
-                                Collectors.toList()
-                        ));
+            Map<String, List<Object[]>> branchMap =
+                    rows.stream()
+                            .collect(Collectors.groupingBy(
+                                    r -> (String) r[0],
+                                    LinkedHashMap::new,
+                                    Collectors.toList()
+                            ));
 
-        List<AccountsPayableMultiBranchRow> result = new ArrayList<>();
-        BigDecimal consolidated = BigDecimal.ZERO;
+            List<AccountsPayableMultiBranchRow> result = new ArrayList<>();
+            BigDecimal consolidated = BigDecimal.ZERO;
 
-        for (var entry : branchMap.entrySet()) {
+            for (var entry : branchMap.entrySet()) {
 
-            String branchName = entry.getKey();
-
-            result.add(
-                    AccountsPayableMultiBranchRow.builder()
-                            .branchName(branchName)
-                            .branchHeader(true)
-                            .build()
-            );
-
-            BigDecimal branchTotal = BigDecimal.ZERO;
-
-            for (Object[] r : entry.getValue()) {
-
-                String reference = (String) r[1];
-                BigDecimal opening = safe((BigDecimal) r[2]);
-                BigDecimal movement = safe((BigDecimal) r[3]);
-
-                BigDecimal closing = opening.add(movement);
-                branchTotal = branchTotal.add(closing);
+                String branchName = entry.getKey();
 
                 result.add(
                         AccountsPayableMultiBranchRow.builder()
                                 .branchName(branchName)
-                                .reference(reference)
-                                .balance(closing)
+                                .branchHeader(true)
+                                .build()
+                );
+
+                BigDecimal branchTotal = BigDecimal.ZERO;
+
+                for (Object[] r : entry.getValue()) {
+
+                    String reference = (String) r[1];
+                    BigDecimal opening = safe((BigDecimal) r[2]);
+                    BigDecimal movement = safe((BigDecimal) r[3]);
+
+                    BigDecimal closing = opening.add(movement);
+                    branchTotal = branchTotal.add(closing);
+
+                    result.add(
+                            AccountsPayableMultiBranchRow.builder()
+                                    .branchName(branchName)
+                                    .reference(reference)
+                                    .balance(closing)
+                                    .build()
+                    );
+                }
+
+                consolidated = consolidated.add(branchTotal);
+
+                result.add(
+                        AccountsPayableMultiBranchRow.builder()
+                                .branchName(branchName)
+                                .balance(branchTotal)
+                                .branchTotal(true)
                                 .build()
                 );
             }
 
-            consolidated = consolidated.add(branchTotal);
-
             result.add(
                     AccountsPayableMultiBranchRow.builder()
-                            .branchName(branchName)
-                            .balance(branchTotal)
-                            .branchTotal(true)
+                            .balance(consolidated)
+                            .consolidatedTotal(true)
                             .build()
             );
-        }
 
-        result.add(
-                AccountsPayableMultiBranchRow.builder()
-                        .balance(consolidated)
-                        .consolidatedTotal(true)
-                        .build()
-        );
-
-        return result;
+            return result;
+        });
     }
 
 
@@ -929,7 +1035,6 @@ public class FinancialStatementService {
     /* ============================================================
        DTOs AND HELPER
     ============================================================ */
-
 
     private BigDecimal safe(BigDecimal val) {
         return val == null ? BigDecimal.ZERO : val;

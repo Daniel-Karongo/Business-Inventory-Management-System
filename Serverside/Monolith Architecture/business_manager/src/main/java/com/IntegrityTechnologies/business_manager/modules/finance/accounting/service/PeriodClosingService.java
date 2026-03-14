@@ -3,20 +3,20 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.se
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.control.CloseChecklistService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.AccountingPeriodClosedEvent;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.OutboxEventWriter;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.AccountingSystemStateService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountingPeriodRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.enums.BusinessTaxMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.CorporateTaxService;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,15 +30,19 @@ public class PeriodClosingService {
     private final GovernanceAuditService auditService;
     private final CloseChecklistService checklistService;
     private final TaxSystemStateService taxSystemStateService;
-    private final ApplicationEventPublisher applicationEventPublisher;
+    private final BranchTenantGuard branchTenantGuard;
+    private final OutboxEventWriter outboxWriter;
 
     @Transactional
     public void closePeriod(UUID periodId, String user) {
 
+        UUID tenantId = TenantContext.getTenantId();
+
         AccountingPeriod period =
-                periodRepository.findById(periodId)
+                periodRepository.findByTenantIdAndId(tenantId, periodId)
                         .orElseThrow(() -> new IllegalArgumentException("Period not found"));
 
+        branchTenantGuard.validate(period.getBranchId());
         var checklist =
                 checklistService.validate(period.getBranchId(), period);
 
@@ -59,13 +63,22 @@ public class PeriodClosingService {
     @Transactional
     public void autoClosePreviousMonthIfNeeded(String user, UUID branchId) {
 
+        UUID tenantId = TenantContext.getTenantId();
+
         LocalDate now = LocalDate.now();
 
         LocalDate start = now.minusMonths(1).withDayOfMonth(1);
         LocalDate end = start.plusMonths(1).minusDays(1);
 
+        branchTenantGuard.validate(branchId);
+
         periodRepository
-                .findByStartDateAndEndDateAndBranchId(start, end, branchId)
+                .findByTenantIdAndBranchIdAndStartDateAndEndDate(
+                        tenantId,
+                        branchId,
+                        start,
+                        end
+                )
                 .ifPresent(period -> {
                     if (!period.isClosed()) {
                         closePeriod(period.getId(), user);
@@ -75,13 +88,16 @@ public class PeriodClosingService {
 
     @Transactional
     public void closeAllOverduePeriods(String user, UUID branchId) {
-
+        branchTenantGuard.validate(branchId);
         LocalDate today = LocalDate.now();
 
+        UUID tenantId = TenantContext.getTenantId();
+
         List<AccountingPeriod> overdue =
-                periodRepository.findByEndDateBeforeAndClosedFalseAndBranchId(
-                        today,
-                        branchId
+                periodRepository.findByTenantIdAndBranchIdAndEndDateBeforeAndClosedFalse(
+                        tenantId,
+                        branchId,
+                        today
                 );
 
         for (AccountingPeriod period : overdue) {
@@ -90,6 +106,10 @@ public class PeriodClosingService {
     }
 
     private void executeClose(AccountingPeriod period, String user) {
+
+        UUID tenantId = TenantContext.getTenantId();
+
+        branchTenantGuard.validate(period.getBranchId());
 
         if (period.isClosed()) return;
 
@@ -122,13 +142,19 @@ public class PeriodClosingService {
                 "Period ID: " + period.getId()
         );
 
-        applicationEventPublisher.publishEvent(
+        AccountingPeriodClosedEvent event =
                 new AccountingPeriodClosedEvent(
+                        tenantId,
                         period.getId(),
                         period.getBranchId(),
                         period.getStartDate().atStartOfDay(),
                         period.getEndDate().atTime(23,59,59)
-                )
+                );
+
+        outboxWriter.write(
+                "ACCOUNTING_PERIOD_CLOSED",
+                period.getBranchId(),
+                event
         );
 
         systemStateService.lockIfNecessary(period.getBranchId());

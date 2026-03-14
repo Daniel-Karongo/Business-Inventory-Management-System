@@ -5,10 +5,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.dto.
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.dto.CorporateVarianceDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.service.BudgetService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +20,7 @@ import java.util.UUID;
 public class BudgetController {
 
     private final BudgetService budgetService;
+    private final BranchTenantGuard branchTenantGuard;
 
     @PostMapping
     public ApiResponse create(
@@ -28,9 +28,7 @@ public class BudgetController {
             @RequestParam int fiscalYear
     ) {
 
-        if (branchId == null) {
-            throw new IllegalArgumentException("BranchId required.");
-        }
+        branchTenantGuard.validate(branchId);
 
         return new ApiResponse(
                 "success",
@@ -68,6 +66,8 @@ public class BudgetController {
             @RequestParam int month,
             @RequestParam UUID accountId
     ) {
+
+        branchTenantGuard.validate(branchId);
 
         return budgetService.computeBranchVariance(
                 branchId,

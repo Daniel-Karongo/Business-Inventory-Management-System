@@ -128,7 +128,10 @@ public class TenantMetadataCache {
         }
 
         boolean exists =
-                branchRepository.existsByIdAndTenantId(branchId, tenantId);
+                branchRepository.existsByTenantIdAndId(
+                        tenantId,
+                        branchId
+                );
 
         if (exists) {
             branches.add(branchId);

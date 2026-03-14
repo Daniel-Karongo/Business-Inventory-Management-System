@@ -6,4 +6,6 @@ import java.util.UUID;
 
 public interface ProcessedKafkaEventRepository
         extends JpaRepository<ProcessedKafkaEvent, UUID> {
+
+    boolean existsByTenantIdAndEventId(UUID tenantId, UUID eventId);
 }

@@ -21,9 +21,11 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sa
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineItem;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.Customer;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.repository.CustomerRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service.CustomerService;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.BatchConsumptionDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.BatchConsumption;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.BatchConsumptionRepository;
@@ -40,6 +42,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -59,9 +62,14 @@ public class SalesService {
     private final CustomerRepository customerRepository;
     private final ReceiptNumberService receiptNumberService;
     private final TaxProperties taxProperties;
+    private final TaxSystemStateService taxSystemStateService;
     private final JournalEntryRepository journalEntryRepository;
     private final BatchConsumptionRepository batchConsumptionRepository;
     private final RevenueRecognitionService revenueRecognitionService;
+
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
 
     /* ============================================================
        CREATE SALE
@@ -91,20 +99,22 @@ public class SalesService {
 
             BigDecimal gross = unitPrice.multiply(BigDecimal.valueOf(li.getQuantity()));
 
-            BigDecimal vatRate = taxProperties.isVatEnabled()
-                    ? taxProperties.getVatRate()
-                    : BigDecimal.ZERO;
+            var taxState = taxSystemStateService.getOrCreate(li.getBranchId());
+
+            boolean vatEnabled = taxState.isVatEnabled();
+            BigDecimal vatRate = vatEnabled ? taxState.getVatRate() : BigDecimal.ZERO;
+            boolean pricesVatInclusive = taxState.isPricesVatInclusive();
 
             BigDecimal net;
             BigDecimal vat;
 
-            if (taxProperties.isVatEnabled()) {
+            if (vatEnabled) {
 
-                if (taxProperties.isPricesVatInclusive()) {
+                if (pricesVatInclusive) {
                     net = gross.divide(
                             BigDecimal.ONE.add(vatRate),
                             6,
-                            BigDecimal.ROUND_HALF_UP
+                            RoundingMode.HALF_UP
                     );
                     vat = gross.subtract(net);
                 } else {
@@ -374,20 +384,22 @@ public class SalesService {
 
             BigDecimal gross = unitPrice.multiply(BigDecimal.valueOf(li.getQuantity()));
 
-            BigDecimal vatRate = taxProperties.isVatEnabled()
-                    ? taxProperties.getVatRate()
-                    : BigDecimal.ZERO;
+            var taxState = taxSystemStateService.getOrCreate(li.getBranchId());
+
+            boolean vatEnabled = taxState.isVatEnabled();
+            BigDecimal vatRate = vatEnabled ? taxState.getVatRate() : BigDecimal.ZERO;
+            boolean pricesVatInclusive = taxState.isPricesVatInclusive();
 
             BigDecimal net;
             BigDecimal vat;
 
-            if (taxProperties.isVatEnabled()) {
+            if (vatEnabled) {
 
-                if (taxProperties.isPricesVatInclusive()) {
+                if (pricesVatInclusive) {
                     net = gross.divide(
                             BigDecimal.ONE.add(vatRate),
                             6,
-                            BigDecimal.ROUND_HALF_UP
+                            RoundingMode.HALF_UP
                     );
                     vat = gross.subtract(net);
                 } else {
@@ -494,7 +506,7 @@ public class SalesService {
     ============================================================ */
 
         journalEntryRepository
-                .findBySourceModuleAndSourceId("SALE", sale.getId())
+                .findByTenantIdAndSourceModuleAndSourceId(tenantId(), "SALE", sale.getId())
                 .ifPresent(journal ->
                         accountingFacade.reverseJournal(
                                 journal.getId(),
@@ -508,7 +520,11 @@ public class SalesService {
     ============================================================ */
 
         List<JournalEntry> consumptionJournals =
-                journalEntryRepository.findByReference("SALE_DELIVERY:" + sale.getId());
+                journalEntryRepository.findByTenantIdAndBranchIdAndReference(
+                        tenantId(),
+                        extractSingleBranch(sale.getLineItems()),
+                        "SALE_DELIVERY:" + sale.getId()
+                );
 
         for (JournalEntry journal : consumptionJournals) {
 
@@ -532,7 +548,7 @@ public class SalesService {
             if (payment.getStatus() == PaymentStatus.SUCCESS) {
 
                 journalEntryRepository
-                        .findBySourceModuleAndSourceId("PAYMENT", payment.getId())
+                        .findByTenantIdAndSourceModuleAndSourceId(tenantId(), "PAYMENT", payment.getId())
                         .ifPresent(journal ->
                                 accountingFacade.reverseJournal(
                                         journal.getId(),

@@ -9,10 +9,12 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.departme
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.MinimalUserDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserDepartment;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserDepartmentRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
@@ -43,8 +45,11 @@ public class DepartmentMapper {
         }
 
         // 🔹 Membership from UserDepartment
+        UUID tenantId = TenantContext.getTenantId();
+
         List<UserDepartment> relations =
-                userDepartmentRepository.findByDepartmentIdWithUser(d.getId());
+                userDepartmentRepository
+                        .findByDepartmentIdWithUser(tenantId, d.getId());
 
         dto.setHeads(
                 relations.stream()

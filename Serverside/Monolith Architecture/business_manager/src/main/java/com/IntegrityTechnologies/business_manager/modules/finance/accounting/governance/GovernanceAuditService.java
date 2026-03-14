@@ -1,5 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +13,7 @@ import java.util.UUID;
 public class GovernanceAuditService {
 
     private final GovernanceAuditLogRepository repository;
+    private final BranchTenantGuard branchTenantGuard;
 
     public void log(
             UUID branchId,
@@ -19,8 +22,13 @@ public class GovernanceAuditService {
             String details
     ) {
 
+        branchTenantGuard.validate(branchId);
+
         GovernanceAuditLog log = new GovernanceAuditLog();
+
+        log.setTenantId(TenantContext.getTenantId());
         log.setBranchId(branchId);
+
         log.setAction(action);
         log.setPerformedBy(performedBy);
         log.setPerformedAt(LocalDateTime.now());

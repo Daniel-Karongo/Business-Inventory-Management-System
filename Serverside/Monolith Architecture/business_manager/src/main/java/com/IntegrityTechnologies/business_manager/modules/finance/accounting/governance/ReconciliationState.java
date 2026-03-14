@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,25 +13,22 @@ import java.util.UUID;
 @Table(
         name = "accounting_reconciliation_state",
         uniqueConstraints = @UniqueConstraint(
-                name = "uk_recon_branch",
-                columnNames = "branchId"
+                name = "uk_recon_tenant_branch",
+                columnNames = {"tenant_id","branch_id"}
         ),
         indexes = @Index(
-                name = "idx_recon_branch",
-                columnList = "branchId"
+                name = "idx_recon_tenant_branch",
+                columnList = "tenant_id,branch_id"
         )
 )
 @Getter
 @Setter
 @NoArgsConstructor
-public class ReconciliationState {
+public class ReconciliationState extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-
-    @Column(nullable = false)
-    private UUID branchId;
 
     private LocalDateTime lastRunAt;
 

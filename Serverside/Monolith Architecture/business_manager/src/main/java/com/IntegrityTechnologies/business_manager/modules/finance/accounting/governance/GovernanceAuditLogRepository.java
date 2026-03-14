@@ -8,5 +8,10 @@ import java.util.UUID;
 
 public interface GovernanceAuditLogRepository
         extends JpaRepository<GovernanceAuditLog, UUID> {
-    Page<GovernanceAuditLog> findByBranchId(UUID branchId, Pageable pageable);
+    Page<GovernanceAuditLog>
+    findByTenantIdAndBranchId(
+            UUID tenantId,
+            UUID branchId,
+            Pageable pageable
+    );
 }

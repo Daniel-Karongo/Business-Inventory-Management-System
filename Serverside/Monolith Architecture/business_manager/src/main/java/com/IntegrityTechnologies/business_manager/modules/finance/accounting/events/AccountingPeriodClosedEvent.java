@@ -5,6 +5,7 @@ import java.util.UUID;
 
 public record AccountingPeriodClosedEvent(
 
+        UUID tenantId,
         UUID periodId,
         UUID branchId,
         LocalDateTime start,

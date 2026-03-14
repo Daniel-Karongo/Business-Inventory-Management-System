@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.projection;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -10,7 +11,7 @@ import java.util.UUID;
 @Table(
         name = "financial_projection_checkpoint",
         uniqueConstraints = @UniqueConstraint(
-                columnNames = {"projectionName","branchId"}
+                columnNames = {"tenant_id","branch_id","projectionName"}
         )
 )
 @Getter
@@ -18,15 +19,13 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ProjectionCheckpoint {
+public class ProjectionCheckpoint extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     private String projectionName;
-
-    private UUID branchId;
 
     private LocalDateTime lastProcessedAt;
 }

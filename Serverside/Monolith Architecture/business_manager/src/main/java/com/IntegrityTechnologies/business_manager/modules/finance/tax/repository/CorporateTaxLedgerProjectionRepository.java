@@ -9,7 +9,9 @@ import java.util.UUID;
 public interface CorporateTaxLedgerProjectionRepository
         extends JpaRepository<CorporateTaxLedgerProjection, UUID> {
 
-    Optional<CorporateTaxLedgerProjection> findByBranchIdAndFiscalYearAndMonthNumber(
+    Optional<CorporateTaxLedgerProjection>
+    findByTenantIdAndBranchIdAndFiscalYearAndMonthNumber(
+            UUID tenantId,
             UUID branchId,
             int fiscalYear,
             int monthNumber

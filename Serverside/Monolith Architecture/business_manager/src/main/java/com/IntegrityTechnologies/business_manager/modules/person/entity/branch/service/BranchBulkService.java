@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.branch.
 import com.IntegrityTechnologies.business_manager.common.bulk.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -53,7 +54,10 @@ public class BranchBulkService {
 
                 // 🔥 2. Duplicate in database
                 if (options.isSkipDuplicates()
-                        && branchRepository.existsByBranchCodeIgnoreCase(code)) {
+                        && branchRepository.existsByTenantIdAndBranchCodeIgnoreCase(
+                        TenantContext.getTenantId(),
+                        code
+                )) {
 
                     throw new IllegalArgumentException(
                             "Branch code already exists: " + code

@@ -4,8 +4,11 @@ import com.IntegrityTechnologies.business_manager.modules.finance.tax.dto.TaxSta
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.CorporateTaxFilingRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.TaxSystemStateRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
-import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -19,17 +22,26 @@ public class TaxStatusController {
 
     private final TaxSystemStateRepository taxSystemStateRepository;
     private final CorporateTaxFilingRepository filingRepository;
+    private final BranchTenantGuard branchTenantGuard;
 
     @GetMapping("/system/status")
     public TaxStatus status(@RequestParam UUID branchId) {
 
-        var state = taxSystemStateRepository
-                .findByBranchId(branchId)
-                .orElse(null);
+        branchTenantGuard.validate(branchId);
+
+        UUID tenantId = TenantContext.getTenantId();
+
+        var state =
+                taxSystemStateRepository
+                        .findByTenantIdAndBranchId(tenantId, branchId)
+                        .orElse(null);
 
         LocalDateTime lastAccrual =
                 filingRepository
-                        .findTopByBranchIdOrderByFiledAtDesc(branchId)
+                        .findTopByTenantIdAndBranchIdOrderByFiledAtDesc(
+                                tenantId,
+                                branchId
+                        )
                         .map(f -> f.getFiledAt())
                         .orElse(null);
 

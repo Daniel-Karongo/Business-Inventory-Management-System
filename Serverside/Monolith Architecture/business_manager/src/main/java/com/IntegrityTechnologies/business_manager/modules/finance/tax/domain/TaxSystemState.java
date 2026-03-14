@@ -1,8 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.tax.domain;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.enums.BusinessTaxMode;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -11,21 +13,20 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "tax_system_state",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"branchId"})
+        uniqueConstraints = @UniqueConstraint(
+                columnNames = {"tenant_id","branch_id"}
+        )
 )
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class TaxSystemState {
+@SuperBuilder
+public class TaxSystemState extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-
-    @Column(nullable = false, unique = true)
-    private UUID branchId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -35,9 +36,12 @@ public class TaxSystemState {
     private boolean vatEnabled;
 
     @Column(nullable = false)
+    private boolean pricesVatInclusive;
+
+    @Column(nullable = false, precision = 19, scale = 6)
     private BigDecimal vatRate;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 19, scale = 6)
     private BigDecimal corporateTaxRate;
 
     @Column(nullable = false)

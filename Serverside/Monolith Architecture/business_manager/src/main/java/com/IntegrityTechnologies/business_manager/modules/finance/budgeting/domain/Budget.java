@@ -3,11 +3,14 @@ package com.IntegrityTechnologies.business_manager.modules.finance.budgeting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.enums.BudgetScenario;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.enums.BudgetStatus;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(
@@ -15,12 +18,18 @@ import java.util.*;
         uniqueConstraints = {
                 @UniqueConstraint(
                         columnNames = {
+                                "tenant_id",
                                 "branch_id",
                                 "fiscalYear",
                                 "versionNumber",
                                 "scenario"
                         }
                 )
+        },
+        indexes = {
+                @Index(name = "idx_budget_tenant", columnList = "tenant_id"),
+                @Index(name = "idx_budget_tenant_branch", columnList = "tenant_id,branch_id"),
+                @Index(name = "idx_budget_year", columnList = "tenant_id,fiscalYear")
         }
 )
 @Getter
@@ -28,7 +37,7 @@ import java.util.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Budget {
+public class Budget extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -38,7 +47,11 @@ public class Budget {
      * NULL branch = GLOBAL BUDGET
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "branch_id")
+    @JoinColumn(
+            name = "branch_id",
+            insertable = false,
+            updatable = false
+    )
     private Branch branch;
 
     @Column(nullable = false)
@@ -70,25 +83,30 @@ public class Budget {
     @Column(nullable = false, updatable = false)
     private String createdBy;
 
-    @OneToMany(mappedBy = "budget",
+    @OneToMany(
+            mappedBy = "budget",
             cascade = CascadeType.ALL,
-            orphanRemoval = true)
+            orphanRemoval = true
+    )
     @Builder.Default
     private List<BudgetLine> lines = new ArrayList<>();
 
     @PrePersist
     public void onCreate() {
+
         this.createdAt = LocalDateTime.now();
+
         if (this.status == null) {
             this.status = BudgetStatus.DRAFT;
         }
     }
 
     public boolean isGlobal() {
-        return branch == null;
+        return getBranchId() == null;
     }
 
     public void ensureEditable() {
+
         if (status != BudgetStatus.DRAFT) {
             throw new IllegalStateException(
                     "Budget is not editable in state: " + status

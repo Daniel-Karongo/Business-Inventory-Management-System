@@ -5,13 +5,13 @@ import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.doma
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.enums.BudgetScenario;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.service.BudgetService;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantSupervisorOnly;
+import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -24,6 +24,7 @@ public class BudgetManagementController {
 
     private final BudgetRepository budgetRepository;
     private final BudgetService budgetService;
+    private final BranchTenantGuard branchTenantGuard;
 
     @GetMapping
     public Page<Budget> list(
@@ -33,10 +34,13 @@ public class BudgetManagementController {
             @RequestParam(defaultValue = "20") int size
     ) {
 
+        branchTenantGuard.validate(branchId);
+
         Pageable pageable = PageRequest.of(page, size);
 
         return budgetRepository
-                .findByBranch_IdAndFiscalYearAndScenario(
+                .findByTenantIdAndBranchIdAndFiscalYearAndScenario(
+                        TenantContext.getTenantId(),
                         branchId,
                         fiscalYear,
                         BudgetScenario.BASELINE,
@@ -46,8 +50,11 @@ public class BudgetManagementController {
 
     @GetMapping("/{id}")
     public Budget get(@PathVariable UUID id) {
-        return budgetRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Budget not found"));
+
+        return budgetRepository.findByTenantIdAndId(
+                TenantContext.getTenantId(),
+                id
+        ).orElseThrow(() -> new IllegalArgumentException("Budget not found"));
     }
 
     @PostMapping("/{id}/submit")

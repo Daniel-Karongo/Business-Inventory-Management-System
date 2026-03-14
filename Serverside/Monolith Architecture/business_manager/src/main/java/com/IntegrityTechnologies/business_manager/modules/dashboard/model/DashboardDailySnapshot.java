@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.dashboard.model;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,23 +15,21 @@ import java.util.UUID;
 @Table(
         name = "dashboard_daily_snapshots",
         uniqueConstraints = @UniqueConstraint(
-                columnNames = {"branch_id", "date"}
+                name = "uk_snapshot_tenant_branch_date",
+                columnNames = {"tenant_id","branch_id","date"}
         ),
         indexes = {
-                @Index(name = "idx_snapshot_branch_date", columnList = "branch_id,date")
+                @Index(name = "idx_snapshot_tenant_branch_date", columnList = "tenant_id,branch_id,date")
         }
 )
 @Getter
 @Setter
 @NoArgsConstructor
-public class DashboardDailySnapshot {
+public class DashboardDailySnapshot extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-
-    @Column(name = "branch_id", nullable = false)
-    private UUID branchId;
 
     @Column(nullable = false)
     private LocalDate date;

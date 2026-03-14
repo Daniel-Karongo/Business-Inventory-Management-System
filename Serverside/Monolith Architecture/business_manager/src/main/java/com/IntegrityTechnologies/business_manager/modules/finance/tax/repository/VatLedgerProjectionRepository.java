@@ -9,7 +9,9 @@ import java.util.UUID;
 public interface VatLedgerProjectionRepository
         extends JpaRepository<VatLedgerProjection, UUID> {
 
-    Optional<VatLedgerProjection> findByBranchIdAndFiscalYearAndMonthNumber(
+    Optional<VatLedgerProjection>
+    findByTenantIdAndBranchIdAndFiscalYearAndMonthNumber(
+            UUID tenantId,
             UUID branchId,
             int fiscalYear,
             int monthNumber

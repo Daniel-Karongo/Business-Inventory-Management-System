@@ -26,6 +26,8 @@ public class SingleEntryPolicy implements AccountingPolicy {
 
         return List.of(
                 new LedgerEntry(
+                        reversal.getTenantId(),
+                        reversal.getBranchId(),
                         originalEntry.getAccount(),
                         reversal,
                         originalEntry.getDirection() == EntryDirection.DEBIT
