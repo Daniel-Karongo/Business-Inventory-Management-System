@@ -7,6 +7,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.departme
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserDepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.Rollcall;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +29,7 @@ public class RollcallEmailNotifier {
         if (dept == null) return;
 
         List<String> emails =
-                userDepartmentRepository.findByDepartmentId(dept.getId())
+                userDepartmentRepository.findByDepartmentIdWithUser(TenantContext.getTenantId(), dept.getId())
                         .stream()
                         .filter(r -> r.getRole() == DepartmentMembershipRole.HEAD)
                         .flatMap(r -> r.getUser().getEmailAddresses().stream())

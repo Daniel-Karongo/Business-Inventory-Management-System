@@ -1,9 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.user.model;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.TenantAwareEntity;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
+
 import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -17,19 +18,14 @@ import java.util.UUID;
         name = "user_image_audits",
         indexes = {
 
-                @Index(
-                        name = "idx_user_image_audit_tenant",
-                        columnList = "tenant_id"
-                ),
+                @Index(name = "idx_user_image_audit_tenant_branch",
+                        columnList = "tenant_id, branch_id"),
 
-                @Index(
-                        name = "idx_user_image_audit_user",
-                        columnList = "user_id"
-                )
-
+                @Index(name = "idx_user_image_audit_user",
+                        columnList = "user_id")
         }
 )
-public class UserImageAudit extends TenantAwareEntity {
+public class UserImageAudit extends BranchAwareEntity {
 
     @Id
     @GeneratedValue
@@ -42,12 +38,18 @@ public class UserImageAudit extends TenantAwareEntity {
     private UUID userId;
 
     private String username;
+
     private String fileName;
+
     private String filePath;
 
-    private String action;       // UPLOAD, DELETE
+    private String action;
+
     private String reason;
+
     private UUID performedById;
+
     private String performedByUsername;
+
     private LocalDateTime timestamp;
 }

@@ -57,10 +57,10 @@ export class UserListComponent implements OnInit {
   displayedColumns = ['select', 'username', 'emails', 'phones', 'branches_depts', 'role', 'status', 'createdAt', 'actions'];
 
   /** Holds all users loaded once from backend */
-  allUsers: User[] = [];
+  // allUsers: User[] = [];
 
   /** After applying filters + search + sort */
-  filteredUsers: User[] = [];
+  // filteredUsers: User[] = [];
 
   /** Users visible on the current page */
   users: User[] = [];
@@ -108,7 +108,7 @@ export class UserListComponent implements OnInit {
     restoreBulk: (ids, reason) => this.userService.restoreBulk(ids, reason),
     hardDeleteBulk: (ids, reason) => this.userService.hardDeleteBulk(ids, reason),
 
-    reload: () => this.loadUsersOnce()
+    reload: () => this.loadUsers()
   };
 
 
@@ -126,7 +126,7 @@ export class UserListComponent implements OnInit {
 
   ngOnInit() {
     this.loadFilters();
-    this.loadUsersOnce();
+    this.loadUsers();
 
     const me = this.authService.getSnapshot();
     this.allowShowDeleted = canSeeDeleted(me);
@@ -138,86 +138,99 @@ export class UserListComponent implements OnInit {
     this.roleService.list().subscribe(r => (this.roles = r || []));
   }
 
-  loadUsersOnce() {
+  loadUsers() {
     this.loading = true;
-    // request a large page so backend returns everything (we paginate client-side)
-    this.userService.list(0, 999999, {}).pipe(
-      finalize(() => this.loading = false)
-    ).subscribe({
-      next: r => {
-        this.allUsers = r.data || [];
-        // initialize defaults
-        this.filteredUsers = [...this.allUsers];
-        this.total = this.filteredUsers.length;
-        this.applyFilters(); // will set `users`
-      },
-      error: () => {
-        this.snackbar.open('Failed to load users', 'Close', { duration: 3000 });
-      }
-    });
+    const deletedParam =
+      this.filterStatus === 'active' ? false :
+        this.filterStatus === 'deleted' ? true :
+          this.showDeleted ? null : false;
+
+    this.userService.list(this.page, this.size, {
+      branch: this.filterBranch || null,
+      department: this.filterDepartment || null,
+      role: this.filterRole || null,
+      q: this.q || null,
+      deleted: deletedParam
+    }, this.sortField, this.sortDir)
+      .pipe(finalize(() => this.loading = false))
+      .subscribe({
+        next: r => {
+          this.users = r.data;
+          this.total = r.total;
+          this.selection.clear();
+        },
+        error: () => {
+          this.snackbar.open('Failed to load users', 'Close', { duration: 3000 });
+        }
+      });
   }
 
   applyFilters() {
-    let data = [...this.allUsers];
-
-    // search - matches username, any email, any phone
-    const q = (this.q || '').trim().toLowerCase();
-    if (q) {
-      data = data.filter(u =>
-        (u.username || '').toLowerCase().includes(q) ||
-        (u.emailAddresses || []).some(e => e.toLowerCase().includes(q)) ||
-        (u.phoneNumbers || []).some(p => p.includes(q))
-      );
-    }
-
-    // branch filter (checks branchHierarchy)
-    if (this.filterBranch) {
-      data = data.filter(u =>
-        (u.branchHierarchy || []).some(b => b.branchId === this.filterBranch)
-      );
-    }
-
-    // department filter (checks each branch -> departments entries)
-    if (this.filterDepartment) {
-      data = data.filter(u =>
-        (u.branchHierarchy || []).some(b =>
-          (b.departments || []).some(d => d.departmentId === this.filterDepartment)
-        )
-      );
-    }
-
-    // role filter
-    if (this.filterRole) {
-      data = data.filter(u => u.role === this.filterRole);
-    }
-
-    // STATUS FILTER
-    if (this.filterStatus === 'active') {
-      data = data.filter(u => u.deleted === false);
-    }
-    else if (this.filterStatus === 'deleted') {
-      data = data.filter(u => u.deleted === true);
-    }
-
-    // Show Deleted toggle (only hide deleted when no explicit status filter)
-    if (!this.showDeleted && this.filterStatus === '') {
-      data = data.filter(u => !u.deleted);
-    }
-
-    // apply sorting (client-side)
-    if (this.sortField) {
-      data.sort((a, b) => this.compareForField(a, b, this.sortField!, this.sortDir));
-    }
-
-    this.filteredUsers = data;
-    this.total = data.length;
-
-    // reset selection (don't keep stale selected items)
-    this.selection.clear();
-
-    // apply pagination
-    this.applyPagination();
+    this.page = 0;
+    this.loadUsers();
   }
+
+  // applyFilters() {
+  //   let data = [...this.allUsers];
+
+  //   // search - matches username, any email, any phone
+  //   const q = (this.q || '').trim().toLowerCase();
+  //   if (q) {
+  //     data = data.filter(u =>
+  //       (u.username || '').toLowerCase().includes(q) ||
+  //       (u.emailAddresses || []).some(e => e.toLowerCase().includes(q)) ||
+  //       (u.phoneNumbers || []).some(p => p.includes(q))
+  //     );
+  //   }
+
+  //   // branch filter (checks branchHierarchy)
+  //   if (this.filterBranch) {
+  //     data = data.filter(u =>
+  //       (u.branchHierarchy || []).some(b => b.branchId === this.filterBranch)
+  //     );
+  //   }
+
+  //   // department filter (checks each branch -> departments entries)
+  //   if (this.filterDepartment) {
+  //     data = data.filter(u =>
+  //       (u.branchHierarchy || []).some(b =>
+  //         (b.departments || []).some(d => d.departmentId === this.filterDepartment)
+  //       )
+  //     );
+  //   }
+
+  //   // role filter
+  //   if (this.filterRole) {
+  //     data = data.filter(u => u.role === this.filterRole);
+  //   }
+
+  //   // STATUS FILTER
+  //   if (this.filterStatus === 'active') {
+  //     data = data.filter(u => u.deleted === false);
+  //   }
+  //   else if (this.filterStatus === 'deleted') {
+  //     data = data.filter(u => u.deleted === true);
+  //   }
+
+  //   // Show Deleted toggle (only hide deleted when no explicit status filter)
+  //   if (!this.showDeleted && this.filterStatus === '') {
+  //     data = data.filter(u => !u.deleted);
+  //   }
+
+  //   // apply sorting (client-side)
+  //   if (this.sortField) {
+  //     data.sort((a, b) => this.compareForField(a, b, this.sortField!, this.sortDir));
+  //   }
+
+  //   this.filteredUsers = data;
+  //   this.total = data.length;
+
+  //   // reset selection (don't keep stale selected items)
+  //   this.selection.clear();
+
+  //   // apply pagination
+  //   this.applyPagination();
+  // }
 
   compareForField(a: User, b: User, field: string, dir: 'asc' | 'desc') {
     const multiplier = dir === 'asc' ? 1 : -1;
@@ -292,26 +305,37 @@ export class UserListComponent implements OnInit {
   }
 
   sortBy(field: string) {
-    if (this.sortField === field) {
-      // toggle direction
+
+    const fieldMap: any = {
+      username: 'username',
+      role: 'role',
+      createdAt: 'createdAt',
+      status: 'deleted'
+    };
+
+    const backendField = fieldMap[field];
+    if (!backendField) return; // ignore unsupported fields
+
+    if (this.sortField === backendField) {
       this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
     } else {
-      this.sortField = field;
+      this.sortField = backendField;
       this.sortDir = 'asc';
     }
+
     this.applyFilters();
   }
 
-  applyPagination() {
-    const start = this.page * this.size;
-    const end = start + this.size;
-    this.users = this.filteredUsers.slice(start, end);
-  }
+  // applyPagination() {
+  //   const start = this.page * this.size;
+  //   const end = start + this.size;
+  //   this.users = this.filteredUsers.slice(start, end);
+  // }
 
   changePage(event: PageEvent) {
     this.page = event.pageIndex;
     this.size = event.pageSize;
-    this.applyPagination();
+    this.loadUsers();
   }
 
   get bulkState(): 'active' | 'deleted' | 'mixed' | null {
@@ -382,7 +406,7 @@ export class UserListComponent implements OnInit {
     }).afterClosed().subscribe(imported => {
       if (imported === true) {
         // 🔄 refresh list after successful import
-        this.loadUsersOnce();
+        this.loadUsers();
       }
     });
   }

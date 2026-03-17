@@ -111,7 +111,7 @@ public class DepartmentBulkService {
                 if (!overlap.isEmpty()) {
                     String users = overlap.stream()
                             .map(id ->
-                                    userRepository.findByIdAndDeletedFalse(id)
+                                    userRepository.findByIdAndTenantIdAndDeletedFalse(id, tenantId)
                                             .map(User::getUsername)
                                             .orElse(id.toString())
                             )
@@ -250,7 +250,7 @@ public class DepartmentBulkService {
             preview.setHeads(
                     dto.getHeadIds().stream()
                             .map(id -> userRepository
-                                    .findByIdAndDeletedFalse(id)
+                                    .findByIdAndTenantIdAndDeletedFalse(id, tenantId)
                                     .filter(u -> u.getTenantId().equals(TenantContext.getTenantId()))
                                     .orElse(null)
                             )
@@ -267,7 +267,7 @@ public class DepartmentBulkService {
             preview.setMembers(
                     dto.getMemberIds().stream()
                             .map(id -> userRepository
-                                    .findByIdAndDeletedFalse(id)
+                                    .findByIdAndTenantIdAndDeletedFalse(id, tenantId)
                                     .filter(u -> u.getTenantId().equals(TenantContext.getTenantId()))
                                     .orElse(null)
                             )

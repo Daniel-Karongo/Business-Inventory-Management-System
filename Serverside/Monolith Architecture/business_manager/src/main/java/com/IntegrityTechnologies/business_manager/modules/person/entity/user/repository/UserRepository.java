@@ -2,6 +2,8 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.user.re
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -20,19 +22,110 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     int countByTenantId(UUID tenantId);
 
     /* ====================== BASIC LOOKUPS ====================== */
+    @Query("""
+        SELECT u
+        FROM User u
+        WHERE u.tenantId = :tenantId
+    """)
+    List<User> findByTenantId(
+            @Param("tenantId") UUID tenantId
+    );
 
-    Optional<User> findByUsername(String username);
-    Optional<User> findByUsernameAndDeletedFalse(String username);
+    @Query("""
+SELECT u
+FROM User u
+WHERE u.tenantId = :tenantId
+""")
+    Page<User> findAllUsers(UUID tenantId, Pageable pageable);
 
-    Optional<User> findByIdNumberAndDeletedFalse(String idNumber);
-    Optional<User> findByIdNumber(String idNumber);
 
-    Optional<User> findByIdAndDeletedFalse(UUID id);
-    Optional<User> findById(UUID id);
+    @Query("""
+SELECT u
+FROM User u
+WHERE u.tenantId = :tenantId
+AND u.deleted = false
+""")
+    Page<User> findActiveUsers(UUID tenantId, Pageable pageable);
 
-    List<User> findByDeletedFalse();
 
-    List<User> findByDeletedTrue();
+    @Query("""
+SELECT u
+FROM User u
+WHERE u.tenantId = :tenantId
+AND u.deleted = true
+""")
+    Page<User> findDeletedUsers(UUID tenantId, Pageable pageable);
+
+    @Query("""
+        SELECT DISTINCT u.id
+        FROM User u
+        LEFT JOIN u.departments ud
+        LEFT JOIN ud.department d
+        LEFT JOIN d.branch b
+        WHERE u.tenantId = :tenantId
+        AND (:deleted IS NULL OR u.deleted = :deleted)
+        AND (:role IS NULL OR u.role = :role)
+        AND (:branchId IS NULL OR b.id = :branchId)
+        AND (:departmentId IS NULL OR d.id = :departmentId)
+        AND (
+              :q IS NULL OR
+              LOWER(u.username) LIKE LOWER(CONCAT('%', :q, '%'))
+              OR EXISTS (
+                  SELECT 1 FROM u.emailAddresses e
+                  WHERE e LIKE CONCAT('%', :q, '%'))
+              )
+              OR EXISTS (
+                  SELECT 1 FROM u.phoneNumbers p
+                  WHERE p LIKE CONCAT('%', :q, '%')
+              )
+    """)
+    Page<UUID> searchUserIds(
+            UUID tenantId,
+            Boolean deleted,
+            Role role,
+            UUID branchId,
+            UUID departmentId,
+            String q,
+            Pageable pageable
+    );
+
+    @Query("""
+        SELECT DISTINCT u
+        FROM User u
+        LEFT JOIN FETCH u.departments ud
+        LEFT JOIN FETCH ud.department d
+        LEFT JOIN FETCH d.branch
+        WHERE u.id IN :ids
+    """)
+    List<User> findUsersWithDepartments(@Param("ids") List<UUID> ids);
+    Optional<User> findByUsernameAndTenantId(String username, UUID tenantId);
+
+    Optional<User> findByUsernameAndTenantIdAndDeletedFalse(String username, UUID tenantId);
+
+    Optional<User> findByIdNumberAndTenantIdAndDeletedFalse(String idNumber, UUID tenantId);
+
+    Optional<User> findByIdNumberAndTenantId(String idNumber, UUID tenantId);
+
+    Optional<User> findByIdAndTenantIdAndDeletedFalse(UUID id, UUID tenantId);
+
+    Optional<User> findByIdAndTenantId(UUID id, UUID tenantId);
+
+    List<User> findByTenantIdAndDeletedFalse(UUID tenantId);
+
+    List<User> findByTenantIdAndDeletedTrue(UUID tenantId);
+
+    @Query("""
+        SELECT DISTINCT u
+        FROM User u
+        LEFT JOIN FETCH u.departments ud
+        LEFT JOIN FETCH ud.department d
+        LEFT JOIN FETCH d.branch
+        WHERE u.tenantId = :tenantId
+    """)
+    List<User> findAllUsersWithDepartments(
+            @Param("tenantId") UUID tenantId
+    );
+    /* ====================== BULK ====================== */
 
     @Query("""
         SELECT u
@@ -45,176 +138,216 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             @Param("tenantId") UUID tenantId,
             @Param("ids") Collection<UUID> ids
     );
-    /* ====================== UNIQUE CHECKS ====================== */
 
-    /* ====================== UNIQUE CHECKS (TENANT SAFE) ====================== */
+    /* ====================== UNIQUE CHECKS ====================== */
 
     boolean existsByUsernameAndTenantId(String username, UUID tenantId);
 
     boolean existsByIdNumberAndTenantId(String idNumber, UUID tenantId);
 
     @Query("""
-    SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END
-    FROM User u
-    JOIN u.emailAddresses e
-    WHERE lower(e) = lower(:email)
-    AND u.tenantId = :tenantId
-""")
+        SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END
+        FROM User u
+        JOIN u.emailAddresses e
+        WHERE lower(e) = lower(:email)
+          AND u.tenantId = :tenantId
+    """)
     boolean existsByEmailAddressAndTenantId(
             @Param("email") String email,
             @Param("tenantId") UUID tenantId
     );
 
     @Query("""
-    SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END
-    FROM User u
-    JOIN u.phoneNumbers p
-    WHERE p = :phone
-    AND u.tenantId = :tenantId
-""")
+        SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END
+        FROM User u
+        JOIN u.phoneNumbers p
+        WHERE p = :phone
+          AND u.tenantId = :tenantId
+    """)
     boolean existsByPhoneNumberAndTenantId(
             @Param("phone") String phone,
             @Param("tenantId") UUID tenantId
     );
 
-
     /* ====================== COLLECTION LOOKUP ====================== */
 
     @Query("""
-        SELECT u FROM User u 
-        JOIN u.emailAddresses e 
-        WHERE lower(e) = lower(:email) AND u.deleted = false
-    """)
-    Optional<User> findByEmailElementIgnoreCaseAndDeletedFalse(@Param("email") String email);
-    @Query("""
-        SELECT u FROM User u 
-        JOIN u.emailAddresses e 
+        SELECT u FROM User u
+        JOIN u.emailAddresses e
         WHERE lower(e) = lower(:email)
+          AND u.deleted = false
+          AND u.tenantId = :tenantId
     """)
-    Optional<User> findByEmailElementIgnoreCase(@Param("email") String email);
+    Optional<User> findByEmailElementIgnoreCaseAndDeletedFalse(
+            @Param("email") String email,
+            @Param("tenantId") UUID tenantId
+    );
 
     @Query("""
-        SELECT u FROM User u 
-        JOIN u.phoneNumbers p 
-        WHERE p = :phone AND u.deleted = false
+        SELECT u FROM User u
+        JOIN u.emailAddresses e
+        WHERE lower(e) = lower(:email)
+          AND u.tenantId = :tenantId
     """)
-    Optional<User> findByPhoneNumberElementAndDeletedFalse(@Param("phone") String phone);
+    Optional<User> findByEmailElementIgnoreCase(
+            @Param("email") String email,
+            @Param("tenantId") UUID tenantId
+    );
+
     @Query("""
-        SELECT u FROM User u 
-        JOIN u.phoneNumbers p 
+        SELECT u FROM User u
+        JOIN u.phoneNumbers p
         WHERE p = :phone
+          AND u.deleted = false
+          AND u.tenantId = :tenantId
     """)
-    Optional<User> findByPhoneNumberElement(@Param("phone") String phone);
+    Optional<User> findByPhoneNumberElementAndDeletedFalse(
+            @Param("phone") String phone,
+            @Param("tenantId") UUID tenantId
+    );
+
+    @Query("""
+        SELECT u FROM User u
+        JOIN u.phoneNumbers p
+        WHERE p = :phone
+          AND u.tenantId = :tenantId
+    """)
+    Optional<User> findByPhoneNumberElement(
+            @Param("phone") String phone,
+            @Param("tenantId") UUID tenantId
+    );
 
     /* ====================== ROLE FILTER ====================== */
 
-    @Query("SELECT u FROM User u WHERE u.deleted = false AND u.role = :role")
-    List<User> findActiveUsersByRole(@Param("role") Role role);
+    @Query("""
+    SELECT u
+    FROM User u
+    WHERE u.deleted = false
+      AND u.role = :role
+      AND u.tenantId = :tenantId
+""")
+    Page<User> findActiveUsersByRole(
+            @Param("tenantId") UUID tenantId,
+            @Param("role") Role role,
+            Pageable pageable
+    );
 
-    @Query("SELECT u FROM User u WHERE u.deleted = true AND u.role = :role")
-    List<User> findDeletedUsersByRole(@Param("role") Role role);
+    @Query("""
+    SELECT u
+    FROM User u
+    WHERE u.deleted = true
+      AND u.role = :role
+      AND u.tenantId = :tenantId
+""")
+    Page<User> findDeletedUsersByRole(
+            @Param("tenantId") UUID tenantId,
+            @Param("role") Role role,
+            Pageable pageable
+    );
 
-    @Query("SELECT u FROM User u WHERE u.role = :role")
-    List<User> findAllUsersByRole(@Param("role") Role role);
-
+    @Query("""
+    SELECT u
+    FROM User u
+    WHERE u.role = :role
+      AND u.tenantId = :tenantId
+""")
+    Page<User> findUsersByRole(
+            @Param("tenantId") UUID tenantId,
+            @Param("role") Role role,
+            Pageable pageable
+    );
 
     /* ====================== IDENTIFIER LOOKUP ====================== */
+
     @Query("""
-        SELECT u FROM User u
-        LEFT JOIN FETCH u.branches
-        LEFT JOIN FETCH u.departments
-        WHERE u.tenantId = :tenantId
-        AND u.deleted = false
-        AND (
-                lower(u.username) = lower(:identifier)
-             OR lower(u.idNumber) = lower(:identifier)
-             OR EXISTS (
-                    SELECT 1 FROM u.emailAddresses e
-                    WHERE lower(e) = lower(:identifier)
-                )
-             OR EXISTS (
-                    SELECT 1 FROM u.phoneNumbers p
-                    WHERE p = :identifier
-                )
-        )
-        """)
+    SELECT DISTINCT u
+    FROM User u
+    LEFT JOIN FETCH u.branches
+    LEFT JOIN FETCH u.departments
+    WHERE u.tenantId = :tenantId
+      AND u.deleted = false
+      AND (
+            lower(u.username) = lower(:identifier)
+         OR lower(u.idNumber) = lower(:identifier)
+         OR EXISTS (
+                SELECT 1 FROM u.emailAddresses e
+                WHERE lower(e) = lower(:identifier)
+            )
+         OR EXISTS (
+                SELECT 1 FROM u.phoneNumbers p
+                WHERE p = :identifier
+            )
+      )
+""")
     Optional<User> findAuthUser(
             @Param("tenantId") UUID tenantId,
             @Param("identifier") String identifier
     );
 
-    /**
-     * Full identifier resolver (UUID, email, phone, username, idNumber)
-     * Phone is normalized externally before calling this method.
-     */
-    default Optional<User> findByIdentifier(String rawIdentifier) {
+    /* ====================== IDENTIFIER RESOLUTION ====================== */
+
+    default Optional<User> findByIdentifier(String rawIdentifier, UUID tenantId) {
 
         String identifier = rawIdentifier == null ? "" : rawIdentifier.trim();
 
-        // 1️⃣ Try UUID
         try {
             UUID id = UUID.fromString(identifier);
-            Optional<User> byId = findByIdAndDeletedFalse(id);
+            Optional<User> byId = findByIdAndTenantIdAndDeletedFalse(id, tenantId);
             if (byId.isPresent()) return byId;
         } catch (IllegalArgumentException ignored) {}
 
-        // 2️⃣ Try email
-        Optional<User> maybe = findByEmailElementIgnoreCaseAndDeletedFalse(identifier.toLowerCase());
+        Optional<User> maybe =
+                findByEmailElementIgnoreCaseAndDeletedFalse(identifier.toLowerCase(), tenantId);
         if (maybe.isPresent()) return maybe;
 
-        // 3️⃣ Try phone (already normalized before this method is called)
         String phoneNumber = normalizePhone(identifier);
-        maybe = findByPhoneNumberElementAndDeletedFalse(phoneNumber);
+
+        maybe = findByPhoneNumberElementAndDeletedFalse(phoneNumber, tenantId);
         if (maybe.isPresent()) return maybe;
 
-        // 4️⃣ Try username
-        maybe = findByUsernameAndDeletedFalse(identifier);
+        maybe = findByUsernameAndTenantIdAndDeletedFalse(identifier, tenantId);
         if (maybe.isPresent()) return maybe;
 
-        // 5️⃣ Try ID number
-        maybe = findByIdNumberAndDeletedFalse(identifier);
+        maybe = findByIdNumberAndTenantIdAndDeletedFalse(identifier, tenantId);
         if (maybe.isPresent()) return maybe;
 
         return Optional.empty();
     }
-    default Optional<User> findByIdentifierForAudits(String rawIdentifier) {
+
+    default Optional<User> findByIdentifierForAudits(String rawIdentifier, UUID tenantId) {
 
         String identifier = rawIdentifier == null ? "" : rawIdentifier.trim();
 
-        // 1️⃣ Try UUID
         try {
             UUID id = UUID.fromString(identifier);
-            Optional<User> byId = findById(id);
+            Optional<User> byId = findByIdAndTenantId(id, tenantId);
             if (byId.isPresent()) return byId;
         } catch (IllegalArgumentException ignored) {}
 
-        // 2️⃣ Try email
-        Optional<User> maybe = findByEmailElementIgnoreCase(identifier.toLowerCase());
+        Optional<User> maybe =
+                findByEmailElementIgnoreCase(identifier.toLowerCase(), tenantId);
         if (maybe.isPresent()) return maybe;
 
-        // 3️⃣ Try phone (already normalized before this method is called)
         String phoneNumber = normalizePhone(identifier);
-        maybe = findByPhoneNumberElement(phoneNumber);
+
+        maybe = findByPhoneNumberElement(phoneNumber, tenantId);
         if (maybe.isPresent()) return maybe;
 
-        // 4️⃣ Try username
-        maybe = findByUsername(identifier);
+        maybe = findByUsernameAndTenantId(identifier, tenantId);
         if (maybe.isPresent()) return maybe;
 
-        // 5️⃣ Try ID number
-        maybe = findByIdNumber(identifier);
+        maybe = findByIdNumberAndTenantId(identifier, tenantId);
         if (maybe.isPresent()) return maybe;
 
         return Optional.empty();
     }
 
     default String normalizePhone(String phone) {
+
         if (phone == null) return null;
 
-        // 1️⃣ Remove spaces and hyphens
         String cleaned = phone.replaceAll("[\\s-]", "");
 
-        // 2️⃣ Convert local formats to international
         if (cleaned.matches("^07\\d{7,8}$")) {
             cleaned = "+254" + cleaned.substring(1);
         } else if (cleaned.matches("^01\\d{7,8}$")) {
@@ -241,22 +374,14 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query(value = "DELETE FROM department_members WHERE user_id = :userId", nativeQuery = true)
     int deleteUserFromDepartmentMembers(@Param("userId") UUID userId);
 
-    default Optional<User> findByIdentifierAndTenantId(
-            String identifier,
-            UUID tenantId
-    ) {
+    default Optional<User> findDeletedByIdentifier(String identifier, UUID tenantId) {
 
-        Optional<User> user = findByIdentifier(identifier);
-
-        if (user.isEmpty()) return Optional.empty();
-
-        if (!user.get().getTenantId().equals(tenantId)) {
-            return Optional.empty();
-        }
-
-        return user;
-
+        return findByIdentifierForAudits(identifier, tenantId)
+                .filter(User::getDeleted);
     }
 
-    Optional<User> findByUsernameAndTenantId(String adminUsername, UUID tenantId);
+    default Optional<User> findByIdentifierIncludingDeleted(String identifier, UUID tenantId) {
+
+        return findByIdentifierForAudits(identifier, tenantId);
+    }
 }

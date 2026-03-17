@@ -50,7 +50,7 @@ public class PasswordResetService {
             String newPassword
     ) {
 
-        User user = userRepository.findByIdentifier(identifier)
+        User user = userRepository.findByIdentifier(identifier, TenantContext.getTenantId())
                 .orElseThrow(() -> new RuntimeException("Invalid reset request"));
 
         try {

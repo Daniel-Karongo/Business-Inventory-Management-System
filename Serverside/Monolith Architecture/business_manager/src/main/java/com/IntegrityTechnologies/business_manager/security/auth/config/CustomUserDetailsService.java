@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.security.auth.config;
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
@@ -12,9 +13,14 @@ import java.util.UUID;
 public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
+    private final UserSessionRepository userSessionRepository;
 
-    public CustomUserDetailsService(UserRepository userRepository) {
+    public CustomUserDetailsService(
+            UserRepository userRepository,
+            UserSessionRepository userSessionRepository
+    ) {
         this.userRepository = userRepository;
+        this.userSessionRepository = userSessionRepository;
     }
 
     @Override
@@ -31,10 +37,16 @@ public class CustomUserDetailsService implements UserDetailsService {
                         )
                 );
 
+        UUID branchId =
+                userSessionRepository
+                        .findFirstByUserIdAndLogoutTimeIsNull(user.getId())
+                        .map(s -> s.getBranchId())
+                        .orElse(null);
+
         return new CustomUserDetails(
                 user.getId(),
                 user.getTenantId(),
-                null,
+                branchId,
                 user.getUsername(),
                 user.getPassword(),
                 user.getRole() != null

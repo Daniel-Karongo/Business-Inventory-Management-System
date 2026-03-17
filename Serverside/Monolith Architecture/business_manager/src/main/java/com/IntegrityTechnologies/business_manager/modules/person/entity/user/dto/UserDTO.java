@@ -41,17 +41,17 @@ public class UserDTO {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Set<DepartmentMinimalDTO> departments = new HashSet<>();
 
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private String createdBy;
-
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private String lastModifiedBy;
-
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private LocalDateTime createdAt;
-
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private LocalDateTime lastModifiedAt;
+//    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+//    private String createdBy;
+//
+//    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+//    private String lastModifiedBy;
+//
+//    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+//    private LocalDateTime createdAt;
+//
+//    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+//    private LocalDateTime lastModifiedAt;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private boolean deleted;

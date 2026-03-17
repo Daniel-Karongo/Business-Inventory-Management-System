@@ -15,11 +15,9 @@ public final class TenantCacheKey {
         return tenantId + "::user::" + identifier;
     }
 
-    public static String allUsers(Boolean deleted) {
-
+    public static String allUsers(Boolean deleted, int page, int size) {
         UUID tenantId = TenantContext.getTenantId();
-
-        return tenantId + "::users::" + deleted;
+        return tenantId + ":users:" + deleted + ":" + page + ":" + size;
     }
 
 }

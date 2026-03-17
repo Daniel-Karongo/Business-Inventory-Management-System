@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.departm
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -36,6 +37,7 @@ public interface DepartmentRepository extends JpaRepository<Department, UUID> {
        LISTING
     ========================================================= */
 
+    @EntityGraph(attributePaths = "branch")
     List<Department> findByTenantIdAndDeletedFalse(UUID tenantId);
 
     List<Department> findByTenantIdAndDeletedTrue(UUID tenantId);
@@ -47,12 +49,15 @@ public interface DepartmentRepository extends JpaRepository<Department, UUID> {
     ========================================================= */
 
     @Query("""
-        SELECT DISTINCT ud.user
+        SELECT DISTINCT u
         FROM UserDepartment ud
+        JOIN ud.user u
+        LEFT JOIN FETCH u.emailAddresses
+        LEFT JOIN FETCH u.phoneNumbers
         WHERE ud.department.id = :deptId
           AND ud.department.tenantId = :tenantId
           AND ud.department.deleted = false
-          AND ud.user.deleted = false
+          AND u.deleted = false
     """)
     List<User> findAllUsersInDepartment(
             @Param("tenantId") UUID tenantId,
@@ -93,10 +98,11 @@ public interface DepartmentRepository extends JpaRepository<Department, UUID> {
     @Query("""
         SELECT d
         FROM Department d
+        JOIN FETCH d.branch
         WHERE d.tenantId = :tenantId
           AND d.deleted = false
     """)
-    List<Department> findAllActive(
+    List<Department> findAllActiveWithBranch(
             @Param("tenantId") UUID tenantId
     );
 }

@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.person.entity.user.se
 import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.config.FileStorageService;
+import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.exception.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.UserImageDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.mapper.UserImageMapper;
@@ -12,6 +13,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.mod
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserImageAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
@@ -44,11 +46,16 @@ public class UserImageService {
     private final UserImageAuditRepository userImageAuditRepository;
     private final FileStorageService fileStorageService;
     private final PrivilegesChecker privilegesChecker;
+    private final TransactionalFileManager transactionalFileManager;
+
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
 
     /* ====================== VALIDATE ACCESS ====================== */
     private User validateAccess(String identifier, Authentication authentication, String action) {
         User requester = privilegesChecker.getAuthenticatedUser(authentication);
-        User target = userRepository.findByIdentifier(identifier)
+        User target = userRepository.findByIdentifier(identifier, tenantId())
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + identifier));
 
         if (!privilegesChecker.isAuthorized(requester, target)) {
@@ -75,14 +82,25 @@ public class UserImageService {
 
             String fileName = System.currentTimeMillis() + "_" + actualFile.getOriginalFilename();
 
+            Path saved;
+
             try (InputStream in = actualFile.getInputStream()) {
 
-                Path saved = fileStorageService.saveFile(userDir, fileName, in);
+                saved = fileStorageService.saveFile(userDir, fileName, in);
+
                 fileStorageService.secure(saved);
             }
 
-            urls.put("/api/users/images/" + folderName + "/" + fileName,
-                    fileDTO.getDescription());
+        /* =========================
+           TRACK FILE FOR ROLLBACK
+           ========================= */
+
+            transactionalFileManager.track(saved);
+
+            urls.put(
+                    "/api/users/images/" + folderName + "/" + fileName,
+                    fileDTO.getDescription()
+            );
         }
 
         return urls;
@@ -109,10 +127,27 @@ public class UserImageService {
 
         do {
 
-            page = userImageRepository.findAll(pageable);
+            page = userImageRepository.findByTenantIdWithUser(
+                    tenantId(),
+                    pageable
+            );
 
             page.getContent().stream()
-                    .filter(img -> privilegesChecker.isAuthorized(performedBy, img.getUser()))
+                    .filter(img -> {
+
+                        boolean userDeletedMatch =
+                                deletedUsers == null ||
+                                        Boolean.TRUE.equals(img.getUser().getDeleted()) == deletedUsers;
+
+                        boolean imageDeletedMatch =
+                                deletedImages == null ||
+                                        Boolean.TRUE.equals(img.getDeleted()) == deletedImages;
+
+                        boolean authorized =
+                                privilegesChecker.isAuthorized(performedBy, img.getUser());
+
+                        return userDeletedMatch && imageDeletedMatch && authorized;
+                    })
                     .forEach(authorizedImages::add);
 
             pageable = page.nextPageable();
@@ -148,19 +183,34 @@ public class UserImageService {
 
         User performedBy = privilegesChecker.getAuthenticatedUser(authentication);
 
-        // 1️⃣ Load images once
         Pageable pageable = PageRequest.of(0, 500);
-
         Page<UserImage> page;
 
         List<UserImage> authorizedImages = new ArrayList<>();
 
         do {
 
-            page = userImageRepository.findByDeleted(null, pageable);
+            page = userImageRepository.findByTenantIdWithUser(
+                    tenantId(),
+                    pageable
+            );
 
             page.getContent().stream()
-                    .filter(img -> privilegesChecker.isAuthorized(performedBy, img.getUser()))
+                    .filter(img -> {
+
+                        boolean userDeletedMatch =
+                                deletedUsers == null ||
+                                        Boolean.TRUE.equals(img.getUser().getDeleted()) == deletedUsers;
+
+                        boolean imageDeletedMatch =
+                                deletedImages == null ||
+                                        Boolean.TRUE.equals(img.getDeleted()) == deletedImages;
+
+                        boolean authorized =
+                                privilegesChecker.isAuthorized(performedBy, img.getUser());
+
+                        return userDeletedMatch && imageDeletedMatch && authorized;
+                    })
                     .forEach(authorizedImages::add);
 
             pageable = page.nextPageable();
@@ -171,17 +221,21 @@ public class UserImageService {
             throw new ImageNotFoundException("No accessible images found matching your filters.");
         }
 
-        // 5️⃣ Create ZIP file
         File tempZip = File.createTempFile("all-images-", ".zip");
 
         try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(tempZip))) {
 
             for (UserImage image : authorizedImages) {
 
-                Path filePath = fileStorageService.userRoot()
+                Path userDir = fileStorageService.userRoot()
                         .resolve(image.getUser().getUploadFolder())
-                        .resolve(image.getFileName())
                         .normalize();
+
+                Path filePath = userDir.resolve(image.getFileName()).normalize();
+
+                if (!filePath.startsWith(userDir)) {
+                    throw new SecurityException("Invalid file path");
+                }
 
                 if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
                     log.warn("Missing image file: {}", image.getFileName());
@@ -189,12 +243,13 @@ public class UserImageService {
                 }
 
                 zos.putNextEntry(new ZipEntry(image.getFileName()));
+
                 try (InputStream is = Files.newInputStream(filePath)) {
                     is.transferTo(zos);
                 }
+
                 zos.closeEntry();
 
-                // 6️⃣ Audit each DOWNLOAD
                 userImageAuditRepository.save(UserImageAudit.builder()
                         .userId(image.getUser().getId())
                         .username(image.getUser().getUsername())
@@ -210,13 +265,18 @@ public class UserImageService {
             zos.finish();
         }
 
-        // 7️⃣ Prepare ZIP resource
         InputStreamResource resource = new InputStreamResource(new FileInputStream(tempZip));
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"all-images.zip\"")
-                .body(resource);
+        ResponseEntity<Resource> response =
+                ResponseEntity.ok()
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .header(HttpHeaders.CONTENT_DISPOSITION,
+                                "attachment; filename=\"all-images.zip\"")
+                        .body(resource);
+
+        tempZip.deleteOnExit();
+
+        return response;
     }
 
     public List<UserImageDTO> getAllUserImagesForAUser(
@@ -232,7 +292,12 @@ public class UserImageService {
                 .toList();
     }
 
-    public ResponseEntity<Resource> downloadAllUserImages(String identifier, Authentication authentication, Boolean deleted) throws IOException {
+    public ResponseEntity<Resource> downloadAllUserImages(
+            String identifier,
+            Authentication authentication,
+            Boolean deleted
+    ) throws IOException {
+
         User target = validateAccess(identifier, authentication, "download");
 
         List<UserImage> images = userImageRepository.findByUser(target);
@@ -243,9 +308,9 @@ public class UserImageService {
 
         List<UserImage> filteredImages = images.stream()
                 .filter(image -> {
-                    if (deleted == null) return true;                              // return all
-                    if (deleted) return Boolean.TRUE.equals(image.getDeleted());   // only deleted
-                    return !Boolean.TRUE.equals(image.getDeleted());               // only active
+                    if (deleted == null) return true;
+                    if (deleted) return Boolean.TRUE.equals(image.getDeleted());
+                    return !Boolean.TRUE.equals(image.getDeleted());
                 })
                 .toList();
 
@@ -259,13 +324,19 @@ public class UserImageService {
                 .resolve(target.getUploadFolder())
                 .normalize();
 
-        // Create temp zip file
         File tempZip = File.createTempFile("user-images-", ".zip");
 
         try {
+
             try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(tempZip))) {
+
                 for (UserImage image : filteredImages) {
+
                     Path filePath = userDir.resolve(image.getFileName()).normalize();
+
+                    if (!filePath.startsWith(userDir)) {
+                        throw new SecurityException("Invalid file path");
+                    }
 
                     if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
                         throw new ImageNotFoundException(
@@ -274,12 +345,13 @@ public class UserImageService {
                     }
 
                     zos.putNextEntry(new ZipEntry(image.getFileName()));
+
                     try (InputStream is = Files.newInputStream(filePath)) {
                         is.transferTo(zos);
                     }
+
                     zos.closeEntry();
 
-                    // Audit retrieval
                     userImageAuditRepository.save(UserImageAudit.builder()
                             .userId(target.getId())
                             .username(target.getUsername())
@@ -300,8 +372,9 @@ public class UserImageService {
                     .header(HttpHeaders.CONTENT_DISPOSITION,
                             "attachment; filename=\"" + target.getUploadFolder() + "-images.zip\"")
                     .body(resource);
+
         } finally {
-            // Cleanup temp file after response is sent
+
             if (tempZip.exists()) {
                 tempZip.delete();
             }
@@ -487,10 +560,15 @@ public class UserImageService {
 
     public ResponseEntity<?> harddeleteUserImage(String identifier, String filename, Authentication authentication) throws IOException {
         User target = validateAccess(identifier, authentication, "delete");
-        Path filePath = fileStorageService.userRoot()
+        Path userDir = fileStorageService.userRoot()
                 .resolve(target.getUploadFolder())
-                .resolve(filename)
                 .normalize();
+
+        Path filePath = userDir.resolve(filename).normalize();
+
+        if (!filePath.startsWith(userDir)) {
+            throw new SecurityException("Invalid file path");
+        }
         if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
             throw new DirectoryNotFoundException("User", target.getUsername(), filePath.toString());
         }
@@ -498,9 +576,6 @@ public class UserImageService {
         Files.delete(filePath);
 
         // If user directory is empty after deletion, remove it
-        Path userDir = fileStorageService.userRoot()
-                .resolve(target.getUploadFolder())
-                .normalize();
         try (var files = Files.list(userDir)) {
             if (!files.findAny().isPresent()) {
                 Files.deleteIfExists(userDir);

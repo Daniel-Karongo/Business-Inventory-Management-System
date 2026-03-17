@@ -18,6 +18,7 @@ import com.IntegrityTechnologies.business_manager.modules.stock.inventory.reposi
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryValuationService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductAuditRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -229,7 +230,10 @@ public class DashboardService {
                         ))
                 );
 
-        userAuditRepository.findTop5ByOrderByTimestampDesc()
+        userAuditRepository.findTop5ByOrderByTimestampDesc(
+                        tenantId(),
+                        PageRequest.of(0,5)
+                )
                 .forEach(a ->
                         out.add(new ActivityDTO(
                                 "USER",
@@ -239,7 +243,10 @@ public class DashboardService {
                         ))
                 );
         productAuditRepository.findAll().stream()
-                .sorted(Comparator.comparing(a -> a.getTimestamp(), Comparator.reverseOrder()))
+                .sorted(Comparator.comparing(
+                a -> a.getTimestamp(),
+                Comparator.nullsLast(Comparator.reverseOrder())
+            ))
                 .limit(5)
                 .forEach(a ->
                         out.add(new ActivityDTO(
@@ -251,7 +258,10 @@ public class DashboardService {
                 );
 
         supplierAuditRepository.findAll().stream()
-                .sorted(Comparator.comparing(a -> a.getTimestamp(), Comparator.reverseOrder()))
+                .sorted(Comparator.comparing(
+                a -> a.getTimestamp(),
+                Comparator.nullsLast(Comparator.reverseOrder())
+            ))
                 .limit(5)
                 .forEach(a ->
                         out.add(new ActivityDTO(
@@ -263,7 +273,10 @@ public class DashboardService {
                 );
 
         branchAuditRepository.findAll().stream()
-                .sorted(Comparator.comparing(a -> a.getTimestamp(), Comparator.reverseOrder()))
+                .sorted(Comparator.comparing(
+                a -> a.getTimestamp(),
+                Comparator.nullsLast(Comparator.reverseOrder())
+            ))
                 .limit(5)
                 .forEach(a ->
                         out.add(new ActivityDTO(
@@ -275,7 +288,10 @@ public class DashboardService {
                 );
 
         departmentAuditRepository.findAll().stream()
-                .sorted(Comparator.comparing(a -> a.getTimestamp(), Comparator.reverseOrder()))
+                .sorted(Comparator.comparing(
+                a -> a.getTimestamp(),
+                Comparator.nullsLast(Comparator.reverseOrder())
+            ))
                 .limit(5)
                 .forEach(a ->
                         out.add(new ActivityDTO(
@@ -286,7 +302,12 @@ public class DashboardService {
                         ))
                 );
 
-        out.sort(Comparator.comparing(ActivityDTO::getTime).reversed());
+        out.sort(
+                Comparator.comparing(
+                        ActivityDTO::getTime,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                )
+        );
         return out.stream().limit(10).toList();
     }
 }

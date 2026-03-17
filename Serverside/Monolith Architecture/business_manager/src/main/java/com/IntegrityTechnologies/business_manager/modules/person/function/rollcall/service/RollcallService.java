@@ -47,7 +47,7 @@ public class RollcallService {
     @Transactional
     public RollcallDTO recordLoginRollcall(UUID userId, UUID departmentId, UUID branchId) {
 
-        User user = userRepository.findByIdAndDeletedFalse(userId)
+        User user = userRepository.findByIdAndTenantIdAndDeletedFalse(userId, TenantContext.getTenantId())
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         Department dept = departmentId == null ? null :
@@ -124,7 +124,7 @@ public class RollcallService {
     @Transactional
     public RollcallDTO recordLogoutRollcall(UUID userId, UUID departmentId, UUID branchId) {
 
-        User user = userRepository.findByIdAndDeletedFalse(userId)
+        User user = userRepository.findByIdAndTenantIdAndDeletedFalse(userId, TenantContext.getTenantId())
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         Department dept = departmentId == null ? null :
@@ -200,7 +200,7 @@ public class RollcallService {
             byte[] rawTemplate
     ) {
 
-        User user = userRepository.findByIdAndDeletedFalse(userId)
+        User user = userRepository.findByIdAndTenantIdAndDeletedFalse(userId, TenantContext.getTenantId())
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         Department dept = departmentRepository.findByTenantIdAndIdAndDeletedFalse(
@@ -270,7 +270,7 @@ public class RollcallService {
 
         List<RollcallDTO> created = new java.util.ArrayList<>();
 
-        List<Department> departments = departmentRepository.findAllActive(
+        List<Department> departments = departmentRepository.findByTenantIdAndDeletedFalse(
                 TenantContext.getTenantId()
         );
         LocalDate today = LocalDate.now();

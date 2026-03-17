@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.user.model;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.TenantAwareEntity;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -13,8 +13,12 @@ import java.util.UUID;
 @Table(
         name = "user_audits",
         indexes = {
-                @Index(name = "idx_user_audit_tenant", columnList = "tenant_id"),
-                @Index(name = "idx_user_audit_user", columnList = "user_id")
+
+                @Index(name = "idx_user_audit_tenant_branch",
+                        columnList = "tenant_id, branch_id"),
+
+                @Index(name = "idx_user_audit_user",
+                        columnList = "user_id")
         }
 )
 @Getter
@@ -22,7 +26,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserAudit extends TenantAwareEntity {
+public class UserAudit extends BranchAwareEntity {
 
     @Id
     @GeneratedValue

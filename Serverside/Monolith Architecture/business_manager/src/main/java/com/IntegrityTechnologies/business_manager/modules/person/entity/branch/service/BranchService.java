@@ -197,14 +197,14 @@ public class BranchService {
 
         } else {
 
-            userBranchRepository.deleteByBranchId(id);
+            userBranchRepository.deleteByBranchId(TenantContext.getTenantId(), id);
 
             departmentRepository.findByTenantIdAndBranch_Id(
                             TenantContext.getTenantId(),
                             id
                     )
                     .forEach(d ->
-                            userDepartmentRepository.deleteByDepartmentId(d.getId()));
+                            userDepartmentRepository.deleteByDepartmentId(TenantContext.getTenantId(), d.getId()));
 
             branchRepository.delete(branch);
 
@@ -306,7 +306,7 @@ public class BranchService {
 
         if (userIds == null) return;
 
-        userBranchRepository.deleteByBranchId(branch.getId());
+        userBranchRepository.deleteByBranchId(TenantContext.getTenantId(), branch.getId());
 
         assignUsers(branch, userIds);
     }
@@ -351,7 +351,7 @@ public class BranchService {
     private BranchDTO toDTO(Branch branch) {
 
         Set<MinimalUserDTO> users =
-                userBranchRepository.findByBranchId(branch.getId())
+                userBranchRepository.findByBranchId(TenantContext.getTenantId(), branch.getId())
                         .stream()
                         .map(ub -> MinimalUserDTO.from(ub.getUser()))
                         .collect(Collectors.toSet());

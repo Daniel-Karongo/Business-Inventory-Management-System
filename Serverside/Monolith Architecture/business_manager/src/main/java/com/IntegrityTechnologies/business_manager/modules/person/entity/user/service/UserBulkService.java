@@ -193,7 +193,7 @@ public class UserBulkService {
                         .departmentsAndPositions(assignments) // still used on real import
                         .build();
 
-                if (request.getOptions().isDryRun()) {
+                if (options.isDryRun()) {
                     // 🧪 Dry run → simulate success
                     result.addSuccess(dto);
                 } else {

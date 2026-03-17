@@ -17,33 +17,71 @@ public interface UserDepartmentRepository
 
     boolean existsByUser_IdAndDepartment_Id(UUID userId, UUID departmentId);
 
+    /* ================= DELETE ================= */
+
     @Modifying
-    @Query("delete from UserDepartment ud where ud.user.id = :userId")
-    void deleteByUserId(UUID userId);
+    @Query("""
+        DELETE FROM UserDepartment ud
+        WHERE ud.user.id = :userId
+          AND ud.user.tenantId = :tenantId
+    """)
+    void deleteByUserId(
+            @Param("tenantId") UUID tenantId,
+            @Param("userId") UUID userId
+    );
 
-    List<UserDepartment> findByUserId(UUID userId);
-
-    List<UserDepartment> findByDepartmentId(UUID departmentId);
+    /* ================= TENANT SAFE ================= */
 
     @Query("""
         SELECT ud
         FROM UserDepartment ud
-        JOIN FETCH ud.user
+        WHERE ud.user.id = :userId
+          AND ud.user.tenantId = :tenantId
+    """)
+    List<UserDepartment> findByUserId(
+            @Param("tenantId") UUID tenantId,
+            @Param("userId") UUID userId
+    );
+
+    @Query("""
+        SELECT ud
+        FROM UserDepartment ud
         WHERE ud.department.id = :departmentId
           AND ud.department.tenantId = :tenantId
     """)
+    List<UserDepartment> findByDepartmentId(
+            @Param("tenantId") UUID tenantId,
+            @Param("departmentId") UUID departmentId
+    );
+
+    /* ================= FETCH ================= */
+
+    @Query("""
+    SELECT ud
+    FROM UserDepartment ud
+    JOIN FETCH ud.user u
+    WHERE ud.department.id = :departmentId
+      AND ud.department.tenantId = :tenantId
+""")
     List<UserDepartment> findByDepartmentIdWithUser(
             @Param("tenantId") UUID tenantId,
             @Param("departmentId") UUID departmentId
     );
 
     @Query("""
-        SELECT ud FROM UserDepartment ud
+        SELECT ud
+        FROM UserDepartment ud
         JOIN FETCH ud.department d
         JOIN FETCH d.branch
         WHERE ud.user.id = :userId
+          AND d.tenantId = :tenantId
     """)
-    List<UserDepartment> findByUserIdWithDepartmentAndBranch(UUID userId);
+    List<UserDepartment> findByUserIdWithDepartmentAndBranch(
+            @Param("tenantId") UUID tenantId,
+            @Param("userId") UUID userId
+    );
+
+    /* ================= PAGINATION ================= */
 
     @Query("""
         SELECT ud
@@ -57,7 +95,16 @@ public interface UserDepartmentRepository
             Pageable pageable
     );
 
+    /* ================= DELETE ================= */
+
     @Modifying
-    @Query("DELETE FROM UserDepartment ud WHERE ud.department.id = :departmentId")
-    void deleteByDepartmentId(UUID departmentId);
+    @Query("""
+        DELETE FROM UserDepartment ud
+        WHERE ud.department.id = :departmentId
+          AND ud.department.tenantId = :tenantId
+    """)
+    void deleteByDepartmentId(
+            @Param("tenantId") UUID tenantId,
+            @Param("departmentId") UUID departmentId
+    );
 }

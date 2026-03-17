@@ -13,6 +13,8 @@ import com.IntegrityTechnologies.business_manager.modules.platform.security.anno
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -111,25 +113,30 @@ public class UserController {
     }
 
     @GetMapping("/all")
-    public ResponseEntity<List<UserDTO>> getAllUsers(
-            @RequestParam(required = false) Boolean deleted
+    public ResponseEntity<Page<UserDTO>> getUsers(
+            @RequestParam(required = false) Boolean deleted,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) UUID branch,
+            @RequestParam(required = false) UUID department,
+            @RequestParam(required = false) String q,
+            Pageable pageable
     ) {
-
         return ResponseEntity.ok(
-                userService.getAllUsers(deleted)
+                userService.getUsersFiltered(deleted, role, branch, department, q, pageable)
         );
     }
 
-    @GetMapping("/role/{role}/active")
-    public ResponseEntity<List<UserDTO>> getUsersByRole(
+    @GetMapping("/role/{role}")
+    public ResponseEntity<Page<UserDTO>> getUsersByRole(
             @PathVariable String role,
-            @RequestParam Boolean deleted
+            @RequestParam(required = false) Boolean deleted,
+            Pageable pageable
     ) {
 
         Role parsedRole = Role.valueOf(role.toUpperCase());
 
         return ResponseEntity.ok(
-                userService.getUsersByRole(parsedRole, deleted)
+                userService.getUsersByRole(parsedRole, deleted, pageable)
         );
     }
 
@@ -324,16 +331,16 @@ public class UserController {
 
     @PlatformAdminOnly
     @GetMapping("/audits/{identifier}/target")
-    public ResponseEntity<List<UserAudit>> getUserAuditsTarget(
-            @PathVariable String identifier
+    public ResponseEntity<Page<UserAudit>> getUserAuditsTarget(
+            @PathVariable String identifier,
+            Pageable pageable
     ) {
 
         User user = userService.getUserByIdentifierForAudits(identifier);
 
         return ResponseEntity.ok(
-                userService.getUserAuditsTarget(user.getId())
+                userService.getUserAuditsTarget(user.getId(), pageable)
         );
-
     }
 
     @PlatformAdminOnly

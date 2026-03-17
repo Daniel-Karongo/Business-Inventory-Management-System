@@ -76,7 +76,7 @@ public class SystemInitializationService {
         ===================================== */
 
         Tenant tenant = tenantRepository
-                .findByCode("default")
+                .findByCodeIgnoreCase("default")
                 .orElseGet(() -> {
 
                     log.warn("⚠️ No tenants found. Creating default tenant.");

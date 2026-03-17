@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.security.auth.controller;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.auth.config.PasswordResetProperties;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.ForceResetRequest;
 import com.IntegrityTechnologies.business_manager.security.auth.model.PasswordResetToken;
@@ -70,7 +71,7 @@ public class PasswordResetController {
                     // For platform users we log OTP only
                     log.warn("Platform reset OTP for {} : {}", platformUser.getUsername(), token.getTokenHash());
                 });
-        userRepository.findByIdentifier(identifier).ifPresent(user -> {
+        userRepository.findByIdentifier(identifier, TenantContext.getTenantId()).ifPresent(user -> {
 
             switch (selectedChannel) {
 

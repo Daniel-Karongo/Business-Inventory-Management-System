@@ -46,14 +46,18 @@ public class DepartmentService {
     private final DepartmentMapper departmentMapper;
     private final UserDepartmentRepository userDepartmentRepository;
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+    
     @Transactional
     public DepartmentDTO create(DepartmentDTO dto, Authentication authentication) {
 
-        UUID tenantId = TenantContext.getTenantId();
+        
         branchTenantGuard.validate(dto.getBranchId());
 
         if (departmentRepository.existsByTenantIdAndNameIgnoreCaseAndBranch_Id(
-                tenantId,
+                tenantId(),
                 dto.getName(),
                 dto.getBranchId()
         )) {
@@ -63,7 +67,7 @@ public class DepartmentService {
         }
 
         Branch branch = branchRepository
-                .findByTenantIdAndId(tenantId, dto.getBranchId())
+                .findByTenantIdAndId(tenantId(), dto.getBranchId())
                 .orElseThrow(() -> new IllegalArgumentException("Branch not found"));
 
         Department department = Department.builder()
@@ -95,11 +99,11 @@ public class DepartmentService {
 
         for (UUID userId : userIds) {
 
-            UUID tenantId = TenantContext.getTenantId();
+            
 
             User user = userRepository
-                    .findByIdAndDeletedFalse(userId)
-                    .filter(u -> u.getTenantId().equals(tenantId))
+                    .findByIdAndTenantIdAndDeletedFalse(userId, tenantId())
+                    .filter(u -> u.getTenantId().equals(tenantId()))
                     .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
             UserDepartment relation = UserDepartment.builder()
@@ -120,12 +124,12 @@ public class DepartmentService {
 
         Department department = getById(departmentId);
 
-        UUID tenantId = TenantContext.getTenantId();
+        
         branchTenantGuard.validate(department.getBranch().getId());
 
         if (!department.getName().equalsIgnoreCase(dto.getName()) &&
                 departmentRepository.existsByTenantIdAndNameIgnoreCaseAndBranch_Id(
-                        tenantId,
+                        tenantId(),
                         dto.getName(),
                         department.getBranch().getId()
                 )) {
@@ -145,7 +149,7 @@ public class DepartmentService {
         departmentRepository.save(department);
 
         // 🔹 Remove old user relations
-        userDepartmentRepository.deleteByDepartmentId(department.getId());
+        userDepartmentRepository.deleteByDepartmentId(tenantId(), department.getId());
 
         // 🔹 Reassign users
         assignUsersToDepartment(dto.getHeadIds(), department, DepartmentMembershipRole.HEAD);
@@ -180,7 +184,7 @@ public class DepartmentService {
 
         departmentRepository.save(existing);
 
-        userDepartmentRepository.deleteByDepartmentId(existing.getId());
+        userDepartmentRepository.deleteByDepartmentId(tenantId(), existing.getId());
 
         assignUsersToDepartment(dto.getHeadIds(), existing, DepartmentMembershipRole.HEAD);
         assignUsersToDepartment(dto.getMemberIds(), existing, DepartmentMembershipRole.MEMBER);
@@ -201,10 +205,10 @@ public class DepartmentService {
 
     public List<DepartmentMinimalDTO> getAllDepartmentsForUser(UUID userId) {
 
-        UUID tenantId = TenantContext.getTenantId();
+        
 
         Set<Department> departments =
-                departmentRepository.findDepartmentsByUserId(tenantId, userId);
+                departmentRepository.findDepartmentsByUserId(tenantId(), userId);
 
         return departments.stream()
                 .map(DepartmentMinimalDTO::from)
@@ -213,26 +217,26 @@ public class DepartmentService {
 
     public Department getById(UUID id) {
 
-        UUID tenantId = TenantContext.getTenantId();
+        
 
         return departmentRepository
-                .findByTenantIdAndId(tenantId, id)
+                .findByTenantIdAndId(tenantId(), id)
                 .orElseThrow(() -> new EntityNotFoundException("Department not found"));
     }
 
     // --- Get all active departments ---
     public List<DepartmentDTO> getAllDepartments(Boolean deleted) {
 
-        UUID tenantId = TenantContext.getTenantId();
+        
 
         List<Department> departments;
 
         if (deleted == null) {
-            departments = departmentRepository.findByTenantIdAndDeletedFalse(tenantId);
+            departments = departmentRepository.findByTenantIdAndDeletedFalse(tenantId());
         } else if (deleted) {
-            departments = departmentRepository.findByTenantIdAndDeletedTrue(tenantId);
+            departments = departmentRepository.findByTenantIdAndDeletedTrue(tenantId());
         } else {
-            departments = departmentRepository.findByTenantIdAndDeletedFalse(tenantId);
+            departments = departmentRepository.findByTenantIdAndDeletedFalse(tenantId());
         }
 
         return departments.stream()
@@ -242,30 +246,30 @@ public class DepartmentService {
 
     public List<DepartmentAudit> getAllDepartmentsAudits() {
 
-        UUID tenantId = TenantContext.getTenantId();
+        
         UUID branchId = BranchContext.getOrNull();
 
         if (branchId != null) {
             return departmentAuditRepository
                     .findByTenantIdAndBranchIdOrderByTimestampDesc(
-                            tenantId,
+                            tenantId(),
                             branchId
                     );
         }
 
         return departmentAuditRepository
-                .findByTenantIdOrderByTimestampDesc(tenantId);
+                .findByTenantIdOrderByTimestampDesc(tenantId());
     }
 
     public List<DepartmentAudit> getDepartmentAudits(UUID departmentId) {
 
-        UUID tenantId = TenantContext.getTenantId();
+        
         UUID branchId = BranchContext.getOrNull();
 
         if (branchId != null) {
             return departmentAuditRepository
                     .findByTenantIdAndBranchIdAndDepartmentIdOrderByTimestampDesc(
-                            tenantId,
+                            tenantId(),
                             branchId,
                             departmentId
                     );
@@ -273,20 +277,20 @@ public class DepartmentService {
 
         return departmentAuditRepository
                 .findByTenantIdAndDepartmentIdOrderByTimestampDesc(
-                        tenantId,
+                        tenantId(),
                         departmentId
                 );
     }
 
     public List<DepartmentAudit> getDepartmentAuditsByPerformer(UUID userId) {
 
-        UUID tenantId = TenantContext.getTenantId();
+        
         UUID branchId = BranchContext.getOrNull();
 
         if (branchId != null) {
             return departmentAuditRepository
                     .findByTenantIdAndBranchIdAndPerformedByIdOrderByTimestampDesc(
-                            tenantId,
+                            tenantId(),
                             branchId,
                             userId
                     );
@@ -294,7 +298,7 @@ public class DepartmentService {
 
         return departmentAuditRepository
                 .findByTenantIdAndPerformedByIdOrderByTimestampDesc(
-                        tenantId,
+                        tenantId(),
                         userId
                 );
     }
@@ -303,12 +307,12 @@ public class DepartmentService {
     @Transactional
     public void deleteDepartment(UUID departmentId, Boolean soft, Authentication authentication) {
 
-        UUID tenantId = TenantContext.getTenantId();
+        
 
         if (Boolean.TRUE.equals(soft)) {
 
             Department d = departmentRepository
-                    .findByTenantIdAndIdAndDeletedFalse(tenantId, departmentId)
+                    .findByTenantIdAndIdAndDeletedFalse(tenantId(), departmentId)
                     .orElseThrow(() -> new EntityNotFoundException("Department not found"));
 
             branchTenantGuard.validate(d.getBranch().getId());
@@ -322,12 +326,12 @@ public class DepartmentService {
         } else {
 
             Department d = departmentRepository
-                    .findByTenantIdAndId(tenantId, departmentId)
+                    .findByTenantIdAndId(tenantId(), departmentId)
                     .orElseThrow(() -> new EntityNotFoundException("Department not found"));
 
             branchTenantGuard.validate(d.getBranch().getId());
 
-            userDepartmentRepository.deleteByDepartmentId(departmentId);
+            userDepartmentRepository.deleteByDepartmentId(tenantId(), departmentId);
 
             departmentRepository.delete(d);
 
@@ -338,10 +342,10 @@ public class DepartmentService {
     @Transactional
     public void restoreDepartment(UUID departmentId, Authentication authentication) {
 
-        UUID tenantId = TenantContext.getTenantId();
+        
 
         Department d = departmentRepository
-                .findByTenantIdAndIdAndDeletedTrue(tenantId, departmentId)
+                .findByTenantIdAndIdAndDeletedTrue(tenantId(), departmentId)
                 .orElseThrow(() -> new EntityNotFoundException("No such deleted department found"));
         branchTenantGuard.validate(d.getBranch().getId());
 

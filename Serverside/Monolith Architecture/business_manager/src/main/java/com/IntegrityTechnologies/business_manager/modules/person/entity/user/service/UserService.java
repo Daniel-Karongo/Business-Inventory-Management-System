@@ -13,13 +13,11 @@ import com.IntegrityTechnologies.business_manager.exception.UserNotFoundExceptio
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.dto.BranchHierarchyDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.service.BranchService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentAssignmentDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentPositionDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.DepartmentMembershipRole;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.department.service.DepartmentService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.UserDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.*;
@@ -27,8 +25,13 @@ import com.IntegrityTechnologies.business_manager.modules.platform.subscription.
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.Hibernate;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -62,8 +65,13 @@ public class UserService {
     private final UserBranchRepository userBranchRepository;
     private final SubscriptionGuard subscriptionGuard;
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+
     /* ====================== REGISTER USER ====================== */
     @Transactional
+    @CacheEvict(value = "users", allEntries = true)
     public UserDTO registerUser(UserDTO dto, Authentication authentication) throws IOException {
         subscriptionGuard.checkUserLimit();
 
@@ -95,7 +103,10 @@ public class UserService {
             throw new InvalidUserDataException("ID number already in use");
 
         // 2️⃣ Resolve creator
-        User creator = userRepository.findByUsername(creatorUsername).orElse(null);
+
+        User creator = creatorUsername != null
+                ? userRepository.findByUsernameAndTenantId(creatorUsername, tenantId()).orElse(null)
+                : null;
         Role newUserRole = Role.valueOf(dto.getRole().trim().toUpperCase());
 
         if (creator != null) {
@@ -124,10 +135,22 @@ public class UserService {
                 .role(Role.valueOf(dto.getRole().trim().toUpperCase()))
                 .deleted(false)
                 .uploadFolder(uploadFolder)
-                .createdBy(creator != null ? creator.getId() : null)
                 .build();
 
-        user = userRepository.save(user);
+        try {
+            user = userRepository.save(user);
+        } catch (DataIntegrityViolationException ex) {
+
+            if (ex.getMessage().contains("uq_user_email_per_tenant")) {
+                throw new InvalidUserDataException("Email already exists");
+            }
+
+            if (ex.getMessage().contains("uq_user_phone_per_tenant")) {
+                throw new InvalidUserDataException("Phone number already exists");
+            }
+
+            throw ex;
+        }
 
         boolean assignedDefaults = applyDefaultBranchAndDepartmentIfMissing(dto, user);
 
@@ -159,7 +182,9 @@ public class UserService {
                 .timestamp(LocalDateTime.now())
                 .build());
 
-        return mapToDTO(user, false);
+        Hibernate.initialize(user.getEmailAddresses());
+        Hibernate.initialize(user.getPhoneNumbers());
+        return mapToDTO(user);
     }
 
 
@@ -167,18 +192,18 @@ public class UserService {
     @Transactional
     @CacheEvict(
         value = "users",
-        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#identifier)")
+        allEntries = true)
     public UserDTO updateUser(String identifier, UserDTO updatedData, Authentication authentication) throws IOException {
         String updaterUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails)
                 ? userDetails.getUsername()
                 : null;
 
         // 1️⃣ Lookup target user
-        User user = userRepository.findByIdentifier(identifier)
+        User user = userRepository.findByIdentifier(identifier, tenantId())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         // 2️⃣ Lookup updater
-        User updater = userRepository.findByIdentifier(updaterUsername)
+        User updater = userRepository.findByIdentifier(updaterUsername, tenantId())
                 .orElseThrow(() -> new UserNotFoundException("Updater not found"));
 
         // 3️⃣ Validate access using centralized method
@@ -258,10 +283,15 @@ public class UserService {
 
         auditChanges(user, changes, updaterUsername);
 
-        return mapToDTO(user, false);
+        Hibernate.initialize(user.getEmailAddresses());
+        Hibernate.initialize(user.getPhoneNumbers());
+        return mapToDTO(user);
     }
 
     @Transactional
+    @CacheEvict(
+            value = "users",
+            allEntries = true)
     public ResponseEntity<?> updateUserImages(
             String identifier,
             List<FIleUploadDTO> newFiles,
@@ -290,13 +320,14 @@ public class UserService {
         }
 
         userRepository.save(target);
-
-        return ResponseEntity.ok(mapToDTO(target, false));
+        Hibernate.initialize(target.getEmailAddresses());
+        Hibernate.initialize(target.getPhoneNumbers());
+        return ResponseEntity.ok(mapToDTO(target));
     }
 
     /* ====================== IMAGE & USER ACCESS VALIDATION ====================== */
     private User validateAccess(String identifier, Authentication auth, String action) {
-        User target = userRepository.findByIdentifier(identifier)
+        User target = userRepository.findByIdentifier(identifier, tenantId())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         User requester = privilegesChecker.getAuthenticatedUser(auth);
@@ -307,8 +338,13 @@ public class UserService {
     }
 
     private boolean hasManagerialRole(String username) {
-        return userRepository.findByUsername(username)
-                .map(user -> user.getRole() == Role.SUPERUSER ||user.getRole() == Role.ADMIN || user.getRole() == Role.MANAGER)
+        return userRepository
+                .findByUsernameAndTenantId(username, tenantId())
+                .map(user ->
+                        user.getRole() == Role.SUPERUSER ||
+                                user.getRole() == Role.ADMIN ||
+                                user.getRole() == Role.MANAGER
+                )
                 .orElse(false);
     }
 
@@ -318,85 +354,150 @@ public class UserService {
             value = "users",
             key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#identifier)"
     )
-    public UserDTO getUser(String identifier, Boolean deleted)  {
+    @Transactional(readOnly = true)
+    public UserDTO getUser(String identifier, Boolean deleted) {
+
         User user;
 
-        if(Boolean.FALSE.equals(deleted)) {
-             user = userRepository.findByIdentifier(identifier)
+        if (Boolean.TRUE.equals(deleted)) {
+
+            user = userRepository
+                    .findDeletedByIdentifier(identifier, tenantId())
                     .orElseThrow(() -> new UserNotFoundException("User not found: " + identifier));
-            return mapToDTO(user, false);
+
+        } else if (Boolean.FALSE.equals(deleted)) {
+
+            user = userRepository
+                    .findByIdentifier(identifier, tenantId())
+                    .orElseThrow(() -> new UserNotFoundException("User not found: " + identifier));
+
         } else {
-            user = userRepository.findByIdentifierForAudits(identifier)
+
+            user = userRepository
+                    .findByIdentifierIncludingDeleted(identifier, tenantId())
                     .orElseThrow(() -> new UserNotFoundException("User not found: " + identifier));
-            return mapToDTO(user, null);
+
         }
 
+        Hibernate.initialize(user.getEmailAddresses());
+        Hibernate.initialize(user.getPhoneNumbers());
+        return mapToDTO(user);
     }
 
     @Cacheable(
             value = "users",
-            key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).allUsers(#deleted)"
+            key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey)"
+                    + ".allUsers(#deleted, #pageable.pageNumber, #pageable.pageSize)"
     )
-    public List<UserDTO> getAllUsers(Boolean deleted) {
-        List<User> users = new ArrayList<>();
-        if(Boolean.FALSE.equals(deleted)) {
-            users = userRepository.findByDeletedFalse();
-            return users.stream()
-                    .map(user -> mapToDTO(user, false)) // false = only active images
-                    .toList();
-        } else if(Boolean.TRUE.equals(deleted)) {
-            users = userRepository.findByDeletedTrue();
-            return users.stream()
-                    .map(user -> mapToDTO(user, false))
-                    .toList();
-        } else {
-            users = userRepository.findAll();
-            return users.stream()
-                    .map(user -> mapToDTO(user, null))
-                    .toList();
+    @Transactional(readOnly = true)
+    public Page<UserDTO> getUsersFiltered(
+            Boolean deleted,
+            String role,
+            UUID branchId,
+            UUID departmentId,
+            String q,
+            Pageable pageable
+    ) {
+        Role parsedRole = role != null ? Role.valueOf(role.toUpperCase()) : null;
+        Page<UUID> pageIds = userRepository.searchUserIds(
+                tenantId(),
+                deleted,
+                parsedRole,
+                branchId,
+                departmentId,
+                q,
+                pageable
+        );
+
+        List<User> users = pageIds.isEmpty()
+                ? List.of()
+                : userRepository.findUsersWithDepartments(pageIds.getContent());
+
+        // 🔥 preserve order
+        Map<UUID, Integer> orderMap = new HashMap<>();
+        for (int i = 0; i < pageIds.getContent().size(); i++) {
+            orderMap.put(pageIds.getContent().get(i), i);
         }
+
+        users.sort(Comparator.comparingInt(u -> orderMap.get(u.getId())));
+
+        return new PageImpl<>(
+                users.stream().map(user -> {
+                    Hibernate.initialize(user.getEmailAddresses());
+                    Hibernate.initialize(user.getPhoneNumbers());
+                    return mapToDTO(user);
+                }).toList(),
+                pageable,
+                pageIds.getTotalElements()
+        );
     }
 
-    public List<UserDTO> getUsersByRole(Role requestedRole, Boolean deleted) {
-        try {
-            Role currentUserRole = privilegesChecker.getCurrentUserRole();
-            if (!currentUserRole.canAccess(requestedRole)) {
-                throw new UnauthorizedAccessException("You cannot access users of this role.");
-            }
-            List<User> users = new ArrayList<>();
-            if(Boolean.FALSE.equals(deleted))
-                users = userRepository.findActiveUsersByRole(requestedRole);
-            else if(Boolean.TRUE.equals(deleted))
-                users = userRepository.findDeletedUsersByRole(requestedRole);
-            else
-                users = userRepository.findAllUsersByRole(requestedRole);
+    @Transactional(readOnly = true)
+    public Page<UserDTO> getUsersByRole(
+            Role requestedRole,
+            Boolean deleted,
+            Pageable pageable
+    ) {
 
-            List<UserDTO> dtos = users.stream()
-                    .map(user -> mapToDTO(user, false))
-                    .toList();
-            return dtos;
-        } catch (IllegalArgumentException e) {
-            throw new InvalidUserDataException("Invalid role: " + requestedRole.name());
+        Role currentUserRole = privilegesChecker.getCurrentUserRole();
+
+        if (!currentUserRole.canAccess(requestedRole)) {
+            throw new UnauthorizedAccessException("You cannot access users of this role.");
         }
+
+        Page<User> users;
+
+        if (Boolean.TRUE.equals(deleted)) {
+
+            users = userRepository.findDeletedUsersByRole(
+                    tenantId(),
+                    requestedRole,
+                    pageable
+            );
+
+        } else if (Boolean.FALSE.equals(deleted)) {
+
+            users = userRepository.findActiveUsersByRole(
+                    tenantId(),
+                    requestedRole,
+                    pageable
+            );
+
+        } else {
+
+            users = userRepository.findUsersByRole(
+                    tenantId(),
+                    requestedRole,
+                    pageable
+            );
+        }
+
+        return users.map(user -> {
+            Hibernate.initialize(user.getEmailAddresses());
+            Hibernate.initialize(user.getPhoneNumbers());
+            return mapToDTO(user);
+        });
     }
 
     public User getUserByIdentifierForAudits(String identifier) {
-        return userRepository.findByIdentifierForAudits(identifier)
+        return userRepository.findByIdentifierForAudits(identifier, tenantId())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
     }
 
-    public List<UserAudit> getUserAuditsTarget(UUID userId) {
-        return userAuditRepository.findByUserIdOrderByTimestampDesc(userId);
+    public Page<UserAudit> getUserAuditsTarget(UUID userId, Pageable pageable) {
+        return userAuditRepository
+                .findByUserIdOrderByTimestampDesc(tenantId(), userId, pageable);
     }
+
     public List<UserAudit> getUserAuditsPerpetrated(UUID userId) {
-        return userAuditRepository.findByPerformedByIdOrderByTimestampDesc(userId);
+        return userAuditRepository.findByPerformedByIdOrderByTimestampDesc(tenantId(), userId);
     }
 
     public List<UserImageAudit> getUserImageAuditsTarget(UUID userId) {
-        return userImageAuditRepository.findByUserIdOrderByTimestampDesc(userId);
+        return userImageAuditRepository.findByUserIdOrderByTimestampDesc(tenantId(), userId);
     }
     public List<UserImageAudit> getUserImageAuditsPerpetrated(UUID userId) {
-        return userImageAuditRepository.findByPerformedByIdOrderByTimestampDesc(userId);
+        return userImageAuditRepository.findByPerformedByIdOrderByTimestampDesc(tenantId(), userId);
     }
 
 
@@ -406,9 +507,10 @@ public class UserService {
     @Transactional
     @CacheEvict(
         value = "users",
-        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#identifier)")
+        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#id)")
     public ResponseEntity<ApiResponse> softDeleteUser(UUID id, Authentication authentication, String reason) {
-        User user = userRepository.findById(id)
+        User user = userRepository
+                .findByIdAndTenantId(id, tenantId())
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
 
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
@@ -426,14 +528,15 @@ public class UserService {
     @Transactional
     @CacheEvict(
         value = "users",
-        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#identifier)")
+        allEntries = true
+    )
     public ResponseEntity<ApiResponse> softDeleteUsersInBulk(List<UUID> userIds, String reason, Authentication authentication) {
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
         String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
 
         List<Map<String, Object>> modifiedUsers = new ArrayList<>();
         for (UUID id : userIds) {
-            User user = userRepository.findById(id)
+            User user = userRepository.findByIdAndTenantId(id, tenantId())
                     .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
             modifiedUsers.add(softDeleteUserInternal(user, performedById, performedByUsername, reason));
         }
@@ -489,9 +592,9 @@ public class UserService {
     @Transactional
     @CacheEvict(
         value = "users",
-        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#identifier)")
+        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#id)")
     public ResponseEntity<ApiResponse> restoreUser(UUID id, Authentication authentication, String reason) throws IOException {
-        User user = userRepository.findById(id)
+        User user = userRepository.findByIdAndTenantId(id, tenantId())
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
 
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
@@ -509,14 +612,15 @@ public class UserService {
     @Transactional
     @CacheEvict(
         value = "users",
-        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#identifier)")
+        allEntries = true
+    )
     public ResponseEntity<ApiResponse> restoreUsersInBulk(List<UUID> userIds, String reason, Authentication authentication) throws IOException {
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
         String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
 
         List<Map<String, Object>> restoredUsers = new ArrayList<>();
         for (UUID id : userIds) {
-            User user = userRepository.findById(id)
+            User user = userRepository.findByIdAndTenantId(id, tenantId())
                     .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
             restoredUsers.add(restoreUserInternal(user, performedById, performedByUsername, reason));
         }
@@ -572,9 +676,9 @@ public class UserService {
     @Transactional
     @CacheEvict(
         value = "users",
-        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#identifier)")
+        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#id)")
     public ResponseEntity<ApiResponse> hardDeleteUser(UUID id, Authentication authentication) throws IOException {
-        User user = userRepository.findById(id)
+        User user = userRepository.findByIdAndTenantId(id, tenantId())
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
 
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
@@ -592,14 +696,15 @@ public class UserService {
     @Transactional
     @CacheEvict(
         value = "users",
-        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#identifier)")
+        allEntries = true
+    )
     public ResponseEntity<ApiResponse> hardDeleteUsersInBulk(List<UUID> userIds, Authentication authentication) throws IOException {
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
         String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
 
         List<Map<String, Object>> deletedUsers = new ArrayList<>();
         for (UUID id : userIds) {
-            User user = userRepository.findById(id)
+            User user = userRepository.findByIdAndTenantId(id, tenantId())
                     .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
             deletedUsers.add(hardDeleteUserInternal(user, performedById, performedByUsername));
         }
@@ -648,9 +753,13 @@ public class UserService {
                 .normalize();
 
         // Delete the user
-        userDepartmentRepository.deleteByUserId(user.getId());
-        userBranchRepository.deleteByUserId(user.getId());
+        userDepartmentRepository.deleteByUserId(tenantId(), user.getId());
+        userBranchRepository.deleteByUserId(tenantId(), user.getId());
         userRepository.delete(user);
+
+        if (!userDir.startsWith(fileStorageService.userRoot())) {
+            throw new SecurityException("Invalid directory path");
+        }
 
         userImageService.deleteUserUploadDirectory(userDir);
 
@@ -742,7 +851,7 @@ public class UserService {
     private void checkEmailUniqueness(List<String> emails, UUID currentUserId, List<String> oldEmails) {
         for (String email : emails) {
             if (!oldEmails.contains(email)) {
-                userRepository.findByEmailElementIgnoreCase(email)
+                userRepository.findByEmailElementIgnoreCase(email, tenantId())
                         .filter(u -> !u.getId().equals(currentUserId))
                         .ifPresent(u -> { throw new InvalidUserDataException("Email already in use: " + email); });
             }
@@ -763,7 +872,7 @@ public class UserService {
     private void checkPhoneUniqueness(List<String> phones, UUID currentUserId, List<String> oldPhones) {
         for (String phone : phones) {
             if (!oldPhones.contains(phone)) {
-                userRepository.findByPhoneNumberElement(phone)
+                userRepository.findByPhoneNumberElement(phone, tenantId())
                         .filter(u -> !u.getId().equals(currentUserId))
                         .ifPresent(u -> { throw new InvalidUserDataException("Phone number already in use: " + phone); });
             }
@@ -789,47 +898,69 @@ public class UserService {
             return false;
         }
 
-        Branch main = branchRepository.findByTenantIdAndBranchCodeIgnoreCase(
-                        TenantContext.getTenantId(),
+        Branch main = branchRepository
+                .findByTenantIdAndBranchCodeIgnoreCase(
+                        tenantId(),
                         "MAIN"
                 )
                 .orElseThrow(() -> new RuntimeException("Default MAIN branch missing"));
 
-        Department general = departmentRepository.findByTenantIdAndNameIgnoreCaseAndBranch_Id(
-                        TenantContext.getTenantId(),
+        Department general = departmentRepository
+                .findByTenantIdAndNameIgnoreCaseAndBranch_Id(
+                        tenantId(),
                         "GENERAL",
                         main.getId()
                 )
                 .orElseThrow(() -> new RuntimeException("Default GENERAL department missing"));
 
-        // 🔹 Ensure GENERAL belongs to MAIN
         if (!general.getBranch().getId().equals(main.getId())) {
             throw new IllegalStateException("GENERAL department must belong to MAIN branch");
         }
 
-        // 🔹 Create branch link
-        userBranchRepository.save(
-                UserBranch.builder()
-                        .id(new UserBranchId(user.getId(), main.getId()))
-                        .user(user)
-                        .branch(main)
-                        .primaryBranch(true)
-                        .build()
-        );
+        /* ---------- enforce single primary branch ---------- */
 
-        // 🔹 Create department link
-        userDepartmentRepository.save(
-                UserDepartment.builder()
-                        .id(new UserDepartmentId(user.getId(), general.getId()))
-                        .user(user)
-                        .department(general)
-                        .role(DepartmentMembershipRole.MEMBER)
-                        .primaryDepartment(true)
-                        .build()
-        );
+        userBranchRepository.findByUserId(tenantId(), user.getId())
+                .forEach(rel -> rel.setPrimaryBranch(false));
 
-        log.info("User '{}' automatically assigned to MAIN → GENERAL",
-                user.getUsername());
+        /* ---------- branch relation ---------- */
+
+        if (!userBranchRepository.existsByUser_IdAndBranch_Id(user.getId(), main.getId())) {
+
+            userBranchRepository.save(
+                    UserBranch.builder()
+                            .id(new UserBranchId(user.getId(), main.getId()))
+                            .user(user)
+                            .branch(main)
+                            .primaryBranch(true)
+                            .build()
+            );
+        }
+
+        /* ---------- enforce single primary department ---------- */
+
+        userDepartmentRepository.findByUserId(tenantId(), user.getId())
+                .forEach(rel -> rel.setPrimaryDepartment(false));
+
+        /* ---------- department relation ---------- */
+
+        if (!userDepartmentRepository
+                .existsByUser_IdAndDepartment_Id(user.getId(), general.getId())) {
+
+            userDepartmentRepository.save(
+                    UserDepartment.builder()
+                            .id(new UserDepartmentId(user.getId(), general.getId()))
+                            .user(user)
+                            .department(general)
+                            .role(DepartmentMembershipRole.MEMBER)
+                            .primaryDepartment(true)
+                            .build()
+            );
+        }
+
+        log.info(
+                "User '{}' automatically assigned to MAIN → GENERAL",
+                user.getUsername()
+        );
 
         return true;
     }
@@ -850,13 +981,18 @@ public class UserService {
             UUID branchId = assignment.getBranchId();
             UUID departmentId = assignment.getDepartmentId();
 
-            Department department = departmentRepository
-                    .findByTenantIdAndIdAndDeletedFalse(TenantContext.getTenantId(), departmentId)
-                    .orElseThrow(() -> new EntityNotFoundException("Department not found"));
+            Department department =
+                    departmentRepository
+                            .findByTenantIdAndIdAndDeletedFalse(
+                                    tenantId(),
+                                    departmentId
+                            )
+                            .orElseThrow(() -> new EntityNotFoundException("Department not found"));
 
             if (!department.getBranch().getId().equals(branchId)) {
                 throw new IllegalArgumentException(
-                        "Department does not belong to selected branch");
+                        "Department does not belong to selected branch"
+                );
             }
 
             DepartmentMembershipRole role =
@@ -864,25 +1000,36 @@ public class UserService {
                             ? DepartmentMembershipRole.HEAD
                             : DepartmentMembershipRole.MEMBER;
 
-            UserDepartment relation = UserDepartment.builder()
-                    .id(new UserDepartmentId(user.getId(), department.getId()))
-                    .user(user)
-                    .department(department)
-                    .role(role)
-                    .primaryDepartment(false)
-                    .build();
+            /* ---------- department relation ---------- */
 
-            userDepartmentRepository.save(relation);
+            if (!userDepartmentRepository
+                    .existsByUser_IdAndDepartment_Id(user.getId(), departmentId)) {
 
-            // ensure branch link
-            UserBranch branchLink = UserBranch.builder()
-                    .id(new UserBranchId(user.getId(), branchId))
-                    .user(user)
-                    .branch(department.getBranch())
-                    .primaryBranch(false)
-                    .build();
+                userDepartmentRepository.save(
+                        UserDepartment.builder()
+                                .id(new UserDepartmentId(user.getId(), departmentId))
+                                .user(user)
+                                .department(department)
+                                .role(role)
+                                .primaryDepartment(false)
+                                .build()
+                );
+            }
 
-            userBranchRepository.save(branchLink);
+            /* ---------- branch relation ---------- */
+
+            if (!userBranchRepository
+                    .existsByUser_IdAndBranch_Id(user.getId(), branchId)) {
+
+                userBranchRepository.save(
+                        UserBranch.builder()
+                                .id(new UserBranchId(user.getId(), branchId))
+                                .user(user)
+                                .branch(department.getBranch())
+                                .primaryBranch(false)
+                                .build()
+                );
+            }
         }
     }
 
@@ -893,8 +1040,6 @@ public class UserService {
         Path userUploadDir = fileStorageService.userRoot()
                 .resolve(uploadFolder)
                 .normalize();
-
-        transactionalFileManager.track(userUploadDir);
 
         Map<String, String> apiUrls = userImageService.saveFiles(files, uploadFolder);
 
@@ -932,8 +1077,10 @@ public class UserService {
     }
 
     private void auditChanges(User user, Map<String, String[]> changes, String updaterUsername) {
-        UUID updaterId = userRepository.findByUsername(updaterUsername)
-                .map(User::getId).orElse(null);
+        UUID updaterId = userRepository
+                .findByUsernameAndTenantId(updaterUsername, tenantId())
+                .map(User::getId)
+                .orElse(null);
 
         for (var entry : changes.entrySet()) {
             userAuditRepository.save(UserAudit.builder()
@@ -956,7 +1103,10 @@ public class UserService {
 
         if (!added.isEmpty() || !removed.isEmpty()) user.setEmailAddresses(newEmails);
 
-        UUID updaterId = userRepository.findByUsername(updaterUsername).map(User::getId).orElse(null);
+        UUID updaterId = userRepository
+                .findByUsernameAndTenantId(updaterUsername, tenantId())
+                .map(User::getId)
+                .orElse(null);
 
         for (String a : added) auditEmailChange(user, "email_add", null, a, updaterId, updaterUsername);
         for (String r : removed) auditEmailChange(user, "email_remove", r, null, updaterId, updaterUsername);
@@ -968,7 +1118,10 @@ public class UserService {
 
         if (!added.isEmpty() || !removed.isEmpty()) user.setPhoneNumbers(newPhones);
 
-        UUID updaterId = userRepository.findByUsername(updaterUsername).map(User::getId).orElse(null);
+        UUID updaterId = userRepository
+                .findByUsernameAndTenantId(updaterUsername, tenantId())
+                .map(User::getId)
+                .orElse(null);
 
         for (String a : added) auditPhoneChange(user, "phone_add", null, a, updaterId, updaterUsername);
         for (String r : removed) auditPhoneChange(user, "phone_remove", r, null, updaterId, updaterUsername);
@@ -1002,44 +1155,44 @@ public class UserService {
                 .build());
     }
 
-    private UserDTO mapToDTO(User user, Boolean deleted) {
+    private UserDTO mapToDTO(User user) {
 
         UserDTO dto = UserDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
-                .emailAddresses(user.getEmailAddresses())
-                .phoneNumbers(user.getPhoneNumbers())
+                .emailAddresses(
+                        user.getEmailAddresses() == null
+                                ? List.of()
+                                : new ArrayList<>(user.getEmailAddresses())
+                )
+                .phoneNumbers(
+                        user.getPhoneNumbers() == null
+                                ? List.of()
+                                : new ArrayList<>(user.getPhoneNumbers())
+                )
                 .idNumber(user.getIdNumber())
                 .role(user.getRole() != null ? user.getRole().name() : null)
-                .createdBy(user.getCreatedBy() != null
-                        ? user.getCreatedBy().toString()
-                        : null)
-                .lastModifiedBy(user.getUpdatedBy() != null
-                        ? user.getUpdatedBy().toString()
-                        : null)
-                .createdAt(user.getCreatedAt())
-                .lastModifiedAt(user.getUpdatedAt())
                 .deleted(Boolean.TRUE.equals(user.getDeleted()))
                 .build();
 
-        List<UserDepartment> relations =
-                userDepartmentRepository.findByUserIdWithDepartmentAndBranch(user.getId());
-
         Map<Branch, List<DepartmentPositionDTO>> grouped = new HashMap<>();
 
-        for (UserDepartment rel : relations) {
+        if (user.getDepartments() != null) {
 
-            Department dept = rel.getDepartment();
-            Branch branch = dept.getBranch();
+            for (UserDepartment rel : user.getDepartments()) {
 
-            grouped.computeIfAbsent(branch, b -> new ArrayList<>())
-                    .add(
-                            DepartmentPositionDTO.builder()
-                                    .departmentId(dept.getId())
-                                    .departmentName(dept.getName())
-                                    .position(rel.getRole().name().toLowerCase())
-                                    .build()
-                    );
+                Department dept = rel.getDepartment();
+                Branch branch = dept.getBranch();
+
+                grouped.computeIfAbsent(branch, b -> new ArrayList<>())
+                        .add(
+                                DepartmentPositionDTO.builder()
+                                        .departmentId(dept.getId())
+                                        .departmentName(dept.getName())
+                                        .position(rel.getRole().name().toLowerCase())
+                                        .build()
+                        );
+            }
         }
 
         List<BranchHierarchyDTO> hierarchy =

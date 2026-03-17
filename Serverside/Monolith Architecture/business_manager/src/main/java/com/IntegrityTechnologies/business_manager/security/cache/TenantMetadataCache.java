@@ -45,17 +45,19 @@ public class TenantMetadataCache {
 
     public UUID getTenantIdByCode(String code) {
 
-        UUID cached = tenantCodeCache.get(code);
+        final String normalizedCode = code.toLowerCase();
+
+        UUID cached = tenantCodeCache.get(normalizedCode);
 
         if (cached != null) {
             return cached;
         }
 
-        Tenant tenant = tenantRepository.findByCode(code)
+        Tenant tenant = tenantRepository.findByCodeIgnoreCase(normalizedCode)
                 .orElseThrow(() ->
-                        new IllegalStateException("Tenant not found: " + code));
+                        new IllegalStateException("Tenant not found: " + normalizedCode));
 
-        tenantCodeCache.put(code, tenant.getId());
+        tenantCodeCache.put(normalizedCode, tenant.getId());
         tenantStatusCache.put(tenant.getId(), tenant.getStatus());
 
         return tenant.getId();

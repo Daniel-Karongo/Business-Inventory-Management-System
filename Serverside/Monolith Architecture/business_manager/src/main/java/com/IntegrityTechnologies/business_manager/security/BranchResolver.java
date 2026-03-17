@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.security;
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserBranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.UserSession;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,7 @@ import java.util.UUID;
 public class BranchResolver {
 
     private final UserSessionRepository sessionRepository;
+    private final UserBranchRepository userBranchRepository;
 
     public UUID resolveBranch(UUID branchIdFromRequest) {
 
@@ -37,12 +39,22 @@ public class BranchResolver {
                 throw new SecurityException("User has no active session in branch");
             }
 
+            boolean member =
+                    userBranchRepository.existsByUser_IdAndBranch_Id(
+                            userId,
+                            branchIdFromRequest
+                    );
+
+            if (!member) {
+                throw new SecurityException("User not assigned to branch");
+            }
+
             return branchIdFromRequest;
         }
 
         /* ---------- Admin global access ---------- */
 
-        if (role == Role.ADMIN) {
+        if (role.canAccess(Role.MANAGER)) {
             return null;
         }
 
@@ -54,6 +66,18 @@ public class BranchResolver {
                         .orElseThrow(() ->
                                 new SecurityException("No active branch session"));
 
-        return session.getBranchId();
+        UUID branchId = session.getBranchId();
+
+        boolean member =
+                userBranchRepository.existsByUser_IdAndBranch_Id(
+                        userId,
+                        branchId
+                );
+
+        if (!member) {
+            throw new SecurityException("User not assigned to branch");
+        }
+
+        return branchId;
     }
 }

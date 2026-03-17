@@ -16,6 +16,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +55,10 @@ public class SupplierImageService {
     private final SupplierMapper supplierMapper;
     private final UserRepository userRepository;
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+
     @Transactional
     public SupplierDTO updateSupplierImages(UUID id, List<FIleUploadDTO> newImages, String updaterUsername) throws IOException {
         Supplier existing = supplierService.getSupplier(id);
@@ -69,7 +74,7 @@ public class SupplierImageService {
         }
 
         if (updaterUsername != null) {
-            userRepository.findByUsername(updaterUsername)
+            userRepository.findByUsernameAndTenantId(updaterUsername, tenantId())
                     .ifPresent(existing::setUpdatedBy);
         }
         existing.setUpdatedAt(LocalDateTime.now());

@@ -52,12 +52,15 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
     ========================================================= */
 
     @Query("""
-        SELECT ub.user
-        FROM UserBranch ub
-        WHERE ub.branch.id = :branchId
-          AND ub.branch.tenantId = :tenantId
-          AND ub.user.deleted = false
-    """)
+    SELECT DISTINCT u
+    FROM UserBranch ub
+    JOIN ub.user u
+    LEFT JOIN FETCH u.emailAddresses
+    LEFT JOIN FETCH u.phoneNumbers
+    WHERE ub.branch.id = :branchId
+      AND ub.branch.tenantId = :tenantId
+      AND u.deleted = false
+""")
     List<User> findUsersByBranchId(
             @Param("tenantId") UUID tenantId,
             @Param("branchId") UUID branchId

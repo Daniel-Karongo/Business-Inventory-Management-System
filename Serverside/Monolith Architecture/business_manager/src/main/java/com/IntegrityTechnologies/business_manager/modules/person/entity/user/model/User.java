@@ -1,9 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.user.model;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.AuditableTenantEntity;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.TenantAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.JdbcTypeCode;
 
 import java.sql.Types;
@@ -15,25 +16,17 @@ import java.util.*;
         name = "users",
         indexes = {
 
-                @Index(
-                        name = "idx_user_tenant_username",
-                        columnList = "tenant_id, username"
-                ),
+                @Index(name = "idx_user_tenant_username",
+                        columnList = "tenant_id, username"),
 
-                @Index(
-                        name = "idx_user_tenant_role",
-                        columnList = "tenant_id, role"
-                ),
+                @Index(name = "idx_user_tenant_role",
+                        columnList = "tenant_id, role"),
 
-                @Index(
-                        name = "idx_user_tenant_deleted",
-                        columnList = "tenant_id, deleted"
-                ),
+                @Index(name = "idx_user_tenant_deleted",
+                        columnList = "tenant_id, deleted"),
 
-                @Index(
-                        name = "idx_user_tenant_idnumber",
-                        columnList = "tenant_id, id_number"
-                )
+                @Index(name = "idx_user_tenant_idnumber",
+                        columnList = "tenant_id, id_number")
         },
         uniqueConstraints = {
 
@@ -53,7 +46,7 @@ import java.util.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder(toBuilder = true)
-public class User extends AuditableTenantEntity {
+public class User extends TenantAwareEntity {
 
     @Id
     @GeneratedValue
@@ -71,47 +64,52 @@ public class User extends AuditableTenantEntity {
        EMAIL ADDRESSES
     ===================================== */
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.LAZY)
+    @BatchSize(size = 50)
     @CollectionTable(
             name = "user_email_addresses",
-            joinColumns = @JoinColumn(name = "user_id"),
+            joinColumns = {
+                    @JoinColumn(name = "user_id", referencedColumnName = "id"),
+                    @JoinColumn(name = "tenant_id", referencedColumnName = "tenant_id")
+            },
             uniqueConstraints = {
                     @UniqueConstraint(
-                            name = "uq_user_email",
-                            columnNames = {"user_id", "email"}
+                            name = "uq_user_email_per_tenant",
+                            columnNames = {"tenant_id", "email"}
                     )
             },
             indexes = {
-                    @Index(name = "idx_user_email", columnList = "email")
+                    @Index(name = "idx_user_email", columnList = "tenant_id, email")
             }
     )
     @Column(name = "email")
     @Builder.Default
     private List<String> emailAddresses = new ArrayList<>();
-
-
     /* =====================================
        PHONE NUMBERS
     ===================================== */
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.LAZY)
+    @BatchSize(size = 50)
     @CollectionTable(
             name = "user_phone_numbers",
-            joinColumns = @JoinColumn(name = "user_id"),
+            joinColumns = {
+                    @JoinColumn(name = "user_id", referencedColumnName = "id"),
+                    @JoinColumn(name = "tenant_id", referencedColumnName = "tenant_id")
+            },
             uniqueConstraints = {
                     @UniqueConstraint(
-                            name = "uq_user_phone",
-                            columnNames = {"user_id", "phone"}
+                            name = "uq_user_phone_per_tenant",
+                            columnNames = {"tenant_id", "phone"}
                     )
             },
             indexes = {
-                    @Index(name = "idx_user_phone", columnList = "phone")
+                    @Index(name = "idx_user_phone", columnList = "tenant_id, phone")
             }
     )
     @Column(name = "phone")
     @Builder.Default
     private List<String> phoneNumbers = new ArrayList<>();
-
 
     /* =====================================
        BASIC INFO
@@ -132,24 +130,28 @@ public class User extends AuditableTenantEntity {
 
     private LocalDateTime deletedAt;
 
-
     /* =====================================
        RELATIONSHIPS
     ===================================== */
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 50)
     @Builder.Default
     private Set<UserBranch> branches = new HashSet<>();
 
-
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 50)
     @Builder.Default
     private Set<UserDepartment> departments = new HashSet<>();
 
-
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 25)
     @Builder.Default
     private List<UserImage> images = new ArrayList<>();
+
+    /* =====================================
+       SECURITY
+    ===================================== */
 
     @Column(nullable = false)
     @Builder.Default

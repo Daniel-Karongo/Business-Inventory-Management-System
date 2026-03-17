@@ -19,6 +19,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplier;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplierId;
@@ -57,6 +58,9 @@ public class SupplierService {
     private final TransactionalFileManager transactionalFileManager;
     private final UserRepository userRepository;
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
 
     /* ===================== read operations ===================== */
 
@@ -202,7 +206,7 @@ public class SupplierService {
 
         // 4️⃣ Set creator
         if (creatorUsername != null) {
-            userRepository.findByUsername(creatorUsername)
+            userRepository.findByUsernameAndTenantId(creatorUsername, tenantId())
                     .ifPresent(supplier::setCreatedBy);
         }
 
@@ -444,7 +448,7 @@ public class SupplierService {
 
         // 5️⃣ Update last modified info
         if (updaterUsername != null) {
-            userRepository.findByUsername(updaterUsername)
+            userRepository.findByUsernameAndTenantId(updaterUsername, tenantId())
                     .ifPresent(existing::setUpdatedBy);
         }
         existing.setUpdatedAt(LocalDateTime.now());

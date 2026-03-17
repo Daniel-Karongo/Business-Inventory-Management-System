@@ -14,7 +14,7 @@ import java.util.UUID;
 public interface TenantRepository extends JpaRepository<Tenant, UUID> {
 
     @Cacheable(value = "tenants", key = "#code")
-    Optional<Tenant> findByCode(String code);
+    Optional<Tenant> findByCodeIgnoreCase(String code);
 
     boolean existsByCode(String code);
 
