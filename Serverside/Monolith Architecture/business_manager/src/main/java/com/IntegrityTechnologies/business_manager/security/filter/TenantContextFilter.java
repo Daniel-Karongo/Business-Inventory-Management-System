@@ -1,9 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.tenant.filter;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.Tenant;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.TenantStatus;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.repository.TenantRepository;
+import com.IntegrityTechnologies.business_manager.security.HibernateTenantFilterManager;
 import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
 import jakarta.servlet.FilterChain;
@@ -22,6 +21,7 @@ import java.util.UUID;
 public class TenantContextFilter extends OncePerRequestFilter {
 
     private final TenantMetadataCache tenantMetadataCache;
+    private final HibernateTenantFilterManager filterManager;
 
     @Override
     protected void doFilterInternal(
@@ -32,11 +32,17 @@ public class TenantContextFilter extends OncePerRequestFilter {
 
         try {
 
+            /* =====================================================
+               PLATFORM ADMIN BYPASS
+            ===================================================== */
             if (SecurityUtils.isPlatformAdmin()) {
                 filterChain.doFilter(request, response);
                 return;
             }
 
+            /* =====================================================
+               TENANT RESOLUTION CHECK
+            ===================================================== */
             UUID tenantId = TenantContext.getOrNull();
 
             if (tenantId == null) {
@@ -44,6 +50,9 @@ public class TenantContextFilter extends OncePerRequestFilter {
                 return;
             }
 
+            /* =====================================================
+               TENANT STATUS VALIDATION
+            ===================================================== */
             TenantStatus status =
                     tenantMetadataCache.getTenantStatus(tenantId);
 
@@ -53,9 +62,21 @@ public class TenantContextFilter extends OncePerRequestFilter {
                 throw new RuntimeException("Tenant inactive");
             }
 
+            /* =====================================================
+               ENABLE HIBERNATE TENANT FILTER (CRITICAL FIX)
+            ===================================================== */
+            if (tenantId != null)
+                filterManager.enable(tenantId);
+
+            /* =====================================================
+               CONTINUE FILTER CHAIN
+            ===================================================== */
             filterChain.doFilter(request, response);
 
         } finally {
+            /* =====================================================
+               CLEANUP THREAD CONTEXT
+            ===================================================== */
             TenantContext.clear();
         }
     }

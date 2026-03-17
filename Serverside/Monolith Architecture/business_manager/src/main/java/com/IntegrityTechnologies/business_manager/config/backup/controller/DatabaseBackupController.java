@@ -5,6 +5,7 @@ import com.IntegrityTechnologies.business_manager.common.backup.dto.DatabaseBack
 import com.IntegrityTechnologies.business_manager.common.backup.model.DatabaseBackupHistory;
 import com.IntegrityTechnologies.business_manager.common.backup.repository.DatabaseBackupHistoryRepository;
 import com.IntegrityTechnologies.business_manager.common.backup.service.DatabaseBackupService;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.PlatformSuperAdminOnly;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
@@ -19,13 +20,13 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/admin/backup")
 @RequiredArgsConstructor
+@PlatformSuperAdminOnly
 public class DatabaseBackupController {
 
     private final DatabaseBackupHistoryRepository historyRepo;
     private final DatabaseBackupService backupService;
 
     @PostMapping("/run")
-    @PreAuthorize("hasRole('SUPERUSER')")
     public ResponseEntity<?> runBackup() {
 
         DatabaseBackupResultDTO result = backupService.backupNow();
@@ -40,13 +41,11 @@ public class DatabaseBackupController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('SUPERUSER')")
     public List<DatabaseBackupHistory> listBackups() {
         return historyRepo.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
     }
 
     @PostMapping("/restore/{id}")
-    @PreAuthorize("hasRole('SUPERUSER')")
     public ResponseEntity<?> restore(
             @PathVariable UUID id,
             @RequestParam(defaultValue = "false") boolean force
@@ -56,7 +55,6 @@ public class DatabaseBackupController {
     }
 
     @PostMapping("/restore/file")
-    @PreAuthorize("hasRole('SUPERUSER')")
     public ResponseEntity<?> restoreFromFile(
             @RequestBody BackupFileRestoreRequest request
     ) {

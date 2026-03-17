@@ -1,20 +1,20 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.tenant.filter;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.Tenant;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.repository.TenantRepository;
 import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.Session;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -24,6 +24,9 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
 
     private final TenantMetadataCache tenantMetadataCache;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     private static final String TENANT_HEADER = "X-Tenant";
 
     @Override
@@ -32,15 +35,25 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
+
         String tenantCode = resolveTenant(request);
 
         if (tenantCode != null) {
+
+            // 🔥 CRITICAL FIX: disable filter BEFORE lookup
+            Session session = entityManager.unwrap(Session.class);
+
+            if (session.getEnabledFilter("tenantFilter") != null) {
+                session.disableFilter("tenantFilter");
+            }
 
             UUID tenantId =
                     tenantMetadataCache.getTenantIdByCode(tenantCode);
 
             TenantContext.setTenantId(tenantId);
+            log.debug("Resolved tenant [{}] → {}", tenantCode);
         }
+
         filterChain.doFilter(request, response);
     }
 
@@ -59,7 +72,6 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
 
             String subdomain = host.split("\\.")[0];
 
-            // 🚨 PLATFORM IS NOT A TENANT
             if (
                     subdomain.equalsIgnoreCase("platform") ||
                             subdomain.equalsIgnoreCase("www") ||

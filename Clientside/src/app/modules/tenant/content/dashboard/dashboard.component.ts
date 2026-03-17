@@ -105,7 +105,7 @@ export class DashboardComponent implements OnInit {
 
         this.cdr.markForCheck();
       }
-      
+
     });
   }
 
@@ -161,8 +161,8 @@ export class DashboardComponent implements OnInit {
       { title: 'Accounts Payable', value: this.formatCurrency(f.accountsPayable) },
       { title: 'Inventory Value', value: this.formatCurrency(f.inventoryValue) },
       { title: 'Corporate Tax Accrued', value: this.formatCurrency(f.corporateTaxAccrued) },
-      { title: 'Gross Margin %', value: `${f.grossMarginPercent.toFixed(2)}%` },
-      { title: 'Inventory Turnover', value: f.inventoryTurnover.toFixed(2) },
+      { title: 'Gross Margin %', value: f.grossMarginPercent != null ? `${f.grossMarginPercent.toFixed(2)}%` : '—'},
+      { title: 'Inventory Turnover', value: f.inventoryTurnover != null ? f.inventoryTurnover.toFixed(2) : '—'},
 
       // 🔥 NEW
       {

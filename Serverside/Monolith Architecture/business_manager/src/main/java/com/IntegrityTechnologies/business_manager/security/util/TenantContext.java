@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.modules.platform.tenant.context;
+package com.IntegrityTechnologies.business_manager.security.filter;
 
 import java.util.UUID;
 
@@ -31,15 +31,5 @@ public final class TenantContext {
 
     public static void clear(){
         TENANT.remove();
-    }
-
-    public static UUID getTenantIdOrNull() {
-
-        try {
-            return getTenantId();
-        } catch (Exception e) {
-            return null;
-        }
-
     }
 }

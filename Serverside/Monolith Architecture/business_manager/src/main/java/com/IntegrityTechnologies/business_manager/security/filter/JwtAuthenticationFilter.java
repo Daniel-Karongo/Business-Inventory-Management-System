@@ -128,10 +128,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         throw new SecurityException("Invalid branch");
                     }
 
-                    TenantContext.clear();
-                    BranchContext.clear();
+                    UUID currentTenant = TenantContext.getOrNull();
 
-                    TenantContext.setTenantId(tenantId);
+                    if (currentTenant == null) {
+                        TenantContext.setTenantId(tenantId);
+                    } else if (!currentTenant.equals(tenantId)) {
+                        throw new SecurityException("Tenant mismatch between request and token");
+                    }
+
                     BranchContext.set(branchId);
 
                     String username = jwtUtil.extractUsername(jwt);
