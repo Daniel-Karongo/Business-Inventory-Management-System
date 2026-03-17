@@ -3,15 +3,14 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.se
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.config.AccountingProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.PaymentStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineItem;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
-import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

@@ -2,7 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.platform.security.ser
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.*;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 

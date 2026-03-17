@@ -8,9 +8,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
-import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

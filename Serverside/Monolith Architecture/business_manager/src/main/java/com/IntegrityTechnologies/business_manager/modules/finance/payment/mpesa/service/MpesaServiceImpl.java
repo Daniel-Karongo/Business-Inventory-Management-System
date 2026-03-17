@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.payment.mpesa.service;
 
-import com.IntegrityTechnologies.business_manager.common.PhoneAndEmailNormalizer;
+import com.IntegrityTechnologies.business_manager.config.util.PhoneAndEmailNormalizer;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentRequest;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.mpesa.client.MpesaClient;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.mpesa.config.MpesaProperties;

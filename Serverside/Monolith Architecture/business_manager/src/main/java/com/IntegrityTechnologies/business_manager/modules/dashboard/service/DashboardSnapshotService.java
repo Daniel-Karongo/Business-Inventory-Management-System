@@ -6,7 +6,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.ada
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryValuationService;
 
 import static com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountingSignRules.*;

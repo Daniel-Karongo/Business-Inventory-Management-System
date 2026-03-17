@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto;
 
-import com.IntegrityTechnologies.business_manager.common.bulk.BulkOptions;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkOptions;
 import lombok.Data;
 
 import java.util.ArrayList;

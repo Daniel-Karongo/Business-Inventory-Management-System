@@ -1,9 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.controller;
 
-import com.IntegrityTechnologies.business_manager.common.ApiResponse;
-import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
-import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
-import com.IntegrityTechnologies.business_manager.config.OptimisticRetryRunner;
+import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
+import com.IntegrityTechnologies.business_manager.config.spring.OptimisticRetryRunner;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;

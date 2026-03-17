@@ -1,9 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.service;
 
-import com.IntegrityTechnologies.business_manager.common.ApiResponse;
-import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
-import com.IntegrityTechnologies.business_manager.config.FileStorageService;
-import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
+import com.IntegrityTechnologies.business_manager.config.files.FileStorageProperties;
+import com.IntegrityTechnologies.business_manager.config.files.FileStorageService;
+import com.IntegrityTechnologies.business_manager.config.files.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.exception.ProductNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
@@ -45,7 +44,7 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service.ProductVariantService;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -53,12 +52,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;

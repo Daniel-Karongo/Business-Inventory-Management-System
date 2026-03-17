@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.config;
+package com.IntegrityTechnologies.business_manager.config.spring;
 
 import jakarta.persistence.OptimisticLockException;
 import org.hibernate.StaleObjectStateException;

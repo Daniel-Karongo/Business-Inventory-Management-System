@@ -1,9 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.user.controller;
 
-import com.IntegrityTechnologies.business_manager.common.ApiResponse;
-import com.IntegrityTechnologies.business_manager.common.ImagesUploadForm;
-import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
-import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
+import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
+import com.IntegrityTechnologies.business_manager.config.files.ImagesUploadForm;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.service.UserBulkService;

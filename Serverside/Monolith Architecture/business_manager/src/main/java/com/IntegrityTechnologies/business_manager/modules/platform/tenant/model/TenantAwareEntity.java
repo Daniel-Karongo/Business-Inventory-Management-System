@@ -1,18 +1,15 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.tenant.model;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.listener.TenantEntityListener;
-import jakarta.persistence.Column;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.Filter;
-import org.hibernate.annotations.FilterDef;
-import org.hibernate.annotations.ParamDef;
+import org.hibernate.annotations.*;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @MappedSuperclass
@@ -35,7 +32,14 @@ import java.util.UUID;
 @AllArgsConstructor
 public abstract class TenantAwareEntity {
 
-    @Column(name = "tenant_id", nullable = false)
+    @Column(name = "tenant_id", nullable = false, updatable = false)
     private UUID tenantId;
 
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false, nullable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }

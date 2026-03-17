@@ -7,7 +7,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.VatLedgerProjection;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.VatLedgerProjectionRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 
 import lombok.RequiredArgsConstructor;
 

@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.config;
+package com.IntegrityTechnologies.business_manager.config.kafka;
 
 import org.apache.kafka.clients.admin.NewTopic;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

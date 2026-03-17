@@ -1,11 +1,11 @@
-package com.IntegrityTechnologies.business_manager.common.backup.service;
+package com.IntegrityTechnologies.business_manager.config.backup.service;
 
-import com.IntegrityTechnologies.business_manager.common.backup.config.DatabaseBackupProperties;
-import com.IntegrityTechnologies.business_manager.common.backup.dto.DatabaseBackupResultDTO;
-import com.IntegrityTechnologies.business_manager.common.backup.model.DatabaseBackupHistory;
-import com.IntegrityTechnologies.business_manager.common.backup.repository.DatabaseBackupHistoryRepository;
-import com.IntegrityTechnologies.business_manager.common.backup.util.BackupCompressionUtil;
-import com.IntegrityTechnologies.business_manager.config.FileStorageService;
+import com.IntegrityTechnologies.business_manager.config.backup.config.DatabaseBackupProperties;
+import com.IntegrityTechnologies.business_manager.config.backup.dto.DatabaseBackupResultDTO;
+import com.IntegrityTechnologies.business_manager.config.backup.model.DatabaseBackupHistory;
+import com.IntegrityTechnologies.business_manager.config.backup.repository.DatabaseBackupHistoryRepository;
+import com.IntegrityTechnologies.business_manager.config.backup.util.BackupCompressionUtil;
+import com.IntegrityTechnologies.business_manager.config.files.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

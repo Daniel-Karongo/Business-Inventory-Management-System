@@ -7,7 +7,7 @@ import com.IntegrityTechnologies.business_manager.modules.communication.reports.
 import com.IntegrityTechnologies.business_manager.modules.communication.reports.security.ReportLimitRegistry;
 import com.IntegrityTechnologies.business_manager.modules.communication.reports.security.ReportLimits;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 

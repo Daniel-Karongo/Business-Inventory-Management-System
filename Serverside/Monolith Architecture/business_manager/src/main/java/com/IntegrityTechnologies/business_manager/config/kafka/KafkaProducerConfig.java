@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.config;
+package com.IntegrityTechnologies.business_manager.config.kafka;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;

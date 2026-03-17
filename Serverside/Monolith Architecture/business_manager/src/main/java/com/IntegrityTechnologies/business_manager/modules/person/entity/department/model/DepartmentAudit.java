@@ -1,8 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.department.model;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
-import com.IntegrityTechnologies.business_manager.security.BranchContext;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;

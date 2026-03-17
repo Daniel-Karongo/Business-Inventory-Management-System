@@ -11,9 +11,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.sec
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.security.JournalIntegrityAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.BranchAccountingSettingsService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
-import com.IntegrityTechnologies.business_manager.security.BranchResolver;
-import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.BranchResolver;
+import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

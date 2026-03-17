@@ -1,9 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.controller;
 
-import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
-import com.IntegrityTechnologies.business_manager.common.PageWrapper;
-import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
-import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
+import com.IntegrityTechnologies.business_manager.config.files.FIleUploadDTO;
+import com.IntegrityTechnologies.business_manager.config.files.FileSecurityUtil;
+import com.IntegrityTechnologies.business_manager.config.response.PageWrapper;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierAuditRepository;
@@ -22,9 +23,11 @@ import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -114,10 +117,11 @@ public class SupplierController {
     }
 
     @TenantManagerOnly
-    @PatchMapping(value = "/{id}/images")
+    @PatchMapping(value = "/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<SupplierDTO> updateSupplierImages(
             @PathVariable UUID id,
-            @RequestParam("newImages") @Valid List<FIleUploadDTO> newImages,
+            @RequestPart("files") List<MultipartFile> files,
+            @RequestPart(value = "descriptions", required = false) List<String> descriptions,
             Authentication authentication
     ) throws IOException {
 
@@ -126,8 +130,17 @@ public class SupplierController {
                         ? userDetails.getUsername()
                         : null;
 
+        List<FIleUploadDTO> dtos = new ArrayList<>();
+
+        for (int i = 0; i < files.size(); i++) {
+            dtos.add(new FIleUploadDTO(
+                    files.get(i),
+                    descriptions != null && i < descriptions.size() ? descriptions.get(i) : null
+            ));
+        }
+
         SupplierDTO updatedSupplier =
-                supplierImageService.updateSupplierImages(id, newImages, updaterUsername);
+                supplierImageService.updateSupplierImages(id, dtos, updaterUsername);
 
         return ResponseEntity.ok(updatedSupplier);
     }
@@ -233,7 +246,6 @@ public class SupplierController {
     /* ====================================
        IMAGE DOWNLOAD
        ==================================== */
-
     @TenantManagerOnly
     @GetMapping("/{id}/images/{filename}")
     public ResponseEntity<Resource> downloadSupplierImage(
@@ -241,6 +253,8 @@ public class SupplierController {
             @PathVariable String filename,
             @RequestParam(required = false) Boolean deleted
     ) throws IOException {
+
+        filename = FileSecurityUtil.sanitizeFilename(filename);
 
         Resource file =
                 supplierImageService.downloadImage(id, filename, deleted);
@@ -311,6 +325,8 @@ public class SupplierController {
             @PathVariable String filename
     ) throws IOException {
 
+        filename = FileSecurityUtil.sanitizeFilename(filename);
+
         return supplierImageService.softDeleteSupplierImage(id, filename);
     }
 
@@ -331,6 +347,8 @@ public class SupplierController {
             @PathVariable String filename
     ) throws IOException {
 
+        filename = FileSecurityUtil.sanitizeFilename(filename);
+
         return supplierImageService.deleteSupplierImage(id, filename);
     }
 
@@ -350,6 +368,8 @@ public class SupplierController {
             @PathVariable UUID id,
             @PathVariable String filename
     ) {
+
+        filename = FileSecurityUtil.sanitizeFilename(filename);
 
         return supplierImageService.restoreSupplierImage(id, filename);
     }

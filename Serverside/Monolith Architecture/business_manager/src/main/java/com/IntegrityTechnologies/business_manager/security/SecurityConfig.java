@@ -3,13 +3,12 @@ package com.IntegrityTechnologies.business_manager.security;
 //import com.IntegrityTechnologies.business_manager.modules.acl.config.PermissionSecurityFilter;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.observability.filter.RequestMetricsFilter;
-import com.IntegrityTechnologies.business_manager.modules.platform.security.filter.RoleGuardFilter;
+import com.IntegrityTechnologies.business_manager.security.filter.RoleGuardFilter;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.rate.TenantRateLimitFilter;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.config.TenantHibernateFilterConfigurer;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.filter.TenantContextFilter;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.filter.TenantResolutionFilter;
-import com.IntegrityTechnologies.business_manager.security.auth.filter.JwtAuthenticationFilter;
-import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import com.IntegrityTechnologies.business_manager.security.filter.TenantContextFilter;
+import com.IntegrityTechnologies.business_manager.security.filter.TenantResolutionFilter;
+import com.IntegrityTechnologies.business_manager.security.filter.JwtAuthenticationFilter;
+import com.IntegrityTechnologies.business_manager.security.filter.BranchContextFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -176,42 +175,20 @@ public class SecurityConfig {
                 // 5 TenantContextFilter
                 // 6 BranchContextFilter
                 // 7 RoleGuardFilter
-                //
 
-                .addFilterBefore(
-                        tenantResolutionFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                )
+                .addFilterBefore(tenantResolutionFilter, UsernamePasswordAuthenticationFilter.class)
 
-                .addFilterBefore(
-                        requestMetricsFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                )
+                .addFilterAfter(requestMetricsFilter, TenantResolutionFilter.class)
 
-                .addFilterBefore(
-                        tenantRateLimitFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                )
+                .addFilterAfter(tenantRateLimitFilter, RequestMetricsFilter.class)
 
-                .addFilterBefore(
-                        jwtAuthFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                )
+                .addFilterAfter(jwtAuthFilter, TenantRateLimitFilter.class)
 
-                .addFilterBefore(
-                        tenantContextFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                )
+                .addFilterAfter(tenantContextFilter, JwtAuthenticationFilter.class)
 
-                .addFilterBefore(
-                        branchContextFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                )
+                .addFilterAfter(branchContextFilter, TenantContextFilter.class)
 
-                .addFilterBefore(
-                        roleGuardFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                )
+                .addFilterAfter(roleGuardFilter, BranchContextFilter.class)
         ;
 
         return http.build();
@@ -230,22 +207,5 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    /* =====================================================
-       AUTH MANAGER
-       ===================================================== */
-
-    @Bean
-    public FilterRegistrationBean<TenantHibernateFilterConfigurer> tenantHibernateFilter(
-            TenantHibernateFilterConfigurer filter) {
-
-        FilterRegistrationBean<TenantHibernateFilterConfigurer> registration =
-                new FilterRegistrationBean<>();
-
-        registration.setFilter(filter);
-        registration.setOrder(100);
-
-        return registration;
     }
 }

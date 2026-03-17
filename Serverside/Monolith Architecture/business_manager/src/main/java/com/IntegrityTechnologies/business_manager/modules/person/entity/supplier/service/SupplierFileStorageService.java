@@ -1,11 +1,12 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.service;
 
-import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
-import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
-import com.IntegrityTechnologies.business_manager.config.FileStorageService;
-import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
+import com.IntegrityTechnologies.business_manager.config.files.FIleUploadDTO;
+import com.IntegrityTechnologies.business_manager.config.files.FileStorageService;
+import com.IntegrityTechnologies.business_manager.config.files.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.SupplierImage;
+import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -42,9 +43,16 @@ public class SupplierFileStorageService {
      * Ensure supplier directory exists and return it.
      */
     public Path getSupplierDirectory(String uploadFolder) throws IOException {
-        return fileStorageService.initDirectory(
-                root().resolve(uploadFolder)
-        );
+
+        String safeFolder = uploadFolder.replaceAll("[^A-Za-z0-9._-]", "_");
+
+        Path dir = root().resolve(safeFolder).normalize();
+
+        if (!dir.startsWith(root())) {
+            throw new SecurityException("Invalid upload folder");
+        }
+
+        return fileStorageService.initDirectory(dir);
     }
 
     /**
@@ -66,13 +74,17 @@ public class SupplierFileStorageService {
             MultipartFile file = fileDTO.getFile();
 
             String original = sanitizeOriginalFileName(file.getOriginalFilename());
-            String fileName = UUID.randomUUID() + "_" + System.currentTimeMillis() + "_" + original;
+            String fileName = UUID.randomUUID() + "_" + original.substring(0, Math.min(original.length(), 50));
 
             try (InputStream in = file.getInputStream()) {
                 Path saved = fileStorageService.saveFile(dir, fileName, in);
                 transactionalFileManager.track(saved);
 
-                String publicUrl = "/api/suppliers/images/" + supplier.getUploadFolder() + "/" + fileName;
+                String publicUrl = "/api/suppliers/images/"
+                        + TenantContext.getTenantId() + "/"
+                        + BranchContext.get() + "/"
+                        + supplier.getUploadFolder() + "/"
+                        + fileName;
 
                 result.add(SupplierImage.builder()
                         .fileName(fileName)
@@ -89,8 +101,17 @@ public class SupplierFileStorageService {
      * Resolve actual disk Path for an image given uploadFolder and filename.
      */
     public Path resolveImagePath(String uploadFolder, String filename) throws IOException {
+
+        String safeFile = filename.replaceAll("[^A-Za-z0-9._-]", "_");
+
         Path dir = getSupplierDirectory(uploadFolder);
-        return dir.resolve(filename).normalize();
+        Path resolved = dir.resolve(safeFile).normalize();
+
+        if (!resolved.startsWith(dir)) {
+            throw new SecurityException("Invalid file path");
+        }
+
+        return resolved;
     }
 
     /**

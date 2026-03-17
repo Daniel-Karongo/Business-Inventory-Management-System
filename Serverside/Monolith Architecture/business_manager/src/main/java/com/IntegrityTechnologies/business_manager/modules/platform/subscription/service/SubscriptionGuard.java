@@ -2,8 +2,8 @@ package com.IntegrityTechnologies.business_manager.modules.platform.subscription
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

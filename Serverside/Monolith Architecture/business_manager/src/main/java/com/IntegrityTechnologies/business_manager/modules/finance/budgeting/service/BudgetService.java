@@ -9,8 +9,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.poli
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
-import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

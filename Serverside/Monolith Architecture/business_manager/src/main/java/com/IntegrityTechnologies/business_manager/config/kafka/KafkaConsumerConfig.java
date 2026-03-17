@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.config;
+package com.IntegrityTechnologies.business_manager.config.kafka;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;

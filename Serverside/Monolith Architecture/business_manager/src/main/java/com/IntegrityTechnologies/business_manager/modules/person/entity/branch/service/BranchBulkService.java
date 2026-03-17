@@ -1,9 +1,12 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.branch.service;
 
-import com.IntegrityTechnologies.business_manager.common.bulk.*;
+import com.IntegrityTechnologies.business_manager.config.bulk.*;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkOptions;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;

@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.common.backup.config;
+package com.IntegrityTechnologies.business_manager.config.backup.config;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;

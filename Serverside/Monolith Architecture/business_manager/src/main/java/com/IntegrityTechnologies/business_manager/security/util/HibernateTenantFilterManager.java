@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.security;
+package com.IntegrityTechnologies.business_manager.security.util;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;

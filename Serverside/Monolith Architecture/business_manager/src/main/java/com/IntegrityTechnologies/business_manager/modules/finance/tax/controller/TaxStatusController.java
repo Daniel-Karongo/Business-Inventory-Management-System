@@ -4,8 +4,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.tax.dto.TaxSta
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.CorporateTaxFilingRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.TaxSystemStateRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
-import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 
 import lombok.RequiredArgsConstructor;
 

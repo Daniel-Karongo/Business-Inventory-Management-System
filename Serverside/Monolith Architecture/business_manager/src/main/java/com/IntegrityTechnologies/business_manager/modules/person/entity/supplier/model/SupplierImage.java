@@ -1,33 +1,37 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.JdbcTypeCode;
+import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.UuidGenerator;
 
-import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "supplier_images", indexes = {@Index(name = "idx_supplier_image_supplier", columnList = "supplier_id")})
-@Data
+@Table(
+        name = "supplier_images",
+        indexes = {
+                @Index(name = "idx_supplier_image_tenant_branch", columnList = "tenant_id, branch_id"),
+                @Index(name = "idx_supplier_image_supplier", columnList = "supplier_id")
+        }
+)
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class SupplierImage {
+@SuperBuilder
+public class SupplierImage extends BranchAwareEntity {
 
     @Id
     @GeneratedValue
-    @JdbcTypeCode(Types.BINARY)
-    @Column(columnDefinition = "BINARY(16)")
+    @UuidGenerator
     private UUID id;
 
     @Column(nullable = false)
     private String fileName;
 
-    /**
-     * Internal absolute filesystem path. Do NOT expose this to clients.
-     */
     @Column(nullable = false)
     private String filePath;
 
@@ -41,6 +45,8 @@ public class SupplierImage {
     private Supplier supplier;
 
     private LocalDateTime deletedAt;
+
+    @Column(nullable = false)
     private Boolean deleted;
 
     private LocalDateTime uploadedAt;

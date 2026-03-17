@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.config;
+package com.IntegrityTechnologies.business_manager.config.caffeine;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.cache.CacheManager;

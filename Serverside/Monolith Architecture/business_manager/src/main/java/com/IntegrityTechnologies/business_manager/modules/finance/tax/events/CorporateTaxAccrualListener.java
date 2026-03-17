@@ -2,15 +2,13 @@ package com.IntegrityTechnologies.business_manager.modules.finance.tax.events;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.AccountingPeriodClosedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.CorporateTaxService;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.EventListener;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor

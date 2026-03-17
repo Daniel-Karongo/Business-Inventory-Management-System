@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.modules.finance.accounting.events;
+package com.IntegrityTechnologies.business_manager.config.kafka;
 
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;

@@ -1,6 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.service;
 
-import com.IntegrityTechnologies.business_manager.common.bulk.*;
+import com.IntegrityTechnologies.business_manager.config.bulk.*;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkOptions;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +21,14 @@ public class SupplierBulkService {
 
     private final SupplierService supplierService;
     private final CategoryRepository categoryRepository;
+
+    private UUID tenantId() {
+        return com.IntegrityTechnologies.business_manager.security.util.TenantContext.getTenantId();
+    }
+
+    private UUID branchId() {
+        return com.IntegrityTechnologies.business_manager.security.util.BranchContext.get();
+    }
 
     public BulkResult<SupplierDTO> importSuppliers(
             BulkRequest<SupplierBulkRow> request,
@@ -99,12 +110,18 @@ public class SupplierBulkService {
                             .map(String::trim)
                             .filter(s -> !s.isBlank())
                             .map(catName ->
-                                    categoryRepository.findByNameIgnoreCase(catName)
+                                    categoryRepository.findByNameSafe(
+                                                    catName,
+                                                    false,
+                                                    tenantId(),
+                                                    branchId()
+                                            )
                                             .orElseThrow(() ->
                                                     new IllegalArgumentException(
-                                                            "Unknown category: " + catName
+                                                            "Unknown category (scoped): " + catName
                                                     )
-                                            ).getId()
+                                            )
+                                            .getId()
                             )
                             .collect(Collectors.toSet());
                 }

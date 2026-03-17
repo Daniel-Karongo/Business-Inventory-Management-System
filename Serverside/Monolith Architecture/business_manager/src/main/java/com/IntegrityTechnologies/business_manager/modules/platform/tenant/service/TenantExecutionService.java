@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.tenant.service;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.Tenant;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.TenantStatus;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.repository.TenantRepository;

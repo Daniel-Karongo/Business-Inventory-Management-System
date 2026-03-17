@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.payment.controller;
 
-import com.IntegrityTechnologies.business_manager.config.OptimisticRetryRunner;
+import com.IntegrityTechnologies.business_manager.config.spring.OptimisticRetryRunner;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentRequest;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.service.PaymentService;

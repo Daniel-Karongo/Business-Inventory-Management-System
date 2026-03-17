@@ -1,20 +1,24 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.service;
 
-import com.IntegrityTechnologies.business_manager.common.PhoneAndEmailNormalizer;
-import com.IntegrityTechnologies.business_manager.common.bulk.*;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkOptions;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
+import com.IntegrityTechnologies.business_manager.config.util.PhoneAndEmailNormalizer;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.*;
-
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
+import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +28,14 @@ public class InventoryBulkService {
     private final ProductRepository productRepository;
     private final BranchRepository branchRepository;
     private final SupplierRepository supplierRepository;
+
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+
+    private UUID branchId() {
+        return BranchContext.get();
+    }
 
     public BulkResult<InventoryBulkPreviewResult> bulkReceive(
             BulkRequest<InventoryReceiveBulkRow> request
@@ -175,8 +187,7 @@ public class InventoryBulkService {
 
             String supplierName = PhoneAndEmailNormalizer.toTitleCase(su.getSupplierName().trim());
 
-            Supplier supplier = supplierRepository
-                    .findByNameIgnoreCase(supplierName)
+            Supplier supplier = supplierRepository.findByNameSafe(supplierName, false, tenantId(), branchId())
                     .orElseThrow(() ->
                             new IllegalArgumentException(
                                     "Supplier not found: " + supplierName

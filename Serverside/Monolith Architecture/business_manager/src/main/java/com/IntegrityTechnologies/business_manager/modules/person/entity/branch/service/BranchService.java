@@ -1,7 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.branch.service;
 
-import com.IntegrityTechnologies.business_manager.common.PhoneAndEmailNormalizer;
-import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
+import com.IntegrityTechnologies.business_manager.config.util.PhoneAndEmailNormalizer;
+import com.IntegrityTechnologies.business_manager.security.util.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.BranchAccountingSettings;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
@@ -26,8 +26,8 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.rep
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserDepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.service.SubscriptionGuard;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
-import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;

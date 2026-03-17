@@ -1,11 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.service;
 
-import com.IntegrityTechnologies.business_manager.common.PhoneAndEmailNormalizer;
-import com.IntegrityTechnologies.business_manager.common.bulk.BulkOptions;
-import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
-import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierCreateDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierDTO;
+import com.IntegrityTechnologies.business_manager.config.util.PhoneAndEmailNormalizer;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkOptions;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.service.SupplierService;
@@ -14,7 +12,8 @@ import com.IntegrityTechnologies.business_manager.modules.stock.category.reposit
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantCreateDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantDTO;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,7 +68,7 @@ public class ProductBulkService {
                 }
 
                 Category category = categoryRepository
-                        .findByNameIgnoreCase(row.getCategoryName())
+                        .findByNameSafe(row.getCategoryName(), false, tenantId(), branchId())
                         .orElseThrow(() ->
                                 new IllegalArgumentException(
                                         "Unknown category: " + row.getCategoryName()
@@ -80,7 +79,7 @@ public class ProductBulkService {
                 if (row.getSupplierNames() != null) {
                     for (String supplierName : row.getSupplierNames()) {
                         Supplier supplier = supplierRepository
-                                .findByNameIgnoreCase(supplierName)
+                                .findByNameSafe(supplierName, false, tenantId(), branchId())
                                 .orElseThrow(() ->
                                         new IllegalArgumentException(
                                                 "Unknown supplier: " + supplierName
@@ -152,6 +151,14 @@ public class ProductBulkService {
         }
 
         return result;
+    }
+
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+    
+    private UUID branchId() {
+        return BranchContext.get();
     }
 
     @Transactional
@@ -253,7 +260,7 @@ public class ProductBulkService {
     ) {
 
         Category category = categoryRepository
-                .findByNameIgnoreCase(row.getCategoryName())
+                .findByNameSafe(row.getCategoryName(), false, tenantId(), branchId())
                 .orElseGet(() -> {
 
                     if (!request.getOptions().isCreateMissingCategories()) {
@@ -276,7 +283,7 @@ public class ProductBulkService {
             for (String supplierName : row.getSupplierNames()) {
 
                 Supplier supplier = supplierRepository
-                        .findByNameIgnoreCase(supplierName)
+                        .findByNameSafe(supplierName, false, tenantId(), branchId())
                         .orElseGet(() -> {
 
                             if (!request.getOptions().isCreateMissingSuppliers()) {
@@ -404,7 +411,7 @@ public class ProductBulkService {
     ) {
 
         if (!categoryRepository
-                .existsByNameIgnoreCase(row.getCategoryName())
+                .existsByNameSafe(row.getCategoryName(), tenantId(), branchId())
                 && !options.isCreateMissingCategories()) {
 
             throw new IllegalArgumentException(
@@ -416,7 +423,7 @@ public class ProductBulkService {
             for (String supplierName : row.getSupplierNames()) {
 
                 if (!supplierRepository
-                        .existsByNameIgnoreCase(supplierName)
+                        .existsByNameSafe(supplierName, tenantId(), branchId())
                         && !options.isCreateMissingSuppliers()) {
 
                     throw new IllegalArgumentException(

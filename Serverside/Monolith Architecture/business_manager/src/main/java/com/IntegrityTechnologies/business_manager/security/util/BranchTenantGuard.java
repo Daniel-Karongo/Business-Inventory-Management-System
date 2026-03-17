@@ -1,7 +1,6 @@
-package com.IntegrityTechnologies.business_manager.security;
+package com.IntegrityTechnologies.business_manager.security.util;
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

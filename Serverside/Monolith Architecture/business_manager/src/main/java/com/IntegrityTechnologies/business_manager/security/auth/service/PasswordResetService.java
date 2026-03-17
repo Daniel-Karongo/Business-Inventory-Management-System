@@ -3,7 +3,7 @@ package com.IntegrityTechnologies.business_manager.security.auth.service;
 import com.IntegrityTechnologies.business_manager.exception.UserNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUser;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.auth.config.PasswordResetProperties;
 import com.IntegrityTechnologies.business_manager.security.auth.model.PasswordResetAudit;
 import com.IntegrityTechnologies.business_manager.security.auth.model.PasswordResetToken;

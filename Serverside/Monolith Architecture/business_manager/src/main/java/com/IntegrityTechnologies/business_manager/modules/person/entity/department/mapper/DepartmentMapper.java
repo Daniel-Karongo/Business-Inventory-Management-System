@@ -1,15 +1,13 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.department.mapper;
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.dto.BranchMinimalDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.DepartmentMembershipRole;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.MinimalUserDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserDepartment;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserDepartmentRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

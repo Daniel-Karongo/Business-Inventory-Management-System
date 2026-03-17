@@ -13,7 +13,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.rep
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.PeriodGuardService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;

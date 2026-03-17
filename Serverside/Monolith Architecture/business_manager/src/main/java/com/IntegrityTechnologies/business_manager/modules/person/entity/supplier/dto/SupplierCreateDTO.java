@@ -1,12 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto;
 
-import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
+import com.IntegrityTechnologies.business_manager.config.files.FIleUploadDTO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Set;

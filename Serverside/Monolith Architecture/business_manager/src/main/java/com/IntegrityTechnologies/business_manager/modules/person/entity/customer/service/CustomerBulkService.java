@@ -1,6 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service;
 
-import com.IntegrityTechnologies.business_manager.common.bulk.*;
+import com.IntegrityTechnologies.business_manager.config.bulk.*;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkOptions;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.repository.CustomerRepository;

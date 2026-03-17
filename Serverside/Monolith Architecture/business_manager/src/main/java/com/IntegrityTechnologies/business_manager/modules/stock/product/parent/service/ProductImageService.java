@@ -1,19 +1,16 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.service;
 
-import com.IntegrityTechnologies.business_manager.config.FileStorageProperties;
-import com.IntegrityTechnologies.business_manager.config.FileStorageService;
-import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
+import com.IntegrityTechnologies.business_manager.config.files.FileStorageService;
+import com.IntegrityTechnologies.business_manager.config.files.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.FileAssignmentDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductImage;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductImageAudit;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductImageAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductImageRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service.ProductVariantImageService;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.stereotype.Service;

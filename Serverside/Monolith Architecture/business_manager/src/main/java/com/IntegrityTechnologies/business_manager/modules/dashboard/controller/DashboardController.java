@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.dashboard.controller;
 
-import com.IntegrityTechnologies.business_manager.common.ApiResponse;
+import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.service.DashboardService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
 import io.swagger.v3.oas.annotations.tags.Tag;

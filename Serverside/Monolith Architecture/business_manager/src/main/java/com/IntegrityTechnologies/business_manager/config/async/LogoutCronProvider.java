@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.config;
+package com.IntegrityTechnologies.business_manager.config.async;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

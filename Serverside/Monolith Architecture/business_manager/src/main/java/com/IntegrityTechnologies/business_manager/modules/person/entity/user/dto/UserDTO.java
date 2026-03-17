@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto;
 
-import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
+import com.IntegrityTechnologies.business_manager.config.files.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.dto.BranchHierarchyDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentMinimalDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentAssignmentDTO;
@@ -41,14 +41,14 @@ public class UserDTO {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Set<DepartmentMinimalDTO> departments = new HashSet<>();
 
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private LocalDateTime createdAt;
+
 //    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
 //    private String createdBy;
 //
 //    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
 //    private String lastModifiedBy;
-//
-//    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-//    private LocalDateTime createdAt;
 //
 //    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
 //    private LocalDateTime lastModifiedAt;

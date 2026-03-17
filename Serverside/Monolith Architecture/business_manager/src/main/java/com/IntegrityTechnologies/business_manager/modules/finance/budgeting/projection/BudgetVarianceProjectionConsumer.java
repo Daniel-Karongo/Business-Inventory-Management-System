@@ -4,7 +4,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetMonthlySnapshotRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.kafka.annotation.KafkaListener;

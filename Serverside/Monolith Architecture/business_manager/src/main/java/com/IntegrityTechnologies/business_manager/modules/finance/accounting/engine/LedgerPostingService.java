@@ -4,7 +4,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.LedgerEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.OutboxEventWriter;
+import com.IntegrityTechnologies.business_manager.config.kafka.OutboxEventWriter;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.AccountingSystemStateService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.security.JournalHashUtil;

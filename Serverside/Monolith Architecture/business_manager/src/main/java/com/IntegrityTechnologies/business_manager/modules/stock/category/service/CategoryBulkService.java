@@ -1,14 +1,21 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.category.service;
 
-import com.IntegrityTechnologies.business_manager.common.bulk.*;
-import com.IntegrityTechnologies.business_manager.modules.stock.category.dto.*;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.dto.CategoryBulkRow;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.dto.CategoryDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
+import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -18,6 +25,13 @@ public class CategoryBulkService {
     private final CategoryService categoryService;
     private final CategoryRepository categoryRepository;
     private final SupplierRepository supplierRepository;
+
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+    private UUID branchId() {
+        return BranchContext.get();
+    }
 
     public BulkResult<CategoryDTO> importCategories(
             BulkRequest<CategoryBulkRow> request
@@ -57,7 +71,7 @@ public class CategoryBulkService {
                     }
 
                     Category parent = categoryRepository
-                            .findByNameIgnoreCase(row.getParentName())
+                            .findByNameSafe(row.getParentName(), false, tenantId(), branchId())
                             .orElseThrow(() ->
                                     new IllegalArgumentException(
                                             "Unknown parent category: " + row.getParentName()
@@ -71,7 +85,7 @@ public class CategoryBulkService {
                 if (row.getSupplierNames() != null && !row.getSupplierNames().isEmpty()) {
                     Set<UUID> supplierIds = row.getSupplierNames().stream()
                             .map(name ->
-                                    supplierRepository.findByNameIgnoreCase(name)
+                                    supplierRepository.findByNameSafe(name, false, tenantId(), branchId())
                                             .orElseThrow(() ->
                                                     new IllegalArgumentException(
                                                             "Unknown supplier: " + name

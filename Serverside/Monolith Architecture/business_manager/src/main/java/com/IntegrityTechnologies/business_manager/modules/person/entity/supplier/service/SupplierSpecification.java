@@ -7,17 +7,27 @@ import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 public class SupplierSpecification {
-
+    public static Specification<Supplier> scoped(UUID tenantId, UUID branchId) {
+        return (root, query, cb) -> cb.and(
+                cb.equal(root.get("tenantId"), tenantId),
+                cb.equal(root.get("branchId"), branchId)
+        );
+    }
     public static Specification<Supplier> inCategories(List<Long> categoryIds) {
         if (categoryIds == null || categoryIds.isEmpty()) return null;
 
         return (root, query, cb) -> {
-            var join = root.join("categorySuppliers", JoinType.INNER)
+            var categoryJoin = root.join("categorySuppliers", JoinType.INNER)
                     .join("category", JoinType.INNER);
 
-            return join.get("id").in(categoryIds);
+            return cb.and(
+                    categoryJoin.get("id").in(categoryIds),
+                    cb.equal(categoryJoin.get("tenantId"), root.get("tenantId")),
+                    cb.equal(categoryJoin.get("branchId"), root.get("branchId"))
+            );
         };
     }
 

@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.common;
+package com.IntegrityTechnologies.business_manager.config.spring;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;

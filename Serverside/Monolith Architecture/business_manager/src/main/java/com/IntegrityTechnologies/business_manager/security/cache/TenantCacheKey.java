@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security.cache;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 
 import java.util.UUID;
 

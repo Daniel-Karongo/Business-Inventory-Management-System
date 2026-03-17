@@ -3,7 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.dashboard.scheduler;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.config.DashboardSnapshotProperties;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.service.DashboardSnapshotService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

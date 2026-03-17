@@ -4,9 +4,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.gov
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.TaxSystemState;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.TaxSystemStateRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
-import com.IntegrityTechnologies.business_manager.security.BranchContext;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
+import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 

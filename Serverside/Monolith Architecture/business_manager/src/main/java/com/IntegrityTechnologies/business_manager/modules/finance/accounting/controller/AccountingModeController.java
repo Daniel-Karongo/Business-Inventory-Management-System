@@ -3,9 +3,9 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.co
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountingMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.AccountingSystemStateService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
-import com.IntegrityTechnologies.business_manager.security.BranchResolver;
-import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.BranchResolver;
+import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

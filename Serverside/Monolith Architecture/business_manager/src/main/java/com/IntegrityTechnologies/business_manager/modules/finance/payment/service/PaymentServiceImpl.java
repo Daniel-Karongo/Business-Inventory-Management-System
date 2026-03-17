@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.payment.service;
 
-import com.IntegrityTechnologies.business_manager.common.TxnCodeGenerator;
+import com.IntegrityTechnologies.business_manager.config.util.TxnCodeGenerator;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
@@ -19,7 +19,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sa
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineItem;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service.CustomerService;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

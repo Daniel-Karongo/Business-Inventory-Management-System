@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.cache;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 
 import java.time.LocalDate;
 import java.util.UUID;

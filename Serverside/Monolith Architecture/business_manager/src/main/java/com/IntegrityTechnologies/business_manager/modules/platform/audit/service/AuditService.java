@@ -3,8 +3,8 @@ package com.IntegrityTechnologies.business_manager.modules.platform.audit.servic
 import com.IntegrityTechnologies.business_manager.modules.platform.audit.entity.AuditEntityType;
 import com.IntegrityTechnologies.business_manager.modules.platform.audit.entity.AuditLog;
 import com.IntegrityTechnologies.business_manager.modules.platform.audit.repository.AuditRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,7 +23,7 @@ public class AuditService {
             String after
     ) {
 
-        UUID tenantId = TenantContext.getTenantIdOrNull();
+        UUID tenantId = TenantContext.getOrNull();
 
         auditRepository.save(
 

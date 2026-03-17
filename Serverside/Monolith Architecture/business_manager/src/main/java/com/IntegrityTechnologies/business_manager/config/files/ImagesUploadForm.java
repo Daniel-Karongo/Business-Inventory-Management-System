@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.common;
+package com.IntegrityTechnologies.business_manager.config.files;
 
 import lombok.Data;
 

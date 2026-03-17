@@ -8,7 +8,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.rep
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.CorporateTaxLedgerProjection;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.CorporateTaxLedgerProjectionRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 
 import lombok.RequiredArgsConstructor;
 

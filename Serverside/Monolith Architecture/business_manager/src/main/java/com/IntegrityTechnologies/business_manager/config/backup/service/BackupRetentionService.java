@@ -1,6 +1,6 @@
-package com.IntegrityTechnologies.business_manager.common.backup.service;
+package com.IntegrityTechnologies.business_manager.config.backup.service;
 
-import com.IntegrityTechnologies.business_manager.config.FileStorageService;
+import com.IntegrityTechnologies.business_manager.config.files.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

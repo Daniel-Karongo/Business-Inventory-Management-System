@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.observability.service;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;

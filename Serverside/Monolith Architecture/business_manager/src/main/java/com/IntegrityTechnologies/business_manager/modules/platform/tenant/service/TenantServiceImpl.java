@@ -10,6 +10,7 @@ import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.mapper.TenantMapper;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,7 @@ public class TenantServiceImpl implements TenantService {
     ========================================== */
 
     @Override
+    @CacheEvict(value = "tenants", allEntries = true)
     public TenantResponse createTenant(TenantCreateRequest request) {
 
         if (tenantRepository.existsByCode(request.getCode())) {

@@ -1,62 +1,217 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository;
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
+import org.springframework.data.domain.*;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
-@Repository
 public interface SupplierRepository extends JpaRepository<Supplier, UUID>, JpaSpecificationExecutor<Supplier> {
-    List<Supplier> findByDeletedFalse();
 
-    List<Supplier> findByDeletedTrue();
+    /* =====================================================
+       BASE SAFE FETCH (STRICT BRANCH)
+    ===================================================== */
+    @Query("""
+        SELECT s FROM Supplier s
+        WHERE s.id = :id
+          AND s.tenantId = :tenantId
+          AND s.branchId = :branchId
+          AND (:deleted IS NULL OR s.deleted = :deleted)
+    """)
+    Optional<Supplier> findByIdSafe(
+            UUID id,
+            Boolean deleted,
+            UUID tenantId,
+            UUID branchId
+    );
 
-    Optional<Supplier> findByIdAndDeletedFalse(UUID id);
-    Optional<Supplier> findByIdAndDeletedTrue(UUID id);
-    Optional<Supplier> findById(UUID id);
 
-    boolean existsByNameIgnoreCase(String name);
 
-    // Search the element collection table for email
-    @Query("select s from Supplier s join s.email e where lower(e) = lower(:email)")
-    Optional<Supplier> findByEmailElementIgnoreCase(@Param("email") String email);
-    @Query("select s from Supplier s join s.email e where lower(e) = lower(:email) and s.deleted = false")
-    Optional<Supplier> findByEmailElementIgnoreCaseAndDeletedFalse(@Param("email") String email);
-    @Query("select s from Supplier s join s.email e where lower(e) = lower(:email) and s.deleted = true")
-    Optional<Supplier> findByEmailElementIgnoreCaseAndDeletedTrue(@Param("email") String email);
+    @Query("""
+        SELECT s FROM Supplier s
+        WHERE s.tenantId = :tenantId
+          AND s.branchId = :branchId
+          AND s.deleted = false
+    """)
+    Page<Supplier> findActive(
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId,
+            Pageable pageable
+    );
 
-    // Search phone numbers (element collection)
-    @Query("select s from Supplier s join s.phoneNumber p where p = :phone")
-    Optional<Supplier> findByPhoneNumberElement(@Param("phone") String phone);
-    @Query("select s from Supplier s join s.phoneNumber p where p = :phone and s.deleted = false")
-    Optional<Supplier> findByPhoneNumberElementAndDeletedFalse(@Param("phone") String phone);
-    @Query("select s from Supplier s join s.phoneNumber p where p = :phone and s.deleted = true")
-    Optional<Supplier> findByPhoneNumberElementAndDeletedTrue(@Param("phone") String phone);
+    @Query("""
+        SELECT s FROM Supplier s
+        WHERE s.tenantId = :tenantId
+          AND s.branchId = :branchId
+          AND s.deleted = true
+    """)
+    Page<Supplier> findDeleted(
+            UUID tenantId,
+            UUID branchId,
+            Pageable pageable
+    );
 
-    // Search name case-insensitive
-    Optional<Supplier> findByNameIgnoreCase(String name);
-    Optional<Supplier> findByNameIgnoreCaseAndDeletedTrue(String name);
-    Optional<Supplier> findByNameIgnoreCaseAndDeletedFalse(String name);
+    /* =====================================================
+       ADMIN (ALL BRANCHES)
+    ===================================================== */
 
-    // Fetch suppliers with categories, images, emails, phone numbers in one query
-    List<Supplier> findAll();
+    @Query("""
+        SELECT s FROM Supplier s
+        WHERE s.tenantId = :tenantId
+          AND s.deleted = false
+    """)
+    Page<Supplier> findAllBranches(
+            UUID tenantId,
+            Pageable pageable
+    );
 
-    // Bulk detach suppliers from categories
+    /* =====================================================
+       SINGLE FETCH
+    ===================================================== */
+
+    @Query("""
+        SELECT s FROM Supplier s
+        WHERE s.id = :id
+          AND s.tenantId = :tenantId
+          AND s.branchId = :branchId
+          AND s.deleted = false
+    """)
+    Optional<Supplier> findActiveById(
+            UUID id,
+            UUID tenantId,
+            UUID branchId
+    );
+
+    /* =====================================================
+       EXISTENCE (STRICT)
+    ===================================================== */
+
+    @Query("""
+        SELECT s FROM Supplier s
+        WHERE s.tenantId = :tenantId
+          AND s.branchId = :branchId
+          AND (:deleted IS NULL OR s.deleted = :deleted)
+    """)
+    List<Supplier> findAllSafe(
+            Boolean deleted,
+            UUID tenantId,
+            UUID branchId
+    );
+
+    @Query("""
+        SELECT COUNT(s) > 0 FROM Supplier s
+        WHERE lower(s.name) = lower(:name)
+          AND s.tenantId = :tenantId
+          AND s.branchId = :branchId
+    """)
+    boolean existsByNameSafe(
+            String name,
+            UUID tenantId,
+            UUID branchId
+    );
+
+    @Query("""
+        SELECT s FROM Supplier s
+        JOIN s.email e
+        WHERE lower(e) = lower(:email)
+          AND s.tenantId = :tenantId
+          AND s.branchId = :branchId
+          AND (:deleted IS NULL OR s.deleted = :deleted)
+    """)
+    Optional<Supplier> findByEmailSafe(
+            String email,
+            Boolean deleted,
+            UUID tenantId,
+            UUID branchId
+    );
+
+    @Query("""
+        SELECT s FROM Supplier s
+        JOIN s.phoneNumber p
+        WHERE p = :phone
+          AND s.tenantId = :tenantId
+          AND s.branchId = :branchId
+          AND (:deleted IS NULL OR s.deleted = :deleted)
+    """)
+    Optional<Supplier> findByPhoneSafe(
+            String phone,
+            Boolean deleted,
+            UUID tenantId,
+            UUID branchId
+    );
+
+    @Query("""
+        SELECT s FROM Supplier s
+        WHERE lower(s.name) = lower(:name)
+          AND s.tenantId = :tenantId
+          AND s.branchId = :branchId
+          AND (:deleted IS NULL OR s.deleted = :deleted)
+    """)
+    Optional<Supplier> findByNameSafe(
+            String name,
+            Boolean deleted,
+            UUID tenantId,
+            UUID branchId
+    );
+
+    @Query("""
+        SELECT s FROM Supplier s
+        WHERE s.id IN :ids
+          AND s.tenantId = :tenantId
+          AND s.branchId = :branchId
+    """)
+    List<Supplier> findAllByIdsSafe(
+            List<UUID> ids,
+            UUID tenantId,
+            UUID branchId
+    );
+
+    /* =====================================================
+       BULK OPERATIONS
+    ===================================================== */
+
     @Modifying
-    @Query(value = "DELETE FROM category_suppliers WHERE supplier_id IN :supplierIds", nativeQuery = true)
-    void detachFromCategoriesBulk(@Param("supplierIds") List<UUID> supplierIds);
+    @Query("""
+        DELETE FROM Supplier s
+        WHERE s.id IN :ids
+          AND s.tenantId = :tenantId
+          AND s.branchId = :branchId
+    """)
+    void deleteSuppliersByIds(
+            List<UUID> ids,
+            UUID tenantId,
+            UUID branchId
+    );
 
-    // Bulk detach suppliers from products
-    @Modifying
-    @Query(value = "DELETE FROM products_suppliers WHERE supplier_id IN :supplierIds", nativeQuery = true)
-    void detachFromProductsBulk(@Param("supplierIds") List<UUID> supplierIds);
+    /* =====================================================
+       CATEGORY DETACH (SAFE)
+    ===================================================== */
 
-    // Bulk delete suppliers
     @Modifying
-    @Query("DELETE FROM Supplier s WHERE s.id IN :supplierIds")
-    void deleteSuppliersByIds(@Param("supplierIds") List<UUID> supplierIds);
+    @Query(value = """
+        DELETE FROM category_suppliers
+        WHERE supplier_id IN :ids
+          AND tenant_id = :tenantId
+          AND branch_id = :branchId
+    """, nativeQuery = true)
+    void detachFromCategories(
+            List<UUID> ids,
+            UUID tenantId,
+            UUID branchId
+    );
+
+    @Modifying
+    @Query(value = """
+        DELETE ps FROM products_suppliers ps
+        JOIN suppliers s ON s.id = ps.supplier_id
+        WHERE ps.supplier_id IN :ids
+          AND s.tenant_id = :tenantId
+          AND s.branch_id = :branchId
+    """, nativeQuery = true)
+    void detachFromProducts(
+            List<UUID> ids,
+            UUID tenantId,
+            UUID branchId
+    );
 }

@@ -16,7 +16,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.function.rollca
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.RollcallAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.RollcallRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;

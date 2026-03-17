@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.common.backup.config;
+package com.IntegrityTechnologies.business_manager.config.backup.config;
 
 import lombok.Getter;
 import lombok.Setter;

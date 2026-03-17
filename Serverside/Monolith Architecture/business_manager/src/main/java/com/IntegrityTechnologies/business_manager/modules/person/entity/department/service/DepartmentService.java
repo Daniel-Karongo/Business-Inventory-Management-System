@@ -1,15 +1,13 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.department.service;
 
-import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
+import com.IntegrityTechnologies.business_manager.security.util.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.service.BranchService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.mapper.DepartmentMapper;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.DepartmentMembershipRole;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserDepartment;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.UserDepartmentId;
@@ -17,17 +15,14 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.rep
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.dto.DepartmentMinimalDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.MinimalUserDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.DepartmentAudit;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
-import com.IntegrityTechnologies.business_manager.modules.stock.category.controller.CategoryController;
-import com.IntegrityTechnologies.business_manager.security.BranchContext;
-import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
+import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;

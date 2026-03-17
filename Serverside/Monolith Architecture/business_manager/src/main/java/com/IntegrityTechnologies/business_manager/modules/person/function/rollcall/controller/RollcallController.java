@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.controller;
 
-import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
+import com.IntegrityTechnologies.business_manager.security.util.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.modules.person.function.biometric.model.BiometricRollcallRequest;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.dto.LoginRollcallRequest;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.dto.RollcallDTO;

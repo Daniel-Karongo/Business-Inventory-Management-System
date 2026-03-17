@@ -1,6 +1,6 @@
-package com.IntegrityTechnologies.business_manager.modules.finance.accounting.events;
+package com.IntegrityTechnologies.business_manager.config.kafka;
 
-import com.IntegrityTechnologies.business_manager.security.filter.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;

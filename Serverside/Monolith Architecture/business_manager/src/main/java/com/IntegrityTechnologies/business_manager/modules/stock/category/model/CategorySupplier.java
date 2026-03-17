@@ -1,25 +1,29 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.category.model;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(
         name = "category_suppliers",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"category_id", "supplier_id"})
+                @UniqueConstraint(
+                        name = "uk_category_supplier_tenant_branch",
+                        columnNames = {"tenant_id", "branch_id", "category_id", "supplier_id"}
+                )
         }
 )
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class CategorySupplier {
+@SuperBuilder
+public class CategorySupplier extends BranchAwareEntity {
 
     @EmbeddedId
     private CategorySupplierId id;

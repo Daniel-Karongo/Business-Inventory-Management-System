@@ -1,7 +1,7 @@
-package com.IntegrityTechnologies.business_manager.common.backup.scheduler;
+package com.IntegrityTechnologies.business_manager.config.backup.scheduler;
 
-import com.IntegrityTechnologies.business_manager.common.backup.config.DatabaseBackupProperties;
-import com.IntegrityTechnologies.business_manager.common.backup.service.DatabaseBackupService;
+import com.IntegrityTechnologies.business_manager.config.backup.config.DatabaseBackupProperties;
+import com.IntegrityTechnologies.business_manager.config.backup.service.DatabaseBackupService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.TaskScheduler;

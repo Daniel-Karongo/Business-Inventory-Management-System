@@ -1,7 +1,7 @@
-package com.IntegrityTechnologies.business_manager.modules.platform.tenant.filter;
+package com.IntegrityTechnologies.business_manager.security.filter;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.FilterChain;

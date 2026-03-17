@@ -2,8 +2,8 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.go
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.config.AccountingProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountingMode;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
-import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

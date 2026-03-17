@@ -7,8 +7,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.tax.mapper.Tax
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.VatFilingRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.VatFilingService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
-import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 
 import lombok.RequiredArgsConstructor;
 

@@ -4,7 +4,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.accounting.InventoryAccountingPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -2,7 +2,7 @@
 //
 //import com.IntegrityTechnologies.business_manager.modules.acl.entity.EndpointPermission;
 //import com.IntegrityTechnologies.business_manager.modules.acl.service.PermissionEvaluatorService;
-//import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+//import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 //import jakarta.servlet.FilterChain;
 //import jakarta.servlet.ServletException;
 //import jakarta.servlet.http.*;

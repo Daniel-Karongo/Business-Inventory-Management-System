@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.exception;
 
-import com.IntegrityTechnologies.business_manager.common.ApiResponse;
+import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.SignatureException;

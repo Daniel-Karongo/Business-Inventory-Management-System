@@ -1,7 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service;
 
-import com.IntegrityTechnologies.business_manager.config.FileStorageService;
-import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
+import com.IntegrityTechnologies.business_manager.config.files.FileStorageService;
+import com.IntegrityTechnologies.business_manager.config.files.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariantImage;

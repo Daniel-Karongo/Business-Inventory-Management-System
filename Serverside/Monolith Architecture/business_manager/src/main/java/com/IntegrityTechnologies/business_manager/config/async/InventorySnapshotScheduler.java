@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.config;
+package com.IntegrityTechnologies.business_manager.config.async;
 
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import lombok.RequiredArgsConstructor;

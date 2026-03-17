@@ -1,8 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.sales.controller;
 
-import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
-import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
-import com.IntegrityTechnologies.business_manager.config.OptimisticRetryRunner;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
+import com.IntegrityTechnologies.business_manager.config.spring.OptimisticRetryRunner;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.service.SaleBulkService;

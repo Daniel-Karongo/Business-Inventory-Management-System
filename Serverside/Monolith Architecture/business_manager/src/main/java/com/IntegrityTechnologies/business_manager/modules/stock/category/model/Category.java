@@ -1,33 +1,36 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.category.model;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Entity
 @Table(
         name = "categories",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"parent_id", "name"})
+                @UniqueConstraint(
+                        name = "uk_category_tenant_branch_parent_name",
+                        columnNames = {"tenant_id", "branch_id", "parent_id", "name"}
+                )
         },
         indexes = {
+                @Index(name = "idx_category_tenant_branch", columnList = "tenant_id, branch_id"),
                 @Index(name = "idx_category_parent", columnList = "parent_id"),
                 @Index(name = "idx_category_deleted", columnList = "deleted"),
                 @Index(name = "idx_category_path", columnList = "path")
         }
 )
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Category {
+@SuperBuilder
+public class Category extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -41,40 +44,24 @@ public class Category {
 
     private String description;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
     private Category parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
-    @Builder.Default
     private List<Category> subcategories = new ArrayList<>();
 
     @Column(nullable = false, length = 255)
     private String path;
 
     @OneToMany(mappedBy = "category")
-    @Builder.Default
-    private List<Product> products = new ArrayList<>();;
+    private List<Product> products = new ArrayList<>();
 
-    @OneToMany(
-            mappedBy = "category",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
-    @Builder.Default
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<CategorySupplier> categorySuppliers = new HashSet<>();
 
     @Column(nullable = false)
-    @Builder.Default
     private boolean deleted = false;
 
     private LocalDateTime deletedAt;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-
-    @PrePersist
-    public void onCreate() { createdAt = LocalDateTime.now(); }
-
-    @PreUpdate
-    public void onUpdate() { updatedAt = LocalDateTime.now(); }
 }

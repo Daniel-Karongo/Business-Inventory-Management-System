@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.common.backup.model;
+package com.IntegrityTechnologies.business_manager.config.backup.model;
 
 import jakarta.persistence.*;
 import lombok.*;

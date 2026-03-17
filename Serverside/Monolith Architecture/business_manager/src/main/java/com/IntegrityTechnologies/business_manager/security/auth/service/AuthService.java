@@ -15,7 +15,7 @@ import com.IntegrityTechnologies.business_manager.security.auth.util.JwtUtil;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.UserSession;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.service.RollcallService;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUser;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
 import com.IntegrityTechnologies.business_manager.security.auth.model.UserType;

@@ -1,6 +1,6 @@
-package com.IntegrityTechnologies.business_manager.common.backup.security;
+package com.IntegrityTechnologies.business_manager.config.backup.security;
 
-import com.IntegrityTechnologies.business_manager.config.FileStorageService;
+import com.IntegrityTechnologies.business_manager.config.files.FileStorageService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

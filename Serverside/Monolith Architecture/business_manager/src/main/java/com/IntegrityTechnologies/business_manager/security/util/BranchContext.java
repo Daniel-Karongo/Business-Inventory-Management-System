@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.security;
+package com.IntegrityTechnologies.business_manager.security.util;
 
 import java.util.UUID;
 

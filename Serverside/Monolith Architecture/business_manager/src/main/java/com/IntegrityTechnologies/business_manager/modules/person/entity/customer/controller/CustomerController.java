@@ -1,7 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.customer.controller;
 
-import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
-import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerBulkRow;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerRequest;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerResponse;

@@ -1,9 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.user.service;
 
-import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
-import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
-import com.IntegrityTechnologies.business_manager.config.FileStorageService;
-import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
+import com.IntegrityTechnologies.business_manager.config.files.FIleUploadDTO;
+import com.IntegrityTechnologies.business_manager.security.util.PrivilegesChecker;
+import com.IntegrityTechnologies.business_manager.config.files.FileStorageService;
+import com.IntegrityTechnologies.business_manager.config.files.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.exception.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto.UserImageDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.mapper.UserImageMapper;
@@ -13,7 +13,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.mod
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserImageAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;

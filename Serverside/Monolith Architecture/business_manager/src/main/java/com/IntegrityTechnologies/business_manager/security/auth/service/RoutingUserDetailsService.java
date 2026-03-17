@@ -2,7 +2,7 @@ package com.IntegrityTechnologies.business_manager.security.auth.service;
 
 import com.IntegrityTechnologies.business_manager.security.auth.config.CustomUserDetailsService;
 import com.IntegrityTechnologies.business_manager.security.auth.config.PlatformUserDetailsService;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
 import org.springframework.security.core.userdetails.*;

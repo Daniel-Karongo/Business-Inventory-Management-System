@@ -1,6 +1,6 @@
-package com.IntegrityTechnologies.business_manager.common.backup.service;
+package com.IntegrityTechnologies.business_manager.config.backup.service;
 
-import com.IntegrityTechnologies.business_manager.common.backup.security.BackupKeyProvider;
+import com.IntegrityTechnologies.business_manager.config.backup.security.BackupKeyProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

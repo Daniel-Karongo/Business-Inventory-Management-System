@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.service;
 
-import com.IntegrityTechnologies.business_manager.common.ApiResponse;
+import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
 import com.IntegrityTechnologies.business_manager.exception.OutOfStockException;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.InventoryAccountingAdapter;
@@ -15,8 +15,8 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.m
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
-import com.IntegrityTechnologies.business_manager.modules.stock.category.controller.CategoryController;
+import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplier;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplierId;
@@ -32,12 +32,11 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.s
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service.ProductVariantService;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -73,6 +72,9 @@ public class InventoryService {
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
+    }
+    private UUID branchId() {
+        return BranchContext.get();
     }
     
     // ------------------------
@@ -217,7 +219,7 @@ public class InventoryService {
             incomingCostTotal = incomingCostTotal.add(net);
             totalInputVat = totalInputVat.add(vat);
 
-            supplierRepository.findByIdAndDeletedFalse(su.getSupplierId())
+            supplierRepository.findByIdSafe(su.getSupplierId(), false, tenantId(), branchId())
                     .ifPresent(suppliersUsed::add);
         }
 

@@ -1,15 +1,15 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.branch.controller;
 
-import com.IntegrityTechnologies.business_manager.common.ApiResponse;
-import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
-import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
+import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.dto.BranchBulkRow;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.dto.BranchDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.service.BranchBulkService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.service.BranchService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.*;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

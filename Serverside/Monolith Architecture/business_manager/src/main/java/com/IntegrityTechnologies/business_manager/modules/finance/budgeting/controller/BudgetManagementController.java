@@ -1,15 +1,15 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.budgeting.controller;
 
-import com.IntegrityTechnologies.business_manager.common.ApiResponse;
+import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.Budget;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.enums.BudgetScenario;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.service.BudgetService;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantSupervisorOnly;
-import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.web.bind.annotation.*;

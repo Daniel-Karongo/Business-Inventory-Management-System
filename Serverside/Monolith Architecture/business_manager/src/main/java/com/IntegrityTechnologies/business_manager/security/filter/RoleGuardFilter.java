@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.modules.platform.security.filter;
+package com.IntegrityTechnologies.business_manager.security.filter;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.*;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.service.RoleGuardService;

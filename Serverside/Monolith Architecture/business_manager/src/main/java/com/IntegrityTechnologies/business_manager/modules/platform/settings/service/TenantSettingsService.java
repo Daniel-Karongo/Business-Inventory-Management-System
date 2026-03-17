@@ -1,7 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.settings.service;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.settings.repository.TenantSettingsRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.TenantSettings;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.common.backup.dto;
+package com.IntegrityTechnologies.business_manager.config.backup.dto;
 
 import lombok.Builder;
 import lombok.Data;

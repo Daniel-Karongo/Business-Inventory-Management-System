@@ -6,7 +6,7 @@ import com.IntegrityTechnologies.business_manager.modules.platform.identity.enti
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUser;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.bootstrap.TenantBootstrapService;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.Tenant;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.repository.TenantRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.service.TenantProvisioningService;

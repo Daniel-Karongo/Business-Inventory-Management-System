@@ -3,8 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.co
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.ManualJournalRequest;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.ManualJournalService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
-import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
-import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 

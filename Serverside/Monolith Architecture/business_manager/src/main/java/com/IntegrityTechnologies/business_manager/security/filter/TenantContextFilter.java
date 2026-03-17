@@ -1,10 +1,10 @@
-package com.IntegrityTechnologies.business_manager.modules.platform.tenant.filter;
+package com.IntegrityTechnologies.business_manager.security.filter;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.TenantStatus;
-import com.IntegrityTechnologies.business_manager.security.HibernateTenantFilterManager;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.HibernateTenantFilterManager;
+import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

@@ -1,8 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.category.service;
 
-import com.IntegrityTechnologies.business_manager.common.ApiResponse;
+import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
 import com.IntegrityTechnologies.business_manager.exception.CategoryNotFoundException;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.dto.CategoryDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.mapper.CategoryMapper;
@@ -14,13 +13,14 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.mapper.SupplierMapper;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
+import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -38,13 +38,14 @@ public class CategoryService {
     public CategoryDTO saveCategory(CategoryDTO dto) {
 
         Category category = dto.getId() != null
-                ? categoryRepository.findById(dto.getId()).orElse(new Category())
+                ? categoryRepository.findByIdSafe(dto.getId(), null, tenantId(), branchId())
+                .orElse(new Category())
                 : new Category();
 
         Long parentId = dto.getParentId();
 
         boolean exists = categoryRepository
-                .existsByNameIgnoreCaseAndParent_Id(dto.getName(), parentId);
+                .existsByNameAndParentSafe(dto.getName(), parentId, tenantId(), branchId());
 
         if (exists) {
             if (dto.getId() == null) {
@@ -54,7 +55,7 @@ public class CategoryService {
             }
 
             Category existing = categoryRepository
-                    .findByNameIgnoreCase(dto.getName())
+                    .findByNameSafe(dto.getName(), false, tenantId(), branchId())
                     .orElse(null);
 
             if (existing != null && !existing.getId().equals(dto.getId())) {
@@ -71,8 +72,12 @@ public class CategoryService {
             if (dto.getParentId().equals(dto.getId()))
                 throw new IllegalArgumentException("Category cannot be its own parent");
 
-            Category parent = categoryRepository.findById(dto.getParentId())
-                    .orElseThrow(() -> new CategoryNotFoundException("Parent category not found"));
+            Category parent = categoryRepository.findByIdSafe(
+                    dto.getParentId(),
+                    false,
+                    tenantId(),
+                    branchId()
+            ).orElseThrow(() -> new CategoryNotFoundException("Parent category not found"));
 
             if (isChildOf(parent, category))
                 throw new IllegalArgumentException("Cannot set parent: would create cycle");
@@ -110,10 +115,14 @@ public class CategoryService {
 
             for (UUID supplierId : dto.getSuppliersIds()) {
 
-                Supplier supplier = supplierRepository.findById(supplierId)
-                        .orElseThrow(() ->
-                                new IllegalArgumentException("Supplier not found: " + supplierId)
-                        );
+                Supplier supplier = supplierRepository.findByIdSafe(
+                        supplierId,
+                        null,
+                        tenantId(),
+                        branchId()
+                ).orElseThrow(() ->
+                        new IllegalArgumentException("Supplier not found: " + supplierId)
+                );
 
                 CategorySupplier relation = CategorySupplier.builder()
                         .id(new CategorySupplierId(category.getId(), supplierId))
@@ -139,23 +148,35 @@ public class CategoryService {
         return result;
     }
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+
+    private UUID branchId() {
+        return BranchContext.get();
+    }
+
     @Transactional
     public CategoryDTO updateCategoryRecursive(CategoryDTO dto) {
 
-        Category category = categoryRepository.findById(dto.getId())
-                .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
+        Category category = categoryRepository.findByIdSafe(
+                dto.getId(),
+                null,
+                tenantId(),
+                branchId()
+        ).orElseThrow(() -> new CategoryNotFoundException("Category not found"));
 
         String oldPath = category.getPath();
 
         Long parentId = dto.getParentId();
 
         boolean exists = categoryRepository
-                .existsByNameIgnoreCaseAndParent_Id(dto.getName(), parentId);
+                .existsByNameAndParentSafe(dto.getName(), parentId, tenantId(), branchId());
 
         if (exists) {
 
             Category existing = categoryRepository
-                    .findByNameIgnoreCase(dto.getName())
+                    .findByNameSafe(dto.getName(), false, tenantId(), branchId())
                     .orElse(null);
 
             if (existing != null && !existing.getId().equals(dto.getId())) {
@@ -168,15 +189,19 @@ public class CategoryService {
         categoryMapper.updateEntityFromDTO(dto, category);
 
         /*
-         * HANDLE PARENT
+         * HANDLE PARENT (SAFE)
          */
         if (dto.getParentId() != null) {
 
             if (dto.getParentId().equals(dto.getId()))
                 throw new IllegalArgumentException("Category cannot be its own parent");
 
-            Category parent = categoryRepository.findById(dto.getParentId())
-                    .orElseThrow(() -> new CategoryNotFoundException("Parent category not found"));
+            Category parent = categoryRepository.findByIdSafe(
+                    dto.getParentId(),
+                    false,
+                    tenantId(),
+                    branchId()
+            ).orElseThrow(() -> new CategoryNotFoundException("Parent category not found"));
 
             if (isChildOf(parent, category))
                 throw new IllegalArgumentException("Cannot set parent: would create cycle");
@@ -190,7 +215,7 @@ public class CategoryService {
         category = categoryRepository.save(category);
 
         /*
-         * OPTIMIZED PATH REWRITE
+         * OPTIMIZED PATH REWRITE (SAFE)
          */
         String newPath;
 
@@ -202,7 +227,12 @@ public class CategoryService {
 
         if (!oldPath.equals(newPath)) {
 
-            categoryRepository.rewriteSubtreePath(oldPath, newPath);
+            categoryRepository.rewriteSubtreePathSafe(
+                    oldPath,
+                    newPath,
+                    tenantId(),
+                    branchId()
+            );
 
             category.setPath(newPath);
         }
@@ -210,7 +240,7 @@ public class CategoryService {
         category = categoryRepository.save(category);
 
         /*
-         * SUPPLIER UPDATE
+         * ✅ SUPPLIER UPDATE (RESTORED + SAFE)
          */
         if (dto.getSuppliersIds() != null) {
 
@@ -218,10 +248,14 @@ public class CategoryService {
 
             for (UUID supplierId : dto.getSuppliersIds()) {
 
-                Supplier supplier = supplierRepository.findById(supplierId)
-                        .orElseThrow(() ->
-                                new IllegalArgumentException("Supplier not found: " + supplierId)
-                        );
+                Supplier supplier = supplierRepository.findByIdSafe(
+                        supplierId,
+                        false,
+                        tenantId(),
+                        branchId()
+                ).orElseThrow(() ->
+                        new IllegalArgumentException("Supplier not found: " + supplierId)
+                );
 
                 CategorySupplier relation = CategorySupplier.builder()
                         .id(new CategorySupplierId(category.getId(), supplierId))
@@ -233,6 +267,9 @@ public class CategoryService {
             }
         }
 
+        /*
+         * ✅ DTO ENRICHMENT (RESTORED)
+         */
         CategoryDTO result = categoryMapper.toDTO(category);
 
         result.setSubcategories(
@@ -302,7 +339,7 @@ public class CategoryService {
 
     public List<CategoryDTO> getAllCategoriesTree(Boolean deleted) {
 
-        List<Category> ordered = categoryRepository.findAllOrderedByPath(deleted);
+        List<Category> ordered = categoryRepository.findAllOrderedSafe(deleted, tenantId(), branchId());
 
         Map<Long, CategoryDTO> dtoMap = new LinkedHashMap<>();
         List<CategoryDTO> roots = new ArrayList<>();
@@ -328,20 +365,25 @@ public class CategoryService {
     }
 
     public List<CategoryDTO> getAllCategoriesFlat(Boolean deleted) {
-        if(Boolean.FALSE.equals(deleted))
-            return categoryRepository.findAllActiveFlat().stream().map(categoryMapper::toDTO).collect(Collectors.toList());
-        else if(Boolean.TRUE.equals(deleted))
-            return categoryRepository.findAllDeletedFlat().stream().map(categoryMapper::toDTO).collect(Collectors.toList());
-        else
-            return categoryRepository.findAllIncludingDeletedFlat().stream().map(categoryMapper::toDTO).collect(Collectors.toList());
+
+        List<Category> categories = categoryRepository
+                .findAllOrderedSafe(deleted, tenantId(), branchId());
+
+        return categories.stream()
+                .map(categoryMapper::toDTO)
+                .collect(Collectors.toList());
     }
 
     // ---------------- SINGLE CATEGORY ----------------
 
     public List<SupplierDTO> getCategorySuppliers(Long id, Boolean deleted, Boolean strict) {
 
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
+        Category category = categoryRepository.findByIdSafe(
+                id,
+                null,
+                tenantId(),
+                branchId()
+        ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
         Set<Supplier> suppliers = new HashSet<>();
 
@@ -387,8 +429,12 @@ public class CategoryService {
 
     public CategoryDTO getCategoryTree(Long id, Boolean deleted) {
 
-        Category root = categoryRepository.findById(id)
-                .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
+        Category root = categoryRepository.findByIdSafe(
+                id,
+                deleted,
+                tenantId(),
+                branchId()
+        ).orElseThrow(() -> new CategoryNotFoundException("Category not found"));
 
         if (deleted != null) {
             if (deleted && !root.isDeleted())
@@ -397,7 +443,11 @@ public class CategoryService {
                 throw new CategoryNotFoundException("Category not found or inactive");
         }
 
-        List<Category> subtree = categoryRepository.findSubtree(root.getPath());
+        List<Category> subtree = categoryRepository.findSubtreeSafe(
+                root.getPath(),
+                tenantId(),
+                branchId()
+        );
 
         return buildTree(subtree).stream()
                 .filter(dto -> dto.getId().equals(id))
@@ -432,19 +482,19 @@ public class CategoryService {
 
     public CategoryDTO getCategoryFlat(Long id, Boolean deleted) {
         if(Boolean.FALSE.equals(deleted)) {
-            Category category = categoryRepository.findByIdAndDeletedFalse(id)
+            Category category = categoryRepository.findByIdSafe(id, false, tenantId(), branchId())
                     .orElseThrow(() -> new CategoryNotFoundException("Category not found or inactive"));
             CategoryDTO dto = categoryMapper.toDTO(category);
             dto.setSubcategories(null); // flat
             return dto;
         } else if(Boolean.TRUE.equals(deleted)) {
-            Category category = categoryRepository.findByIdAndDeletedTrue(id)
-                    .orElseThrow(() -> new CategoryNotFoundException("Category not found or inactive"));
+            Category category = categoryRepository.findByIdSafe(id, true, tenantId(), branchId())
+                    .orElseThrow(() -> new CategoryNotFoundException("Category not found or active"));
             CategoryDTO dto = categoryMapper.toDTO(category);
             dto.setSubcategories(null);
             return dto;
         } else {
-            Category category = categoryRepository.findById(id)
+            Category category = categoryRepository.findByIdSafe(id, null, tenantId(), branchId())
                     .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
             CategoryDTO dto = categoryMapper.toDTO(category);
             dto.setSubcategories(null);
@@ -490,10 +540,18 @@ public class CategoryService {
     @Transactional
     public ResponseEntity<ApiResponse> softDelete(Long id) {
 
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
+        Category category = categoryRepository.findByIdSafe(
+                id,
+                false,
+                tenantId(),
+                branchId()
+        ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
-        categoryRepository.softDeleteByPath(category.getPath());
+        categoryRepository.softDeleteByPathSafe(
+                category.getPath(),
+                tenantId(),
+                branchId()
+        );
 
         return ResponseEntity.ok(
                 new ApiResponse("success", "Category and subcategories soft deleted")
@@ -506,10 +564,18 @@ public class CategoryService {
 
         for (Long id : ids) {
 
-            Category category = categoryRepository.findById(id)
-                    .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
+            Category category = categoryRepository.findByIdSafe(
+                    id,
+                    false,
+                    tenantId(),
+                    branchId()
+            ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
-            categoryRepository.softDeleteByPath(category.getPath());
+            categoryRepository.softDeleteByPathSafe(
+                    category.getPath(),
+                    tenantId(),
+                    branchId()
+            );
         }
 
         return ResponseEntity.ok(
@@ -523,10 +589,18 @@ public class CategoryService {
     @Transactional
     public ResponseEntity<ApiResponse> hardDelete(Long id) {
 
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
+        Category category = categoryRepository.findByIdSafe(
+                id,
+                null,
+                tenantId(),
+                branchId()
+        ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
-        categoryRepository.hardDeleteByPath(category.getPath());
+        categoryRepository.hardDeleteByPathSafe(
+                category.getPath(),
+                tenantId(),
+                branchId()
+        );
 
         return ResponseEntity.ok(
                 new ApiResponse("success", "Category permanently deleted")
@@ -539,10 +613,18 @@ public class CategoryService {
 
         for (Long id : ids) {
 
-            Category category = categoryRepository.findById(id)
-                    .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
+            Category category = categoryRepository.findByIdSafe(
+                    id,
+                    null,
+                    tenantId(),
+                    branchId()
+            ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
-            categoryRepository.hardDeleteByPath(category.getPath());
+            categoryRepository.hardDeleteByPathSafe(
+                    category.getPath(),
+                    tenantId(),
+                    branchId()
+            );
         }
 
         return ResponseEntity.ok(
@@ -556,34 +638,52 @@ public class CategoryService {
     /** Restore single category (non-recursive) */
     @Transactional
     public ResponseEntity<ApiResponse> restore(Long id) {
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
+
+        Category category = categoryRepository.findByIdSafe(
+                id,
+                null,
+                tenantId(),
+                branchId()
+        ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
         category.setDeleted(false);
         category.setDeletedAt(null);
         categoryRepository.save(category);
 
         Map<String, Object> restored = Map.of("id", category.getId(), "name", category.getName());
-        return ResponseEntity.ok(new ApiResponse("success", "Category restored", restored));
+
+        return ResponseEntity.ok(
+                new ApiResponse("success", "Category restored", restored)
+        );
     }
 
     /** Restore categories in bulk (non-recursive) */
     @Transactional
     public ResponseEntity<ApiResponse> restoreInBulk(List<Long> ids) {
+
         List<Map<String, Object>> restoredCategories = new ArrayList<>();
 
         for (Long id : ids) {
-            Category category = categoryRepository.findById(id)
-                    .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
+
+            Category category = categoryRepository.findByIdSafe(
+                    id,
+                    null,
+                    tenantId(),
+                    branchId()
+            ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
             category.setDeleted(false);
             category.setDeletedAt(null);
             categoryRepository.save(category);
 
-            restoredCategories.add(Map.of("id", category.getId(), "name", category.getName()));
+            restoredCategories.add(
+                    Map.of("id", category.getId(), "name", category.getName())
+            );
         }
 
-        return ResponseEntity.ok(new ApiResponse("success", "Categories restored", restoredCategories));
+        return ResponseEntity.ok(
+                new ApiResponse("success", "Categories restored", restoredCategories)
+        );
     }
 
     // --------------------- RECURSIVE RESTORE ---------------------
@@ -592,10 +692,18 @@ public class CategoryService {
     @Transactional
     public ResponseEntity<ApiResponse> restoreRecursively(Long id) {
 
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
+        Category category = categoryRepository.findByIdSafe(
+                id,
+                true,
+                tenantId(),
+                branchId()
+        ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
-        categoryRepository.restoreByPath(category.getPath());
+        categoryRepository.restoreByPathSafe(
+                category.getPath(),
+                tenantId(),
+                branchId()
+        );
 
         return ResponseEntity.ok(
                 new ApiResponse("success", "Category and subcategories restored")
@@ -608,12 +716,20 @@ public class CategoryService {
 
         for (Long id : ids) {
 
-            Category category = categoryRepository.findById(id)
-                    .orElseThrow(() ->
-                            new CategoryNotFoundException("Category not found: " + id)
-                    );
+            Category category = categoryRepository.findByIdSafe(
+                    id,
+                    true,
+                    tenantId(),
+                    branchId()
+            ).orElseThrow(() ->
+                    new CategoryNotFoundException("Category not found: " + id)
+            );
 
-            categoryRepository.restoreByPath(category.getPath());
+            categoryRepository.restoreByPathSafe(
+                    category.getPath(),
+                    tenantId(),
+                    branchId()
+            );
         }
 
         return ResponseEntity.ok(
@@ -628,16 +744,18 @@ public class CategoryService {
      * Active only if activeOnly=true, otherwise all categories.
      */
     public List<CategoryDTO> searchByKeyword(String keyword, boolean deleted) {
-        List<Category> matching = deleted == false
-                ? categoryRepository.searchActive(keyword)
-                : categoryRepository.searchAll(keyword);
 
-        // Convert to DTOs
+        List<Category> matching = categoryRepository.searchSafe(
+                keyword,
+                deleted,
+                tenantId(),
+                branchId()
+        );
+
         List<CategoryDTO> dtos = matching.stream()
                 .map(categoryMapper::toDTO)
                 .toList();
 
-        // Build tree
         return buildTreeFromList(dtos);
     }
 
@@ -667,11 +785,17 @@ public class CategoryService {
     }
 
     public List<Long> getAllCategoryIdsRecursive(Long categoryId) {
-        Category root = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new CategoryNotFoundException("Category not found: " + categoryId));
+
+        Category root = categoryRepository.findByIdSafe(
+                categoryId,
+                null,
+                tenantId(),
+                branchId()
+        ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + categoryId));
 
         List<Long> ids = new ArrayList<>();
         collectCategoryIds(root, ids);
+
         return ids;
     }
 

@@ -1,8 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.category.controller;
 
-import com.IntegrityTechnologies.business_manager.common.ApiResponse;
-import com.IntegrityTechnologies.business_manager.common.bulk.BulkRequest;
-import com.IntegrityTechnologies.business_manager.common.bulk.BulkResult;
+import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.dto.CategoryBulkRow;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.dto.CategoryDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.service.CategoryBulkService;

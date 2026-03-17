@@ -1,35 +1,87 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository;
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.SupplierImage;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
-@Repository
 public interface SupplierImageRepository extends JpaRepository<SupplierImage, UUID> {
-    List<SupplierImage> findBySupplierId(UUID supplierId);
-    List<SupplierImage> findBySupplierIdAndDeletedFalse(UUID supplierId);
-    List<SupplierImage> findBySupplierIdAndDeletedTrue(UUID supplierId);
-    List<SupplierImage> findBySupplier_Id(UUID supplierId);
 
-    List<SupplierImage> findBySupplier_IdAndDeleted(UUID supplierId, Boolean deleted);
-    Optional<SupplierImage> findBySupplierIdAndFileName(UUID supplierId, String fileName);
+    /* =====================================================
+       ✅ SAFE METHODS (STRICT TENANT + BRANCH)
+    ===================================================== */
+    @Query("""
+        SELECT i FROM SupplierImage i
+        WHERE i.tenantId = :tenantId
+          AND i.branchId = :branchId
+    """)
+    List<SupplierImage> findAllSafe(UUID tenantId, UUID branchId);
 
-    Optional<SupplierImage> findBySupplierIdAndFileNameAndDeletedFalse(UUID supplierId, String fileName);
+    @Query("""
+        SELECT si FROM SupplierImage si
+        JOIN si.supplier s
+        WHERE si.tenantId = :tenantId
+          AND si.branchId = :branchId
+          AND (:deletedImage IS NULL OR si.deleted = :deletedImage)
+          AND (:deletedSupplier IS NULL OR s.deleted = :deletedSupplier)
+    """)
+    List<SupplierImage> findAllWithSupplierFilter(
+            UUID tenantId,
+            UUID branchId,
+            Boolean deletedSupplier,
+            Boolean deletedImage
+    );
 
-    Optional<SupplierImage> findBySupplierIdAndFileNameAndDeletedTrue(UUID supplierId, String fileName);
+    @Query("""
+        SELECT si FROM SupplierImage si
+        WHERE si.supplier.id = :supplierId
+          AND si.tenantId = :tenantId
+          AND si.branchId = :branchId
+    """)
+    List<SupplierImage> findSafeBySupplier(
+            UUID supplierId,
+            UUID tenantId,
+            UUID branchId
+    );
+
+    @Query("""
+        SELECT si FROM SupplierImage si
+        WHERE si.supplier.id = :supplierId
+          AND si.tenantId = :tenantId
+          AND si.branchId = :branchId
+          AND si.deleted = false
+    """)
+    List<SupplierImage> findSafeActiveBySupplier(
+            UUID supplierId,
+            UUID tenantId,
+            UUID branchId
+    );
+
+    @Query("""
+        SELECT si FROM SupplierImage si
+        WHERE si.supplier.id = :supplierId
+          AND si.tenantId = :tenantId
+          AND si.branchId = :branchId
+          AND si.fileName = :fileName
+    """)
+    Optional<SupplierImage> findSafeByFileName(
+            UUID supplierId,
+            String fileName,
+            UUID tenantId,
+            UUID branchId
+    );
 
     @Modifying
-    @Query("DELETE FROM SupplierImage si WHERE si.supplier.id = :supplierId")
-    void deleteAllBySupplierId(@Param("supplierId") UUID supplierId);
-
-    @Modifying
-    @Query("DELETE FROM SupplierImage si WHERE si.supplier.id IN :supplierIds")
-    void deleteAllBySupplierIds(@Param("supplierIds") List<UUID> supplierIds);
+        @Query("""
+        DELETE FROM SupplierImage si
+        WHERE si.supplier.id IN :supplierIds
+          AND si.tenantId = :tenantId
+          AND si.branchId = :branchId
+    """)
+    void deleteAllBySupplierIds(
+            List<UUID> supplierIds,
+            UUID tenantId,
+            UUID branchId
+    );
 }

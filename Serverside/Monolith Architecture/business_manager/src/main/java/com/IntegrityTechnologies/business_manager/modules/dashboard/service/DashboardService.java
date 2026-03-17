@@ -11,7 +11,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.r
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserAuditRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.BatchConsumptionRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;

@@ -1,6 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.sales.service;
 
-import com.IntegrityTechnologies.business_manager.common.bulk.*;
+import com.IntegrityTechnologies.business_manager.config.bulk.*;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkError;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkOptions;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentRequest;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.service.PaymentService;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.dto.*;
@@ -9,11 +13,11 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sa
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

@@ -1,6 +1,6 @@
-package com.IntegrityTechnologies.business_manager.config;
+package com.IntegrityTechnologies.business_manager.config.files;
 
-import com.IntegrityTechnologies.business_manager.security.filter.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

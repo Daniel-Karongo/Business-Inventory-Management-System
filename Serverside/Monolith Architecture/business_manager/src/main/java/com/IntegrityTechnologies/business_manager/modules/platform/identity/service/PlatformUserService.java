@@ -8,7 +8,7 @@ import com.IntegrityTechnologies.business_manager.modules.platform.identity.enti
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.mapper.PlatformUserMapper;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

@@ -7,7 +7,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.domain.SupplierPayment;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.repository.SupplierPaymentRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

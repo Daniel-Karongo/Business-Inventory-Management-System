@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.modules.finance.accounting.events;
+package com.IntegrityTechnologies.business_manager.config.kafka;
 
 import jakarta.persistence.*;
 import lombok.Getter;

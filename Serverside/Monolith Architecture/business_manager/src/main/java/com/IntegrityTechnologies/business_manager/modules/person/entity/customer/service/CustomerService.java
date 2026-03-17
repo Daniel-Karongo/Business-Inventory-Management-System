@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service;
 
-import com.IntegrityTechnologies.business_manager.common.PhoneAndEmailNormalizer;
+import com.IntegrityTechnologies.business_manager.config.util.PhoneAndEmailNormalizer;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.dto.SmsRequest;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.model.SmsMessage;

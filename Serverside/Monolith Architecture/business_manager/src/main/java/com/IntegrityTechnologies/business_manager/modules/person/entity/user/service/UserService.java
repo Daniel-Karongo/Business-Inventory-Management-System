@@ -1,11 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.user.service;
 
-import com.IntegrityTechnologies.business_manager.common.ApiResponse;
-import com.IntegrityTechnologies.business_manager.common.FIleUploadDTO;
-import com.IntegrityTechnologies.business_manager.common.PhoneAndEmailNormalizer;
-import com.IntegrityTechnologies.business_manager.common.PrivilegesChecker;
-import com.IntegrityTechnologies.business_manager.config.FileStorageService;
-import com.IntegrityTechnologies.business_manager.config.TransactionalFileManager;
+import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
+import com.IntegrityTechnologies.business_manager.config.files.FIleUploadDTO;
+import com.IntegrityTechnologies.business_manager.config.util.PhoneAndEmailNormalizer;
+import com.IntegrityTechnologies.business_manager.security.util.PrivilegesChecker;
+import com.IntegrityTechnologies.business_manager.config.files.FileStorageService;
+import com.IntegrityTechnologies.business_manager.config.files.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.exception.InvalidUserDataException;
 import com.IntegrityTechnologies.business_manager.exception.UnauthorizedAccessException;
@@ -22,7 +22,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.dto
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.*;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.service.SubscriptionGuard;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
@@ -32,6 +32,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -398,7 +399,14 @@ public class UserService {
             String q,
             Pageable pageable
     ) {
+
         Role parsedRole = role != null ? Role.valueOf(role.toUpperCase()) : null;
+
+        // 🔥 REMOVE SORTING FROM DB QUERY (fix MySQL DISTINCT issue)
+        Pageable unsortedPageable = Pageable.ofSize(pageable.getPageSize())
+                .withPage(pageable.getPageNumber());
+
+        // STEP 1: fetch IDs only (safe pagination)
         Page<UUID> pageIds = userRepository.searchUserIds(
                 tenantId(),
                 deleted,
@@ -406,14 +414,17 @@ public class UserService {
                 branchId,
                 departmentId,
                 q,
-                pageable
+                unsortedPageable
         );
 
-        List<User> users = pageIds.isEmpty()
-                ? List.of()
-                : userRepository.findUsersWithDepartments(pageIds.getContent());
+        if (pageIds.isEmpty()) {
+            return new PageImpl<>(List.of(), pageable, 0);
+        }
 
-        // 🔥 preserve order
+        // STEP 2: fetch full users
+        List<User> users = userRepository.findUsersWithDepartments(pageIds.getContent());
+
+        // 🔥 STEP 3: preserve DB pagination order
         Map<UUID, Integer> orderMap = new HashMap<>();
         for (int i = 0; i < pageIds.getContent().size(); i++) {
             orderMap.put(pageIds.getContent().get(i), i);
@@ -421,15 +432,58 @@ public class UserService {
 
         users.sort(Comparator.comparingInt(u -> orderMap.get(u.getId())));
 
-        return new PageImpl<>(
-                users.stream().map(user -> {
-                    Hibernate.initialize(user.getEmailAddresses());
-                    Hibernate.initialize(user.getPhoneNumbers());
-                    return mapToDTO(user);
-                }).toList(),
-                pageable,
-                pageIds.getTotalElements()
-        );
+        // 🔥 STEP 4: APPLY SORTING IN MEMORY (SAFE)
+        if (pageable.getSort().isSorted()) {
+            Comparator<User> comparator = null;
+
+            for (Sort.Order order : pageable.getSort()) {
+
+                Comparator<User> fieldComparator = getComparatorForField(order.getProperty());
+
+                if (fieldComparator == null) continue;
+
+                if (order.isDescending()) {
+                    fieldComparator = fieldComparator.reversed();
+                }
+
+                comparator = (comparator == null)
+                        ? fieldComparator
+                        : comparator.thenComparing(fieldComparator);
+            }
+
+            if (comparator != null) {
+                users.sort(comparator);
+            }
+        }
+
+        // STEP 5: map to DTO
+        List<UserDTO> dtoList = users.stream().map(user -> {
+            Hibernate.initialize(user.getEmailAddresses());
+            Hibernate.initialize(user.getPhoneNumbers());
+            return mapToDTO(user);
+        }).toList();
+
+        return new PageImpl<>(dtoList, pageable, pageIds.getTotalElements());
+    }
+
+    private Comparator<User> getComparatorForField(String field) {
+
+        return switch (field) {
+
+            case "username" ->
+                    Comparator.comparing(u -> Optional.ofNullable(u.getUsername()).orElse("").toLowerCase());
+
+            case "role" ->
+                    Comparator.comparing(u -> Optional.ofNullable(u.getRole()).map(Enum::name).orElse(""));
+
+            case "createdAt" ->
+                    Comparator.comparing(User::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()));
+
+            case "deleted" ->
+                    Comparator.comparing(u -> Optional.ofNullable(u.getDeleted()).orElse(false));
+
+            default -> null;
+        };
     }
 
     @Transactional(readOnly = true)
@@ -1173,6 +1227,7 @@ public class UserService {
                 .idNumber(user.getIdNumber())
                 .role(user.getRole() != null ? user.getRole().name() : null)
                 .deleted(Boolean.TRUE.equals(user.getDeleted()))
+                .createdAt(user.getCreatedAt())
                 .build();
 
         Map<Branch, List<DepartmentPositionDTO>> grouped = new HashMap<>();

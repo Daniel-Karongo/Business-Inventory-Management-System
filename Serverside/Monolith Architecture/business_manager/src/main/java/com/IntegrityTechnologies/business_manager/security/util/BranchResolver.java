@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.security;
+package com.IntegrityTechnologies.business_manager.security.util;
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserBranchRepository;

@@ -3,7 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.co
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.security.JournalIntegrityAudit;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.security.JournalIntegrityService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantSuperuserOnly;
-import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 

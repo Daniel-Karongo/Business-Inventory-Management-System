@@ -1,7 +1,7 @@
 package com.IntegrityTechnologies.business_manager.security.auth.controller;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.auth.config.PasswordResetProperties;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.ForceResetRequest;
 import com.IntegrityTechnologies.business_manager.security.auth.model.PasswordResetToken;

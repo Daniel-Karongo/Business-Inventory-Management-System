@@ -9,7 +9,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.doma
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.enums.BudgetStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

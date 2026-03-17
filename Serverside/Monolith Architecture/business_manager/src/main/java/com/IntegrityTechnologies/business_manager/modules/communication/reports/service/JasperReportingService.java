@@ -8,7 +8,7 @@ import com.IntegrityTechnologies.business_manager.modules.communication.reports.
 import com.IntegrityTechnologies.business_manager.modules.communication.reports.security.ReportAccess;
 import com.IntegrityTechnologies.business_manager.modules.communication.reports.security.ReportLimitRegistry;
 import com.IntegrityTechnologies.business_manager.modules.communication.reports.security.ReportLimits;
-import com.IntegrityTechnologies.business_manager.security.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import net.sf.jasperreports.engine.*;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
@@ -26,7 +26,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.Connection;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
 
 @Service

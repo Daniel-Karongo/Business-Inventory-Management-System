@@ -32,60 +32,61 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     );
 
     @Query("""
-SELECT u
-FROM User u
-WHERE u.tenantId = :tenantId
-""")
+        SELECT u
+        FROM User u
+        WHERE u.tenantId = :tenantId
+    """)
     Page<User> findAllUsers(UUID tenantId, Pageable pageable);
 
 
     @Query("""
-SELECT u
-FROM User u
-WHERE u.tenantId = :tenantId
-AND u.deleted = false
-""")
+        SELECT u
+        FROM User u
+        WHERE u.tenantId = :tenantId
+        AND u.deleted = false
+    """)
     Page<User> findActiveUsers(UUID tenantId, Pageable pageable);
 
 
     @Query("""
-SELECT u
-FROM User u
-WHERE u.tenantId = :tenantId
-AND u.deleted = true
-""")
+        SELECT u
+        FROM User u
+        WHERE u.tenantId = :tenantId
+        AND u.deleted = true
+    """)
     Page<User> findDeletedUsers(UUID tenantId, Pageable pageable);
 
     @Query("""
-        SELECT DISTINCT u.id
-        FROM User u
-        LEFT JOIN u.departments ud
-        LEFT JOIN ud.department d
-        LEFT JOIN d.branch b
-        WHERE u.tenantId = :tenantId
-        AND (:deleted IS NULL OR u.deleted = :deleted)
-        AND (:role IS NULL OR u.role = :role)
-        AND (:branchId IS NULL OR b.id = :branchId)
-        AND (:departmentId IS NULL OR d.id = :departmentId)
-        AND (
-              :q IS NULL OR
-              LOWER(u.username) LIKE LOWER(CONCAT('%', :q, '%'))
-              OR EXISTS (
-                  SELECT 1 FROM u.emailAddresses e
-                  WHERE e LIKE CONCAT('%', :q, '%'))
-              )
-              OR EXISTS (
-                  SELECT 1 FROM u.phoneNumbers p
-                  WHERE p LIKE CONCAT('%', :q, '%')
-              )
-    """)
+    SELECT DISTINCT u.id
+    FROM User u
+    LEFT JOIN u.departments ud
+    LEFT JOIN ud.department d
+    LEFT JOIN d.branch b
+    WHERE u.tenantId = :tenantId
+    AND (:deleted IS NULL OR u.deleted = :deleted)
+    AND (:role IS NULL OR u.role = :role)
+    AND (:branchId IS NULL OR b.id = :branchId)
+    AND (:departmentId IS NULL OR d.id = :departmentId)
+    AND (
+        :q IS NULL OR
+        LOWER(u.username) LIKE LOWER(CONCAT('%', :q, '%'))
+        OR EXISTS (
+            SELECT 1 FROM u.emailAddresses e
+            WHERE e LIKE CONCAT('%', :q, '%')
+        )
+        OR EXISTS (
+            SELECT 1 FROM u.phoneNumbers p
+            WHERE p LIKE CONCAT('%', :q, '%')
+        )
+    )
+""")
     Page<UUID> searchUserIds(
-            UUID tenantId,
-            Boolean deleted,
-            Role role,
-            UUID branchId,
-            UUID departmentId,
-            String q,
+            @Param("tenantId") UUID tenantId,
+            @Param("deleted") Boolean deleted,
+            @Param("role") Role role,
+            @Param("branchId") UUID branchId,
+            @Param("departmentId") UUID departmentId,
+            @Param("q") String q,
             Pageable pageable
     );
 

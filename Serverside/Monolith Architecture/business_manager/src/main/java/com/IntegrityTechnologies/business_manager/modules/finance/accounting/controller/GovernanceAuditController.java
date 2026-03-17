@@ -3,8 +3,8 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.co
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.GovernanceAuditLogResponse;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditLogRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.context.TenantContext;
-import com.IntegrityTechnologies.business_manager.security.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

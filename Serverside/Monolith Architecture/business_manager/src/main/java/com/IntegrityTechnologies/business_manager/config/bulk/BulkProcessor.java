@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.common.bulk;
+package com.IntegrityTechnologies.business_manager.config.bulk;
 
 public interface BulkProcessor<I, O> {
 

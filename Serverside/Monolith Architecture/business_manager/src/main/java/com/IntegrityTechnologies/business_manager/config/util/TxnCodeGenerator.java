@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.common;
+package com.IntegrityTechnologies.business_manager.config.util;
 
 import java.security.SecureRandom;
 
