@@ -15,6 +15,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.m
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductSupplier;
 import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
@@ -141,7 +142,9 @@ public class InventoryService {
                 throw new IllegalArgumentException("classification is required when no productVariantId provided");
 
             variant = productVariantRepository
-                    .findByProductIdAndClassification(
+                    .findByTenantIdAndBranchIdAndProduct_IdAndClassification(
+                            tenantId(),
+                            branchId(),
                             req.getProductId(),
                             req.getClassification())
                     .orElse(null);
@@ -236,7 +239,7 @@ public class InventoryService {
                 .orElse(InventoryItem.builder()
                         .productId(product.getId())
                         .productVariant(variant)
-                        .branch(branch)
+                        .branchId(branch.getId())
                         .quantityOnHand(0L)
                         .quantityReserved(0L)
                         .averageCost(BigDecimal.ZERO)
@@ -339,20 +342,34 @@ public class InventoryService {
 
         for (Supplier s : suppliersUsed) {
 
-            if (!product.getSuppliers().contains(s)) {
-                product.getSuppliers().add(s);
+            boolean alreadyLinked = product.getSuppliers()
+                    .stream()
+                    .anyMatch(ps ->
+                            ps.getSupplier().getId().equals(s.getId())
+                    );
+
+            if (!alreadyLinked) {
+
+                ProductSupplier ps = ProductSupplier.builder()
+                        .product(product)
+                        .supplier(s)
+                        .build();
+
+                product.getSuppliers().add(ps);
                 addedSuppliers.add(s);
             }
 
+            // CATEGORY LINK (unchanged)
             if (category != null) {
 
-                boolean alreadyLinked = category.getCategorySuppliers()
+                boolean alreadyCategoryLinked = category.getCategorySuppliers()
                         .stream()
                         .anyMatch(rel ->
                                 rel.getSupplier().getId().equals(s.getId())
                         );
 
-                if (!alreadyLinked) {
+                if (!alreadyCategoryLinked) {
+
                     CategorySupplier relation = CategorySupplier.builder()
                             .id(new CategorySupplierId(
                                     category.getId(),
@@ -468,7 +485,9 @@ public class InventoryService {
                                 new IllegalArgumentException("Variant not found")
                         )
                         : productVariantRepository
-                        .findByProductIdAndClassification(
+                        .findByTenantIdAndBranchIdAndProduct_IdAndClassification(
+                                tenantId(),
+                                branchId(),
                                 req.getProductId(),
                                 req.getClassification()
                         )
@@ -1313,7 +1332,7 @@ public class InventoryService {
                 .stream()
                 .filter(it -> it.getProductVariant() != null &&
                         it.getProductId() != null &&
-                        productId.equals(it.getProductId()) && branchId.equals(it.getBranch().getId()))
+                        productId.equals(it.getProductId()) && branchId.equals(it.getBranchId()))
                 .toList();
 
         List<InventoryResponse> res = new ArrayList<>();
@@ -1340,7 +1359,7 @@ public class InventoryService {
     }
 
     public List<ProductAudit> getAuditTrail(UUID productId) {
-        return productAuditRepository.findByProductIdOrderByTimestampDesc(productId);
+        return productAuditRepository.findByTenantIdAndBranchIdAndProductIdOrderByTimestampDesc(tenantId(), branchId(), productId);
     }
 
     // Snapshot and historical snapshot handling (kept similar to your previous logic)
@@ -1373,8 +1392,8 @@ public class InventoryService {
             InventorySnapshot snap = InventorySnapshot.builder()
                     .productId(variant.getProduct().getId())
                     .productVariantId(variant.getId())
-                    .branchId(i.getBranch().getId())
-
+                    .branchId(i.getBranchId())
+                    .tenantId(tenantId())
                     .quantityOnHand(i.getQuantityOnHand())
                     .quantityReserved(i.getQuantityReserved())
 
@@ -1400,7 +1419,7 @@ public class InventoryService {
         for (InventoryItem item : allItems) {
             UUID pvid = item.getProductVariant().getId();
             UUID pid = item.getProductVariant().getProduct().getId();
-            UUID bid = item.getBranch().getId();
+            UUID bid = item.getBranchId();
 
             var last = inventorySnapshotRepository.findTopByProductVariantIdAndBranchIdAndSnapshotDateLessThanEqualOrderBySnapshotDateDesc(pvid, bid, date);
 
@@ -1682,7 +1701,7 @@ public class InventoryService {
     private InventoryResponse buildResponse(InventoryItem item) {
 
         UUID variantId = item.getProductVariant().getId();
-        UUID branchId = item.getBranch().getId();
+        UUID branchId = item.getBranchId();
 
         List<InventoryBatch> batches =
                 batchRepository.findByProductVariantIdAndBranchIdAndQuantityRemainingGreaterThanOrderByReceivedAtAsc(
@@ -1716,7 +1735,7 @@ public class InventoryService {
                 .productClassification(item.getProductVariant().getClassification())
                 .productVariantSKU(item.getProductVariant().getSku())
                 .branchId(branchId)
-                .branchName(item.getBranch().getName())
+                .branchName(branchRepository.findById(item.getBranchId()).get().getName())
                 .averageCost(item.getAverageCost())
                 .quantityOnHand(item.getQuantityOnHand())
                 .quantityReserved(item.getQuantityReserved())

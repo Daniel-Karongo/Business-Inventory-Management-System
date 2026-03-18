@@ -153,7 +153,7 @@ public class InventoryBulkService {
        ========================= */
 
         Product product = productRepository
-                .findByNameIgnoreCase(productName)
+                .findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId(), branchId(), productName)
                 .orElseThrow(() ->
                         new IllegalArgumentException(
                                 "Product not found: " + productName

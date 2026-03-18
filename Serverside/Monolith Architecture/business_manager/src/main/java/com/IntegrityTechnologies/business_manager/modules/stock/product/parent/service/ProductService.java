@@ -1,12 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.service;
 
-import com.IntegrityTechnologies.business_manager.config.files.FileStorageProperties;
 import com.IntegrityTechnologies.business_manager.config.files.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.files.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.exception.ProductNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleLineItemRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
@@ -20,15 +18,9 @@ import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.StockTransaction;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductCreateDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductFullCreateDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductUpdateDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.mapper.ProductMapper;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductAudit;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductImage;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductImageAudit;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductImageAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductImageRepository;
@@ -44,7 +36,9 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service.ProductVariantService;
+import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -83,7 +77,6 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ProductImageRepository productImageRepository;
     private final ProductMapper productMapper;
-    private final FileStorageProperties fileStorageProperties;
     private final FileStorageService fileStorageService;
     private final TransactionalFileManager transactionalFileManager;
     private final ProductAuditRepository productAuditRepository;
@@ -95,7 +88,6 @@ public class ProductService {
     private final ProductVariantRepository productVariantRepository;
     private final ProductImageService productImageService;
     private final InventoryItemRepository inventoryItemRepository;
-    private final SaleLineItemRepository saleLineItemRepository;
     private final SaleRepository saleRepository;
     private final StockTransactionRepository stockTransactionRepository;
     private final ProductVariantAuditRepository productVariantAuditRepository;
@@ -108,22 +100,26 @@ public class ProductService {
     private Path productRoot() {
         return fileStorageService.productRoot();
     }
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+
+    private UUID branchId() {
+        return BranchContext.get();
+    }
 
     /* =============================
        READ METHODS (unchanged)
        ============================= */
 
     public List<ProductDTO> getAllProducts(Boolean deleted) {
-        return productRepository.findAll().stream()
-                .filter(product ->
-                        deleted == null
-                                ? true                                       // return all
-                                : deleted                                     // deleted = true → get deleted only
-                                ? Boolean.TRUE.equals(product.getDeleted())
-                                : Boolean.FALSE.equals(product.getDeleted()) // deleted = false → get active only
-                )
+
+        return productRepository
+                .findAllWithRelationsByTenantIdAndBranchId(tenantId(), branchId())
+                .stream()
+                .filter(product -> matchesDeleted(deleted, product.getDeleted()))
                 .map(productMapper::toDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
 
@@ -163,6 +159,8 @@ public class ProductService {
 
         Specification<Product> spec =
                 ProductSpecification.filterProducts(
+                        tenantId(),
+                        branchId(),
                         categoryIds,
                         name,
                         description,
@@ -184,44 +182,58 @@ public class ProductService {
     }
 
     public ProductDTO getProductById(UUID id, Boolean deleted) {
-        Product p = productRepository.findById(id)
-                .filter(product ->
-                        deleted == null
-                                ? true                                       // return all
-                                : deleted                                     // deleted = true → get deleted only
-                                ? Boolean.TRUE.equals(product.getDeleted())
-                                : Boolean.FALSE.equals(product.getDeleted()) // deleted = false → get active only
-                )
+
+        Product product = productRepository
+                .findByIdAndTenantIdAndBranchId(id, tenantId(), branchId())
                 .orElseThrow(() -> new ProductNotFoundException("Product not found: " + id));
-        return productMapper.toDTO(p);
+
+        if (deleted != null) {
+            if (deleted && !Boolean.TRUE.equals(product.getDeleted())) {
+                throw new ProductNotFoundException("Product not found: " + id);
+            }
+            if (!deleted && Boolean.TRUE.equals(product.getDeleted())) {
+                throw new ProductNotFoundException("Product not found: " + id);
+            }
+        }
+
+        return productMapper.toDTO(product);
     }
 
     public ProductDTO getProductBySKU(String sku, Boolean deleted) {
-        return productRepository.findBySku(sku)
-                .filter(product ->
-                        deleted == null
-                                ? true                                       // return all
-                                : deleted                                     // deleted = true → get deleted only
-                                ? Boolean.TRUE.equals(product.getDeleted())
-                                : Boolean.FALSE.equals(product.getDeleted()) // deleted = false → get active only
-                )
-                .map(productMapper::toDTO)
-                .orElseThrow(() -> new ProductNotFoundException("Product with SKU not found: " + sku));
+
+        Product product = productRepository
+                .findByTenantIdAndBranchIdAndSku(tenantId(), branchId(), sku)
+                .orElseThrow(() ->
+                        new ProductNotFoundException("Product with SKU not found: " + sku)
+                );
+
+        if (deleted != null) {
+            if (deleted && !Boolean.TRUE.equals(product.getDeleted())) {
+                throw new ProductNotFoundException("Product not found");
+            }
+            if (!deleted && Boolean.TRUE.equals(product.getDeleted())) {
+                throw new ProductNotFoundException("Product not found");
+            }
+        }
+
+        return productMapper.toDTO(product);
     }
 
     public List<ProductDTO> getProductsBySupplier(UUID supplierId, Boolean deleted) {
-        List<Product> products = productRepository.findAllBySuppliers_Id(supplierId);
-        if (products.isEmpty())
+
+        List<Product> products =
+                productRepository.findAllBySupplierIdAndTenantIdAndBranchId(
+                        supplierId,
+                        tenantId(),
+                        branchId()
+                );
+
+        if (products.isEmpty()) {
             throw new ProductNotFoundException("No products found for supplier: " + supplierId);
+        }
 
         return products.stream()
-                .filter(product ->
-                        deleted == null
-                                ? true                                       // return all
-                                : deleted                                     // deleted = true → get deleted only
-                                ? Boolean.TRUE.equals(product.getDeleted())
-                                : Boolean.FALSE.equals(product.getDeleted()) // deleted = false → get active only
-                )
+                .filter(product -> matchesDeleted(deleted, product.getDeleted()))
                 .map(productMapper::toDTO)
                 .toList();
     }
@@ -231,26 +243,31 @@ public class ProductService {
         List<Product> products;
 
         if (Boolean.TRUE.equals(strict)) {
-            // Strict → products ONLY in this category
-            products = productRepository.findAllByCategory_Id(categoryId);
+
+            products = productRepository.findAllByTenantIdAndBranchIdAndCategory_Id(
+                    tenantId(),
+                    branchId(),
+                    categoryId
+            );
 
         } else {
-            // Non-strict → get products in all subcategories (recursive)
-            List<Long> categoryIds = categoryService.getAllCategoryIdsRecursive(categoryId);
-            products = productRepository.findAllByCategory_IdIn(categoryIds);
+
+            List<Long> categoryIds =
+                    categoryService.getAllCategoryIdsRecursive(categoryId);
+
+            products = productRepository.findAllByTenantIdAndBranchIdAndCategory_IdIn(
+                    tenantId(),
+                    branchId(),
+                    categoryIds
+            );
         }
 
-        if (products.isEmpty())
+        if (products.isEmpty()) {
             throw new ProductNotFoundException("No products found for category: " + categoryId);
+        }
 
         return products.stream()
-                .filter(product ->
-                        deleted == null
-                                ? true
-                                : deleted
-                                ? Boolean.TRUE.equals(product.getDeleted())
-                                : Boolean.FALSE.equals(product.getDeleted())
-                )
+                .filter(product -> matchesDeleted(deleted, product.getDeleted()))
                 .map(productMapper::toDTO)
                 .toList();
     }
@@ -334,41 +351,123 @@ public class ProductService {
     @Transactional
     public ProductDTO createProductCore(ProductCreateDTO dto) {
 
-        validateCreateDTO(dto);
-        validateCreateDTOUniqueness(dto);
+    /* =============================
+       VALIDATION
+    ============================= */
+
+        if (dto.getName() == null || dto.getName().isBlank()) {
+            throw new IllegalArgumentException("Product name is required.");
+        }
+
+        if (dto.getCategoryId() == null) {
+            throw new IllegalArgumentException("Category is required.");
+        }
+
+    /* =============================
+       UNIQUENESS (TENANT + BRANCH)
+    ============================= */
+
+        if (productRepository.existsByTenantIdAndBranchIdAndNameIgnoreCase(
+                tenantId(), branchId(), dto.getName()
+        )) {
+            throw new IllegalArgumentException(
+                    "Product already exists with name: " + dto.getName()
+            );
+        }
+
+    /* =============================
+       CATEGORY (STRICT SAFE)
+    ============================= */
+
+        Category category = categoryRepository
+                .findByIdSafe(
+                        dto.getCategoryId(),
+                        false,
+                        tenantId(),
+                        branchId()
+                )
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Invalid categoryId")
+                );
+
+    /* =============================
+       BUILD ENTITY
+    ============================= */
 
         Product product = productMapper.toEntity(dto);
-
-        Category category = categoryRepository.findById(dto.getCategoryId())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid categoryId"));
-
         product.setCategory(category);
+
+    /* =============================
+       SUPPLIERS (FIXED 🔥)
+    ============================= */
 
         if (dto.getSupplierIds() != null && !dto.getSupplierIds().isEmpty()) {
 
             List<Supplier> suppliers =
-                    supplierRepository.findAllById(dto.getSupplierIds());
+                    supplierRepository.findAllByIdsSafe(
+                            dto.getSupplierIds(),
+                            tenantId(),
+                            branchId()
+                    );
 
-            product.setSuppliers(new HashSet<>(suppliers));
-            syncCategorySuppliers(category, product.getSuppliers());
+            if (suppliers.size() != dto.getSupplierIds().size()) {
+                throw new IllegalArgumentException("Some suppliers are invalid for this tenant/branch");
+            }
+
+            final Product finalProduct = product;
+
+            Set<ProductSupplier> productSuppliers = suppliers.stream()
+                    .map(supplier -> ProductSupplier.builder()
+                            .product(finalProduct)
+                            .supplier(supplier)
+                            .build()
+                    )
+                    .collect(Collectors.toSet());
+
+            product.setSuppliers(productSuppliers);
+
+            // keep category sync
+            syncCategorySuppliers(category, new HashSet<>(suppliers));
         }
+
+    /* =============================
+       SKU (TENANT SAFE)
+    ============================= */
 
         if (product.getSku() == null || product.getSku().isBlank()) {
-            product.setSku(skuService.generateSkuForCategory(category));
-        } else if (productRepository.existsBySku(product.getSku())) {
-            throw new IllegalArgumentException("SKU already exists");
+
+            product.setSku(
+                    skuService.generateSkuForCategory(category)
+            );
+
+        } else {
+
+            if (productRepository.existsByTenantIdAndBranchIdAndSku(
+                    tenantId(), branchId(), product.getSku()
+            )) {
+                throw new IllegalArgumentException("SKU already exists");
+            }
         }
+
+    /* =============================
+       SAVE
+    ============================= */
 
         product = productRepository.save(product);
 
-        // CREATE audit ONLY
-        ProductAudit createAudit = new ProductAudit();
-        createAudit.setAction("CREATE");
-        createAudit.setProductId(product.getId());
-        createAudit.setProductName(product.getName());
-        createAudit.setTimestamp(LocalDateTime.now());
-        createAudit.setPerformedBy(SecurityUtils.currentUsername());
-        productAuditRepository.save(createAudit);
+    /* =============================
+       AUDIT
+    ============================= */
+
+        productAuditRepository.save(
+                ProductAudit.builder()
+                        .action("CREATE")
+                        .productId(product.getId())
+                        .productName(product.getName())
+                        .timestamp(LocalDateTime.now())
+                        .performedBy(SecurityUtils.currentUsername())
+                        .build()
+        );
 
         return productMapper.toDTO(product);
     }
@@ -415,14 +514,26 @@ public class ProductService {
 
     private void validateCreateDTOUniqueness(ProductCreateDTO dto) {
 
-        // --- Name (unique)
-        if (dto.getName() != null && productRepository.existsByName(dto.getName())) {
-            throw new IllegalArgumentException("A product with the name '" + dto.getName() + "' already exists.");
+        if (dto.getName() != null &&
+                productRepository.existsByTenantIdAndBranchIdAndNameIgnoreCase(
+                        tenantId(),
+                        branchId(),
+                        dto.getName()
+                )) {
+
+            throw new IllegalArgumentException(
+                    "A product with the name '" + dto.getName() + "' already exists."
+            );
         }
     }
 
     public boolean existsByName(String name) {
-        return productRepository.existsByNameIgnoreCase(name);
+
+        return productRepository.existsByTenantIdAndBranchIdAndNameIgnoreCase(
+                TenantContext.getTenantId(),
+                BranchContext.get(),
+                name
+        );
     }
 
     /**
@@ -434,121 +545,214 @@ public class ProductService {
 
     @Transactional
     public ProductDTO updateProduct(UUID id, ProductUpdateDTO dto) throws IOException {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found: " + id));
 
-        List<ProductAudit> fieldAudits = new ArrayList<>();
-        validateUpdateDTOUniqueness(dto);
+        Product product = getProductOrThrow(id);
 
-        // name
-        if (dto.getName() != null && !dto.getName().equals(product.getName())) {
-            fieldAudits.add(auditForField(product, "name", product.getName(), dto.getName()));
-            product.setName(dto.getName());
-        }
+        validateUpdateDTOUniqueness(id, dto);
 
-        // description
-        if (dto.getDescription() != null && !Objects.equals(dto.getDescription(), product.getDescription())) {
-            fieldAudits.add(auditForField(product, "description", product.getDescription(), dto.getDescription()));
-            product.setDescription(dto.getDescription());
-        }
+        List<ProductAudit> audits = new ArrayList<>();
 
-        // sku
-        if (dto.getSku() != null && !dto.getSku().equals(product.getSku())) {
-            if (productRepository.existsBySku(dto.getSku()))
-                throw new IllegalArgumentException("SKU already exists");
-            fieldAudits.add(auditForField(product, "sku", product.getSku(), dto.getSku()));
-            product.setSku(dto.getSku());
-        }
-
-        // category change -> do not change SKU automatically, but allow category update if provided
-        if (dto.getCategoryId() != null && (product.getCategory() == null || !Objects.equals(product.getCategory().getId(), dto.getCategoryId()))) {
-            Category newCat = categoryRepository.findById(dto.getCategoryId()).orElseThrow(() -> new IllegalArgumentException("Invalid categoryId"));
-            fieldAudits.add(auditForField(product, "categoryId", product.getCategory() == null ? null : product.getCategory().getId().toString(), dto.getCategoryId().toString()));
-            product.setCategory(newCat);
-        }
-
-        // suppliers update — patching simple replacement
-        if (dto.getSupplierIds() != null) {
-            Set<Supplier> newSuppliers = supplierRepository.findAllById(dto.getSupplierIds()).stream().collect(Collectors.toSet());
-            String oldSuppliers = product.getSuppliers() == null ? "" : product.getSuppliers().stream().map(Supplier::getId).map(UUID::toString).collect(Collectors.joining(","));
-            String newSuppliersStr = newSuppliers.stream().map(Supplier::getId).map(UUID::toString).collect(Collectors.joining(","));
-            if (!Objects.equals(oldSuppliers, newSuppliersStr)) {
-                fieldAudits.add(auditForField(product, "supplierIds", oldSuppliers, newSuppliersStr));
-                product.setSuppliers(newSuppliers);
-                syncCategorySuppliers(product.getCategory(), newSuppliers);
-            }
-        }
+        updateBasicFields(product, dto, audits);
+        updateCategory(product, dto, audits);
+        updateSuppliers(product, dto, audits);
+        updateVariants(product, dto);
+        updatePricing(product, dto, audits);
 
         product.setUpdatedAt(LocalDateTime.now());
 
-        ProductVariant variant;
+        Product saved = productRepository.save(product);
 
-        for (ProductVariantCreateDTO variantCreateDTO : dto.getVariants()) {
-            variant = productVariantRepository.findByProductIdAndClassification(
-                    id, variantCreateDTO.getClassification()
-            ).orElse(null);
-
-            if (variant == null) {
-                variant = new ProductVariant();
-                variant.setProduct(product);
-                variant.setAverageBuyingPrice(BigDecimal.ZERO);
-                variant.setClassification(variantCreateDTO.getClassification());
-                variant.setSku(
-                        variantCreateDTO.getSku() != null ?
-                                variantCreateDTO.getSku() :
-                                generateVariantSku(product, variantCreateDTO.getClassification())
-                );
-
-                productVariantRepository.save(variant);
-            }
+        if (!audits.isEmpty()) {
+            productAuditRepository.saveAll(audits);
         }
 
-        // minimumPercentageProfit changed?
-        if (dto.getMinimumPercentageProfit() != null &&
-                !Objects.equals(dto.getMinimumPercentageProfit(), product.getMinimumPercentageProfit())) {
-
-            fieldAudits.add(auditForField(
-                    product,
-                    "minimumPercentageProfit",
-                    product.getMinimumPercentageProfit() == null ? null : product.getMinimumPercentageProfit().toString(),
-                    dto.getMinimumPercentageProfit().toString()
-            ));
-
-            product.setMinimumPercentageProfit(dto.getMinimumPercentageProfit());
-
-            // Recompute all variant minimum selling price
-            if (product.getVariants() != null) {
-                for (ProductVariant savedVariant : product.getVariants()) {
-                    BigDecimal newMinSelling = productVariantService.computeMinSelling(
-                            savedVariant.getAverageBuyingPrice(),
-                            dto.getMinimumPercentageProfit()
-                    );
-                    savedVariant.setMinimumSellingPrice(newMinSelling);
-                    productVariantRepository.save(savedVariant);
-                }
-            }
-        }
-
-        Product updated = productRepository.save(product);
-
-        // persist field audits
-        if (!fieldAudits.isEmpty()) {
-            productAuditRepository.saveAll(fieldAudits.stream().peek(a -> {
-                a.setProductId(updated.getId());
-                a.setProductName(updated.getName());
-                a.setTimestamp(LocalDateTime.now());
-                a.setPerformedBy(SecurityUtils.currentUsername());
-            }).collect(Collectors.toList()));
-        }
-
-        return productMapper.toDTO(updated);
+        return productMapper.toDTO(saved);
     }
 
-    private void validateUpdateDTOUniqueness(ProductUpdateDTO dto) {
+    private void updateBasicFields(Product product,
+                                   ProductUpdateDTO dto,
+                                   List<ProductAudit> audits) {
 
-        // --- Name (unique)
-        if (dto.getName() != null && productRepository.existsByName(dto.getName())) {
-            throw new IllegalArgumentException("A product with the name '" + dto.getName() + "' already exists.");
+        /* NAME */
+        if (dto.getName() != null && !dto.getName().equals(product.getName())) {
+            audits.add(auditForField(product, "name", product.getName(), dto.getName()));
+            product.setName(dto.getName());
+        }
+
+        /* DESCRIPTION */
+        if (dto.getDescription() != null &&
+                !Objects.equals(dto.getDescription(), product.getDescription())) {
+
+            audits.add(auditForField(product, "description",
+                    product.getDescription(), dto.getDescription()));
+
+            product.setDescription(dto.getDescription());
+        }
+
+        /* SKU */
+        if (dto.getSku() != null && !dto.getSku().equals(product.getSku())) {
+
+            if (productRepository.existsByTenantIdAndBranchIdAndSku(
+                    tenantId(), branchId(), dto.getSku())) {
+                throw new IllegalArgumentException("SKU already exists");
+            }
+
+            audits.add(auditForField(product, "sku", product.getSku(), dto.getSku()));
+            product.setSku(dto.getSku());
+        }
+    }
+
+    private void updateCategory(Product product,
+                                ProductUpdateDTO dto,
+                                List<ProductAudit> audits) {
+
+        if (dto.getCategoryId() == null) return;
+
+        if (product.getCategory() != null &&
+                Objects.equals(product.getCategory().getId(), dto.getCategoryId())) {
+            return;
+        }
+
+        Category newCat = categoryRepository.findByIdSafe(
+                dto.getCategoryId(),
+                false,
+                tenantId(),
+                branchId()
+        ).orElseThrow(() -> new IllegalArgumentException("Invalid categoryId"));
+
+        audits.add(auditForField(
+                product,
+                "categoryId",
+                product.getCategory() == null ? null : product.getCategory().getId().toString(),
+                dto.getCategoryId().toString()
+        ));
+
+        product.setCategory(newCat);
+    }
+
+    private void updateSuppliers(Product product,
+                                 ProductUpdateDTO dto,
+                                 List<ProductAudit> audits) {
+
+        if (dto.getSupplierIds() == null) return;
+
+        List<Supplier> suppliers =
+                supplierRepository.findAllByIdsSafe(
+                        dto.getSupplierIds(),
+                        tenantId(),
+                        branchId()
+                );
+
+        String oldSuppliers = product.getSuppliers() == null
+                ? ""
+                : product.getSuppliers().stream()
+                .map(ps -> ps.getSupplier().getId().toString())
+                .collect(Collectors.joining(","));
+
+        String newSuppliers = suppliers.stream()
+                .map(s -> s.getId().toString())
+                .collect(Collectors.joining(","));
+
+        if (Objects.equals(oldSuppliers, newSuppliers)) return;
+
+        audits.add(auditForField(product, "supplierIds", oldSuppliers, newSuppliers));
+
+        product.getSuppliers().clear();
+
+        for (Supplier supplier : suppliers) {
+            product.getSuppliers().add(
+                    ProductSupplier.builder()
+                            .product(product)
+                            .supplier(supplier)
+                            .build()
+            );
+        }
+
+        syncCategorySuppliers(product.getCategory(), new HashSet<>(suppliers));
+    }
+
+    private void updateVariants(Product product, ProductUpdateDTO dto) {
+
+        if (dto.getVariants() == null) return;
+
+        for (ProductVariantCreateDTO v : dto.getVariants()) {
+
+            ProductVariant existing =
+                    productVariantRepository
+                            .findByTenantIdAndBranchIdAndProduct_IdAndClassification(
+                                    tenantId(),
+                                    branchId(),
+                                    product.getId(),
+                                    v.getClassification()
+                            ).orElse(null);
+
+            if (existing != null) continue;
+
+            ProductVariant variant = new ProductVariant();
+            variant.setProduct(product);
+            variant.setClassification(v.getClassification());
+            variant.setAverageBuyingPrice(BigDecimal.ZERO);
+
+            variant.setSku(
+                    v.getSku() != null
+                            ? v.getSku()
+                            : generateVariantSku(product, v.getClassification())
+            );
+
+            productVariantRepository.save(variant);
+        }
+    }
+
+    private void updatePricing(Product product,
+                               ProductUpdateDTO dto,
+                               List<ProductAudit> audits) {
+
+        if (dto.getMinimumPercentageProfit() == null) return;
+
+        if (Objects.equals(dto.getMinimumPercentageProfit(),
+                product.getMinimumPercentageProfit())) return;
+
+        audits.add(auditForField(
+                product,
+                "minimumPercentageProfit",
+                product.getMinimumPercentageProfit() == null ? null :
+                        product.getMinimumPercentageProfit().toString(),
+                dto.getMinimumPercentageProfit().toString()
+        ));
+
+        product.setMinimumPercentageProfit(dto.getMinimumPercentageProfit());
+
+        if (product.getVariants() == null) return;
+
+        for (ProductVariant v : product.getVariants()) {
+
+            BigDecimal newMinSelling =
+                    productVariantService.computeMinSelling(
+                            v.getAverageBuyingPrice(),
+                            dto.getMinimumPercentageProfit()
+                    );
+
+            v.setMinimumSellingPrice(newMinSelling);
+
+            productVariantRepository.save(v);
+        }
+    }
+
+    private void validateUpdateDTOUniqueness(UUID productId, ProductUpdateDTO dto) {
+
+        if (dto.getName() != null) {
+
+            productRepository.findByTenantIdAndBranchIdAndNameIgnoreCase(
+                    tenantId(),
+                    branchId(),
+                    dto.getName()
+            ).ifPresent(existing -> {
+                if (!existing.getId().equals(productId)) {
+                    throw new IllegalArgumentException(
+                            "A product with the name '" + dto.getName() + "' already exists."
+                    );
+                }
+            });
         }
     }
 
@@ -594,60 +798,109 @@ public class ProductService {
 
     @Transactional
     public void uploadProductImages(UUID productId, List<MultipartFile> files) throws IOException {
-        Product product = productRepository.findById(productId).orElseThrow(() -> new ProductNotFoundException("Product not found"));
-        Path productDir = fileStorageService.initDirectory(productRoot().resolve(product.getId().toString()));
+
+        Product product = productRepository
+                .findByIdAndTenantIdAndBranchId(productId, tenantId(), branchId())
+                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+
         productImageService.saveProductImages(product, files);
+
         productRepository.save(product);
     }
 
     public void restoreProductImage(UUID productId, UUID productImageId, String reason) {
-        Product p = productRepository.findByIdAndDeletedFalse(productId).orElseThrow(() -> new ProductNotFoundException("Product not found"));
-        ProductImage img = productImageRepository.findById(productImageId).orElseThrow(() -> new EntityNotFoundException("Product image not found"));
+
+        Product product = productRepository
+                .findByIdAndTenantIdAndBranchId(productId, tenantId(), branchId())
+                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+
+        ProductImage img = productImageRepository.findById(productImageId)
+                .orElseThrow(() -> new EntityNotFoundException("Product image not found"));
+
+        // 🔥 ensure image belongs to this product
+        if (!img.getProduct().getId().equals(productId)) {
+            throw new IllegalStateException("Image does not belong to product");
+        }
+
         img.setDeleted(false);
         productImageRepository.save(img);
-        productImageAuditRepository.save(imageAuditForAction(p, img, "IMAGE_RESTORE_INDEPENDENTLY", reason == null ? "Restored by user" : reason));
+
+        productImageAuditRepository.save(
+                imageAuditForAction(product, img, "IMAGE_RESTORE_INDEPENDENTLY",
+                        reason == null ? "Restored by user" : reason)
+        );
     }
 
     public void deleteProductImageByFilename(UUID productId, String filename, Boolean soft) throws IOException {
-        Product p = productRepository.findByIdAndDeletedFalse(productId).orElseThrow(() -> new ProductNotFoundException("Product not found"));
-        if (p.getImages() == null) return;
-        for (ProductImage img : new ArrayList<>(p.getImages())) {
+
+        Product product = productRepository
+                .findByIdAndTenantIdAndBranchId(productId, tenantId(), branchId())
+                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+
+        if (product.getImages() == null) return;
+
+        for (ProductImage img : new ArrayList<>(product.getImages())) {
+
+            if (!img.getProduct().getId().equals(productId)) continue;
+
             if (Boolean.TRUE.equals(soft)) {
+
                 img.setDeleted(true);
                 productImageRepository.save(img);
-                productImageAuditRepository.save(imageAuditForAction(p, img, "IMAGE_SOFT_DELETED_INDEPENDENTLY", "Deleted by user"));
+
+                productImageAuditRepository.save(
+                        imageAuditForAction(product, img,
+                                "IMAGE_SOFT_DELETED_INDEPENDENTLY",
+                                "Deleted by user")
+                );
+
             } else {
+
                 if (filename.equals(img.getFileName())) {
-                    // delete physical file
-                    try {
-                        // the stored filePath is API path; derive physical path
-                        Path physical = productRoot().resolve(p.getId().toString()).resolve(img.getFileName());
+
+                    Path physical = resolveProductFile(product.getId(), img.getFileName());
+
+                    boolean usedElsewhere = isFileUsedElsewhere(img, productId);
+
+                    product.getImages().remove(img);
+                    productImageRepository.delete(img);
+
+                    if (!usedElsewhere) {
                         Files.deleteIfExists(physical);
-                    } catch (Exception ignored) {
                     }
 
-                    p.getImages().remove(img);
-
-                    productImageRepository.delete(img);
-                    // audit
-                    productImageAuditRepository.save(imageAuditForAction(p, img, "IMAGE_HARD_DELETED_INDEPENDENTLY", "Deleted by user"));
+                    productImageAuditRepository.save(
+                            imageAuditForAction(product, img,
+                                    "IMAGE_HARD_DELETED_INDEPENDENTLY",
+                                    "Deleted by user")
+                    );
                 }
             }
         }
-        productRepository.save(p);
+
+        productRepository.save(product);
     }
 
     public void deleteAllProductImages(UUID productId, Boolean soft, String reason) throws IOException {
-        Product p = productRepository.findById(productId).orElseThrow(() -> new ProductNotFoundException("Product not found"));
-        if (p.getImages() == null) return;
-        deleteProductImages(p, soft, reason);
 
-        if(Boolean.FALSE.equals(soft)) {
-            deleteProductUploadDirectory(productId);
-            p.setImages(new ArrayList<>());
-            productRepository.save(p);
+        Product product = productRepository
+                .findByIdAndTenantIdAndBranchId(productId, tenantId(), branchId())
+                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
 
-            productImageAuditRepository.save(imageAuditForAction(p, null, "ALL_IMAGES_DELETED", "All images deleted"));
+        if (product.getImages() == null) return;
+
+        deleteProductImages(product, soft, reason);
+
+        if (Boolean.FALSE.equals(soft)) {
+
+            product.setImages(new ArrayList<>());
+            productRepository.save(product);
+
+            productImageAuditRepository.save(
+                    imageAuditForAction(product, null,
+                            "ALL_IMAGES_DELETED",
+                            "All images deleted")
+            );
         }
     }
 
@@ -671,18 +924,18 @@ public class ProductService {
                             .build();
                     productImageAuditRepository.save(audit);
 
-                    Path physical = productRoot().resolve(product.getId().toString()).resolve(img.getFileName());
-                    Files.deleteIfExists(physical);
+                    Path physical = resolveProductFile(product.getId(), img.getFileName());
+
+                    boolean usedElsewhere = isFileUsedElsewhere(img, product.getId());
+
+                    if (!usedElsewhere) {
+                        Files.deleteIfExists(physical);
+                    }
                 } catch (IOException ignored) {
                 }
                 productImageRepository.delete(img);
             }
         }
-    }
-
-    public void deleteProductUploadDirectory(UUID productId) throws IOException {
-        Path dir = productRoot().resolve(productId.toString());
-        fileStorageService.deleteDirectory(dir);
     }
 
     /* =============================
@@ -702,14 +955,18 @@ public class ProductService {
         String username = SecurityUtils.currentUsername();
 
     /* ===========================
-       FETCH EVERYTHING FIRST
+       FETCH EVERYTHING (TENANT SAFE)
        =========================== */
 
         List<ProductImage> productImages =
-                productImageRepository.findByProduct_Id(productId);
+                productImageRepository.findByTenantIdAndBranchIdAndProduct_Id(
+                        tenantId(), branchId(), productId
+                );
 
         List<ProductVariant> variants =
-                productVariantRepository.findByProduct_Id(productId);
+                productVariantRepository.findByTenantIdAndBranchIdAndProduct_Id(
+                        tenantId(), branchId(), productId
+                );
 
         List<UUID> variantIds = variants.stream()
                 .map(ProductVariant::getId)
@@ -718,26 +975,28 @@ public class ProductService {
         List<ProductVariantImage> variantImages =
                 variantIds.isEmpty()
                         ? List.of()
-                        : productVariantImageRepository.findByVariantIdsWithVariant(variantIds);
+                        : productVariantImageRepository.findByVariantIdsWithVariant(variantIds, tenantId(), branchId());
 
     /* ===========================
-       NOW PERFORM UPDATES
+       APPLY SOFT DELETE
        =========================== */
 
         product.setDeleted(true);
         product.setDeletedAt(now);
 
-        productImageRepository.softDeleteByProductId(productId);
+        productImageRepository.softDeleteByProductId(productId, tenantId(), branchId());
 
         if (!variantIds.isEmpty()) {
-            productVariantRepository.softDeleteByProductId(productId);
-            productVariantImageRepository.softDeleteByVariantIds(variantIds);
+            productVariantRepository.softDeleteByProductId(productId, tenantId(), branchId());
+            productVariantImageRepository.softDeleteByVariantIds(variantIds, tenantId(), branchId());
             inventoryItemRepository.softDeleteByVariantIds(variantIds);
             stockTransactionRepository.softDeleteByVariantIds(variantIds);
         }
 
+        productRepository.save(product);
+
     /* ===========================
-       AUDITS (USE PRE-FETCHED DATA)
+       AUDITS
        =========================== */
 
         productAuditRepository.save(
@@ -751,35 +1010,29 @@ public class ProductService {
                         .build()
         );
 
-        if (!productImages.isEmpty()) {
-            auditProductImages(productImages,
-                    "IMAGE_SOFT_DELETED_ALONG_WITH_PRODUCT",
-                    product,
-                    reason,
-                    now,
-                    username
-            );
-        }
+        auditProductImages(productImages,
+                "IMAGE_SOFT_DELETED_ALONG_WITH_PRODUCT",
+                product,
+                reason,
+                now,
+                username
+        );
 
-        if (!variants.isEmpty()) {
-            auditVariants(variants,
-                    "VARIANT_SOFT_DELETED_ALONG_WITH_PRODUCT",
-                    product,
-                    reason,
-                    now,
-                    username
-            );
-        }
+        auditVariants(variants,
+                "VARIANT_SOFT_DELETED_ALONG_WITH_PRODUCT",
+                product,
+                reason,
+                now,
+                username
+        );
 
-        if (!variantImages.isEmpty()) {
-            auditVariantImages(variantImages,
-                    "VARIANT_IMAGE_SOFT_DELETED_ALONG_WITH_PRODUCT",
-                    product,
-                    reason,
-                    now,
-                    username
-            );
-        }
+        auditVariantImages(variantImages,
+                "VARIANT_IMAGE_SOFT_DELETED_ALONG_WITH_PRODUCT",
+                product,
+                reason,
+                now,
+                username
+        );
     }
 
 /* =========================================================
@@ -802,7 +1055,10 @@ public class ProductService {
                                String reason,
                                ProductRestoreOptions options) {
 
-        if (options.isRestoreInventory() && !options.isRestoreStockTransactions()) {
+        if (options != null &&
+                options.isRestoreInventory() &&
+                !options.isRestoreStockTransactions()) {
+
             throw new IllegalArgumentException(
                     "Cannot restore inventory without restoring stock transactions."
             );
@@ -817,10 +1073,13 @@ public class ProductService {
         LocalDateTime now = LocalDateTime.now();
         String username = SecurityUtils.currentUsername();
 
-        /* ---------- PRODUCT ---------- */
+    /* ===========================
+       RESTORE PRODUCT
+       =========================== */
 
         product.setDeleted(false);
         product.setDeletedAt(null);
+        productRepository.save(product);
 
         productAuditRepository.save(
                 ProductAudit.builder()
@@ -833,12 +1092,16 @@ public class ProductService {
                         .build()
         );
 
-        /* ---------- PRODUCT IMAGES ---------- */
+    /* ===========================
+       PRODUCT IMAGES
+       =========================== */
 
-        productImageRepository.restoreByProductId(productId);
+        productImageRepository.restoreByProductId(productId, tenantId(), branchId());
 
         List<ProductImage> productImages =
-                productImageRepository.findByProduct_Id(productId);
+                productImageRepository.findByTenantIdAndBranchIdAndProduct_Id(
+                        tenantId(), branchId(), productId
+                );
 
         auditProductImages(productImages,
                 "IMAGE_RESTORED_ALONG_WITH_PRODUCT",
@@ -848,10 +1111,14 @@ public class ProductService {
                 username
         );
 
-        /* ---------- VARIANTS ---------- */
+    /* ===========================
+       VARIANTS
+       =========================== */
 
         List<ProductVariant> variants =
-                productVariantRepository.findByProduct_Id(productId);
+                productVariantRepository.findByTenantIdAndBranchIdAndProduct_Id(
+                        tenantId(), branchId(), productId
+                );
 
         if (!variants.isEmpty()) {
 
@@ -859,7 +1126,7 @@ public class ProductService {
                     .map(ProductVariant::getId)
                     .toList();
 
-            productVariantRepository.restoreByProductId(productId);
+            productVariantRepository.restoreByProductId(productId, tenantId(), branchId());
 
             auditVariants(variants,
                     "VARIANT_RESTORED_ALONG_WITH_PRODUCT",
@@ -869,18 +1136,22 @@ public class ProductService {
                     username
             );
 
-            /* ---------- VARIANT IMAGES ---------- */
+        /* ===========================
+           VARIANT IMAGES
+           =========================== */
 
-            List<ProductVariantImage> variantImagesToRestore =
-                    productVariantImageRepository.findByVariantIdsWithVariant(variantIds)
-                            .stream()
+            List<ProductVariantImage> variantImages =
+                    productVariantImageRepository.findByVariantIdsWithVariant(variantIds, tenantId(), branchId());
+
+            List<ProductVariantImage> deletedVariantImages =
+                    variantImages.stream()
                             .filter(img -> Boolean.TRUE.equals(img.getDeleted()))
                             .toList();
 
-            productVariantImageRepository.restoreByVariantIds(variantIds);
+            productVariantImageRepository.restoreByVariantIds(variantIds, tenantId(), branchId());
 
             auditVariantImages(
-                    variantImagesToRestore,
+                    deletedVariantImages,
                     "VARIANT_IMAGE_RESTORED_ALONG_WITH_PRODUCT",
                     product,
                     reason,
@@ -888,22 +1159,20 @@ public class ProductService {
                     username
             );
 
-            /* ---------- INVENTORY ---------- */
+        /* ===========================
+           INVENTORY + STOCK
+           =========================== */
 
-            if (options != null && options.isRestoreInventory()) {
-                inventoryItemRepository.restoreByVariantIds(variantIds);
-            }
+            if (options != null) {
 
-            /* ---------- STOCK ---------- */
+                if (options.isRestoreStockTransactions()) {
+                    stockTransactionRepository.restoreByVariantIds(variantIds);
+                }
 
-            if (options != null && options.isRestoreStockTransactions()) {
-                stockTransactionRepository.restoreByVariantIds(variantIds);
-            }
-
-            /* ---------- RECALCULATE INVENTORY ---------- */
-
-            if (options != null && options.isRestoreInventory()) {
-                recalculateInventoryFromTransactions(variantIds, username);
+                if (options.isRestoreInventory()) {
+                    inventoryItemRepository.restoreByVariantIds(variantIds);
+                    recalculateInventoryFromTransactions(variantIds, username);
+                }
             }
         }
     }
@@ -960,7 +1229,9 @@ public class ProductService {
     ========================================================= */
 
     private Product getProductOrThrow(UUID id) {
-        return productRepository.findById(id)
+
+        return productRepository
+                .findByIdAndTenantIdAndBranchId(id, tenantId(), branchId())
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
     }
 
@@ -1086,7 +1357,6 @@ public class ProductService {
 //
 //        // === PRODUCT IMAGES ===
 //        deleteProductImages(product, false, "Deleted along with product");
-//        deleteProductUploadDirectory(productId);
 //
 //        // === PRODUCT ===
 //        productRepository.delete(product);
@@ -1095,201 +1365,169 @@ public class ProductService {
     @Transactional
     public void hardDeleteProduct(UUID productId, String reason) {
 
-    /* =========================================================
-       1️⃣ LOCK PRODUCT (Prevents concurrent updates)
-       ========================================================= */
-
-        Product product = productRepository.findForUpdate(productId)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+        Product product = getProductForUpdate(productId);
 
         LocalDateTime now = LocalDateTime.now();
         String username = SecurityUtils.currentUsername();
 
-    /* =========================================================
-       2️⃣ FETCH EVERYTHING FIRST (DETACHED SNAPSHOTS)
-       ========================================================= */
+        List<ProductImage> productImages = fetchProductImages(productId);
+        List<ProductVariant> variants = fetchVariants(productId);
+        List<UUID> variantIds = extractVariantIds(variants);
+        List<ProductVariantImage> variantImages = fetchVariantImages(variantIds);
 
-        List<ProductImage> productImages =
-                productImageRepository.findByProduct_Id(productId);
+        validateHardDeleteSafety(productId, variantIds);
 
-        List<ProductVariant> variants =
-                productVariantRepository.findByProduct_Id(productId);
+        auditHardDelete(product, productImages, variants, variantImages, reason, now, username);
 
-        List<UUID> variantIds = variants.stream()
-                .map(ProductVariant::getId)
-                .toList();
+        List<Path> filesToDelete = collectFilesToDelete(productImages, variantImages, productId);
 
-        List<ProductVariantImage> variantImages =
-                variantIds.isEmpty()
-                        ? List.of()
-                        : productVariantImageRepository.findByVariantIdsWithVariant(variantIds);
+        deleteRelations(productId, variantIds);
 
-    /* =========================================================
-       3️⃣ SAFETY CHECKS (BLOCK IF FINANCIAL HISTORY EXISTS)
-       ========================================================= */
-
-        boolean hasCompletedSales = false;
-
-        if (!variantIds.isEmpty()) {
-            hasCompletedSales =
-                    saleRepository.existsByVariantIdsAndStatus(
-                            variantIds,
-                            Sale.SaleStatus.COMPLETED
-                    );
-        }
-
-        boolean hasStock =
-                stockTransactionRepository.existsByProductId(productId);
-
-        boolean hasInventory =
-                inventoryItemRepository.existsByProductId(productId);
-
-        if (hasCompletedSales || hasStock || hasInventory) {
-            throw new IllegalStateException(
-                    "Cannot hard delete product with historical financial records."
-            );
-        }
-
-    /* =========================================================
-       4️⃣ AUDIT EVERYTHING BEFORE REMOVAL
-       ========================================================= */
-
-        productAuditRepository.save(
-                ProductAudit.builder()
-                        .action("HARD_DELETE")
-                        .productId(product.getId())
-                        .productName(product.getName())
-                        .timestamp(now)
-                        .performedBy(username)
-                        .reason(reason)
-                        .build()
-        );
-
-        if (!productImages.isEmpty()) {
-            productImageAuditRepository.saveAll(
-                    productImages.stream()
-                            .map(img -> ProductImageAudit.builder()
-                                    .action("IMAGE_DELETED_PERMANENTLY")
-                                    .fileName(img.getFileName())
-                                    .filePath(img.getFilePath())
-                                    .productId(product.getId())
-                                    .productName(product.getName())
-                                    .timestamp(now)
-                                    .performedBy(username)
-                                    .reason(reason)
-                                    .build())
-                            .toList()
-            );
-        }
-
-        if (!variants.isEmpty()) {
-            productVariantAuditRepository.saveAll(
-                    variants.stream()
-                            .map(v -> ProductVariantAudit.builder()
-                                    .action("VARIANT_HARD_DELETED")
-                                    .productId(product.getId())
-                                    .productName(product.getName())
-                                    .productVariantId(v.getId())
-                                    .variantClassification(v.getClassification())
-                                    .timestamp(now)
-                                    .performedBy(username)
-                                    .reason(reason)
-                                    .build())
-                            .toList()
-            );
-        }
-
-        if (!variantImages.isEmpty()) {
-            productVariantImageAuditRepository.saveAll(
-                    variantImages.stream()
-                            .map(img -> ProductVariantImageAudit.builder()
-                                    .action("VARIANT_IMAGE_DELETED_PERMANENTLY")
-                                    .productVariantId(img.getVariant().getId())
-                                    .productName(product.getName())
-                                    .classification(img.getVariant().getClassification())
-                                    .fileName(img.getFileName())
-                                    .filePath(img.getFilePath())
-                                    .timestamp(now)
-                                    .performedBy(username)
-                                    .reason(reason)
-                                    .build())
-                            .toList()
-            );
-        }
-
-    /* =========================================================
-       5️⃣ CAPTURE FILE PATHS FOR POST-COMMIT CLEANUP
-       ========================================================= */
-
-        List<Path> filesToDelete = new ArrayList<>();
-        Path productDir = productRoot().resolve(productId.toString());
-
-        for (ProductImage img : productImages) {
-            filesToDelete.add(productDir.resolve(img.getFileName()));
-        }
-
-        for (ProductVariantImage img : variantImages) {
-            filesToDelete.add(productDir.resolve(img.getFileName()));
-        }
-
-    /* =========================================================
-       6️⃣ BREAK MANY-TO-MANY SAFELY (NO COLLECTION MUTATION)
-       ========================================================= */
-
-        productRepository.detachSuppliers(productId);
-
-        if (!variantIds.isEmpty()) {
-            productVariantImageRepository.deleteByVariantIds(variantIds);
-            productVariantRepository.deleteByProductId(productId);
-        }
-
-        productImageRepository.deleteByProductId(productId);
-
-        /* sync context */
-        em.flush();
-        em.clear();
-
-        /* delete product */
-        productRepository.deleteById(productId);
-
-    /* =========================================================
-       8️ POST-COMMIT FILE CLEANUP (SAFE)
-       ========================================================= */
-
-        transactionalFileManager.runAfterCommit(() -> {
-
-            try {
-
-                for (Path file : filesToDelete) {
-                    try {
-                        fileStorageService.deleteFile(file);
-                    } catch (Exception ex) {
-                        log.warn("Failed to delete file {}", file, ex);
-                    }
-                }
-
-                try {
-                    fileStorageService.deleteDirectory(productDir);
-                } catch (Exception ex) {
-                    log.warn("Failed to delete directory {}", productDir, ex);
-                }
-
-            } catch (Exception e) {
-                log.error("Unexpected error during cleanup for product {}", productId, e);
-            }
-        });
+        scheduleFileCleanup(filesToDelete);
     }
 
     @Transactional
     public void bulkHardDelete(List<UUID> ids, String reason) {
+        int i = 0;
         for (UUID id : ids) {
+
             hardDeleteProduct(id, reason);
-            em.flush();
-            em.clear();
+
+            if (++i % 20 == 0) {
+                em.flush();
+                em.clear();
+            }
         }
     }
 
+    private Product getProductForUpdate(UUID productId) {
+        return productRepository.findForUpdate(productId, tenantId(), branchId())
+                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+    }
 
+    private List<ProductImage> fetchProductImages(UUID productId) {
+        return productImageRepository.findByTenantIdAndBranchIdAndProduct_Id(
+                tenantId(), branchId(), productId
+        );
+    }
+
+    private List<ProductVariant> fetchVariants(UUID productId) {
+        return productVariantRepository.findByTenantIdAndBranchIdAndProduct_Id(
+                tenantId(), branchId(), productId
+        );
+    }
+
+    private List<UUID> extractVariantIds(List<ProductVariant> variants) {
+        return variants.stream().map(ProductVariant::getId).toList();
+    }
+
+    private List<ProductVariantImage> fetchVariantImages(List<UUID> variantIds) {
+        return variantIds.isEmpty()
+                ? List.of()
+                : productVariantImageRepository.findByVariantIdsWithVariant(
+                variantIds, tenantId(), branchId()
+        );
+    }
+
+    private void validateHardDeleteSafety(UUID productId, List<UUID> variantIds) {
+
+        if (!variantIds.isEmpty()) {
+
+            boolean hasCompletedSales =
+                    saleRepository.existsByVariantIdsAndStatus(
+                            variantIds,
+                            Sale.SaleStatus.COMPLETED
+                    );
+
+            if (hasCompletedSales) {
+                throw new IllegalStateException("Cannot delete product with completed sales");
+            }
+        }
+
+        if (stockTransactionRepository.existsByProductId(productId) ||
+                inventoryItemRepository.existsByProductId(productId)) {
+
+            throw new IllegalStateException("Cannot delete product with inventory history");
+        }
+    }
+
+    private void auditHardDelete(
+            Product product,
+            List<ProductImage> productImages,
+            List<ProductVariant> variants,
+            List<ProductVariantImage> variantImages,
+            String reason,
+            LocalDateTime now,
+            String username
+    ) {
+
+        productAuditRepository.save(
+                auditFactory("HARD_DELETE", product, reason, now, username)
+        );
+
+        auditProductImages(productImages, "IMAGE_DELETED_PERMANENTLY", product, reason, now, username);
+        auditVariants(variants, "VARIANT_HARD_DELETED", product, reason, now, username);
+        auditVariantImages(variantImages, "VARIANT_IMAGE_DELETED_PERMANENTLY", product, reason, now, username);
+    }
+
+    private List<Path> collectFilesToDelete(
+            List<ProductImage> productImages,
+            List<ProductVariantImage> variantImages,
+            UUID productId
+    ) {
+
+        Path sharedDir = fileStorageService.productSharedRoot();
+
+        List<Path> files = new ArrayList<>();
+
+        for (ProductImage img : productImages) {
+
+            boolean usedElsewhere = productImageRepository
+                    .existsByTenantIdAndBranchIdAndContentHashAndProduct_IdNot(
+                            tenantId(), branchId(), img.getContentHash(), productId
+                    );
+
+            if (!usedElsewhere) {
+                files.add(sharedDir.resolve(img.getFileName()));
+            }
+        }
+
+        variantImages.forEach(img ->
+                files.add(sharedDir.resolve(img.getFileName()))
+        );
+
+        return files;
+    }
+
+    private void deleteRelations(UUID productId, List<UUID> variantIds) {
+
+        productRepository.detachSuppliers(productId);
+
+        if (!variantIds.isEmpty()) {
+            productVariantImageRepository.deleteByVariantIds(variantIds, tenantId(), branchId());
+            productVariantRepository.deleteByProductId(productId, tenantId(), branchId());
+        }
+
+        productImageRepository.deleteByProductId(productId, tenantId(), branchId());
+
+        em.flush();
+        em.clear();
+
+        productRepository.deleteById(productId);
+    }
+
+    private void scheduleFileCleanup(List<Path> files) {
+
+        transactionalFileManager.runAfterCommit(() -> {
+            files.forEach(file -> {
+                try {
+                    fileStorageService.deleteFile(file);
+                } catch (Exception e) {
+                    log.warn("Failed to delete file {}", file, e);
+                }
+            });
+        });
+    }
 
 
 
@@ -1311,54 +1549,76 @@ public class ProductService {
     /* =============================
     PRODUCT IMAGES
    ============================= */
+
+    public ResponseEntity<Resource> downloadProductImagesZip(UUID productId, Boolean deleted)
+            throws IOException {
+
+        File zip = zipProductImages(productId, deleted);
+
+        Resource res = new FileSystemResource(zip);
+
+        transactionalFileManager.runAfterCommit(zip::delete);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=product-" + productId + "-images.zip")
+                .body(res);
+    }
+
+    public ResponseEntity<Resource> downloadAllProductImagesZip(
+            Boolean deletedProducts,
+            Boolean deletedImages
+    ) throws IOException {
+
+        File zip = zipAllProductImages(deletedProducts, deletedImages);
+
+        Resource res = new FileSystemResource(zip);
+
+        transactionalFileManager.runAfterCommit(zip::delete);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=all-product-images.zip")
+                .body(res);
+    }
+
     public List<String> getProductImageUrls(UUID id, Boolean deleted) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+
+        Product product = getProduct(id);
 
         if (product.getImages() == null) return List.of();
 
         return product.getImages()
                 .stream()
-                .filter(image ->
-                        deleted == null
-                                ? true                                       // return all
-                                : deleted                                     // deleted = true → get deleted only
-                                ? Boolean.TRUE.equals(image.getDeleted())
-                                : Boolean.FALSE.equals(image.getDeleted()) // deleted = false → get active only
-                )
+                .filter(image -> matchesDeleted(deleted, image.getDeleted()))
                 .map(ProductImage::getFilePath)
                 .toList();
     }
 
     public File zipProductImages(UUID productId, Boolean deleted) throws IOException {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
 
-        // Filter images based on deleted flag
+        Product product = getProduct(productId);
+
         List<ProductImage> imagesToZip = product.getImages() == null
                 ? List.of()
                 : product.getImages().stream()
-                .filter(image -> deleted == null
-                        ? true                        // return all
-                        : deleted                     // deleted = true → get deleted only
-                        ? Boolean.TRUE.equals(image.getDeleted())
-                        : Boolean.FALSE.equals(image.getDeleted()) // deleted = false → get active only
-                )
+                .filter(image -> matchesDeleted(deleted, image.getDeleted()))
                 .toList();
 
         File zipFile = File.createTempFile("product-" + productId + "-images", ".zip");
 
         try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFile))) {
-            for (ProductImage image : imagesToZip) {
-                // Resolve the physical file path
-                Path physicalPath = productRoot().resolve(product.getId().toString())
-                        .resolve(Paths.get(image.getFilePath()).getFileName());
 
-                if (Files.exists(physicalPath)) {
-                    zos.putNextEntry(new ZipEntry(physicalPath.getFileName().toString()));
-                    Files.copy(physicalPath, zos);
-                    zos.closeEntry();
-                }
+            for (ProductImage image : imagesToZip) {
+
+                Path physicalPath = resolveProductFile(
+                        product.getId(),
+                        Paths.get(image.getFilePath()).getFileName().toString()
+                );
+
+                addToZip(zos, physicalPath, physicalPath.getFileName().toString());
             }
         }
 
@@ -1366,58 +1626,50 @@ public class ProductService {
     }
 
     public Map<UUID, List<String>> getAllProductImageUrls() {
-        Map<UUID, List<String>> result = new HashMap<>();
 
-        productRepository.findAll().forEach(product -> {
-            List<String> imgs = product.getImages() == null
-                    ? List.of()
-                    : product.getImages().stream()
-                    .map(ProductImage::getFilePath)
-                    .toList();
-
-            result.put(product.getId(), imgs);
-        });
-
-        return result;
+        return productImageRepository
+                .findAllImagePaths(tenantId(), branchId())
+                .stream()
+                .collect(Collectors.groupingBy(
+                        ProductImageProjection::getProductId,
+                        Collectors.mapping(ProductImageProjection::getFilePath, Collectors.toList())
+                ));
     }
 
     public File zipAllProductImages(Boolean deletedProducts, Boolean deletedImages) throws IOException {
+
+        List<Product> products = productRepository.findAllWithRelationsByTenantIdAndBranchId(
+                tenantId(),
+                branchId()
+        );
+
         File zipFile = File.createTempFile("all-product-images", ".zip");
 
         try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFile))) {
-            // Filter products based on deletedProducts flag
-            List<Product> products = productRepository.findAll().stream()
-                    .filter(p -> deletedProducts == null
-                            ? true
-                            : deletedProducts
-                            ? Boolean.TRUE.equals(p.getDeleted())
-                            : Boolean.FALSE.equals(p.getDeleted())
-                    )
-                    .toList();
 
             for (Product product : products) {
-                // Filter product images based on deletedImages flag
-                List<ProductImage> imagesToZip = product.getImages() == null
+
+                if (deletedProducts != null) {
+                    if (deletedProducts && !Boolean.TRUE.equals(product.getDeleted())) continue;
+                    if (!deletedProducts && Boolean.TRUE.equals(product.getDeleted())) continue;
+                }
+
+                List<ProductImage> images = product.getImages() == null
                         ? List.of()
-                        : product.getImages().stream()
-                        .filter(img -> deletedImages == null
-                                ? true
-                                : deletedImages
-                                ? Boolean.TRUE.equals(img.getDeleted())
-                                : Boolean.FALSE.equals(img.getDeleted())
-                        )
-                        .toList();
+                        : product.getImages();
 
-                for (ProductImage image : imagesToZip) {
-                    Path physicalPath = productRoot().resolve(product.getId().toString())
-                            .resolve(Paths.get(image.getFilePath()).getFileName());
+                for (ProductImage image : images) {
 
-                    if (Files.exists(physicalPath)) {
-                        String entryName = product.getId() + "/" + physicalPath.getFileName().toString();
-                        zos.putNextEntry(new ZipEntry(entryName));
-                        Files.copy(physicalPath, zos);
-                        zos.closeEntry();
-                    }
+                    if (!matchesDeleted(deletedImages, image.getDeleted())) continue;
+
+                    Path physicalPath = resolveProductFile(
+                            product.getId(),
+                            Paths.get(image.getFilePath()).getFileName().toString()
+                    );
+
+                    String entryName = product.getId() + "/" + physicalPath.getFileName();
+
+                    addToZip(zos, physicalPath, entryName);
                 }
             }
         }
@@ -1427,14 +1679,18 @@ public class ProductService {
 
     public ResponseEntity<Resource> getProductThumbnail(UUID id) {
 
-        Product product = productRepository.findByIdAndDeletedFalse(id)
+        Product product = productRepository
+                .findByIdAndTenantIdAndBranchIdAndDeletedFalse(
+                        id,
+                        tenantId(),
+                        branchId()
+                )
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
 
         if (product.getImages() == null || product.getImages().isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
-        // 🔥 Null-safe filtering
         ProductImage primary = product.getImages().stream()
                 .filter(img -> !Boolean.TRUE.equals(img.getDeleted()))
                 .filter(img -> Boolean.TRUE.equals(img.getPrimaryImage()))
@@ -1450,8 +1706,7 @@ public class ProductService {
             return ResponseEntity.notFound().build();
         }
 
-        Path path = productRoot()
-                .resolve(id.toString())
+        Path path = fileStorageService.productSharedRoot()
                 .resolve(primary.getThumbnailFileName());
 
         if (!Files.exists(path)) {
@@ -1461,8 +1716,8 @@ public class ProductService {
         Resource resource = new FileSystemResource(path.toFile());
 
         return ResponseEntity.ok()
-                .contentType(MediaType.IMAGE_JPEG)
-                .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+                .contentType(MediaType.IMAGE_JPEG)  // ✅ RESTORED
+                .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400") // ✅ RESTORED
                 .body(resource);
     }
 
@@ -1474,18 +1729,32 @@ public class ProductService {
        ============================= */
 
     public List<ProductAudit> getProductAudits(UUID productId) {
-        return productAuditRepository.findByProductIdOrderByTimestampDesc(productId);
+
+        return productAuditRepository
+                .findByTenantIdAndBranchIdAndProductIdOrderByTimestampDesc(
+                        tenantId(),
+                        branchId(),
+                        productId
+                );
     }
 
     public List<ProductImageAudit> getProductImagesAudits(UUID productId) {
-        return productImageAuditRepository.findByProductId(productId)
+
+        return productImageAuditRepository
+                .findByTenantIdAndBranchIdAndProductId(
+                        tenantId(),
+                        branchId(),
+                        productId
+                )
                 .stream()
                 .sorted(Comparator.comparing(ProductImageAudit::getTimestamp).reversed())
                 .toList();
     }
 
     public Map<UUID, List<ProductImageAudit>> getAllProductImagesAudits() {
-        return productImageAuditRepository.findAll()
+
+        return productImageAuditRepository
+                .findByTenantIdAndBranchId(tenantId(), branchId())
                 .stream()
                 .sorted(Comparator.comparing(ProductImageAudit::getTimestamp).reversed())
                 .collect(Collectors.groupingBy(ProductImageAudit::getProductId));
@@ -1505,6 +1774,61 @@ public class ProductService {
     /* =============================
        UTILITIES
        ============================= */
+
+    private boolean matchesDeleted(Boolean filter, Boolean actual) {
+        if (filter == null) return true;
+        return filter
+                ? Boolean.TRUE.equals(actual)
+                : Boolean.FALSE.equals(actual);
+    }
+
+    private Product getProduct(UUID id) {
+        return productRepository
+                .findByIdAndTenantIdAndBranchId(id, tenantId(), branchId())
+                .orElseThrow(() -> new ProductNotFoundException("Product not found: " + id));
+    }
+
+    private Path resolveProductFile(UUID productId, String filename) {
+        return fileStorageService.productSharedRoot()
+                .resolve(filename);
+    }
+
+    private void addToZip(ZipOutputStream zos, Path file, String entryName) throws IOException {
+        if (!Files.exists(file)) return;
+
+        zos.putNextEntry(new ZipEntry(entryName));
+        Files.copy(file, zos);
+        zos.closeEntry();
+    }
+
+    private boolean isFileUsedElsewhere(ProductImage img, UUID currentProductId) {
+
+        return productImageRepository
+                .existsByTenantIdAndBranchIdAndContentHashAndProduct_IdNot(
+                        tenantId(),
+                        branchId(),
+                        img.getContentHash(),
+                        currentProductId
+                );
+    }
+
+    private ProductAudit auditFactory(
+            String action,
+            Product product,
+            String reason,
+            LocalDateTime now,
+            String username
+    ) {
+
+        ProductAudit audit = new ProductAudit();
+        audit.setAction(action);
+        audit.setProductId(product.getId());
+        audit.setProductName(product.getName());
+        audit.setTimestamp(now);
+        audit.setPerformedBy(username);
+        audit.setReason(reason);
+        return audit;
+    }
 
     private ProductAudit auditForField(Product product, String field, String oldVal, String newVal) {
         ProductAudit a = new ProductAudit();

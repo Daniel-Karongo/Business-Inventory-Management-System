@@ -33,7 +33,10 @@ public class CacheConfiguration {
                         "balanceSheet",
                         "cashFlow",
                         "accountsReceivable",
-                        "accountsPayable"
+                        "accountsPayable",
+
+                        // STOCK MODULE
+                        "barcode-scan"
                 );
 
         manager.setCaffeine(

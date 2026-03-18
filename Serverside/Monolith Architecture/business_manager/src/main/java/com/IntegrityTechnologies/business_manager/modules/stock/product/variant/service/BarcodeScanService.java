@@ -1,14 +1,14 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service;
 
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryItem;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.BarcodeScanResponse;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.VariantScanProjection;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
+import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
@@ -17,46 +17,32 @@ import java.util.UUID;
 public class BarcodeScanService {
 
     private final ProductVariantRepository variantRepo;
-    private final InventoryItemRepository inventoryRepo;
 
-    @Transactional(readOnly = true)
-    public BarcodeScanResponse scan(String barcode, UUID branchId) {
+    private UUID tenantId() { return TenantContext.getTenantId(); }
+    private UUID branchId() { return BranchContext.get(); }
 
-        ProductVariant variant = variantRepo.findByBarcode(barcode)
-                .or(() -> variantRepo.findBySku(barcode))
+    @Cacheable(
+            value = "barcode-scan",
+            key = "T(java.util.Objects).hash(#root.target.tenantId(), #root.target.branchId(), #barcode)"
+    )
+    public BarcodeScanResponse scan(String barcode) {
+
+        VariantScanProjection p = variantRepo
+                .scanProjection(tenantId(), branchId(), barcode)
                 .orElseThrow(() ->
                         new EntityNotFoundException("Invalid barcode or SKU")
                 );
 
-        InventoryItem inventory = null;
-
-        if (branchId != null) {
-            inventory = inventoryRepo
-                    .findByProductVariant_IdAndBranchId(
-                            variant.getId(), branchId
-                    )
-                    .orElse(null);
-        }
-
         return BarcodeScanResponse.builder()
-                .productId(variant.getProduct().getId())
-                .productName(variant.getProduct().getName())
-
-                .variantId(variant.getId())
-                .classification(variant.getClassification())
-                .sku(variant.getSku())
-                .barcode(variant.getBarcode())
-
-                .sellingPrice(
-                        variant.getMinimumSellingPrice()
-                )
-
-                .branchId(branchId)
-                .quantityOnHand(
-                        inventory != null
-                                ? inventory.getQuantityOnHand()
-                                : null
-                )
+                .productId(p.getProductId())
+                .productName(p.getProductName())
+                .variantId(p.getVariantId())
+                .classification(p.getClassification())
+                .sku(p.getSku())
+                .barcode(p.getBarcode())
+                .sellingPrice(p.getSellingPrice())
+                .branchId(p.getBranchId())
+                .quantityOnHand(p.getQuantityOnHand())
                 .build();
     }
 }

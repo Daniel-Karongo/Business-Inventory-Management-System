@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.modules.finance.accounting.events;
+package com.IntegrityTechnologies.business_manager.config.kafka;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -12,13 +12,12 @@ import org.springframework.stereotype.Component;
 )
 @Component
 @RequiredArgsConstructor
-public class SpringAccountingEventPublisher implements AccountingEventPublisher {
+public class SpringDomainEventPublisher implements DomainEventPublisher {
 
     private final ApplicationEventPublisher publisher;
 
     @Override
     public void publish(String eventType, Object event) {
-
         publisher.publishEvent(event);
     }
 }

@@ -15,6 +15,8 @@ import java.util.UUID;
 public class ProductSpecification {
 
     public static Specification<Product> filterProducts(
+            UUID tenantId,
+            UUID branchId,
             List<Long> categoryIds,
             String name,
             String description,
@@ -32,7 +34,16 @@ public class ProductSpecification {
 
         return (root, query, cb) -> {
 
+            query.distinct(true); // 🔒 prevent duplication from joins
+
             List<Predicate> predicates = new ArrayList<>();
+
+            /* =============================
+               🔴 TENANT + BRANCH ISOLATION (MANDATORY)
+               ============================= */
+
+            predicates.add(cb.equal(root.get("tenantId"), tenantId));
+            predicates.add(cb.equal(root.get("branchId"), branchId));
 
             Join<Product, Category> categoryJoin =
                     root.join("category", JoinType.LEFT);
@@ -86,13 +97,14 @@ public class ProductSpecification {
             }
 
             /* =============================
-               🔥 SUPPLIER COUNT FILTER
+               🔥 SUPPLIER COUNT FILTER (ISOLATED)
                ============================= */
 
             if (minSuppliers != null || maxSuppliers != null) {
 
                 Subquery<Long> supplierCountSub = query.subquery(Long.class);
                 Root<Product> subRoot = supplierCountSub.correlate(root);
+
                 Join<Product, Supplier> supplierJoin =
                         subRoot.join("suppliers", JoinType.LEFT);
 
@@ -118,21 +130,25 @@ public class ProductSpecification {
             }
 
             /* =============================
-               SORTING
+               SORTING (ISOLATED)
                ============================= */
 
             if (sortBy != null) {
 
                 boolean desc = "desc".equalsIgnoreCase(direction);
 
-                // Variant Count
+                // Variant Count (🔒 ISOLATED)
                 if ("variantCount".equals(sortBy)) {
 
                     Subquery<Long> variantSub = query.subquery(Long.class);
                     Root<ProductVariant> v = variantSub.from(ProductVariant.class);
 
                     variantSub.select(cb.count(v.get("id")))
-                            .where(cb.equal(v.get("product"), root));
+                            .where(
+                                    cb.equal(v.get("product"), root),
+                                    cb.equal(v.get("tenantId"), tenantId),
+                                    cb.equal(v.get("branchId"), branchId)
+                            );
 
                     query.orderBy(desc
                             ? cb.desc(variantSub)
@@ -140,11 +156,12 @@ public class ProductSpecification {
                     );
                 }
 
-                // Supplier Count Sorting
+                // Supplier Count
                 else if ("supplierCount".equals(sortBy)) {
 
                     Subquery<Long> supplierSub = query.subquery(Long.class);
                     Root<Product> subRoot = supplierSub.correlate(root);
+
                     Join<Product, Supplier> s =
                             subRoot.join("suppliers", JoinType.LEFT);
 

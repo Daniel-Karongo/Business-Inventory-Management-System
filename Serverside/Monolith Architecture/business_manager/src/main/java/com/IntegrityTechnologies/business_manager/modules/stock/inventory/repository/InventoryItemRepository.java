@@ -54,4 +54,16 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
         )
     """)
     List<InventoryItem> findDeadStock(@Param("cutoff") LocalDateTime cutoff);
+
+    Optional<InventoryItem> findByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
+            UUID variantId,
+            UUID tenantId,
+            UUID branchId
+    );
+
+    boolean existsByProductVariantIdAndTenantIdAndBranchId(
+            UUID variantId,
+            UUID tenantId,
+            UUID branchId
+    );
 }

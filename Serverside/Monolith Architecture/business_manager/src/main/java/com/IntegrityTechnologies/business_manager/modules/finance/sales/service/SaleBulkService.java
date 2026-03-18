@@ -360,10 +360,18 @@ public class SaleBulkService {
                         .map(v -> v.trim().toUpperCase())
                         .orElse("STANDARD");
 
+        UUID tenantId = TenantContext.getTenantId();
+        UUID branchId = resolveBranch(row).getId();
+
         if (row.getSku() != null && !row.getSku().isBlank()) {
+
             ProductVariant v =
                     productVariantRepository
-                            .findBySku(row.getSku().trim())
+                            .findByTenantIdAndBranchIdAndSkuAndDeletedFalse(
+                                    tenantId,
+                                    branchId,
+                                    row.getSku().trim()
+                            )
                             .orElseThrow(() ->
                                     new IllegalArgumentException("SKU not found: " + row.getSku()));
 
@@ -371,16 +379,18 @@ public class SaleBulkService {
                 throw new IllegalArgumentException(
                         "Variant mismatch for SKU " + row.getSku());
             }
+
             return v;
         }
 
         if (row.getProductName() != null && !row.getProductName().isBlank()) {
+
             List<ProductVariant> variants =
-                    productVariantRepository
-                            .findByProduct_NameIgnoreCaseAndClassificationAndDeletedFalse(
-                                    row.getProductName().trim(),
-                                    classification
-                            );
+                    productVariantRepository.findByProductNameAndClassificationSafe(
+                            row.getProductName().trim(),
+                            classification,
+                            tenantId
+                    );
 
             if (variants.isEmpty()) {
                 throw new IllegalArgumentException(

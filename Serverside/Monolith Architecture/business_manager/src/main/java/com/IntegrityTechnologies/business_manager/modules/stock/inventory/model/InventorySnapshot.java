@@ -1,10 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
+import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
@@ -16,15 +15,15 @@ import java.util.UUID;
 @Table(
         name = "inventory_snapshots",
         uniqueConstraints = @UniqueConstraint(
-                columnNames = {"product_id", "product_variant_id", "branch_id", "snapshot_date"}
+                columnNames = {"tenant_id", "branch_id", "product_id", "product_variant_id", "snapshot_date"}
         )
 )
 @Getter
 @Setter
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class InventorySnapshot {
+@SuperBuilder
+public class InventorySnapshot extends BranchAwareEntity {
 
     @Id
     @UuidGenerator
@@ -32,7 +31,6 @@ public class InventorySnapshot {
 
     private UUID productId;
     private UUID productVariantId;
-    private UUID branchId;
 
     private Long quantityOnHand;
     private Long quantityReserved;

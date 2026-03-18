@@ -2,31 +2,30 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.variant
 
 import com.IntegrityTechnologies.business_manager.config.files.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.files.TransactionalFileManager;
+import com.IntegrityTechnologies.business_manager.config.kafka.OutboxEventWriter;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.events.VariantImageUploadRequestedEvent;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariantImage;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
+import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.UUID;
+import java.io.*;
+import java.nio.file.*;
+import java.security.MessageDigest;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -38,29 +37,64 @@ public class ProductVariantImageService {
     private final ProductVariantImageRepository imageRepo;
     private final FileStorageService fileStorageService;
     private final TransactionalFileManager transactionalFileManager;
+    private final OutboxEventWriter outboxEventWriter;
 
-    /* ============================================================
-       ROOT DIRECTORY
-       ============================================================ */
+    private UUID tenantId() { return TenantContext.getTenantId(); }
+    private UUID branchId() { return BranchContext.get(); }
 
-    private Path root() {
-        return fileStorageService.productRoot();
+    private ProductVariant getVariant(UUID variantId) {
+        return variantRepo.findByIdSafe(
+                variantId,
+                false,
+                tenantId(),
+                branchId()
+        ).orElseThrow(() -> new EntityNotFoundException("Variant not found"));
+    }
+
+    private Path sharedDir() {
+        return fileStorageService.initDirectory(
+                fileStorageService.productSharedRoot().resolve("_variant")
+        );
     }
 
     /* ============================================================
-       PUBLIC API
+       UPLOAD
        ============================================================ */
 
     @Transactional
     public void uploadVariantImages(UUID variantId, List<MultipartFile> files) throws IOException {
 
-        ProductVariant variant = variantRepo.findById(variantId)
-                .orElseThrow(() -> new EntityNotFoundException("Variant not found"));
+        ProductVariant variant = getVariant(variantId);
 
         if (files == null || files.isEmpty()) return;
 
         for (MultipartFile file : files) {
-            saveVariantImage(variant, file);
+
+            validateFile(file);
+
+            Path tempDir = fileStorageService.initDirectory(
+                    fileStorageService.productSharedRoot().resolve("_tmp")
+            );
+
+            String tempName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+
+            Path tempFile = tempDir.resolve(tempName);
+
+            try (InputStream in = file.getInputStream()) {
+                Files.copy(in, tempFile);
+            }
+
+            outboxEventWriter.write(
+                    "VARIANT_IMAGE_UPLOAD_REQUESTED",
+                    branchId(),
+                    VariantImageUploadRequestedEvent.builder()
+                            .variantId(variantId)
+                            .tenantId(tenantId())
+                            .branchId(branchId())
+                            .fileName(file.getOriginalFilename())
+                            .tempFilePath(tempFile.toString())
+                            .build()
+            );
         }
     }
 
@@ -69,75 +103,59 @@ public class ProductVariantImageService {
 
         if (file == null || file.isEmpty()) return;
 
-    /* ============================================================
-       1️⃣ CREATE SECURE VARIANT DIRECTORY (ALWAYS HIDDEN)
-       ============================================================ */
+        validateFile(file);
 
-        Path variantDir = fileStorageService.initDirectory(
-                root()
-                        .resolve(variant.getProduct().getId().toString())
-                        .resolve("variants")
-                        .resolve(variant.getId().toString())
-        );
+        String hash = computeHash(file);
 
-        // 🔐 Force-secure directory (important for Windows)
-        fileStorageService.secure(variantDir);
+        Optional<ProductVariantImage> existing =
+                imageRepo.findFirstByTenantIdAndBranchIdAndContentHash(
+                        tenantId(),
+                        branchId(),
+                        hash
+                );
 
-    /* ============================================================
-       2️⃣ BUILD SAFE FILE NAME
-       ============================================================ */
+        String extension = getExtension(file.getOriginalFilename());
+        String fileName;
+        String thumbnailName;
 
-        String sanitized = sanitize(file.getOriginalFilename());
+        if (existing.isPresent()) {
 
-        String fileName =
-                System.currentTimeMillis() + "_" +
-                        UUID.randomUUID() + "_" +
-                        sanitized;
+            fileName = existing.get().getFileName();
+            thumbnailName = existing.get().getThumbnailFileName();
 
-        Path saved;
+        } else {
 
-    /* ============================================================
-       3️⃣ SAVE ORIGINAL (ALREADY SECURED BY saveFile)
-       ============================================================ */
+            fileName = hash + extension;
+            thumbnailName = "thumb_" + hash + ".jpg";
 
-        try (InputStream in = file.getInputStream()) {
+            Path shared = sharedDir();
 
-            saved = fileStorageService.saveFile(variantDir, fileName, in);
-            transactionalFileManager.track(saved);
+            Path saved = shared.resolve(fileName);
+
+            if (!Files.exists(saved)) {
+
+                try (InputStream in = file.getInputStream()) {
+
+                    saved = fileStorageService.saveFile(shared, fileName, in);
+                    transactionalFileManager.track(saved);
+
+                    Path thumb = createThumbnail(shared, fileName, saved);
+                    transactionalFileManager.track(thumb);
+                }
+            }
         }
-
-    /* ============================================================
-       4️⃣ GENERATE HIGH-QUALITY THUMBNAIL
-       ============================================================ */
-
-        String baseName = fileName.replaceAll("\\.[^.]+$", "");
-        String thumbnailName = "thumb_" + baseName + ".jpg";
-        Path thumbnailPath = variantDir.resolve(thumbnailName);
-
-        Thumbnails.of(saved.toFile())
-                .size(300, 300)
-                .outputFormat("jpg")
-                .outputQuality(0.95f)          // 🔥 MUCH higher quality
-                .keepAspectRatio(true)
-                .toFile(thumbnailPath.toFile());
-
-        transactionalFileManager.track(thumbnailPath);
-
-        // 🔐 CRITICAL: secure thumbnail AFTER it is fully written
-        fileStorageService.secure(thumbnailPath);
-
-    /* ============================================================
-       5️⃣ SAVE METADATA
-       ============================================================ */
 
         imageRepo.save(
                 ProductVariantImage.builder()
                         .variant(variant)
                         .fileName(fileName)
-                        .filePath("/api/product-variants/images/"
-                                + variant.getId() + "/" + fileName)
                         .thumbnailFileName(thumbnailName)
+                        .filePath("/api/product-variants/" + variant.getId() + "/images/" + fileName)
+                        .contentHash(hash)
+                        .tenantId(tenantId())
+                        .branchId(branchId())
                         .deleted(false)
+                        .uploadedAt(LocalDateTime.now())
                         .build()
         );
     }
@@ -149,104 +167,124 @@ public class ProductVariantImageService {
     @Transactional(readOnly = true)
     public List<String> getImageUrls(UUID variantId) {
 
-        return imageRepo.findByVariant_IdAndDeletedFalse(variantId)
+        getVariant(variantId);
+
+        return imageRepo.findByTenantIdAndBranchIdAndVariant_IdAndDeletedFalse(
+                        tenantId(),
+                        branchId(),
+                        variantId
+                )
                 .stream()
                 .map(ProductVariantImage::getFilePath)
                 .toList();
     }
 
-    @Transactional(readOnly = true)
-    public File zipVariantImages(UUID variantId) throws IOException {
+    public ResponseEntity<Resource> getProductVariantImage(UUID variantId, String fileName) {
 
-        ProductVariant variant = variantRepo.findById(variantId)
-                .orElseThrow(() -> new EntityNotFoundException("Variant not found"));
+        getVariant(variantId);
 
-        Path variantDir = root()
-                .resolve(variant.getProduct().getId().toString())
-                .resolve("variants")
-                .resolve(variantId.toString());
+        ProductVariantImage img = imageRepo
+                .findByTenantIdAndBranchIdAndVariant_IdAndFileNameAndDeletedFalse(
+                        tenantId(),
+                        branchId(),
+                        variantId,
+                        fileName
+                )
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        Path path = sharedDir().resolve(img.getFileName());
+
+        if (!Files.exists(path)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+
+        return ResponseEntity.ok(new FileSystemResource(path));
+    }
+
+    public ResponseEntity<Resource> downloadZipResponse(UUID variantId) throws IOException {
+
+        getVariant(variantId);
 
         List<ProductVariantImage> images =
-                imageRepo.findByVariant_IdAndDeletedFalse(variantId);
+                imageRepo.findByTenantIdAndBranchIdAndVariant_IdAndDeletedFalse(
+                        tenantId(),
+                        branchId(),
+                        variantId
+                );
 
-        File zip = File.createTempFile(
-                "variant-" + variantId + "-images",
-                ".zip"
-        );
+        File zip = File.createTempFile("variant-images-", ".zip");
 
         try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zip))) {
 
             for (ProductVariantImage img : images) {
 
-                Path physical = variantDir.resolve(img.getFileName());
+                Path p = sharedDir().resolve(img.getFileName());
 
-                if (!Files.exists(physical)) continue;
+                if (!Files.exists(p)) continue;
 
                 zos.putNextEntry(new ZipEntry(img.getFileName()));
-                Files.copy(physical, zos);
+                Files.copy(p, zos);
                 zos.closeEntry();
             }
         }
 
-        return zip;
-    }
-
-    public ResponseEntity<Resource> getProductVariantImage(UUID variantId, String fileName) {
-
-        ProductVariantImage img = imageRepo
-                .findByVariant_IdAndDeletedFalse(variantId)
-                .stream()
-                .filter(i -> i.getFileName().equals(fileName))
-                .findFirst()
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Variant image metadata not found"
-                        )
-                );
-
-        ProductVariant variant = img.getVariant();
-
-        Path imagePath = root()
-                .resolve(variant.getProduct().getId().toString())
-                .resolve("variants")
-                .resolve(variantId.toString())
-                .resolve(img.getFileName())
-                .normalize();
-
-        if (!Files.exists(imagePath)) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Variant image not found on disk"
-            );
-        }
-
-        Resource resource = new FileSystemResource(imagePath.toFile());
-
-        MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
-
-        try {
-            String detected = Files.probeContentType(imagePath);
-            if (detected != null) {
-                mediaType = MediaType.parseMediaType(detected);
-            }
-        } catch (IOException ignored) {}
-
         return ResponseEntity.ok()
-                .contentType(mediaType)
-                .body(resource);
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=images.zip")
+                .body(new FileSystemResource(zip));
     }
 
     /* ============================================================
-       UTILITIES
+       UTIL
        ============================================================ */
 
-    private String sanitize(String original) {
+    private String computeHash(MultipartFile file) {
+        try (InputStream is = file.getInputStream()) {
 
-        if (original == null || original.isBlank()) {
-            return "file";
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+            byte[] buffer = new byte[8192];
+            int read;
+
+            while ((read = is.read(buffer)) != -1) {
+                digest.update(buffer, 0, read);
+            }
+
+            return HexFormat.of().formatHex(digest.digest());
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
+    }
 
-        return original.replaceAll("[^a-zA-Z0-9._-]", "_");
+    private void validateFile(MultipartFile file) {
+        if (file.getSize() > 10 * 1024 * 1024) {
+            throw new IllegalArgumentException("Max 10MB");
+        }
+        if (file.getContentType() == null ||
+                !file.getContentType().startsWith("image/")) {
+            throw new IllegalArgumentException("Only image files allowed");
+        }
+    }
+
+    private String getExtension(String name) {
+        if (name == null || !name.contains(".")) return ".bin";
+        return name.substring(name.lastIndexOf("."));
+    }
+
+    private Path createThumbnail(Path dir, String fileName, Path source) throws IOException {
+
+        String base = fileName.replaceAll("\\.[^.]+$", "");
+        String thumb = "thumb_" + base + ".jpg";
+
+        Path path = dir.resolve(thumb);
+
+        Thumbnails.of(source.toFile())
+                .size(300, 300)
+                .outputFormat("jpg")
+                .toFile(path.toFile());
+
+        fileStorageService.secure(path);
+
+        return path;
     }
 }

@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.modules.finance.accounting.projection;
+package com.IntegrityTechnologies.business_manager.config.kafka;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.TenantAwareEntity;
 import jakarta.persistence.*;

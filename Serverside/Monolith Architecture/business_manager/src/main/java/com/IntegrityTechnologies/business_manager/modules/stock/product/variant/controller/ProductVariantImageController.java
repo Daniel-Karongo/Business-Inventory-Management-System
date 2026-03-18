@@ -4,15 +4,11 @@ import com.IntegrityTechnologies.business_manager.modules.platform.security.anno
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service.ProductVariantImageService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
@@ -25,7 +21,7 @@ public class ProductVariantImageController {
 
     private final ProductVariantImageService service;
 
-    @GetMapping("/images/{variantId}/{fileName:.+}")
+    @GetMapping("/{variantId}/images/{fileName:.+}")
     public ResponseEntity<Resource> getVariantImage(
             @PathVariable UUID variantId,
             @PathVariable String fileName
@@ -50,16 +46,6 @@ public class ProductVariantImageController {
             @PathVariable UUID variantId
     ) throws IOException {
 
-        File zip = service.zipVariantImages(variantId);
-
-        Resource res = new FileSystemResource(zip);
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(
-                        HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=variant-" + variantId + "-images.zip"
-                )
-                .body(res);
+        return service.downloadZipResponse(variantId); // move logic to service
     }
 }

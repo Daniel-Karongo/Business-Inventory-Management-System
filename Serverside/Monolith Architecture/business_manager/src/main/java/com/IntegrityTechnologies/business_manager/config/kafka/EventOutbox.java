@@ -45,4 +45,12 @@ public class EventOutbox {
     private LocalDateTime createdAt;
 
     private LocalDateTime processedAt;
+
+    private int retryCount = 0;
+
+    @Column(nullable = false)
+    private boolean failed = false;
+
+    @Column(columnDefinition = "TEXT")
+    private String failureReason;
 }

@@ -3,6 +3,8 @@ package com.IntegrityTechnologies.business_manager.modules.finance.budgeting.pro
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
+import com.IntegrityTechnologies.business_manager.config.kafka.ProcessedKafkaEvent;
+import com.IntegrityTechnologies.business_manager.config.kafka.ProcessedKafkaEventRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetMonthlySnapshotRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
@@ -21,11 +23,9 @@ import java.util.UUID;
 public class BudgetVarianceProjectionConsumer {
 
     private final BudgetMonthlySnapshotRepository snapshotRepository;
+    private final ProcessedKafkaEventRepository processedRepo;
 
-    @KafkaListener(
-            topics = "journal-posted",
-            groupId = "budget-variance"
-    )
+    @KafkaListener(topics = "journal-posted", groupId = "budget-variance")
     @Transactional
     public void handleKafka(JournalPostedEvent event) {
         process(event);
@@ -38,6 +38,11 @@ public class BudgetVarianceProjectionConsumer {
     }
 
     private void process(JournalPostedEvent event) {
+
+        if (processedRepo.existsByTenantIdAndEventId(
+                event.tenantId(),
+                event.journalId()
+        )) return;
 
         try {
 
@@ -67,10 +72,12 @@ public class BudgetVarianceProjectionConsumer {
                 );
             }
 
+            ProcessedKafkaEvent processed = new ProcessedKafkaEvent();
+            processed.setEventId(event.journalId());
+            processedRepo.save(processed);
+
         } finally {
-
             TenantContext.clear();
-
         }
     }
 }

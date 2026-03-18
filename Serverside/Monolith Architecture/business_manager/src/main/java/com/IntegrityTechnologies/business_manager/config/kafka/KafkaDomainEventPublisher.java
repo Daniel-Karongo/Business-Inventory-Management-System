@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.modules.finance.accounting.events;
+package com.IntegrityTechnologies.business_manager.config.kafka;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 )
 @Component
 @RequiredArgsConstructor
-public class KafkaAccountingEventPublisher implements AccountingEventPublisher {
+public class KafkaDomainEventPublisher implements DomainEventPublisher {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
@@ -27,11 +27,19 @@ public class KafkaAccountingEventPublisher implements AccountingEventPublisher {
 
         return switch (eventType) {
 
+            // ACCOUNTING
             case "JOURNAL_POSTED" -> "journal-posted";
-
             case "ACCOUNTING_PERIOD_CLOSED" -> "accounting-period-closed";
 
-            default -> "accounting-events";
+            // VARIANT
+            case "VARIANT_BARCODE_REQUESTED" -> "variant-barcode";
+            case "VARIANT_IMAGE_UPLOAD_REQUESTED" -> "variant-image";
+            case "VARIANT_BARCODE_PDF_REQUESTED" -> "variant-pdf";
+
+            // SAFETY (DO NOT SILENTLY DROP)
+            default -> throw new IllegalArgumentException(
+                    "No topic mapping for event type: " + eventType
+            );
         };
     }
 }

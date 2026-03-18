@@ -1,9 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.model;
 
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -15,37 +16,34 @@ import java.util.UUID;
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "unique_variant_branch",
-                        columnNames = {"product_variant_id", "branch_id"}
+                        columnNames = {"tenant_id", "branch_id", "product_variant_id"}
                 )
         },
         indexes = {
-                @Index(name = "idx_inventory_product", columnList = "product_id"),
+                @Index(name = "idx_inventory_tenant_branch", columnList = "tenant_id, branch_id"),
                 @Index(name = "idx_inventory_variant", columnList = "product_variant_id"),
-                @Index(name = "idx_inventory_branch", columnList = "branch_id"),
                 @Index(name = "idx_inventory_deleted", columnList = "deleted")
         }
 )
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class InventoryItem {
+@SuperBuilder
+public class InventoryItem extends BranchAwareEntity {
 
     @Id
     @GeneratedValue
-    @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
     @Column(name="product_id", nullable=false)
     private UUID productId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "product_variant_id", nullable = false)
-    private ProductVariant productVariant;
+    @Column(name = "product_variant_id", nullable = false)
+    private UUID productVariantId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "branch_id", nullable = false)
-    private Branch branch;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_variant_id", insertable = false, updatable = false)
+    private ProductVariant productVariant;
 
     @Column(nullable = false)
     private Long quantityOnHand;
@@ -59,8 +57,8 @@ public class InventoryItem {
     private LocalDateTime lastUpdatedAt;
     private String lastUpdatedBy;
 
-    @Column(nullable = false)
     @Builder.Default
+    @Column(nullable = false)
     private Boolean deleted = false;
 
     @Version

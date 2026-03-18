@@ -8,6 +8,8 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.m
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
+import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,48 +29,69 @@ public class ProductVariantService {
     private final VariantBarcodeService barcodeService;
     private final InventoryItemRepository inventoryItemRepository;
 
+    private UUID tenantId() { return TenantContext.getTenantId(); }
+    private UUID branchId() { return BranchContext.get(); }
+
     @Transactional
     public ProductVariantDTO createVariant(ProductVariantCreateDTO dto) {
 
-        Product product = productRepo.findById(dto.getProductId())
-                .orElseThrow(() -> new EntityNotFoundException("Product not found"));
+        Product product = productRepo.findByIdAndTenantIdAndBranchIdAndDeletedFalse(
+                dto.getProductId(),
+                tenantId(),
+                branchId()
+        ).orElseThrow(() -> new EntityNotFoundException("Product not found"));
 
-        if (variantRepo.existsByProduct_IdAndClassification(
-                dto.getProductId(), dto.getClassification())) {
+        if (variantRepo.existsByTenantIdAndBranchIdAndProduct_IdAndClassification(
+                tenantId(),
+                branchId(),
+                dto.getProductId(),
+                dto.getClassification()
+        )) {
             throw new IllegalArgumentException("Variant already exists");
+        }
+
+        String sku =
+                dto.getSku() != null
+                        ? dto.getSku()
+                        : product.getSku() + "-" + normalize(dto.getClassification());
+
+        if (variantRepo.existsByTenantIdAndBranchIdAndSku(
+                tenantId(),
+                branchId(),
+                sku
+        )) {
+            throw new IllegalArgumentException("SKU already exists: " + sku);
         }
 
         ProductVariant v = new ProductVariant();
         v.setProduct(product);
         v.setClassification(dto.getClassification());
-        v.setSku(
-                dto.getSku() != null
-                        ? dto.getSku()
-                        : product.getSku() + "-" + dto.getClassification()
-        );
+        v.setSku(sku);
+        v.setTenantId(tenantId());
+        v.setBranchId(branchId());
 
         v = variantRepo.save(v);
 
-        // 🔥 FORCE barcode creation and return UPDATED entity
         return barcodeService.generateBarcodeIfMissing(v.getId());
     }
 
-    /* =============================
-       CORE HELPERS (REQUIRED)
-       ============================= */
-
     public ProductVariant getEntity(UUID id) {
-        return variantRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Variant not found"));
+        return variantRepo.findByIdSafe(
+                id,
+                false,
+                tenantId(),
+                branchId()
+        ).orElseThrow(() -> new EntityNotFoundException("Variant not found"));
     }
 
     public List<ProductVariant> getEntitiesForProduct(UUID productId) {
-        return variantRepo.findByProduct_Id(productId);
+        return variantRepo.findByProduct_IdSafe(
+                productId,
+                false,
+                tenantId(),
+                branchId()
+        );
     }
-
-    /* =============================
-       READ
-       ============================= */
 
     public ProductVariantDTO getVariant(UUID id) {
         return mapper.toDTO(getEntity(id));
@@ -81,24 +104,44 @@ public class ProductVariantService {
                 .toList();
     }
 
-    /* =============================
-       UPDATE
-       ============================= */
-
+    @Transactional
     public ProductVariantDTO updateVariant(UUID id, ProductVariantUpdateDTO dto) {
 
         ProductVariant v = getEntity(id);
 
-        if (dto.getClassification() != null)
+        if (dto.getClassification() != null &&
+                !dto.getClassification().equals(v.getClassification())) {
+
+            if (variantRepo.existsByTenantIdAndBranchIdAndProduct_IdAndClassification(
+                    tenantId(),
+                    branchId(),
+                    v.getProduct().getId(),
+                    dto.getClassification()
+            )) {
+                throw new IllegalArgumentException("Variant classification already exists");
+            }
+
             v.setClassification(dto.getClassification());
+        }
 
         if (dto.getAverageBuyingPrice() != null)
             v.setAverageBuyingPrice(dto.getAverageBuyingPrice());
 
-        if (dto.getSku() != null)
+        if (dto.getSku() != null && !dto.getSku().equals(v.getSku())) {
+
+            if (variantRepo.existsByTenantIdAndBranchIdAndSku(
+                    tenantId(),
+                    branchId(),
+                    dto.getSku()
+            )) {
+                throw new IllegalArgumentException("SKU already exists: " + dto.getSku());
+            }
+
             v.setSku(dto.getSku());
+        }
 
         Double pct = v.getProduct().getMinimumPercentageProfit();
+
         v.setMinimumSellingPrice(
                 computeMinSelling(v.getAverageBuyingPrice(), pct)
         );
@@ -106,72 +149,61 @@ public class ProductVariantService {
         return mapper.toDTO(variantRepo.save(v));
     }
 
-    /* =============================
-       DELETE
-       ============================= */
-
     @Transactional
     public void deleteVariant(UUID variantId) {
 
-        ProductVariant variant = variantRepo.findById(variantId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException("Variant not found"));
+        ProductVariant variant = getEntity(variantId);
 
         UUID productId = variant.getProduct().getId();
 
-    /* ================================
-       RULE 1: BLOCK IF INVENTORY EXISTS
-       ================================ */
-
         boolean hasInventory =
-                inventoryItemRepository.existsByProductVariant_Id(variantId);
+                inventoryItemRepository.existsByProductVariantIdAndTenantIdAndBranchId(
+                        variantId,
+                        tenantId(),
+                        branchId()
+                );
 
         if (hasInventory) {
             throw new IllegalStateException(
                     "Cannot delete variant '" +
                             variant.getClassification() +
-                            "' because inventory records exist."
+                            "' because inventory exists."
             );
         }
 
-    /* ================================
-       RULE 2: BLOCK IF LAST VARIANT
-       ================================ */
-
         long activeVariants =
-                variantRepo.countByProduct_IdAndDeletedFalse(productId);
+                variantRepo.countByTenantIdAndBranchIdAndProduct_IdAndDeletedFalse(
+                        tenantId(),
+                        branchId(),
+                        productId
+                );
 
         if (activeVariants <= 1) {
             throw new IllegalStateException(
-                    "Cannot delete the last remaining variant of a product."
+                    "Cannot delete the last remaining variant."
             );
         }
 
-        variantRepo.delete(variant);
+        variant.setDeleted(true);
+        variantRepo.save(variant);
     }
-
-    /* =============================
-       PRICING
-       ============================= */
 
     public BigDecimal computeMinSelling(BigDecimal buying, Double pct) {
 
-        if (buying == null) {
-            buying = BigDecimal.ZERO;
-        }
-
-        if (pct == null) {
-            pct = 0D;
-        }
+        if (buying == null) buying = BigDecimal.ZERO;
+        if (pct == null) pct = 0D;
 
         BigDecimal percentage =
                 BigDecimal.valueOf(pct)
                         .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
 
-        BigDecimal multiplier =
-                BigDecimal.ONE.add(percentage);
-
-        return buying.multiply(multiplier)
+        return buying.multiply(BigDecimal.ONE.add(percentage))
                 .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private String normalize(String input) {
+        return input == null ? "" :
+                input.replaceAll("[^A-Za-z0-9]", "")
+                        .toUpperCase();
     }
 }

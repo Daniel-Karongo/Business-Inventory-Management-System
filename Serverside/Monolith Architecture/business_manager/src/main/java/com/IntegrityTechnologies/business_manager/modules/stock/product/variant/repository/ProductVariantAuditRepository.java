@@ -2,11 +2,20 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.variant
 
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariantAudit;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.UUID;
 
-@Repository
 public interface ProductVariantAuditRepository extends JpaRepository<ProductVariantAudit, UUID> {
 
+    List<ProductVariantAudit> findByTenantIdAndBranchIdAndProductVariantIdOrderByTimestampDesc(
+            UUID tenantId,
+            UUID branchId,
+            UUID variantId
+    );
+
+    List<ProductVariantAudit> findTop10ByTenantIdAndBranchIdOrderByTimestampDesc(
+            UUID tenantId,
+            UUID branchId
+    );
 }

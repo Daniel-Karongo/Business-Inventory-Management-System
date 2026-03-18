@@ -1,7 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.model;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -11,28 +13,25 @@ import java.util.UUID;
 @Table(
         name = "inventory_batches",
         indexes = {
-                @Index(name = "idx_batch_variant_branch",
-                        columnList = "productVariantId, branchId"),
+                @Index(name = "idx_batch_tenant_branch_variant",
+                        columnList = "tenant_id, branch_id, product_variant_id"),
                 @Index(name = "idx_batch_fifo",
-                        columnList = "receivedAt")
+                        columnList = "received_at")
         }
 )
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class InventoryBatch {
+@SuperBuilder
+public class InventoryBatch extends BranchAwareEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue
     private UUID id;
 
-    @Column(nullable = false, columnDefinition = "BINARY(16)")
+    @Column(name = "product_variant_id", nullable = false)
     private UUID productVariantId;
-
-    @Column(nullable = false, columnDefinition = "BINARY(16)")
-    private UUID branchId;
 
     @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal unitCost;

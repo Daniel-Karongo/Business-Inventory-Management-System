@@ -1,87 +1,70 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
-import org.hibernate.annotations.JdbcTypeCode;
-
-import java.sql.Types;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 @Table(
         name = "products",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_product_tenant_branch_name", columnNames = {"tenant_id", "branch_id", "name"}),
+                @UniqueConstraint(name = "uk_product_tenant_branch_sku", columnNames = {"tenant_id", "branch_id", "sku"})
+        },
         indexes = {
-                @Index(name = "idx_product_name", columnList = "name"),
-                @Index(name = "idx_product_sku", columnList = "sku")
+                @Index(name = "idx_product_tenant_branch", columnList = "tenant_id, branch_id"),
+                @Index(name = "idx_product_deleted", columnList = "deleted")
         }
 )
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@SuperBuilder
+@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
 @ToString(exclude = {"variants", "images", "suppliers", "category"})
-public class Product {
+public class Product extends BranchAwareEntity {
 
-    @EqualsAndHashCode.Include
     @Id
-    @GeneratedValue
-    @JdbcTypeCode(Types.BINARY)
-    @Column(columnDefinition = "BINARY(16)")
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private UUID id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String name;
 
     private String description;
 
-    @Column(unique = true)
     private String sku;
 
     private Double minimumPercentageProfit;
 
-    @OneToMany(mappedBy = "product")
+    @Builder.Default
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductVariant> variants = new ArrayList<>();
 
-    @OneToMany(mappedBy = "product")
+    @Builder.Default
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductImage> images = new ArrayList<>();
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "products_suppliers",
-            joinColumns = @JoinColumn(name = "product_id"),
-            inverseJoinColumns = @JoinColumn(name = "supplier_id")
-    )
-    private Set<Supplier> suppliers = new HashSet<>();
+    @Builder.Default
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ProductSupplier> suppliers = new HashSet<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean deleted = false;
+
     private LocalDateTime deletedAt;
-
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-
-    @PrePersist
-    public void onCreate() {
-        createdAt = LocalDateTime.now();
-        deleted = (deleted == null) ? false : deleted;
-    }
-
-    @PreUpdate
-    public void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
 }

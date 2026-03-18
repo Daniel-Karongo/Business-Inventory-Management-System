@@ -5,6 +5,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
+import com.IntegrityTechnologies.business_manager.config.kafka.ProcessedKafkaEvent;
+import com.IntegrityTechnologies.business_manager.config.kafka.ProcessedKafkaEventRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.VatLedgerProjection;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.VatLedgerProjectionRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
@@ -27,6 +29,7 @@ public class VatLedgerProjectionConsumer {
 
     private final VatLedgerProjectionRepository repo;
     private final AccountingAccounts accounts;
+    private final ProcessedKafkaEventRepository processedRepo;
 
     @KafkaListener(
             topics = "journal-posted",
@@ -49,7 +52,10 @@ public class VatLedgerProjectionConsumer {
     }
 
     private void process(JournalPostedEvent event) {
-
+        if (processedRepo.existsByTenantIdAndEventId(
+                event.tenantId(),
+                event.journalId()
+        )) return;
         try {
 
             TenantContext.setTenantId(event.tenantId());
@@ -109,6 +115,10 @@ public class VatLedgerProjectionConsumer {
             }
 
             repo.save(projection);
+
+            ProcessedKafkaEvent processed = new ProcessedKafkaEvent();
+            processed.setEventId(event.journalId());
+            processedRepo.save(processed);
 
         } finally {
 

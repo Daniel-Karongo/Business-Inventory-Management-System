@@ -1,9 +1,12 @@
 package com.IntegrityTechnologies.business_manager.config.files;
 
+import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.PathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -11,6 +14,7 @@ import java.io.InputStream;
 import java.nio.file.*;
 import java.nio.file.attribute.DosFileAttributeView;
 import java.util.Comparator;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -42,31 +46,53 @@ public class FileStorageService {
     /* ============================================================
        MODULE ROOTS
        ============================================================ */
+
     public Path tenantRoot() {
 
-        String tenantId = TenantContext.getTenantId().toString();
+        UUID tenantId = TenantContext.getTenantId();
+
+        if (tenantId == null) {
+            throw new IllegalStateException("TenantContext is required");
+        }
 
         Path dir = uploadsRoot.resolve("." + tenantId);
-
         createAndSecure(dir);
 
         return dir;
-
     }
+
     public Path brandingRoot() {
 
-        Path tenant = tenantRoot();
-
-        Path dir = tenant.resolve(".branding").normalize();
+        Path dir = tenantRoot().resolve(".branding").normalize();
 
         createAndSecure(dir);
 
         return dir;
+    }
 
+    public Path branchRoot() {
+
+        UUID branchId = BranchContext.get();
+
+        if (branchId == null) {
+            throw new IllegalStateException("BranchContext is required for branchRoot()");
+        }
+
+        Path dir = tenantRoot()
+                .resolve("." + branchId)
+                .normalize();
+
+        createAndSecure(dir);
+
+        return dir;
     }
 
     public Path productRoot() {
         return moduleRoot(".products");
+    }
+
+    public Path productSharedRoot() {
+        return productRoot().resolve("_shared");
     }
 
     public Path userRoot() {
@@ -79,14 +105,11 @@ public class FileStorageService {
 
     private Path moduleRoot(String name) {
 
-        Path tenant = tenantRoot();
-
-        Path dir = tenant.resolve(name).normalize();
+        Path dir = branchRoot().resolve(name).normalize();
 
         createAndSecure(dir);
 
         return dir;
-
     }
 
     /* ============================================================
@@ -122,6 +145,17 @@ public class FileStorageService {
         return target;
     }
 
+    public Resource asResource(Path path) {
+
+        validateInsideStorage(path);
+
+        if (!Files.exists(path)) {
+            throw new RuntimeException("File not found: " + path);
+        }
+
+        return new PathResource(path);
+    }
+
     public void deleteFile(Path file) throws IOException {
         if (file == null) return;
         validateInsideStorage(file);
@@ -150,7 +184,6 @@ public class FileStorageService {
         try {
             Files.createDirectories(dir);
 
-            // 🔐 Secure ALL path segments inside storage
             Path current = storageRoot;
 
             for (Path segment : storageRoot.relativize(dir)) {

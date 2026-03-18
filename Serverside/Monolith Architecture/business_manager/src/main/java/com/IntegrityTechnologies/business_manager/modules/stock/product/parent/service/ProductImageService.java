@@ -10,7 +10,9 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.r
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service.ProductVariantImageService;
+import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.stereotype.Service;
@@ -19,12 +21,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,8 +38,19 @@ public class ProductImageService {
     private final TransactionalFileManager transactionalFileManager;
     private final ProductImageAuditRepository productImageAuditRepository;
 
-    private Path productRoot() {
-        return fileStorageService.productRoot();
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+
+    private UUID branchId() {
+        return BranchContext.get();
+    }
+
+    private void assertOwnership(Product product) {
+        if (!tenantId().equals(product.getTenantId())
+                || !branchId().equals(product.getBranchId())) {
+            throw new IllegalStateException("Cross-tenant/branch access detected");
+        }
     }
 
     @Transactional
@@ -50,6 +62,8 @@ public class ProductImageService {
     ) throws IOException {
 
         if (files == null || files.isEmpty()) return;
+
+        assertOwnership(product);
 
         Map<String, MultipartFile> fileMap =
                 files.stream().collect(Collectors.toMap(
@@ -63,7 +77,6 @@ public class ProductImageService {
             if (file == null) continue;
 
             if (Boolean.TRUE.equals(assignment.getAssignToProduct())) {
-
                 saveProductImages(product, List.of(file));
             }
 
@@ -78,7 +91,6 @@ public class ProductImageService {
                                     .orElse(null);
 
                     if (variant != null) {
-
                         productVariantImageService.saveVariantImage(variant, file);
                     }
                 }
@@ -91,8 +103,13 @@ public class ProductImageService {
 
         if (files == null || files.isEmpty()) return;
 
-        Path productDir = fileStorageService.initDirectory(
-                productRoot().resolve(product.getId().toString())
+        assertOwnership(product);
+
+        UUID tenantId = tenantId();
+        UUID branchId = branchId();
+
+        Path sharedDir = fileStorageService.initDirectory(
+                fileStorageService.productSharedRoot()
         );
 
         List<ProductImage> newImages = new ArrayList<>();
@@ -105,69 +122,63 @@ public class ProductImageService {
 
         for (MultipartFile file : files) {
 
-            if (file.isEmpty()) continue;
+            validateFile(file);
 
-            // ==============================
-            // 1️⃣ Generate safe file name
-            // ==============================
+            String hash = computeHash(file);
 
-            String sanitized =
-                    file.getOriginalFilename()
-                            .replaceAll("[^a-zA-Z0-9._-]", "_");
+            Optional<ProductImage> existing =
+                    productImageRepository
+                            .findFirstByTenantIdAndBranchIdAndContentHash(
+                                    tenantId,
+                                    branchId,
+                                    hash
+                            );
 
-            String fileName =
-                    System.currentTimeMillis() + "_"
-                            + UUID.randomUUID() + "_"
-                            + sanitized;
+            String extension = getExtension(file.getOriginalFilename());
+            String fileName;
+            String thumbnailName;
 
-            // ==============================
-            // 2️⃣ Save original image
-            // ==============================
+            if (existing.isPresent()) {
 
-            Path saved;
+                ProductImage existingImage = existing.get();
+                fileName = existingImage.getFileName();
+                thumbnailName = existingImage.getThumbnailFileName();
 
-            try (InputStream in = file.getInputStream()) {
-                saved = fileStorageService.saveFile(productDir, fileName, in);
-                transactionalFileManager.track(saved);
+            } else {
+
+                fileName = hash + extension;
+                thumbnailName = "thumb_" + hash + ".jpg";
+
+                Path saved = sharedDir.resolve(fileName);
+                Path thumbnailPath = sharedDir.resolve(thumbnailName);
+
+                if (!Files.exists(saved)) {
+
+                    try (InputStream in = file.getInputStream()) {
+
+                        saved = fileStorageService.saveFile(sharedDir, fileName, in);
+                        transactionalFileManager.track(saved);
+
+                        thumbnailPath = createThumbnail(sharedDir, fileName, saved);
+                        transactionalFileManager.track(thumbnailPath);
+                    }
+                }
             }
 
-            // ==============================
-            // 3️⃣ Generate thumbnail
-            // ==============================
-
-            String baseName = fileName.replaceAll("\\.[^.]+$", "");
-            String thumbnailFileName = "thumb_" + baseName + ".jpg";
-            Path thumbnailPath = productDir.resolve(thumbnailFileName);
-
-            Thumbnails.of(saved.toFile())
-                    .size(300, 300)
-                    .outputFormat("jpg")
-                    .toFile(thumbnailPath.toFile());
-
-            transactionalFileManager.track(thumbnailPath);
-
-            // 🔐 Secure thumbnail (since it was not created via saveFile)
-            fileStorageService.secure(thumbnailPath);
-
-            // ==============================
-            // 4️⃣ Determine primary image
-            // ==============================
-
             boolean makePrimary = !hasPrimaryAlready;
-            hasPrimaryAlready = true; // after first
-
-            // ==============================
-            // 5️⃣ Build entity
-            // ==============================
+            hasPrimaryAlready = true;
 
             ProductImage pi = ProductImage.builder()
                     .fileName(fileName)
-                    .thumbnailFileName(thumbnailFileName)
-                    .filePath("/api/products/images/" + product.getId() + "/" + fileName)
+                    .thumbnailFileName(thumbnailName)
+                    .filePath("/api/products/images/shared/" + fileName)
                     .product(product)
+                    .contentHash(hash)
                     .primaryImage(makePrimary)
                     .deleted(false)
                     .deletedIndependently(false)
+                    .tenantId(tenantId)
+                    .branchId(branchId)
                     .build();
 
             newImages.add(pi);
@@ -183,27 +194,84 @@ public class ProductImageService {
 
             product.getImages().addAll(newImages);
 
-            // ==============================
-            // 6️⃣ Audit entries
-            // ==============================
+            productImageAuditRepository.saveAll(
+                    newImages.stream()
+                            .map(img -> imageAudit(product, img, "IMAGE_LINKED_OR_UPLOADED"))
+                            .toList()
+            );
+        }
+    }
 
-            List<ProductImageAudit> audits =
-                    newImages.stream().map(img -> {
+    private String getExtension(String filename) {
+        if (filename == null || !filename.contains(".")) return ".bin";
+        return filename.substring(filename.lastIndexOf("."));
+    }
 
-                        ProductImageAudit ia = new ProductImageAudit();
-                        ia.setAction("IMAGE_UPLOADED");
-                        ia.setFileName(img.getFileName());
-                        ia.setFilePath(img.getFilePath());
-                        ia.setProductId(product.getId());
-                        ia.setProductName(product.getName());
-                        ia.setTimestamp(LocalDateTime.now());
-                        ia.setPerformedBy(SecurityUtils.currentUsername());
+    private Path createThumbnail(Path productDir, String fileName, Path source) throws IOException {
 
-                        return ia;
+        String baseName = fileName.replaceAll("\\.[^.]+$", "");
+        String thumbName = "thumb_" + baseName + ".jpg";
 
-                    }).collect(Collectors.toList());
+        Path thumbPath = productDir.resolve(thumbName);
 
-            productImageAuditRepository.saveAll(audits);
+        Thumbnails.of(source.toFile())
+                .size(300, 300)
+                .outputFormat("jpg")
+                .toFile(thumbPath.toFile());
+
+        fileStorageService.secure(thumbPath);
+
+        return thumbPath;
+    }
+
+    private void validateFile(MultipartFile file) {
+
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty");
+        }
+
+        String name = file.getOriginalFilename();
+
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Invalid file name");
+        }
+
+        if (file.getSize() > 10 * 1024 * 1024) {
+            throw new IllegalArgumentException("File exceeds 10MB limit");
+        }
+    }
+
+    private ProductImageAudit imageAudit(Product product,
+                                         ProductImage img,
+                                         String action) {
+
+        ProductImageAudit ia = new ProductImageAudit();
+        ia.setAction(action);
+        ia.setFileName(img.getFileName());
+        ia.setFilePath(img.getFilePath());
+        ia.setProductId(product.getId());
+        ia.setProductName(product.getName());
+        ia.setTimestamp(LocalDateTime.now());
+        ia.setPerformedBy(SecurityUtils.currentUsername());
+        return ia;
+    }
+
+    private String computeHash(MultipartFile file) {
+        try (InputStream is = file.getInputStream()) {
+
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+            byte[] buffer = new byte[8192];
+            int read;
+
+            while ((read = is.read(buffer)) != -1) {
+                digest.update(buffer, 0, read);
+            }
+
+            return HexFormat.of().formatHex(digest.digest());
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to compute file hash", e);
         }
     }
 }

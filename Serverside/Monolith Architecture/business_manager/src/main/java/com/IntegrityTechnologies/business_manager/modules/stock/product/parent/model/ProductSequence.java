@@ -1,32 +1,39 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
-import lombok.Data;
-import org.hibernate.annotations.JdbcTypeCode;
-
-import java.sql.Types;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
-@Table(name = "product_sequences",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"category_id"}))
+@Table(
+        name = "product_sequences",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_sequence_tenant_branch_category",
+                        columnNames = {"tenant_id", "branch_id", "category_id"}
+                )
+        },
+        indexes = {
+                @Index(name = "idx_sequence_tenant_branch", columnList = "tenant_id, branch_id")
+        }
+)
 @Data
-public class ProductSequence {
+@SuperBuilder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ProductSequence extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "category_id", nullable = false, unique = true)
+    @Column(name = "category_id", nullable = false)
     private Long categoryId;
 
-    /**
-     * Last allocated sequence number for the category.
-     * Start at 0, increment to produce next value.
-     */
     @Column(name = "last_seq_value", nullable = false)
     private Long lastValue = 0L;
 
-    // optional version for optimistic locking if desired
     @Version
     private Long version;
 }

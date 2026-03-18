@@ -1,42 +1,96 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository;
 
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariantImage;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
-@Repository
 public interface ProductVariantImageRepository extends JpaRepository<ProductVariantImage, UUID> {
 
-    List<ProductVariantImage> findByVariant_IdIn(List<UUID> variantIds);
+    List<ProductVariantImage> findByTenantIdAndBranchIdAndVariant_IdIn(
+            UUID tenantId,
+            UUID branchId,
+            List<UUID> variantIds
+    );
 
-    List<ProductVariantImage> findByVariant_IdAndDeletedFalse(UUID variantId);
+    List<ProductVariantImage> findByTenantIdAndBranchIdAndVariant_IdAndDeletedFalse(
+            UUID tenantId,
+            UUID branchId,
+            UUID variantId
+    );
 
-    @Modifying
-    @Transactional
-    @Query("update ProductVariantImage i set i.deleted = true where i.variant.id in :variantIds")
-    void softDeleteByVariantIds(@Param("variantIds") List<UUID> variantIds);
-
-    @Modifying
-    @Transactional
-    @Query("update ProductVariantImage i set i.deleted = false where i.variant.id in :variantIds")
-    void restoreByVariantIds(@Param("variantIds") List<UUID> variantIds);
+    Optional<ProductVariantImage> findByTenantIdAndBranchIdAndFileName(
+            UUID tenantId,
+            UUID branchId,
+            String fileName
+    );
 
     @Query("""
-        select pvi
-        from ProductVariantImage pvi
-        join fetch pvi.variant v
-        where v.id in :variantIds
-    """)
-    List<ProductVariantImage> findByVariantIdsWithVariant(@Param("variantIds") List<UUID> variantIds);
+    select pvi
+    from ProductVariantImage pvi
+    join fetch pvi.variant v
+    where v.id in :variantIds
+      and pvi.tenantId = :tenantId
+      and pvi.branchId = :branchId
+""")
+    List<ProductVariantImage> findByVariantIdsWithVariant(
+            @Param("variantIds") List<UUID> variantIds,
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId
+    );
 
     @Modifying
-    @Query("DELETE FROM ProductVariantImage vi WHERE vi.variant.id IN :variantIds")
-    void deleteByVariantIds(@Param("variantIds") List<UUID> variantIds);
+    @Query("""
+        update ProductVariantImage i
+        set i.deleted = true
+        where i.variant.id in :variantIds
+          and i.tenantId = :tenantId
+          and i.branchId = :branchId
+    """)
+    void softDeleteByVariantIds(
+            @Param("variantIds") List<UUID> variantIds,
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId
+    );
+
+    @Modifying
+    @Query("""
+        update ProductVariantImage i
+        set i.deleted = false
+        where i.variant.id in :variantIds
+          and i.tenantId = :tenantId
+          and i.branchId = :branchId
+    """)
+    void restoreByVariantIds(
+            @Param("variantIds") List<UUID> variantIds,
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId
+    );
+
+    @Modifying
+    @Query("""
+        delete from ProductVariantImage i
+        where i.variant.id in :variantIds
+          and i.tenantId = :tenantId
+          and i.branchId = :branchId
+    """)
+    void deleteByVariantIds(
+            @Param("variantIds") List<UUID> variantIds,
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId
+    );
+
+    Optional<ProductVariantImage> findFirstByTenantIdAndBranchIdAndContentHash(
+            UUID tenantId,
+            UUID branchId,
+            String contentHash
+    );
+
+    Optional<ProductVariantImage> findByTenantIdAndBranchIdAndVariant_IdAndFileNameAndDeletedFalse(
+            UUID tenantId,
+            UUID branchId,
+            UUID variantId,
+            String fileName
+    );
 }

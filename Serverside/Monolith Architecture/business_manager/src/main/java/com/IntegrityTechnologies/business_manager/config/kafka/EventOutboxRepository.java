@@ -10,17 +10,6 @@ import java.util.UUID;
 public interface EventOutboxRepository
         extends JpaRepository<EventOutbox, UUID> {
 
-    @Query(value = """
-        SELECT *
-        FROM event_outbox
-        WHERE tenant_id = :tenantId
-          AND processed = false
-        ORDER BY created_at
-        LIMIT 200
-        FOR UPDATE SKIP LOCKED
-    """, nativeQuery = true)
-    List<EventOutbox> fetchBatch(@Param("tenantId") UUID tenantId);
-
     @Modifying
     @Query("""
         DELETE FROM EventOutbox e
@@ -37,9 +26,12 @@ public interface EventOutboxRepository
         SELECT *
         FROM event_outbox
         WHERE processed = false
+          AND failed = false
         ORDER BY created_at
         LIMIT 200
         FOR UPDATE SKIP LOCKED
     """, nativeQuery = true)
     List<EventOutbox> fetchBatchGlobal();
+
+    List<EventOutbox> findByFailedTrueAndTenantId(UUID tenantId);
 }

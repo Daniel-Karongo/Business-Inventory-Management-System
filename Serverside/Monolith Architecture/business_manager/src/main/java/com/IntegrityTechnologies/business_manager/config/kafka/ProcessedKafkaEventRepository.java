@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.modules.finance.accounting.projection;
+package com.IntegrityTechnologies.business_manager.config.kafka;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

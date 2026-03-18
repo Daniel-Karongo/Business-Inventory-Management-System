@@ -34,6 +34,14 @@ public class CategoryService {
     private final SupplierMapper supplierMapper;
     private final SupplierRepository supplierRepository;
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+
+    private UUID branchId() {
+        return BranchContext.get();
+    }
+
     // ---------------- SAVE / UPDATE ----------------
     public CategoryDTO saveCategory(CategoryDTO dto) {
 
@@ -148,12 +156,34 @@ public class CategoryService {
         return result;
     }
 
-    private UUID tenantId() {
-        return TenantContext.getTenantId();
-    }
+    @Transactional
+    public Category createMinimal(String name) {
 
-    private UUID branchId() {
-        return BranchContext.get();
+        Category category = categoryRepository
+                .findByNameSafe(name, false, tenantId(), branchId())
+                .orElseGet(() -> {
+
+                    Category newCategory = Category.builder()
+                            .name(name)
+                            .tenantId(tenantId())
+                            .branchId(branchId())
+                            .path("/TEMP")
+                            .build();
+
+                    newCategory = categoryRepository.save(newCategory);
+
+                    if (newCategory.getParent() == null) {
+                        newCategory.setPath("/" + newCategory.getId());
+                    } else {
+                        newCategory.setPath(
+                                newCategory.getParent().getPath() + "/" + newCategory.getId()
+                        );
+                    }
+
+                    return categoryRepository.save(newCategory);
+                });
+
+        return category;
     }
 
     @Transactional

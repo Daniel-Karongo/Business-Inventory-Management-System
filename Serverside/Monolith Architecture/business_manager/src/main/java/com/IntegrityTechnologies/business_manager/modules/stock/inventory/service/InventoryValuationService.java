@@ -142,7 +142,7 @@ public class InventoryValuationService {
         for (InventoryItem item : items) {
 
             UUID variantId = item.getProductVariant().getId();
-            UUID branchId = item.getBranch().getId();
+            UUID branchId = item.getBranchId();
 
             long qty = reconstructHistoricalQty(variantId, branchId, date);
 
@@ -205,7 +205,7 @@ public class InventoryValuationService {
         if (qty <= 0) return BigDecimal.ZERO;
 
         UUID variantId = item.getProductVariant().getId();
-        UUID branchId = item.getBranch().getId();
+        UUID branchId = item.getBranchId();
 
         BigDecimal unitCost = switch (method) {
             case FIFO, LIFO, WAC -> resolveUnitCost(variantId, branchId);
@@ -310,7 +310,7 @@ public class InventoryValuationService {
         Map<UUID, BigDecimal> map = new HashMap<>();
 
         for (InventoryItem item : inventoryItemRepository.findAll()) {
-            UUID branchId = item.getBranch().getId();
+            UUID branchId = item.getBranchId();
             BigDecimal val = calculateItemValuation(item, method);
             map.merge(branchId, val, BigDecimal::add);
         }

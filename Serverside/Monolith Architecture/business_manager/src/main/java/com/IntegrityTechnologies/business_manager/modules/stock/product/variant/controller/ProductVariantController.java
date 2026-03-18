@@ -1,21 +1,24 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.controller;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.*;
+import com.IntegrityTechnologies.business_manager.config.files.FileStorageService;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.*;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,6 +34,8 @@ public class ProductVariantController {
     private final ProductVariantImageService imageService;
     private final VariantBarcodePdfService pdfService;
     private final BarcodeScanService scanService;
+    private final VariantPdfOrchestrationService pdfOrchestrationService;
+    private final FileStorageService fileStorageService;
 
     @TenantManagerOnly
     @PostMapping
@@ -40,7 +45,7 @@ public class ProductVariantController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ProductVariantDTO> find(@PathVariable UUID id) {
-        return ResponseEntity.ok(service.getVariant(id));
+        return ResponseEntity.ok(service.getVariant(id)); // must be SAFE inside service
     }
 
     @GetMapping("/product/{productId}")
@@ -53,12 +58,11 @@ public class ProductVariantController {
         return ResponseEntity.ok(barcodeService.getVariantByBarcode(barcode));
     }
 
+    /* 🔒 REMOVE branchId from API */
     @PostMapping("/scan")
-    public ResponseEntity<BarcodeScanResponse> scan(
-            @RequestBody BarcodeScanRequest req
-    ) {
+    public ResponseEntity<BarcodeScanResponse> scan(@RequestBody BarcodeScanRequest req) {
         return ResponseEntity.ok(
-                scanService.scan(req.getBarcode(), req.getBranchId())
+                scanService.scan(req.getBarcode()) // branch resolved internally
         );
     }
 
@@ -68,37 +72,10 @@ public class ProductVariantController {
         return ResponseEntity.ok(barcodeService.generateBarcodeIfMissing(id));
     }
 
+    /* 🔥 MOVE FILE SERVING TO SERVICE */
     @GetMapping("/{id}/barcode/image")
     public ResponseEntity<Resource> downloadBarcodeImage(@PathVariable UUID id) {
-
-        ProductVariant v = service.getEntity(id);
-
-        if (v.getBarcodeImagePath() == null)
-            throw new IllegalStateException("No barcode image for variant");
-
-        File file = new File(v.getBarcodeImagePath());
-
-        Resource res = new FileSystemResource(file);
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.IMAGE_PNG)
-                .header(
-                        HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=barcode-" + v.getSku() + ".png"
-                )
-                .body(res);
-    }
-
-    @TenantManagerOnly
-    @PostMapping("/{id}/images")
-    public ResponseEntity<Void> uploadImages(
-            @PathVariable UUID id,
-            @RequestParam("files") List<MultipartFile> files
-    ) throws IOException {
-
-        imageService.uploadVariantImages(id, files);
-
-        return ResponseEntity.noContent().build();
+        return barcodeService.getBarcodeImage(id); // new safe method
     }
 
     @GetMapping("/{id}/images")
@@ -106,36 +83,31 @@ public class ProductVariantController {
         return ResponseEntity.ok(imageService.getImageUrls(id));
     }
 
-    @GetMapping("/{id}/barcode/pdf")
-    public ResponseEntity<Resource> barcodePdf(@PathVariable UUID id) throws IOException {
+    @PostMapping("/barcode/pdf/bulk")
+    public ResponseEntity<String> bulkPdf(@RequestBody List<UUID> variantIds) {
 
-        File pdf = pdfService.generatePdf(
-                List.of(service.getEntity(id))
-        );
+        String fileName = pdfOrchestrationService.requestBulkPdf(variantIds);
 
-        return pdfResponse(pdf, "variant-" + id + "-barcode.pdf");
+        return ResponseEntity.accepted().body(fileName);
     }
 
-    @PostMapping("/barcode/pdf/bulk")
-    public ResponseEntity<Resource> bulkPdf(@RequestBody List<UUID> variantIds) throws IOException {
+    @GetMapping("/barcode/pdf/download/{fileName}")
+    public ResponseEntity<Resource> downloadPdf(@PathVariable String fileName) {
 
-        List<ProductVariant> variants =
-                variantIds.stream().map(service::getEntity).toList();
+        Resource resource = pdfOrchestrationService.getPdfResource(fileName);
 
-        File pdf = pdfService.generatePdf(variants);
-
-        return pdfResponse(pdf, "variant-barcodes.pdf");
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=" + fileName)
+                .body(resource);
     }
 
     @GetMapping("/product/{productId}/barcode/pdf")
-    public ResponseEntity<Resource> productPdf(@PathVariable UUID productId) throws IOException {
+    public ResponseEntity<String> productPdf(@PathVariable UUID productId) {
 
-        List<ProductVariant> variants =
-                service.getEntitiesForProduct(productId);
+        String fileName = pdfOrchestrationService.requestProductPdf(productId);
 
-        File pdf = pdfService.generatePdf(variants);
-
-        return pdfResponse(pdf, "product-" + productId + "-barcodes.pdf");
+        return ResponseEntity.accepted().body(fileName);
     }
 
     @TenantManagerOnly
@@ -150,22 +122,7 @@ public class ProductVariantController {
     @TenantAdminOnly
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
-
         service.deleteVariant(id);
-
         return ResponseEntity.noContent().build();
-    }
-
-    private ResponseEntity<Resource> pdfResponse(File file, String name) {
-
-        Resource res = new FileSystemResource(file);
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_PDF)
-                .header(
-                        HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=" + name
-                )
-                .body(res);
     }
 }

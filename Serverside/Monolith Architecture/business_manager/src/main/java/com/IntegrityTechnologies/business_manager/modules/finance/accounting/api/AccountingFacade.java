@@ -12,7 +12,6 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.pol
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.PeriodGuardService;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -20,7 +19,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -29,7 +31,6 @@ public class AccountingFacade {
     private final AccountRepository accountRepository;
     private final LedgerPostingService postingService;
     private final JournalEntryRepository journalRepo;
-    private final BranchRepository branchRepository;
     private final PeriodGuardService periodGuardService;
     private final Map<AccountingMode, AccountingPolicy> policies;
     private final AccountingSystemStateService stateService;

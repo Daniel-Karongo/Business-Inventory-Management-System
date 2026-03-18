@@ -1,6 +1,5 @@
 package com.IntegrityTechnologies.business_manager.config.kafka;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -22,10 +21,12 @@ import java.util.Map;
 public class KafkaConsumerConfig {
 
     @Bean
-    public ConsumerFactory<String, JournalPostedEvent> consumerFactory() {
+    public ConsumerFactory<String, Object> consumerFactory() {
 
-        JsonDeserializer<JournalPostedEvent> deserializer =
-                new JsonDeserializer<>(JournalPostedEvent.class);
+        JsonDeserializer<Object> deserializer = new JsonDeserializer<>();
+        deserializer.addTrustedPackages("*");
+        deserializer.setUseTypeMapperForKey(false);
+        deserializer.setRemoveTypeHeaders(false);
 
         deserializer.addTrustedPackages("*");
 
@@ -38,7 +39,7 @@ public class KafkaConsumerConfig {
 
         config.put(
                 ConsumerConfig.GROUP_ID_CONFIG,
-                "accounting-engine"
+                "business-manager"
         );
 
         config.put(
@@ -54,10 +55,10 @@ public class KafkaConsumerConfig {
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, JournalPostedEvent>
+    public ConcurrentKafkaListenerContainerFactory<String, Object>
     kafkaListenerContainerFactory() {
 
-        ConcurrentKafkaListenerContainerFactory<String, JournalPostedEvent> factory =
+        ConcurrentKafkaListenerContainerFactory<String, Object> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
 
         factory.setConsumerFactory(consumerFactory());

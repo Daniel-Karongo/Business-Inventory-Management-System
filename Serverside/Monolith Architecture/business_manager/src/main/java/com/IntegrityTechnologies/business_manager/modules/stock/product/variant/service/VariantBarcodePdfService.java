@@ -1,43 +1,92 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service;
 
+import com.IntegrityTechnologies.business_manager.config.files.FileStorageService;
+import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
+import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
-import org.apache.pdfbox.pdmodel.*;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * VariantBarcodePdfService
- *
- * Restores full legacy barcode PDF functionality:
- *  - Single variant label PDF (A6)
- *  - Multi-variant sheet PDF (Letter)
- *  - Product-wide variant barcode PDF
- *
- * Variant is the sole barcode owner.
- */
 @Service
 @RequiredArgsConstructor
 public class VariantBarcodePdfService {
 
     private final ProductVariantRepository variantRepo;
     private final VariantBarcodeService barcodeService;
+    private final FileStorageService fileStorageService;
+
+    private UUID tenantId() { return TenantContext.getTenantId(); }
+    private UUID branchId() { return BranchContext.get(); }
 
     /* ============================================================
-       1. SINGLE VARIANT LABEL (A6)
+       SAFE LOAD
        ============================================================ */
-    public File generateSingleLabel(ProductVariant variant) throws IOException {
 
-        // Ensure barcode + image exist
-        barcodeService.generateBarcodeIfMissing(variant.getId());
+    private ProductVariant getVariant(UUID id) {
+        return variantRepo.findByIdSafe(
+                id,
+                false,
+                tenantId(),
+                branchId()
+        ).orElseThrow(() -> new EntityNotFoundException("Variant not found"));
+    }
+
+    private List<ProductVariant> getVariantsForProduct(UUID productId) {
+        return variantRepo.findByProduct_IdSafe(
+                productId,
+                false,
+                tenantId(),
+                branchId()
+        );
+    }
+
+    /* ============================================================
+       PATH RESOLUTION (CRITICAL)
+       ============================================================ */
+
+    private Path resolveBarcodePath(ProductVariant variant) {
+
+        return fileStorageService.productRoot()
+                .resolve(variant.getProduct().getId().toString())
+                .resolve("variants")
+                .resolve(variant.getId().toString())
+                .resolve("barcode")
+                .resolve(variant.getBarcode() + ".png");
+    }
+
+    /* ============================================================
+       SINGLE LABEL
+       ============================================================ */
+
+    public File generateSingleLabel(UUID variantId) throws IOException {
+
+        ProductVariant variant = getVariant(variantId);
+
+        barcodeService.ensureBarcodeExists(variant);
+
+        Path imagePath = resolveBarcodePath(variant);
+
+        if (!imagePath.toFile().exists()) {
+            throw new EntityNotFoundException("Barcode image missing");
+        }
 
         File pdf = File.createTempFile(
                 "variant-barcode-" + variant.getId(),
@@ -50,51 +99,36 @@ public class VariantBarcodePdfService {
             doc.addPage(page);
 
             PDImageXObject barcodeImage =
-                    PDImageXObject.createFromFile(
-                            variant.getBarcodeImagePath(),
-                            doc
-                    );
+                    PDImageXObject.createFromFile(imagePath.toString(), doc);
 
             try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
 
                 float top = page.getMediaBox().getHeight();
 
-                // Title
                 cs.beginText();
                 cs.setFont(PDType1Font.HELVETICA_BOLD, 14);
                 cs.newLineAtOffset(30, top - 30);
                 cs.showText("Product Barcode Label");
                 cs.endText();
 
-                // Product name
                 cs.beginText();
                 cs.setFont(PDType1Font.HELVETICA, 12);
                 cs.newLineAtOffset(30, top - 55);
                 cs.showText("Product: " + variant.getProduct().getName());
                 cs.endText();
 
-                // Variant
                 cs.beginText();
                 cs.setFont(PDType1Font.HELVETICA_OBLIQUE, 11);
                 cs.newLineAtOffset(30, top - 75);
                 cs.showText("Variant: " + variant.getClassification());
                 cs.endText();
 
-                // Barcode image
                 cs.drawImage(barcodeImage, 30, top - 160, 220, 60);
 
-                // Barcode text
                 cs.beginText();
                 cs.setFont(PDType1Font.HELVETICA, 10);
                 cs.newLineAtOffset(30, top - 175);
                 cs.showText("Barcode: " + variant.getBarcode());
-                cs.endText();
-
-                // Footer
-                cs.beginText();
-                cs.setFont(PDType1Font.HELVETICA, 8);
-                cs.newLineAtOffset(30, 20);
-                cs.showText("Generated by Integrity Business Manager");
                 cs.endText();
             }
 
@@ -105,14 +139,16 @@ public class VariantBarcodePdfService {
     }
 
     /* ============================================================
-       2. MULTI-VARIANT BARCODE SHEET (LETTER)
+       MULTI SHEET
        ============================================================ */
-    public File generateSheet(List<ProductVariant> variants) throws IOException {
 
-        File pdf = File.createTempFile(
-                "variant-barcode-sheet-",
-                ".pdf"
-        );
+    public Path generateSheetToFile(List<UUID> variantIds, String outputPath) throws IOException {
+
+        List<ProductVariant> variants = variantIds.stream()
+                .map(this::getVariant)
+                .toList();
+
+        Path output = Path.of(outputPath);
 
         try (PDDocument doc = new PDDocument()) {
 
@@ -127,15 +163,13 @@ public class VariantBarcodePdfService {
 
             for (ProductVariant variant : variants) {
 
-                barcodeService.generateBarcodeIfMissing(variant.getId());
+                barcodeService.ensureBarcodeExists(variant);
+
+                Path imagePath = resolveBarcodePath(variant);
 
                 PDImageXObject barcodeImage =
-                        PDImageXObject.createFromFile(
-                                variant.getBarcodeImagePath(),
-                                doc
-                        );
+                        PDImageXObject.createFromFile(imagePath.toString(), doc);
 
-                // Page break
                 if (y < 130) {
                     cs.close();
                     page = new PDPage(PDRectangle.LETTER);
@@ -144,21 +178,14 @@ public class VariantBarcodePdfService {
                     y = page.getMediaBox().getHeight() - margin;
                 }
 
-                // Header text
                 cs.beginText();
                 cs.setFont(PDType1Font.HELVETICA_BOLD, 11);
                 cs.newLineAtOffset(margin, y);
-                cs.showText(
-                        variant.getProduct().getName()
-                                + " — "
-                                + variant.getClassification()
-                );
+                cs.showText(variant.getProduct().getName() + " — " + variant.getClassification());
                 cs.endText();
 
-                // Barcode image
                 cs.drawImage(barcodeImage, margin, y - 60, 240, 55);
 
-                // Barcode text
                 cs.beginText();
                 cs.setFont(PDType1Font.HELVETICA, 9);
                 cs.newLineAtOffset(margin, y - 72);
@@ -169,41 +196,9 @@ public class VariantBarcodePdfService {
             }
 
             cs.close();
-            doc.save(pdf);
+            doc.save(output.toFile());
         }
 
-        return pdf;
-    }
-
-    /* ============================================================
-       3. PRODUCT-WIDE BARCODE PDF
-       ============================================================ */
-    public File generateProductSheet(UUID productId) throws IOException {
-
-        List<ProductVariant> variants =
-                variantRepo.findByProduct_Id(productId);
-
-        if (variants.isEmpty()) {
-            throw new IllegalStateException(
-                    "No variants found for product: " + productId
-            );
-        }
-
-        return generateSheet(variants);
-    }
-
-    /* ============================================================
-       4. CONTROLLER-FRIENDLY WRAPPER
-       ============================================================ */
-    public File generatePdf(List<ProductVariant> variants) throws IOException {
-        if (variants == null || variants.isEmpty()) {
-            throw new IllegalArgumentException("No variants supplied");
-        }
-
-        if (variants.size() == 1) {
-            return generateSingleLabel(variants.get(0));
-        }
-
-        return generateSheet(variants);
+        return output;
     }
 }

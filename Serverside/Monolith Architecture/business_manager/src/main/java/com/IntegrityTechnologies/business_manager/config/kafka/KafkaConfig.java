@@ -27,4 +27,19 @@ public class KafkaConfig {
     public NewTopic accountingPeriodClosedTopic() {
         return new NewTopic("accounting-period-closed", 6, (short) 2);
     }
+
+    @Bean
+    public NewTopic variantBarcodeTopic() {
+        return new NewTopic("variant-barcode", 3, (short) 1);
+    }
+
+    @Bean
+    public NewTopic variantImageTopic() {
+        return new NewTopic("variant-image", 3, (short) 1);
+    }
+
+    @Bean
+    public NewTopic variantPdfTopic() {
+        return new NewTopic("variant-pdf", 3, (short) 1);
+    }
 }

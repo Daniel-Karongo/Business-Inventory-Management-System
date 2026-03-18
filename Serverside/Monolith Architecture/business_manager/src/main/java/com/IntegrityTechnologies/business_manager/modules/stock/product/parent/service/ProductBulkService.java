@@ -9,6 +9,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.service.SupplierService;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.category.service.CategoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantCreateDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantDTO;
@@ -30,6 +31,19 @@ public class ProductBulkService {
     private final CategoryRepository categoryRepository;
     private final SupplierRepository supplierRepository;
     private final SupplierService supplierService;
+    private final CategoryService categoryService;
+
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+
+    private UUID branchId() {
+        return BranchContext.get();
+    }
+
+    private String normalize(String name) {
+        return PhoneAndEmailNormalizer.toTitleCase(name);
+    }
 
     public BulkResult<ProductDTO> importProducts(
             BulkRequest<ProductBulkRow> request
@@ -46,15 +60,18 @@ public class ProductBulkService {
         Set<String> seenNames = new HashSet<>();
 
         for (int i = 0; i < request.getItems().size(); i++) {
+
             int rowNum = i + 1;
             ProductBulkRow row = request.getItems().get(i);
 
             try {
+
                 validate(row);
 
-                String normalizedName = PhoneAndEmailNormalizer.toTitleCase(row.getName());
+                String normalizedName = normalize(row.getName());
+                String normalizedKey = normalizedName.toLowerCase();
 
-                if (!seenNames.add(normalizedName.toLowerCase())) {
+                if (!seenNames.add(normalizedKey)) {
                     throw new IllegalArgumentException(
                             "Duplicate product name in import: " + normalizedName
                     );
@@ -62,6 +79,7 @@ public class ProductBulkService {
 
                 if (options.isSkipDuplicates()
                         && productService.existsByName(normalizedName)) {
+
                     throw new IllegalArgumentException(
                             "Product already exists: " + normalizedName
                     );
@@ -76,8 +94,11 @@ public class ProductBulkService {
                         );
 
                 Set<UUID> supplierIds = new HashSet<>();
+
                 if (row.getSupplierNames() != null) {
+
                     for (String supplierName : row.getSupplierNames()) {
+
                         Supplier supplier = supplierRepository
                                 .findByNameSafe(supplierName, false, tenantId(), branchId())
                                 .orElseThrow(() ->
@@ -85,6 +106,7 @@ public class ProductBulkService {
                                                 "Unknown supplier: " + supplierName
                                         )
                                 );
+
                         supplierIds.add(supplier.getId());
                     }
                 }
@@ -94,20 +116,18 @@ public class ProductBulkService {
                                 ? List.of("STANDARD")
                                 : row.getVariants();
 
-                /* =========================
-                   DRY RUN
-                   ========================= */
+            /* =========================
+               DRY RUN (UNCHANGED)
+               ========================= */
                 if (options.isDryRun()) {
 
                     List<ProductVariantDTO> previewVariants =
                             variants.stream()
                                     .map(String::trim)
                                     .filter(v -> !v.isBlank())
-                                    .map(v ->
-                                            ProductVariantDTO.builder()
-                                                    .classification(v)
-                                                    .build()
-                                    )
+                                    .map(v -> ProductVariantDTO.builder()
+                                            .classification(v)
+                                            .build())
                                     .toList();
 
                     result.addSuccess(
@@ -117,32 +137,31 @@ public class ProductBulkService {
                                     .categoryId(category.getId())
                                     .categoryName(category.getName())
                                     .variants(previewVariants)
-                                    .minimumPercentageProfit(
-                                            row.getMinimumPercentageProfit()
-                                    )
+                                    .minimumPercentageProfit(row.getMinimumPercentageProfit())
                                     .build()
                     );
+
                     continue;
                 }
 
-                /* =========================
-                   REAL INSERT (OWN TX)
-                   ========================= */
+            /* =========================
+               REAL INSERT
+               ========================= */
+
                 ProductCreateDTO dto = ProductCreateDTO.builder()
                         .name(normalizedName)
                         .description(row.getDescription())
                         .barcode(row.getBarcode())
                         .categoryId(category.getId())
                         .supplierIds(
-                                supplierIds.isEmpty()
-                                        ? null
-                                        : new ArrayList<>(supplierIds)
+                                supplierIds.isEmpty() ? null : new ArrayList<>(supplierIds)
                         )
                         .variants(variants)
                         .minimumPercentageProfit(row.getMinimumPercentageProfit())
                         .build();
 
                 ProductDTO saved = productService.createProduct(dto);
+
                 result.addSuccess(saved);
 
             } catch (Exception ex) {
@@ -151,14 +170,6 @@ public class ProductBulkService {
         }
 
         return result;
-    }
-
-    private UUID tenantId() {
-        return TenantContext.getTenantId();
-    }
-    
-    private UUID branchId() {
-        return BranchContext.get();
     }
 
     @Transactional
@@ -181,7 +192,7 @@ public class ProductBulkService {
         result.setTotal(request.getProducts().size());
 
     /* ================================
-       DRY RUN MODE
+       DRY RUN MODE (UNCHANGED LOGIC)
        ================================ */
 
         if (options.isDryRun()) {
@@ -189,16 +200,16 @@ public class ProductBulkService {
             for (int i = 0; i < request.getProducts().size(); i++) {
 
                 int rowNumber = i + 1;
-                ProductBulkFrontendRowDTO row =
-                        request.getProducts().get(i);
+                ProductBulkFrontendRowDTO row = request.getProducts().get(i);
 
                 try {
 
                     validateFrontendRow(row);
-                    validateCategoryAndSuppliers(row, request.getOptions());
+                    validateCategoryAndSuppliers(row, options);
+
                     result.addSuccess(
                             ProductDTO.builder()
-                                    .name(row.getName())
+                                    .name(normalize(row.getName()))
                                     .description(row.getDescription())
                                     .categoryName(row.getCategoryName())
                                     .minimumPercentageProfit(row.getMinimumPercentageProfit())
@@ -230,8 +241,7 @@ public class ProductBulkService {
 
         for (int i = 0; i < request.getProducts().size(); i++) {
 
-            ProductBulkFrontendRowDTO row =
-                    request.getProducts().get(i);
+            ProductBulkFrontendRowDTO row = request.getProducts().get(i);
 
             ProductFullCreateDTO internal =
                     mapToInternalDTO(row, i, request, files);
@@ -259,6 +269,8 @@ public class ProductBulkService {
             List<MultipartFile> files
     ) {
 
+        String normalizedName = normalize(row.getName());
+
         Category category = categoryRepository
                 .findByNameSafe(row.getCategoryName(), false, tenantId(), branchId())
                 .orElseGet(() -> {
@@ -269,11 +281,7 @@ public class ProductBulkService {
                         );
                     }
 
-                    Category newCategory = Category.builder()
-                            .name(row.getCategoryName())
-                            .build();
-
-                    return categoryRepository.save(newCategory);
+                    return categoryService.createMinimal(row.getCategoryName());
                 });
 
         List<UUID> supplierIds = new ArrayList<>();
@@ -303,7 +311,7 @@ public class ProductBulkService {
         }
 
         ProductCreateDTO product = ProductCreateDTO.builder()
-                .name(row.getName())
+                .name(normalizedName) // 🔥 FIX
                 .description(row.getDescription())
                 .categoryId(category.getId())
                 .supplierIds(supplierIds.isEmpty() ? null : supplierIds)
@@ -315,8 +323,7 @@ public class ProductBulkService {
                         ? List.of(defaultVariant())
                         : row.getVariants().stream()
                         .map(v -> {
-                            ProductVariantCreateDTO dto =
-                                    new ProductVariantCreateDTO();
+                            ProductVariantCreateDTO dto = new ProductVariantCreateDTO();
                             dto.setClassification(v);
                             return dto;
                         })
@@ -447,7 +454,7 @@ public class ProductBulkService {
             throw new IllegalArgumentException("Category is required");
         }
 
-        if (productService.existsByName(row.getName())) {
+        if (productService.existsByName(normalize(row.getName()))) {
             throw new IllegalArgumentException(
                     "Product already exists: " + row.getName()
             );

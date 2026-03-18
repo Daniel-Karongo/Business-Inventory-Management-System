@@ -1,7 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.model;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 
 import java.math.BigDecimal;
@@ -11,14 +13,15 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "stock_transactions", indexes = {
+        @Index(name = "idx_stock_tx_tenant_branch", columnList = "tenant_id, branch_id"),
         @Index(name = "idx_stock_tx_product", columnList = "product_id"),
         @Index(name = "idx_stock_tx_deleted", columnList = "deleted")
 })
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class StockTransaction {
+@SuperBuilder
+public class StockTransaction extends BranchAwareEntity {
 
     @Id
     @GeneratedValue
@@ -26,16 +29,11 @@ public class StockTransaction {
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
-    // product reference (denormalized for faster reporting)
     @Column(name = "product_id", nullable = false)
     private UUID productId;
 
     @Column(name = "product_variant_id", nullable = false)
     private UUID productVariantId;
-
-
-    @Column(name = "branch_id", nullable = false)
-    private UUID branchId;
 
     @Column(precision = 18, scale = 2)
     private BigDecimal unitCost;
@@ -48,10 +46,9 @@ public class StockTransaction {
     private UUID supplierId;
 
     @Column(nullable = false)
-    private Long quantityDelta; // positive for receipts, negative for consumption
+    private Long quantityDelta;
 
-    private String reference; // e.g., saleId, purchaseOrderId, adjustmentId
-
+    private String reference;
     private String note;
 
     @Column(nullable = false, updatable = false)
@@ -59,23 +56,23 @@ public class StockTransaction {
 
     private String performedBy;
 
-    @Column(nullable = false)
     @Builder.Default
+    @Column(nullable = false)
     private Boolean deleted = false;
-
-    public enum TransactionType {
-        RECEIPT, // goods received from supplier
-        SALE,    // sale consumed inventory
-        ADJUSTMENT, // manual stock correction
-        TRANSFER_IN,
-        TRANSFER_OUT,
-        RESERVATION, // reserved for order
-        RELEASE, // release reservation
-        RETURN
-    }
 
     @Version
     private Long version;
+
+    public enum TransactionType {
+        RECEIPT,
+        SALE,
+        ADJUSTMENT,
+        TRANSFER_IN,
+        TRANSFER_OUT,
+        RESERVATION,
+        RELEASE,
+        RETURN
+    }
 
     @PrePersist
     public void onCreate() {

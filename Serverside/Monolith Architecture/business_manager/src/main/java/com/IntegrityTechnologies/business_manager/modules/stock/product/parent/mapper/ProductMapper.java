@@ -2,21 +2,17 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierMinimalDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.mapper.UserMapper;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductCreateDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductUpdateDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductImage;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductSupplier;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import org.mapstruct.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
-@Mapper(componentModel = "spring", uses = {UserMapper.class})
+@Mapper(componentModel = "spring")
 public interface ProductMapper {
 
     /* =========================================================
@@ -33,11 +29,11 @@ public interface ProductMapper {
             expression = "java(mapImagesToUrls(product.getImages()))")
     @Mapping(target = "variants",
             expression = "java(mapVariants(product.getVariants()))")
-    @Mapping(target = "minimumPercentageProfit", source = "minimumPercentageProfit")
     @Mapping(target = "updatedAt",
             expression = "java(product.getUpdatedAt() != null ? product.getUpdatedAt() : product.getCreatedAt())")
+    @Mapping(target = "barcode", ignore = true) // handled at variant level
+    @Mapping(target = "barcodeImagePath", ignore = true)
     ProductDTO toDTO(Product product);
-
 
     /* =========================================================
        DTO → ENTITY (CREATE)
@@ -48,31 +44,27 @@ public interface ProductMapper {
     @Mapping(target = "suppliers", ignore = true)
     @Mapping(target = "images", ignore = true)
     @Mapping(target = "variants", ignore = true)
-    @Mapping(target = "minimumPercentageProfit", source = "minimumPercentageProfit")
+    @Mapping(target = "deleted", constant = "false")
     Product toEntity(ProductCreateDTO dto);
-
 
     /* =========================================================
        PARTIAL UPDATE
        ========================================================= */
 
-    @Mapping(target = "images", ignore = true)
-    @Mapping(target = "category", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "minimumPercentageProfit", source = "minimumPercentageProfit")
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "images", ignore = true)
+    @Mapping(target = "variants", ignore = true)
+    @Mapping(target = "category", ignore = true)
+    @Mapping(target = "deleted", ignore = true)
+    @Mapping(target = "deletedAt", ignore = true)
     Product applyUpdate(@MappingTarget Product existing, ProductUpdateDTO dto);
 
-
     /* =========================================================
-       IMAGE MAPPING (List Safe)
+       IMAGE MAPPING
        ========================================================= */
 
     default List<String> mapImagesToUrls(List<ProductImage> images) {
-        if (images == null || images.isEmpty()) {
-            return List.of();
-        }
+        if (images == null || images.isEmpty()) return List.of();
 
         List<String> urls = new ArrayList<>();
 
@@ -85,40 +77,32 @@ public interface ProductMapper {
         return urls;
     }
 
-
     /* =========================================================
-       SUPPLIER MAPPING (List Safe)
+       SUPPLIER MAPPING
        ========================================================= */
 
-    default List<SupplierMinimalDTO> mapSuppliersMinimal(Set<Supplier> suppliers) {
-        if (suppliers == null || suppliers.isEmpty()) {
-            return List.of();
-        }
+    default List<SupplierMinimalDTO> mapSuppliersMinimal(Set<ProductSupplier> productSuppliers) {
 
-        List<SupplierMinimalDTO> result = new ArrayList<>();
+        if (productSuppliers == null || productSuppliers.isEmpty()) return List.of();
 
-        for (Supplier s : suppliers) {
-            result.add(new SupplierMinimalDTO(
-                    s.getId(),
-                    s.getName()
-            ));
-        }
-
-        return result;
+        return productSuppliers.stream()
+                .map(ProductSupplier::getSupplier)
+                .filter(Objects::nonNull)
+                .map(s -> new SupplierMinimalDTO(s.getId(), s.getName()))
+                .toList();
     }
 
     /* =========================================================
-       VARIANT MAPPING (List Safe)
+       VARIANT MAPPING (SAFE)
        ========================================================= */
 
     default List<ProductVariantDTO> mapVariants(List<ProductVariant> variants) {
-        if (variants == null || variants.isEmpty()) {
-            return List.of();
-        }
+        if (variants == null || variants.isEmpty()) return List.of();
 
         List<ProductVariantDTO> result = new ArrayList<>();
 
         for (ProductVariant v : variants) {
+
             result.add(
                     ProductVariantDTO.builder()
                             .id(v.getId())
@@ -126,6 +110,8 @@ public interface ProductMapper {
                             .productId(v.getProduct() != null ? v.getProduct().getId() : null)
                             .productName(v.getProduct() != null ? v.getProduct().getName() : null)
                             .sku(v.getSku())
+                            .barcode(v.getBarcode()) // ✅ KEEP
+                            .barcodeImagePath(v.getBarcodeImagePath()) // ✅ KEEP
                             .averageBuyingPrice(v.getAverageBuyingPrice())
                             .minimumSellingPrice(v.getMinimumSellingPrice())
                             .build()

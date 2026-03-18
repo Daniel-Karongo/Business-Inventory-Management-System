@@ -1,5 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.projection;
 
+import com.IntegrityTechnologies.business_manager.config.kafka.ProcessedKafkaEvent;
+import com.IntegrityTechnologies.business_manager.config.kafka.ProcessedKafkaEventRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
