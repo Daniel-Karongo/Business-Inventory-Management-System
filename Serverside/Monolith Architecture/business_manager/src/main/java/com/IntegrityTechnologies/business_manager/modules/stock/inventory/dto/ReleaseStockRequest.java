@@ -7,6 +7,6 @@ import java.util.UUID;
 public class ReleaseStockRequest {
     private UUID productVariantId;
     private UUID branchId;
-    private int quantity;
+    private long quantity;
     private String reference;
 }

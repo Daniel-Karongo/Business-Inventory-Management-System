@@ -1,10 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 
 import java.sql.Types;
@@ -12,25 +11,29 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "branch_audits")
+@Table(
+        name = "branch_audits",
+        indexes = {
+                @Index(name = "idx_branch_audit_scope", columnList = "tenant_id, branch_id"),
+                @Index(name = "idx_branch_audit_timestamp", columnList = "timestamp")
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class BranchAudit {
+@SuperBuilder
+public class BranchAudit extends BranchAwareEntity {
+
     @Id
     @GeneratedValue
     @JdbcTypeCode(Types.BINARY)
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
-    @JdbcTypeCode(Types.BINARY)
-    @Column(columnDefinition = "BINARY(16)")
-    private UUID branchId;
-
     private String branchName;
 
     private String action;
+
     private String fieldChanged;
 
     @Column(length = 2000)
@@ -51,6 +54,8 @@ public class BranchAudit {
 
     @PrePersist
     public void onCreate() {
-        timestamp = LocalDateTime.now();
+        if (timestamp == null) {
+            timestamp = LocalDateTime.now();
+        }
     }
 }

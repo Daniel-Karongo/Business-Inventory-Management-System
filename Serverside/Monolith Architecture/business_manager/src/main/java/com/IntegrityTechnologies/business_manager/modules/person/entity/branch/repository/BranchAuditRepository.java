@@ -9,8 +9,20 @@ import java.util.UUID;
 
 @Repository
 public interface BranchAuditRepository extends JpaRepository<BranchAudit, UUID> {
-    List<BranchAudit> findByBranchIdOrderByTimestampDesc(UUID branchID);
-    List<BranchAudit> findByPerformedByIdOrderByTimestampDesc(UUID performedById);
-    List<BranchAudit> findAllByOrderByTimestampDesc();
-    List<BranchAudit> findTop5ByOrderByTimestampDesc();
+
+    List<BranchAudit> findByTenantIdAndBranchIdOrderByTimestampDesc(
+            UUID tenantId,
+            UUID branchId
+    );
+
+    List<BranchAudit> findTop10ByTenantIdAndBranchIdOrderByTimestampDesc(
+            UUID tenantId,
+            UUID branchId
+    );
+
+    List<BranchAudit> findByTenantIdAndBranchIdAndPerformedByIdOrderByTimestampDesc(
+            UUID tenantId,
+            UUID branchId,
+            UUID performedById
+    );
 }

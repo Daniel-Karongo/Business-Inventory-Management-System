@@ -4,7 +4,6 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.accounting.InventoryAccountingPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,147 +19,120 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
     private final AccountingFacade accountingFacade;
     private final AccountingAccounts accounts;
 
-    private UUID tenantId() {
-        return TenantContext.getTenantId();
+    @Override
+    public void recordInventoryReceipt(UUID tenantId, UUID refId, UUID branchId, BigDecimal value, String ref) {
+
+        accountingFacade.post(buildEvent(
+                tenantId,
+                "INVENTORY_RECEIPT",
+                refId,
+                branchId,
+                ref,
+                "Inventory received",
+                List.of(
+                        entry(accounts.get(tenantId, branchId, AccountRole.INVENTORY), EntryDirection.DEBIT, value),
+                        entry(accounts.get(tenantId, branchId, AccountRole.ACCOUNTS_PAYABLE), EntryDirection.CREDIT, value)
+                )
+        ));
     }
 
     @Override
-    public void recordInventoryReceipt(UUID refId, UUID branchId, BigDecimal value, String ref) {
+    public void recordInventoryConsumption(UUID tenantId, UUID refId, UUID branchId, BigDecimal value, String ref) {
 
-        accountingFacade.post(
-                AccountingEvent.builder()
-                        .eventId(UUID.randomUUID())
-                        .sourceModule("INVENTORY_RECEIPT")
-                        .sourceId(refId)
-                        .reference(ref)
-                        .description("Inventory received")
-                        .performedBy("SYSTEM")
-                        .branchId(branchId)
-                        .entries(List.of(
-                                AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.INVENTORY))
-                                        .direction(EntryDirection.DEBIT)
-                                        .amount(value)
-                                        .build(),
-                                AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.ACCOUNTS_PAYABLE))
-                                        .direction(EntryDirection.CREDIT)
-                                        .amount(value)
-                                        .build()
-                        ))
-                        .build()
-        );
+        accountingFacade.post(buildEvent(
+                tenantId,
+                "INVENTORY_CONSUMPTION",
+                refId,
+                branchId,
+                ref,
+                "Inventory sold",
+                List.of(
+                        entry(accounts.get(tenantId, branchId, AccountRole.COGS), EntryDirection.DEBIT, value),
+                        entry(accounts.get(tenantId, branchId, AccountRole.INVENTORY), EntryDirection.CREDIT, value)
+                )
+        ));
     }
 
     @Override
-    public void recordInventoryConsumption(UUID refId, UUID branchId, BigDecimal value, String ref) {
+    public void recordInventoryReturn(UUID tenantId, UUID refId, UUID branchId, BigDecimal value, String ref) {
 
-        accountingFacade.post(
-                AccountingEvent.builder()
-                        .eventId(UUID.randomUUID())
-                        .sourceModule("INVENTORY_CONSUMPTION")
-                        .sourceId(refId)
-                        .reference(ref)
-                        .description("Inventory sold")
-                        .performedBy("SYSTEM")
-                        .branchId(branchId)
-                        .entries(List.of(
-                                AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.COGS))
-                                        .direction(EntryDirection.DEBIT)
-                                        .amount(value)
-                                        .build(),
-                                AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.INVENTORY))
-                                        .direction(EntryDirection.CREDIT)
-                                        .amount(value)
-                                        .build()
-                        ))
-                        .build()
-        );
+        accountingFacade.post(buildEvent(
+                tenantId,
+                "INVENTORY_RETURN",
+                refId,
+                branchId,
+                ref,
+                "Inventory returned",
+                List.of(
+                        entry(accounts.get(tenantId, branchId, AccountRole.INVENTORY), EntryDirection.DEBIT, value),
+                        entry(accounts.get(tenantId, branchId, AccountRole.COGS), EntryDirection.CREDIT, value)
+                )
+        ));
     }
 
     @Override
-    public void recordInventoryReturn(UUID refId, UUID branchId, BigDecimal value, String ref) {
+    public void recordInventoryTransferOut(UUID tenantId, UUID refId, UUID branchId, BigDecimal value, String ref) {
 
-        accountingFacade.post(
-                AccountingEvent.builder()
-                        .eventId(UUID.randomUUID())
-                        .sourceModule("INVENTORY_RETURN")
-                        .sourceId(refId)
-                        .reference(ref)
-                        .description("Inventory returned")
-                        .performedBy("SYSTEM")
-                        .branchId(branchId)
-                        .entries(List.of(
-                                AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.INVENTORY))
-                                        .direction(EntryDirection.DEBIT)
-                                        .amount(value)
-                                        .build(),
-                                AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.COGS))
-                                        .direction(EntryDirection.CREDIT)
-                                        .amount(value)
-                                        .build()
-                        ))
-                        .build()
-        );
+        accountingFacade.post(buildEvent(
+                tenantId,
+                "INVENTORY_TRANSFER_OUT",
+                refId,
+                branchId,
+                ref,
+                "Inventory transferred out (source branch)",
+                List.of(
+                        entry(accounts.get(tenantId, branchId, AccountRole.BRANCH_CLEARING), EntryDirection.DEBIT, value),
+                        entry(accounts.get(tenantId, branchId, AccountRole.INVENTORY), EntryDirection.CREDIT, value)
+                )
+        ));
     }
 
     @Override
-    public void recordInventoryTransferOut(UUID refId, UUID branchId, BigDecimal value, String ref) {
+    public void recordInventoryTransferIn(UUID tenantId, UUID refId, UUID branchId, BigDecimal value, String ref) {
 
-        accountingFacade.post(
-                AccountingEvent.builder()
-                        .eventId(UUID.randomUUID())
-                        .sourceModule("INVENTORY_TRANSFER_OUT")
-                        .sourceId(refId)
-                        .reference(ref)
-                        .description("Inventory transferred out (source branch)")
-                        .performedBy("SYSTEM")
-                        .branchId(branchId)
-                        .entries(List.of(
-                                AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.BRANCH_CLEARING))
-                                        .direction(EntryDirection.DEBIT)
-                                        .amount(value)
-                                        .build(),
-                                AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.INVENTORY))
-                                        .direction(EntryDirection.CREDIT)
-                                        .amount(value)
-                                        .build()
-                        ))
-                        .build()
-        );
+        accountingFacade.post(buildEvent(
+                tenantId,
+                "INVENTORY_TRANSFER_IN",
+                refId,
+                branchId,
+                ref,
+                "Inventory transferred in (destination branch)",
+                List.of(
+                        entry(accounts.get(tenantId, branchId, AccountRole.INVENTORY), EntryDirection.DEBIT, value),
+                        entry(accounts.get(tenantId, branchId, AccountRole.BRANCH_CLEARING), EntryDirection.CREDIT, value)
+                )
+        ));
     }
 
-    @Override
-    public void recordInventoryTransferIn(UUID refId, UUID branchId, BigDecimal value, String ref) {
+    /* ========================= INTERNAL HELPERS ========================= */
 
-        accountingFacade.post(
-                AccountingEvent.builder()
-                        .eventId(UUID.randomUUID())
-                        .sourceModule("INVENTORY_TRANSFER_IN")
-                        .sourceId(refId)
-                        .reference(ref)
-                        .description("Inventory transferred in (destination branch)")
-                        .performedBy("SYSTEM")
-                        .branchId(branchId)
-                        .entries(List.of(
-                                AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.INVENTORY))
-                                        .direction(EntryDirection.DEBIT)
-                                        .amount(value)
-                                        .build(),
-                                AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.BRANCH_CLEARING))
-                                        .direction(EntryDirection.CREDIT)
-                                        .amount(value)
-                                        .build()
-                        ))
-                        .build()
-        );
+    private AccountingEvent buildEvent(
+            UUID tenantId,
+            String module,
+            UUID sourceId,
+            UUID branchId,
+            String reference,
+            String description,
+            List<AccountingEvent.Entry> entries
+    ) {
+        return AccountingEvent.builder()
+                .eventId(UUID.randomUUID())
+                .tenantId(tenantId)
+                .sourceModule(module)
+                .sourceId(sourceId)
+                .reference(reference)
+                .description(description)
+                .performedBy("SYSTEM")
+                .branchId(branchId)
+                .entries(entries)
+                .build();
+    }
+
+    private AccountingEvent.Entry entry(UUID accountId, EntryDirection direction, BigDecimal amount) {
+        return AccountingEvent.Entry.builder()
+                .accountId(accountId)
+                .direction(direction)
+                .amount(amount)
+                .build();
     }
 }

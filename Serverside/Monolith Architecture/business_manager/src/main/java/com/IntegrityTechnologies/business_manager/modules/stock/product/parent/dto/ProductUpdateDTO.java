@@ -23,4 +23,5 @@ public class ProductUpdateDTO {
     private Double minimumPercentageProfit;
     private Long categoryId;
     private List<UUID> supplierIds;
+    private UUID branchId;
 }

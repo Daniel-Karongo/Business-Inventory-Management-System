@@ -27,7 +27,6 @@ public class TempFileCleanupService {
         tenantExecutionService.forEachTenant(tenantId -> {
 
             try {
-                TenantContext.setTenantId(tenantId);
 
                 Path tenantRoot = fileStorageService.tenantRoot();
 
@@ -72,9 +71,6 @@ public class TempFileCleanupService {
 
             } catch (IOException e) {
                 log.error("Failed tenant cleanup {}", tenantId, e);
-
-            } finally {
-                TenantContext.clear();
             }
         });
     }

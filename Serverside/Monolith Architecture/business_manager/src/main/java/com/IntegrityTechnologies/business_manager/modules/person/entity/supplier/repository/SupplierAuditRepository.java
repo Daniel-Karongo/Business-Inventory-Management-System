@@ -14,7 +14,10 @@ public interface SupplierAuditRepository extends JpaRepository<SupplierAudit, UU
 
     List<SupplierAudit> findAllByOrderByTimestampDesc();
 
-    List<SupplierAudit> findTop5ByOrderByTimestampDesc();
+    List<SupplierAudit> findTop10ByTenantIdAndBranchIdOrderByTimestampDesc(
+            UUID tenantId,
+            UUID branchId
+    );
 
 
     /* ========= SAFE ========= */

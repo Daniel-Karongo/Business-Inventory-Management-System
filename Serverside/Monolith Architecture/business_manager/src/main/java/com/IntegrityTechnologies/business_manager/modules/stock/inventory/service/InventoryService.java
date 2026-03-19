@@ -1,9 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.service;
 
 import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
+import com.IntegrityTechnologies.business_manager.config.response.PageWrapper;
 import com.IntegrityTechnologies.business_manager.exception.OutOfStockException;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.InventoryAccountingAdapter;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
@@ -15,27 +15,32 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.m
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductSupplier;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplier;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplierId;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.accounting.InventoryAccountingPort;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductAudit;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductSupplier;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.service.ProductService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service.ProductVariantService;
+import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
+import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,10 +71,12 @@ public class InventoryService {
 
     private static final int MAX_RETRIES = 5;
     private final ProductVariantService productVariantService;
-    private final InventoryAccountingAdapter inventoryAccountingPort;
+    private final InventoryAccountingPort inventoryAccountingPort;
     private final AccountingFacade accountingFacade;
     private final AccountingAccounts accountingAccounts;
     private final BatchConsumptionRepository batchConsumptionRepository;
+    private final BatchReservationRepository batchReservationRepository;
+    private final BranchTenantGuard branchTenantGuard;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -84,6 +91,8 @@ public class InventoryService {
 
     @Transactional
     public ApiResponse receiveStock(ReceiveStockRequest req) {
+
+        branchTenantGuard.validate(req.getBranchId());
 
         periodGuardService.validateOpenPeriod(
                 LocalDate.now(),
@@ -103,12 +112,15 @@ public class InventoryService {
             throw new IllegalArgumentException("At least one supplier must be provided");
 
         // -------------------------------------------------------------
-        // IDEMPOTENCY CHECK
+        // IDEMPOTENCY CHECK (FIXED - TENANT SAFE)
         // -------------------------------------------------------------
         if (req.getReference() != null &&
-                stockTransactionRepository.existsByReferenceAndType(
+                stockTransactionRepository.existsByReferenceAndTypeAndTenantIdAndBranchId(
                         req.getReference(),
-                        StockTransaction.TransactionType.RECEIPT)) {
+                        StockTransaction.TransactionType.RECEIPT,
+                        tenantId(),
+                        req.getBranchId()
+                )) {
 
             return new ApiResponse(
                     "success",
@@ -127,7 +139,7 @@ public class InventoryService {
                 .orElseThrow(() -> new IllegalArgumentException("Branch not found"));
 
         // -------------------------------------------------------------
-        // 2. RESOLVE OR CREATE VARIANT
+        // 2. RESOLVE OR CREATE VARIANT (UNCHANGED LOGIC)
         // -------------------------------------------------------------
         ProductVariant variant;
 
@@ -144,7 +156,7 @@ public class InventoryService {
             variant = productVariantRepository
                     .findByTenantIdAndBranchIdAndProduct_IdAndClassification(
                             tenantId(),
-                            branchId(),
+                            req.getBranchId(),
                             req.getProductId(),
                             req.getClassification())
                     .orElse(null);
@@ -166,7 +178,7 @@ public class InventoryService {
         }
 
         // -------------------------------------------------------------
-        // 3. COST + VAT COMPUTATION
+        // 3. COST + VAT COMPUTATION (UNCHANGED)
         // -------------------------------------------------------------
         long incomingUnits = 0;
         BigDecimal incomingCostTotal = BigDecimal.ZERO;
@@ -230,20 +242,33 @@ public class InventoryService {
             throw new IllegalArgumentException("Total units supplied must be > 0");
 
         // -------------------------------------------------------------
-        // 4. LOAD OR CREATE INVENTORY ITEM
+        // 4. LOAD OR CREATE INVENTORY ITEM (🔥 FIXED WITH LOCK)
         // -------------------------------------------------------------
+
+        final UUID variantIdFinal = variant.getId();
+        final UUID branchIdFinal = branch.getId();
+        final UUID productIdFinal = product.getId();
+        final UUID tenantIdFinal = tenantId();
+
         InventoryItem item = inventoryItemRepository
-                .findByProductVariant_IdAndBranchId(
-                        variant.getId(),
-                        branch.getId())
-                .orElse(InventoryItem.builder()
-                        .productId(product.getId())
-                        .productVariant(variant)
-                        .branchId(branch.getId())
-                        .quantityOnHand(0L)
-                        .quantityReserved(0L)
-                        .averageCost(BigDecimal.ZERO)
-                        .build());
+                .lockByVariant(
+                        variantIdFinal,
+                        tenantIdFinal,
+                        branchIdFinal
+                )
+                .orElseGet(() -> {
+
+                    InventoryItem newItem = InventoryItem.builder()
+                            .productId(productIdFinal)
+                            .productVariantId(variantIdFinal)
+                            .branchId(branchIdFinal)
+                            .quantityOnHand(0L)
+                            .averageCost(BigDecimal.ZERO)
+                            .deleted(false)
+                            .build();
+
+                    return inventoryItemRepository.save(newItem);
+                });
 
         long oldQty = item.getQuantityOnHand();
 
@@ -254,7 +279,7 @@ public class InventoryService {
         inventoryItemRepository.save(item);
 
         // -------------------------------------------------------------
-        // 5. FIFO BATCH CREATION (WITH SELLING PRICE)
+        // 5. FIFO BATCH CREATION (UNCHANGED)
         // -------------------------------------------------------------
         Double margin = product.getMinimumPercentageProfit();
         if (margin == null) margin = 0D;
@@ -264,11 +289,8 @@ public class InventoryService {
             BigDecimal sellingPrice;
 
             if (req.getSellingPrice() != null) {
-
                 sellingPrice = req.getSellingPrice();
-
             } else {
-
                 BigDecimal multiplier =
                         BigDecimal.ONE.add(
                                 BigDecimal.valueOf(margin / 100.0)
@@ -295,7 +317,7 @@ public class InventoryService {
         recomputeWeightedAverage(variant.getId(), branch.getId());
 
         // -------------------------------------------------------------
-        // 6. UPDATE VARIANT PRICING
+        // 6. UPDATE VARIANT PRICING (UNCHANGED)
         // -------------------------------------------------------------
         variant.setAverageBuyingPrice(item.getAverageCost());
 
@@ -313,7 +335,7 @@ public class InventoryService {
         productVariantRepository.save(variant);
 
         // -------------------------------------------------------------
-        // 7. STOCK TRANSACTIONS
+        // 7. STOCK TRANSACTIONS (UNCHANGED)
         // -------------------------------------------------------------
         for (SupplierUnit su : req.getSuppliers()) {
 
@@ -335,7 +357,7 @@ public class InventoryService {
         }
 
         // -------------------------------------------------------------
-        // 8. UPDATE PRODUCT SUPPLIERS & CATEGORY + AUDIT
+        // 8. PRODUCT SUPPLIERS + CATEGORY + AUDIT (UNCHANGED)
         // -------------------------------------------------------------
         Category category = product.getCategory();
         Set<Supplier> addedSuppliers = new HashSet<>();
@@ -344,12 +366,9 @@ public class InventoryService {
 
             boolean alreadyLinked = product.getSuppliers()
                     .stream()
-                    .anyMatch(ps ->
-                            ps.getSupplier().getId().equals(s.getId())
-                    );
+                    .anyMatch(ps -> ps.getSupplier().getId().equals(s.getId()));
 
             if (!alreadyLinked) {
-
                 ProductSupplier ps = ProductSupplier.builder()
                         .product(product)
                         .supplier(s)
@@ -359,22 +378,16 @@ public class InventoryService {
                 addedSuppliers.add(s);
             }
 
-            // CATEGORY LINK (unchanged)
             if (category != null) {
 
                 boolean alreadyCategoryLinked = category.getCategorySuppliers()
                         .stream()
-                        .anyMatch(rel ->
-                                rel.getSupplier().getId().equals(s.getId())
-                        );
+                        .anyMatch(rel -> rel.getSupplier().getId().equals(s.getId()));
 
                 if (!alreadyCategoryLinked) {
 
                     CategorySupplier relation = CategorySupplier.builder()
-                            .id(new CategorySupplierId(
-                                    category.getId(),
-                                    s.getId()
-                            ))
+                            .id(new CategorySupplierId(category.getId(), s.getId()))
                             .category(category)
                             .supplier(s)
                             .build();
@@ -401,7 +414,7 @@ public class InventoryService {
         }
 
         // -------------------------------------------------------------
-        // 9. ACCOUNTING
+        // 9. ACCOUNTING (UNCHANGED)
         // -------------------------------------------------------------
         if (vatEnabled && totalInputVat.compareTo(BigDecimal.ZERO) > 0) {
 
@@ -421,7 +434,7 @@ public class InventoryService {
                                             .amount(incomingCostTotal)
                                             .build(),
                                     AccountingEvent.Entry.builder()
-                                            .accountId(accountingAccounts.get(tenantId(), branch.getId(),AccountRole.VAT_INPUT))
+                                            .accountId(accountingAccounts.get(tenantId(), branch.getId(), AccountRole.VAT_INPUT))
                                             .direction(EntryDirection.DEBIT)
                                             .amount(totalInputVat)
                                             .build(),
@@ -436,8 +449,11 @@ public class InventoryService {
 
         } else {
 
+            UUID receiptId = requireReferenceId(req.getReference(), "Receipt");
+
             inventoryAccountingPort.recordInventoryReceipt(
-                    variant.getId(),
+                    tenantId(),
+                    receiptId, // ✅ FIXED
                     branch.getId(),
                     incomingCostTotal,
                     req.getReference()
@@ -445,7 +461,7 @@ public class InventoryService {
         }
 
         // -------------------------------------------------------------
-        // 10. RETURN
+        // 10. RETURN (UNCHANGED)
         // -------------------------------------------------------------
         return new ApiResponse(
                 "success",
@@ -458,6 +474,8 @@ public class InventoryService {
     public InventoryBulkPreviewRow simulateReceive(
             ReceiveStockRequest req
     ) {
+
+        branchTenantGuard.validate(req.getBranchId());
 
     /* =========================
        1. RESOLVE PRODUCT + BRANCH
@@ -487,7 +505,7 @@ public class InventoryService {
                         : productVariantRepository
                         .findByTenantIdAndBranchIdAndProduct_IdAndClassification(
                                 tenantId(),
-                                branchId(),
+                                req.getBranchId(),
                                 req.getProductId(),
                                 req.getClassification()
                         )
@@ -564,6 +582,9 @@ public class InventoryService {
 
     @Transactional
     public ApiResponse transferStock(TransferStockRequest req) {
+        branchTenantGuard.validate(req.getToBranchId());
+        branchTenantGuard.validate(req.getFromBranchId());
+
         periodGuardService.validateOpenPeriod(
                 LocalDate.now(),
                 req.getFromBranchId()
@@ -585,44 +606,101 @@ public class InventoryService {
     }
 
     private ApiResponse processTransfer(TransferStockRequest req) {
+        ensureNotProcessed(
+                req.getReference(),
+                StockTransaction.TransactionType.TRANSFER_OUT,
+                req.getFromBranchId()
+        );
+
+        ensureNotProcessed(
+                req.getReference(),
+                StockTransaction.TransactionType.TRANSFER_IN,
+                req.getToBranchId()
+        );
+
+        final UUID tenantId = tenantId();
 
         UUID variantId = req.getProductVariantId();
         UUID fromBranch = req.getFromBranchId();
         UUID toBranch = req.getToBranchId();
         long quantity = req.getQuantity();
 
+        // ======================================================
+        // 🔒 1. LOCK SOURCE INVENTORY
+        // ======================================================
+        InventoryItem sourceItem = inventoryItemRepository
+                .lockByVariant(variantId, tenantId, fromBranch)
+                .orElseThrow(() -> new OutOfStockException("Source inventory not found"));
+
+        long available = sourceItem.getQuantityOnHand();
+        if (available < quantity) {
+            throw new OutOfStockException("Insufficient stock for transfer");
+        }
+
+        // ======================================================
+        // 🔒 2. LOCK DESTINATION INVENTORY (CREATE IF MISSING)
+        // ======================================================
+        InventoryItem destinationItem = inventoryItemRepository
+                .lockByVariant(variantId, tenantId, toBranch)
+                .orElseGet(() -> {
+
+                    InventoryItem newItem = InventoryItem.builder()
+                            .productId(sourceItem.getProductId())
+                            .productVariantId(variantId)
+                            .branchId(toBranch)
+                            .quantityOnHand(0L)
+                            .averageCost(BigDecimal.ZERO)
+                            .deleted(false)
+                            .build();
+
+                    return inventoryItemRepository.save(newItem);
+                });
+
+        // ======================================================
+        // 🔒 3. LOCK SOURCE FIFO BATCHES
+        // ======================================================
         List<InventoryBatch> sourceBatches =
-                batchRepository.findByProductVariantIdAndBranchIdAndQuantityRemainingGreaterThanOrderByReceivedAtAsc(
-                                variantId,
-                                fromBranch,
-                                0L
-                        );
+                batchRepository.lockBatchesByBranch(
+                        variantId,
+                        tenantId,
+                        fromBranch
+                );
 
         long remaining = quantity;
         BigDecimal totalTransferValue = BigDecimal.ZERO;
 
+        // ======================================================
+        // 4️⃣ FIFO MOVE (UNCHANGED LOGIC, NOW LOCKED)
+        // ======================================================
         for (InventoryBatch sourceBatch : sourceBatches) {
 
             if (remaining <= 0) break;
 
             long moveQty = Math.min(sourceBatch.getQuantityRemaining(), remaining);
 
-            // Reduce source
+            if (moveQty <= 0) continue;
+
             sourceBatch.setQuantityRemaining(
                     sourceBatch.getQuantityRemaining() - moveQty
             );
 
-            totalTransferValue = totalTransferValue.add(
+            BigDecimal cost =
                     sourceBatch.getUnitCost()
-                            .multiply(BigDecimal.valueOf(moveQty))
-            );
+                            .multiply(BigDecimal.valueOf(moveQty));
 
-            // Create destination batch
+            totalTransferValue = totalTransferValue.add(cost);
+
+            // DESTINATION COST STRATEGY
+            BigDecimal destinationCost =
+                    req.getDestinationUnitCost() != null
+                            ? req.getDestinationUnitCost()
+                            : sourceBatch.getUnitCost();
+
             InventoryBatch newBatch = InventoryBatch.builder()
                     .productVariantId(variantId)
                     .branchId(toBranch)
-                    .unitCost(sourceBatch.getUnitCost())
-                    .unitSellingPrice(sourceBatch.getUnitSellingPrice()) // 🔥 ADD
+                    .unitCost(destinationCost)
+                    .unitSellingPrice(sourceBatch.getUnitSellingPrice())
                     .quantityReceived(moveQty)
                     .quantityRemaining(moveQty)
                     .receivedAt(sourceBatch.getReceivedAt())
@@ -636,23 +714,43 @@ public class InventoryService {
         if (remaining > 0)
             throw new OutOfStockException("Insufficient stock for transfer");
 
-        // Update physical quantities
-        decrementPhysicalOnly(variantId, fromBranch, quantity);
-        incrementPhysicalOnly(variantId, toBranch, quantity);
+        // ======================================================
+        // 5️⃣ UPDATE INVENTORY ITEMS (LOCKED)
+        // ======================================================
+        sourceItem.setQuantityOnHand(sourceItem.getQuantityOnHand() - quantity);
+        sourceItem.setLastUpdatedAt(LocalDateTime.now());
+        sourceItem.setLastUpdatedBy(getCurrentUsername());
 
+        destinationItem.setQuantityOnHand(destinationItem.getQuantityOnHand() + quantity);
+        destinationItem.setLastUpdatedAt(LocalDateTime.now());
+        destinationItem.setLastUpdatedBy(getCurrentUsername());
+
+        inventoryItemRepository.save(sourceItem);
+        inventoryItemRepository.save(destinationItem);
+
+        // ======================================================
+        // 6️⃣ RECOMPUTE AVERAGES
+        // ======================================================
         recomputeWeightedAverage(variantId, fromBranch);
         recomputeWeightedAverage(variantId, toBranch);
 
-        // Accounting
+        // ======================================================
+        // 7️⃣ ACCOUNTING (UNCHANGED)
+        // ======================================================
+
+        UUID transferId = requireReferenceId(req.getReference(), "Transfer");
+
         inventoryAccountingPort.recordInventoryTransferOut(
-                variantId,
+                tenantId,
+                transferId, // ✅ FIXED
                 fromBranch,
                 totalTransferValue,
                 req.getReference()
         );
 
         inventoryAccountingPort.recordInventoryTransferIn(
-                variantId,
+                tenantId,
+                transferId, // ✅ FIXED
                 toBranch,
                 totalTransferValue,
                 req.getReference()
@@ -663,9 +761,7 @@ public class InventoryService {
 
     private void decrementPhysicalOnly(UUID variantId, UUID branchId, long qty) {
 
-        InventoryItem item = inventoryItemRepository
-                .findByProductVariant_IdAndBranchId(variantId, branchId)
-                .orElseThrow();
+        InventoryItem item = getItemOrThrow(variantId, branchId);
 
         item.setQuantityOnHand(item.getQuantityOnHand() - qty);
         inventoryItemRepository.save(item);
@@ -673,9 +769,7 @@ public class InventoryService {
 
     private void incrementPhysicalOnly(UUID variantId, UUID branchId, long qty) {
 
-        InventoryItem item = inventoryItemRepository
-                .findByProductVariant_IdAndBranchId(variantId, branchId)
-                .orElseThrow();
+        InventoryItem item = getItemOrThrow(variantId, branchId);
 
         item.setQuantityOnHand(item.getQuantityOnHand() + qty);
         inventoryItemRepository.save(item);
@@ -685,14 +779,16 @@ public class InventoryService {
     public void restoreConsumedBatches(UUID saleId, UUID branchId, UUID variantId) {
 
         List<BatchConsumption> consumptions =
-                batchConsumptionRepository.findBySaleIdAndProductVariantId(
+                batchConsumptionRepository.findBySaleIdAndProductVariantIdAndTenantIdAndBranchId(
                         saleId,
-                        variantId
+                        variantId,
+                        tenantId(),
+                        branchId
                 );
 
         for (BatchConsumption bc : consumptions) {
 
-            InventoryBatch batch = batchRepository.findById(bc.getBatchId())
+            InventoryBatch batch = batchRepository.findByIdAndTenantIdAndBranchId(bc.getBatchId(), tenantId(), branchId)
                     .orElseThrow();
 
             batch.setQuantityRemaining(
@@ -711,96 +807,255 @@ public class InventoryService {
     // ------------------------
     // VARIANT RESERVE / RELEASE / DECREMENT (existing)
     // ------------------------
-    @Transactional
-    public void reserveStockVariant(UUID productVariantId, UUID branchId, int quantity, String reference) {
-        if (quantity <= 0) throw new IllegalArgumentException("Quantity must be > 0");
+    public void reserveStockVariant(UUID productVariantId,
+                                    UUID branchId,
+                                    Long quantity,
+                                    String reference,
+                                    List<SaleLineBatchSelection> manualSelections) {
 
         int attempts = 0;
+
         while (true) {
             try {
-                processReservationVariant(productVariantId, branchId, quantity, reference);
+                doReserveStockVariant(
+                        productVariantId,
+                        branchId,
+                        quantity,
+                        reference,
+                        manualSelections
+                );
                 return;
+
             } catch (OptimisticLockException e) {
                 attempts++;
+
                 if (attempts >= MAX_RETRIES) {
-                    throw new RuntimeException("Failed to reserve stock due to concurrent updates.");
+                    throw new RuntimeException("Failed to reserve stock due to concurrent updates.", e);
                 }
             }
         }
     }
 
-    private void processReservationVariant(UUID productVariantId, UUID branchId, long quantity, String reference) {
-        InventoryItem item = inventoryItemRepository.findByProductVariant_IdAndBranchId(productVariantId, branchId)
-                .orElseThrow(() -> new IllegalArgumentException("Inventory item not found"));
+    @Transactional
+    public void doReserveStockVariant(UUID productVariantId,
+                                         UUID branchId,
+                                         Long quantity,
+                                         String reference,
+                                         List<SaleLineBatchSelection> manualSelections) {
 
-        long available = item.getQuantityOnHand() - item.getQuantityReserved();
-        if (available < quantity) {
-            throw new OutOfStockException("Not enough stock to reserve");
-        }
-
-        item.setQuantityReserved(item.getQuantityReserved() + quantity);
-        item.setLastUpdatedAt(LocalDateTime.now());
-        item.setLastUpdatedBy(getCurrentUsername());
-        inventoryItemRepository.save(item);
-
-        stockTransactionRepository.save(StockTransaction.builder()
-                .productId(item.getProductVariant().getProduct().getId())
-                .productVariantId(productVariantId)
-                .branchId(branchId)
-                .type(StockTransaction.TransactionType.RESERVATION)
-                .quantityDelta(quantity)
-                .reference(reference)
-                .note("Reserved for order")
-                .timestamp(LocalDateTime.now())
-                .performedBy(getCurrentUsername())
-                .build()
+        processReservationVariant(
+                productVariantId,
+                branchId,
+                quantity,
+                reference,
+                manualSelections
         );
     }
 
-    @Transactional
-    public void releaseReservationVariant(UUID productVariantId, UUID branchId, int quantity, String reference) {
-        if (quantity <= 0) throw new IllegalArgumentException("Quantity must be > 0");
+    private void processReservationVariant(UUID productVariantId,
+                                           UUID branchId,
+                                           long quantity,
+                                           String reference,
+                                           List<SaleLineBatchSelection> manualSelections) {
+
+        ensureNotProcessed(
+                reference,
+                StockTransaction.TransactionType.RESERVATION,
+                branchId
+        );
+
+        final UUID tenantId = tenantId();
+
+        UUID referenceId = requireReferenceId(reference, "Reservation");
+
+        long remaining = quantity;
+
+        // =====================================================
+        // 🔥 1. MANUAL SELECTION FIRST
+        // =====================================================
+        if (manualSelections != null && !manualSelections.isEmpty()) {
+
+            for (SaleLineBatchSelection sel : manualSelections) {
+
+                InventoryBatch batch = batchRepository
+                        .findByIdForUpdate(
+                                sel.getBatchId(),
+                                tenantId,
+                                branchId
+                        )
+                        .orElseThrow(() -> new IllegalArgumentException("Invalid batch"));
+
+                long reserveQty = Math.min(sel.getQuantity(), remaining);
+
+                if (batch.getQuantityRemaining() < reserveQty) {
+                    throw new OutOfStockException("Insufficient batch stock");
+                }
+
+                batch.setQuantityRemaining(batch.getQuantityRemaining() - reserveQty);
+
+                batchReservationRepository.save(
+                        BatchReservation.builder()
+                                .batchId(batch.getId())
+                                .productVariantId(productVariantId)
+                                .referenceId(referenceId)
+                                .quantity(reserveQty)
+                                .createdAt(LocalDateTime.now())
+                                .build()
+                );
+
+                remaining -= reserveQty;
+            }
+        }
+
+        // =====================================================
+        // 🔥 2. FIFO FALLBACK
+        // =====================================================
+        if (remaining > 0) {
+
+            List<InventoryBatch> batches =
+                    batchRepository.lockAvailableBatchesFIFO(
+                            productVariantId,
+                            tenantId,
+                            branchId
+                    );
+
+            for (InventoryBatch batch : batches) {
+
+                if (remaining <= 0) break;
+
+                long reserveQty = Math.min(batch.getQuantityRemaining(), remaining);
+
+                if (reserveQty <= 0) continue;
+
+                batch.setQuantityRemaining(batch.getQuantityRemaining() - reserveQty);
+
+                batchReservationRepository.save(
+                        BatchReservation.builder()
+                                .batchId(batch.getId())
+                                .productVariantId(productVariantId)
+                                .referenceId(referenceId)
+                                .quantity(reserveQty)
+                                .createdAt(LocalDateTime.now())
+                                .build()
+                );
+
+                remaining -= reserveQty;
+            }
+        }
+
+        if (remaining > 0)
+            throw new OutOfStockException("Insufficient stock to reserve");
+
+        stockTransactionRepository.save(
+                StockTransaction.builder()
+                        .productVariantId(productVariantId)
+                        .branchId(branchId)
+                        .type(StockTransaction.TransactionType.RESERVATION)
+                        .quantityDelta(quantity) // positive
+                        .reference(reference)
+                        .note("Batch reservation")
+                        .timestamp(LocalDateTime.now())
+                        .performedBy(getCurrentUsername())
+                        .build()
+        );
+    }
+
+    public void releaseReservationVariant(UUID productVariantId,
+                                          UUID branchId,
+                                          long quantity,
+                                          String reference) {
 
         int attempts = 0;
 
         while (true) {
             try {
-                processReleaseReservation(productVariantId, branchId, quantity, reference);
+                doReleaseReservationVariant(
+                        productVariantId,
+                        branchId,
+                        quantity,
+                        reference
+                );
                 return;
-            } catch (OptimisticLockException ex) {
-                attempts++;
-                if (attempts >= MAX_RETRIES) {
-                    throw new RuntimeException("Failed to release reservation due to concurrent modification.", ex);
+
+            } catch (OptimisticLockException e) {
+                if (++attempts >= MAX_RETRIES) {
+                    throw new RuntimeException("Failed to release reservation", e);
                 }
             }
         }
     }
 
-    private void processReleaseReservation(UUID productVariantId, UUID branchId, int quantity, String reference) {
-        InventoryItem item = inventoryItemRepository.findByProductVariant_IdAndBranchId(productVariantId, branchId)
-                .orElseThrow(() -> new IllegalArgumentException("Inventory item not found"));
+    @Transactional
+    public void doReleaseReservationVariant(UUID productVariantId,
+                                            UUID branchId,
+                                            long quantity,
+                                            String reference) {
 
-        long releaseQty = Math.min(quantity, item.getQuantityReserved());
+        processReleaseReservation(
+                productVariantId,
+                branchId,
+                quantity,
+                reference
+        );
+    }
 
-        if (releaseQty <= 0) {
-            throw new IllegalArgumentException("Nothing to release (reserved=" + item.getQuantityReserved() + ")");
+    private void processReleaseReservation(UUID productVariantId,
+                                           UUID branchId,
+                                           long quantity,
+                                           String reference) {
+
+        ensureNotProcessed(
+                reference,
+                StockTransaction.TransactionType.RELEASE,
+                branchId
+        );
+
+        final UUID tenantId = tenantId();
+
+        UUID referenceId = requireReferenceId(reference, "Release");
+
+        List<BatchReservation> reservations =
+                batchReservationRepository.lockByReferenceIdAndTenantIdAndBranchId(
+                        referenceId,
+                        tenantId,
+                        branchId
+                );
+
+        long remaining = quantity;
+
+        for (BatchReservation res : reservations) {
+
+            if (remaining <= 0) break;
+
+            InventoryBatch batch = batchRepository.findByIdAndTenantIdAndBranchId(res.getBatchId(), tenantId, branchId)
+                    .orElseThrow();
+
+            long releaseQty = Math.min(res.getQuantity(), remaining);
+
+            // 🔥 RESTORE STOCK
+            batch.setQuantityRemaining(batch.getQuantityRemaining() + releaseQty);
+
+            res.setQuantity(res.getQuantity() - releaseQty);
+
+            if (res.getQuantity() == 0) {
+                batchReservationRepository.delete(res);
+            }
+
+            remaining -= releaseQty;
         }
 
-        item.setQuantityReserved(item.getQuantityReserved() - releaseQty);
-        item.setLastUpdatedAt(LocalDateTime.now());
-        item.setLastUpdatedBy(getCurrentUsername());
-        inventoryItemRepository.save(item);
+        if (remaining > 0) {
+            throw new IllegalStateException("Attempted to release more than reserved");
+        }
 
-        // StockTransaction insert also versioned → must be inside retry wrapper
         stockTransactionRepository.save(
                 StockTransaction.builder()
-                        .productId(item.getProductId())
                         .productVariantId(productVariantId)
                         .branchId(branchId)
                         .type(StockTransaction.TransactionType.RELEASE)
-                        .quantityDelta(-releaseQty)
+                        .quantityDelta(quantity)
                         .reference(reference)
-                        .note("Release reservation")
+                        .note("Batch release")
                         .timestamp(LocalDateTime.now())
                         .performedBy(getCurrentUsername())
                         .build()
@@ -821,21 +1076,17 @@ public class InventoryService {
                 null   // no manual selections
         );
     }
-    @Transactional
     public void decrementVariantStock(UUID productVariantId,
                                       UUID branchId,
                                       int quantity,
                                       String reference,
                                       List<SaleLineBatchSelection> manualSelections) {
 
-        if (quantity <= 0)
-            throw new IllegalArgumentException("Quantity must be > 0");
-
         int attempts = 0;
 
         while (true) {
             try {
-                processStockDecrementVariant(
+                doDecrementVariantStock(
                         productVariantId,
                         branchId,
                         quantity,
@@ -843,13 +1094,29 @@ public class InventoryService {
                         manualSelections
                 );
                 return;
+
             } catch (OptimisticLockException e) {
-                attempts++;
-                if (attempts >= MAX_RETRIES) {
-                    throw new RuntimeException("Concurrent stock update conflict. Try again.");
+                if (++attempts >= MAX_RETRIES) {
+                    throw new RuntimeException("Stock conflict", e);
                 }
             }
         }
+    }
+
+    @Transactional
+    public void doDecrementVariantStock(UUID productVariantId,
+                                        UUID branchId,
+                                        int quantity,
+                                        String reference,
+                                        List<SaleLineBatchSelection> manualSelections) {
+
+        processStockDecrementVariant(
+                productVariantId,
+                branchId,
+                quantity,
+                reference,
+                manualSelections
+        );
     }
 
     private void processStockDecrementVariant(UUID productVariantId,
@@ -857,180 +1124,194 @@ public class InventoryService {
                                               long qty,
                                               String reference,
                                               List<SaleLineBatchSelection> manualSelections) {
+
+        ensureNotProcessed(
+                reference,
+                StockTransaction.TransactionType.SALE,
+                branchId
+        );
+
         periodGuardService.validateOpenPeriod(
                 LocalDate.now(),
                 branchId
         );
 
-        InventoryItem item = inventoryItemRepository
-                .findByProductVariant_IdAndBranchId(productVariantId, branchId)
-                .orElseThrow(() -> new OutOfStockException("Inventory record not found"));
+        final UUID tenantId = tenantId();
 
-        long available = item.getQuantityOnHand() - item.getQuantityReserved();
-        if (available < qty) {
-            throw new OutOfStockException("Insufficient stock in this branch");
-        }
+        UUID saleId = requireReferenceId(reference, "Sale");
+
+        InventoryItem item = inventoryItemRepository
+                .lockByVariant(productVariantId, tenantId, branchId)
+                .orElseThrow(() -> new OutOfStockException("Inventory not found"));
 
         long remaining = qty;
         BigDecimal totalCost = BigDecimal.ZERO;
 
-        // ======================================================
-        // 1️⃣ MANUAL SELECTION
-        // ======================================================
+        // =====================================================
+        // 🔥 1. MANUAL BATCH SELECTION (HIGHEST PRIORITY)
+        // =====================================================
         if (manualSelections != null && !manualSelections.isEmpty()) {
 
             for (SaleLineBatchSelection sel : manualSelections) {
 
-                InventoryBatch batch = batchRepository.findById(sel.getBatchId())
-                        .orElseThrow(() ->
-                                new IllegalArgumentException("Batch not found"));
+                if (remaining <= 0) break;
 
-                if (!batch.getBranchId().equals(branchId))
-                    throw new IllegalStateException("Batch not in this branch");
+                InventoryBatch batch = batchRepository
+                        .findByIdForUpdate(
+                                sel.getBatchId(),
+                                tenantId,
+                                branchId
+                        )
+                        .orElseThrow(() -> new IllegalArgumentException("Invalid batch"));
 
-                if (!batch.getProductVariantId().equals(productVariantId))
-                    throw new IllegalStateException("Batch mismatch with variant");
+                long consumeQty = Math.min(sel.getQuantity(), remaining);
 
-                if (batch.getQuantityRemaining() < sel.getQuantity())
-                    throw new OutOfStockException("Insufficient in selected batch");
+                if (batch.getQuantityRemaining() < consumeQty) {
+                    throw new OutOfStockException("Insufficient stock in selected batch");
+                }
 
-                batch.setQuantityRemaining(
-                        batch.getQuantityRemaining() - sel.getQuantity()
+                batch.setQuantityRemaining(batch.getQuantityRemaining() - consumeQty);
+
+                totalCost = totalCost.add(
+                        batch.getUnitCost().multiply(BigDecimal.valueOf(consumeQty))
                 );
-
-                BigDecimal cost =
-                        batch.getUnitCost()
-                                .multiply(BigDecimal.valueOf(sel.getQuantity()));
-
-                totalCost = totalCost.add(cost);
 
                 batchConsumptionRepository.save(
                         BatchConsumption.builder()
                                 .batchId(batch.getId())
-                                .saleId(extractSaleIdFromReference(reference))
+                                .saleId(saleId)
                                 .productVariantId(productVariantId)
-                                .quantity(sel.getQuantity())
+                                .quantity(consumeQty)
                                 .unitCost(batch.getUnitCost())
                                 .build()
                 );
 
-                remaining -= sel.getQuantity();
+                remaining -= consumeQty;
             }
         }
 
-        // 🔥 ALWAYS run FIFO for remaining > 0
+        // =====================================================
+        // 🔥 2. FALLBACK → RESERVATIONS (LOCKED)
+        // =====================================================
         if (remaining > 0) {
 
-            List<InventoryBatch> batches =
-                    batchRepository                            .findByProductVariantIdAndBranchIdAndQuantityRemainingGreaterThanOrderByReceivedAtAsc(
-                                    productVariantId,
-                                    branchId,
-                                    0L
-                            );
+            List<BatchReservation> reservations =
+                    batchReservationRepository.lockByReferenceIdAndTenantIdAndBranchId(
+                            saleId,
+                            tenantId,
+                            branchId
+                    );
 
-            for (InventoryBatch batch : batches) {
+            for (BatchReservation res : reservations) {
 
                 if (remaining <= 0) break;
 
-                long deduct = Math.min(batch.getQuantityRemaining(), remaining);
+                InventoryBatch batch = batchRepository
+                        .findByIdAndTenantIdAndBranchId(
+                                res.getBatchId(),
+                                tenantId,
+                                branchId
+                        )
+                        .orElseThrow(() -> new IllegalStateException("Batch not found"));
 
-                batch.setQuantityRemaining(batch.getQuantityRemaining() - deduct);
+                long consumeQty = Math.min(res.getQuantity(), remaining);
 
-                BigDecimal cost =
-                        batch.getUnitCost()
-                                .multiply(BigDecimal.valueOf(deduct));
-
-                totalCost = totalCost.add(cost);
+                totalCost = totalCost.add(
+                        batch.getUnitCost().multiply(BigDecimal.valueOf(consumeQty))
+                );
 
                 batchConsumptionRepository.save(
                         BatchConsumption.builder()
                                 .batchId(batch.getId())
-                                .saleId(extractSaleIdFromReference(reference))
+                                .saleId(saleId)
                                 .productVariantId(productVariantId)
-                                .quantity(deduct)
+                                .quantity(consumeQty)
                                 .unitCost(batch.getUnitCost())
                                 .build()
                 );
 
-                remaining -= deduct;
-            }
+                res.setQuantity(res.getQuantity() - consumeQty);
 
-            if (remaining > 0)
-                throw new OutOfStockException("Insufficient FIFO stock");
+                if (res.getQuantity() == 0) {
+                    batchReservationRepository.delete(res);
+                }
+
+                remaining -= consumeQty;
+            }
         }
 
+        if (remaining > 0) {
+            throw new OutOfStockException("Insufficient stock for sale");
+        }
+
+        // =====================================================
+        // 🔥 3. UPDATE INVENTORY
+        // =====================================================
         item.setQuantityOnHand(item.getQuantityOnHand() - qty);
         item.setLastUpdatedAt(LocalDateTime.now());
         item.setLastUpdatedBy(getCurrentUsername());
+
         inventoryItemRepository.save(item);
 
         recomputeWeightedAverage(productVariantId, branchId);
 
-        // -----------------------------------------
-        // ACCOUNTING — TRUE FIFO COGS
-        // -----------------------------------------
+        UUID referenceId = saleId;
+
         inventoryAccountingPort.recordInventoryConsumption(
-                productVariantId,
+                tenantId,
+                referenceId,
                 branchId,
                 totalCost,
                 reference
         );
 
-        // -----------------------------------------
-        // STOCK TRANSACTION
-        // -----------------------------------------
         stockTransactionRepository.save(
                 StockTransaction.builder()
-                        .productId(item.getProductVariant().getProduct().getId())
+                        .productId(item.getProductId())
                         .productVariantId(productVariantId)
                         .branchId(branchId)
                         .type(StockTransaction.TransactionType.SALE)
                         .quantityDelta(-qty)
                         .reference(reference)
-                        .note("Sale decrement (FIFO)")
+                        .note("Sale (manual + FIFO fallback)")
                         .timestamp(LocalDateTime.now())
                         .performedBy(getCurrentUsername())
                         .build()
         );
     }
 
-    private UUID extractSaleIdFromReference(String reference) {
-        if (reference != null && reference.startsWith("SALE_DELIVERY:")) {
-            return UUID.fromString(reference.replace("SALE_DELIVERY:", ""));
-        }
-        return null;
-    }
-
     // ------------------------
     // NEW: variant-aware adjustStockVariant
     // ------------------------
-    @Transactional
     public ApiResponse adjustStockVariant(AdjustStockRequest req) {
-        periodGuardService.validateOpenPeriod(
-                LocalDate.now(),
-                req.getBranchId()
-        );
-
-        if (req.getProductVariantId() == null)
-            throw new IllegalArgumentException("productVariantId is required");
-        if (req.getBranchId() == null)
-            throw new IllegalArgumentException("branchId is required");
 
         int attempts = 0;
 
         while (true) {
             try {
-                return processAdjustStockVariant(req);
-            } catch (OptimisticLockException ex) {
-                attempts++;
-                if (attempts >= MAX_RETRIES) {
-                    throw new RuntimeException("Failed to adjust stock due to concurrent modification.", ex);
+                return doAdjustStockVariant(req);
+
+            } catch (OptimisticLockException e) {
+                if (++attempts >= MAX_RETRIES) {
+                    throw new RuntimeException("Adjust failed", e);
                 }
             }
         }
     }
 
+    @Transactional
+    public ApiResponse doAdjustStockVariant(AdjustStockRequest req) {
+        return processAdjustStockVariant(req);
+    }
+
     private ApiResponse processAdjustStockVariant(AdjustStockRequest req) {
+        ensureNotProcessed(
+                req.getReference(),
+                StockTransaction.TransactionType.ADJUSTMENT,
+                req.getBranchId()
+        );
+
+        final UUID tenantId = tenantId();
 
         ProductVariant variant = productVariantRepository.findById(req.getProductVariantId())
                 .orElseThrow(() -> new IllegalArgumentException("Variant not found"));
@@ -1038,8 +1319,11 @@ public class InventoryService {
         Branch branch = branchRepository.findById(req.getBranchId())
                 .orElseThrow(() -> new IllegalArgumentException("Branch not found"));
 
+        // ======================================================
+        // 🔒 1. LOCK INVENTORY ITEM
+        // ======================================================
         InventoryItem item = inventoryItemRepository
-                .findByProductVariant_IdAndBranchId(req.getProductVariantId(), req.getBranchId())
+                .lockByVariant(variant.getId(), tenantId, branch.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Inventory item not found"));
 
         long delta = req.getQuantityDelta();
@@ -1048,31 +1332,34 @@ public class InventoryService {
             throw new IllegalArgumentException("Quantity delta cannot be zero");
 
         // ======================================================
-        // NEGATIVE ADJUSTMENT (LOSS / DAMAGE / SHRINKAGE)
+        // NEGATIVE ADJUSTMENT (LOSS / DAMAGE)
         // ======================================================
         if (delta < 0) {
 
             long qtyToRemove = Math.abs(delta);
 
-            long available = item.getQuantityOnHand() - item.getQuantityReserved();
+            long available = item.getQuantityOnHand();
             if (available < qtyToRemove)
                 throw new OutOfStockException("Insufficient stock for negative adjustment");
 
             long remaining = qtyToRemove;
             BigDecimal totalCost = BigDecimal.ZERO;
 
+            // 🔒 LOCK FIFO BATCHES
             List<InventoryBatch> batches =
-                    batchRepository                            .findByProductVariantIdAndBranchIdAndQuantityRemainingGreaterThanOrderByReceivedAtAsc(
-                                    variant.getId(),
-                                    branch.getId(),
-                                    0L
-                            );
+                    batchRepository.lockAvailableBatchesFIFO(
+                            variant.getId(),
+                            tenantId,
+                            branch.getId()
+                    );
 
             for (InventoryBatch batch : batches) {
 
                 if (remaining <= 0) break;
 
                 long deduct = Math.min(batch.getQuantityRemaining(), remaining);
+
+                if (deduct <= 0) continue;
 
                 batch.setQuantityRemaining(batch.getQuantityRemaining() - deduct);
 
@@ -1088,15 +1375,19 @@ public class InventoryService {
             if (remaining > 0)
                 throw new OutOfStockException("Insufficient FIFO stock");
 
-            // Update summary mirror
+            // update inventory
             item.setQuantityOnHand(item.getQuantityOnHand() - qtyToRemove);
             item.setLastUpdatedAt(LocalDateTime.now());
             item.setLastUpdatedBy(getCurrentUsername());
+
             inventoryItemRepository.save(item);
 
-            // Accounting
+            // accounting
+            UUID refId = requireReferenceId(req.getReference(), "Adjustment");
+
             inventoryAccountingPort.recordInventoryConsumption(
-                    variant.getId(),
+                    tenantId,
+                    refId,
                     branch.getId(),
                     totalCost,
                     req.getReference()
@@ -1104,7 +1395,7 @@ public class InventoryService {
         }
 
         // ======================================================
-        // POSITIVE ADJUSTMENT (FOUND STOCK / COUNT CORRECTION)
+        // POSITIVE ADJUSTMENT (FOUND STOCK)
         // ======================================================
         else {
 
@@ -1127,7 +1418,7 @@ public class InventoryService {
                     .productVariantId(variant.getId())
                     .branchId(branch.getId())
                     .unitCost(unitCost)
-                    .unitSellingPrice(sellingPrice) // 🔥
+                    .unitSellingPrice(sellingPrice)
                     .quantityReceived(qtyToAdd)
                     .quantityRemaining(qtyToAdd)
                     .receivedAt(LocalDateTime.now())
@@ -1135,28 +1426,34 @@ public class InventoryService {
 
             batchRepository.save(batch);
 
-            // Update summary mirror
             item.setQuantityOnHand(item.getQuantityOnHand() + qtyToAdd);
             item.setLastUpdatedAt(LocalDateTime.now());
             item.setLastUpdatedBy(getCurrentUsername());
+
             inventoryItemRepository.save(item);
 
             BigDecimal totalValue =
                     unitCost.multiply(BigDecimal.valueOf(qtyToAdd));
 
+            UUID refId = requireReferenceId(req.getReference(), "Adjustment");
+
             inventoryAccountingPort.recordInventoryReturn(
-                    variant.getId(),
+                    tenantId,
+                    refId,
                     branch.getId(),
                     totalValue,
                     req.getReference()
             );
         }
 
+        // ======================================================
+        // 🔁 RECOMPUTE AVERAGE
+        // ======================================================
         recomputeWeightedAverage(variant.getId(), branch.getId());
 
-        // -----------------------------------------------------
+        // ======================================================
         // STOCK TRANSACTION
-        // -----------------------------------------------------
+        // ======================================================
         stockTransactionRepository.save(
                 StockTransaction.builder()
                         .productId(variant.getProduct().getId())
@@ -1174,34 +1471,56 @@ public class InventoryService {
         return new ApiResponse("success", "Batch-aware stock adjusted", buildResponse(item));
     }
 
-    @Transactional
-    public void incrementVariantStock(UUID variantId, UUID branchId, long qty, String reference) {
-        if (qty <= 0) throw new IllegalArgumentException("Quantity must be > 0");
+    public void incrementVariantStock(UUID variantId,
+                                      UUID branchId,
+                                      long qty,
+                                      String reference) {
 
         int attempts = 0;
 
         while (true) {
             try {
-                processIncrementVariantStock(variantId, branchId, qty, reference);
+                doIncrementVariantStock(
+                        variantId,
+                        branchId,
+                        qty,
+                        reference
+                );
                 return;
-            } catch (OptimisticLockException ex) {
-                attempts++;
-                if (attempts >= MAX_RETRIES) {
-                    throw new RuntimeException("Failed to increment stock due to concurrent modification.", ex);
+
+            } catch (OptimisticLockException e) {
+                if (++attempts >= MAX_RETRIES) {
+                    throw new RuntimeException("Increment failed", e);
                 }
             }
         }
+    }
+
+    @Transactional
+    public void doIncrementVariantStock(UUID variantId,
+                                        UUID branchId,
+                                        long qty,
+                                        String reference) {
+
+        processIncrementVariantStock(
+                variantId,
+                branchId,
+                qty,
+                reference
+        );
     }
 
     private void processIncrementVariantStock(UUID variantId,
                                               UUID branchId,
                                               long qty,
                                               String reference) {
+        ensureNotProcessed(
+                reference,
+                StockTransaction.TransactionType.RETURN,
+                branchId
+        );
 
-        InventoryItem item = inventoryItemRepository
-                .findByProductVariant_IdAndBranchId(variantId, branchId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Inventory entry not found for variant=" + variantId + " branch=" + branchId));
+        InventoryItem item = getItemOrThrow(variantId, branchId);
 
         BigDecimal unitCost = item.getAverageCost();
         if (unitCost == null) unitCost = BigDecimal.ZERO;
@@ -1235,8 +1554,11 @@ public class InventoryService {
         BigDecimal value =
                 unitCost.multiply(BigDecimal.valueOf(qty));
 
+        UUID refId = requireReferenceId(reference, "Return");
+
         inventoryAccountingPort.recordInventoryReturn(
-                variantId,
+                tenantId(),
+                refId, // ✅ FIXED
                 branchId,
                 value,
                 reference
@@ -1261,22 +1583,31 @@ public class InventoryService {
     // READ HELPERS (variant-aware)
     // ------------------------
 
-    public List<InventoryResponse> getAllInventory() {
-        List<InventoryItem> items = inventoryItemRepository.findAll();
-        List<InventoryResponse> res = new ArrayList<>();
-        for (InventoryItem it : items) {
-            res.add(buildResponse(it));
-        }
-        return res;
+    public PageWrapper<InventoryResponse> getAllInventory(Pageable pageable) {
+
+        Page<InventoryItem> page =
+                inventoryItemRepository.findAllActive(
+                        tenantId(),
+                        pageable
+                );
+
+        return new PageWrapper<>(
+                page.map(this::buildResponse)
+        );
     }
 
-    public List<InventoryResponse> getInventoryByBranch(UUID branchId) {
-        List<InventoryItem> items = inventoryItemRepository.findByBranchId(branchId);
-        List<InventoryResponse> res = new ArrayList<>();
-        for (InventoryItem it : items) {
-            res.add(buildResponse(it));
-        }
-        return res;
+    public PageWrapper<InventoryResponse> getInventoryByBranch(UUID branchId, Pageable pageable) {
+
+        Page<InventoryItem> page =
+                inventoryItemRepository.findByBranchScoped(
+                        tenantId(),
+                        branchId,
+                        pageable
+                );
+
+        return new PageWrapper<>(
+                page.map(this::buildResponse)
+        );
     }
 
     /**
@@ -1285,40 +1616,40 @@ public class InventoryService {
      */
     public ApiResponse getInventoryForVariantBranch(UUID productVariantId, UUID branchId) {
 
-        if (productVariantId == null) {
-            throw new IllegalArgumentException("productVariantId is required");
-        }
-
         if (branchId != null) {
-            Optional<InventoryItem> itemOpt = inventoryItemRepository.findByProductVariant_IdAndBranchId(productVariantId, branchId);
-            if (itemOpt.isPresent()) {
-                return new ApiResponse("success", "Inventory for variant+branch", buildResponse(itemOpt.get()));
-            } else {
-                return new ApiResponse("success", "Inventory for variant+branch", null);
-            }
-        } else {
-            // aggregate across branches for the variant
-            List<InventoryItem> items = inventoryItemRepository.findAll()
-                    .stream()
-                    .filter(it -> it.getProductVariant() != null && productVariantId.equals(it.getProductVariant().getId()))
-                    .toList();
 
-            List<InventoryResponse> aggregated = items.stream().map(item -> buildResponse(item)).toList();
-
-            return new ApiResponse("success", "Inventory for variant across branches", aggregated);
+            return inventoryItemRepository
+                    .findByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
+                            productVariantId,
+                            tenantId(),
+                            branchId
+                    )
+                    .map(i -> new ApiResponse("success", "Inventory found", buildResponse(i)))
+                    .orElse(new ApiResponse("success", "No inventory", null));
         }
+
+        List<InventoryItem> items =
+                inventoryItemRepository.findByProductScoped(
+                        tenantId(),
+                        productVariantId
+                );
+
+        return new ApiResponse(
+                "success",
+                "Inventory across branches",
+                items.stream().map(this::buildResponse).toList()
+        );
     }
 
     /**
      * Return stock across branches aggregated by variant for a product.
      */
     public ApiResponse getProductStockAcrossBranches(UUID productId) {
-        List<InventoryItem> items = inventoryItemRepository.findAll()
-                .stream()
-                .filter(it -> it.getProductVariant() != null &&
-                        it.getProductId() != null &&
-                        productId.equals(it.getProductId()))
-                .toList();
+        List<InventoryItem> items =
+                inventoryItemRepository.findByProductScoped(
+                        tenantId(),
+                        productId
+                );
 
         List<InventoryResponse> res = new ArrayList<>();
         for (InventoryItem it : items) {
@@ -1328,12 +1659,13 @@ public class InventoryService {
     }
 
     public ApiResponse getProductStockInBranch(UUID productId, UUID branchId) {
-        List<InventoryItem> items = inventoryItemRepository.findAll()
-                .stream()
-                .filter(it -> it.getProductVariant() != null &&
-                        it.getProductId() != null &&
-                        productId.equals(it.getProductId()) && branchId.equals(it.getBranchId()))
-                .toList();
+        List<InventoryItem> items =
+                inventoryItemRepository.findByProductScoped(
+                                tenantId(),
+                                productId
+                        ).stream()
+                        .filter(i -> branchId.equals(i.getBranchId()))
+                        .toList();
 
         List<InventoryResponse> res = new ArrayList<>();
         for (InventoryItem it : items) {
@@ -1342,20 +1674,35 @@ public class InventoryService {
         return new ApiResponse("success", "Inventory for product " + productId.toString() + " in branch " + branchId, res);
     }
 
-    public ApiResponse getLowStock(Long threshold) {
-        var items = inventoryItemRepository.findAll();
-        List<InventoryResponse> response = items.stream()
-                .filter(i -> (i.getQuantityOnHand() - i.getQuantityReserved()) <= threshold)
-                .map(i -> buildResponse(i)).toList();
-        return new ApiResponse("success", "Product under " + threshold + " in stock", response);
+    public ApiResponse getLowStock(Long threshold, Pageable pageable) {
+
+        Page<InventoryItem> page =
+                inventoryItemRepository.findLowStock(
+                        tenantId(),
+                        threshold,
+                        pageable
+                );
+
+        return new ApiResponse(
+                "success",
+                "Low stock",
+                new PageWrapper<>(page.map(this::buildResponse))
+        );
     }
 
-    public ApiResponse getOutOfStock() {
-        var items = inventoryItemRepository.findAll();
-        List<InventoryResponse> response = items.stream()
-                .filter(i -> (i.getQuantityOnHand() - i.getQuantityReserved()) <= 0)
-                .map(i -> buildResponse(i)).toList();
-        return new ApiResponse("success", "Out of stock products", response);
+    public ApiResponse getOutOfStock(Pageable pageable) {
+
+        Page<InventoryItem> page =
+                inventoryItemRepository.findOutOfStock(
+                        tenantId(),
+                        pageable
+                );
+
+        return new ApiResponse(
+                "success",
+                "Out of stock",
+                new PageWrapper<>(page.map(this::buildResponse))
+        );
     }
 
     public List<ProductAudit> getAuditTrail(UUID productId) {
@@ -1365,47 +1712,50 @@ public class InventoryService {
     // Snapshot and historical snapshot handling (kept similar to your previous logic)
     @Transactional
     public void takeSnapshot(LocalDate date) {
-        List<InventoryItem> items = inventoryItemRepository.findAll();
 
-        for (InventoryItem i : items) {
+        int page = 0;
+        Page<InventoryItem> slice;
 
-            ProductVariant variant = i.getProductVariant();
+        do {
 
-            // -----------------------------
-            // Determine valuation unit
-            // -----------------------------
-            // Priority:
-            // 1. inventory averageCost
-            // 2. variant averageBuyingPrice
-            // 3. zero
-            BigDecimal valuationUnit =
-                    Optional.ofNullable(i.getAverageCost())
-                            .filter(cost -> cost.compareTo(BigDecimal.ZERO) > 0)
-                            .orElse(
-                                    Optional.ofNullable(variant.getAverageBuyingPrice())
-                                            .orElse(BigDecimal.ZERO)
-                            );
+            slice = inventoryItemRepository.findAllActive(
+                    tenantId(),
+                    PageRequest.of(page, 1000)
+            );
 
-            // -----------------------------
-            // Build snapshot
-            // -----------------------------
-            InventorySnapshot snap = InventorySnapshot.builder()
-                    .productId(variant.getProduct().getId())
-                    .productVariantId(variant.getId())
-                    .branchId(i.getBranchId())
-                    .tenantId(tenantId())
-                    .quantityOnHand(i.getQuantityOnHand())
-                    .quantityReserved(i.getQuantityReserved())
+            for (InventoryItem i : slice.getContent()) {
 
-                    // valuation = unit valuation × quantity
-                    .valuation(valuationUnit.multiply(BigDecimal.valueOf(i.getQuantityOnHand())))
+                ProductVariant variant = i.getProductVariant();
 
-                    .snapshotDate(date)
-                    .createdAt(LocalDateTime.now())
-                    .build();
+                BigDecimal valuationUnit =
+                        Optional.ofNullable(i.getAverageCost())
+                                .filter(cost -> cost.compareTo(BigDecimal.ZERO) > 0)
+                                .orElse(
+                                        Optional.ofNullable(variant.getAverageBuyingPrice())
+                                                .orElse(BigDecimal.ZERO)
+                                );
 
-            inventorySnapshotRepository.save(snap);
-        }
+                InventorySnapshot snap = InventorySnapshot.builder()
+                        .productId(variant.getProduct().getId())
+                        .productVariantId(variant.getId())
+                        .branchId(i.getBranchId())
+                        .tenantId(tenantId())
+                        .quantityOnHand(i.getQuantityOnHand())
+                        .valuation(
+                                valuationUnit.multiply(
+                                        BigDecimal.valueOf(i.getQuantityOnHand())
+                                )
+                        )
+                        .snapshotDate(date)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+
+                inventorySnapshotRepository.save(snap);
+            }
+
+            page++;
+
+        } while (!slice.isLast());
     }
 
     public List<Map<String, Object>> getSnapshot(LocalDate date) {
@@ -1414,34 +1764,48 @@ public class InventoryService {
 
         List<Map<String, Object>> result = new ArrayList<>();
 
-        List<InventoryItem> allItems = inventoryItemRepository.findAll();
+        Page<InventoryItem> page =
+                inventoryItemRepository.findAllActive(tenantId(), Pageable.unpaged());
+
+        List<InventoryItem> allItems = page.getContent();
 
         for (InventoryItem item : allItems) {
             UUID pvid = item.getProductVariant().getId();
             UUID pid = item.getProductVariant().getProduct().getId();
             UUID bid = item.getBranchId();
 
-            var last = inventorySnapshotRepository.findTopByProductVariantIdAndBranchIdAndSnapshotDateLessThanEqualOrderBySnapshotDateDesc(pvid, bid, date);
+            var last = inventorySnapshotRepository.findTopByProductVariantIdAndBranchIdAndTenantIdAndSnapshotDateLessThanEqualOrderBySnapshotDateDesc(
+                            pvid,
+                            bid,
+                            tenantId(),
+                            date
+                    );
 
             long baseOnHand = last.map(InventorySnapshot::getQuantityOnHand).orElse(0L);
-            long baseReserved = last.map(InventorySnapshot::getQuantityReserved).orElse(0L);
             LocalDate baseDate = last.map(InventorySnapshot::getSnapshotDate).orElse(LocalDate.EPOCH);
 
             LocalDateTime baseDateTime = baseDate.atStartOfDay();
 
             List<StockTransaction> txns =
-                    stockTransactionRepository.findBetweenVariant(pvid, bid, baseDateTime, toDate);
+                    stockTransactionRepository.findBetweenVariant(
+                            pvid,
+                            bid,
+                            tenantId(),
+                            baseDateTime,
+                            toDate
+                    );
 
             long deltaOnHand = 0;
             long deltaReserved = 0;
 
             for (StockTransaction txn : txns) {
                 switch (txn.getType()) {
-                    case RECEIPT, ADJUSTMENT ->
+
+                    case RECEIPT, ADJUSTMENT, TRANSFER_IN, RETURN ->
                             deltaOnHand += txn.getQuantityDelta();
 
-                    case SALE ->
-                            baseOnHand += txn.getQuantityDelta();
+                    case SALE, TRANSFER_OUT ->
+                            deltaOnHand += txn.getQuantityDelta();
 
                     case RESERVATION ->
                             deltaReserved += txn.getQuantityDelta();
@@ -1455,7 +1819,6 @@ public class InventoryService {
             map.put("productId", pid);
             map.put("branchId", bid);
             map.put("quantityOnHand", baseOnHand + deltaOnHand);
-            map.put("quantityReserved", baseReserved + deltaReserved);
             map.put("snapshotDate", baseDate);
 
             result.add(map);
@@ -1467,32 +1830,39 @@ public class InventoryService {
     @Transactional(readOnly = true)
     public boolean inventoryExists(UUID variantId, UUID branchId) {
         return inventoryItemRepository
-                .findByProductVariant_IdAndBranchId(variantId, branchId)
+                .findByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
+                        variantId,
+                        tenantId(),
+                        branchId
+                )
                 .isPresent();
     }
 
     @Transactional(readOnly = true)
     public long availableQuantity(UUID variantId, UUID branchId) {
-        return inventoryItemRepository
-                .findByProductVariant_IdAndBranchId(variantId, branchId)
-                .map(i -> i.getQuantityOnHand() - i.getQuantityReserved())
-                .orElse(0L);
+
+        List<InventoryBatch> batches =
+                batchRepository.findAvailableBatches(
+                        variantId,
+                        tenantId(),
+                        branchId
+                );
+
+        return batches.stream()
+                .mapToLong(InventoryBatch::getQuantityRemaining)
+                .sum();
     }
 
     private void recomputeWeightedAverage(UUID variantId, UUID branchId) {
 
-        InventoryItem item = inventoryItemRepository
-                .findByProductVariant_IdAndBranchId(variantId, branchId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException("Inventory item not found"));
+        InventoryItem item = getItemOrThrow(variantId, branchId);
 
         List<InventoryBatch> batches =
-                batchRepository
-                        .findByProductVariantIdAndBranchIdAndQuantityRemainingGreaterThanOrderByReceivedAtAsc(
-                                variantId,
-                                branchId,
-                                0L
-                        );
+                batchRepository.findAvailableBatches(
+                        variantId,
+                        tenantId(),
+                        branchId
+                );
 
         BigDecimal totalValue = BigDecimal.ZERO;
         long totalQty = 0;
@@ -1527,11 +1897,11 @@ public class InventoryService {
     public List<InventoryBatchDTO> getBatchesForVariantBranch(UUID variantId, UUID branchId) {
 
         List<InventoryBatch> batches =
-                batchRepository.findByProductVariantIdAndBranchIdAndQuantityRemainingGreaterThanOrderByReceivedAtAsc(
-                                variantId,
-                                branchId,
-                                0L
-                        );
+                batchRepository.findAvailableBatches(
+                    variantId,
+                    tenantId(),
+                    branchId
+                );
 
         List<InventoryBatchDTO> result = new ArrayList<>();
 
@@ -1563,7 +1933,11 @@ public class InventoryService {
     public List<BatchConsumptionDTO> getBatchConsumptions(UUID batchId) {
 
         List<BatchConsumption> consumptions =
-                batchConsumptionRepository.findByBatchId(batchId);
+                batchConsumptionRepository.findByBatchIdAndTenantIdAndBranchId(
+                        batchId,
+                        tenantId(),
+                        branchId()
+                );
 
         List<BatchConsumptionDTO> result = new ArrayList<>();
 
@@ -1595,6 +1969,7 @@ public class InventoryService {
             long quantity,
             List<UUID> selectedBatchIds
     ) {
+        branchTenantGuard.validate(branchId);
 
         long remaining = quantity;
         BigDecimal totalCost = BigDecimal.ZERO;
@@ -1602,12 +1977,11 @@ public class InventoryService {
         List<Map<String, Object>> rows = new ArrayList<>();
 
         List<InventoryBatch> batches =
-                batchRepository
-                        .findByProductVariantIdAndBranchIdAndQuantityRemainingGreaterThanOrderByReceivedAtAsc(
-                                variantId,
-                                branchId,
-                                0L
-                        );
+                batchRepository.findAvailableBatches(
+                    variantId,
+                    tenantId(),
+                    branchId
+                );
 
         // 1️⃣ MANUAL FIRST
         if (selectedBatchIds != null && !selectedBatchIds.isEmpty()) {
@@ -1675,13 +2049,14 @@ public class InventoryService {
 
     @Transactional(readOnly = true)
     public BigDecimal getFifoSellingPrice(UUID variantId, UUID branchId) {
+        branchTenantGuard.validate(branchId);
 
         List<InventoryBatch> batches =
-                batchRepository.findByProductVariantIdAndBranchIdAndQuantityRemainingGreaterThanOrderByReceivedAtAsc(
-                                variantId,
-                                branchId,
-                                0L
-                        );
+                batchRepository.findAvailableBatches(
+                    variantId,
+                    tenantId(),
+                    branchId
+                );
 
         if (batches.isEmpty()) {
             return BigDecimal.ZERO;
@@ -1703,12 +2078,14 @@ public class InventoryService {
         UUID variantId = item.getProductVariant().getId();
         UUID branchId = item.getBranchId();
 
+        long reserved = computeReserved(variantId, branchId);
+
         List<InventoryBatch> batches =
-                batchRepository.findByProductVariantIdAndBranchIdAndQuantityRemainingGreaterThanOrderByReceivedAtAsc(
-                                variantId,
-                                branchId,
-                                0L
-                        );
+                batchRepository.findAvailableBatches(
+                        variantId,
+                        tenantId(),
+                        branchId
+                );
 
         int batchCount = batches.size();
 
@@ -1731,14 +2108,14 @@ public class InventoryService {
                 .productId(item.getProductVariant().getProduct().getId())
                 .productName(item.getProductVariant().getProduct().getName())
                 .productSKU(item.getProductVariant().getProduct().getSku())
-                .productVariantId(item.getProductVariant().getId())
+                .productVariantId(variantId)
                 .productClassification(item.getProductVariant().getClassification())
                 .productVariantSKU(item.getProductVariant().getSku())
                 .branchId(branchId)
-                .branchName(branchRepository.findById(item.getBranchId()).get().getName())
+                .branchName(branchRepository.findById(branchId).map(Branch::getName).orElse("N/A"))
                 .averageCost(item.getAverageCost())
                 .quantityOnHand(item.getQuantityOnHand())
-                .quantityReserved(item.getQuantityReserved())
+                .quantityReserved(reserved) // 🔥 FIXED
                 .batchCount(batchCount)
                 .oldestBatchDate(oldest != null ? oldest.toString() : null)
                 .totalRemainingBatchValue(totalRemainingValue)
@@ -1770,18 +2147,18 @@ public class InventoryService {
             UUID branchId,
             long quantityNeeded
     ) {
+        branchTenantGuard.validate(branchId);
 
         List<Map<String, Object>> result = new ArrayList<>();
 
         long remaining = quantityNeeded;
 
         List<InventoryBatch> batches =
-                batchRepository
-                        .findByProductVariantIdAndBranchIdAndQuantityRemainingGreaterThanOrderByReceivedAtAsc(
-                                variantId,
-                                branchId,
-                                0L
-                        );
+                batchRepository.findAvailableBatches(
+                    variantId,
+                    tenantId(),
+                    branchId
+                );
 
         boolean first = true;
 
@@ -1809,5 +2186,86 @@ public class InventoryService {
         }
 
         return result;
+    }
+
+    private InventoryItem getItemOrThrow(UUID variantId, UUID branchId) {
+        return inventoryItemRepository
+                .findByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
+                        variantId,
+                        tenantId(),
+                        branchId
+                )
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Inventory item not found"));
+    }
+
+    private synchronized void ensureNotProcessed(
+            String reference,
+            StockTransaction.TransactionType type,
+            UUID branchId
+    ) {
+
+        if (reference == null) return;
+
+        boolean exists =
+                stockTransactionRepository.existsByReferenceAndTypeAndTenantIdAndBranchId(
+                        reference,
+                        type,
+                        tenantId(),
+                        branchId
+                );
+
+        if (exists) {
+            throw new IllegalStateException(
+                    "Duplicate operation detected: " + type + " already processed for reference=" + reference
+            );
+        }
+    }
+
+    private boolean reservationExists(UUID referenceId, UUID variantId, UUID branchId) {
+        return batchReservationRepository.existsByReferenceIdAndProductVariantIdAndTenantIdAndBranchId(
+                referenceId,
+                variantId,
+                tenantId(),
+                branchId
+        );
+    }
+
+    private long computeReserved(UUID variantId, UUID branchId) {
+
+        return batchReservationRepository
+                .sumReservedByVariantAndTenantAndBranch(
+                        variantId,
+                        tenantId(),
+                        branchId
+                );
+    }
+
+    private UUID extractReferenceId(String reference) {
+
+        if (reference == null) return null;
+
+        if (!reference.contains(":")) {
+            return null;
+        }
+
+        try {
+            String[] parts = reference.split(":");
+            return UUID.fromString(parts[1]);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private UUID requireReferenceId(String reference, String context) {
+        UUID id = extractReferenceId(reference);
+
+        if (id == null) {
+            throw new IllegalArgumentException(
+                    context + " requires reference in format TYPE:UUID"
+            );
+        }
+
+        return id;
     }
 }

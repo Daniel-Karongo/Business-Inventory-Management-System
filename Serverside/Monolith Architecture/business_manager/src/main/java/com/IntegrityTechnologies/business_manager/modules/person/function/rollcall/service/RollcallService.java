@@ -16,6 +16,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.function.rollca
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.RollcallAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.RollcallRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.service.TenantExecutionService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -39,6 +40,7 @@ public class RollcallService {
     private final BranchRepository branchRepository;
     private final BiometricService biometricService;
     private final EmailService notificationService;
+    private final TenantExecutionService tenantExecutionService;
 
     /* =====================================================
        LOGIN ROLLCALL
@@ -324,7 +326,12 @@ public class RollcallService {
     @Scheduled(cron = "${rollcall.absentees.mark.cron}")
     @Transactional
     public void markAbsentees() {
-        markAbsenteesAndReturn();
+
+        tenantExecutionService.forEachTenant(tenantId -> {
+
+            markAbsenteesAndReturn();
+
+        });
     }
 
     /* =====================================================

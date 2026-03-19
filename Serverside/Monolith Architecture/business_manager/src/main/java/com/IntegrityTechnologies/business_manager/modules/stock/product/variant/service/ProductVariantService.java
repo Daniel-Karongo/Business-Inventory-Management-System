@@ -157,7 +157,7 @@ public class ProductVariantService {
         UUID productId = variant.getProduct().getId();
 
         boolean hasInventory =
-                inventoryItemRepository.existsByProductVariantIdAndTenantIdAndBranchId(
+                inventoryItemRepository.existsByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
                         variantId,
                         tenantId(),
                         branchId()

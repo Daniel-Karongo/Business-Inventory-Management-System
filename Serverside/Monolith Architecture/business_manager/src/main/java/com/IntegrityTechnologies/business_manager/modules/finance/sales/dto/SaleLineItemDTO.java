@@ -13,7 +13,7 @@ public class SaleLineItemDTO {
     private UUID productVariantId;
     private String productName;
     private UUID branchId;
-    private int quantity;
+    private long quantity;
     private BigDecimal unitPrice;
     private BigDecimal lineTotal;
     private List<BatchConsumptionDTO> batchConsumptions;

@@ -546,7 +546,7 @@ public class ProductService {
     @Transactional
     public ProductDTO updateProduct(UUID id, ProductUpdateDTO dto) throws IOException {
 
-        Product product = getProductOrThrow(id);
+        Product product = getProductOrThrow(id, dto.getBranchId());
 
         validateUpdateDTOUniqueness(id, dto);
 
@@ -945,7 +945,8 @@ public class ProductService {
     @Transactional
     public void softDeleteProduct(UUID productId, String reason) {
 
-        Product product = getProductOrThrow(productId);
+        Product product = getProductOrThrow(productId, null);
+        UUID branchId = product.getBranchId();
 
         if (Boolean.TRUE.equals(product.getDeleted())) {
             return;
@@ -960,12 +961,12 @@ public class ProductService {
 
         List<ProductImage> productImages =
                 productImageRepository.findByTenantIdAndBranchIdAndProduct_Id(
-                        tenantId(), branchId(), productId
+                        tenantId(), branchId, productId
                 );
 
         List<ProductVariant> variants =
                 productVariantRepository.findByTenantIdAndBranchIdAndProduct_Id(
-                        tenantId(), branchId(), productId
+                        tenantId(), branchId, productId
                 );
 
         List<UUID> variantIds = variants.stream()
@@ -984,13 +985,13 @@ public class ProductService {
         product.setDeleted(true);
         product.setDeletedAt(now);
 
-        productImageRepository.softDeleteByProductId(productId, tenantId(), branchId());
+        productImageRepository.softDeleteByProductId(productId, tenantId(), branchId);
 
         if (!variantIds.isEmpty()) {
-            productVariantRepository.softDeleteByProductId(productId, tenantId(), branchId());
+            productVariantRepository.softDeleteByProductId(productId, tenantId(), branchId);
             productVariantImageRepository.softDeleteByVariantIds(variantIds, tenantId(), branchId());
-            inventoryItemRepository.softDeleteByVariantIds(variantIds);
-            stockTransactionRepository.softDeleteByVariantIds(variantIds);
+            inventoryItemRepository.softDeleteByVariantIds(variantIds, tenantId());
+            stockTransactionRepository.softDeleteByVariantIds(variantIds, tenantId());
         }
 
         productRepository.save(product);
@@ -1064,7 +1065,8 @@ public class ProductService {
             );
         }
 
-        Product product = getProductOrThrow(productId);
+        Product product = getProductOrThrow(productId, null);
+        UUID branchId = product.getBranchId();
 
         if (!Boolean.TRUE.equals(product.getDeleted())) {
             return;
@@ -1086,6 +1088,8 @@ public class ProductService {
                         .action("RESTORE")
                         .productId(product.getId())
                         .productName(product.getName())
+                        .branchId(branchId)
+                        .tenantId(tenantId())
                         .timestamp(now)
                         .performedBy(username)
                         .reason(reason)
@@ -1096,11 +1100,11 @@ public class ProductService {
        PRODUCT IMAGES
        =========================== */
 
-        productImageRepository.restoreByProductId(productId, tenantId(), branchId());
+        productImageRepository.restoreByProductId(productId, tenantId(), branchId);
 
         List<ProductImage> productImages =
                 productImageRepository.findByTenantIdAndBranchIdAndProduct_Id(
-                        tenantId(), branchId(), productId
+                        tenantId(), branchId, productId
                 );
 
         auditProductImages(productImages,
@@ -1166,12 +1170,16 @@ public class ProductService {
             if (options != null) {
 
                 if (options.isRestoreStockTransactions()) {
-                    stockTransactionRepository.restoreByVariantIds(variantIds);
+                    stockTransactionRepository.restoreByVariantIds(
+                            variantIds,
+                            tenantId(),
+                            branchId()
+                    );
                 }
 
                 if (options.isRestoreInventory()) {
-                    inventoryItemRepository.restoreByVariantIds(variantIds);
-                    recalculateInventoryFromTransactions(variantIds, username);
+                    inventoryItemRepository.restoreByVariantIds(variantIds, tenantId(), branchId);
+                    recalculateInventoryFromTransactions(variantIds, username, branchId);
                 }
             }
         }
@@ -1196,31 +1204,29 @@ public class ProductService {
 
     private void recalculateInventoryFromTransactions(
             List<UUID> variantIds,
-            String username
+            String username,
+            UUID branchId
     ) {
 
         for (UUID variantId : variantIds) {
 
             List<StockTransaction> transactions =
-                    stockTransactionRepository
-                            .findByProductVariantIdAndDeletedFalse(variantId);
+                    stockTransactionRepository.findByProductVariantIdAndBranchIdAndTenantIdOrderByTimestampDesc(variantId, tenantId(), branchId());
 
             long quantity = transactions.stream()
                     .mapToLong(StockTransaction::getQuantityDelta)
                     .sum();
 
-            List<InventoryItem> items =
-                    inventoryItemRepository.findByProductVariant_Id(variantId);
+            InventoryItem item =
+                    inventoryItemRepository.findByProductVariantIdAndTenantIdAndBranchId(variantId, tenantId(), branchId)
+                            .orElseThrow(() -> new EntityNotFoundException("Inventory for variant " + variantId));
 
-            for (InventoryItem item : items) {
-                item.setDeleted(false);
-                item.setQuantityOnHand(quantity);
-                item.setQuantityReserved(0L);
-                item.setLastUpdatedAt(LocalDateTime.now());
-                item.setLastUpdatedBy(username);
-            }
+            item.setDeleted(false);
+            item.setQuantityOnHand(quantity);
+            item.setLastUpdatedAt(LocalDateTime.now());
+            item.setLastUpdatedBy(username);
 
-            inventoryItemRepository.saveAll(items);
+            inventoryItemRepository.save(item);
         }
     }
 
@@ -1228,10 +1234,10 @@ public class ProductService {
     PRIVATE HELPERS
     ========================================================= */
 
-    private Product getProductOrThrow(UUID id) {
+    private Product getProductOrThrow(UUID id, UUID branchId) {
 
         return productRepository
-                .findByIdAndTenantIdAndBranchId(id, tenantId(), branchId())
+                .findByIdAndTenantIdAndBranchId(id, tenantId(), branchId == null ? branchId() : branchId)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
     }
 
@@ -1444,8 +1450,12 @@ public class ProductService {
             }
         }
 
-        if (stockTransactionRepository.existsByProductId(productId) ||
-                inventoryItemRepository.existsByProductId(productId)) {
+        if (stockTransactionRepository.existsByProductIdAndTenantIdAndBranchId(
+                productId, tenantId(), branchId()
+        ) ||
+                inventoryItemRepository.existsByProductIdAndTenantIdAndBranchId(
+                        productId, tenantId(), branchId()
+                )) {
 
             throw new IllegalStateException("Cannot delete product with inventory history");
         }

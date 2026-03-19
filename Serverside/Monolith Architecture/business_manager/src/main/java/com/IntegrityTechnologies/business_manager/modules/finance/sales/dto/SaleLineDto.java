@@ -10,7 +10,7 @@ import java.util.UUID;
 public class SaleLineDto {
     private UUID productVariantId;   // REQUIRED
     private UUID branchId;
-    private Integer quantity;
+    private Long quantity;
     private BigDecimal unitPrice; // optional
     private List<BatchSelectionDto> batchSelections;
 }

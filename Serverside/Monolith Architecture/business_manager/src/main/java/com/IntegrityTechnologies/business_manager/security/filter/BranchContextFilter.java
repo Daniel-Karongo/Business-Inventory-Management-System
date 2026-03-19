@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.security.filter;
 
 import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.BranchResolver;
+import com.IntegrityTechnologies.business_manager.security.util.HibernateBranchFilterManager;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -21,6 +22,7 @@ import java.util.UUID;
 public class BranchContextFilter extends OncePerRequestFilter {
 
     private final BranchResolver branchResolver;
+    private final HibernateBranchFilterManager branchFilterManager;
 
     @Override
     protected void doFilterInternal(
@@ -54,7 +56,11 @@ public class BranchContextFilter extends OncePerRequestFilter {
 
             UUID resolved = branchResolver.resolveBranch(branchId);
 
+            // 👇 THIS IS THE KEY CHANGE
             BranchContext.set(resolved);
+
+            // 🔥 Apply filter ONLY if branch is NOT null
+            branchFilterManager.enable(resolved);
 
             filterChain.doFilter(request, response);
 

@@ -59,7 +59,8 @@ public interface DepartmentAuditRepository extends JpaRepository<DepartmentAudit
        ENTERPRISE FEED
     ========================================================= */
 
-    List<DepartmentAudit> findTop200ByTenantIdOrderByTimestampDesc(
-            UUID tenantId
+    List<DepartmentAudit> findTop10ByTenantIdAndBranchIdOrderByTimestampDesc(
+            UUID tenantId,
+            UUID branchId
     );
 }

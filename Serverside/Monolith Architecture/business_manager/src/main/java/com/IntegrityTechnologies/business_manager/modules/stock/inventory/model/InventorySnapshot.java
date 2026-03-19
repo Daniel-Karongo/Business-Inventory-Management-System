@@ -33,7 +33,6 @@ public class InventorySnapshot extends BranchAwareEntity {
     private UUID productVariantId;
 
     private Long quantityOnHand;
-    private Long quantityReserved;
 
     private BigDecimal valuation;
 

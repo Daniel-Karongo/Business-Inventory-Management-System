@@ -6,6 +6,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.departme
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.UserSession;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.service.RollcallService;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.service.TenantExecutionService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -27,49 +28,49 @@ public class AutoLogoutScheduler {
     private final DepartmentRepository departmentRepository;
     private final BranchRepository branchRepository;
     private final RollcallService rollcallService;
+    private final TenantExecutionService tenantExecutionService;
 
     @Scheduled(cron = "#{@logoutCronProvider.getCron()}")
     @Transactional
     public void autoLogoutMissingUsers() {
 
-        // ---- PREVENT MULTIPLE RUNS TODAY ----
         if (runTracker.hasRunToday()) {
             System.out.println("Auto logout already executed today. Skipping...");
             return;
         }
 
         LocalDateTime now = LocalDateTime.now();
-        List<UserSession> sessions = userSessionRepository.findAllByLogoutTimeIsNull();
 
-        for (UserSession session : sessions) {
+        tenantExecutionService.forEachTenant(tenantId -> {
 
-            session.setLogoutTime(now);
-            session.setAutoLoggedOut(true);
-            userSessionRepository.save(session);
+            List<UserSession> sessions =
+                    userSessionRepository.findAllByLogoutTimeIsNull();
 
-            UUID userId = session.getUserId();
-            UUID branchId = session.getBranchId();
+            for (UserSession session : sessions) {
 
-            UUID tenantId = TenantContext.getTenantId();
+                session.setLogoutTime(now);
+                session.setAutoLoggedOut(true);
+                userSessionRepository.save(session);
 
-            Set<Department> departments =
-                    departmentRepository.findDepartmentsByUserId(
-                            tenantId,
-                            userId
-                    );
+                UUID userId = session.getUserId();
+                UUID branchId = session.getBranchId();
 
-            if (departments.isEmpty()) {
-                rollcallService.recordLogoutRollcall(userId, null, branchId);
-            } else {
-                for (Department dept : departments) {
-                    rollcallService.recordLogoutRollcall(userId, dept.getId(), branchId);
+                Set<Department> departments =
+                        departmentRepository.findDepartmentsByUserId(
+                                tenantId,
+                                userId
+                        );
+
+                if (departments.isEmpty()) {
+                    rollcallService.recordLogoutRollcall(userId, null, branchId);
+                } else {
+                    for (Department dept : departments) {
+                        rollcallService.recordLogoutRollcall(userId, dept.getId(), branchId);
+                    }
                 }
             }
-        }
+        });
 
-        System.out.println("Auto logout executed at: " + now);
-
-        // ---- MARK AS EXECUTED FOR TODAY ----
         runTracker.markRunToday();
     }
 }

@@ -13,7 +13,7 @@ public interface ProductAuditRepository extends JpaRepository<ProductAudit, UUID
             UUID productId
     );
 
-    List<ProductAudit> findTop5ByTenantIdAndBranchIdOrderByTimestampDesc(
+    List<ProductAudit> findTop10ByTenantIdAndBranchIdOrderByTimestampDesc(
             UUID tenantId,
             UUID branchId
     );

@@ -1,7 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.branch.service;
 
 import com.IntegrityTechnologies.business_manager.config.util.PhoneAndEmailNormalizer;
-import com.IntegrityTechnologies.business_manager.security.util.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.BranchAccountingSettings;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
@@ -26,15 +25,19 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.user.rep
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserDepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.service.SubscriptionGuard;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
-import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
+import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.PrivilegesChecker;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -57,6 +60,9 @@ public class BranchService {
     private final TaxSystemStateRepository taxSystemStateRepository;
     private final TaxProperties taxProperties;
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
 
     /* =====================================================
        CREATE
@@ -394,6 +400,7 @@ public class BranchService {
         BranchAudit audit = BranchAudit.builder()
                 .branchId(branch.getId())
                 .branchName(branch.getName())
+                .tenantId(tenantId())
                 .action(action)
                 .fieldChanged(field)
                 .oldValue(oldValue)

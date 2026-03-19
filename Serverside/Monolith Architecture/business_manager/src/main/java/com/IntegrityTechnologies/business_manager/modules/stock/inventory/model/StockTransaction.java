@@ -12,11 +12,20 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "stock_transactions", indexes = {
-        @Index(name = "idx_stock_tx_tenant_branch", columnList = "tenant_id, branch_id"),
-        @Index(name = "idx_stock_tx_product", columnList = "product_id"),
-        @Index(name = "idx_stock_tx_deleted", columnList = "deleted")
-})
+@Table(
+        name = "stock_transactions",
+        indexes = {
+                @Index(name = "idx_stock_tx_tenant_branch", columnList = "tenant_id, branch_id"),
+                @Index(name = "idx_stock_tx_product", columnList = "product_id"),
+                @Index(name = "idx_stock_tx_deleted", columnList = "deleted")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uq_tx_reference_type_scope",
+                        columnNames = {"reference", "type", "tenant_id", "branch_id"}
+                )
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

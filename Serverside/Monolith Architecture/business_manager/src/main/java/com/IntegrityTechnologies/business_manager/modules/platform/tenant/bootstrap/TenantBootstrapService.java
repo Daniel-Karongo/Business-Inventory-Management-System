@@ -77,6 +77,7 @@ public class TenantBootstrapService {
                             BranchAudit.builder()
                                     .branchId(b.getId())
                                     .branchName(b.getName())
+                                    .tenantId(tenantId)
                                     .action("CREATE")
                                     .reason("Tenant bootstrap")
                                     .performedByUsername("system")

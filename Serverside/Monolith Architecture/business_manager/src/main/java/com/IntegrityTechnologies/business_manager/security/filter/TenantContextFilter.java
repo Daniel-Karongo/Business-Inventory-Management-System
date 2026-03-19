@@ -30,54 +30,38 @@ public class TenantContextFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        try {
-
-            /* =====================================================
-               PLATFORM ADMIN BYPASS
-            ===================================================== */
-            if (SecurityUtils.isPlatformAdmin()) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-
-            /* =====================================================
-               TENANT RESOLUTION CHECK
-            ===================================================== */
-            UUID tenantId = TenantContext.getOrNull();
-
-            if (tenantId == null) {
-                filterChain.doFilter(request, response);
-                return;
-            }
-
-            /* =====================================================
-               TENANT STATUS VALIDATION
-            ===================================================== */
-            TenantStatus status =
-                    tenantMetadataCache.getTenantStatus(tenantId);
-
-            if (status != TenantStatus.ACTIVE
-                    && status != TenantStatus.TRIAL) {
-
-                throw new RuntimeException("Tenant inactive");
-            }
-
-            /* =====================================================
-               ENABLE HIBERNATE TENANT FILTER (CRITICAL FIX)
-            ===================================================== */
-            if (tenantId != null)
-                filterManager.enable(tenantId);
-
-            /* =====================================================
-               CONTINUE FILTER CHAIN
-            ===================================================== */
+        /* =====================================================
+           PLATFORM ADMIN BYPASS
+        ===================================================== */
+        if (SecurityUtils.isPlatformAdmin()) {
             filterChain.doFilter(request, response);
-
-        } finally {
-            /* =====================================================
-               CLEANUP THREAD CONTEXT
-            ===================================================== */
-            TenantContext.clear();
+            return;
         }
+
+        UUID tenantId = TenantContext.getOrNull();
+
+        if (tenantId == null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        /* =====================================================
+           TENANT STATUS VALIDATION
+        ===================================================== */
+        TenantStatus status =
+                tenantMetadataCache.getTenantStatus(tenantId);
+
+        if (status != TenantStatus.ACTIVE
+                && status != TenantStatus.TRIAL) {
+
+            throw new RuntimeException("Tenant inactive");
+        }
+
+        /* =====================================================
+           ENABLE HIBERNATE FILTER
+        ===================================================== */
+        filterManager.enable(tenantId);
+
+        filterChain.doFilter(request, response);
     }
 }

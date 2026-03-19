@@ -66,7 +66,7 @@ public class DashboardService {
                 .revenueTrend(buildSnapshotTrend(branchId, "revenue"))
                 .profitTrend(buildSnapshotTrend(branchId, "profit"))
                 .vatTrend(buildSnapshotTrend(branchId, "vat"))
-                .topBatches(top5ProfitableBatches())
+                .topBatches(top5ProfitableBatches(branchId))
                 .recentActivities(buildRecentActivities(branchId))
                 .build();
     }
@@ -157,15 +157,21 @@ public class DashboardService {
     private DashboardSummaryDTO.OperationalKpis buildOperationalKpis(UUID branchId) {
 
         long lowStock =
-                inventoryItemRepository.findByBranchId(branchId)
+                inventoryItemRepository.findByTenantIdAndBranchIdAndDeletedFalse(
+                                tenantId(),
+                                branchId
+                        )
                         .stream()
-                        .filter(i -> (i.getQuantityOnHand() - i.getQuantityReserved()) <= 5)
+                        .filter(i -> i.getQuantityOnHand() <= 5)
                         .count();
 
         long outOfStock =
-                inventoryItemRepository.findByBranchId(branchId)
+                inventoryItemRepository.findByTenantIdAndBranchIdAndDeletedFalse(
+                                tenantId(),
+                                branchId
+                        )
                         .stream()
-                        .filter(i -> (i.getQuantityOnHand() - i.getQuantityReserved()) <= 0)
+                        .filter(i -> i.getQuantityOnHand() <= 0)
                         .count();
 
         return DashboardSummaryDTO.OperationalKpis.builder()
@@ -173,27 +179,31 @@ public class DashboardService {
                 .refundCountToday(0L)
                 .lowStockCount(lowStock)
                 .outOfStockCount(outOfStock)
-                .deadStockValue(computeDeadStockValue())
+                .deadStockValue(computeDeadStockValue(branchId))
                 .build();
     }
 
     /* ============================================================
        REVENUE TREND (7 DAYS)
     ============================================================ */
-    private BigDecimal computeDeadStockValue() {
+    private BigDecimal computeDeadStockValue(UUID branchId) {
 
         LocalDateTime cutoff = LocalDateTime.now().minusDays(60);
 
-        return inventoryItemRepository.findDeadStock(cutoff)
+        return inventoryItemRepository.findDeadStock(
+                        tenantId(),
+                        branchId,
+                        cutoff
+                )
                 .stream()
                 .map(i -> i.getAverageCost()
                         .multiply(BigDecimal.valueOf(i.getQuantityOnHand())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private List<ChartPoint> top5ProfitableBatches() {
+    private List<ChartPoint> top5ProfitableBatches(UUID branchId) {
 
-        return batchConsumptionRepository.topBatchProfitRaw()
+        return batchConsumptionRepository.topBatchProfitRaw(tenantId(), branchId)
                 .stream()
                 .map(row -> {
 
@@ -215,10 +225,12 @@ public class DashboardService {
 
     private List<ActivityDTO> buildRecentActivities(UUID branchId) {
 
+        UUID tenantId = tenantId();
+
         List<ActivityDTO> out = new ArrayList<>();
 
         stockTransactionRepository
-                .findByBranchIdOrderByTimestampDesc(branchId)
+                .findByBranchIdAndTenantIdOrderByTimestampDesc(branchId, tenantId)
                 .stream()
                 .limit(5)
                 .forEach(tx ->
@@ -230,10 +242,8 @@ public class DashboardService {
                         ))
                 );
 
-        userAuditRepository.findTop5ByOrderByTimestampDesc(
-                        tenantId(),
-                        PageRequest.of(0,5)
-                )
+        userAuditRepository
+                .findTop10ByTenantIdOrderByTimestampDesc(tenantId)
                 .forEach(a ->
                         out.add(new ActivityDTO(
                                 "USER",
@@ -242,12 +252,9 @@ public class DashboardService {
                                 a.getTimestamp()
                         ))
                 );
-        productAuditRepository.findAll().stream()
-                .sorted(Comparator.comparing(
-                a -> a.getTimestamp(),
-                Comparator.nullsLast(Comparator.reverseOrder())
-            ))
-                .limit(5)
+
+        productAuditRepository
+                .findTop10ByTenantIdAndBranchIdOrderByTimestampDesc(tenantId, branchId)
                 .forEach(a ->
                         out.add(new ActivityDTO(
                                 "PRODUCT",
@@ -257,12 +264,8 @@ public class DashboardService {
                         ))
                 );
 
-        supplierAuditRepository.findAll().stream()
-                .sorted(Comparator.comparing(
-                a -> a.getTimestamp(),
-                Comparator.nullsLast(Comparator.reverseOrder())
-            ))
-                .limit(5)
+        supplierAuditRepository
+                .findTop10ByTenantIdAndBranchIdOrderByTimestampDesc(tenantId, branchId)
                 .forEach(a ->
                         out.add(new ActivityDTO(
                                 "SUPPLIER",
@@ -272,12 +275,8 @@ public class DashboardService {
                         ))
                 );
 
-        branchAuditRepository.findAll().stream()
-                .sorted(Comparator.comparing(
-                a -> a.getTimestamp(),
-                Comparator.nullsLast(Comparator.reverseOrder())
-            ))
-                .limit(5)
+        branchAuditRepository
+                .findTop10ByTenantIdAndBranchIdOrderByTimestampDesc(tenantId, branchId)
                 .forEach(a ->
                         out.add(new ActivityDTO(
                                 "BRANCH",
@@ -287,12 +286,8 @@ public class DashboardService {
                         ))
                 );
 
-        departmentAuditRepository.findAll().stream()
-                .sorted(Comparator.comparing(
-                a -> a.getTimestamp(),
-                Comparator.nullsLast(Comparator.reverseOrder())
-            ))
-                .limit(5)
+        departmentAuditRepository
+                .findTop10ByTenantIdAndBranchIdOrderByTimestampDesc(tenantId, branchId)
                 .forEach(a ->
                         out.add(new ActivityDTO(
                                 "DEPARTMENT",
@@ -302,12 +297,12 @@ public class DashboardService {
                         ))
                 );
 
-        out.sort(
-                Comparator.comparing(
+        return out.stream()
+                .sorted(Comparator.comparing(
                         ActivityDTO::getTime,
                         Comparator.nullsLast(Comparator.reverseOrder())
-                )
-        );
-        return out.stream().limit(10).toList();
+                ))
+                .limit(10)
+                .toList();
     }
 }

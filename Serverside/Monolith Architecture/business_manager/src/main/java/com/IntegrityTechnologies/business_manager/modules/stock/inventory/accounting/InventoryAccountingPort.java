@@ -6,6 +6,7 @@ import java.util.UUID;
 public interface InventoryAccountingPort {
 
     void recordInventoryReceipt(
+            UUID tenantId,
             UUID referenceId,
             UUID branchId,
             BigDecimal value,
@@ -13,6 +14,7 @@ public interface InventoryAccountingPort {
     );
 
     void recordInventoryConsumption(
+            UUID tenantId,
             UUID referenceId,
             UUID branchId,
             BigDecimal value,
@@ -20,17 +22,15 @@ public interface InventoryAccountingPort {
     );
 
     void recordInventoryReturn(
+            UUID tenantId,
             UUID referenceId,
             UUID branchId,
             BigDecimal value,
             String reference
     );
 
-    /** ===========================
-     * TRANSFERS (NEW)
-     * =========================== */
-
     void recordInventoryTransferOut(
+            UUID tenantId,
             UUID referenceId,
             UUID branchId,
             BigDecimal value,
@@ -38,6 +38,7 @@ public interface InventoryAccountingPort {
     );
 
     void recordInventoryTransferIn(
+            UUID tenantId,
             UUID referenceId,
             UUID branchId,
             BigDecimal value,

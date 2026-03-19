@@ -4,13 +4,14 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.r
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.StockTransactionDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.StockTransaction;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,57 +20,95 @@ import java.util.UUID;
 public class StockTransactionService {
 
     private final StockTransactionRepository stockRepository;
-    private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
     private final BranchRepository branchRepository;
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+
+    /* ===================================================== */
+
     public List<StockTransactionDTO> getByProduct(UUID productId) {
-        return stockRepository.findByProductIdOrderByTimestampDesc(productId)
-                .stream().map(this::toDTO)
+        return stockRepository
+                .findByProductIdAndTenantIdOrderByTimestampDesc(productId, tenantId())
+                .stream()
+                .map(this::toDTO)
                 .toList();
     }
 
     public List<StockTransactionDTO> getByVariant(UUID variantId) {
-        return stockRepository.findByProductVariantIdOrderByTimestampDesc(variantId)
-                .stream().map(this::toDTO)
+        return stockRepository
+                .findByProductVariantIdAndTenantIdOrderByTimestampDesc(variantId, tenantId())
+                .stream()
+                .map(this::toDTO)
                 .toList();
     }
 
     public List<StockTransactionDTO> getByBranch(UUID branchId) {
-        return stockRepository.findByBranchIdOrderByTimestampDesc(branchId)
-                .stream().map(this::toDTO)
+        return stockRepository
+                .findByBranchIdAndTenantIdOrderByTimestampDesc(branchId, tenantId())
+                .stream()
+                .map(this::toDTO)
                 .toList();
     }
 
     public List<StockTransactionDTO> getByProductAndBranch(UUID productId, UUID branchId) {
-        return stockRepository.findByProductIdAndBranchIdOrderByTimestampDesc(productId, branchId)
-                .stream().map(this::toDTO)
+        return stockRepository
+                .findByProductIdAndBranchIdAndTenantIdOrderByTimestampDesc(
+                        productId,
+                        branchId,
+                        tenantId()
+                )
+                .stream()
+                .map(this::toDTO)
                 .toList();
     }
 
     public List<StockTransactionDTO> getByVariantAndBranch(UUID variantId, UUID branchId) {
-        return stockRepository.findByProductVariantIdAndBranchIdOrderByTimestampDesc(variantId, branchId)
-                .stream().map(this::toDTO)
+        return stockRepository
+                .findByProductVariantIdAndBranchIdAndTenantIdOrderByTimestampDesc(
+                        variantId,
+                        branchId,
+                        tenantId()
+                )
+                .stream()
+                .map(this::toDTO)
                 .toList();
     }
 
     public List<StockTransactionDTO> getByDateRange(LocalDate from, LocalDate to) {
-        return stockRepository.findByTimestampBetween(
+        return stockRepository
+                .findByDateRange(
+                        tenantId(),
                         from.atStartOfDay(),
-                        to.atTime(23, 59, 59))
-                .stream().map(this::toDTO)
+                        to.atTime(23, 59, 59)
+                )
+                .stream()
+                .map(this::toDTO)
                 .toList();
     }
 
+    /* ===================================================== */
+
     private StockTransactionDTO toDTO(StockTransaction t) {
 
-        ProductVariant variant = productVariantRepository.findById(t.getProductVariantId())
+        ProductVariant variant = productVariantRepository
+                .findById(t.getProductVariantId())
                 .orElse(null);
 
-        String productName = variant != null ? variant.getProduct().getName() : null;
-        String variantName = variant != null ? variant.getClassification() : null;
+        String productName =
+                (variant != null && variant.getProduct() != null)
+                        ? variant.getProduct().getName()
+                        : null;
 
-        String branchName = branchRepository.findById(t.getBranchId())
+        String variantName =
+                (variant != null)
+                        ? variant.getClassification()
+                        : null;
+
+        String branchName = branchRepository
+                .findById(t.getBranchId())
                 .map(b -> b.getName())
                 .orElse(null);
 

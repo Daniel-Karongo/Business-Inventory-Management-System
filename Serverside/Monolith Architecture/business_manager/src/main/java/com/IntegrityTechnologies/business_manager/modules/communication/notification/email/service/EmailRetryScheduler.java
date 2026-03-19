@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.communication.notific
 
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.model.EmailMessage;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.repository.EmailMessageRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.service.TenantExecutionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -16,15 +17,20 @@ public class EmailRetryScheduler {
 
     private final EmailMessageRepository repo;
     private final EmailServiceImpl emailService;
+    private final TenantExecutionService tenantExecutionService;
 
-    @Scheduled(fixedDelay = 300_000) // every 5 minutes
+    @Scheduled(fixedDelay = 300_000)
     public void retryFailedEmails() {
 
-        List<EmailMessage> failed = repo.findByStatus("FAILED");
+        tenantExecutionService.forEachTenant(tenantId -> {
 
-        for (EmailMessage msg : failed) {
-            log.info("Retrying failed email {}", msg.getId());
-            emailService.sendAsync(msg);
-        }
+            List<EmailMessage> failed =
+                    repo.findByStatus("FAILED");
+
+            for (EmailMessage msg : failed) {
+                log.info("Retrying failed email {}", msg.getId());
+                emailService.sendAsync(msg);
+            }
+        });
     }
 }

@@ -79,6 +79,15 @@ public class StockTransactionController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate to
     ) {
+
+        if (from == null || to == null) {
+            throw new IllegalArgumentException("from and to dates are required");
+        }
+
+        if (to.isBefore(from)) {
+            throw new IllegalArgumentException("Invalid date range: 'to' cannot be before 'from'");
+        }
+
         return ResponseEntity.ok(
                 service.getByDateRange(from, to)
         );

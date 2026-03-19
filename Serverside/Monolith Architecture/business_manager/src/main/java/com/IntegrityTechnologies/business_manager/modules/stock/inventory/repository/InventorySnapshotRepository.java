@@ -12,15 +12,22 @@ import java.util.UUID;
 @Repository
 public interface InventorySnapshotRepository extends JpaRepository<InventorySnapshot, UUID> {
 
-    List<InventorySnapshot> findBySnapshotDate(LocalDate date);
+    List<InventorySnapshot> findBySnapshotDateAndTenantIdAndBranchId(
+            LocalDate date,
+            UUID tenantId,
+            UUID branchId
+    );
 
-    List<InventorySnapshot> findByProductVariantIdAndBranchIdOrderBySnapshotDateDesc(
-            UUID productVariantId, UUID branchId);
-
-    Optional<InventorySnapshot>
-    findTopByProductVariantIdAndBranchIdAndSnapshotDateLessThanEqualOrderBySnapshotDateDesc(
+    List<InventorySnapshot> findByProductVariantIdAndBranchIdAndTenantIdOrderBySnapshotDateDesc(
             UUID productVariantId,
             UUID branchId,
+            UUID tenantId
+    );
+
+    Optional<InventorySnapshot> findTopByProductVariantIdAndBranchIdAndTenantIdAndSnapshotDateLessThanEqualOrderBySnapshotDateDesc(
+            UUID productVariantId,
+            UUID branchId,
+            UUID tenantId,
             LocalDate date
     );
 }

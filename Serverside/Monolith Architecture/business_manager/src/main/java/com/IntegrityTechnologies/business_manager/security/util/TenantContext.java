@@ -12,13 +12,13 @@ public final class TenantContext {
         TENANT.set(tenantId);
     }
 
-    public static UUID getTenantId(){
+    public static UUID getTenantId() {
 
         UUID tenantId = TENANT.get();
 
         if (tenantId == null) {
             throw new IllegalStateException(
-                    "TenantContext not initialized for this thread"
+                    "TenantContext not initialized. This is a BUG. Check scheduler or async flow."
             );
         }
 

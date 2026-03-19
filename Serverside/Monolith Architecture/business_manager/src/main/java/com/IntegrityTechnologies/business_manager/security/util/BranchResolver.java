@@ -55,7 +55,12 @@ public class BranchResolver {
         /* ---------- Admin global access ---------- */
 
         if (role.canAccess(Role.MANAGER)) {
-            return null;
+            return branchIdFromRequest; // null = global
+        }
+
+        // NON-ADMIN MUST HAVE BRANCH
+        if (branchIdFromRequest == null) {
+            throw new SecurityException("Branch required for non-admin users");
         }
 
         /* ---------- Resolve current session ---------- */

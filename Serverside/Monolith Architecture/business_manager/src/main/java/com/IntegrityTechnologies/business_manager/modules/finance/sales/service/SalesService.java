@@ -143,6 +143,7 @@ public class SalesService {
                     SaleLineBatchSelection selection =
                             SaleLineBatchSelection.builder()
                                     .batchId(bs.getBatchId())
+                                    .tenantId(tenantId())
                                     .quantity(bs.getQuantity())
                                     .saleLineItem(line)
                                     .build();
@@ -162,6 +163,8 @@ public class SalesService {
 
         Sale sale = Sale.builder()
                 .id(saleId)
+                .branchId(branchId)
+                .tenantId(tenantId())
                 .receiptNo(receiptNumberService.nextSaleReceipt()) // ✅ NEW
                 .createdAt(LocalDateTime.now())
                 .createdBy(currentUser)
@@ -181,7 +184,8 @@ public class SalesService {
                     li.getProductVariantId(),
                     li.getBranchId(),
                     li.getQuantity(),
-                    "SALE:" + saleId
+                    "SALE:" + saleId,
+                    li.getBatchSelections()
             );
         }
 
@@ -214,11 +218,13 @@ public class SalesService {
             );
 
             List<BatchConsumption> consumptions =
-                    batchConsumptionRepository
-                            .findBySaleIdAndProductVariantId(
-                                    sale.getId(),
-                                    li.getProductVariantId()
-                            );
+                    batchConsumptionRepository.findBySaleIdAndProductVariantIdAndTenantIdAndBranchId(
+                    saleId,
+                    li.getProductVariantId(),
+                    tenantId(),
+                    li.getBranchId()
+            );
+
 
             for (BatchConsumption bc : consumptions) {
                 totalCOGS = totalCOGS.add(
@@ -357,7 +363,7 @@ public class SalesService {
                     li.getProductVariantId(),
                     li.getBranchId(),
                     li.getQuantity(),
-                    "UPDATE_RELEASE:" + id
+                    "RELEASE:" + id
             );
         }
 
@@ -407,7 +413,7 @@ public class SalesService {
                 vat = BigDecimal.ZERO;
             }
 
-            newLines.add(SaleLineItem.builder()
+            SaleLineItem line = SaleLineItem.builder()
                     .productVariantId(variant.getId())
                     .productName(variant.getProduct().getName() + " (" +
                             (variant.getClassification() != null ? variant.getClassification() : "UNCLASSIFIED") + ")")
@@ -418,7 +424,25 @@ public class SalesService {
                     .netAmount(net)
                     .vatAmount(vat)
                     .vatRate(vatRate)
-                    .build());
+                    .build();
+
+            // 🔥 ADD THIS
+            if (li.getBatchSelections() != null && !li.getBatchSelections().isEmpty()) {
+
+                for (BatchSelectionDto bs : li.getBatchSelections()) {
+
+                    SaleLineBatchSelection selection =
+                            SaleLineBatchSelection.builder()
+                                    .batchId(bs.getBatchId())
+                                    .quantity(bs.getQuantity())
+                                    .saleLineItem(line)
+                                    .build();
+
+                    line.getBatchSelections().add(selection);
+                }
+            }
+
+            newLines.add(line);
         }
 
         BigDecimal newTotal = newLines.stream()
@@ -440,7 +464,8 @@ public class SalesService {
                     li.getProductVariantId(),
                     li.getBranchId(),
                     li.getQuantity(),
-                    "SALE_UPDATE:" + id
+                    "SALE_UPDATE:" + id,
+                    li.getBatchSelections()
             );
         }
 
@@ -609,7 +634,7 @@ public class SalesService {
                         li.getProductVariantId(),
                         li.getBranchId(),
                         li.getQuantity(),
-                        "CANCEL+REFUND_RELEASE:" + id
+                        "RELEASE:" + id
                 );
             } catch (Exception ignored) {}
         }
@@ -680,10 +705,11 @@ public class SalesService {
                         sale.getLineItems().stream().map(li -> {
 
                             List<BatchConsumptionDTO> consumptions =
-                                    batchConsumptionRepository
-                                            .findBySaleIdAndProductVariantId(
+                                    batchConsumptionRepository.findBySaleIdAndProductVariantIdAndTenantIdAndBranchId(
                                                     sale.getId(),
-                                                    li.getProductVariantId()
+                                                    li.getProductVariantId(),
+                                                    tenantId(),
+                                                    li.getBranchId()
                                             )
                                             .stream()
                                             .map(bc -> BatchConsumptionDTO.builder()

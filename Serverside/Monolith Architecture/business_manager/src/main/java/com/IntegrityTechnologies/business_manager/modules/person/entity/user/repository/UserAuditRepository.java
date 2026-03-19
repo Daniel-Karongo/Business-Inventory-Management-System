@@ -48,4 +48,6 @@ public interface UserAuditRepository extends JpaRepository<UserAudit, UUID> {
             @Param("tenantId") UUID tenantId,
             Pageable pageable
     );
+
+    List<UserAudit> findTop10ByTenantIdOrderByTimestampDesc(UUID tenantId);
 }

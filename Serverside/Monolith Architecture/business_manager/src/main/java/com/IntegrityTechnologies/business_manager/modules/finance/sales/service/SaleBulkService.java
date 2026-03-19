@@ -297,7 +297,8 @@ public class SaleBulkService {
                             li.variant().getId(),
                             li.branch().getId(),
                             li.quantity(),
-                            "BULK-SALE:" + plan.receiptNo()
+                            "SALE:" + sale.getId(),
+                            null // no manual selection in bulk import
                     );
                 }
             }
@@ -525,7 +526,7 @@ public class SaleBulkService {
     private record PlannedLineItem(
             ProductVariant variant,
             Branch branch,
-            int quantity,
+            long quantity,
             BigDecimal unitPrice,
             BigDecimal lineTotal
     ) {}

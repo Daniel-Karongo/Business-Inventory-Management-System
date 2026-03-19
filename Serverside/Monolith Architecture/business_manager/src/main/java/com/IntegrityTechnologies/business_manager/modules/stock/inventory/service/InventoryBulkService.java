@@ -11,7 +11,6 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,10 +30,6 @@ public class InventoryBulkService {
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
-    }
-
-    private UUID branchId() {
-        return BranchContext.get();
     }
 
     public BulkResult<InventoryBulkPreviewResult> bulkReceive(
@@ -117,9 +112,9 @@ public class InventoryBulkService {
 
     private ReceiveStockRequest mapToRequest(InventoryReceiveBulkRow row) {
 
-    /* =========================
-       NORMALIZE INPUT
-       ========================= */
+        /* =========================
+           NORMALIZE INPUT
+           ========================= */
 
         String rawProductName = row.getProductName();
         String rawClassification = row.getClassification();
@@ -148,24 +143,12 @@ public class InventoryBulkService {
                         ? row.getNote().trim()
                         : null;
 
-    /* =========================
-       RESOLVE PRODUCT
-       ========================= */
-
-        Product product = productRepository
-                .findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId(), branchId(), productName)
-                .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Product not found: " + productName
-                        )
-                );
-
-    /* =========================
-       RESOLVE BRANCH
-       ========================= */
+        /* =========================
+           RESOLVE BRANCH (SOURCE OF TRUTH)
+           ========================= */
 
         Branch branch = branchRepository.findByTenantIdAndBranchCodeIgnoreCase(
-                        TenantContext.getTenantId(),
+                        tenantId(),
                         branchCode
                 )
                 .orElseThrow(() ->
@@ -174,9 +157,27 @@ public class InventoryBulkService {
                         )
                 );
 
-    /* =========================
-       RESOLVE SUPPLIERS
-       ========================= */
+        UUID resolvedBranchId = branch.getId();
+
+        /* =========================
+           RESOLVE PRODUCT (TENANT SAFE)
+           ========================= */
+
+        Product product = productRepository
+                .findByTenantIdAndBranchIdAndNameIgnoreCase(
+                        tenantId(),
+                        resolvedBranchId,
+                        productName
+                )
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Product not found: " + productName + " in branch " + branchCode
+                        )
+                );
+
+        /* =========================
+           RESOLVE SUPPLIERS (STRICT TENANT + BRANCH)
+           ========================= */
 
         List<SupplierUnit> supplierUnits = new ArrayList<>();
 
@@ -187,10 +188,15 @@ public class InventoryBulkService {
 
             String supplierName = PhoneAndEmailNormalizer.toTitleCase(su.getSupplierName().trim());
 
-            Supplier supplier = supplierRepository.findByNameSafe(supplierName, false, tenantId(), branchId())
+            Supplier supplier = supplierRepository.findByNameSafe(
+                            supplierName,
+                            false,
+                            tenantId(),
+                            resolvedBranchId
+                    )
                     .orElseThrow(() ->
                             new IllegalArgumentException(
-                                    "Supplier not found: " + supplierName
+                                    "Supplier not found: " + supplierName + " in branch " + branchCode
                             )
                     );
 
@@ -202,14 +208,14 @@ public class InventoryBulkService {
             supplierUnits.add(unit);
         }
 
-    /* =========================
-       BUILD REQUEST
-       ========================= */
+        /* =========================
+           BUILD REQUEST
+           ========================= */
 
         ReceiveStockRequest req = new ReceiveStockRequest();
         req.setProductId(product.getId());
         req.setClassification(classification);
-        req.setBranchId(branch.getId());
+        req.setBranchId(resolvedBranchId);
         req.setSellingPrice(row.getSellingPrice());
         req.setReference(reference);
         req.setNote(note);

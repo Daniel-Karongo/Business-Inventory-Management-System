@@ -38,9 +38,13 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
 
         String tenantCode = resolveTenant(request);
 
-        if (tenantCode != null) {
+        if (tenantCode == null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-            // 🔥 CRITICAL FIX: disable filter BEFORE lookup
+        try {
+
             Session session = entityManager.unwrap(Session.class);
 
             if (session.getEnabledFilter("tenantFilter") != null) {
@@ -51,10 +55,13 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
                     tenantMetadataCache.getTenantIdByCode(tenantCode);
 
             TenantContext.setTenantId(tenantId);
-            log.debug("Resolved tenant [{}] → {}", tenantCode);
-        }
 
-        filterChain.doFilter(request, response);
+            filterChain.doFilter(request, response);
+
+        } finally {
+            // Safety net (final cleanup filter also handles it)
+            TenantContext.clear();
+        }
     }
 
     private String resolveTenant(HttpServletRequest request) {

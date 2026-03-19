@@ -40,17 +40,21 @@ public class TenantExecutionService {
 
             for (Tenant tenant : tenants.getContent()) {
 
+                UUID tenantId = tenant.getId();
+
                 try {
 
-                    TenantContext.setTenantId(tenant.getId());
+                    TenantContext.setTenantId(tenantId);
 
-                    task.accept(tenant.getId());
+                    log.debug("Executing task for tenant {}", tenantId);
+
+                    task.accept(tenantId);
 
                 } catch (Exception e) {
 
                     log.error(
                             "Tenant job failed for tenant {}",
-                            tenant.getId(),
+                            tenantId,
                             e
                     );
 

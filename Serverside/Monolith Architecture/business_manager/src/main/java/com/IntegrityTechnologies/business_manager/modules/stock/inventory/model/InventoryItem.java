@@ -48,9 +48,6 @@ public class InventoryItem extends BranchAwareEntity {
     @Column(nullable = false)
     private Long quantityOnHand;
 
-    @Column(nullable = false)
-    private Long quantityReserved;
-
     @Column(precision = 18, scale = 6)
     private BigDecimal averageCost = BigDecimal.ZERO;
 
