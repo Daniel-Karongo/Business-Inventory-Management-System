@@ -36,7 +36,12 @@ public class CacheConfiguration {
                         "accountsPayable",
 
                         // STOCK MODULE
-                        "barcode-scan"
+                        "barcode-scan",
+
+                        // 🔥 NEW
+                        "variant-search",
+                        "packaging",
+                        "pricing-preview"
                 );
 
         manager.setCaffeine(

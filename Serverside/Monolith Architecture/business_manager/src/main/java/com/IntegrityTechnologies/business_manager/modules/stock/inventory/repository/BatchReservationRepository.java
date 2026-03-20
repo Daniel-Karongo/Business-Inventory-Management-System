@@ -6,9 +6,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Repository
@@ -65,5 +67,19 @@ public interface BatchReservationRepository
             UUID productVariantId,
             UUID tenantId,
             UUID branchId
+    );
+
+    @Query("""
+        SELECT r.productVariantId, SUM(r.quantity)
+        FROM BatchReservation r
+        WHERE r.productVariantId IN :variantIds
+          AND r.tenantId = :tenantId
+          AND r.branchId = :branchId
+        GROUP BY r.productVariantId
+    """)
+    List<Object[]> sumReservedBulk(
+            @Param("variantIds") List<UUID> variantIds,
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId
     );
 }

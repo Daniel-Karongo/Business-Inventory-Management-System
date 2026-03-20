@@ -2,6 +2,8 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.variant
 
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.VariantScanProjection;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -184,5 +186,41 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
             @Param("name") String name,
             @Param("classification") String classification,
             @Param("tenantId") UUID tenantId
+    );
+
+    @Query("""
+        SELECT v FROM ProductVariant v
+        JOIN FETCH v.product p
+        WHERE v.tenantId = :tenantId
+          AND v.branchId = :branchId
+          AND v.deleted = false
+          AND (
+                LOWER(v.sku) LIKE LOWER(CONCAT('%', :search, '%'))
+             OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))
+          )
+    """)
+    List<ProductVariant> searchSellable(
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId,
+            @Param("search") String search
+    );
+
+    @Query("""
+        SELECT v FROM ProductVariant v
+        JOIN FETCH v.product p
+        WHERE v.tenantId = :tenantId
+          AND v.branchId = :branchId
+          AND v.deleted = false
+          AND (
+                :search IS NULL OR
+                LOWER(v.sku) LIKE LOWER(CONCAT('%', :search, '%')) OR
+                LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))
+          )
+    """)
+    Page<ProductVariant> searchSellablePaged(
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId,
+            @Param("search") String search,
+            Pageable pageable
     );
 }

@@ -50,4 +50,16 @@ public class SaleLineItem extends BranchAwareEntity {
     private BigDecimal netAmount;
     private BigDecimal vatAmount;
     private BigDecimal vatRate;
+
+    @Column(name = "packaging_id", columnDefinition = "BINARY(16)")
+    private UUID packagingId;
+
+    @Column(nullable = false)
+    private Long unitsPerPackaging; // snapshot
+
+    @Column(nullable = false)
+    private Long baseUnits; // CRITICAL (inventory truth)
+
+    @Column(columnDefinition = "TEXT")
+    private String pricingBreakdownJson;
 }

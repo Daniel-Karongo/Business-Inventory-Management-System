@@ -1,22 +1,30 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service;
 
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.cache.CacheInvalidationService;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.mapper.ProductVariantMapper;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.repository.ProductVariantPackagingRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import jakarta.persistence.EntityManagerFactory;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.Cache;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -28,6 +36,8 @@ public class ProductVariantService {
     private final ProductVariantMapper mapper;
     private final VariantBarcodeService barcodeService;
     private final InventoryItemRepository inventoryItemRepository;
+    private final ProductVariantPackagingRepository packagingRepo;
+    private final CacheInvalidationService cacheInvalidationService;
 
     private UUID tenantId() { return TenantContext.getTenantId(); }
     private UUID branchId() { return BranchContext.get(); }
@@ -72,7 +82,32 @@ public class ProductVariantService {
 
         v = variantRepo.save(v);
 
+        // ✅ CRITICAL: ensure base packaging exists
+        createBasePackaging(v);
+
+        cacheInvalidationService.evictVariantSearch(branchId());
+        cacheInvalidationService.evictPricingByVariant(v.getId(), branchId());
+
         return barcodeService.generateBarcodeIfMissing(v.getId());
+    }
+
+    private void createBasePackaging(ProductVariant variant) {
+
+        boolean exists = packagingRepo
+                .findByProductVariantIdAndIsBaseUnitTrueAndDeletedFalse(variant.getId()) != null;
+
+        if (exists) return;
+
+        ProductVariantPackaging packaging = ProductVariantPackaging.builder()
+                .productVariant(variant)
+                .name("Piece") // default naming (can evolve later)
+                .unitsPerPackaging(1L)
+                .isBaseUnit(true)
+                .tenantId(tenantId())
+                .branchId(branchId())
+                .build();
+
+        packagingRepo.save(packaging);
     }
 
     public ProductVariant getEntity(UUID id) {
@@ -105,6 +140,7 @@ public class ProductVariantService {
     }
 
     @Transactional
+    @CacheEvict(value = "pricing-preview", allEntries = true)
     public ProductVariantDTO updateVariant(UUID id, ProductVariantUpdateDTO dto) {
 
         ProductVariant v = getEntity(id);
@@ -146,10 +182,14 @@ public class ProductVariantService {
                 computeMinSelling(v.getAverageBuyingPrice(), pct)
         );
 
+        cacheInvalidationService.evictVariantSearch(branchId());
+        cacheInvalidationService.evictPricingByVariant(v.getId(), branchId());
+
         return mapper.toDTO(variantRepo.save(v));
     }
 
     @Transactional
+    @CacheEvict(value = "pricing-preview", allEntries = true)
     public void deleteVariant(UUID variantId) {
 
         ProductVariant variant = getEntity(variantId);
@@ -186,6 +226,9 @@ public class ProductVariantService {
 
         variant.setDeleted(true);
         variantRepo.save(variant);
+
+        cacheInvalidationService.evictVariantSearch(branchId());
+        cacheInvalidationService.evictPricingByVariant(variant.getId(), branchId());
     }
 
     public BigDecimal computeMinSelling(BigDecimal buying, Double pct) {

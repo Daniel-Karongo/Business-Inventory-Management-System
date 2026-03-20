@@ -1,5 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.sales.service;
 
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.service.ProductVariantPackagingService;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.*;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.service.PricingEngineService;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.service.ProductPriceService;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
@@ -28,6 +33,7 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.m
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
@@ -60,6 +66,10 @@ public class SalesService {
     private final JournalEntryRepository journalEntryRepository;
     private final BatchConsumptionRepository batchConsumptionRepository;
     private final RevenueRecognitionService revenueRecognitionService;
+    private final ProductVariantPackagingService packagingService;
+    private final ProductPriceService priceService;
+    private final PricingEngineService pricingEngine;
+    private final ObjectMapper objectMapper;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -79,18 +89,144 @@ public class SalesService {
                 .orElse(null);
 
         List<SaleLineItem> lines = new ArrayList<>();
+        UUID customerGroupId = resolveCustomerGroupId(customerId);
 
         for (var li : req.getItems()) {
 
-            ProductVariant v = productVariantRepository.findById(li.getProductVariantId())
+            ProductVariant variant = productVariantRepository.findByIdSafe(
+                            li.getProductVariantId(),
+                            false,
+                            tenantId(),
+                            li.getBranchId()
+                    )
                     .orElseThrow(() ->
                             new IllegalArgumentException("ProductVariant not found: " + li.getProductVariantId()));
 
-            Product p = v.getProduct();
+            Product product = variant.getProduct();
 
-            BigDecimal unitPrice = Optional.ofNullable(li.getUnitPrice())
-                    .orElse(v.getMinimumSellingPrice());
+            // =====================================================
+            // 1. PACKAGING
+            // =====================================================
+            ProductVariantPackaging packaging;
 
+            if (li.getPackagingId() != null) {
+                packaging = packagingService.getPackagings(variant.getId())
+                        .stream()
+                        .filter(pkg -> pkg.getId().equals(li.getPackagingId()))
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalArgumentException("Invalid packaging for variant"));
+            } else {
+                packaging = packagingService.getBasePackaging(variant.getId());
+            }
+
+            if (packaging.getUnitsPerPackaging() <= 0) {
+                throw new IllegalStateException("Invalid packaging configuration");
+            }
+
+            // =====================================================
+            // 2. PRICE
+            // =====================================================
+            PricingResult pricing;
+
+            if (li.getUnitPrice() != null) {
+
+                // 👤 MANUAL OVERRIDE
+                pricing = new PricingResult();
+                pricing.setBasePrice(li.getUnitPrice());
+                pricing.setFinalPrice(li.getUnitPrice());
+                pricing.setResolvedPriceId(null);
+
+                pricing.getAdjustments().add(
+                        new PricingAdjustment(
+                                "MANUAL_OVERRIDE",
+                                "USER_INPUT",
+                                BigDecimal.ZERO,
+                                "Manual price override"
+                        )
+                );
+
+                if (variant.getMinimumSellingPrice() != null &&
+                        li.getUnitPrice().compareTo(variant.getMinimumSellingPrice()) < 0) {
+
+                    pricing.getAdjustments().add(
+                            new PricingAdjustment(
+                                    "BELOW_MIN_PRICE",
+                                    "SYSTEM_WARNING",
+                                    variant.getMinimumSellingPrice().subtract(li.getUnitPrice()),
+                                    "Price below minimum selling price"
+                            )
+                    );
+                }
+
+            } else {
+
+                long baseUnits = li.getQuantity() * packaging.getUnitsPerPackaging();
+
+                pricing = pricingEngine.resolve(
+                        PricingContext.builder()
+                                .tenantId(tenantId())
+                                .branchId(li.getBranchId())
+                                .productVariantId(variant.getId())
+                                .packagingId(packaging.getId())
+                                .quantity(baseUnits)
+                                .customerId(customerId)
+                                .customerGroupId(customerGroupId)
+                                .pricingTime(LocalDateTime.now())
+                                .policy(
+                                        PricingPolicy.builder()
+                                                .enforceMinimumPrice(false)
+                                                .allowManualOverride(true)
+                                                .build()
+                                )
+                                .build()
+                );
+            }
+
+            BigDecimal unitPrice = pricing.getFinalPrice();
+
+            // =====================================================
+            // 3. BASE UNITS
+            // =====================================================
+            long baseUnits = li.getQuantity() * packaging.getUnitsPerPackaging();
+
+            // =====================================================
+            // 4. STRICT BATCH VALIDATION
+            // =====================================================
+            List<SaleLineBatchSelection> selections = new ArrayList<>();
+
+            if (li.getBatchSelections() != null && !li.getBatchSelections().isEmpty()) {
+
+                long totalSelected = 0;
+
+                for (BatchSelectionDto bs : li.getBatchSelections()) {
+
+                    long qty = bs.getQuantity();
+
+                    if (qty <= 0) {
+                        throw new IllegalArgumentException("Batch selection quantity must be > 0");
+                    }
+
+                    totalSelected += qty;
+
+                    selections.add(
+                            SaleLineBatchSelection.builder()
+                                    .batchId(bs.getBatchId())
+                                    .tenantId(tenantId())
+                                    .quantity(qty)
+                                    .build()
+                    );
+                }
+
+                if (totalSelected != baseUnits) {
+                    throw new IllegalArgumentException(
+                            "Batch selections must equal base units. Expected=" + baseUnits + ", got=" + totalSelected
+                    );
+                }
+            }
+
+            // =====================================================
+            // 5. TAX (RESTORED FULL LOGIC)
+            // =====================================================
             BigDecimal gross = unitPrice.multiply(BigDecimal.valueOf(li.getQuantity()));
 
             var taxState = taxSystemStateService.getOrCreate(li.getBranchId());
@@ -122,54 +258,59 @@ public class SalesService {
                 vat = BigDecimal.ZERO;
             }
 
+            // =====================================================
+            // 6. BUILD LINE
+            // =====================================================
+            String pricingJson;
+            try {
+                pricingJson = objectMapper.writeValueAsString(pricing);
+            } catch (Exception e) {
+                pricingJson = "{\"error\":\"pricing_serialization_failed\"}";
+            }
+
             SaleLineItem line = SaleLineItem.builder()
-                    .productVariantId(v.getId())
-                    .productName(p.getName() + " (" +
-                            (v.getClassification() != null ? v.getClassification() : "UNCLASSIFIED") + ")")
+                    .productVariantId(variant.getId())
+                    .productName(product.getName() + " (" +
+                            (variant.getClassification() != null ? variant.getClassification() : "UNCLASSIFIED") + ")")
                     .branchId(li.getBranchId())
+                    .packagingId(packaging.getId())
+                    .unitsPerPackaging(packaging.getUnitsPerPackaging())
+                    .baseUnits(baseUnits)
                     .unitPrice(unitPrice)
                     .quantity(li.getQuantity())
                     .lineTotal(gross)
                     .netAmount(net)
                     .vatAmount(vat)
                     .vatRate(vatRate)
+                    .batchSelections(new ArrayList<>())
+                    .pricingBreakdownJson(pricingJson)
                     .build();
 
-            // 🔥 ADD THIS BLOCK — manual batch mapping
-            if (li.getBatchSelections() != null && !li.getBatchSelections().isEmpty()) {
-
-                for (BatchSelectionDto bs : li.getBatchSelections()) {
-
-                    SaleLineBatchSelection selection =
-                            SaleLineBatchSelection.builder()
-                                    .batchId(bs.getBatchId())
-                                    .tenantId(tenantId())
-                                    .quantity(bs.getQuantity())
-                                    .saleLineItem(line)
-                                    .build();
-
-                    line.getBatchSelections().add(selection);
-                }
-            }
+            selections.forEach(sel -> {
+                sel.setSaleLineItem(line);
+                line.getBatchSelections().add(sel);
+            });
 
             lines.add(line);
         }
 
-        BigDecimal computedTotal = lines.stream()
+        BigDecimal total = lines.stream()
                 .map(SaleLineItem::getLineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         UUID branchId = extractSingleBranch(lines);
 
+        String receiptNo = receiptNumberService.nextSaleReceipt();
+
         Sale sale = Sale.builder()
                 .id(saleId)
                 .branchId(branchId)
                 .tenantId(tenantId())
-                .receiptNo(receiptNumberService.nextSaleReceipt()) // ✅ NEW
+                .receiptNo(receiptNo)
                 .createdAt(LocalDateTime.now())
                 .createdBy(currentUser)
                 .customerId(customerId)
-                .totalAmount(computedTotal)
+                .totalAmount(total)
                 .totalDiscount(Optional.ofNullable(req.getTotalDiscount()).orElse(BigDecimal.ZERO))
                 .totalTax(Optional.ofNullable(req.getTotalTax()).orElse(BigDecimal.ZERO))
                 .lineItems(lines)
@@ -179,11 +320,14 @@ public class SalesService {
 
         Sale saved = saleRepository.save(sale);
 
+        // =====================================================
+        // 7. RESERVE STOCK
+        // =====================================================
         for (SaleLineItem li : lines) {
             inventoryService.reserveStockVariant(
                     li.getProductVariantId(),
                     li.getBranchId(),
-                    li.getQuantity(),
+                    li.getBaseUnits(),
                     "SALE:" + saleId,
                     li.getBatchSelections()
             );
@@ -212,7 +356,7 @@ public class SalesService {
             inventoryService.decrementVariantStock(
                     li.getProductVariantId(),
                     li.getBranchId(),
-                    li.getQuantity().intValue(),
+                    li.getBaseUnits().intValue(), // 🔥 FIXED
                     "SALE_DELIVERY:" + sale.getId(),
                     li.getBatchSelections()
             );
@@ -357,30 +501,99 @@ public class SalesService {
             throw new IllegalStateException("Only CREATED sales can be updated");
         }
 
-        // release existing reservations
+        // =====================================================
+        // 1. RELEASE OLD RESERVATIONS
+        // =====================================================
         for (SaleLineItem li : sale.getLineItems()) {
             inventoryService.releaseReservationVariant(
                     li.getProductVariantId(),
                     li.getBranchId(),
-                    li.getQuantity(),
-                    "RELEASE:" + id
+                    li.getBaseUnits(),
+                    "SALE:" + id
             );
         }
 
-        UUID customerId = customerService.findOrCreateCustomer(
-                List.of(req.getCustomerIdentifiers())
-        );
+        UUID customerId = Optional.ofNullable(req.getCustomerIdentifiers())
+                .map(ci -> customerService.findOrCreateCustomer(List.of(ci)))
+                .orElse(null);
+        UUID customerGroupId = resolveCustomerGroupId(customerId);
 
         List<SaleLineItem> newLines = new ArrayList<>();
 
         for (var li : req.getItems()) {
 
-            ProductVariant variant = productVariantRepository.findById(li.getProductVariantId())
-                    .orElseThrow(() ->
-                            new IllegalArgumentException("Variant not found: " + li.getProductVariantId()));
+            ProductVariant variant = productVariantRepository.findByIdSafe(
+                            li.getProductVariantId(),
+                            false,
+                            tenantId(),
+                            li.getBranchId()
+                    )
+                    .orElseThrow(() -> new IllegalArgumentException("Variant not found"));
 
-            BigDecimal unitPrice = Optional.ofNullable(li.getUnitPrice())
-                    .orElse(variant.getMinimumSellingPrice());
+            Product product = variant.getProduct();
+
+            ProductVariantPackaging packaging;
+
+            if (li.getUnitPrice() != null) {
+                throw new IllegalStateException("Manual price override not allowed during update");
+            }
+
+            if (li.getPackagingId() != null) {
+                packaging = packagingService.getPackagings(variant.getId())
+                        .stream()
+                        .filter(pkg -> pkg.getId().equals(li.getPackagingId()))
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalArgumentException("Invalid packaging"));
+            } else {
+                packaging = packagingService.getBasePackaging(variant.getId());
+            }
+
+            long baseUnits = li.getQuantity() * packaging.getUnitsPerPackaging();
+
+            PricingResult pricing = pricingEngine.resolve(
+                    PricingContext.builder()
+                            .tenantId(tenantId())
+                            .branchId(li.getBranchId())
+                            .productVariantId(variant.getId())
+                            .packagingId(packaging.getId())
+                            .quantity(baseUnits)
+                            .customerId(customerId)
+                            .customerGroupId(customerGroupId)
+                            .pricingTime(LocalDateTime.now())
+                            .build()
+            );
+
+            BigDecimal unitPrice = pricing.getFinalPrice();
+
+            List<SaleLineBatchSelection> selections = new ArrayList<>();
+
+            if (li.getBatchSelections() != null && !li.getBatchSelections().isEmpty()) {
+
+                long totalSelected = 0;
+
+                for (BatchSelectionDto bs : li.getBatchSelections()) {
+
+                    long qty = bs.getQuantity();
+
+                    if (qty <= 0) {
+                        throw new IllegalArgumentException("Batch selection quantity must be > 0");
+                    }
+
+                    totalSelected += qty;
+
+                    selections.add(
+                            SaleLineBatchSelection.builder()
+                                    .batchId(bs.getBatchId())
+                                    .tenantId(tenantId())
+                                    .quantity(qty)
+                                    .build()
+                    );
+                }
+
+                if (totalSelected != baseUnits) {
+                    throw new IllegalArgumentException("Batch selections must equal base units");
+                }
+            }
 
             BigDecimal gross = unitPrice.multiply(BigDecimal.valueOf(li.getQuantity()));
 
@@ -413,58 +626,60 @@ public class SalesService {
                 vat = BigDecimal.ZERO;
             }
 
+            String pricingJson;
+            try {
+                pricingJson = objectMapper.writeValueAsString(pricing);
+            } catch (Exception e) {
+                pricingJson = "{\"error\":\"pricing_serialization_failed\"}";
+            }
+
             SaleLineItem line = SaleLineItem.builder()
                     .productVariantId(variant.getId())
-                    .productName(variant.getProduct().getName() + " (" +
+                    .productName(product.getName() + " (" +
                             (variant.getClassification() != null ? variant.getClassification() : "UNCLASSIFIED") + ")")
                     .branchId(li.getBranchId())
+                    .packagingId(packaging.getId())
+                    .unitsPerPackaging(packaging.getUnitsPerPackaging())
+                    .baseUnits(baseUnits)
                     .unitPrice(unitPrice)
                     .quantity(li.getQuantity())
                     .lineTotal(gross)
                     .netAmount(net)
                     .vatAmount(vat)
                     .vatRate(vatRate)
+                    .batchSelections(new ArrayList<>())
+                    .pricingBreakdownJson(pricingJson)
                     .build();
 
-            // 🔥 ADD THIS
-            if (li.getBatchSelections() != null && !li.getBatchSelections().isEmpty()) {
-
-                for (BatchSelectionDto bs : li.getBatchSelections()) {
-
-                    SaleLineBatchSelection selection =
-                            SaleLineBatchSelection.builder()
-                                    .batchId(bs.getBatchId())
-                                    .quantity(bs.getQuantity())
-                                    .saleLineItem(line)
-                                    .build();
-
-                    line.getBatchSelections().add(selection);
-                }
-            }
+            selections.forEach(sel -> {
+                sel.setSaleLineItem(line);
+                line.getBatchSelections().add(sel);
+            });
 
             newLines.add(line);
         }
 
-        BigDecimal newTotal = newLines.stream()
-                .map(SaleLineItem::getLineTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
         sale.getLineItems().clear();
         sale.getLineItems().addAll(newLines);
 
+        BigDecimal total = newLines.stream()
+                .map(SaleLineItem::getLineTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         sale.setCustomerId(customerId);
-        sale.setTotalAmount(newTotal);
-        sale.setTotalDiscount(Optional.ofNullable(req.getTotalDiscount()).orElse(BigDecimal.ZERO));
-        sale.setTotalTax(Optional.ofNullable(req.getTotalTax()).orElse(BigDecimal.ZERO));
+        sale.setTotalAmount(total);
 
         saleRepository.save(sale);
 
+        // =====================================================
+        // 2. RE-RESERVE
+        // =====================================================
         for (SaleLineItem li : newLines) {
             inventoryService.reserveStockVariant(
                     li.getProductVariantId(),
                     li.getBranchId(),
-                    li.getQuantity(),
-                    "SALE_UPDATE:" + id,
+                    li.getBaseUnits(),
+                    "SALE:" + id,
                     li.getBatchSelections()
             );
         }
@@ -490,7 +705,7 @@ public class SalesService {
             inventoryService.releaseReservationVariant(
                     li.getProductVariantId(),
                     li.getBranchId(),
-                    li.getQuantity(),
+                    li.getBaseUnits(),
                     "CANCEL:" + id
             );
         }
@@ -633,7 +848,7 @@ public class SalesService {
                 inventoryService.releaseReservationVariant(
                         li.getProductVariantId(),
                         li.getBranchId(),
-                        li.getQuantity(),
+                        li.getBaseUnits(),
                         "RELEASE:" + id
                 );
             } catch (Exception ignored) {}
@@ -768,5 +983,13 @@ public class SalesService {
         }
 
         return branches.iterator().next();
+    }
+
+    private UUID resolveCustomerGroupId(UUID customerId) {
+        if (customerId == null) return null;
+
+        return customerRepository.findById(customerId)
+                .map(c -> c.getGroup() != null ? c.getGroup().getId() : null)
+                .orElse(null);
     }
 }

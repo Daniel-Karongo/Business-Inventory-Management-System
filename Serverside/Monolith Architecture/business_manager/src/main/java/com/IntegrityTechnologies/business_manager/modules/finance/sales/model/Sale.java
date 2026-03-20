@@ -19,6 +19,12 @@ import java.util.UUID;
         indexes = {
                 @Index(name = "idx_sales_created_at", columnList = "createdAt"),
                 @Index(name = "idx_sales_tenant_branch", columnList = "tenant_id, branch_id")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_sales_tenant_receipt",
+                        columnNames = {"tenant_id", "branch_id", "receipt_no"}
+                )
         }
 )
 @Data
@@ -31,7 +37,7 @@ public class Sale extends BranchAwareEntity {
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
-    @Column(unique = true)
+    @Column(nullable = false)
     private String receiptNo;
 
     private String createdBy;

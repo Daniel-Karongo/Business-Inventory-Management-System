@@ -48,6 +48,9 @@ public class BatchReservation extends BranchAwareEntity {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Version
+    private Long version;
+
     @PrePersist
     public void onCreate() {
         if (createdAt == null) {

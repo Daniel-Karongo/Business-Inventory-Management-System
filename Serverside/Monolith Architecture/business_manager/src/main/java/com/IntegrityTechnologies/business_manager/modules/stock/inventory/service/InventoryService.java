@@ -50,6 +50,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -88,6 +89,12 @@ public class InventoryService {
     // ------------------------
     // EXISTING / CORE METHODS
     // ------------------------
+
+    private List<UUID> sortIds(UUID... ids) {
+        return Arrays.stream(ids)
+                .sorted(Comparator.comparing(UUID::toString))
+                .toList();
+    }
 
     @Transactional
     public ApiResponse receiveStock(ReceiveStockRequest req) {
@@ -166,7 +173,10 @@ public class InventoryService {
                 variant = new ProductVariant();
                 variant.setProduct(product);
                 variant.setClassification(req.getClassification());
+                variant.setTenantId(tenantId());
+                variant.setBranchId(req.getBranchId());
 
+                variant = productVariantRepository.save(variant);
                 variant.setSku(
                         req.getNewVariantSku() != null
                                 ? req.getNewVariantSku()
@@ -865,30 +875,51 @@ public class InventoryService {
         );
 
         final UUID tenantId = tenantId();
-
         UUID referenceId = requireReferenceId(reference, "Reservation");
+
+        // =====================================================
+        // 🔒 GLOBAL LOCK ORDER (PREVENT DEADLOCK)
+        // =====================================================
+        InventoryItem item = inventoryItemRepository
+                .lockByVariant(productVariantId, tenantId, branchId)
+                .orElseThrow(() -> new OutOfStockException("Inventory not found"));
+
+        long reserved = computeReserved(productVariantId, branchId);
+        long available = item.getQuantityOnHand();
+
+        if ((available - reserved) < quantity) {
+            throw new OutOfStockException("Insufficient available stock after reservations");
+        }
 
         long remaining = quantity;
 
         // =====================================================
-        // 🔥 1. MANUAL SELECTION FIRST
+        // 🔥 STRICT MODE (MANUAL)
         // =====================================================
         if (manualSelections != null && !manualSelections.isEmpty()) {
 
-            for (SaleLineBatchSelection sel : manualSelections) {
+            // 🔥 enforce deterministic lock order
+            List<UUID> orderedBatchIds = manualSelections.stream()
+                    .map(SaleLineBatchSelection::getBatchId)
+                    .sorted(Comparator.comparing(UUID::toString))
+                    .toList();
+
+            Map<UUID, SaleLineBatchSelection> map =
+                    manualSelections.stream()
+                            .collect(Collectors.toMap(SaleLineBatchSelection::getBatchId, s -> s));
+
+            for (UUID batchId : orderedBatchIds) {
+
+                SaleLineBatchSelection sel = map.get(batchId);
 
                 InventoryBatch batch = batchRepository
-                        .findByIdForUpdate(
-                                sel.getBatchId(),
-                                tenantId,
-                                branchId
-                        )
+                        .findByIdForUpdate(batchId, tenantId, branchId)
                         .orElseThrow(() -> new IllegalArgumentException("Invalid batch"));
 
-                long reserveQty = Math.min(sel.getQuantity(), remaining);
+                long reserveQty = sel.getQuantity();
 
                 if (batch.getQuantityRemaining() < reserveQty) {
-                    throw new OutOfStockException("Insufficient batch stock");
+                    throw new OutOfStockException("Insufficient stock in selected batch");
                 }
 
                 batch.setQuantityRemaining(batch.getQuantityRemaining() - reserveQty);
@@ -905,12 +936,16 @@ public class InventoryService {
 
                 remaining -= reserveQty;
             }
+
+            if (remaining != 0) {
+                throw new IllegalStateException("STRICT mode violation: mismatch in quantities");
+            }
         }
 
         // =====================================================
-        // 🔥 2. FIFO FALLBACK
+        // 🔥 FIFO MODE
         // =====================================================
-        if (remaining > 0) {
+        else {
 
             List<InventoryBatch> batches =
                     batchRepository.lockAvailableBatchesFIFO(
@@ -919,6 +954,7 @@ public class InventoryService {
                             branchId
                     );
 
+            // already ordered by FIFO (receivedAt ASC)
             for (InventoryBatch batch : batches) {
 
                 if (remaining <= 0) break;
@@ -941,19 +977,23 @@ public class InventoryService {
 
                 remaining -= reserveQty;
             }
+
+            if (remaining > 0) {
+                throw new OutOfStockException("Insufficient stock to reserve");
+            }
         }
 
-        if (remaining > 0)
-            throw new OutOfStockException("Insufficient stock to reserve");
-
+        // =====================================================
+        // 🔥 TRANSACTION LOG
+        // =====================================================
         stockTransactionRepository.save(
                 StockTransaction.builder()
                         .productVariantId(productVariantId)
                         .branchId(branchId)
                         .type(StockTransaction.TransactionType.RESERVATION)
-                        .quantityDelta(quantity) // positive
+                        .quantityDelta(quantity)
                         .reference(reference)
-                        .note("Batch reservation")
+                        .note("Batch reservation (ordered-lock safe)")
                         .timestamp(LocalDateTime.now())
                         .performedBy(getCurrentUsername())
                         .build()
@@ -1131,13 +1171,9 @@ public class InventoryService {
                 branchId
         );
 
-        periodGuardService.validateOpenPeriod(
-                LocalDate.now(),
-                branchId
-        );
+        periodGuardService.validateOpenPeriod(LocalDate.now(), branchId);
 
         final UUID tenantId = tenantId();
-
         UUID saleId = requireReferenceId(reference, "Sale");
 
         InventoryItem item = inventoryItemRepository
@@ -1148,23 +1184,32 @@ public class InventoryService {
         BigDecimal totalCost = BigDecimal.ZERO;
 
         // =====================================================
-        // 🔥 1. MANUAL BATCH SELECTION (HIGHEST PRIORITY)
+        // 🔥 1. STRICT MODE (MANUAL SELECTION)
         // =====================================================
         if (manualSelections != null && !manualSelections.isEmpty()) {
 
-            for (SaleLineBatchSelection sel : manualSelections) {
+            // 🔥 deterministic ordering (deadlock-safe)
+            List<UUID> orderedBatchIds = manualSelections.stream()
+                    .map(SaleLineBatchSelection::getBatchId)
+                    .sorted(Comparator.comparing(UUID::toString))
+                    .toList();
 
-                if (remaining <= 0) break;
+            Map<UUID, SaleLineBatchSelection> map =
+                    manualSelections.stream()
+                            .collect(Collectors.toMap(
+                                    SaleLineBatchSelection::getBatchId,
+                                    s -> s
+                            ));
+
+            for (UUID batchId : orderedBatchIds) {
+
+                SaleLineBatchSelection sel = map.get(batchId);
 
                 InventoryBatch batch = batchRepository
-                        .findByIdForUpdate(
-                                sel.getBatchId(),
-                                tenantId,
-                                branchId
-                        )
+                        .findByIdForUpdate(batchId, tenantId, branchId)
                         .orElseThrow(() -> new IllegalArgumentException("Invalid batch"));
 
-                long consumeQty = Math.min(sel.getQuantity(), remaining);
+                long consumeQty = sel.getQuantity();
 
                 if (batch.getQuantityRemaining() < consumeQty) {
                     throw new OutOfStockException("Insufficient stock in selected batch");
@@ -1188,12 +1233,16 @@ public class InventoryService {
 
                 remaining -= consumeQty;
             }
+
+            if (remaining != 0) {
+                throw new IllegalStateException("STRICT mode violation");
+            }
         }
 
         // =====================================================
-        // 🔥 2. FALLBACK → RESERVATIONS (LOCKED)
+        // 🔥 2. RESERVATION FIRST
         // =====================================================
-        if (remaining > 0) {
+        else {
 
             List<BatchReservation> reservations =
                     batchReservationRepository.lockByReferenceIdAndTenantIdAndBranchId(
@@ -1238,6 +1287,46 @@ public class InventoryService {
 
                 remaining -= consumeQty;
             }
+
+            // =====================================================
+            // 🔥 3. FIFO FALLBACK (SAFE)
+            // =====================================================
+            if (remaining > 0) {
+
+                List<InventoryBatch> batches =
+                        batchRepository.lockAvailableBatchesFIFO(
+                                productVariantId,
+                                tenantId,
+                                branchId
+                        );
+
+                for (InventoryBatch batch : batches) {
+
+                    if (remaining <= 0) break;
+
+                    long consumeQty = Math.min(batch.getQuantityRemaining(), remaining);
+
+                    if (consumeQty <= 0) continue;
+
+                    batch.setQuantityRemaining(batch.getQuantityRemaining() - consumeQty);
+
+                    totalCost = totalCost.add(
+                            batch.getUnitCost().multiply(BigDecimal.valueOf(consumeQty))
+                    );
+
+                    batchConsumptionRepository.save(
+                            BatchConsumption.builder()
+                                    .batchId(batch.getId())
+                                    .saleId(saleId)
+                                    .productVariantId(productVariantId)
+                                    .quantity(consumeQty)
+                                    .unitCost(batch.getUnitCost())
+                                    .build()
+                    );
+
+                    remaining -= consumeQty;
+                }
+            }
         }
 
         if (remaining > 0) {
@@ -1245,7 +1334,7 @@ public class InventoryService {
         }
 
         // =====================================================
-        // 🔥 3. UPDATE INVENTORY
+        // 🔥 FINALIZE INVENTORY + AUDIT + ACCOUNTING
         // =====================================================
         item.setQuantityOnHand(item.getQuantityOnHand() - qty);
         item.setLastUpdatedAt(LocalDateTime.now());
@@ -1255,11 +1344,9 @@ public class InventoryService {
 
         recomputeWeightedAverage(productVariantId, branchId);
 
-        UUID referenceId = saleId;
-
         inventoryAccountingPort.recordInventoryConsumption(
                 tenantId,
-                referenceId,
+                saleId,
                 branchId,
                 totalCost,
                 reference
@@ -1273,7 +1360,7 @@ public class InventoryService {
                         .type(StockTransaction.TransactionType.SALE)
                         .quantityDelta(-qty)
                         .reference(reference)
-                        .note("Sale (manual + FIFO fallback)")
+                        .note("Sale (ordered-lock safe)")
                         .timestamp(LocalDateTime.now())
                         .performedBy(getCurrentUsername())
                         .build()

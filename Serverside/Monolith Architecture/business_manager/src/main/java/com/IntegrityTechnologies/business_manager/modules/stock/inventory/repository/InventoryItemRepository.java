@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.stock.inventory.repos
 
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryItem;
 import jakarta.persistence.LockModeType;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -176,5 +177,18 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
     Page<InventoryItem> findOutOfStock(
             UUID tenantId,
             Pageable pageable
+    );
+
+    @Query("""
+        SELECT i FROM InventoryItem i
+        WHERE i.productVariantId IN :variantIds
+          AND i.tenantId = :tenantId
+          AND i.branchId = :branchId
+          AND i.deleted = false
+    """)
+    List<InventoryItem> findAllByVariants(
+            @Param("variantIds") List<UUID> variantIds,
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId
     );
 }

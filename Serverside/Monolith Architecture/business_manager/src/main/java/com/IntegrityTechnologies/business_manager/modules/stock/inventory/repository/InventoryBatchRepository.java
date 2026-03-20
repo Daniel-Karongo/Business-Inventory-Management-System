@@ -23,18 +23,19 @@ public interface InventoryBatchRepository
     ===================================================== */
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("""
-        SELECT b FROM InventoryBatch b
-        WHERE b.productVariantId = :variantId
-          AND b.tenantId = :tenantId
-          AND b.branchId = :branchId
-          AND b.quantityRemaining > 0
-        ORDER BY b.receivedAt ASC
-    """)
+    @Query(value = """
+        SELECT * FROM inventory_batches b
+        WHERE b.product_variant_id = :variantId
+          AND b.tenant_id = :tenantId
+          AND b.branch_id = :branchId
+          AND b.quantity_remaining > 0
+        ORDER BY b.received_at ASC
+        FOR UPDATE SKIP LOCKED
+    """, nativeQuery = true)
     List<InventoryBatch> lockAvailableBatchesFIFO(
-            @Param("variantId") UUID variantId,
-            @Param("tenantId") UUID tenantId,
-            @Param("branchId") UUID branchId
+            UUID variantId,
+            UUID tenantId,
+            UUID branchId
     );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

@@ -104,7 +104,6 @@ public class CustomerService {
                 .gender(best.getGender())
                 .address(best.getAddress())
                 .notes(best.getNotes())
-                .createdAt(LocalDateTime.now())
                 .build();
 
         Customer saved = customerRepository.save(created);

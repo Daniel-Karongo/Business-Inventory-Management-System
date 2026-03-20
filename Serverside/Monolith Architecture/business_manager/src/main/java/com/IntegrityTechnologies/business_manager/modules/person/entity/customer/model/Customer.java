@@ -1,52 +1,43 @@
 package com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
-@Table(name = "customers")
-@Data
+@Table(
+        name = "customers",
+        indexes = {
+                @Index(name = "idx_customer_tenant_branch", columnList = "tenant_id, branch_id")
+        }
+)
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Customer {
+@SuperBuilder
+public class Customer extends BranchAwareEntity {
 
     @Id
-    @GeneratedValue
-    @Column(columnDefinition = "BINARY(16)")
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
     private String name;
 
     @ElementCollection
-    @CollectionTable(
-            name = "customer_phone_numbers",
-            joinColumns = @JoinColumn(name = "customer_id"),
-            indexes = {
-                    @Index(name = "idx_customer_phone_number", columnList = "phone_number")
-            }
-    )
-    @Column(name = "phone_number")
-    @Builder.Default
+    @CollectionTable(name = "customer_phone_numbers", joinColumns = @JoinColumn(name = "customer_id"))
     private List<String> phoneNumbers = new ArrayList<>();
 
     @ElementCollection
-    @CollectionTable(
-            name = "customer_email_addresses",
-            joinColumns = @JoinColumn(name = "customer_id"),
-            indexes = {
-                    @Index(name = "idx_customer_email_address", columnList = "email_address")
-            }
-    )
-    @Column(name = "email_address")
-    @Builder.Default
+    @CollectionTable(name = "customer_emails", joinColumns = @JoinColumn(name = "customer_id"))
     private List<String> emailAddresses = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "group_id")
+    private CustomerGroup group;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -60,20 +51,6 @@ public class Customer {
 
     private String notes;
 
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-
     @Column(nullable = false)
-    @Builder.Default
     private Boolean deleted = false;
-
-    @PrePersist
-    public void prePersist() {
-        createdAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    public void preUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
 }

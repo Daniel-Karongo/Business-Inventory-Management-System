@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.sales.dto;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 /**
  * One row = one SALE LINE ITEM.
@@ -17,6 +18,9 @@ public class SaleBulkRow {
     /** Product identification (either SKU or name) */
     private String sku;
     private String productName;
+    private UUID packagingId;
+    private UUID customerId;
+    private UUID customerGroupId;
 
     /** Optional variant classification, default = STANDARD */
     private String variant;
