@@ -18,7 +18,7 @@ public interface BatchConsumptionRepository extends JpaRepository<BatchConsumpti
             UUID branchId
     );
 
-    List<BatchConsumption> findByBatchIdAndTenantIdAndBranchId(
+    List<BatchConsumption> findByBatch_IdAndTenantIdAndBranchId(
             UUID batchId,
             UUID tenantId,
             UUID branchId
@@ -33,7 +33,7 @@ public interface BatchConsumptionRepository extends JpaRepository<BatchConsumpti
 
     @Query("""
         SELECT 
-            bc.batchId,
+            bc.batch.id,
             SUM(li.lineTotal * (bc.quantity * 1.0 / li.quantity)),
             SUM(bc.quantity * bc.unitCost)
         FROM BatchConsumption bc
@@ -44,9 +44,15 @@ public interface BatchConsumptionRepository extends JpaRepository<BatchConsumpti
           AND bc.branchId = :branchId
           AND s.branchId = :branchId
           AND li.productVariantId = bc.productVariantId
-        GROUP BY bc.batchId
+        GROUP BY bc.batch.id
     """)
     List<Object[]> topBatchProfitRaw(
+            UUID tenantId,
+            UUID branchId
+    );
+
+    boolean existsByProductVariantIdAndTenantIdAndBranchId(
+            UUID productVariantId,
             UUID tenantId,
             UUID branchId
     );

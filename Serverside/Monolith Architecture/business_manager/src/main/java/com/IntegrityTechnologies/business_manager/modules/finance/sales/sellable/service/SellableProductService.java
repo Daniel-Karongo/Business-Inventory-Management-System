@@ -10,9 +10,6 @@ import com.IntegrityTechnologies.business_manager.modules.stock.inventory.reposi
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.service.ProductVariantPackagingService;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingContext;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingPolicy;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingResult;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.service.PricingEngineService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
@@ -36,7 +33,7 @@ public class SellableProductService {
     private final InventoryItemRepository inventoryItemRepository;
     private final BatchReservationRepository batchReservationRepository;
     private final InventoryBatchRepository batchRepository;
-
+    private final SellableResolverService resolver;
     private final InventoryService inventoryService;
     private final PricingEngineService pricingEngineService;
     private final ProductVariantPackagingService packagingService;
@@ -84,12 +81,15 @@ public class SellableProductService {
                                 i -> i
                         ));
 
-        Map<UUID, Long> reservedMap = new HashMap<>();
+        Map<String, Long> reservedMap = new HashMap<>();
 
         batchReservationRepository
-                .sumReservedBulk(variantIds, tenantId, branchId)
+                .sumReservedBulk(variantIds, tenantId)
                 .forEach(row -> {
-                    reservedMap.put((UUID) row[0], (Long) row[1]);
+
+                    String key = row.getProductVariantId() + "|" + row.getBranchId();
+
+                    reservedMap.put(key, row.getTotalReserved());
                 });
 
         Map<UUID, List<PackagingDTO>> packagingMap =
@@ -145,34 +145,63 @@ public class SellableProductService {
             SellableProductRequest request,
             long quantity,
             Map<UUID, InventoryItem> inventoryMap,
-            Map<UUID, Long> reservedMap,
+            Map<String, Long> reservedMap,
             Map<UUID, List<PackagingDTO>> packagingMap
     ) {
 
         InventoryItem item = inventoryMap.get(variant.getId());
 
         long onHand = item != null ? item.getQuantityOnHand() : 0L;
-        long reserved = reservedMap.getOrDefault(variant.getId(), 0L);
+        long reserved = reservedMap.getOrDefault(
+                variant.getId() + "|" + request.getBranchId(),
+                0L
+        );
         long available = Math.max(0, onHand - reserved);
 
-        // Packaging (already mapped)
-        List<PackagingDTO> packaging =
+        List<PackagingDTO> packagingList =
                 packagingMap.getOrDefault(variant.getId(), List.of());
 
-        // Pricing
-        PricingPreviewDTO pricing = request.isIncludePricing()
-                ? buildPricing(variant, request, quantity)
-                : null;
+        Map<UUID, PricingPreviewDTO> pricingMap = new HashMap<>();
+
+        if (request.isIncludePricing()) {
+            for (PackagingDTO pkg : packagingList) {
+
+                ResolvedSellable resolved = resolver.resolve(
+                        variant.getId(),
+                        pkg.getPackagingId(),
+                        quantity,
+                        request.getBranchId(),
+                        request.getCustomerId(),
+                        request.getCustomerGroupId(),
+                        pkg.getUnitsPerPackaging()
+                );
+
+                pricingMap.put(
+                        pkg.getPackagingId(),
+                        PricingPreviewDTO.builder()
+                                .unitPrice(resolved.getUnitPrice())
+                                .totalPrice(resolved.getTotalPrice())
+                                .adjustments(resolved.getAdjustments())
+                                .build()
+                );
+            }
+        }
 
         // Allocation (still per variant → acceptable)
         AllocationPreviewDTO allocation = null;
         if (request.isIncludeAllocation() && available > 0) {
 
+            long baseUnits = quantity; // fallback
+
+            if (!packagingList.isEmpty()) {
+                baseUnits = quantity * packagingList.get(0).getUnitsPerPackaging();
+            }
+
             Map<String, Object> alloc =
                     inventoryService.previewAllocation(
                             variant.getId(),
                             request.getBranchId(),
-                            quantity,
+                            baseUnits,
                             null
                     );
 
@@ -189,7 +218,7 @@ public class SellableProductService {
         }
 
         List<WarningDTO> warnings =
-                buildWarnings(available, pricing, variant);
+                buildWarnings(available, pricingMap, variant);
 
         return SellableVariantDTO.builder()
                 .productId(variant.getProduct().getId())
@@ -201,8 +230,8 @@ public class SellableProductService {
                 .quantityOnHand(onHand)
                 .quantityReserved(reserved)
                 .quantityAvailable(available)
-                .packagings(packaging)
-                .pricing(pricing)
+                .packagings(packagingList)
+                .pricingByPackaging(pricingMap)
                 .batches(batches)
                 .allocation(allocation)
                 .warnings(warnings)
@@ -212,47 +241,10 @@ public class SellableProductService {
     // =========================
     // PRICING
     // =========================
-    @Cacheable(
-            value = "pricing-preview",
-            key = "T(com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.cache.SellableCacheKey)" +
-                    ".pricing(#variant.id, #request.branchId, #request.customerId, #request.customerGroupId, #quantity)"
-    )
-    public PricingPreviewDTO buildPricing(
-            ProductVariant variant,
-            SellableProductRequest request,
-            long quantity
-    ) {
-        PricingPolicy policy = PricingPolicy.builder()
-                .enforceMinimumPrice(false)
-                .build();
-
-        PricingContext ctx = PricingContext.builder()
-                .tenantId(TenantContext.getTenantId())
-                .branchId(request.getBranchId())
-                .productVariantId(variant.getId())
-                .packagingId(null)
-                .quantity(quantity)
-                .customerId(request.getCustomerId())
-                .customerGroupId(request.getCustomerGroupId())
-                .pricingTime(java.time.LocalDateTime.now())
-                .policy(policy)
-                .build();
-
-        PricingResult result = pricingEngineService.resolve(ctx);
-
-        BigDecimal unitPrice = result.getFinalPrice();
-
-        return PricingPreviewDTO.builder()
-                .unitPrice(unitPrice)
-                .totalPrice(unitPrice.multiply(BigDecimal.valueOf(quantity)))
-                .adjustments(result.getAdjustments())
-                .build();
-    }
-
-    // =========================
-    // BATCH PREVIEW (LIGHT)
-    // =========================
     private List<BatchPreviewDTO> buildBatchPreview(UUID variantId, UUID branchId) {
+
+        Map<UUID, Long> reservedMap =
+                inventoryService.computeReservedPerBatch(variantId, branchId);
 
         List<InventoryBatch> batches =
                 batchRepository.findAvailableBatches(
@@ -262,15 +254,19 @@ public class SellableProductService {
                 );
 
         return batches.stream()
-                .limit(5) // 🔥 only top 5 for UI
-                .map(b -> BatchPreviewDTO.builder()
-                        .batchId(b.getId())
-                        .available(b.getQuantityRemaining())
-                        .unitCost(b.getUnitCost())
-                        .sellingPrice(b.getUnitSellingPrice())
-                        .receivedAt(b.getReceivedAt())
-                        .build()
-                )
+                .limit(5)
+                .map(b -> {
+
+                    long reserved = reservedMap.getOrDefault(b.getId(), 0L);
+                    long available = b.getQuantityRemaining() - reserved;
+
+                    return BatchPreviewDTO.builder()
+                            .batchId(b.getId())
+                            .available(available)
+                            .unitCost(b.getUnitCost())
+                            .receivedAt(b.getReceivedAt())
+                            .build();
+                })
                 .toList();
     }
 
@@ -279,7 +275,7 @@ public class SellableProductService {
     // =========================
     private List<WarningDTO> buildWarnings(
             long available,
-            PricingPreviewDTO pricing,
+            Map<UUID, PricingPreviewDTO> pricingMap,
             ProductVariant variant
     ) {
 
@@ -290,19 +286,23 @@ public class SellableProductService {
                     .type("OUT_OF_STOCK")
                     .message("Item is out of stock")
                     .build());
-        } else if (available > 0 && available <= 5) {
+        } else if (available <= 5) {
             warnings.add(WarningDTO.builder()
                     .type("LOW_STOCK")
                     .message("Low stock remaining")
                     .build());
         }
 
-        if (pricing != null && variant.getMinimumSellingPrice() != null) {
-            if (pricing.getUnitPrice().compareTo(variant.getMinimumSellingPrice()) < 0) {
-                warnings.add(WarningDTO.builder()
-                        .type("BELOW_MIN_PRICE")
-                        .message("Price below minimum selling price")
-                        .build());
+        // ✅ CHECK ALL PACKAGING PRICES
+        if (pricingMap != null && variant.getMinimumSellingPrice() != null) {
+            for (PricingPreviewDTO pricing : pricingMap.values()) {
+                if (pricing.getUnitPrice().compareTo(variant.getMinimumSellingPrice()) < 0) {
+                    warnings.add(WarningDTO.builder()
+                            .type("BELOW_MIN_PRICE")
+                            .message("Price below minimum selling price")
+                            .build());
+                    break; // one warning is enough
+                }
             }
         }
 

@@ -34,6 +34,10 @@ import java.util.*;
 @EqualsAndHashCode(callSuper = true)
 public class ProductVariant extends BranchAwareEntity {
 
+    // NOTE:
+    // Variant is NOT directly sellable.
+    // Sellable = Variant + Packaging + Pricing + Adjustments
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;

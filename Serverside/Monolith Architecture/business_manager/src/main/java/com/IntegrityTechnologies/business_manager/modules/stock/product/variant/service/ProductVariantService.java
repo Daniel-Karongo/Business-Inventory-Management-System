@@ -2,6 +2,8 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.variant
 
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.cache.CacheInvalidationService;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.BatchConsumptionRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.BatchReservationRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.mapper.ProductVariantMapper;
@@ -30,6 +32,16 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class ProductVariantService {
+    /**
+     * IMPORTANT DOMAIN NOTE:
+     *
+     * ProductVariant is NOT directly sellable.
+     *
+     * Sellable = Variant + Packaging + Pricing + Adjustments
+     *
+     * Do NOT use ProductVariant as a source of pricing or stock decisions.
+     * Always use SellableResolverService.
+     */
 
     private final ProductVariantRepository variantRepo;
     private final ProductRepository productRepo;
@@ -38,6 +50,8 @@ public class ProductVariantService {
     private final InventoryItemRepository inventoryItemRepository;
     private final ProductVariantPackagingRepository packagingRepo;
     private final CacheInvalidationService cacheInvalidationService;
+    private final BatchReservationRepository batchReservationRepository;
+    private final BatchConsumptionRepository batchConsumptionRepository;
 
     private UUID tenantId() { return TenantContext.getTenantId(); }
     private UUID branchId() { return BranchContext.get(); }
@@ -93,14 +107,14 @@ public class ProductVariantService {
 
     private void createBasePackaging(ProductVariant variant) {
 
-        boolean exists = packagingRepo
-                .findByProductVariantIdAndIsBaseUnitTrueAndDeletedFalse(variant.getId()) != null;
+        var existing = packagingRepo
+                .findByProductVariantIdAndIsBaseUnitTrueAndDeletedFalse(variant.getId());
 
-        if (exists) return;
+        if (existing != null) return;
 
         ProductVariantPackaging packaging = ProductVariantPackaging.builder()
                 .productVariant(variant)
-                .name("Piece") // default naming (can evolve later)
+                .name("Piece")
                 .unitsPerPackaging(1L)
                 .isBaseUnit(true)
                 .tenantId(tenantId())
@@ -139,6 +153,9 @@ public class ProductVariantService {
                 .toList();
     }
 
+    // NOTE:
+    // minimumSellingPrice is ONLY a fallback / warning reference.
+    // PricingEngine is the source of truth for actual selling price.
     @Transactional
     @CacheEvict(value = "pricing-preview", allEntries = true)
     public ProductVariantDTO updateVariant(UUID id, ProductVariantUpdateDTO dto) {
@@ -196,6 +213,31 @@ public class ProductVariantService {
 
         UUID productId = variant.getProduct().getId();
 
+        boolean hasNonBasePackaging =
+                packagingRepo.existsByProductVariantIdAndIsBaseUnitFalseAndDeletedFalse(variantId);
+
+        if (hasNonBasePackaging) {
+            throw new IllegalStateException("Cannot delete variant with additional packaging configurations");
+        }
+
+        boolean hasReservations =
+                batchReservationRepository.existsByProductVariantIdAndTenantIdAndBranchId(
+                        variantId,
+                        tenantId(),
+                        branchId()
+                );
+
+        boolean hasConsumptions =
+                batchConsumptionRepository.existsByProductVariantIdAndTenantIdAndBranchId(
+                        variantId,
+                        tenantId(),
+                        branchId()
+                );
+
+        if (hasReservations || hasConsumptions) {
+            throw new IllegalStateException("Cannot delete variant with stock history");
+        }
+        
         boolean hasInventory =
                 inventoryItemRepository.existsByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
                         variantId,
@@ -244,9 +286,14 @@ public class ProductVariantService {
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
+    // SKU is immutable once created unless explicitly overridden
     private String normalize(String input) {
         return input == null ? "" :
                 input.replaceAll("[^A-Za-z0-9]", "")
                         .toUpperCase();
+    }
+
+    public boolean isSellable(UUID variantId) {
+        return packagingRepo.existsByProductVariantIdAndDeletedFalse(variantId);
     }
 }

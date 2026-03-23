@@ -145,8 +145,6 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
         v.sku as sku,
         v.barcode as barcode,
     
-        v.minimumSellingPrice as sellingPrice,
-    
         v.branchId as branchId,
         COALESCE(i.quantityOnHand, 0) as quantityOnHand
     

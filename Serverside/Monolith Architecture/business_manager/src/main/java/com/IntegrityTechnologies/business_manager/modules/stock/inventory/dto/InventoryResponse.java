@@ -17,10 +17,10 @@ public class InventoryResponse {
     private String productClassification;
     private String productVariantSKU;
     private UUID branchId;
-    private String branchName;
     private BigDecimal averageCost;
     private Long quantityOnHand;
     private Long quantityReserved;
+    private Long quantityAvailable;
     private String lastUpdatedAt;
     private Integer batchCount;
     private String oldestBatchDate;

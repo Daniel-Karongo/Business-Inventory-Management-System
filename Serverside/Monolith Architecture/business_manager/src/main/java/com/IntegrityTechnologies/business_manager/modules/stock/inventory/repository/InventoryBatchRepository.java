@@ -18,6 +18,8 @@ import java.util.UUID;
 public interface InventoryBatchRepository
         extends JpaRepository<InventoryBatch, UUID> {
 
+    boolean existsByIdAndTenantIdAndBranchId(UUID id, UUID tenantId, UUID branchId);
+
     /* =====================================================
        FIFO LOCKED BATCH FETCH
     ===================================================== */
@@ -99,6 +101,52 @@ public interface InventoryBatchRepository
     """)
     Optional<InventoryBatch> findByIdForUpdate(
             UUID batchId,
+            UUID tenantId,
+            UUID branchId
+    );
+
+    @Query("""
+        SELECT COALESCE(SUM(b.quantityRemaining), 0)
+        FROM InventoryBatch b
+        WHERE b.productVariantId = :variantId
+          AND b.tenantId = :tenantId
+          AND b.branchId = :branchId
+    """)
+    long sumRemainingByVariant(
+            @Param("variantId") UUID variantId,
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId
+    );
+
+    @Query("""
+        SELECT 
+            COUNT(b),
+            COALESCE(SUM(b.quantityRemaining * b.unitCost), 0),
+            MIN(b.receivedAt)
+        FROM InventoryBatch b
+        WHERE b.productVariantId = :variantId
+          AND b.tenantId = :tenantId
+          AND b.branchId = :branchId
+          AND b.quantityRemaining > 0
+    """)
+    Object[] aggregateBatchStats(
+            UUID variantId,
+            UUID tenantId,
+            UUID branchId
+    );
+
+    @Query("""
+        SELECT 
+            COALESCE(SUM(b.quantityRemaining * b.unitCost), 0),
+            COALESCE(SUM(b.quantityRemaining), 0)
+        FROM InventoryBatch b
+        WHERE b.productVariantId = :variantId
+          AND b.tenantId = :tenantId
+          AND b.branchId = :branchId
+          AND b.quantityRemaining > 0
+    """)
+    Object[] computeWeightedAverageRaw(
+            UUID variantId,
             UUID tenantId,
             UUID branchId
     );

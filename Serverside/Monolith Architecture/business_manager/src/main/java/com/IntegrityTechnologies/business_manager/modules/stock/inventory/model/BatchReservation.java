@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.stock.inventory.model
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Check;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -21,7 +22,7 @@ import java.util.UUID;
                 @Index(name = "idx_reservation_tenant_branch", columnList = "tenant_id, branch_id")
         }
 )
-@org.hibernate.annotations.Check(constraints = "quantity > 0")
+@Check(constraints = "quantity > 0")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -33,8 +34,9 @@ public class BatchReservation extends BranchAwareEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
-    private UUID batchId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "batch_id", nullable = false)
+    private InventoryBatch batch;
 
     @Column(nullable = false)
     private UUID productVariantId;

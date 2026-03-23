@@ -266,8 +266,8 @@ public class SaleBulkService {
                                 .pricingTime(LocalDateTime.now())
                                 .policy(
                                         PricingPolicy.builder()
-                                                .enforceMinimumPrice(false)
-                                                .allowManualOverride(true)
+                                                .enforceMinimumPrice(false) // bulk import allows override
+                                                .requireOverrideReason(false) // optional depending on business
                                                 .build()
                                 )
                                 .build()

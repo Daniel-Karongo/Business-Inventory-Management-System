@@ -16,4 +16,6 @@ public class SaleRequest {
     private BigDecimal totalDiscount;
     private CustomerRequest customerIdentifiers;
     private String reference; // external reference if any
+    private boolean overrideMinimumPrice;
+    private String overrideReason;
 }

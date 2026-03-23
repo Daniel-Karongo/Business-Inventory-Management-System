@@ -1,4 +1,4 @@
-package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto;
+package com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.dto;
 
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingAdjustment;
 import lombok.Builder;
@@ -11,20 +11,9 @@ import java.util.UUID;
 
 @Data
 @Builder
-public class BarcodeScanResponse {
+public class SellableResolveResponse {
 
-    // ✅ PRODUCT / VARIANT INFO (RESTORED)
-    private UUID productId;
-    private String productName;
-
-    private UUID variantId;
-    private String classification;
-    private String sku;
-    private String barcode;
-
-    private UUID branchId;
-
-    // ✅ SELLABLE DATA
+    private UUID productVariantId;
     private UUID packagingId;
 
     private Long requestedQuantity;

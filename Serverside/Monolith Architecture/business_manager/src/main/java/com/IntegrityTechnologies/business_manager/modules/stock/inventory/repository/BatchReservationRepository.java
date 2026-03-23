@@ -1,6 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository;
 
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.BatchReservation;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.projection.BatchReservationSummary;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.projection.VariantReservationSummary;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -70,16 +72,37 @@ public interface BatchReservationRepository
     );
 
     @Query("""
-        SELECT r.productVariantId, SUM(r.quantity)
+        SELECT 
+            r.productVariantId AS productVariantId,
+            r.batch.branchId AS branchId,
+            SUM(r.quantity) AS totalReserved
         FROM BatchReservation r
-        WHERE r.productVariantId IN :variantIds
-          AND r.tenantId = :tenantId
-          AND r.branchId = :branchId
-        GROUP BY r.productVariantId
+        WHERE r.tenantId = :tenantId
+          AND r.productVariantId IN :variantIds
+        GROUP BY r.productVariantId, r.batch.branchId
     """)
-    List<Object[]> sumReservedBulk(
+    List<VariantReservationSummary> sumReservedBulk(
             @Param("variantIds") List<UUID> variantIds,
+            @Param("tenantId") UUID tenantId
+    );
+
+    @Query("""
+        SELECT r.batch.id AS batchId, SUM(r.quantity) AS totalReserved
+        FROM BatchReservation r
+        WHERE r.tenantId = :tenantId
+          AND r.branchId = :branchId
+          AND r.productVariantId = :variantId
+        GROUP BY r.batch.id
+    """)
+    List<BatchReservationSummary> sumReservedByBatch(
+            @Param("variantId") UUID variantId,
             @Param("tenantId") UUID tenantId,
             @Param("branchId") UUID branchId
+    );
+
+    boolean existsByProductVariantIdAndTenantIdAndBranchId(
+            UUID productVariantId,
+            UUID tenantId,
+            UUID branchId
     );
 }

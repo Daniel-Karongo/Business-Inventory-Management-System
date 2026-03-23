@@ -4,6 +4,7 @@ import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.Check;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -13,12 +14,13 @@ import java.util.UUID;
 @Table(
         name = "inventory_batches",
         indexes = {
-                @Index(name = "idx_batch_tenant_branch_variant",
-                        columnList = "tenant_id, branch_id, product_variant_id"),
-                @Index(name = "idx_batch_fifo",
-                        columnList = "received_at")
+                @Index(name = "idx_batch_tenant_branch_variant", columnList = "tenant_id, branch_id, product_variant_id"),
+                @Index(name = "idx_batch_fifo", columnList = "received_at")
         }
 )
+@Check(constraints = "quantity_remaining >= 0")
+@Check(constraints = "quantity_received >= 0")
+@Check(constraints = "quantity_remaining <= quantity_received")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -35,9 +37,6 @@ public class InventoryBatch extends BranchAwareEntity {
 
     @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal unitCost;
-
-    @Column(nullable = false, precision = 19, scale = 6)
-    private BigDecimal unitSellingPrice;
 
     @Column(nullable = false)
     private Long quantityReceived;

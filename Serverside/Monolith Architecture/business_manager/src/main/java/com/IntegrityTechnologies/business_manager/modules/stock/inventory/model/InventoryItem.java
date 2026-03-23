@@ -5,6 +5,7 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.Check;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -25,6 +26,7 @@ import java.util.UUID;
                 @Index(name = "idx_inventory_deleted", columnList = "deleted")
         }
 )
+@Check(constraints = "quantity_on_hand >= 0")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

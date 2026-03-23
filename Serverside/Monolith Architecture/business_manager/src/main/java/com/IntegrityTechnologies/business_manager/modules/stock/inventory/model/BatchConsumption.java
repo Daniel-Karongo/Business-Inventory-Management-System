@@ -4,12 +4,14 @@ import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.Check;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
 @Table(name = "batch_consumptions")
+@Check(constraints = "quantity > 0")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,8 +23,9 @@ public class BatchConsumption extends BranchAwareEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
-    private UUID batchId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "batch_id", nullable = false)
+    private InventoryBatch batch;
 
     @Column(nullable = false)
     private UUID saleId;

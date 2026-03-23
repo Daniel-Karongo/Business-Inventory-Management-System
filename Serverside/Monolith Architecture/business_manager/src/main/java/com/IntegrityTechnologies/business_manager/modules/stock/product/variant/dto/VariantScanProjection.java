@@ -13,8 +13,6 @@ public interface VariantScanProjection {
     String getSku();
     String getBarcode();
 
-    BigDecimal getSellingPrice();
-
     UUID getBranchId();
     Long getQuantityOnHand();
 }

@@ -25,12 +25,19 @@ public final class SellableCacheKey {
 
     public static String pricing(
             UUID variantId,
+            UUID packagingId,
             UUID branchId,
             UUID customerId,
             UUID groupId,
             long quantity
     ) {
         UUID tenantId = TenantContext.getTenantId();
-        return tenantId + "::pricing::" + variantId + "::" + branchId + "::" + customerId + "::" + groupId + "::" + quantity;
+        return tenantId + "::pricing::"
+                + variantId + "::"
+                + packagingId + "::"
+                + branchId + "::"
+                + customerId + "::"
+                + groupId + "::"
+                + quantity;
     }
 }

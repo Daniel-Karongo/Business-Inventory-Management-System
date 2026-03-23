@@ -16,10 +16,12 @@ public class InventoryBatchDTO {
     private UUID branchId;
 
     private BigDecimal unitCost;
-    private BigDecimal unitSellingPrice;
+//    private BigDecimal unitSellingPrice;
 
     private Long quantityReceived;
     private Long quantityRemaining;
+    private Long reservedQuantity;
+    private Long availableQuantity;
 
     private BigDecimal totalRemainingValue;
 

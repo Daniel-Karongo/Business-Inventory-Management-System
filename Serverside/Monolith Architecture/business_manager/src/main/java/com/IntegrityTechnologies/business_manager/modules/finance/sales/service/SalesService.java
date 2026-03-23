@@ -61,13 +61,11 @@ public class SalesService {
     private final PaymentService paymentService;
     private final CustomerRepository customerRepository;
     private final ReceiptNumberService receiptNumberService;
-    private final TaxProperties taxProperties;
     private final TaxSystemStateService taxSystemStateService;
     private final JournalEntryRepository journalEntryRepository;
     private final BatchConsumptionRepository batchConsumptionRepository;
     private final RevenueRecognitionService revenueRecognitionService;
     private final ProductVariantPackagingService packagingService;
-    private final ProductPriceService priceService;
     private final PricingEngineService pricingEngine;
     private final ObjectMapper objectMapper;
 
@@ -130,6 +128,18 @@ public class SalesService {
 
             if (li.getUnitPrice() != null) {
 
+                if (!req.isOverrideMinimumPrice()) {
+                    throw new IllegalArgumentException(
+                            "Manual price requires override flag"
+                    );
+                }
+
+                if (req.getOverrideReason() == null || req.getOverrideReason().isBlank()) {
+                    throw new IllegalArgumentException(
+                            "Override reason is required for manual pricing"
+                    );
+                }
+
                 // 👤 MANUAL OVERRIDE
                 pricing = new PricingResult();
                 pricing.setBasePrice(li.getUnitPrice());
@@ -162,6 +172,12 @@ public class SalesService {
 
                 long baseUnits = li.getQuantity() * packaging.getUnitsPerPackaging();
 
+                boolean isOverride = req.isOverrideMinimumPrice();
+
+                if (isOverride && req.getOverrideReason() == null) {
+                    throw new IllegalArgumentException("Override reason is required");
+                }
+
                 pricing = pricingEngine.resolve(
                         PricingContext.builder()
                                 .tenantId(tenantId())
@@ -174,8 +190,7 @@ public class SalesService {
                                 .pricingTime(LocalDateTime.now())
                                 .policy(
                                         PricingPolicy.builder()
-                                                .enforceMinimumPrice(false)
-                                                .allowManualOverride(true)
+                                                .enforceMinimumPrice(!isOverride)
                                                 .build()
                                 )
                                 .build()
@@ -560,6 +575,11 @@ public class SalesService {
                             .customerId(customerId)
                             .customerGroupId(customerGroupId)
                             .pricingTime(LocalDateTime.now())
+                            .policy(
+                                    PricingPolicy.builder()
+                                            .enforceMinimumPrice(true) // ALWAYS enforce on update
+                                            .build()
+                            )
                             .build()
             );
 
@@ -928,7 +948,7 @@ public class SalesService {
                                             )
                                             .stream()
                                             .map(bc -> BatchConsumptionDTO.builder()
-                                                    .batchId(bc.getBatchId())
+                                                    .batchId(bc.getBatch().getId())
                                                     .saleId(bc.getSaleId())
                                                     .productVariantId(bc.getProductVariantId())
                                                     .quantity(bc.getQuantity())

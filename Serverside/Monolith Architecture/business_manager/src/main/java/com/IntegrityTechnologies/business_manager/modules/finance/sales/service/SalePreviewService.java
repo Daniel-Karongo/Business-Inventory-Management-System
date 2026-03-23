@@ -45,11 +45,12 @@ public class SalePreviewService {
         // =====================================================
         // 2. PRICING
         // =====================================================
+
         PricingResult pricing = pricingEngine.resolve(
                 PricingContext.builder()
                         .productVariantId(req.getProductVariantId())
                         .packagingId(packaging.getId())
-                        .quantity(req.getQuantity())
+                        .quantity(baseUnits) // ✅ FIXED
                         .customerId(req.getCustomerId())
                         .customerGroupId(req.getCustomerGroupId())
                         .branchId(req.getBranchId())

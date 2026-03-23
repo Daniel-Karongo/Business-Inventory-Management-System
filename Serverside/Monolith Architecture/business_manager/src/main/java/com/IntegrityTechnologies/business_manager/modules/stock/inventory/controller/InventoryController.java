@@ -119,6 +119,35 @@ public class InventoryController {
         return ResponseEntity.ok(new ApiResponse("success", "Variant reservation released"));
     }
 
+    @PostMapping("/variant/{variantId}/branch/{branchId}/reconcile")
+    public ResponseEntity<ApiResponse> reconcile(
+            @PathVariable UUID variantId,
+            @PathVariable UUID branchId
+    ) {
+
+        return ResponseEntity.ok(
+                inventoryService.reconcileInventory(variantId, branchId)
+        );
+    }
+
+    @GetMapping("/variant/{variantId}/branch/{branchId}/available-debug")
+    public ResponseEntity<ApiResponse> debugAvailable(
+            @PathVariable UUID variantId,
+            @PathVariable UUID branchId
+    ) {
+
+        long available = inventoryService.availableQuantity(variantId, branchId);
+        long reserved = inventoryService.getReservedQuantity(variantId, branchId);
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("available", available);
+        res.put("reserved", reserved);
+
+        return ResponseEntity.ok(
+                new ApiResponse("success", "Debug stock", res)
+        );
+    }
+
     /* ==================================== READS ==================================== */
 
     @GetMapping("/variant/{variantId}/branch/{branchId}/batches")
@@ -175,6 +204,19 @@ public class InventoryController {
         );
     }
 
+    @GetMapping("/variant/{variantId}/branch/{branchId}/available")
+    public ResponseEntity<ApiResponse> getAvailableStock(
+            @PathVariable UUID variantId,
+            @PathVariable UUID branchId
+    ) {
+
+        long available = inventoryService.availableQuantity(variantId, branchId);
+
+        return ResponseEntity.ok(
+                new ApiResponse("success", "Available stock", available)
+        );
+    }
+
     /* ==================================== LISTS ==================================== */
 
     @GetMapping
@@ -210,14 +252,6 @@ public class InventoryController {
                         inventoryService.suggestBatches(variantId, branchId, quantity)
                 )
         );
-    }
-
-    @GetMapping("/variant/{variantId}/branch/{branchId}/fifo-price")
-    public ApiResponse getFifoPrice(@PathVariable UUID variantId, @PathVariable UUID branchId) {
-
-        BigDecimal price = inventoryService.getFifoSellingPrice(variantId, branchId);
-
-        return new ApiResponse("success", "FIFO unit cost", price);
     }
 
     /* ==================================== REPORTS ==================================== */
