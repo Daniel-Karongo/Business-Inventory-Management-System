@@ -1,7 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
 import jakarta.persistence.*;
 import lombok.*;

@@ -35,12 +35,16 @@ public class ProductController {
        ========================================================= */
 
     @GetMapping
-    public List<ProductDTO> getAll(@RequestParam(required = false) Boolean deleted) {
-        return productService.getAllProducts(deleted);
+    public List<ProductDTO> getAll(
+        @RequestParam(required = false) UUID branchId,
+        @RequestParam(required = false) Boolean deleted
+    ) {
+        return productService.getAllProducts(branchId, deleted);
     }
 
     @GetMapping("/search")
     public PageWrapper<ProductDTO> search(
+            @RequestParam(required = false) UUID branchId,
             @RequestParam(required = false) List<Long> categoryIds,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String name,
@@ -63,6 +67,7 @@ public class ProductController {
 
         return new PageWrapper<>(
                 productService.getProductsAdvanced(
+                        branchId,
                         categoryIds,
                         name,
                         description,
@@ -83,29 +88,38 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    public ProductDTO getById(@PathVariable UUID id,
-                              @RequestParam(required = false) Boolean deleted) {
-        return productService.getProductById(id, deleted);
+    public ProductDTO getById(
+        @RequestParam(required = false) UUID branchId,
+        @PathVariable UUID id,
+        @RequestParam(required = false) Boolean deleted) {
+        return productService.getProductById(branchId, id, deleted);
     }
 
     @GetMapping("/sku/{sku}")
-    public ProductDTO getBySku(@PathVariable String sku,
-                               @RequestParam(required = false) Boolean deleted) {
-        return productService.getProductBySKU(sku, deleted);
+    public ProductDTO getBySku(
+           @RequestParam(required = false) UUID branchId,
+           @PathVariable String sku,
+           @RequestParam(required = false) Boolean deleted) {
+        return productService.getProductBySKU(branchId, sku, deleted);
     }
 
     @TenantManagerOnly
     @GetMapping("/supplier/{supplierId}")
-    public List<ProductDTO> getBySupplier(@PathVariable UUID supplierId,
-                                          @RequestParam(required = false) Boolean deleted) {
-        return productService.getProductsBySupplier(supplierId, deleted);
+    public List<ProductDTO> getBySupplier(
+            @RequestParam(required = false) UUID branchId,
+            @PathVariable UUID supplierId,
+            @RequestParam(required = false) Boolean deleted
+    ) {
+        return productService.getProductsBySupplier(branchId, supplierId, deleted);
     }
 
     @GetMapping("/category/{categoryId}")
-    public List<ProductDTO> getByCategory(@PathVariable Long categoryId,
-                                          @RequestParam(defaultValue = "true") Boolean strict,
-                                          @RequestParam(required = false) Boolean deleted) {
-        return productService.getProductsByCategory(categoryId, deleted, strict);
+    public List<ProductDTO> getByCategory(
+          @RequestParam(required = false) UUID branchId,
+          @PathVariable Long categoryId,
+          @RequestParam(defaultValue = "true") Boolean strict,
+          @RequestParam(required = false) Boolean deleted) {
+        return productService.getProductsByCategory(branchId, categoryId, deleted, strict);
     }
 
     /* =========================================================
@@ -114,18 +128,21 @@ public class ProductController {
 
     @TenantSupervisorOnly
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ProductDTO> create(@ModelAttribute ProductCreateDTO dto) throws IOException {
+    public ResponseEntity<ProductDTO> create(
+            @RequestParam(required = false) UUID branchId,
+            @ModelAttribute ProductCreateDTO dto) throws IOException {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(productService.createProduct(dto));
+                .body(productService.createProduct(branchId, dto));
     }
 
     @TenantSupervisorOnly
     @PostMapping("/full")
     public ProductDTO fullCreate(
+            @RequestParam(required = false) UUID branchId,
             @RequestPart("payload") ProductFullCreateDTO dto,
             @RequestPart(value = "files", required = false) List<MultipartFile> files
     ) throws IOException {
-        return productService.fullCreate(dto, files);
+        return productService.fullCreate(branchId, dto, files);
     }
 
     @TenantSupervisorOnly
@@ -140,67 +157,86 @@ public class ProductController {
        ========================================================= */
 
     @GetMapping("/{id}/images")
-    public List<String> getImages(@PathVariable UUID id,
-                                  @RequestParam(required = false) Boolean deleted) {
-        return productService.getProductImageUrls(id, deleted);
+    public List<String> getImages(
+            @RequestParam(required = false) UUID branchId,
+            @PathVariable UUID id,
+            @RequestParam(required = false) Boolean deleted) {
+        return productService.getProductImageUrls(branchId, id, deleted);
     }
 
     @GetMapping("/{id}/images/zip")
-    public ResponseEntity<Resource> downloadImages(@PathVariable UUID id,
-                                                   @RequestParam(required = false) Boolean deleted)
-            throws IOException {
-        return productService.downloadProductImagesZip(id, deleted);
+    public ResponseEntity<Resource> downloadImages(
+            @RequestParam(required = false) UUID branchId,
+            @PathVariable UUID id,
+            @RequestParam(required = false) Boolean deleted)
+    throws IOException {
+        return productService.downloadProductImagesZip(branchId, id, deleted);
     }
 
     @TenantManagerOnly
     @GetMapping("/images")
-    public Map<UUID, List<String>> getAllImages() {
-        return productService.getAllProductImageUrls();
+    public Map<UUID, List<String>> getAllImages(
+            @RequestParam(required = false) UUID branchId
+    ) {
+        return productService.getAllProductImageUrls(branchId);
     }
 
     @TenantManagerOnly
     @GetMapping("/images/zip")
     public ResponseEntity<Resource> downloadAllImages(
+
+            @RequestParam(required = false) UUID branchId,
             @RequestParam(required = false) Boolean deletedProducts,
             @RequestParam(required = false) Boolean deletedImages
     ) throws IOException {
-        return productService.downloadAllProductImagesZip(deletedProducts, deletedImages);
+        return productService.downloadAllProductImagesZip(branchId, deletedProducts, deletedImages);
     }
 
     @GetMapping("/{id}/thumbnail")
-    public ResponseEntity<Resource> thumbnail(@PathVariable UUID id) {
-        return productService.getProductThumbnail(id);
+    public ResponseEntity<Resource> thumbnail(
+            @RequestParam(required = false) UUID branchId,
+            @PathVariable UUID id
+    ) {
+        return productService.getProductThumbnail(branchId, id);
     }
 
     @TenantSupervisorOnly
     @PatchMapping("/{id}/images")
-    public void uploadImages(@PathVariable UUID id,
-                             @RequestParam List<MultipartFile> files) throws IOException {
-        productService.uploadProductImages(id, files);
+    public void uploadImages(
+            @RequestParam(required = false) UUID branchId,
+            @PathVariable UUID id,
+            @RequestParam List<MultipartFile> files) throws IOException {
+        productService.uploadProductImages(branchId, id, files);
     }
 
     @TenantSupervisorOnly
     @DeleteMapping("/{id}/images/{filename}")
-    public void deleteImage(@PathVariable UUID id,
-                            @PathVariable String filename,
-                            @RequestParam(defaultValue = "true") Boolean soft) throws IOException {
-        productService.deleteProductImageByFilename(id, filename, soft);
+    public void deleteImage(
+            @RequestParam(required = false) UUID branchId,
+            @PathVariable UUID id,
+            @PathVariable String filename,
+            @RequestParam(defaultValue = "true") Boolean soft) throws IOException {
+        productService.deleteProductImageByFilename(branchId, id, filename, soft);
     }
 
     @TenantSupervisorOnly
     @DeleteMapping("/{id}/images")
-    public void deleteAllImages(@PathVariable UUID id,
-                                @RequestParam(defaultValue = "true") Boolean soft,
-                                @RequestParam(required = false) String reason) throws IOException {
-        productService.deleteAllProductImages(id, soft, reason);
+    public void deleteAllImages(
+            @RequestParam(required = false) UUID branchId,
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "true") Boolean soft,
+            @RequestParam(required = false) String reason) throws IOException {
+        productService.deleteAllProductImages(branchId, id, soft, reason);
     }
 
     @TenantSupervisorOnly
     @PutMapping("/{productId}/images/{imageId}/restore")
-    public void restoreImage(@PathVariable UUID productId,
-                             @PathVariable UUID imageId,
-                             @RequestParam(required = false) String reason) {
-        productService.restoreProductImage(productId, imageId, reason);
+    public void restoreImage(
+            @RequestParam(required = false) UUID branchId,
+            @PathVariable UUID productId,
+            @PathVariable UUID imageId,
+            @RequestParam(required = false) String reason) {
+        productService.restoreProductImage(branchId, productId, imageId, reason);
     }
 
     /* =========================================================
@@ -228,22 +264,16 @@ public class ProductController {
 
     @PlatformAdminOnly
     @DeleteMapping("/{id}/hard")
-    public void hardDelete(@PathVariable UUID id,
-                           @RequestParam(required = false) String reason) {
-        productService.hardDeleteProduct(id, reason);
+    public void hardDelete(
+           @RequestParam(required = false) UUID branchId,
+           @PathVariable UUID id,
+           @RequestParam(required = false) String reason) {
+        productService.hardDeleteProduct(branchId, id, reason);
     }
 
     /* =========================================================
        BULK
        ========================================================= */
-
-    @TenantManagerOnly
-    @PostMapping("/bulk/import")
-    public BulkResult<ProductDTO> importProducts(
-            @RequestBody BulkRequest<ProductBulkRow> request
-    ) {
-        return bulkService.importProducts(request);
-    }
 
     @TenantManagerOnly
     @PostMapping(value = "/bulk/full", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -272,8 +302,11 @@ public class ProductController {
 
     @PlatformAdminOnly
     @DeleteMapping("/bulk/hard")
-    public void bulkHardDelete(@RequestBody BulkActionRequest request) {
-        productService.bulkHardDelete(request.getIds(), request.getReason());
+    public void bulkHardDelete(
+            @RequestParam(required = false) UUID branchId,
+            @RequestBody BulkActionRequest request
+    ) {
+        productService.bulkHardDelete(branchId, request.getIds(), request.getReason());
     }
 
     /* =========================================================
@@ -282,19 +315,27 @@ public class ProductController {
 
     @TenantManagerOnly
     @GetMapping("/{id}/audits")
-    public List<ProductAudit> audits(@PathVariable UUID id) {
-        return productService.getProductAudits(id);
+    public List<ProductAudit> audits(
+            @RequestParam(required = false) UUID branchId,
+            @PathVariable UUID id
+    ) {
+        return productService.getProductAudits(branchId, id);
     }
 
     @TenantManagerOnly
     @GetMapping("/{id}/images/audits")
-    public List<ProductImageAudit> imageAudits(@PathVariable UUID id) {
-        return productService.getProductImagesAudits(id);
+    public List<ProductImageAudit> imageAudits(
+            @RequestParam(required = false) UUID branchId,
+            @PathVariable UUID id
+    ) {
+        return productService.getProductImagesAudits(branchId,id);
     }
 
     @PlatformAdminOnly
     @GetMapping("/images/audits")
-    public Map<UUID, List<ProductImageAudit>> allImageAudits() {
-        return productService.getAllProductImagesAudits();
+    public Map<UUID, List<ProductImageAudit>> allImageAudits(
+            @RequestParam(required = false) UUID branchId
+    ) {
+        return productService.getAllProductImagesAudits(branchId);
     }
 }

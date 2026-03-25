@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import jakarta.validation.constraints.NotBlank;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -21,6 +22,11 @@ public class CategoryDTO {
     private String name;
 
     private String description;
+    private UUID branchId;
+
+    private Double minimumPercentageProfit;
+    private BigDecimal minimumProfit;
+
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private boolean deleted;
 
@@ -32,7 +38,7 @@ public class CategoryDTO {
     private List<CategoryDTO> subcategories; // optional nested DTOs
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private Set<UUID> suppliersIds; // optional nested DTOs
+    private Set<UUID> supplierIds; // optional nested DTOs
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private List<SupplierMinimalDTO> suppliers;

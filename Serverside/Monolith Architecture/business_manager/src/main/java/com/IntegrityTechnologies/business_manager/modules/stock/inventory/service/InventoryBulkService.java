@@ -147,7 +147,7 @@ public class InventoryBulkService {
            RESOLVE BRANCH (SOURCE OF TRUTH)
            ========================= */
 
-        Branch branch = branchRepository.findByTenantIdAndBranchCodeIgnoreCase(
+        Branch branch = branchRepository.findByTenantIdAndBranchCodeIgnoreCaseAndDeletedFalse(
                         tenantId(),
                         branchCode
                 )

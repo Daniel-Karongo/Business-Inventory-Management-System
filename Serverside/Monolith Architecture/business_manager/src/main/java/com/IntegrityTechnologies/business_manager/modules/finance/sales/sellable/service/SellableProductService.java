@@ -8,10 +8,9 @@ import com.IntegrityTechnologies.business_manager.modules.stock.inventory.reposi
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryBatchRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.service.ProductVariantPackagingService;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.service.PricingEngineService;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -35,7 +34,6 @@ public class SellableProductService {
     private final InventoryBatchRepository batchRepository;
     private final SellableResolverService resolver;
     private final InventoryService inventoryService;
-    private final PricingEngineService pricingEngineService;
     private final ProductVariantPackagingService packagingService;
 
     // =========================
@@ -291,19 +289,6 @@ public class SellableProductService {
                     .type("LOW_STOCK")
                     .message("Low stock remaining")
                     .build());
-        }
-
-        // ✅ CHECK ALL PACKAGING PRICES
-        if (pricingMap != null && variant.getMinimumSellingPrice() != null) {
-            for (PricingPreviewDTO pricing : pricingMap.values()) {
-                if (pricing.getUnitPrice().compareTo(variant.getMinimumSellingPrice()) < 0) {
-                    warnings.add(WarningDTO.builder()
-                            .type("BELOW_MIN_PRICE")
-                            .message("Price below minimum selling price")
-                            .build());
-                    break; // one warning is enough
-                }
-            }
         }
 
         return warnings;

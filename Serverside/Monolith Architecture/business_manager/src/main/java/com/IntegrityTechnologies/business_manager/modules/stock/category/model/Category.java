@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -43,6 +44,11 @@ public class Category extends BranchAwareEntity {
     private String name;
 
     private String description;
+
+    // FALLBACK FOR PROFIT ENFORCEMENT (LOWEST PRIORITY)
+    private Double minimumPercentageProfit;
+    @Column(precision = 19, scale = 6)
+    private BigDecimal minimumProfit;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")

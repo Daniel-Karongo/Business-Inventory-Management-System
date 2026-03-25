@@ -7,8 +7,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.PaymentStatus;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineItem;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.Sale;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineItem;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;

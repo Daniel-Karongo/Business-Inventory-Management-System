@@ -94,7 +94,7 @@ public class DepartmentBulkService {
                 UUID tenantId = TenantContext.getTenantId();
 
                 UUID branchId = branchRepository
-                        .findByTenantIdAndBranchCodeIgnoreCase(tenantId, branchCode)
+                        .findByTenantIdAndBranchCodeIgnoreCaseAndDeletedFalse(tenantId, branchCode)
                         .orElseThrow(() ->
                                 new IllegalArgumentException(
                                         "Unknown branchCode: " + branchCode

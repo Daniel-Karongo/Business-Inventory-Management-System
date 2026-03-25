@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.payment.model;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.Sale;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;

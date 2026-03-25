@@ -8,8 +8,8 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.m
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductImageAudit;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductImageAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductImageRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service.ProductVariantImageService;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.service.ProductVariantImageService;
 import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;

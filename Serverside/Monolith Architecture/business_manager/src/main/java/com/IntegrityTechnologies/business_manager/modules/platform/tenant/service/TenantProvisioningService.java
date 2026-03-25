@@ -10,6 +10,7 @@ import com.IntegrityTechnologies.business_manager.modules.platform.subscription.
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.Tenant;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.TenantStatus;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.repository.TenantRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.TenantInventorySettingsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +24,7 @@ public class TenantProvisioningService {
     private final PlanRepository planRepository;
     private final TenantSubscriptionRepository subscriptionRepository;
     private final AuditService auditService;
+    private final TenantInventorySettingsService tenantInventorySettingsService;
 
     public Tenant provisionTenant(String name, String code) {
 
@@ -61,6 +63,8 @@ public class TenantProvisioningService {
                 .build();
 
         subscriptionRepository.save(subscription);
+
+        tenantInventorySettingsService.initialize(tenant.getId());
 
         return tenant;
     }

@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.variant
 import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -17,6 +18,7 @@ public class PricingContext {
     private UUID packagingId;
 
     private Long quantity;
+    private BigDecimal cost;
 
     private UUID customerId;
     private UUID customerGroupId;

@@ -953,7 +953,7 @@ public class UserService {
         }
 
         Branch main = branchRepository
-                .findByTenantIdAndBranchCodeIgnoreCase(
+                .findByTenantIdAndBranchCodeIgnoreCaseAndDeletedFalse(
                         tenantId(),
                         "MAIN"
                 )

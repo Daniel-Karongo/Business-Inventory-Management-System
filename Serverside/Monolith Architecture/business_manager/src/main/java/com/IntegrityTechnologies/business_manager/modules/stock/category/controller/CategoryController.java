@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @Tag(name = "Categories")
 @RestController
@@ -72,23 +73,25 @@ public class CategoryController {
 
     @GetMapping("/all")
     public ResponseEntity<List<CategoryDTO>> getAllCategories(
+            @RequestParam(required = false) UUID branchId,
             @RequestParam(defaultValue = "tree") String mode,
             @RequestParam(defaultValue = "false") Boolean deleted
     ) {
 
         return ResponseEntity.ok(
-                categoryService.getAllCategories(mode, deleted)
+                categoryService.getAllCategories(branchId, mode, deleted)
         );
     }
 
     @GetMapping("/search")
     public ResponseEntity<List<CategoryDTO>> searchByKeyword(
+            @RequestParam(required = false) UUID branchId,
             @RequestParam String keyword,
             @RequestParam(required = true, defaultValue = "false") Boolean deleted
     ) {
 
         List<CategoryDTO> results =
-                categoryService.searchByKeyword(keyword, deleted);
+                categoryService.searchByKeyword(branchId, keyword, deleted);
 
         return ResponseEntity.ok(results);
     }
@@ -96,24 +99,26 @@ public class CategoryController {
     @GetMapping("/{id}")
     public ResponseEntity<CategoryDTO> getCategory(
             @PathVariable Long id,
+            @RequestParam(required = false) UUID branchId,
             @RequestParam(defaultValue = "tree") String mode,
             @RequestParam(defaultValue = "false") Boolean deleted
     ) {
 
         return ResponseEntity.ok(
-                categoryService.getCategory(id, mode, deleted)
+                categoryService.getCategory(branchId, id, mode, deleted)
         );
     }
 
     @GetMapping("/{id}/suppliers")
     public ResponseEntity<List<SupplierDTO>> getCategorySuppliers(
             @PathVariable Long id,
+            @RequestParam(required = false) UUID branchId,
             @RequestParam(required = false) Boolean deleted,
             @RequestParam(defaultValue = "true") Boolean strict
     ) {
 
         return ResponseEntity.ok(
-                categoryService.getCategorySuppliers(id, deleted, strict)
+                categoryService.getCategorySuppliers(branchId, id, deleted, strict)
         );
     }
 
@@ -123,59 +128,73 @@ public class CategoryController {
 
     @TenantManagerOnly
     @DeleteMapping("/{id}/soft")
-    public ResponseEntity<ApiResponse> softDelete(@PathVariable Long id) {
-        return categoryService.softDelete(id);
+    public ResponseEntity<ApiResponse> softDelete(
+            @PathVariable Long id,
+            @RequestParam(required = false) UUID branchId
+    ) {
+        return categoryService.softDelete(branchId, id);
     }
 
     @TenantManagerOnly
     @DeleteMapping("/bulk/soft")
     public ResponseEntity<ApiResponse> softDeleteInBulk(
-            @RequestBody List<Long> categoryIds
+            @RequestBody List<Long> categoryIds,
+            @RequestParam(required = false) UUID branchId
     ) {
-        return categoryService.softDeleteInBulk(categoryIds);
+        return categoryService.softDeleteInBulk(branchId, categoryIds);
     }
 
     @PlatformAdminOnly
     @DeleteMapping("/{id}/hard")
-    public ResponseEntity<ApiResponse> hardDelete(@PathVariable Long id) {
-        return categoryService.hardDelete(id);
+    public ResponseEntity<ApiResponse> hardDelete(
+            @PathVariable Long id,
+            @RequestParam(required = false) UUID branchId
+    ) {
+        return categoryService.hardDelete(branchId, id);
     }
 
     @PlatformAdminOnly
     @DeleteMapping("/bulk/hard")
     public ResponseEntity<ApiResponse> hardDeleteInBulk(
-            @RequestBody List<Long> categoryIds
+            @RequestBody List<Long> categoryIds,
+            @RequestParam(required = false) UUID branchId
     ) {
-        return categoryService.hardDeleteInBulk(categoryIds);
+        return categoryService.hardDeleteInBulk(branchId, categoryIds);
     }
 
     @TenantManagerOnly
     @PutMapping("/{id}/restore")
-    public ResponseEntity<ApiResponse> restore(@PathVariable Long id) {
-        return categoryService.restore(id);
+    public ResponseEntity<ApiResponse> restore(
+            @PathVariable Long id,
+            @RequestParam(required = false) UUID branchId
+    ) {
+        return categoryService.restore(branchId, id);
     }
 
     @TenantManagerOnly
     @PutMapping("/restore/bulk")
     public ResponseEntity<ApiResponse> restoreInBulk(
-            @RequestBody List<Long> categoryIds
+            @RequestBody List<Long> categoryIds,
+            @RequestParam(required = false) UUID branchId
     ) {
-        return categoryService.restoreInBulk(categoryIds);
+        return categoryService.restoreInBulk(branchId, categoryIds);
     }
 
     @TenantManagerOnly
     @PutMapping("/{id}/restore-recursive")
     public ResponseEntity<ApiResponse> restoreCategoryRecursively(
-            @PathVariable Long id
+            @PathVariable Long id,
+            @RequestParam(required = false) UUID branchId
     ) {
-        return categoryService.restoreRecursively(id);
+        return categoryService.restoreRecursively(branchId, id);
     }
 
     @TenantManagerOnly
     @PutMapping("/restore-recursive/bulk")
     public ResponseEntity<ApiResponse> restoreCategoriesRecursivelyInBulk(
-            @RequestBody List<Long> categoryIds
+            @RequestBody List<Long> categoryIds,
+            @RequestParam(required = false) UUID branchId
     ) {
-        return categoryService.restoreCategoriesRecursivelyInBulk(categoryIds);
+        return categoryService.restoreCategoriesRecursivelyInBulk(branchId, categoryIds);
     }
 }

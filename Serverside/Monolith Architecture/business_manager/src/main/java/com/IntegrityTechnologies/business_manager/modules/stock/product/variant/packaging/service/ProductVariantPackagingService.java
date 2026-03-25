@@ -1,14 +1,14 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.service;
 
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.cache.CacheInvalidationService;
+import com.IntegrityTechnologies.business_manager.config.caffeine.CacheInvalidationService;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.dto.PackagingDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackagingAudit;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.repository.ProductVariantPackagingAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.repository.ProductVariantPackagingRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
@@ -62,7 +62,7 @@ public class ProductVariantPackagingService {
 
         ProductVariantPackaging packaging = ProductVariantPackaging.builder()
                 .productVariant(variant)
-                .name(name)
+                .name(normalize(name))
                 .unitsPerPackaging(unitsPerPackaging)
                 .isBaseUnit(false)
                 .tenantId(tenantId())
@@ -71,6 +71,16 @@ public class ProductVariantPackagingService {
 
         cacheInvalidationService.evictPackaging(variantId);
         cacheInvalidationService.evictPricingByVariant(variantId, branchId());
+
+        boolean exists = packagingRepo.findByProductVariantIdAndDeletedFalse(variantId)
+                .stream()
+                .anyMatch(p ->
+                        normalize(p.getName()).equals(normalize(name))
+                );
+
+        if (exists) {
+            throw new IllegalArgumentException("Packaging already exists: " + name);
+        }
 
         return packagingRepo.save(packaging);
     }
@@ -143,7 +153,7 @@ public class ProductVariantPackagingService {
 
         // ✅ Rename allowed (including base unit)
         if (name != null) {
-            packaging.setName(name);
+            packaging.setName(normalize(name));
         }
 
         // ❗ Units rules
@@ -186,7 +196,15 @@ public class ProductVariantPackagingService {
 
         cacheInvalidationService.evictPackaging(variantId);
         cacheInvalidationService.evictPricingByVariant(variantId, branchId());
-        
+
+        boolean exists = packagingRepo.findByProductVariantIdAndDeletedFalse(variantId)
+                .stream()
+                .anyMatch(p -> normalize(p.getName()).equals(normalize(name)));
+
+        if (exists) {
+            throw new IllegalArgumentException("Packaging already exists: " + name);
+        }
+
         return packagingRepo.save(packaging);
     }
 
@@ -195,7 +213,6 @@ public class ProductVariantPackagingService {
     ===================================================== */
 
     @Transactional
-    @CacheEvict(value = "packaging", allEntries = true)
     public void deletePackaging(UUID packagingId) {
 
         ProductVariantPackaging packaging = packagingRepo.findById(packagingId)
@@ -223,5 +240,9 @@ public class ProductVariantPackagingService {
         }
 
         return quantity * packaging.getUnitsPerPackaging();
+    }
+
+    private String normalize(String s) {
+        return s.trim().toLowerCase();
     }
 }

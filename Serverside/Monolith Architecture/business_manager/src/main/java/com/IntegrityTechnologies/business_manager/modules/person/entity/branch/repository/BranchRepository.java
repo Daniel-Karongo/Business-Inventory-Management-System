@@ -33,7 +33,7 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
        BRANCH CODE
     ========================================================= */
 
-    Optional<Branch> findByTenantIdAndBranchCodeIgnoreCase(UUID tenantId, String branchCode);
+    Optional<Branch> findByTenantIdAndBranchCodeIgnoreCaseAndDeletedFalse(UUID tenantId, String branchCode);
 
     boolean existsByTenantIdAndBranchCodeIgnoreCase(UUID tenantId, String branchCode);
 

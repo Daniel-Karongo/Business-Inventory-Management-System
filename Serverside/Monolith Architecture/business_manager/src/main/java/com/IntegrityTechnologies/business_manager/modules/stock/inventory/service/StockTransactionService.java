@@ -4,14 +4,13 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.r
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.StockTransactionDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.StockTransaction;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 

@@ -9,7 +9,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.PeriodGuardService;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineBatchSelection;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineBatchSelection;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
@@ -25,15 +25,20 @@ import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.projection.BatchReservationSummary;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.projection.VariantReservationSummary;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.valuation.InventoryValuationEngine;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.valuation.InventoryValuationService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductAudit;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductSupplier;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.service.ProductService;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service.ProductVariantService;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.service.ProductVariantService;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.repository.ProductVariantPackagingRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.repository.ProductPriceRepository;
 import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
@@ -80,6 +85,11 @@ public class InventoryService {
     private final BatchConsumptionRepository batchConsumptionRepository;
     private final BatchReservationRepository batchReservationRepository;
     private final BranchTenantGuard branchTenantGuard;
+    private final ProductPriceRepository productPriceRepository;
+    private final ProductVariantPackagingRepository packagingRepository;
+    private final InventoryValuationService valuationService;
+    private final InventoryValuationEngine valuationEngine;
+    private final TenantInventorySettingsService settingsService;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -128,43 +138,36 @@ public class InventoryService {
             // -------------------------------------------------------------
             // 2. RESOLVE OR CREATE VARIANT (UNCHANGED LOGIC)
             // -------------------------------------------------------------
-            ProductVariant variant;
 
-            if (req.getProductVariantId() != null) {
+            if (req.getProductVariantId() == null) {
+                throw new IllegalArgumentException(
+                        "productVariantId is required. Use StockOnboarding flow."
+                );
+            }
 
-                variant = productVariantRepository.findById(req.getProductVariantId())
-                        .orElseThrow(() -> new IllegalArgumentException("Variant not found"));
+            ProductVariant variant = productVariantRepository.findById(req.getProductVariantId())
+                    .orElseThrow(() -> new IllegalArgumentException("Variant not found"));
 
-            } else {
-
-                if (req.getClassification() == null || req.getClassification().isBlank())
-                    throw new IllegalArgumentException("classification is required when no productVariantId provided");
-
-                variant = productVariantRepository
-                        .findByTenantIdAndBranchIdAndProduct_IdAndClassification(
-                                tenantId(),
-                                req.getBranchId(),
-                                req.getProductId(),
-                                req.getClassification())
-                        .orElse(null);
-
-                if (variant == null) {
-
-                    variant = new ProductVariant();
-                    variant.setProduct(product);
-                    variant.setClassification(req.getClassification());
-                    variant.setTenantId(tenantId());
-                    variant.setBranchId(req.getBranchId());
-
-                    variant = productVariantRepository.save(variant);
-                    variant.setSku(
-                            req.getNewVariantSku() != null
-                                    ? req.getNewVariantSku()
-                                    : productService.generateVariantSku(product, req.getClassification())
+            ProductVariantPackaging basePackaging =
+                    packagingRepository.findByProductVariantIdAndIsBaseUnitTrueAndDeletedFalse(
+                            variant.getId()
                     );
 
-                    variant = productVariantRepository.save(variant);
-                }
+            if (basePackaging == null) {
+                throw new IllegalStateException("Base packaging missing for variant");
+            }
+
+            boolean hasPricing = !productPriceRepository
+                    .findByProductVariantIdAndPackagingIdAndDeletedFalse(
+                            variant.getId(),
+                            basePackaging.getId()
+                    )
+                    .isEmpty();
+
+            if (!hasPricing) {
+                throw new IllegalStateException(
+                        "Cannot receive stock without pricing configured"
+                );
             }
 
             // -------------------------------------------------------------
@@ -271,8 +274,6 @@ public class InventoryService {
             // -------------------------------------------------------------
             // 5. FIFO BATCH CREATION (UNCHANGED)
             // -------------------------------------------------------------
-            Double margin = product.getMinimumPercentageProfit();
-            if (margin == null) margin = 0D;
 
             for (SupplierUnit su : req.getSuppliers()) {
 
@@ -290,22 +291,6 @@ public class InventoryService {
 
             recomputeWeightedAverage(variant.getId(), branch.getId());
             validateInventoryInvariant(variant.getId(), branch.getId());
-
-            // -------------------------------------------------------------
-            // 6. UPDATE VARIANT PRICING (UNCHANGED)
-            // -------------------------------------------------------------
-            variant.setAverageBuyingPrice(item.getAverageCost());
-
-            variant.setMinimumSellingPrice(
-                    productVariantService.computeMinSelling(
-                            item.getAverageCost(),
-                            margin
-                    )
-            );
-
-            if (req.getSellingPrice() != null) {
-                variant.setMinimumSellingPrice(req.getSellingPrice());
-            }
 
             productVariantRepository.save(variant);
 
@@ -435,6 +420,8 @@ public class InventoryService {
                 );
             }
 
+            settingsService.lock(tenantId());
+            
             return new ApiResponse(
                     "success",
                     "Stock received successfully",
@@ -1360,6 +1347,28 @@ public class InventoryService {
             ProductVariant variant = productVariantRepository.findById(req.getProductVariantId())
                     .orElseThrow(() -> new IllegalArgumentException("Variant not found"));
 
+            ProductVariantPackaging basePackaging =
+                    packagingRepository.findByProductVariantIdAndIsBaseUnitTrueAndDeletedFalse(
+                            variant.getId()
+                    );
+
+            if (basePackaging == null) {
+                throw new IllegalStateException("Base packaging missing for variant");
+            }
+
+            boolean hasPricing = !productPriceRepository
+                    .findByProductVariantIdAndPackagingIdAndDeletedFalse(
+                            variant.getId(),
+                            basePackaging.getId()
+                    )
+                    .isEmpty();
+
+            if (!hasPricing) {
+                throw new IllegalStateException(
+                        "Cannot adjust stock without pricing configured"
+                );
+            }
+
             Branch branch = branchRepository.findById(req.getBranchId())
                     .orElseThrow(() -> new IllegalArgumentException("Branch not found"));
 
@@ -1452,18 +1461,10 @@ public class InventoryService {
 
                 long qtyToAdd = delta;
 
-                BigDecimal unitCost =
-                        req.getUnitCost() != null
-                                ? req.getUnitCost()
-                                : variant.getAverageBuyingPrice();
+                BigDecimal unitCost = req.getUnitCost();
 
                 if (unitCost == null)
                     unitCost = BigDecimal.ZERO;
-
-                BigDecimal sellingPrice =
-                        variant.getMinimumSellingPrice() != null
-                                ? variant.getMinimumSellingPrice()
-                                : unitCost;
 
                 InventoryBatch batch = InventoryBatch.builder()
                         .productVariantId(variant.getId())
@@ -1576,11 +1577,6 @@ public class InventoryService {
             if (unitCost == null) unitCost = BigDecimal.ZERO;
 
             ProductVariant variant = item.getProductVariant();
-
-            BigDecimal sellingPrice =
-                    variant.getMinimumSellingPrice() != null
-                            ? variant.getMinimumSellingPrice()
-                            : unitCost;
 
             InventoryBatch batch = InventoryBatch.builder()
                     .productVariantId(variantId)
@@ -1830,39 +1826,47 @@ public class InventoryService {
     @Transactional
     public void takeSnapshot(LocalDate date) {
 
+        String method = valuationService.resolveCurrentMethod();
+
         int page = 0;
         Page<InventoryItem> slice;
 
         do {
-
             slice = inventoryItemRepository.findAllActive(
                     tenantId(),
                     PageRequest.of(page, 1000)
             );
 
-            for (InventoryItem i : slice.getContent()) {
+            for (InventoryItem item : slice.getContent()) {
 
-                ProductVariant variant = i.getProductVariant();
+                long qty = item.getQuantityOnHand();
+                if (qty <= 0) continue;
 
-                BigDecimal valuationUnit =
-                        Optional.ofNullable(i.getAverageCost())
-                                .filter(cost -> cost.compareTo(BigDecimal.ZERO) > 0)
-                                .orElse(
-                                        Optional.ofNullable(variant.getAverageBuyingPrice())
-                                                .orElse(BigDecimal.ZERO)
-                                );
+                UUID variantId = item.getProductVariant().getId();
+                UUID branchId = item.getBranchId();
+
+                BigDecimal valuation = valuationEngine.valuate(
+                        method,
+                        variantId,
+                        branchId,
+                        qty
+                );
+
+                BigDecimal unitCost = valuation.divide(
+                        BigDecimal.valueOf(qty),
+                        6,
+                        RoundingMode.HALF_UP
+                );
 
                 InventorySnapshot snap = InventorySnapshot.builder()
-                        .productId(variant.getProduct().getId())
-                        .productVariantId(variant.getId())
-                        .branchId(i.getBranchId())
                         .tenantId(tenantId())
-                        .quantityOnHand(i.getQuantityOnHand())
-                        .valuation(
-                                valuationUnit.multiply(
-                                        BigDecimal.valueOf(i.getQuantityOnHand())
-                                )
-                        )
+                        .branchId(branchId)
+                        .productId(item.getProductId())
+                        .productVariantId(variantId)
+                        .quantityOnHand(qty)
+                        .valuation(valuation)
+                        .unitCost(unitCost)
+                        .valuationMethod(method)
                         .snapshotDate(date)
                         .createdAt(LocalDateTime.now())
                         .build();
@@ -2461,5 +2465,18 @@ public class InventoryService {
 
     private String buildKey(UUID variantId, UUID branchId) {
         return variantId + "|" + branchId;
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal getAverageCost(UUID variantId, UUID branchId) {
+
+        return inventoryItemRepository
+                .findByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
+                        variantId,
+                        tenantId(),
+                        branchId
+                )
+                .map(InventoryItem::getAverageCost)
+                .orElse(BigDecimal.ZERO);
     }
 }

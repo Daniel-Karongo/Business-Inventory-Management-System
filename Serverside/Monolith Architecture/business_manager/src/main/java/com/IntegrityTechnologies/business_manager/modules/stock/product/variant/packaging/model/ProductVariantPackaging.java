@@ -1,7 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;

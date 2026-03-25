@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineBatchSelection;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineBatchSelection;
 import lombok.Data;
 
 import java.util.List;

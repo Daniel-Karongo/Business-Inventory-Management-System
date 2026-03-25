@@ -9,7 +9,7 @@ import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryBulkService;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryValuationService;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.valuation.InventoryValuationService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -368,7 +367,9 @@ public class InventoryController {
     }
 
     @GetMapping("/valuation/branch/{branchId}")
-    public ResponseEntity<ApiResponse> valuationByBranch(@PathVariable UUID branchId) {
+    public ResponseEntity<ApiResponse> valuationByBranch(
+            @PathVariable UUID branchId
+    ) {
         return ResponseEntity.ok(
                 new ApiResponse("success", "Branch valuation",
                         valuationService.getBranchValuation(branchId))
@@ -388,6 +389,23 @@ public class InventoryController {
                         "success",
                         "Historical valuation for " + d,
                         valuationService.getHistoricalValuation(d, method)
+                )
+        );
+    }
+
+    @GetMapping("/valuation/history/{variantId}")
+    public ResponseEntity<ApiResponse> valuationAsOf(
+            @PathVariable UUID variantId,
+            @RequestParam UUID branchId,
+            @RequestParam(required = false) LocalDate date
+    ) {
+        LocalDate d = (date == null) ? LocalDate.now() : date;
+
+        return ResponseEntity.ok(
+                new ApiResponse(
+                        "success",
+                        "Historical valuation for " + d,
+                        valuationService.getHistoricalValuation(variantId, branchId, d)
                 )
         );
     }

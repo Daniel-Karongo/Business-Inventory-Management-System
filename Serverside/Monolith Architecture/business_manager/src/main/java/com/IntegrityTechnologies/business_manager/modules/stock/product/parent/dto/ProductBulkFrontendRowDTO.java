@@ -12,6 +12,7 @@ public class ProductBulkFrontendRowDTO {
     private String categoryName;
     private List<String> supplierNames;
     private List<String> variants;
+    private String branchName;
     private Double minimumPercentageProfit;
 
 }

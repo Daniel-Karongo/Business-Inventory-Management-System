@@ -1,13 +1,12 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.mapper;
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierMinimalDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductImage;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductSupplier;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import org.mapstruct.*;
 
 import java.util.*;
@@ -112,8 +111,8 @@ public interface ProductMapper {
                             .sku(v.getSku())
                             .barcode(v.getBarcode()) // ✅ KEEP
                             .barcodeImagePath(v.getBarcodeImagePath()) // ✅ KEEP
-                            .averageBuyingPrice(v.getAverageBuyingPrice())
-                            .minimumSellingPrice(v.getMinimumSellingPrice())
+                            .minimumProfit(v.getMinimumProfit())
+                            .minimumPercentageProfit(v.getMinimumPercentageProfit())
                             .build()
             );
         }

@@ -2,12 +2,12 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.
 
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -44,7 +44,10 @@ public class Product extends BranchAwareEntity {
 
     private String sku;
 
+    // FALLBACK FOR PROFIT ENFORCEMENT (SECOND-LOWEST PRIORITY)
     private Double minimumPercentageProfit;
+    @Column(precision = 19, scale = 6)
+    private BigDecimal minimumProfit;
 
     @Builder.Default
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)

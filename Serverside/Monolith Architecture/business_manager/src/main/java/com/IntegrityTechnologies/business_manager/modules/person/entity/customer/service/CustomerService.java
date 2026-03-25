@@ -5,8 +5,8 @@ import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundExcept
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.dto.SmsRequest;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.model.SmsMessage;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.service.SmsService;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.Sale;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerRequest;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerResponse;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.Customer;

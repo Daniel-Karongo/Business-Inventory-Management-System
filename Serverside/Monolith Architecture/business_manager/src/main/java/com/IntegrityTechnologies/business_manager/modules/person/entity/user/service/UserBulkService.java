@@ -139,7 +139,7 @@ public class UserBulkService {
 
                 if (row.getBranchCode() != null && row.getDepartmentName() != null) {
 
-                    Branch branch = branchRepository.findByTenantIdAndBranchCodeIgnoreCase(
+                    Branch branch = branchRepository.findByTenantIdAndBranchCodeIgnoreCaseAndDeletedFalse(
                         TenantContext.getTenantId(),
                         row.getBranchCode()
                     )

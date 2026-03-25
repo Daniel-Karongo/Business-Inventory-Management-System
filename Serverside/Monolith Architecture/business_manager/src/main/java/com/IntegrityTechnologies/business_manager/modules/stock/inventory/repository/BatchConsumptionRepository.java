@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -56,4 +57,12 @@ public interface BatchConsumptionRepository extends JpaRepository<BatchConsumpti
             UUID tenantId,
             UUID branchId
     );
+
+    @Query("""
+        SELECT COALESCE(SUM(bc.unitCost * bc.quantity), 0)
+        FROM BatchConsumption bc
+        WHERE bc.saleId = :saleId
+        AND bc.tenantId = :tenantId
+    """)
+    BigDecimal sumCostBySaleId(UUID saleId, UUID tenantId);
 }

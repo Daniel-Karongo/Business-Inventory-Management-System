@@ -8,8 +8,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.payment.mpesa.
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.mpesa.repository.MpesaTransactionRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.repository.PaymentRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.service.PaymentService;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.Sale;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerRequest;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.CustomerType;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service.CustomerService;

@@ -1,7 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.category.service;
 
+import com.IntegrityTechnologies.business_manager.config.caffeine.CacheInvalidationService;
 import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
 import com.IntegrityTechnologies.business_manager.exception.CategoryNotFoundException;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.control.CloseChecklistService;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.dto.CategoryDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.mapper.CategoryMapper;
@@ -14,9 +17,11 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
 import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
+import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,27 +38,29 @@ public class CategoryService {
     private final CategoryMapper categoryMapper;
     private final SupplierMapper supplierMapper;
     private final SupplierRepository supplierRepository;
+    private final BranchRepository branchRepository;
+    private final CacheInvalidationService cacheInvalidationService;
+    private final BranchTenantGuard branchTenantGuard;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
     }
 
-    private UUID branchId() {
-        return BranchContext.get();
-    }
-
     // ---------------- SAVE / UPDATE ----------------
     public CategoryDTO saveCategory(CategoryDTO dto) {
 
+        UUID branchId = dto.getBranchId();
+        branchTenantGuard.validate(branchId);
+
         Category category = dto.getId() != null
-                ? categoryRepository.findByIdSafe(dto.getId(), null, tenantId(), branchId())
+                ? categoryRepository.findByIdSafe(dto.getId(), null, tenantId(), branchId)
                 .orElse(new Category())
                 : new Category();
 
         Long parentId = dto.getParentId();
 
         boolean exists = categoryRepository
-                .existsByNameAndParentSafe(dto.getName(), parentId, tenantId(), branchId());
+                .existsByNameAndParentSafe(dto.getName(), parentId, tenantId(), branchId);
 
         if (exists) {
             if (dto.getId() == null) {
@@ -63,7 +70,7 @@ public class CategoryService {
             }
 
             Category existing = categoryRepository
-                    .findByNameSafe(dto.getName(), false, tenantId(), branchId())
+                    .findByNameSafe(dto.getName(), false, tenantId(), branchId)
                     .orElse(null);
 
             if (existing != null && !existing.getId().equals(dto.getId())) {
@@ -72,6 +79,7 @@ public class CategoryService {
                 );
             }
         }
+        validateProfit(dto);
 
         categoryMapper.updateEntityFromDTO(dto, category);
 
@@ -84,7 +92,7 @@ public class CategoryService {
                     dto.getParentId(),
                     false,
                     tenantId(),
-                    branchId()
+                    branchId
             ).orElseThrow(() -> new CategoryNotFoundException("Parent category not found"));
 
             if (isChildOf(parent, category))
@@ -100,6 +108,11 @@ public class CategoryService {
          * Set temporary path before first save to satisfy NOT NULL constraint
          */
         category.setPath("/TEMP");
+
+        if(dto.getMinimumProfit() != null)
+            category.setMinimumProfit(dto.getMinimumProfit());
+        if(dto.getMinimumPercentageProfit() != null)
+            category.setMinimumPercentageProfit(dto.getMinimumPercentageProfit());
 
         category = categoryRepository.save(category);
 
@@ -117,17 +130,17 @@ public class CategoryService {
         /*
          * Handle suppliers AFTER category ID exists
          */
-        if (dto.getSuppliersIds() != null) {
+        if (dto.getSupplierIds() != null) {
 
             category.getCategorySuppliers().clear();
 
-            for (UUID supplierId : dto.getSuppliersIds()) {
+            for (UUID supplierId : dto.getSupplierIds()) {
 
                 Supplier supplier = supplierRepository.findByIdSafe(
                         supplierId,
                         null,
                         tenantId(),
-                        branchId()
+                        branchId
                 ).orElseThrow(() ->
                         new IllegalArgumentException("Supplier not found: " + supplierId)
                 );
@@ -140,6 +153,8 @@ public class CategoryService {
 
                 category.getCategorySuppliers().add(relation);
             }
+
+            category = categoryRepository.saveAndFlush(category);
         }
 
         CategoryDTO result = categoryMapper.toDTO(category);
@@ -153,20 +168,37 @@ public class CategoryService {
                         : List.of()
         );
 
+        cacheInvalidationService.evictCategoryCaches(branchId);
         return result;
     }
 
+    private void validateProfit(CategoryDTO dto) {
+
+        if (dto.getMinimumPercentageProfit() != null) {
+            if (dto.getMinimumPercentageProfit() < 0 || dto.getMinimumPercentageProfit() > 100) {
+                throw new IllegalArgumentException("Percentage must be 0–100");
+            }
+        }
+
+        if (dto.getMinimumProfit() != null) {
+            if (dto.getMinimumProfit().signum() < 0) {
+                throw new IllegalArgumentException("Minimum profit cannot be negative");
+            }
+        }
+    }
+
     @Transactional
-    public Category createMinimal(String name) {
+    public Category createMinimal(String name, String branchName) {
+        UUID branchId = findBranch(branchName);
 
         Category category = categoryRepository
-                .findByNameSafe(name, false, tenantId(), branchId())
+                .findByNameSafe(name, false, tenantId(), branchId)
                 .orElseGet(() -> {
 
                     Category newCategory = Category.builder()
                             .name(name)
                             .tenantId(tenantId())
-                            .branchId(branchId())
+                            .branchId(branchId)
                             .path("/TEMP")
                             .build();
 
@@ -183,17 +215,29 @@ public class CategoryService {
                     return categoryRepository.save(newCategory);
                 });
 
+        cacheInvalidationService.evictCategoryCaches(branchId);
         return category;
     }
 
+    @Cacheable(
+            value = "branch-lookup",
+            key = "T(java.util.Objects).hash(T(com.IntegrityTechnologies.business_manager.security.util.TenantContext).getTenantId(), #branchName)"
+    )
+    public UUID findBranch(String branchName) {
+        return branchRepository.findByTenantIdAndBranchCodeIgnoreCaseAndDeletedFalse(tenantId(), branchName)
+                .orElseThrow(() -> new IllegalArgumentException("Branch not found: " + branchName)).getId();
+    }
+
+
     @Transactional
     public CategoryDTO updateCategoryRecursive(CategoryDTO dto) {
+        UUID branchId = dto.getBranchId();
 
         Category category = categoryRepository.findByIdSafe(
                 dto.getId(),
                 null,
                 tenantId(),
-                branchId()
+                branchId
         ).orElseThrow(() -> new CategoryNotFoundException("Category not found"));
 
         String oldPath = category.getPath();
@@ -201,12 +245,12 @@ public class CategoryService {
         Long parentId = dto.getParentId();
 
         boolean exists = categoryRepository
-                .existsByNameAndParentSafe(dto.getName(), parentId, tenantId(), branchId());
+                .existsByNameAndParentSafe(dto.getName(), parentId, tenantId(), branchId);
 
         if (exists) {
 
             Category existing = categoryRepository
-                    .findByNameSafe(dto.getName(), false, tenantId(), branchId())
+                    .findByNameSafe(dto.getName(), false, tenantId(), branchId)
                     .orElse(null);
 
             if (existing != null && !existing.getId().equals(dto.getId())) {
@@ -230,7 +274,7 @@ public class CategoryService {
                     dto.getParentId(),
                     false,
                     tenantId(),
-                    branchId()
+                    branchId
             ).orElseThrow(() -> new CategoryNotFoundException("Parent category not found"));
 
             if (isChildOf(parent, category))
@@ -261,7 +305,7 @@ public class CategoryService {
                     oldPath,
                     newPath,
                     tenantId(),
-                    branchId()
+                    branchId
             );
 
             category.setPath(newPath);
@@ -272,17 +316,17 @@ public class CategoryService {
         /*
          * ✅ SUPPLIER UPDATE (RESTORED + SAFE)
          */
-        if (dto.getSuppliersIds() != null) {
+        if (dto.getSupplierIds() != null) {
 
             category.getCategorySuppliers().clear();
 
-            for (UUID supplierId : dto.getSuppliersIds()) {
+            for (UUID supplierId : dto.getSupplierIds()) {
 
                 Supplier supplier = supplierRepository.findByIdSafe(
                         supplierId,
                         false,
                         tenantId(),
-                        branchId()
+                        branchId
                 ).orElseThrow(() ->
                         new IllegalArgumentException("Supplier not found: " + supplierId)
                 );
@@ -295,6 +339,8 @@ public class CategoryService {
 
                 category.getCategorySuppliers().add(relation);
             }
+
+            category = categoryRepository.saveAndFlush(category);
         }
 
         /*
@@ -311,6 +357,7 @@ public class CategoryService {
                         : List.of()
         );
 
+        cacheInvalidationService.evictCategoryCaches(branchId);
         return result;
     }
 
@@ -323,7 +370,24 @@ public class CategoryService {
         if (potentialParent.getId().equals(category.getId())) return true;
         return isChildOf(potentialParent.getParent(), category);
     }
+    public void validateCategoryForBulk(CategoryDTO dto) {
 
+        UUID branchId = dto.getBranchId();
+        branchTenantGuard.validate(branchId);
+
+        Long parentId = dto.getParentId();
+
+        boolean exists = categoryRepository
+                .existsByNameAndParentSafe(dto.getName(), parentId, tenantId(), branchId);
+
+        if (exists && dto.getId() == null) {
+            throw new IllegalArgumentException(
+                    "Category already exists under this parent: " + dto.getName()
+            );
+        }
+
+        validateProfit(dto);
+    }
 
 
 
@@ -360,16 +424,20 @@ public class CategoryService {
                 .toList();
     }
 
-    public List<CategoryDTO> getAllCategories(String mode, Boolean deleted) {
+    public List<CategoryDTO> getAllCategories(UUID branchId, String mode, Boolean deleted) {
         if("tree".equals(mode))
-            return getAllCategoriesTree(deleted);
+            return getAllCategoriesTree(branchId, deleted);
         else
-            return getAllCategoriesFlat(deleted);
+            return getAllCategoriesFlat(branchId, deleted);
     }
 
-    public List<CategoryDTO> getAllCategoriesTree(Boolean deleted) {
+    @Cacheable(
+            value = "category-tree",
+            key = "T(com.IntegrityTechnologies.business_manager.modules.stock.category.cache.CategoryCacheKey).tree(#branchId, #deleted)"
+    )
+    public List<CategoryDTO> getAllCategoriesTree(UUID branchId, Boolean deleted) {
 
-        List<Category> ordered = categoryRepository.findAllOrderedSafe(deleted, tenantId(), branchId());
+        List<Category> ordered = categoryRepository.findAllOrderedSafe(deleted, tenantId(), branchId);
 
         Map<Long, CategoryDTO> dtoMap = new LinkedHashMap<>();
         List<CategoryDTO> roots = new ArrayList<>();
@@ -394,10 +462,14 @@ public class CategoryService {
         return roots;
     }
 
-    public List<CategoryDTO> getAllCategoriesFlat(Boolean deleted) {
+    @Cacheable(
+            value = "category-flat",
+            key = "T(com.IntegrityTechnologies.business_manager.modules.stock.category.cache.CategoryCacheKey).flat(#branchId, #deleted)"
+    )
+    public List<CategoryDTO> getAllCategoriesFlat(UUID branchId, Boolean deleted) {
 
         List<Category> categories = categoryRepository
-                .findAllOrderedSafe(deleted, tenantId(), branchId());
+                .findAllOrderedSafe(deleted, tenantId(), branchId);
 
         return categories.stream()
                 .map(categoryMapper::toDTO)
@@ -406,13 +478,13 @@ public class CategoryService {
 
     // ---------------- SINGLE CATEGORY ----------------
 
-    public List<SupplierDTO> getCategorySuppliers(Long id, Boolean deleted, Boolean strict) {
+    public List<SupplierDTO> getCategorySuppliers(UUID branchId, Long id, Boolean deleted, Boolean strict) {
 
         Category category = categoryRepository.findByIdSafe(
                 id,
                 null,
                 tenantId(),
-                branchId()
+                branchId
         ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
         Set<Supplier> suppliers = new HashSet<>();
@@ -450,20 +522,20 @@ public class CategoryService {
         return supplierMapper.toDTOList(filtered);
     }
 
-    public CategoryDTO getCategory(Long id, String mode, Boolean deleted) {
+    public CategoryDTO getCategory(UUID branchId, Long id, String mode, Boolean deleted) {
         if("tree".equals(mode))
-            return getCategoryTree(id, deleted);
+            return getCategoryTree(branchId, id, deleted);
         else
-            return getCategoryFlat(id, deleted);
+            return getCategoryFlat(branchId, id, deleted);
     }
 
-    public CategoryDTO getCategoryTree(Long id, Boolean deleted) {
+    public CategoryDTO getCategoryTree(UUID branchId, Long id, Boolean deleted) {
 
         Category root = categoryRepository.findByIdSafe(
                 id,
                 deleted,
                 tenantId(),
-                branchId()
+                branchId
         ).orElseThrow(() -> new CategoryNotFoundException("Category not found"));
 
         if (deleted != null) {
@@ -476,7 +548,7 @@ public class CategoryService {
         List<Category> subtree = categoryRepository.findSubtreeSafe(
                 root.getPath(),
                 tenantId(),
-                branchId()
+                branchId
         );
 
         return buildTree(subtree).stream()
@@ -510,21 +582,21 @@ public class CategoryService {
         return dto;
     }
 
-    public CategoryDTO getCategoryFlat(Long id, Boolean deleted) {
+    public CategoryDTO getCategoryFlat(UUID branchId, Long id, Boolean deleted) {
         if(Boolean.FALSE.equals(deleted)) {
-            Category category = categoryRepository.findByIdSafe(id, false, tenantId(), branchId())
+            Category category = categoryRepository.findByIdSafe(id, false, tenantId(), branchId)
                     .orElseThrow(() -> new CategoryNotFoundException("Category not found or inactive"));
             CategoryDTO dto = categoryMapper.toDTO(category);
             dto.setSubcategories(null); // flat
             return dto;
         } else if(Boolean.TRUE.equals(deleted)) {
-            Category category = categoryRepository.findByIdSafe(id, true, tenantId(), branchId())
+            Category category = categoryRepository.findByIdSafe(id, true, tenantId(), branchId)
                     .orElseThrow(() -> new CategoryNotFoundException("Category not found or active"));
             CategoryDTO dto = categoryMapper.toDTO(category);
             dto.setSubcategories(null);
             return dto;
         } else {
-            Category category = categoryRepository.findByIdSafe(id, null, tenantId(), branchId())
+            Category category = categoryRepository.findByIdSafe(id, null, tenantId(), branchId)
                     .orElseThrow(() -> new CategoryNotFoundException("Category not found"));
             CategoryDTO dto = categoryMapper.toDTO(category);
             dto.setSubcategories(null);
@@ -568,21 +640,22 @@ public class CategoryService {
 
     /** Soft delete a single category */
     @Transactional
-    public ResponseEntity<ApiResponse> softDelete(Long id) {
+    public ResponseEntity<ApiResponse> softDelete(UUID branchId, Long id) {
 
         Category category = categoryRepository.findByIdSafe(
                 id,
                 false,
                 tenantId(),
-                branchId()
+                branchId
         ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
         categoryRepository.softDeleteByPathSafe(
                 category.getPath(),
                 tenantId(),
-                branchId()
+                branchId
         );
 
+        cacheInvalidationService.evictCategoryCaches(branchId);
         return ResponseEntity.ok(
                 new ApiResponse("success", "Category and subcategories soft deleted")
         );
@@ -590,7 +663,7 @@ public class CategoryService {
 
     /** Soft delete categories in bulk */
     @Transactional
-    public ResponseEntity<ApiResponse> softDeleteInBulk(List<Long> ids) {
+    public ResponseEntity<ApiResponse> softDeleteInBulk(UUID branchId, List<Long> ids) {
 
         for (Long id : ids) {
 
@@ -598,16 +671,17 @@ public class CategoryService {
                     id,
                     false,
                     tenantId(),
-                    branchId()
+                    branchId
             ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
             categoryRepository.softDeleteByPathSafe(
                     category.getPath(),
                     tenantId(),
-                    branchId()
+                    branchId
             );
         }
 
+        cacheInvalidationService.evictCategoryCaches(branchId);
         return ResponseEntity.ok(
                 new ApiResponse("success", "Categories and subcategories soft deleted")
         );
@@ -617,21 +691,22 @@ public class CategoryService {
 
     /** Single-category hard delete */
     @Transactional
-    public ResponseEntity<ApiResponse> hardDelete(Long id) {
+    public ResponseEntity<ApiResponse> hardDelete(UUID branchId, Long id) {
 
         Category category = categoryRepository.findByIdSafe(
                 id,
                 null,
                 tenantId(),
-                branchId()
+                branchId
         ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
         categoryRepository.hardDeleteByPathSafe(
                 category.getPath(),
                 tenantId(),
-                branchId()
+                branchId
         );
 
+        cacheInvalidationService.evictCategoryCaches(branchId);
         return ResponseEntity.ok(
                 new ApiResponse("success", "Category permanently deleted")
         );
@@ -639,7 +714,7 @@ public class CategoryService {
 
     /** Bulk hard delete */
     @Transactional
-    public ResponseEntity<ApiResponse> hardDeleteInBulk(List<Long> ids) {
+    public ResponseEntity<ApiResponse> hardDeleteInBulk(UUID branchId, List<Long> ids) {
 
         for (Long id : ids) {
 
@@ -647,16 +722,17 @@ public class CategoryService {
                     id,
                     null,
                     tenantId(),
-                    branchId()
+                    branchId
             ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
             categoryRepository.hardDeleteByPathSafe(
                     category.getPath(),
                     tenantId(),
-                    branchId()
+                    branchId
             );
         }
 
+        cacheInvalidationService.evictCategoryCaches(branchId);
         return ResponseEntity.ok(
                 new ApiResponse("success", "Categories permanently deleted")
         );
@@ -667,13 +743,13 @@ public class CategoryService {
 
     /** Restore single category (non-recursive) */
     @Transactional
-    public ResponseEntity<ApiResponse> restore(Long id) {
+    public ResponseEntity<ApiResponse> restore(UUID branchId, Long id) {
 
         Category category = categoryRepository.findByIdSafe(
                 id,
                 null,
                 tenantId(),
-                branchId()
+                branchId
         ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
         category.setDeleted(false);
@@ -682,6 +758,7 @@ public class CategoryService {
 
         Map<String, Object> restored = Map.of("id", category.getId(), "name", category.getName());
 
+        cacheInvalidationService.evictCategoryCaches(branchId);
         return ResponseEntity.ok(
                 new ApiResponse("success", "Category restored", restored)
         );
@@ -689,7 +766,7 @@ public class CategoryService {
 
     /** Restore categories in bulk (non-recursive) */
     @Transactional
-    public ResponseEntity<ApiResponse> restoreInBulk(List<Long> ids) {
+    public ResponseEntity<ApiResponse> restoreInBulk(UUID branchId, List<Long> ids) {
 
         List<Map<String, Object>> restoredCategories = new ArrayList<>();
 
@@ -699,7 +776,7 @@ public class CategoryService {
                     id,
                     null,
                     tenantId(),
-                    branchId()
+                    branchId
             ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
             category.setDeleted(false);
@@ -711,6 +788,7 @@ public class CategoryService {
             );
         }
 
+        cacheInvalidationService.evictCategoryCaches(branchId);
         return ResponseEntity.ok(
                 new ApiResponse("success", "Categories restored", restoredCategories)
         );
@@ -720,21 +798,22 @@ public class CategoryService {
 
     /** Restore category + all subcategories recursively */
     @Transactional
-    public ResponseEntity<ApiResponse> restoreRecursively(Long id) {
+    public ResponseEntity<ApiResponse> restoreRecursively(UUID branchId, Long id) {
 
         Category category = categoryRepository.findByIdSafe(
                 id,
                 true,
                 tenantId(),
-                branchId()
+                branchId
         ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
 
         categoryRepository.restoreByPathSafe(
                 category.getPath(),
                 tenantId(),
-                branchId()
+                branchId
         );
 
+        cacheInvalidationService.evictCategoryCaches(branchId);
         return ResponseEntity.ok(
                 new ApiResponse("success", "Category and subcategories restored")
         );
@@ -742,7 +821,7 @@ public class CategoryService {
 
     /** Bulk recursive restore */
     @Transactional
-    public ResponseEntity<ApiResponse> restoreCategoriesRecursivelyInBulk(List<Long> ids) {
+    public ResponseEntity<ApiResponse> restoreCategoriesRecursivelyInBulk(UUID branchId, List<Long> ids) {
 
         for (Long id : ids) {
 
@@ -750,7 +829,7 @@ public class CategoryService {
                     id,
                     true,
                     tenantId(),
-                    branchId()
+                    branchId
             ).orElseThrow(() ->
                     new CategoryNotFoundException("Category not found: " + id)
             );
@@ -758,10 +837,11 @@ public class CategoryService {
             categoryRepository.restoreByPathSafe(
                     category.getPath(),
                     tenantId(),
-                    branchId()
+                    branchId
             );
         }
 
+        cacheInvalidationService.evictCategoryCaches(branchId);
         return ResponseEntity.ok(
                 new ApiResponse("success", "Categories and subcategories restored")
         );
@@ -773,13 +853,17 @@ public class CategoryService {
      * Search and return a hierarchical tree of matching categories.
      * Active only if activeOnly=true, otherwise all categories.
      */
-    public List<CategoryDTO> searchByKeyword(String keyword, boolean deleted) {
+    @Cacheable(
+            value = "category-search",
+            key = "T(com.IntegrityTechnologies.business_manager.modules.stock.category.cache.CategoryCacheKey).search(#branchId, #keyword, #deleted)"
+    )
+    public List<CategoryDTO> searchByKeyword(UUID branchId, String keyword, boolean deleted) {
 
         List<Category> matching = categoryRepository.searchSafe(
                 keyword,
                 deleted,
                 tenantId(),
-                branchId()
+                branchId
         );
 
         List<CategoryDTO> dtos = matching.stream()
@@ -814,13 +898,13 @@ public class CategoryService {
         children.forEach(child -> attachChildren(child, childrenMap));
     }
 
-    public List<Long> getAllCategoryIdsRecursive(Long categoryId) {
+    public List<Long> getAllCategoryIdsRecursive(UUID branchId, Long categoryId) {
 
         Category root = categoryRepository.findByIdSafe(
                 categoryId,
                 null,
                 tenantId(),
-                branchId()
+                branchId
         ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + categoryId));
 
         List<Long> ids = new ArrayList<>();
@@ -836,10 +920,5 @@ public class CategoryService {
                 collectCategoryIds(sub, ids);
             }
         }
-    }
-
-    public void validateAccess() {
-        Role role = SecurityUtils.currentRole();
-
     }
 }

@@ -1,6 +1,5 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Data;
 

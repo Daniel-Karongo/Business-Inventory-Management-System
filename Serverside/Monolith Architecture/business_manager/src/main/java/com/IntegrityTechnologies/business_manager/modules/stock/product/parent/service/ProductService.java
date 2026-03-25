@@ -4,8 +4,8 @@ import com.IntegrityTechnologies.business_manager.config.files.FileStorageServic
 import com.IntegrityTechnologies.business_manager.config.files.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.exception.ProductNotFoundException;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.Sale;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
@@ -25,17 +25,17 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.r
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductImageAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantCreateDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariant;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariantAudit;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariantImage;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.model.ProductVariantImageAudit;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantAuditRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantImageAuditRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantImageRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.repository.ProductVariantRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.service.ProductVariantService;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantCreateDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariantAudit;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariantImage;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariantImageAudit;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantImageAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantImageRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.service.ProductVariantService;
 import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
@@ -54,6 +54,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -97,25 +98,25 @@ public class ProductService {
     @PersistenceContext
     private EntityManager em;
 
-    private Path productRoot() {
-        return fileStorageService.productRoot();
-    }
     private UUID tenantId() {
         return TenantContext.getTenantId();
     }
-
-    private UUID branchId() {
-        return BranchContext.get();
-    }
+    
 
     /* =============================
        READ METHODS (unchanged)
        ============================= */
 
-    public List<ProductDTO> getAllProducts(Boolean deleted) {
+    @Transactional(readOnly = true)
+    public Product getById(UUID branchId, UUID id) {
+        return productRepository.findByIdAndTenantIdAndBranchId(id, tenantId(), branchId)
+                .orElseThrow(() -> new EntityNotFoundException("Product not found"));
+    }
+
+    public List<ProductDTO> getAllProducts(UUID branchId, Boolean deleted) {
 
         return productRepository
-                .findAllWithRelationsByTenantIdAndBranchId(tenantId(), branchId())
+                .findAllWithRelationsByTenantIdAndBranchId(tenantId(), branchId)
                 .stream()
                 .filter(product -> matchesDeleted(deleted, product.getDeleted()))
                 .map(productMapper::toDTO)
@@ -135,6 +136,7 @@ public class ProductService {
     );
 
     public Page<ProductDTO> getProductsAdvanced(
+            UUID branchId,
             List<Long> categoryIds,
             String name,
             String description,
@@ -160,7 +162,7 @@ public class ProductService {
         Specification<Product> spec =
                 ProductSpecification.filterProducts(
                         tenantId(),
-                        branchId(),
+                        branchId,
                         categoryIds,
                         name,
                         description,
@@ -181,10 +183,10 @@ public class ProductService {
                 .map(productMapper::toDTO);
     }
 
-    public ProductDTO getProductById(UUID id, Boolean deleted) {
+    public ProductDTO getProductById(UUID branchId, UUID id, Boolean deleted) {
 
         Product product = productRepository
-                .findByIdAndTenantIdAndBranchId(id, tenantId(), branchId())
+                .findByIdAndTenantIdAndBranchId(id, tenantId(), branchId)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found: " + id));
 
         if (deleted != null) {
@@ -199,10 +201,10 @@ public class ProductService {
         return productMapper.toDTO(product);
     }
 
-    public ProductDTO getProductBySKU(String sku, Boolean deleted) {
+    public ProductDTO getProductBySKU(UUID branchId, String sku, Boolean deleted) {
 
         Product product = productRepository
-                .findByTenantIdAndBranchIdAndSku(tenantId(), branchId(), sku)
+                .findByTenantIdAndBranchIdAndSku(tenantId(), branchId, sku)
                 .orElseThrow(() ->
                         new ProductNotFoundException("Product with SKU not found: " + sku)
                 );
@@ -219,13 +221,13 @@ public class ProductService {
         return productMapper.toDTO(product);
     }
 
-    public List<ProductDTO> getProductsBySupplier(UUID supplierId, Boolean deleted) {
+    public List<ProductDTO> getProductsBySupplier(UUID branchId, UUID supplierId, Boolean deleted) {
 
         List<Product> products =
                 productRepository.findAllBySupplierIdAndTenantIdAndBranchId(
                         supplierId,
                         tenantId(),
-                        branchId()
+                        branchId
                 );
 
         if (products.isEmpty()) {
@@ -238,7 +240,7 @@ public class ProductService {
                 .toList();
     }
 
-    public List<ProductDTO> getProductsByCategory(Long categoryId, Boolean deleted, Boolean strict) {
+    public List<ProductDTO> getProductsByCategory(UUID branchId, Long categoryId, Boolean deleted, Boolean strict) {
 
         List<Product> products;
 
@@ -246,18 +248,18 @@ public class ProductService {
 
             products = productRepository.findAllByTenantIdAndBranchIdAndCategory_Id(
                     tenantId(),
-                    branchId(),
+                    branchId,
                     categoryId
             );
 
         } else {
 
             List<Long> categoryIds =
-                    categoryService.getAllCategoryIdsRecursive(categoryId);
+                    categoryService.getAllCategoryIdsRecursive(branchId, categoryId);
 
             products = productRepository.findAllByTenantIdAndBranchIdAndCategory_IdIn(
                     tenantId(),
-                    branchId(),
+                    branchId,
                     categoryIds
             );
         }
@@ -278,6 +280,7 @@ public class ProductService {
 
     @Transactional
     public ProductDTO fullCreate(
+            UUID branchId,
             ProductFullCreateDTO dto,
             List<MultipartFile> files
     ) throws IOException {
@@ -286,7 +289,7 @@ public class ProductService {
        1️⃣ CREATE PRODUCT
        ============================= */
 
-        ProductDTO productDTO = createProductCore(dto.getProduct());
+        ProductDTO productDTO = createProductCore(branchId, dto.getProduct());
 
         Product product = productRepository.findById(productDTO.getId())
                 .orElseThrow(() -> new EntityNotFoundException("Product not found"));
@@ -297,7 +300,7 @@ public class ProductService {
 
         List<ProductVariantCreateDTO> variants =
                 (dto.getVariants() == null || dto.getVariants().isEmpty())
-                        ? List.of(defaultVariant())
+                        ? List.of(defaultVariant(dto.getProduct()))
                         : dto.getVariants();
 
         List<ProductVariant> createdVariants = new ArrayList<>();
@@ -341,15 +344,17 @@ public class ProductService {
         return dto;
     }
 
-    private ProductVariantCreateDTO defaultVariant() {
+    private ProductVariantCreateDTO defaultVariant(ProductCreateDTO productCreateDTO) {
 
         ProductVariantCreateDTO dto = new ProductVariantCreateDTO();
         dto.setClassification("STANDARD");
+        dto.setMinimumPercentageProfit(productCreateDTO.getMinimumPercentageProfit());
+        dto.setMinimumProfit(productCreateDTO.getMinimumProfit());
         return dto;
     }
 
     @Transactional
-    public ProductDTO createProductCore(ProductCreateDTO dto) {
+    public ProductDTO createProductCore(UUID branchId, ProductCreateDTO dto) {
 
     /* =============================
        VALIDATION
@@ -368,7 +373,7 @@ public class ProductService {
     ============================= */
 
         if (productRepository.existsByTenantIdAndBranchIdAndNameIgnoreCase(
-                tenantId(), branchId(), dto.getName()
+                tenantId(), branchId, dto.getName()
         )) {
             throw new IllegalArgumentException(
                     "Product already exists with name: " + dto.getName()
@@ -384,7 +389,7 @@ public class ProductService {
                         dto.getCategoryId(),
                         false,
                         tenantId(),
-                        branchId()
+                        branchId
                 )
                 .orElseThrow(() ->
                         new IllegalArgumentException("Invalid categoryId")
@@ -407,7 +412,7 @@ public class ProductService {
                     supplierRepository.findAllByIdsSafe(
                             dto.getSupplierIds(),
                             tenantId(),
-                            branchId()
+                            branchId
                     );
 
             if (suppliers.size() != dto.getSupplierIds().size()) {
@@ -443,7 +448,7 @@ public class ProductService {
         } else {
 
             if (productRepository.existsByTenantIdAndBranchIdAndSku(
-                    tenantId(), branchId(), product.getSku()
+                    tenantId(), branchId, product.getSku()
             )) {
                 throw new IllegalArgumentException("SKU already exists");
             }
@@ -473,7 +478,7 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductDTO createProduct(ProductCreateDTO dto) throws IOException {
+    public ProductDTO createProduct(UUID branchId, ProductCreateDTO dto) throws IOException {
 
         ProductFullCreateDTO full = new ProductFullCreateDTO();
         full.setProduct(dto);
@@ -496,7 +501,7 @@ public class ProductService {
         // No file assignments
         full.setFileAssignments(null);
 
-        return fullCreate(full, null);
+        return fullCreate(branchId, full, null);
     }
 
     private void validateCreateDTO(ProductCreateDTO dto) {
@@ -510,21 +515,6 @@ public class ProductService {
 
     public String generateVariantSku(Product product, String classification) {
         return product.getSku() + "-" + classification.replaceAll(" ", "-");
-    }
-
-    private void validateCreateDTOUniqueness(ProductCreateDTO dto) {
-
-        if (dto.getName() != null &&
-                productRepository.existsByTenantIdAndBranchIdAndNameIgnoreCase(
-                        tenantId(),
-                        branchId(),
-                        dto.getName()
-                )) {
-
-            throw new IllegalArgumentException(
-                    "A product with the name '" + dto.getName() + "' already exists."
-            );
-        }
     }
 
     public boolean existsByName(String name) {
@@ -593,7 +583,7 @@ public class ProductService {
         if (dto.getSku() != null && !dto.getSku().equals(product.getSku())) {
 
             if (productRepository.existsByTenantIdAndBranchIdAndSku(
-                    tenantId(), branchId(), dto.getSku())) {
+                    tenantId(), dto.getBranchId(), dto.getSku())) {
                 throw new IllegalArgumentException("SKU already exists");
             }
 
@@ -617,7 +607,7 @@ public class ProductService {
                 dto.getCategoryId(),
                 false,
                 tenantId(),
-                branchId()
+                dto.getBranchId()
         ).orElseThrow(() -> new IllegalArgumentException("Invalid categoryId"));
 
         audits.add(auditForField(
@@ -640,7 +630,7 @@ public class ProductService {
                 supplierRepository.findAllByIdsSafe(
                         dto.getSupplierIds(),
                         tenantId(),
-                        branchId()
+                        dto.getBranchId()
                 );
 
         String oldSuppliers = product.getSuppliers() == null
@@ -681,7 +671,7 @@ public class ProductService {
                     productVariantRepository
                             .findByTenantIdAndBranchIdAndProduct_IdAndClassification(
                                     tenantId(),
-                                    branchId(),
+                                    dto.getBranchId(),
                                     product.getId(),
                                     v.getClassification()
                             ).orElse(null);
@@ -691,7 +681,6 @@ public class ProductService {
             ProductVariant variant = new ProductVariant();
             variant.setProduct(product);
             variant.setClassification(v.getClassification());
-            variant.setAverageBuyingPrice(BigDecimal.ZERO);
 
             variant.setSku(
                     v.getSku() != null
@@ -722,20 +711,9 @@ public class ProductService {
 
         product.setMinimumPercentageProfit(dto.getMinimumPercentageProfit());
 
-        if (product.getVariants() == null) return;
+        productRepository.save(product);
 
-        for (ProductVariant v : product.getVariants()) {
-
-            BigDecimal newMinSelling =
-                    productVariantService.computeMinSelling(
-                            v.getAverageBuyingPrice(),
-                            dto.getMinimumPercentageProfit()
-                    );
-
-            v.setMinimumSellingPrice(newMinSelling);
-
-            productVariantRepository.save(v);
-        }
+        // Pricing handled by PricingEngine rules. No mutation here.
     }
 
     private void validateUpdateDTOUniqueness(UUID productId, ProductUpdateDTO dto) {
@@ -744,7 +722,7 @@ public class ProductService {
 
             productRepository.findByTenantIdAndBranchIdAndNameIgnoreCase(
                     tenantId(),
-                    branchId(),
+                    dto.getBranchId(),
                     dto.getName()
             ).ifPresent(existing -> {
                 if (!existing.getId().equals(productId)) {
@@ -797,10 +775,10 @@ public class ProductService {
        ============================= */
 
     @Transactional
-    public void uploadProductImages(UUID productId, List<MultipartFile> files) throws IOException {
+    public void uploadProductImages(UUID branchId, UUID productId, List<MultipartFile> files) throws IOException {
 
         Product product = productRepository
-                .findByIdAndTenantIdAndBranchId(productId, tenantId(), branchId())
+                .findByIdAndTenantIdAndBranchId(productId, tenantId(), branchId)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
 
         productImageService.saveProductImages(product, files);
@@ -808,10 +786,10 @@ public class ProductService {
         productRepository.save(product);
     }
 
-    public void restoreProductImage(UUID productId, UUID productImageId, String reason) {
+    public void restoreProductImage(UUID branchId, UUID productId, UUID productImageId, String reason) {
 
         Product product = productRepository
-                .findByIdAndTenantIdAndBranchId(productId, tenantId(), branchId())
+                .findByIdAndTenantIdAndBranchId(productId, tenantId(), branchId)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
 
         ProductImage img = productImageRepository.findById(productImageId)
@@ -831,10 +809,10 @@ public class ProductService {
         );
     }
 
-    public void deleteProductImageByFilename(UUID productId, String filename, Boolean soft) throws IOException {
+    public void deleteProductImageByFilename(UUID branchId, UUID productId, String filename, Boolean soft) throws IOException {
 
         Product product = productRepository
-                .findByIdAndTenantIdAndBranchId(productId, tenantId(), branchId())
+                .findByIdAndTenantIdAndBranchId(productId, tenantId(), branchId)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
 
         if (product.getImages() == null) return;
@@ -860,7 +838,7 @@ public class ProductService {
 
                     Path physical = resolveProductFile(product.getId(), img.getFileName());
 
-                    boolean usedElsewhere = isFileUsedElsewhere(img, productId);
+                    boolean usedElsewhere = isFileUsedElsewhere(branchId, img, productId);
 
                     product.getImages().remove(img);
                     productImageRepository.delete(img);
@@ -881,15 +859,15 @@ public class ProductService {
         productRepository.save(product);
     }
 
-    public void deleteAllProductImages(UUID productId, Boolean soft, String reason) throws IOException {
+    public void deleteAllProductImages(UUID branchId, UUID productId, Boolean soft, String reason) throws IOException {
 
         Product product = productRepository
-                .findByIdAndTenantIdAndBranchId(productId, tenantId(), branchId())
+                .findByIdAndTenantIdAndBranchId(productId, tenantId(), branchId)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
 
         if (product.getImages() == null) return;
 
-        deleteProductImages(product, soft, reason);
+        deleteProductImages(branchId, product, soft, reason);
 
         if (Boolean.FALSE.equals(soft)) {
 
@@ -904,7 +882,7 @@ public class ProductService {
         }
     }
 
-    public void deleteProductImages(Product product, Boolean soft, String reason) {
+    public void deleteProductImages(UUID branchId, Product product, Boolean soft, String reason) {
         for (ProductImage img : new ArrayList<>(product.getImages())) {
             if(Boolean.TRUE.equals(soft)) {
                 img.setDeleted(true);
@@ -926,7 +904,7 @@ public class ProductService {
 
                     Path physical = resolveProductFile(product.getId(), img.getFileName());
 
-                    boolean usedElsewhere = isFileUsedElsewhere(img, product.getId());
+                    boolean usedElsewhere = isFileUsedElsewhere(branchId, img, product.getId());
 
                     if (!usedElsewhere) {
                         Files.deleteIfExists(physical);
@@ -976,7 +954,7 @@ public class ProductService {
         List<ProductVariantImage> variantImages =
                 variantIds.isEmpty()
                         ? List.of()
-                        : productVariantImageRepository.findByVariantIdsWithVariant(variantIds, tenantId(), branchId());
+                        : productVariantImageRepository.findByVariantIdsWithVariant(variantIds, tenantId(), branchId);
 
     /* ===========================
        APPLY SOFT DELETE
@@ -989,7 +967,7 @@ public class ProductService {
 
         if (!variantIds.isEmpty()) {
             productVariantRepository.softDeleteByProductId(productId, tenantId(), branchId);
-            productVariantImageRepository.softDeleteByVariantIds(variantIds, tenantId(), branchId());
+            productVariantImageRepository.softDeleteByVariantIds(variantIds, tenantId(), branchId);
             inventoryItemRepository.softDeleteByVariantIds(variantIds, tenantId());
             stockTransactionRepository.softDeleteByVariantIds(variantIds, tenantId());
         }
@@ -1121,7 +1099,7 @@ public class ProductService {
 
         List<ProductVariant> variants =
                 productVariantRepository.findByTenantIdAndBranchIdAndProduct_Id(
-                        tenantId(), branchId(), productId
+                        tenantId(), branchId, productId
                 );
 
         if (!variants.isEmpty()) {
@@ -1130,7 +1108,7 @@ public class ProductService {
                     .map(ProductVariant::getId)
                     .toList();
 
-            productVariantRepository.restoreByProductId(productId, tenantId(), branchId());
+            productVariantRepository.restoreByProductId(productId, tenantId(), branchId);
 
             auditVariants(variants,
                     "VARIANT_RESTORED_ALONG_WITH_PRODUCT",
@@ -1145,14 +1123,14 @@ public class ProductService {
            =========================== */
 
             List<ProductVariantImage> variantImages =
-                    productVariantImageRepository.findByVariantIdsWithVariant(variantIds, tenantId(), branchId());
+                    productVariantImageRepository.findByVariantIdsWithVariant(variantIds, tenantId(), branchId);
 
             List<ProductVariantImage> deletedVariantImages =
                     variantImages.stream()
                             .filter(img -> Boolean.TRUE.equals(img.getDeleted()))
                             .toList();
 
-            productVariantImageRepository.restoreByVariantIds(variantIds, tenantId(), branchId());
+            productVariantImageRepository.restoreByVariantIds(variantIds, tenantId(), branchId);
 
             auditVariantImages(
                     deletedVariantImages,
@@ -1173,7 +1151,7 @@ public class ProductService {
                     stockTransactionRepository.restoreByVariantIds(
                             variantIds,
                             tenantId(),
-                            branchId()
+                            branchId
                     );
                 }
 
@@ -1211,7 +1189,7 @@ public class ProductService {
         for (UUID variantId : variantIds) {
 
             List<StockTransaction> transactions =
-                    stockTransactionRepository.findByProductVariantIdAndBranchIdAndTenantIdOrderByTimestampDesc(variantId, tenantId(), branchId());
+                    stockTransactionRepository.findByProductVariantIdAndBranchIdAndTenantIdOrderByTimestampDesc(variantId, tenantId(), branchId);
 
             long quantity = transactions.stream()
                     .mapToLong(StockTransaction::getQuantityDelta)
@@ -1237,7 +1215,7 @@ public class ProductService {
     private Product getProductOrThrow(UUID id, UUID branchId) {
 
         return productRepository
-                .findByIdAndTenantIdAndBranchId(id, tenantId(), branchId == null ? branchId() : branchId)
+                .findByIdAndTenantIdAndBranchId(id, tenantId(), branchId == null ? branchId : branchId)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
     }
 
@@ -1369,35 +1347,35 @@ public class ProductService {
 //    }
 
     @Transactional
-    public void hardDeleteProduct(UUID productId, String reason) {
+    public void hardDeleteProduct(UUID branchId, UUID productId, String reason) {
 
-        Product product = getProductForUpdate(productId);
+        Product product = getProductForUpdate(branchId, productId);
 
         LocalDateTime now = LocalDateTime.now();
         String username = SecurityUtils.currentUsername();
 
-        List<ProductImage> productImages = fetchProductImages(productId);
-        List<ProductVariant> variants = fetchVariants(productId);
+        List<ProductImage> productImages = fetchProductImages(branchId, productId);
+        List<ProductVariant> variants = fetchVariants(branchId, productId);
         List<UUID> variantIds = extractVariantIds(variants);
-        List<ProductVariantImage> variantImages = fetchVariantImages(variantIds);
+        List<ProductVariantImage> variantImages = fetchVariantImages(branchId, variantIds);
 
-        validateHardDeleteSafety(productId, variantIds);
+        validateHardDeleteSafety(branchId, productId, variantIds);
 
         auditHardDelete(product, productImages, variants, variantImages, reason, now, username);
 
-        List<Path> filesToDelete = collectFilesToDelete(productImages, variantImages, productId);
+        List<Path> filesToDelete = collectFilesToDelete(branchId, productImages, variantImages, productId);
 
-        deleteRelations(productId, variantIds);
+        deleteRelations(branchId, productId, variantIds);
 
         scheduleFileCleanup(filesToDelete);
     }
 
     @Transactional
-    public void bulkHardDelete(List<UUID> ids, String reason) {
+    public void bulkHardDelete(UUID branchId, List<UUID> ids, String reason) {
         int i = 0;
         for (UUID id : ids) {
 
-            hardDeleteProduct(id, reason);
+            hardDeleteProduct(branchId, id, reason);
 
             if (++i % 20 == 0) {
                 em.flush();
@@ -1406,20 +1384,20 @@ public class ProductService {
         }
     }
 
-    private Product getProductForUpdate(UUID productId) {
-        return productRepository.findForUpdate(productId, tenantId(), branchId())
+    private Product getProductForUpdate(UUID branchId, UUID productId) {
+        return productRepository.findForUpdate(productId, tenantId(), branchId)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
     }
 
-    private List<ProductImage> fetchProductImages(UUID productId) {
+    private List<ProductImage> fetchProductImages(UUID branchId, UUID productId) {
         return productImageRepository.findByTenantIdAndBranchIdAndProduct_Id(
-                tenantId(), branchId(), productId
+                tenantId(), branchId, productId
         );
     }
 
-    private List<ProductVariant> fetchVariants(UUID productId) {
+    private List<ProductVariant> fetchVariants(UUID branchId, UUID productId) {
         return productVariantRepository.findByTenantIdAndBranchIdAndProduct_Id(
-                tenantId(), branchId(), productId
+                tenantId(), branchId, productId
         );
     }
 
@@ -1427,15 +1405,15 @@ public class ProductService {
         return variants.stream().map(ProductVariant::getId).toList();
     }
 
-    private List<ProductVariantImage> fetchVariantImages(List<UUID> variantIds) {
+    private List<ProductVariantImage> fetchVariantImages(UUID branchId, List<UUID> variantIds) {
         return variantIds.isEmpty()
                 ? List.of()
                 : productVariantImageRepository.findByVariantIdsWithVariant(
-                variantIds, tenantId(), branchId()
+                variantIds, tenantId(), branchId
         );
     }
 
-    private void validateHardDeleteSafety(UUID productId, List<UUID> variantIds) {
+    private void validateHardDeleteSafety(UUID branchId, UUID productId, List<UUID> variantIds) {
 
         if (!variantIds.isEmpty()) {
 
@@ -1451,10 +1429,10 @@ public class ProductService {
         }
 
         if (stockTransactionRepository.existsByProductIdAndTenantIdAndBranchId(
-                productId, tenantId(), branchId()
+                productId, tenantId(), branchId
         ) ||
                 inventoryItemRepository.existsByProductIdAndTenantIdAndBranchId(
-                        productId, tenantId(), branchId()
+                        productId, tenantId(), branchId
                 )) {
 
             throw new IllegalStateException("Cannot delete product with inventory history");
@@ -1481,6 +1459,7 @@ public class ProductService {
     }
 
     private List<Path> collectFilesToDelete(
+            UUID branchId,
             List<ProductImage> productImages,
             List<ProductVariantImage> variantImages,
             UUID productId
@@ -1494,7 +1473,7 @@ public class ProductService {
 
             boolean usedElsewhere = productImageRepository
                     .existsByTenantIdAndBranchIdAndContentHashAndProduct_IdNot(
-                            tenantId(), branchId(), img.getContentHash(), productId
+                            tenantId(), branchId, img.getContentHash(), productId
                     );
 
             if (!usedElsewhere) {
@@ -1509,16 +1488,16 @@ public class ProductService {
         return files;
     }
 
-    private void deleteRelations(UUID productId, List<UUID> variantIds) {
+    private void deleteRelations(UUID branchId, UUID productId, List<UUID> variantIds) {
 
         productRepository.detachSuppliers(productId);
 
         if (!variantIds.isEmpty()) {
-            productVariantImageRepository.deleteByVariantIds(variantIds, tenantId(), branchId());
-            productVariantRepository.deleteByProductId(productId, tenantId(), branchId());
+            productVariantImageRepository.deleteByVariantIds(variantIds, tenantId(), branchId);
+            productVariantRepository.deleteByProductId(productId, tenantId(), branchId);
         }
 
-        productImageRepository.deleteByProductId(productId, tenantId(), branchId());
+        productImageRepository.deleteByProductId(productId, tenantId(), branchId);
 
         em.flush();
         em.clear();
@@ -1560,10 +1539,10 @@ public class ProductService {
     PRODUCT IMAGES
    ============================= */
 
-    public ResponseEntity<Resource> downloadProductImagesZip(UUID productId, Boolean deleted)
+    public ResponseEntity<Resource> downloadProductImagesZip(UUID branchId, UUID productId, Boolean deleted)
             throws IOException {
 
-        File zip = zipProductImages(productId, deleted);
+        File zip = zipProductImages(branchId, productId, deleted);
 
         Resource res = new FileSystemResource(zip);
 
@@ -1577,11 +1556,12 @@ public class ProductService {
     }
 
     public ResponseEntity<Resource> downloadAllProductImagesZip(
+            UUID branchId,
             Boolean deletedProducts,
             Boolean deletedImages
     ) throws IOException {
 
-        File zip = zipAllProductImages(deletedProducts, deletedImages);
+        File zip = zipAllProductImages(branchId, deletedProducts, deletedImages);
 
         Resource res = new FileSystemResource(zip);
 
@@ -1594,9 +1574,9 @@ public class ProductService {
                 .body(res);
     }
 
-    public List<String> getProductImageUrls(UUID id, Boolean deleted) {
+    public List<String> getProductImageUrls(UUID branchId, UUID id, Boolean deleted) {
 
-        Product product = getProduct(id);
+        Product product = getProduct(branchId, id);
 
         if (product.getImages() == null) return List.of();
 
@@ -1607,9 +1587,9 @@ public class ProductService {
                 .toList();
     }
 
-    public File zipProductImages(UUID productId, Boolean deleted) throws IOException {
+    public File zipProductImages(UUID branchId, UUID productId, Boolean deleted) throws IOException {
 
-        Product product = getProduct(productId);
+        Product product = getProduct(branchId, productId);
 
         List<ProductImage> imagesToZip = product.getImages() == null
                 ? List.of()
@@ -1635,10 +1615,10 @@ public class ProductService {
         return zipFile;
     }
 
-    public Map<UUID, List<String>> getAllProductImageUrls() {
+    public Map<UUID, List<String>> getAllProductImageUrls(UUID branchId) {
 
         return productImageRepository
-                .findAllImagePaths(tenantId(), branchId())
+                .findAllImagePaths(tenantId(), branchId)
                 .stream()
                 .collect(Collectors.groupingBy(
                         ProductImageProjection::getProductId,
@@ -1646,11 +1626,11 @@ public class ProductService {
                 ));
     }
 
-    public File zipAllProductImages(Boolean deletedProducts, Boolean deletedImages) throws IOException {
+    public File zipAllProductImages(UUID branchId, Boolean deletedProducts, Boolean deletedImages) throws IOException {
 
         List<Product> products = productRepository.findAllWithRelationsByTenantIdAndBranchId(
                 tenantId(),
-                branchId()
+                branchId
         );
 
         File zipFile = File.createTempFile("all-product-images", ".zip");
@@ -1687,13 +1667,13 @@ public class ProductService {
         return zipFile;
     }
 
-    public ResponseEntity<Resource> getProductThumbnail(UUID id) {
+    public ResponseEntity<Resource> getProductThumbnail(UUID branchId, UUID id) {
 
         Product product = productRepository
                 .findByIdAndTenantIdAndBranchIdAndDeletedFalse(
                         id,
                         tenantId(),
-                        branchId()
+                        branchId
                 )
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
 
@@ -1738,22 +1718,22 @@ public class ProductService {
        PRODUCT AUDITS
        ============================= */
 
-    public List<ProductAudit> getProductAudits(UUID productId) {
+    public List<ProductAudit> getProductAudits(UUID branchId, UUID productId) {
 
         return productAuditRepository
                 .findByTenantIdAndBranchIdAndProductIdOrderByTimestampDesc(
                         tenantId(),
-                        branchId(),
+                        branchId,
                         productId
                 );
     }
 
-    public List<ProductImageAudit> getProductImagesAudits(UUID productId) {
+    public List<ProductImageAudit> getProductImagesAudits(UUID branchId, UUID productId) {
 
         return productImageAuditRepository
                 .findByTenantIdAndBranchIdAndProductId(
                         tenantId(),
-                        branchId(),
+                        branchId,
                         productId
                 )
                 .stream()
@@ -1761,10 +1741,10 @@ public class ProductService {
                 .toList();
     }
 
-    public Map<UUID, List<ProductImageAudit>> getAllProductImagesAudits() {
+    public Map<UUID, List<ProductImageAudit>> getAllProductImagesAudits(UUID branchId) {
 
         return productImageAuditRepository
-                .findByTenantIdAndBranchId(tenantId(), branchId())
+                .findByTenantIdAndBranchId(tenantId(), branchId)
                 .stream()
                 .sorted(Comparator.comparing(ProductImageAudit::getTimestamp).reversed())
                 .collect(Collectors.groupingBy(ProductImageAudit::getProductId));
@@ -1792,9 +1772,9 @@ public class ProductService {
                 : Boolean.FALSE.equals(actual);
     }
 
-    private Product getProduct(UUID id) {
+    private Product getProduct(UUID branchId, UUID id) {
         return productRepository
-                .findByIdAndTenantIdAndBranchId(id, tenantId(), branchId())
+                .findByIdAndTenantIdAndBranchId(id, tenantId(), branchId)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found: " + id));
     }
 
@@ -1811,12 +1791,12 @@ public class ProductService {
         zos.closeEntry();
     }
 
-    private boolean isFileUsedElsewhere(ProductImage img, UUID currentProductId) {
+    private boolean isFileUsedElsewhere(UUID branchId, ProductImage img, UUID currentProductId) {
 
         return productImageRepository
                 .existsByTenantIdAndBranchIdAndContentHashAndProduct_IdNot(
                         tenantId(),
-                        branchId(),
+                        branchId,
                         img.getContentHash(),
                         currentProductId
                 );
@@ -1866,9 +1846,5 @@ public class ProductService {
             ia.setFilePath(img.getFilePath());
         }
         return ia;
-    }
-
-    private String sanitizeFilename(String n) {
-        return (n == null) ? "file" : n.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
 }

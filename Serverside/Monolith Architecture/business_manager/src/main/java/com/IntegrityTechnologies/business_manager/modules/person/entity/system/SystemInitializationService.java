@@ -108,7 +108,7 @@ public class SystemInitializationService {
             if (adminCreated) {
 
                 UUID branchId = branchRepository
-                        .findByTenantIdAndBranchCodeIgnoreCase(tenant.getId(), "MAIN")
+                        .findByTenantIdAndBranchCodeIgnoreCaseAndDeletedFalse(tenant.getId(), "MAIN")
                         .map(Branch::getId)
                         .orElse(null);
 

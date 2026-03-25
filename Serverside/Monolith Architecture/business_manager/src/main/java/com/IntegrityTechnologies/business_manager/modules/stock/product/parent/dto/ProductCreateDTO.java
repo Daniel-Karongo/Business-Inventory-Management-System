@@ -30,6 +30,7 @@ public class ProductCreateDTO {
     private Long categoryId;
 
     private Double minimumPercentageProfit;
+    private BigDecimal minimumProfit;
 
     private List<UUID> supplierIds;
 

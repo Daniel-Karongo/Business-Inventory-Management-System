@@ -15,9 +15,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.Pa
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.Payment;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.PaymentStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.repository.PaymentRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.Sale;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.model.SaleLineItem;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.repository.SaleRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.Sale;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineItem;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service.CustomerService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;

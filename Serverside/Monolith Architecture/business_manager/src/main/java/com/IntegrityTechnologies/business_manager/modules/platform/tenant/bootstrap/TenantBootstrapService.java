@@ -58,7 +58,7 @@ public class TenantBootstrapService {
         ===================================== */
 
         Branch branch = branchRepository
-                .findByTenantIdAndBranchCodeIgnoreCase(tenantId, "MAIN")
+                .findByTenantIdAndBranchCodeIgnoreCaseAndDeletedFalse(tenantId, "MAIN")
                 .orElseGet(() -> {
 
                     Branch b = Branch.builder()

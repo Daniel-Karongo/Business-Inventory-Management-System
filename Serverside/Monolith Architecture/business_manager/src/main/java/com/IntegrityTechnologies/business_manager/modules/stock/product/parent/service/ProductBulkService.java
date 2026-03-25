@@ -1,9 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.service;
 
-import com.IntegrityTechnologies.business_manager.config.util.PhoneAndEmailNormalizer;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkOptions;
-import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
+import com.IntegrityTechnologies.business_manager.config.util.PhoneAndEmailNormalizer;
+import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.service.SupplierService;
@@ -11,11 +11,11 @@ import com.IntegrityTechnologies.business_manager.modules.stock.category.model.C
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.service.CategoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.*;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantCreateDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantDTO;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantCreateDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantDTO;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -32,144 +32,14 @@ public class ProductBulkService {
     private final SupplierRepository supplierRepository;
     private final SupplierService supplierService;
     private final CategoryService categoryService;
+    private final BranchRepository branchRepository;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
     }
 
-    private UUID branchId() {
-        return BranchContext.get();
-    }
-
     private String normalize(String name) {
         return PhoneAndEmailNormalizer.toTitleCase(name);
-    }
-
-    public BulkResult<ProductDTO> importProducts(
-            BulkRequest<ProductBulkRow> request
-    ) {
-
-        BulkResult<ProductDTO> result = new BulkResult<>();
-        result.setTotal(request.getItems().size());
-
-        BulkOptions options =
-                request.getOptions() != null
-                        ? request.getOptions()
-                        : new BulkOptions();
-
-        Set<String> seenNames = new HashSet<>();
-
-        for (int i = 0; i < request.getItems().size(); i++) {
-
-            int rowNum = i + 1;
-            ProductBulkRow row = request.getItems().get(i);
-
-            try {
-
-                validate(row);
-
-                String normalizedName = normalize(row.getName());
-                String normalizedKey = normalizedName.toLowerCase();
-
-                if (!seenNames.add(normalizedKey)) {
-                    throw new IllegalArgumentException(
-                            "Duplicate product name in import: " + normalizedName
-                    );
-                }
-
-                if (options.isSkipDuplicates()
-                        && productService.existsByName(normalizedName)) {
-
-                    throw new IllegalArgumentException(
-                            "Product already exists: " + normalizedName
-                    );
-                }
-
-                Category category = categoryRepository
-                        .findByNameSafe(row.getCategoryName(), false, tenantId(), branchId())
-                        .orElseThrow(() ->
-                                new IllegalArgumentException(
-                                        "Unknown category: " + row.getCategoryName()
-                                )
-                        );
-
-                Set<UUID> supplierIds = new HashSet<>();
-
-                if (row.getSupplierNames() != null) {
-
-                    for (String supplierName : row.getSupplierNames()) {
-
-                        Supplier supplier = supplierRepository
-                                .findByNameSafe(supplierName, false, tenantId(), branchId())
-                                .orElseThrow(() ->
-                                        new IllegalArgumentException(
-                                                "Unknown supplier: " + supplierName
-                                        )
-                                );
-
-                        supplierIds.add(supplier.getId());
-                    }
-                }
-
-                List<String> variants =
-                        (row.getVariants() == null || row.getVariants().isEmpty())
-                                ? List.of("STANDARD")
-                                : row.getVariants();
-
-            /* =========================
-               DRY RUN (UNCHANGED)
-               ========================= */
-                if (options.isDryRun()) {
-
-                    List<ProductVariantDTO> previewVariants =
-                            variants.stream()
-                                    .map(String::trim)
-                                    .filter(v -> !v.isBlank())
-                                    .map(v -> ProductVariantDTO.builder()
-                                            .classification(v)
-                                            .build())
-                                    .toList();
-
-                    result.addSuccess(
-                            ProductDTO.builder()
-                                    .name(normalizedName)
-                                    .description(row.getDescription())
-                                    .categoryId(category.getId())
-                                    .categoryName(category.getName())
-                                    .variants(previewVariants)
-                                    .minimumPercentageProfit(row.getMinimumPercentageProfit())
-                                    .build()
-                    );
-
-                    continue;
-                }
-
-            /* =========================
-               REAL INSERT
-               ========================= */
-
-                ProductCreateDTO dto = ProductCreateDTO.builder()
-                        .name(normalizedName)
-                        .description(row.getDescription())
-                        .barcode(row.getBarcode())
-                        .categoryId(category.getId())
-                        .supplierIds(
-                                supplierIds.isEmpty() ? null : new ArrayList<>(supplierIds)
-                        )
-                        .variants(variants)
-                        .minimumPercentageProfit(row.getMinimumPercentageProfit())
-                        .build();
-
-                ProductDTO saved = productService.createProduct(dto);
-
-                result.addSuccess(saved);
-
-            } catch (Exception ex) {
-                result.addError(rowNum, ex.getMessage());
-            }
-        }
-
-        return result;
     }
 
     @Transactional
@@ -202,6 +72,8 @@ public class ProductBulkService {
                 int rowNumber = i + 1;
                 ProductBulkFrontendRowDTO row = request.getProducts().get(i);
 
+                UUID branchId = findBranch(row.getBranchName());
+
                 try {
 
                     validateFrontendRow(row);
@@ -211,6 +83,7 @@ public class ProductBulkService {
                             ProductDTO.builder()
                                     .name(normalize(row.getName()))
                                     .description(row.getDescription())
+                                    .branchId(branchId)
                                     .categoryName(row.getCategoryName())
                                     .minimumPercentageProfit(row.getMinimumPercentageProfit())
                                     .variants(
@@ -242,15 +115,16 @@ public class ProductBulkService {
         for (int i = 0; i < request.getProducts().size(); i++) {
 
             ProductBulkFrontendRowDTO row = request.getProducts().get(i);
+            UUID branchId = findBranch(row.getBranchName());
 
             ProductFullCreateDTO internal =
-                    mapToInternalDTO(row, i, request, files);
+                    mapToInternalDTO(row, i, request);
 
             List<MultipartFile> relevantFiles =
                     filterMultipartFilesForRow(i, request, files);
 
             ProductDTO saved =
-                    productService.fullCreate(internal, relevantFiles);
+                    productService.fullCreate(branchId, internal, relevantFiles);
 
             created.add(saved);
         }
@@ -265,14 +139,14 @@ public class ProductBulkService {
     private ProductFullCreateDTO mapToInternalDTO(
             ProductBulkFrontendRowDTO row,
             int rowIndex,
-            ProductBulkFrontendRequestDTO request,
-            List<MultipartFile> files
+            ProductBulkFrontendRequestDTO request
     ) {
+        UUID branchId = findBranch(row.getBranchName());
 
         String normalizedName = normalize(row.getName());
 
         Category category = categoryRepository
-                .findByNameSafe(row.getCategoryName(), false, tenantId(), branchId())
+                .findByNameSafe(row.getCategoryName(), false, tenantId(), branchId)
                 .orElseGet(() -> {
 
                     if (!request.getOptions().isCreateMissingCategories()) {
@@ -281,7 +155,7 @@ public class ProductBulkService {
                         );
                     }
 
-                    return categoryService.createMinimal(row.getCategoryName());
+                    return categoryService.createMinimal(row.getCategoryName(), row.getBranchName());
                 });
 
         List<UUID> supplierIds = new ArrayList<>();
@@ -291,7 +165,7 @@ public class ProductBulkService {
             for (String supplierName : row.getSupplierNames()) {
 
                 Supplier supplier = supplierRepository
-                        .findByNameSafe(supplierName, false, tenantId(), branchId())
+                        .findByNameSafe(supplierName, false, tenantId(), branchId)
                         .orElseGet(() -> {
 
                             if (!request.getOptions().isCreateMissingSuppliers()) {
@@ -416,9 +290,10 @@ public class ProductBulkService {
             ProductBulkFrontendRowDTO row,
             BulkOptions options
     ) {
+        UUID branchId = findBranch(row.getBranchName());
 
         if (!categoryRepository
-                .existsByNameSafe(row.getCategoryName(), tenantId(), branchId())
+                .existsByNameSafe(row.getCategoryName(), tenantId(), branchId)
                 && !options.isCreateMissingCategories()) {
 
             throw new IllegalArgumentException(
@@ -430,7 +305,7 @@ public class ProductBulkService {
             for (String supplierName : row.getSupplierNames()) {
 
                 if (!supplierRepository
-                        .existsByNameSafe(supplierName, tenantId(), branchId())
+                        .existsByNameSafe(supplierName, tenantId(), branchId)
                         && !options.isCreateMissingSuppliers()) {
 
                     throw new IllegalArgumentException(
@@ -459,17 +334,24 @@ public class ProductBulkService {
                     "Product already exists: " + row.getName()
             );
         }
+
+        if (row.getCategoryName() == null
+                || row.getCategoryName().isBlank()) {
+            throw new IllegalArgumentException("Category is required");
+        }
+
+        if (row.getBranchName() == null
+                || row.getBranchName().isBlank()) {
+            throw new IllegalArgumentException("Branch is required");
+        }
     }
 
-    /* =========================
-       HELPERS
-       ========================= */
-
-    private void validate(ProductBulkRow row) {
-        if (row.getName() == null || row.getName().isBlank())
-            throw new IllegalArgumentException("name is required");
-
-        if (row.getCategoryName() == null || row.getCategoryName().isBlank())
-            throw new IllegalArgumentException("categoryName is required");
+    @Cacheable(
+            value = "branch-lookup",
+            key = "T(java.util.Objects).hash(T(com.IntegrityTechnologies.business_manager.security.util.TenantContext).getTenantId(), #branchName)"
+    )
+    public UUID findBranch(String branchName) {
+        return branchRepository.findByTenantIdAndBranchCodeIgnoreCaseAndDeletedFalse(tenantId(), branchName)
+                .orElseThrow(() -> new IllegalArgumentException("Branch not found: " + branchName)).getId();
     }
 }

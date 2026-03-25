@@ -38,4 +38,11 @@ public class InventorySnapshot extends BranchAwareEntity {
 
     private LocalDate snapshotDate;
     private LocalDateTime createdAt;
+
+    @Column(precision = 19, scale = 6)
+    private BigDecimal unitCost;
+
+    @Column(nullable = false)
+    private String valuationMethod;
 }
+

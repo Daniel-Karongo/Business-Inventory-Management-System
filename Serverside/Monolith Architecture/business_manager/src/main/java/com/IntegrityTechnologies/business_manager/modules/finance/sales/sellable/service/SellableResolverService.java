@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,7 @@ public class SellableResolverService {
     private final PricingEngineService pricingEngine;
     private final InventoryService inventoryService;
 
+
     public ResolvedSellable resolve(
             UUID variantId,
             UUID packagingId,
@@ -34,7 +36,8 @@ public class SellableResolverService {
     ) {
 
         long baseUnits = quantity * unitsPerPackaging;
-
+        BigDecimal unitCost =
+                inventoryService.getAverageCost(variantId, branchId);
         // =========================
         // PRICING
         // =========================
@@ -45,6 +48,7 @@ public class SellableResolverService {
                         .productVariantId(variantId)
                         .packagingId(packagingId)
                         .quantity(baseUnits)
+                        .cost(unitCost)
                         .customerId(customerId)
                         .customerGroupId(customerGroupId)
                         .pricingTime(LocalDateTime.now())
@@ -90,22 +94,6 @@ public class SellableResolverService {
         long baseUnits = quantity * unitsPerPackaging;
 
         // =========================
-        // PRICING
-        // =========================
-        PricingResult pricing = pricingEngine.resolve(
-                PricingContext.builder()
-                        .tenantId(TenantContext.getTenantId())
-                        .branchId(branchId)
-                        .productVariantId(variantId)
-                        .packagingId(packagingId)
-                        .quantity(baseUnits)
-                        .customerId(customerId)
-                        .customerGroupId(customerGroupId)
-                        .pricingTime(java.time.LocalDateTime.now())
-                        .build()
-        );
-
-        // =========================
         // STOCK VALIDATION
         // =========================
         long available = inventoryService.availableQuantity(
@@ -129,6 +117,25 @@ public class SellableResolverService {
                 );
 
         BigDecimal totalCost = (BigDecimal) allocation.get("totalCost");
+        BigDecimal unitCost =
+                totalCost.divide(BigDecimal.valueOf(baseUnits), 6, RoundingMode.HALF_UP);
+
+        // =========================
+        // PRICING
+        // =========================
+        PricingResult pricing = pricingEngine.resolve(
+                PricingContext.builder()
+                        .tenantId(TenantContext.getTenantId())
+                        .branchId(branchId)
+                        .productVariantId(variantId)
+                        .packagingId(packagingId)
+                        .quantity(baseUnits)
+                        .cost(unitCost)
+                        .customerId(customerId)
+                        .customerGroupId(customerGroupId)
+                        .pricingTime(LocalDateTime.now())
+                        .build()
+        );
 
         return SellableResolveResponse.builder()
                 .productVariantId(variantId)

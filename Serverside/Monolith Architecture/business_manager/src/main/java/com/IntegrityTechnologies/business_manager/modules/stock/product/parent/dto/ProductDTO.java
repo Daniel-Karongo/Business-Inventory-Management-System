@@ -1,12 +1,13 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto;
 
 import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierMinimalDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.dto.ProductVariantDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -23,8 +24,10 @@ public class ProductDTO {
     private String sku;
     private String barcode;
     private String barcodeImagePath;
+    private UUID branchId;
 
-    private Double minimumPercentageProfit; // same field name you used
+    private Double minimumPercentageProfit;
+    private BigDecimal minimumProfit;
 
     private List<ProductVariantDTO> variants; // <-- NEW
     private List<String> imageUrls;

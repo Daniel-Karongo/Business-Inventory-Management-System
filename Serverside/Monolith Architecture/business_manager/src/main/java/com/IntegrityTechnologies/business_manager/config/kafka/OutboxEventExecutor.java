@@ -2,9 +2,9 @@ package com.IntegrityTechnologies.business_manager.config.kafka;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.AccountingPeriodClosedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.events.VariantBarcodePdfRequestedEvent;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.events.VariantBarcodeRequestedEvent;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.events.VariantImageUploadRequestedEvent;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.events.VariantBarcodePdfRequestedEvent;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.events.VariantBarcodeRequestedEvent;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.events.VariantImageUploadRequestedEvent;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
