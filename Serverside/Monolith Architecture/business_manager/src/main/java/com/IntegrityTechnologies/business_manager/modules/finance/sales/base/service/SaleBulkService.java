@@ -12,6 +12,10 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineItem;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.repository.SaleRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.ResolutionMode;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableContext;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableSnapshot;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.service.SellableResolutionService;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
@@ -21,7 +25,6 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.service.ProductVariantPackagingService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingAdjustment;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingPolicy;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingResult;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.service.PricingEngineService;
@@ -56,6 +59,7 @@ public class SaleBulkService {
     private final PricingEngineService pricingEngine;
     private final ObjectMapper objectMapper;
     private final TaxSystemStateService taxSystemStateService;
+    private final SellableResolutionService sellableResolutionService;
 
     /* ============================================================
        ENTRY POINT
@@ -131,26 +135,9 @@ public class SaleBulkService {
                 validateRow(row);
 
                 ProductVariant variant = resolveVariant(row);
-                Branch branch = resolveBranch(row);
+                resolveBranch(row);
 
-                ProductVariantPackaging packaging =
-                        resolvePackaging(row, variant);
-
-                long baseUnits =
-                        row.getQuantity() * packaging.getUnitsPerPackaging();
-
-                try {
-                    inventoryService.previewAllocation(
-                            variant.getId(),
-                            branch.getId(),
-                            baseUnits,
-                            null // no manual selection in bulk (for now)
-                    );
-                } catch (Exception ex) {
-                    throw new IllegalArgumentException(
-                            "Insufficient stock (strict allocation failed): " + ex.getMessage()
-                    );
-                }
+                resolvePackaging(row, variant);
 
             } catch (Exception ex) {
                 result.addError(rowNum, ex.getMessage());
@@ -219,114 +206,138 @@ public class SaleBulkService {
             ProductVariantPackaging packaging =
                     resolvePackaging(row, variant);
 
-            long baseUnits =
-                    row.getQuantity() * packaging.getUnitsPerPackaging();
-
-            PricingResult pricing;
-
+            // =========================
+            // MANUAL PRICE OVERRIDE (PRESERVED)
+            // =========================
             if (row.getUnitPrice() != null) {
 
-                // 👤 MANUAL OVERRIDE
-                pricing = new PricingResult();
-                pricing.setBasePrice(row.getUnitPrice());
-                pricing.setFinalPrice(row.getUnitPrice());
-                pricing.setResolvedPriceId(null);
+                BigDecimal unitPrice = row.getUnitPrice();
+                long baseUnits = row.getQuantity() * packaging.getUnitsPerPackaging();
 
-                pricing.getAdjustments().add(
-                        new PricingAdjustment(
-                                "MANUAL_OVERRIDE",
-                                "BULK_INPUT",
-                                BigDecimal.ZERO,
-                                "Manual price override (bulk)"
+                BigDecimal gross = unitPrice.multiply(BigDecimal.valueOf(row.getQuantity()));
+
+                var taxState = taxSystemStateService.getOrCreate(branch.getId());
+
+                boolean vatEnabled = taxState.isVatEnabled();
+                BigDecimal vatRate = vatEnabled ? taxState.getVatRate() : BigDecimal.ZERO;
+                boolean pricesVatInclusive = taxState.isPricesVatInclusive();
+
+                BigDecimal net;
+                BigDecimal vat;
+
+                if (vatEnabled) {
+                    if (pricesVatInclusive) {
+                        net = gross.divide(
+                                BigDecimal.ONE.add(vatRate),
+                                6,
+                                RoundingMode.HALF_UP
+                        );
+                        vat = gross.subtract(net);
+                    } else {
+                        net = gross;
+                        vat = net.multiply(vatRate);
+                        gross = net.add(vat);
+                    }
+                } else {
+                    net = gross;
+                    vat = BigDecimal.ZERO;
+                }
+
+                String pricingJson;
+                try {
+                    PricingResult pricing = new PricingResult();
+                    pricing.setBasePrice(unitPrice);
+                    pricing.setFinalPrice(unitPrice);
+
+                    pricing.getAdjustments().add(
+                            new PricingAdjustment(
+                                    "MANUAL_OVERRIDE",
+                                    "BULK_INPUT",
+                                    BigDecimal.ZERO,
+                                    "Manual price override (bulk)"
+                            )
+                    );
+
+                    pricingJson = objectMapper.writeValueAsString(pricing);
+
+                } catch (Exception e) {
+                    pricingJson = "{\"error\":\"pricing_serialization_failed\"}";
+                }
+
+                Long available = inventoryService.availableQuantity(
+                        variant.getId(),
+                        branch.getId()
+                );
+
+                items.add(
+                        new PlannedLineItem(
+                                variant,
+                                branch,
+                                packaging,
+                                row.getQuantity(),
+                                baseUnits,
+                                unitPrice,
+                                net,
+                                vat,
+                                vatRate,
+                                gross,
+                                pricingJson,
+
+                                // SNAPSHOT (MANUAL FALLBACK)
+                                null,                 // unitCost
+                                null,                 // totalCost
+                                available,
+                                available >= baseUnits,
+                                "[]",                  // warnings
+                                ResolutionMode.FINAL_STRICT
                         )
                 );
 
-//                if (variant.getMinimumSellingPrice() != null &&
-//                        row.getUnitPrice().compareTo(variant.getMinimumSellingPrice()) < 0) {
-//
-//                    pricing.getAdjustments().add(
-//                            new PricingAdjustment(
-//                                    "BELOW_MIN_PRICE",
-//                                    "SYSTEM_WARNING",
-//                                    variant.getMinimumSellingPrice().subtract(row.getUnitPrice()),
-//                                    "Price below minimum selling price"
-//                            )
-//                    );
-//                }
-
-            } else {
-
-                pricing = pricingEngine.resolve(
-                        PricingContext.builder()
-                                .tenantId(TenantContext.getTenantId())
-                                .branchId(branch.getId())
-                                .productVariantId(variant.getId())
-                                .packagingId(packaging.getId())
-                                .quantity(baseUnits)
-                                .customerId(customerId)           // ✅ ADD
-                                .customerGroupId(customerGroupId) // ✅ ADD
-                                .pricingTime(LocalDateTime.now())
-                                .policy(
-                                        PricingPolicy.builder()
-                                                .enforceMinimumPrice(false) // bulk import allows override
-                                                .requireOverrideReason(false) // optional depending on business
-                                                .build()
-                                )
-                                .build()
-                );
-            }
-            BigDecimal unitPrice = pricing.getFinalPrice();
-
-            BigDecimal gross = unitPrice.multiply(BigDecimal.valueOf(row.getQuantity()));
-
-            var taxState = taxSystemStateService.getOrCreate(branch.getId());
-
-            boolean vatEnabled = taxState.isVatEnabled();
-            BigDecimal vatRate = vatEnabled ? taxState.getVatRate() : BigDecimal.ZERO;
-            boolean pricesVatInclusive = taxState.isPricesVatInclusive();
-
-            BigDecimal net;
-            BigDecimal vat;
-
-            if (vatEnabled) {
-
-                if (pricesVatInclusive) {
-                    net = gross.divide(
-                            BigDecimal.ONE.add(vatRate),
-                            6,
-                            RoundingMode.HALF_UP
-                    );
-                    vat = gross.subtract(net);
-                } else {
-                    net = gross;
-                    vat = net.multiply(vatRate);
-                    gross = net.add(vat);
-                }
-
-            } else {
-                net = gross;
-                vat = BigDecimal.ZERO;
+                continue;
             }
 
-            String pricingJson;
-            try {
-                pricingJson = objectMapper.writeValueAsString(pricing);
-            } catch (Exception e) {
-                pricingJson = "{\"error\":\"pricing_serialization_failed\"}";
-            }
+            // =========================
+            // DOMAIN RESOLUTION (NEW CORE)
+            // =========================
+            SellableSnapshot snap = sellableResolutionService.resolve(
+                    SellableContext.builder()
+                            .tenantId(TenantContext.getTenantId())
+                            .branchId(branch.getId())
+                            .productVariantId(variant.getId())
+                            .packagingId(packaging.getId())
+                            .quantity(row.getQuantity())
+                            .customerId(customerId)
+                            .customerGroupId(customerGroupId)
+                            .pricingPolicy(
+                                    PricingPolicy.builder()
+                                            .enforceMinimumPrice(false) // bulk allows override
+                                            .build()
+                            )
+                            .mode(ResolutionMode.FINAL_STRICT)
+                            .build()
+            );
+
             items.add(
                     new PlannedLineItem(
                             variant,
                             branch,
                             packaging,
                             row.getQuantity(),
-                            baseUnits,
-                            unitPrice,
-                            net,
-                            vat,
-                            vatRate,
-                            gross,
-                            pricingJson
+                            snap.getBaseUnits(),
+                            snap.getUnitPrice(),
+                            snap.getNetAmount(),
+                            snap.getVatAmount(),
+                            snap.getVatRate(),
+                            snap.getTotalPrice(),
+                            snap.getPricingJson(),
+
+                            // 🔥 NEW
+                            snap.getUnitCost(),
+                            snap.getTotalCost(),
+                            snap.getAvailableStock(),
+                            snap.getStockSufficient(),
+                            toJsonSafe(snap.getWarnings()),
+                            (ResolutionMode.FINAL_STRICT)
                     )
             );
         }
@@ -345,7 +356,7 @@ public class SaleBulkService {
 
         validatePaymentsAggregate(paymentsRaw, total);
 
-        // provider reference validation (dry-run safe)
+        // provider validation
         if (paymentsRaw != null) {
             for (String entry : paymentsRaw.split(";")) {
                 String[] parts = entry.split("\\|");
@@ -398,28 +409,40 @@ public class SaleBulkService {
 
             for (PlannedLineItem li : plan.items()) {
                 sale.getLineItems().add(
-                    SaleLineItem.builder()
-                        .productVariantId(li.variant().getId())
-                        .productName(
-                                li.variant().getProduct().getName() +
-                                        " (" + li.variant().getClassification() + ")"
-                        )
-                        .branchId(li.branch().getId())
-                        // 🔥 PACKAGING
-                        .packagingId(li.packaging().getId())
-                        .unitsPerPackaging(li.packaging().getUnitsPerPackaging())
-                        // 🔥 QUANTITIES
-                        .quantity(li.quantity())
-                        .baseUnits(li.baseUnits())
-                        // 🔥 PRICE
-                        .unitPrice(li.unitPrice())
-                        .lineTotal(li.lineTotal())
-                        .netAmount(li.netAmount())
-                        .vatRate(li.vatRate())
-                        .vatAmount(li.vatAmount())
-                        // 🔥 AUDIT
-                        .pricingBreakdownJson(li.pricingJson())
-                        .build()
+                        SaleLineItem.builder()
+                                .productVariantId(li.variant().getId())
+                                .productName(
+                                        li.variant().getProduct().getName() +
+                                                " (" + li.variant().getClassification() + ")"
+                                )
+                                .branchId(li.branch().getId())
+
+                                // PACKAGING
+                                .packagingId(li.packaging().getId())
+                                .unitsPerPackaging(li.packaging().getUnitsPerPackaging())
+
+                                // QUANTITIES
+                                .quantity(li.quantity())
+                                .baseUnits(li.baseUnits())
+
+                                .resolutionMode(li.mode().name())
+                                // PRICE
+                                .unitPrice(li.unitPrice())
+                                .lineTotal(li.lineTotal())
+                                .netAmount(li.netAmount())
+                                .vatRate(li.vatRate())
+                                .vatAmount(li.vatAmount())
+
+                                // 🔥 SNAPSHOT (LIMITED — bulk doesn't expose cost unless you extend PlannedLineItem)
+                                .unitCost(li.unitCost())
+                                .totalCost(li.totalCost())
+                                .availableStockAtSale(li.availableStock())
+                                .stockSufficient(li.stockSufficient())
+                                .warningsJson(li.warningsJson())
+
+                                // AUDIT
+                                .pricingBreakdownJson(li.pricingJson())
+                                .build()
                 );
             }
 
@@ -658,6 +681,14 @@ public class SaleBulkService {
         );
     }
 
+    private String toJsonSafe(Object obj) {
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (Exception e) {
+            return "[]";
+        }
+    }
+
     /* ============================================================
        INTERNAL RECORDS
        ============================================================ */
@@ -682,8 +713,16 @@ public class SaleBulkService {
             BigDecimal unitPrice,
             BigDecimal netAmount,
             BigDecimal vatAmount,
-            BigDecimal vatRate, // ✅ ADD
+            BigDecimal vatRate,
             BigDecimal lineTotal,
-            String pricingJson
+            String pricingJson,
+
+            // 🔥 ADD THESE
+            BigDecimal unitCost,
+            BigDecimal totalCost,
+            Long availableStock,
+            Boolean stockSufficient,
+            String warningsJson,
+            ResolutionMode mode
     ) {}
 }

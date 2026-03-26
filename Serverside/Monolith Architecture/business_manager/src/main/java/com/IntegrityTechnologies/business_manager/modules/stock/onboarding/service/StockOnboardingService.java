@@ -208,6 +208,7 @@ public class StockOnboardingService {
 
                 ProductVariantPackaging created =
                         packagingService.createPackaging(
+                                req.getBranchId(),
                                 variantId,
                                 p.getName(),
                                 p.getUnits()

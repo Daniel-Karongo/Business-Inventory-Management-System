@@ -20,6 +20,7 @@ public class ProductVariantPackagingController {
     @PostMapping
     public ProductVariantPackaging create(@RequestBody CreatePackagingRequest req) {
         return service.createPackaging(
+                req.getBranchId(),
                 req.getVariantId(),
                 req.getName(),
                 req.getUnitsPerPackaging()
@@ -36,11 +37,14 @@ public class ProductVariantPackagingController {
             @PathVariable UUID id,
             @RequestBody UpdatePackagingRequest req
     ) {
-        return service.updatePackaging(id, req.getName(), req.getUnitsPerPackaging());
+        return service.updatePackaging(req.getBranchId(), id, req.getName(), req.getUnitsPerPackaging());
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable UUID id) {
-        service.deletePackaging(id);
+    public void delete(
+            @PathVariable UUID id,
+            @RequestParam UUID branchId
+    ) {
+        service.deletePackaging(branchId, id);
     }
 }

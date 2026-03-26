@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.dto.AllocationDetail;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingAdjustment;
 import lombok.Builder;
 import lombok.Data;
@@ -37,7 +38,7 @@ public class BarcodeScanResponse {
 
     private BigDecimal totalCost;
 
-    private List<Map<String, Object>> batchAllocations;
+    private List<AllocationDetail> batchAllocations;
 
     private List<PricingAdjustment> adjustments;
 }

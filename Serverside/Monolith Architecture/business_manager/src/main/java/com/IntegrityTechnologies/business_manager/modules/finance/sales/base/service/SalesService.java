@@ -14,6 +14,11 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.mod
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineBatchSelection;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineItem;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.repository.SaleRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.controller.SellableController;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.ResolutionMode;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableContext;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableSnapshot;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.service.SellableResolutionService;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.Customer;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.repository.CustomerRepository;
@@ -72,6 +77,7 @@ public class SalesService {
     private final ProductVariantPackagingService packagingService;
     private final PricingEngineService pricingEngine;
     private final ObjectMapper objectMapper;
+    private final SellableResolutionService sellableResolutionService;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -90,8 +96,9 @@ public class SalesService {
                 .map(ci -> customerService.findOrCreateCustomer(List.of(ci)))
                 .orElse(null);
 
-        List<SaleLineItem> lines = new ArrayList<>();
         UUID customerGroupId = resolveCustomerGroupId(customerId);
+
+        List<SaleLineItem> lines = new ArrayList<>();
 
         for (var li : req.getItems()) {
 
@@ -106,111 +113,47 @@ public class SalesService {
 
             Product product = variant.getProduct();
 
-            // =====================================================
-            // 1. PACKAGING
-            // =====================================================
-            ProductVariantPackaging packaging;
+            // =========================
+            // BATCH IDS (STRICT)
+            // =========================
+            List<UUID> batchIds = null;
 
-            if (li.getPackagingId() != null) {
-                packaging = packagingService.getPackagings(variant.getId())
-                        .stream()
-                        .filter(pkg -> pkg.getId().equals(li.getPackagingId()))
-                        .findFirst()
-                        .orElseThrow(() -> new IllegalArgumentException("Invalid packaging for variant"));
-            } else {
-                packaging = packagingService.getBasePackaging(variant.getId());
+            if (li.getBatchSelections() != null && !li.getBatchSelections().isEmpty()) {
+
+                batchIds = li.getBatchSelections().stream()
+                        .map(BatchSelectionDto::getBatchId)
+                        .toList();
             }
 
-            if (packaging.getUnitsPerPackaging() <= 0) {
-                throw new IllegalStateException("Invalid packaging configuration");
-            }
+            // =========================
+            // PRICING POLICY (manual override support)
+            // =========================
+            PricingPolicy policy = PricingPolicy.builder()
+                    .enforceMinimumPrice(!req.isOverrideMinimumPrice())
+                    .build();
 
-            // =====================================================
-            // 2. PRICE
-            // =====================================================
-            PricingResult pricing;
+            // =========================
+            // RESOLVE VIA DOMAIN
+            // =========================
 
-            if (li.getUnitPrice() != null) {
+            SellableContext ctx = SellableContext.builder()
+                    .tenantId(tenantId())
+                    .branchId(li.getBranchId())
+                    .productVariantId(li.getProductVariantId())
+                    .packagingId(li.getPackagingId())
+                    .quantity(li.getQuantity())
+                    .customerId(customerId)
+                    .customerGroupId(customerGroupId)
+                    .batchIds(batchIds)
+                    .pricingPolicy(policy)
+                    .mode(ResolutionMode.FINAL_STRICT)
+                    .build();
 
-                if (!req.isOverrideMinimumPrice()) {
-                    throw new IllegalArgumentException(
-                            "Manual price requires override flag"
-                    );
-                }
+            SellableSnapshot snap = sellableResolutionService.resolve(ctx);
 
-                if (req.getOverrideReason() == null || req.getOverrideReason().isBlank()) {
-                    throw new IllegalArgumentException(
-                            "Override reason is required for manual pricing"
-                    );
-                }
-
-                // 👤 MANUAL OVERRIDE
-                pricing = new PricingResult();
-                pricing.setBasePrice(li.getUnitPrice());
-                pricing.setFinalPrice(li.getUnitPrice());
-                pricing.setResolvedPriceId(null);
-
-                pricing.getAdjustments().add(
-                        new PricingAdjustment(
-                                "MANUAL_OVERRIDE",
-                                "USER_INPUT",
-                                BigDecimal.ZERO,
-                                "Manual price override"
-                        )
-                );
-
-//                if (variant.getMinimumSellingPrice() != null &&
-//                        li.getUnitPrice().compareTo(variant.getMinimumSellingPrice()) < 0) {
-//
-//                    pricing.getAdjustments().add(
-//                            new PricingAdjustment(
-//                                    "BELOW_MIN_PRICE",
-//                                    "SYSTEM_WARNING",
-//                                    variant.getMinimumSellingPrice().subtract(li.getUnitPrice()),
-//                                    "Price below minimum selling price"
-//                            )
-//                    );
-//                }
-
-            } else {
-
-                long baseUnits = li.getQuantity() * packaging.getUnitsPerPackaging();
-
-                boolean isOverride = req.isOverrideMinimumPrice();
-
-                if (isOverride && req.getOverrideReason() == null) {
-                    throw new IllegalArgumentException("Override reason is required");
-                }
-
-                pricing = pricingEngine.resolve(
-                        PricingContext.builder()
-                                .tenantId(tenantId())
-                                .branchId(li.getBranchId())
-                                .productVariantId(variant.getId())
-                                .packagingId(packaging.getId())
-                                .quantity(baseUnits)
-                                .customerId(customerId)
-                                .customerGroupId(customerGroupId)
-                                .pricingTime(LocalDateTime.now())
-                                .policy(
-                                        PricingPolicy.builder()
-                                                .enforceMinimumPrice(!isOverride)
-                                                .build()
-                                )
-                                .build()
-                );
-            }
-
-            BigDecimal unitPrice = pricing.getFinalPrice();
-
-            // =====================================================
-            // 3. BASE UNITS
-            // =====================================================
-            long baseUnits = li.getQuantity() * packaging.getUnitsPerPackaging();
-
-            // =====================================================
-            // 4. STRICT BATCH VALIDATION
-            // =====================================================
+            // =========================
+            // STRICT BATCH VALIDATION (UNCHANGED)
+            // =========================
             List<SaleLineBatchSelection> selections = new ArrayList<>();
 
             if (li.getBatchSelections() != null && !li.getBatchSelections().isEmpty()) {
@@ -236,73 +179,56 @@ public class SalesService {
                     );
                 }
 
-                if (totalSelected != baseUnits) {
+                if (totalSelected != snap.getBaseUnits()) {
                     throw new IllegalArgumentException(
-                            "Batch selections must equal base units. Expected=" + baseUnits + ", got=" + totalSelected
+                            "Batch selections must equal base units. Expected=" +
+                                    snap.getBaseUnits() + ", got=" + totalSelected
                     );
                 }
             }
 
-            // =====================================================
-            // 5. TAX (RESTORED FULL LOGIC)
-            // =====================================================
-            BigDecimal gross = unitPrice.multiply(BigDecimal.valueOf(li.getQuantity()));
-
-            var taxState = taxSystemStateService.getOrCreate(li.getBranchId());
-
-            boolean vatEnabled = taxState.isVatEnabled();
-            BigDecimal vatRate = vatEnabled ? taxState.getVatRate() : BigDecimal.ZERO;
-            boolean pricesVatInclusive = taxState.isPricesVatInclusive();
-
-            BigDecimal net;
-            BigDecimal vat;
-
-            if (vatEnabled) {
-
-                if (pricesVatInclusive) {
-                    net = gross.divide(
-                            BigDecimal.ONE.add(vatRate),
-                            6,
-                            RoundingMode.HALF_UP
-                    );
-                    vat = gross.subtract(net);
-                } else {
-                    net = gross;
-                    vat = net.multiply(vatRate);
-                    gross = net.add(vat);
-                }
-
-            } else {
-                net = gross;
-                vat = BigDecimal.ZERO;
-            }
-
-            // =====================================================
-            // 6. BUILD LINE
-            // =====================================================
-            String pricingJson;
-            try {
-                pricingJson = objectMapper.writeValueAsString(pricing);
-            } catch (Exception e) {
-                pricingJson = "{\"error\":\"pricing_serialization_failed\"}";
-            }
-
+            // =========================
+            // BUILD LINE (FROM SNAPSHOT)
+            // =========================
             SaleLineItem line = SaleLineItem.builder()
-                    .productVariantId(variant.getId())
+                    .productVariantId(snap.getProductVariantId())
                     .productName(product.getName() + " (" +
                             (variant.getClassification() != null ? variant.getClassification() : "UNCLASSIFIED") + ")")
                     .branchId(li.getBranchId())
-                    .packagingId(packaging.getId())
-                    .unitsPerPackaging(packaging.getUnitsPerPackaging())
-                    .baseUnits(baseUnits)
-                    .unitPrice(unitPrice)
-                    .quantity(li.getQuantity())
-                    .lineTotal(gross)
-                    .netAmount(net)
-                    .vatAmount(vat)
-                    .vatRate(vatRate)
+
+                    .resolutionMode(ctx.getMode().name())
+
+                    // PACKAGING
+                    .packagingId(snap.getPackagingId())
+                    .unitsPerPackaging(
+                            snap.getQuantity() == 0 ? 0 :
+                                    snap.getBaseUnits() / snap.getQuantity()
+                    )
+
+                    // QUANTITIES
+                    .quantity(snap.getQuantity())
+                    .baseUnits(snap.getBaseUnits())
+
+                    // PRICE
+                    .unitPrice(snap.getUnitPrice())
+                    .lineTotal(snap.getTotalPrice())
+
+                    // TAX
+                    .netAmount(snap.getNetAmount())
+                    .vatAmount(snap.getVatAmount())
+                    .vatRate(snap.getVatRate())
+
+                    // 🔥 NEW SNAPSHOT FIELDS
+                    .unitCost(snap.getUnitCost())
+                    .totalCost(snap.getTotalCost())
+                    .availableStockAtSale(snap.getAvailableStock())
+                    .stockSufficient(snap.getStockSufficient())
+                    .warningsJson(toJsonSafe(snap.getWarnings()))
+
+                    // AUDIT
+                    .pricingBreakdownJson(snap.getPricingJson())
+
                     .batchSelections(new ArrayList<>())
-                    .pricingBreakdownJson(pricingJson)
                     .build();
 
             selections.forEach(sel -> {
@@ -339,9 +265,9 @@ public class SalesService {
 
         Sale saved = saleRepository.save(sale);
 
-        // =====================================================
-        // 7. RESERVE STOCK
-        // =====================================================
+        // =========================
+        // RESERVE STOCK
+        // =========================
         for (SaleLineItem li : lines) {
             inventoryService.reserveStockVariant(
                     li.getProductVariantId(),
@@ -506,9 +432,7 @@ public class SalesService {
             throw new IllegalStateException("Only CREATED sales can be updated");
         }
 
-        // =====================================================
-        // 1. RELEASE OLD RESERVATIONS
-        // =====================================================
+        // RELEASE OLD
         for (SaleLineItem li : sale.getLineItems()) {
             inventoryService.releaseReservationVariant(
                     li.getProductVariantId(),
@@ -521,6 +445,7 @@ public class SalesService {
         UUID customerId = Optional.ofNullable(req.getCustomerIdentifiers())
                 .map(ci -> customerService.findOrCreateCustomer(List.of(ci)))
                 .orElse(null);
+
         UUID customerGroupId = resolveCustomerGroupId(customerId);
 
         List<SaleLineItem> newLines = new ArrayList<>();
@@ -537,134 +462,63 @@ public class SalesService {
 
             Product product = variant.getProduct();
 
-            ProductVariantPackaging packaging;
+            SellableContext ctx = SellableContext.builder()
+                    .tenantId(tenantId())
+                    .branchId(li.getBranchId())
+                    .productVariantId(li.getProductVariantId())
+                    .packagingId(li.getPackagingId())
+                    .quantity(li.getQuantity())
+                    .customerId(customerId)
+                    .customerGroupId(customerGroupId)
+                    .batchIds(null)
+                    .pricingPolicy(PricingPolicy.builder()
+                            .enforceMinimumPrice(true)
+                            .build())
+                    .mode(ResolutionMode.FINAL_STRICT)
+                    .build();
 
-            if (li.getUnitPrice() != null) {
-                throw new IllegalStateException("Manual price override not allowed during update");
-            }
-
-            if (li.getPackagingId() != null) {
-                packaging = packagingService.getPackagings(variant.getId())
-                        .stream()
-                        .filter(pkg -> pkg.getId().equals(li.getPackagingId()))
-                        .findFirst()
-                        .orElseThrow(() -> new IllegalArgumentException("Invalid packaging"));
-            } else {
-                packaging = packagingService.getBasePackaging(variant.getId());
-            }
-
-            long baseUnits = li.getQuantity() * packaging.getUnitsPerPackaging();
-
-            PricingResult pricing = pricingEngine.resolve(
-                    PricingContext.builder()
-                            .tenantId(tenantId())
-                            .branchId(li.getBranchId())
-                            .productVariantId(variant.getId())
-                            .packagingId(packaging.getId())
-                            .quantity(baseUnits)
-                            .customerId(customerId)
-                            .customerGroupId(customerGroupId)
-                            .pricingTime(LocalDateTime.now())
-                            .policy(
-                                    PricingPolicy.builder()
-                                            .enforceMinimumPrice(true) // ALWAYS enforce on update
-                                            .build()
-                            )
-                            .build()
-            );
-
-            BigDecimal unitPrice = pricing.getFinalPrice();
-
-            List<SaleLineBatchSelection> selections = new ArrayList<>();
-
-            if (li.getBatchSelections() != null && !li.getBatchSelections().isEmpty()) {
-
-                long totalSelected = 0;
-
-                for (BatchSelectionDto bs : li.getBatchSelections()) {
-
-                    long qty = bs.getQuantity();
-
-                    if (qty <= 0) {
-                        throw new IllegalArgumentException("Batch selection quantity must be > 0");
-                    }
-
-                    totalSelected += qty;
-
-                    selections.add(
-                            SaleLineBatchSelection.builder()
-                                    .batchId(bs.getBatchId())
-                                    .tenantId(tenantId())
-                                    .quantity(qty)
-                                    .build()
-                    );
-                }
-
-                if (totalSelected != baseUnits) {
-                    throw new IllegalArgumentException("Batch selections must equal base units");
-                }
-            }
-
-            BigDecimal gross = unitPrice.multiply(BigDecimal.valueOf(li.getQuantity()));
-
-            var taxState = taxSystemStateService.getOrCreate(li.getBranchId());
-
-            boolean vatEnabled = taxState.isVatEnabled();
-            BigDecimal vatRate = vatEnabled ? taxState.getVatRate() : BigDecimal.ZERO;
-            boolean pricesVatInclusive = taxState.isPricesVatInclusive();
-
-            BigDecimal net;
-            BigDecimal vat;
-
-            if (vatEnabled) {
-
-                if (pricesVatInclusive) {
-                    net = gross.divide(
-                            BigDecimal.ONE.add(vatRate),
-                            6,
-                            RoundingMode.HALF_UP
-                    );
-                    vat = gross.subtract(net);
-                } else {
-                    net = gross;
-                    vat = net.multiply(vatRate);
-                    gross = net.add(vat);
-                }
-
-            } else {
-                net = gross;
-                vat = BigDecimal.ZERO;
-            }
-
-            String pricingJson;
-            try {
-                pricingJson = objectMapper.writeValueAsString(pricing);
-            } catch (Exception e) {
-                pricingJson = "{\"error\":\"pricing_serialization_failed\"}";
-            }
+            SellableSnapshot snap = sellableResolutionService.resolve(ctx);
 
             SaleLineItem line = SaleLineItem.builder()
-                    .productVariantId(variant.getId())
+                    .productVariantId(snap.getProductVariantId())
                     .productName(product.getName() + " (" +
                             (variant.getClassification() != null ? variant.getClassification() : "UNCLASSIFIED") + ")")
                     .branchId(li.getBranchId())
-                    .packagingId(packaging.getId())
-                    .unitsPerPackaging(packaging.getUnitsPerPackaging())
-                    .baseUnits(baseUnits)
-                    .unitPrice(unitPrice)
-                    .quantity(li.getQuantity())
-                    .lineTotal(gross)
-                    .netAmount(net)
-                    .vatAmount(vat)
-                    .vatRate(vatRate)
-                    .batchSelections(new ArrayList<>())
-                    .pricingBreakdownJson(pricingJson)
-                    .build();
 
-            selections.forEach(sel -> {
-                sel.setSaleLineItem(line);
-                line.getBatchSelections().add(sel);
-            });
+                    .resolutionMode(ctx.getMode().name())
+
+                    // PACKAGING
+                    .packagingId(snap.getPackagingId())
+                    .unitsPerPackaging(
+                            snap.getQuantity() == 0 ? 0 :
+                                    snap.getBaseUnits() / snap.getQuantity()
+                    )
+
+                    // QUANTITIES
+                    .quantity(snap.getQuantity())
+                    .baseUnits(snap.getBaseUnits())
+
+                    // PRICE
+                    .unitPrice(snap.getUnitPrice())
+                    .lineTotal(snap.getTotalPrice())
+
+                    // TAX
+                    .netAmount(snap.getNetAmount())
+                    .vatAmount(snap.getVatAmount())
+                    .vatRate(snap.getVatRate())
+
+                    // 🔥 NEW SNAPSHOT FIELDS
+                    .unitCost(snap.getUnitCost())
+                    .totalCost(snap.getTotalCost())
+                    .availableStockAtSale(snap.getAvailableStock())
+                    .stockSufficient(snap.getStockSufficient())
+                    .warningsJson(toJsonSafe(snap.getWarnings()))
+
+                    // AUDIT
+                    .pricingBreakdownJson(snap.getPricingJson())
+
+                    .batchSelections(new ArrayList<>())
+                    .build();
 
             newLines.add(line);
         }
@@ -681,9 +535,7 @@ public class SalesService {
 
         saleRepository.save(sale);
 
-        // =====================================================
-        // 2. RE-RESERVE
-        // =====================================================
+        // RE-RESERVE
         for (SaleLineItem li : newLines) {
             inventoryService.reserveStockVariant(
                     li.getProductVariantId(),
@@ -1001,5 +853,13 @@ public class SalesService {
         return customerRepository.findById(customerId)
                 .map(c -> c.getGroup() != null ? c.getGroup().getId() : null)
                 .orElse(null);
+    }
+
+    private String toJsonSafe(Object obj) {
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (Exception e) {
+            return "[]";
+        }
     }
 }

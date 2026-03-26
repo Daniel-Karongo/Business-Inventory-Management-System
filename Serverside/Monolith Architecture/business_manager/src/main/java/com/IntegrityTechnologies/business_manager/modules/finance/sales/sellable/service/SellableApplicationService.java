@@ -1,9 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.service;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.ResolutionMode;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableContext;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableSnapshot;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.dto.SellableResolveRequest;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.dto.SellableResolveResponse;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.service.ProductVariantPackagingService;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -11,31 +13,35 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class SellableApplicationService {
 
-    private final SellableResolverService resolver;
-    private final ProductVariantPackagingService packagingService;
+    private final SellableResolutionService resolutionService;
 
     public SellableResolveResponse resolve(SellableResolveRequest req) {
 
-        ProductVariantPackaging packaging =
-                (req.getPackagingId() != null)
-                        ? packagingService.getPackagings(req.getProductVariantId())
-                        .stream()
-                        .filter(p -> p.getId().equals(req.getPackagingId()))
-                        .findFirst()
-                        .orElseThrow(() -> new IllegalArgumentException("Invalid packaging"))
-                        : packagingService.getBasePackaging(req.getProductVariantId());
-
-        long quantity = req.getQuantity() != null ? req.getQuantity() : 1L;
-
-        return resolver.resolveFull(
-                req.getProductVariantId(),
-                packaging.getId(),
-                quantity,
-                req.getBranchId(),
-                req.getCustomerId(),
-                req.getCustomerGroupId(),
-                packaging.getUnitsPerPackaging(),
-                req.getBatchIds()
+        SellableSnapshot snap = resolutionService.resolve(
+                SellableContext.builder()
+                        .tenantId(TenantContext.getTenantId())
+                        .branchId(req.getBranchId())
+                        .productVariantId(req.getProductVariantId())
+                        .packagingId(req.getPackagingId())
+                        .quantity(req.getQuantity() != null ? req.getQuantity() : 1L)
+                        .customerId(req.getCustomerId())
+                        .customerGroupId(req.getCustomerGroupId())
+                        .batchIds(req.getBatchIds())
+                        .mode(ResolutionMode.UI_FAST)
+                        .build()
         );
+
+        return SellableResolveResponse.builder()
+                .productVariantId(snap.getProductVariantId())
+                .packagingId(snap.getPackagingId())
+                .requestedQuantity(snap.getQuantity())
+                .baseUnits(snap.getBaseUnits())
+                .unitPrice(snap.getUnitPrice())
+                .totalPrice(snap.getTotalPrice())
+                .availableStock(snap.getAvailableStock())
+                .totalCost(snap.getTotalCost())
+                .batchAllocations(snap.getAllocations())
+                .adjustments(snap.getAdjustments())
+                .build();
     }
 }

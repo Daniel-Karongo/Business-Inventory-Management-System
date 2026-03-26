@@ -30,7 +30,6 @@ public class ProductVariantPackagingService {
     private final CacheInvalidationService cacheInvalidationService;
 
     private UUID tenantId() { return TenantContext.getTenantId(); }
-    private UUID branchId() { return BranchContext.get(); }
 
     /* =====================================================
        CREATE PACKAGING
@@ -38,6 +37,7 @@ public class ProductVariantPackagingService {
 
     @Transactional
     public ProductVariantPackaging createPackaging(
+            UUID branchId,
             UUID variantId,
             String name,
             Long unitsPerPackaging
@@ -47,17 +47,26 @@ public class ProductVariantPackagingService {
                 variantId,
                 false,
                 tenantId(),
-                branchId()
+                branchId
         ).orElseThrow(() -> new EntityNotFoundException("Variant not found"));
 
         if (unitsPerPackaging == null || unitsPerPackaging <= 0) {
             throw new IllegalArgumentException("unitsPerPackaging must be > 0");
         }
 
+        // =========================
+        // BASE UNIT SAFETY
+        // =========================
         if (unitsPerPackaging == 1) {
-            throw new IllegalArgumentException(
-                    "unitsPerPackaging = 1 is reserved for base unit"
-            );
+
+            ProductVariantPackaging existingBase =
+                    packagingRepo.findByProductVariantIdAndIsBaseUnitTrueAndDeletedFalse(variantId);
+
+            if (existingBase != null) {
+                throw new IllegalStateException(
+                        "Base unit already exists for this variant"
+                );
+            }
         }
 
         ProductVariantPackaging packaging = ProductVariantPackaging.builder()
@@ -66,16 +75,17 @@ public class ProductVariantPackagingService {
                 .unitsPerPackaging(unitsPerPackaging)
                 .isBaseUnit(false)
                 .tenantId(tenantId())
-                .branchId(branchId())
+                .branchId(branchId)
                 .build();
 
         cacheInvalidationService.evictPackaging(variantId);
-        cacheInvalidationService.evictPricingByVariant(variantId, branchId());
+        cacheInvalidationService.evictPricingByVariant(variantId, branchId);
 
         boolean exists = packagingRepo.findByProductVariantIdAndDeletedFalse(variantId)
                 .stream()
                 .anyMatch(p ->
-                        normalize(p.getName()).equals(normalize(name))
+                        !p.getId().equals(packaging.getId()) && // 🔥 critical
+                                normalize(p.getName()).equals(normalize(name))
                 );
 
         if (exists) {
@@ -137,6 +147,7 @@ public class ProductVariantPackagingService {
 
     @Transactional
     public ProductVariantPackaging updatePackaging(
+            UUID branchId,
             UUID packagingId,
             String name,
             Long unitsPerPackaging
@@ -160,10 +171,21 @@ public class ProductVariantPackagingService {
         if (unitsPerPackaging != null) {
 
             if (packaging.getIsBaseUnit()) {
+
                 if (unitsPerPackaging != 1) {
                     throw new IllegalStateException(
                             "Base unit must always have unitsPerPackaging = 1"
                     );
+                }
+
+                // 🔥 EXTRA SAFETY (paranoid but correct)
+                ProductVariantPackaging existingBase =
+                        packagingRepo.findByProductVariantIdAndIsBaseUnitTrueAndDeletedFalse(
+                                packaging.getProductVariant().getId()
+                        );
+
+                if (existingBase != null && !existingBase.getId().equals(packaging.getId())) {
+                    throw new IllegalStateException("Multiple base units detected (data corruption)");
                 }
             } else {
                 if (unitsPerPackaging <= 1) {
@@ -180,7 +202,7 @@ public class ProductVariantPackagingService {
         auditRepo.save(
                 ProductVariantPackagingAudit.builder()
                         .tenantId(tenantId())
-                        .branchId(branchId())
+                        .branchId(branchId)
                         .productVariantId(packaging.getProductVariant().getId())
                         .packagingName(packaging.getName())
                         .action("UPDATE")
@@ -195,11 +217,14 @@ public class ProductVariantPackagingService {
         UUID variantId = packaging.getProductVariant().getId();
 
         cacheInvalidationService.evictPackaging(variantId);
-        cacheInvalidationService.evictPricingByVariant(variantId, branchId());
+        cacheInvalidationService.evictPricingByVariant(variantId, branchId);
 
         boolean exists = packagingRepo.findByProductVariantIdAndDeletedFalse(variantId)
                 .stream()
-                .anyMatch(p -> normalize(p.getName()).equals(normalize(name)));
+                .anyMatch(p ->
+                        !p.getId().equals(packagingId) &&
+                                normalize(p.getName()).equals(normalize(name))
+                );
 
         if (exists) {
             throw new IllegalArgumentException("Packaging already exists: " + name);
@@ -213,7 +238,10 @@ public class ProductVariantPackagingService {
     ===================================================== */
 
     @Transactional
-    public void deletePackaging(UUID packagingId) {
+    public void deletePackaging(
+            UUID branchId,
+            UUID packagingId
+    ) {
 
         ProductVariantPackaging packaging = packagingRepo.findById(packagingId)
                 .orElseThrow(() -> new EntityNotFoundException("Packaging not found"));
@@ -226,7 +254,7 @@ public class ProductVariantPackagingService {
         packaging.setDeletedAt(java.time.LocalDateTime.now());
 
         cacheInvalidationService.evictPackaging(packaging.getProductVariant().getId());
-        cacheInvalidationService.evictPricingByVariant(packaging.getProductVariant().getId(), branchId());
+        cacheInvalidationService.evictPricingByVariant(packaging.getProductVariant().getId(), branchId);
 
         packagingRepo.save(packaging);
     }

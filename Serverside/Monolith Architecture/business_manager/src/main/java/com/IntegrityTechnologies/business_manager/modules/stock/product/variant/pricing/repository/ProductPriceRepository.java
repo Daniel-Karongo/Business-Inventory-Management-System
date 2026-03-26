@@ -18,6 +18,8 @@ public interface ProductPriceRepository extends JpaRepository<ProductPrice, UUID
         SELECT p FROM ProductPrice p
         WHERE p.productVariant.id = :variantId
           AND p.packaging.id = :packagingId
+          AND p.tenantId = :tenantId
+          AND p.branchId = :branchId
           AND p.deleted = false
           AND p.minQuantity <= :quantity
         ORDER BY p.minQuantity DESC
@@ -25,6 +27,8 @@ public interface ProductPriceRepository extends JpaRepository<ProductPrice, UUID
     List<ProductPrice> findApplicablePrices(
             UUID variantId,
             UUID packagingId,
+            UUID tenantId,
+            UUID branchId,
             Long quantity
     );
 }

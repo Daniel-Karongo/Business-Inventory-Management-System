@@ -26,9 +26,17 @@ public class CustomerPricingRule implements PricingRule {
     @Override
     public PricingResult apply(PricingContext ctx, PricingResult current) {
 
+        BigDecimal cost = ctx.getCost();
+
+        if (cost == null || cost.compareTo(BigDecimal.ZERO) <= 0) {
+            return current;
+        }
+
         List<CustomerPrice> matches = repo.findBestMatch(
                 ctx.getProductVariantId(),
                 ctx.getPackagingId(),
+                ctx.getTenantId(),
+                ctx.getBranchId(),
                 ctx.getCustomerId(),
                 ctx.getCustomerGroupId(),
                 ctx.getQuantity(),

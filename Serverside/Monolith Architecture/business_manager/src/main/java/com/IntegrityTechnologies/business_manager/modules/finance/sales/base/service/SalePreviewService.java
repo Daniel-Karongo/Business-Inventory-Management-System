@@ -1,109 +1,50 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.sales.base.service;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto.SaleLinePreviewResponse;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto.BatchSelectionDto;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto.SaleLinePreviewRequest;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.service.ProductVariantPackagingService;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingContext;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingResult;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.service.PricingEngineService;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto.*;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.*;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.service.SellableResolutionService;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class SalePreviewService {
 
-    private final PricingEngineService pricingEngine;
-    private final ProductVariantPackagingService packagingService;
-    private final InventoryService inventoryService;
+    private final SellableResolutionService resolutionService;
 
     public SaleLinePreviewResponse preview(SaleLinePreviewRequest req) {
 
-        // =====================================================
-        // 1. PACKAGING
-        // =====================================================
-        ProductVariantPackaging packaging =
-                (req.getPackagingId() != null)
-                        ? packagingService.getPackagings(req.getProductVariantId())
-                        .stream()
-                        .filter(p -> p.getId().equals(req.getPackagingId()))
-                        .findFirst()
-                        .orElseThrow(() -> new IllegalArgumentException("Invalid packaging"))
-                        : packagingService.getBasePackaging(req.getProductVariantId());
-
-        long baseUnits = req.getQuantity() * packaging.getUnitsPerPackaging();
-
-        // =====================================================
-        // 2. PRICING
-        // =====================================================
-
-        PricingResult pricing = pricingEngine.resolve(
-                PricingContext.builder()
+        SellableSnapshot snap = resolutionService.resolve(
+                SellableContext.builder()
+                        .tenantId(TenantContext.getTenantId())
+                        .branchId(req.getBranchId())
                         .productVariantId(req.getProductVariantId())
-                        .packagingId(packaging.getId())
-                        .quantity(baseUnits) // ✅ FIXED
+                        .packagingId(req.getPackagingId())
+                        .quantity(req.getQuantity())
                         .customerId(req.getCustomerId())
                         .customerGroupId(req.getCustomerGroupId())
-                        .branchId(req.getBranchId())
-                        .pricingTime(LocalDateTime.now())
+                        .batchIds(
+                                req.getBatchSelections() == null ? null :
+                                        req.getBatchSelections().stream()
+                                                .map(BatchSelectionDto::getBatchId)
+                                                .toList()
+                        )
+                        .mode(ResolutionMode.PREVIEW)
                         .build()
         );
 
-        // =====================================================
-        // 3. STOCK
-        // =====================================================
-        long available = inventoryService.availableQuantity(
-                req.getProductVariantId(),
-                req.getBranchId()
-        );
-
-        if (available < baseUnits) {
-            throw new IllegalStateException("Insufficient stock");
-        }
-
-        // =====================================================
-        // 4. BATCH PREVIEW
-        // =====================================================
-        List<UUID> batchIds = req.getBatchSelections() == null
-                ? null
-                : req.getBatchSelections()
-                .stream()
-                .map(BatchSelectionDto::getBatchId)
-                .toList();
-
-        Map<String, Object> allocation =
-                inventoryService.previewAllocation(
-                        req.getProductVariantId(),
-                        req.getBranchId(),
-                        baseUnits,
-                        batchIds
-                );
-
-        BigDecimal totalCost = (BigDecimal) allocation.get("totalCost");
-
         return SaleLinePreviewResponse.builder()
-                .productVariantId(req.getProductVariantId())
-                .packagingId(packaging.getId())
-                .requestedQuantity(req.getQuantity())
-                .baseUnits(baseUnits)
-                .unitPrice(pricing.getFinalPrice())
-                .totalPrice(
-                        pricing.getFinalPrice()
-                                .multiply(BigDecimal.valueOf(req.getQuantity()))
-                )
-                .totalCost(totalCost)
-                .availableStock(available)
-                .batchAllocations((java.util.List<Map<String, Object>>) allocation.get("allocations"))
-                .adjustments(pricing.getAdjustments())
+                .productVariantId(snap.getProductVariantId())
+                .packagingId(snap.getPackagingId())
+                .requestedQuantity(snap.getQuantity())
+                .baseUnits(snap.getBaseUnits())
+                .unitPrice(snap.getUnitPrice())
+                .totalPrice(snap.getTotalPrice())
+                .totalCost(snap.getTotalCost())
+                .availableStock(snap.getAvailableStock())
+                .batchAllocations(snap.getAllocations())
+                .adjustments(snap.getAdjustments())
                 .build();
     }
 }

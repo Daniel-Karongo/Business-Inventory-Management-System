@@ -40,6 +40,8 @@ public class ProductPriceService {
         List<ProductPrice> prices = priceRepo.findApplicablePrices(
                 variantId,
                 packagingId,
+                tenantId(),
+                branchId(),
                 quantity
         );
 
@@ -49,7 +51,7 @@ public class ProductPriceService {
             );
         }
 
-        return prices.get(0); // highest minQuantity match
+        return prices.get(0);
     }
 
     @Transactional

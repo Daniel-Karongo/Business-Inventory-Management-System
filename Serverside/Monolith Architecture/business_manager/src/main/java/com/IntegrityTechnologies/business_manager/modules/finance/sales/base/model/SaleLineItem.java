@@ -46,6 +46,9 @@ public class SaleLineItem extends BranchAwareEntity {
     @Builder.Default
     private List<SaleLineBatchSelection> batchSelections = new ArrayList<>();
 
+    @Column(length = 20)
+    private String resolutionMode;
+
     private BigDecimal netAmount;
     private BigDecimal vatAmount;
     private BigDecimal vatRate;
@@ -61,4 +64,29 @@ public class SaleLineItem extends BranchAwareEntity {
 
     @Column(columnDefinition = "TEXT")
     private String pricingBreakdownJson;
+
+    // =========================
+    // COST SNAPSHOT
+    // =========================
+    @Column(precision = 19, scale = 6)
+    private BigDecimal unitCost;
+
+    @Column(precision = 19, scale = 6)
+    private BigDecimal totalCost;
+
+    // =========================
+    // STOCK SNAPSHOT
+    // =========================
+    private Long availableStockAtSale;
+
+    // =========================
+    // VALIDATION SNAPSHOT
+    // =========================
+    private Boolean stockSufficient;
+
+    // =========================
+    // WARNINGS (JSON)
+    // =========================
+    @Column(columnDefinition = "TEXT")
+    private String warningsJson;
 }

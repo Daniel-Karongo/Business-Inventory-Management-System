@@ -14,6 +14,8 @@ public interface CustomerPriceRepository extends JpaRepository<CustomerPrice, UU
         SELECT cp FROM CustomerPrice cp
         WHERE cp.productVariant.id = :variantId
           AND cp.packaging.id = :packagingId
+          AND cp.tenantId = :tenantId
+          AND cp.branchId = :branchId
           AND cp.deleted = false
           AND (
               (cp.customerId IS NOT NULL AND cp.customerId = :customerId)
@@ -28,6 +30,8 @@ public interface CustomerPriceRepository extends JpaRepository<CustomerPrice, UU
     List<CustomerPrice> findBestMatch(
             UUID variantId,
             UUID packagingId,
+            UUID tenantId,
+            UUID branchId,
             UUID customerId,
             UUID groupId,
             Long quantity,

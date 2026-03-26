@@ -1,7 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.service;
 
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.service.SellableResolverService;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.ResolutionMode;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableContext;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableSnapshot;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.service.SellableResolutionService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.BarcodeScanResponse;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.VariantScanProjection;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
@@ -20,7 +23,7 @@ import java.util.UUID;
 public class BarcodeScanService {
 
     private final ProductVariantRepository variantRepo;
-    private final SellableResolverService resolver;
+    private final SellableResolutionService resolutionService;
     private final ProductVariantPackagingService packagingService;
 
     private UUID tenantId() { return TenantContext.getTenantId(); }
@@ -39,25 +42,25 @@ public class BarcodeScanService {
                 );
 
         // =========================
-        // 1. DEFAULT PACKAGING (BASE)
+        // BASE PACKAGING
         // =========================
         ProductVariantPackaging packaging =
                 packagingService.getBasePackaging(p.getVariantId());
 
-        long quantity = 1L; // default scan = 1 unit
+        long quantity = 1L;
 
         // =========================
-        // 2. RESOLVE SELLABLE
+        // RESOLVE (NEW ENGINE)
         // =========================
-        var resolved = resolver.resolveFull(
-                p.getVariantId(),
-                packaging.getId(),
-                quantity,
-                branchId(),
-                null, // no customer in scan
-                null,
-                packaging.getUnitsPerPackaging(),
-                null
+        SellableSnapshot snap = resolutionService.resolve(
+                SellableContext.builder()
+                        .tenantId(tenantId())
+                        .branchId(branchId())
+                        .productVariantId(p.getVariantId())
+                        .packagingId(packaging.getId())
+                        .quantity(quantity)
+                        .mode(ResolutionMode.UI_FAST) // 🔥 correct for scan
+                        .build()
         );
 
         return BarcodeScanResponse.builder()
@@ -69,16 +72,15 @@ public class BarcodeScanService {
                 .barcode(p.getBarcode())
                 .branchId(p.getBranchId())
 
-                // ✅ NEW CORRECT DATA
                 .packagingId(packaging.getId())
                 .requestedQuantity(quantity)
-                .baseUnits(resolved.getBaseUnits())
-                .unitPrice(resolved.getUnitPrice())
-                .totalPrice(resolved.getTotalPrice())
-                .availableStock(resolved.getAvailableStock())
-                .totalCost(resolved.getTotalCost())
-                .batchAllocations(resolved.getBatchAllocations())
-                .adjustments(resolved.getAdjustments())
+                .baseUnits(snap.getBaseUnits())
+                .unitPrice(snap.getUnitPrice())
+                .totalPrice(snap.getTotalPrice())
+                .availableStock(snap.getAvailableStock())
+                .totalCost(snap.getTotalCost())
+                .batchAllocations(snap.getAllocations())
+                .adjustments(snap.getAdjustments())
 
                 .build();
     }

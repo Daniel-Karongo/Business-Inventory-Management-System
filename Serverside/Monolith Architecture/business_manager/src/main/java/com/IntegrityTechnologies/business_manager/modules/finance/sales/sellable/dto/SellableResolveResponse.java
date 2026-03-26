@@ -26,7 +26,7 @@ public class SellableResolveResponse {
 
     private BigDecimal totalCost;
 
-    private List<Map<String, Object>> batchAllocations;
+    private List<AllocationDetail> batchAllocations;
 
     private List<PricingAdjustment> adjustments;
 }

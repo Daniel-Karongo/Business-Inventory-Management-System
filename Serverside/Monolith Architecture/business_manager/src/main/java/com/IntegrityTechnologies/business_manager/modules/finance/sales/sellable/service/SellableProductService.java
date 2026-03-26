@@ -1,6 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.service;
 
 import com.IntegrityTechnologies.business_manager.config.response.PageWrapper;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.ResolutionMode;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableContext;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableSnapshot;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryBatch;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryItem;
@@ -14,13 +17,9 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,9 +31,11 @@ public class SellableProductService {
     private final InventoryItemRepository inventoryItemRepository;
     private final BatchReservationRepository batchReservationRepository;
     private final InventoryBatchRepository batchRepository;
-    private final SellableResolverService resolver;
     private final InventoryService inventoryService;
     private final ProductVariantPackagingService packagingService;
+
+    // 🔥 NEW CORE SERVICE
+    private final SellableResolutionService resolutionService;
 
     // =========================
     // ENTRY POINT
@@ -50,9 +51,6 @@ public class SellableProductService {
 
         Pageable pageable = PageRequest.of(page, size);
 
-        // =========================================
-        // 🔥 PAGINATED VARIANT FETCH
-        // =========================================
         Page<ProductVariant> variantPage =
                 fetchVariantsPaged(tenantId, branchId, request.getSearch(), pageable);
 
@@ -67,9 +65,9 @@ public class SellableProductService {
         List<UUID> variantIds =
                 variants.stream().map(ProductVariant::getId).toList();
 
-        // =========================================
+        // =========================
         // BULK LOAD
-        // =========================================
+        // =========================
 
         Map<UUID, InventoryItem> inventoryMap =
                 inventoryItemRepository.findAllByVariants(variantIds, tenantId, branchId)
@@ -84,18 +82,16 @@ public class SellableProductService {
         batchReservationRepository
                 .sumReservedBulk(variantIds, tenantId)
                 .forEach(row -> {
-
                     String key = row.getProductVariantId() + "|" + row.getBranchId();
-
                     reservedMap.put(key, row.getTotalReserved());
                 });
 
         Map<UUID, List<PackagingDTO>> packagingMap =
                 packagingService.getPackagingsBulk(variantIds);
 
-        // =========================================
+        // =========================
         // BUILD DTOs
-        // =========================================
+        // =========================
 
         List<SellableVariantDTO> dtoList = variants.stream()
                 .map(v -> buildVariantDTOOptimized(
@@ -161,62 +157,73 @@ public class SellableProductService {
 
         Map<UUID, PricingPreviewDTO> pricingMap = new HashMap<>();
 
+        // =========================
+        // PRICING (NEW ENGINE)
+        // =========================
         if (request.isIncludePricing()) {
             for (PackagingDTO pkg : packagingList) {
 
-                ResolvedSellable resolved = resolver.resolve(
-                        variant.getId(),
-                        pkg.getPackagingId(),
-                        quantity,
-                        request.getBranchId(),
-                        request.getCustomerId(),
-                        request.getCustomerGroupId(),
-                        pkg.getUnitsPerPackaging()
+                SellableSnapshot snap = resolutionService.resolve(
+                        SellableContext.builder()
+                                .tenantId(TenantContext.getTenantId())
+                                .branchId(request.getBranchId())
+                                .productVariantId(variant.getId())
+                                .packagingId(pkg.getPackagingId())
+                                .quantity(quantity)
+                                .customerId(request.getCustomerId())
+                                .customerGroupId(request.getCustomerGroupId())
+                                .mode(ResolutionMode.UI_FAST)
+                                .build()
                 );
 
                 pricingMap.put(
                         pkg.getPackagingId(),
                         PricingPreviewDTO.builder()
-                                .unitPrice(resolved.getUnitPrice())
-                                .totalPrice(resolved.getTotalPrice())
-                                .adjustments(resolved.getAdjustments())
+                                .unitPrice(snap.getUnitPrice())
+                                .totalPrice(snap.getTotalPrice())
+                                .adjustments(snap.getAdjustments())
                                 .build()
                 );
             }
         }
 
-        // Allocation (still per variant → acceptable)
+        // =========================
+        // ALLOCATION (TYPED)
+        // =========================
         AllocationPreviewDTO allocation = null;
+
         if (request.isIncludeAllocation() && available > 0) {
 
-            long baseUnits = quantity; // fallback
+            long baseUnits = quantity;
 
             if (!packagingList.isEmpty()) {
                 baseUnits = quantity * packagingList.get(0).getUnitsPerPackaging();
             }
 
-            Map<String, Object> alloc =
-                    inventoryService.previewAllocation(
-                            variant.getId(),
-                            request.getBranchId(),
-                            baseUnits,
-                            null
-                    );
+            AllocationResult alloc = inventoryService.previewAllocation(
+                    variant.getId(),
+                    request.getBranchId(),
+                    baseUnits,
+                    null
+            );
 
             allocation = AllocationPreviewDTO.builder()
-                    .totalCost((BigDecimal) alloc.get("totalCost"))
-                    .allocations((List<Map<String, Object>>) alloc.get("allocations"))
+                    .totalCost(alloc.getTotalCost())
+                    .allocations(alloc.getAllocations())
                     .build();
         }
 
-        // Batches (optional)
+        // =========================
+        // BATCH PREVIEW
+        // =========================
         List<BatchPreviewDTO> batches = null;
+
         if (request.isIncludeBatches()) {
             batches = buildBatchPreview(variant.getId(), request.getBranchId());
         }
 
         List<WarningDTO> warnings =
-                buildWarnings(available, pricingMap, variant);
+                buildWarnings(available);
 
         return SellableVariantDTO.builder()
                 .productId(variant.getProduct().getId())
@@ -237,7 +244,7 @@ public class SellableProductService {
     }
 
     // =========================
-    // PRICING
+    // BATCH PREVIEW
     // =========================
     private List<BatchPreviewDTO> buildBatchPreview(UUID variantId, UUID branchId) {
 
@@ -269,12 +276,10 @@ public class SellableProductService {
     }
 
     // =========================
-    // WARNINGS ENGINE
+    // WARNINGS
     // =========================
     private List<WarningDTO> buildWarnings(
-            long available,
-            Map<UUID, PricingPreviewDTO> pricingMap,
-            ProductVariant variant
+            long available
     ) {
 
         List<WarningDTO> warnings = new ArrayList<>();

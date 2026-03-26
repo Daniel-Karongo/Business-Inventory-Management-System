@@ -10,6 +10,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.PeriodGuardService;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineBatchSelection;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.dto.AllocationDetail;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.dto.AllocationResult;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
@@ -2085,28 +2087,29 @@ public class InventoryService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Object> previewAllocation(
+    public AllocationResult previewAllocation(
             UUID variantId,
             UUID branchId,
             long quantity,
             List<UUID> selectedBatchIds
     ) {
         branchTenantGuard.validate(branchId);
+
         Map<UUID, Long> reservedMap = computeReservedPerBatch(variantId, branchId);
 
         long remaining = quantity;
         BigDecimal totalCost = BigDecimal.ZERO;
 
-        List<Map<String, Object>> rows = new ArrayList<>();
+        List<AllocationDetail> rows = new ArrayList<>();
 
         List<InventoryBatch> batches =
                 batchRepository.findAvailableBatches(
-                    variantId,
-                    tenantId(),
-                    branchId
+                        variantId,
+                        tenantId(),
+                        branchId
                 );
 
-        // 1️⃣ MANUAL FIRST
+        // 🔥 MANUAL FIRST
         if (selectedBatchIds != null && !selectedBatchIds.isEmpty()) {
 
             Map<UUID, InventoryBatch> batchMap =
@@ -2124,25 +2127,24 @@ public class InventoryService {
                 long allocate = Math.min(available, remaining);
 
                 BigDecimal cost =
-                        batch.getUnitCost()
-                                .multiply(BigDecimal.valueOf(allocate));
+                        batch.getUnitCost().multiply(BigDecimal.valueOf(allocate));
 
-                rows.add(Map.of(
-                        "batchId", batch.getId(),
-                        "allocated", allocate,
-                        "available", available,
-                        "reserved", reserved,
-                        "unitCost", batch.getUnitCost(),
-//                        "sellingPrice", batch.getUnitSellingPrice(),
-                        "totalCost", cost
-                ));
+                rows.add(AllocationDetail.builder()
+                        .batchId(batch.getId())
+                        .allocatedQuantity(allocate)
+                        .availableQuantity(available)
+                        .reservedQuantity(reserved)
+                        .unitCost(batch.getUnitCost())
+                        .totalCost(cost)
+                        .receivedAt(batch.getReceivedAt())
+                        .build());
 
                 totalCost = totalCost.add(cost);
                 remaining -= allocate;
             }
         }
 
-        // 2️⃣ FIFO FOR REMAINDER
+        // 🔥 FIFO
         for (InventoryBatch batch : batches) {
 
             if (remaining <= 0) break;
@@ -2156,18 +2158,17 @@ public class InventoryService {
             long allocate = Math.min(available, remaining);
 
             BigDecimal cost =
-                    batch.getUnitCost()
-                            .multiply(BigDecimal.valueOf(allocate));
+                    batch.getUnitCost().multiply(BigDecimal.valueOf(allocate));
 
-            rows.add(Map.of(
-                    "batchId", batch.getId(),
-                    "allocated", allocate,
-                    "available", available,
-                    "reserved", reserved,
-                    "unitCost", batch.getUnitCost(),
-//                    "sellingPrice", batch.getUnitSellingPrice(),
-                    "totalCost", cost
-            ));
+            rows.add(AllocationDetail.builder()
+                    .batchId(batch.getId())
+                    .allocatedQuantity(allocate)
+                    .availableQuantity(available)
+                    .reservedQuantity(reserved)
+                    .unitCost(batch.getUnitCost())
+                    .totalCost(cost)
+                    .receivedAt(batch.getReceivedAt())
+                    .build());
 
             totalCost = totalCost.add(cost);
             remaining -= allocate;
@@ -2176,10 +2177,10 @@ public class InventoryService {
         if (remaining > 0)
             throw new OutOfStockException("Insufficient stock for allocation");
 
-        return Map.of(
-                "allocations", rows,
-                "totalCost", totalCost
-        );
+        return AllocationResult.builder()
+                .allocations(rows)
+                .totalCost(totalCost)
+                .build();
     }
 
     public Map<UUID, Long> computeReservedPerBatch(UUID variantId, UUID branchId) {

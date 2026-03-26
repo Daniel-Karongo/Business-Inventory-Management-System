@@ -5,11 +5,11 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 @Data
 @Builder
-public class AllocationPreviewDTO {
-    private BigDecimal totalCost;
+public class AllocationResult {
+
     private List<AllocationDetail> allocations;
+    private BigDecimal totalCost;
 }
