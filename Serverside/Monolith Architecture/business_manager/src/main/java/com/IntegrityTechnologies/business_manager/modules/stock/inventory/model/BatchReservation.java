@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.stock.inventory.model
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.Check;
 
 import java.time.LocalDateTime;
@@ -18,8 +19,10 @@ import java.util.UUID;
                 )
         },
         indexes = {
-                @Index(name = "idx_reservation_variant", columnList = "product_variant_id"),
-                @Index(name = "idx_reservation_tenant_branch", columnList = "tenant_id, branch_id")
+                @Index(
+                        name = "idx_reservation_active_lookup",
+                        columnList = "tenant_id, branch_id, product_variant_id, status, expires_at"
+                )
         }
 )
 @Check(constraints = "quantity > 0")
@@ -27,7 +30,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class BatchReservation extends BranchAwareEntity {
 
     @Id
@@ -49,6 +52,25 @@ public class BatchReservation extends BranchAwareEntity {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "sale_id")
+    private UUID saleId;
+
+    @Column(name = "sale_line_item_id")
+    private Long saleLineItemId;
+
+    @Column(name = "packaging_id")
+    private UUID packagingId;
+
+    @Column(name = "requested_quantity")
+    private Long requestedQuantity; // sell units
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private ReservationStatus status;
+
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
 
     @Version
     private Long version;

@@ -9,8 +9,10 @@ import java.util.UUID;
 @Data
 public class ReserveStockRequest {
     private UUID productVariantId;
+    private UUID packagingId;     // ✅ ADD
     private UUID branchId;
-    private Long quantity;
+    private Long baseUnits;       // ✅ ADD
+    private Long quantity;        // sell units
     private String reference;
     private List<SaleLineBatchSelection> batchSelections;
 }

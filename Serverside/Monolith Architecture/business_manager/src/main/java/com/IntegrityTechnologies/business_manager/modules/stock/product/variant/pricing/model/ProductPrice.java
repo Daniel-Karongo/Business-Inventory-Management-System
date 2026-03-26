@@ -82,12 +82,18 @@ public class ProductPrice extends BranchAwareEntity {
     private Long version;
 
     @PrePersist
+    @PreUpdate
     public void validate() {
         if (minQuantity == null || minQuantity <= 0) {
             throw new IllegalStateException("minQuantity must be > 0");
         }
         if (price == null || price.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalStateException("price must be >= 0");
+        }
+
+        // 🔥 HARD RULE
+        if (minQuantity == 1 && price.compareTo(BigDecimal.ZERO) == 0) {
+            throw new IllegalStateException("Base price cannot be zero");
         }
     }
 }

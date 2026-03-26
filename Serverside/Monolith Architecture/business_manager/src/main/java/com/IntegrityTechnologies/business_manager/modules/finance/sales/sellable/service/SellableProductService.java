@@ -5,19 +5,21 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableContext;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableSnapshot;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.dto.*;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.engine.StockEngine;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryBatch;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryItem;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.BatchReservationRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryBatchRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.service.ProductVariantPackagingService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -29,13 +31,12 @@ public class SellableProductService {
 
     private final ProductVariantRepository variantRepository;
     private final InventoryItemRepository inventoryItemRepository;
-    private final BatchReservationRepository batchReservationRepository;
     private final InventoryBatchRepository batchRepository;
-    private final InventoryService inventoryService;
     private final ProductVariantPackagingService packagingService;
 
     // 🔥 NEW CORE SERVICE
     private final SellableResolutionService resolutionService;
+    private final StockEngine stockEngine;
 
     // =========================
     // ENTRY POINT
@@ -77,15 +78,6 @@ public class SellableProductService {
                                 i -> i
                         ));
 
-        Map<String, Long> reservedMap = new HashMap<>();
-
-        batchReservationRepository
-                .sumReservedBulk(variantIds, tenantId)
-                .forEach(row -> {
-                    String key = row.getProductVariantId() + "|" + row.getBranchId();
-                    reservedMap.put(key, row.getTotalReserved());
-                });
-
         Map<UUID, List<PackagingDTO>> packagingMap =
                 packagingService.getPackagingsBulk(variantIds);
 
@@ -99,7 +91,6 @@ public class SellableProductService {
                         request,
                         quantity,
                         inventoryMap,
-                        reservedMap,
                         packagingMap
                 ))
                 .toList();
@@ -139,18 +130,14 @@ public class SellableProductService {
             SellableProductRequest request,
             long quantity,
             Map<UUID, InventoryItem> inventoryMap,
-            Map<String, Long> reservedMap,
             Map<UUID, List<PackagingDTO>> packagingMap
     ) {
 
         InventoryItem item = inventoryMap.get(variant.getId());
 
         long onHand = item != null ? item.getQuantityOnHand() : 0L;
-        long reserved = reservedMap.getOrDefault(
-                variant.getId() + "|" + request.getBranchId(),
-                0L
-        );
-        long available = Math.max(0, onHand - reserved);
+        long reserved = stockEngine.reservedQuantity(variant.getId(), request.getBranchId());
+        long available = stockEngine.availableQuantity(variant.getId(), request.getBranchId());
 
         List<PackagingDTO> packagingList =
                 packagingMap.getOrDefault(variant.getId(), List.of());
@@ -192,24 +179,24 @@ public class SellableProductService {
         // =========================
         AllocationPreviewDTO allocation = null;
 
-        if (request.isIncludeAllocation() && available > 0) {
+        if (request.isIncludeAllocation() && available > 0 && !packagingList.isEmpty()) {
 
-            long baseUnits = quantity;
+            PackagingDTO pkg = packagingList.get(0); // UI preview only
 
-            if (!packagingList.isEmpty()) {
-                baseUnits = quantity * packagingList.get(0).getUnitsPerPackaging();
-            }
-
-            AllocationResult alloc = inventoryService.previewAllocation(
-                    variant.getId(),
-                    request.getBranchId(),
-                    baseUnits,
-                    null
+            SellableSnapshot snap = resolutionService.resolve(
+                    SellableContext.builder()
+                            .tenantId(TenantContext.getTenantId())
+                            .branchId(request.getBranchId())
+                            .productVariantId(variant.getId())
+                            .packagingId(pkg.getPackagingId())
+                            .quantity(quantity)
+                            .mode(ResolutionMode.PREVIEW)
+                            .build()
             );
 
             allocation = AllocationPreviewDTO.builder()
-                    .totalCost(alloc.getTotalCost())
-                    .allocations(alloc.getAllocations())
+                    .totalCost(snap.getTotalCost())
+                    .allocations(snap.getAllocations())
                     .build();
         }
 
@@ -249,7 +236,7 @@ public class SellableProductService {
     private List<BatchPreviewDTO> buildBatchPreview(UUID variantId, UUID branchId) {
 
         Map<UUID, Long> reservedMap =
-                inventoryService.computeReservedPerBatch(variantId, branchId);
+                stockEngine.reservedPerBatchPublic(variantId, branchId);
 
         List<InventoryBatch> batches =
                 batchRepository.findAvailableBatches(

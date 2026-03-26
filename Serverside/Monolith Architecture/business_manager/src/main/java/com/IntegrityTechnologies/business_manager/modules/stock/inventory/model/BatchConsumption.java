@@ -10,7 +10,15 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
-@Table(name = "batch_consumptions")
+@Table(
+        name = "batch_consumptions",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_consumption_reservation",
+                        columnNames = {"reservation_id"}
+                )
+        }
+)
 @Check(constraints = "quantity > 0")
 @Getter
 @Setter
@@ -38,4 +46,7 @@ public class BatchConsumption extends BranchAwareEntity {
 
     @Column(nullable = false, precision = 19, scale = 6)
     private BigDecimal unitCost;
+
+    @Column(name = "reservation_id")
+    private UUID reservationId;
 }

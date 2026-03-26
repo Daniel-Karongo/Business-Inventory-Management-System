@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository;
 
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.StockTransactionDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.StockTransaction;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -173,4 +174,95 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
             @Param("tenantId") UUID tenantId,
             @Param("branchId") UUID branchId
     );
+
+    @Query("""
+    SELECT new com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.StockTransactionDTO(
+        s.id,
+        s.productId,
+        p.name,
+        s.productVariantId,
+        v.classification,
+        s.branchId,
+        b.name,
+        s.type,
+        s.quantityDelta,
+        s.unitCost,
+        s.reference,
+        s.supplierId,
+        s.note,
+        s.timestamp,
+        s.performedBy
+    )
+    FROM StockTransaction s
+    JOIN ProductVariant v ON v.id = s.productVariantId
+    JOIN Product p ON p.id = v.product.id
+    JOIN Branch b ON b.id = s.branchId
+    WHERE s.tenantId = :tenantId
+      AND s.branchId = :branchId
+      AND s.deleted = false
+    ORDER BY s.timestamp DESC
+""")
+    List<StockTransactionDTO> findAllDTO(UUID tenantId, UUID branchId);
+
+
+    @Query("""
+    SELECT new com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.StockTransactionDTO(
+        s.id,
+        s.productId,
+        p.name,
+        s.productVariantId,
+        v.classification,
+        s.branchId,
+        b.name,
+        s.type,
+        s.quantityDelta,
+        s.unitCost,
+        s.reference,
+        s.supplierId,
+        s.note,
+        s.timestamp,
+        s.performedBy
+    )
+    FROM StockTransaction s
+    JOIN ProductVariant v ON v.id = s.productVariantId
+    JOIN Product p ON p.id = v.product.id
+    JOIN Branch b ON b.id = s.branchId
+    WHERE s.tenantId = :tenantId
+      AND s.branchId = :branchId
+      AND s.productVariantId = :variantId
+      AND s.deleted = false
+    ORDER BY s.timestamp DESC
+""")
+    List<StockTransactionDTO> findByVariantDTO(UUID tenantId, UUID branchId, UUID variantId);
+
+
+    @Query("""
+    SELECT new com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.StockTransactionDTO(
+        s.id,
+        s.productId,
+        p.name,
+        s.productVariantId,
+        v.classification,
+        s.branchId,
+        b.name,
+        s.type,
+        s.quantityDelta,
+        s.unitCost,
+        s.reference,
+        s.supplierId,
+        s.note,
+        s.timestamp,
+        s.performedBy
+    )
+    FROM StockTransaction s
+    JOIN ProductVariant v ON v.id = s.productVariantId
+    JOIN Product p ON p.id = v.product.id
+    JOIN Branch b ON b.id = s.branchId
+    WHERE s.tenantId = :tenantId
+      AND s.branchId = :branchId
+      AND s.productId = :productId
+      AND s.deleted = false
+    ORDER BY s.timestamp DESC
+""")
+    List<StockTransactionDTO> findByProductDTO(UUID tenantId, UUID branchId, UUID productId);
 }

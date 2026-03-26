@@ -54,43 +54,35 @@ public class ProductVariantPackagingService {
             throw new IllegalArgumentException("unitsPerPackaging must be > 0");
         }
 
-        // =========================
-        // BASE UNIT SAFETY
-        // =========================
-        if (unitsPerPackaging == 1) {
+        String normalized = normalize(name);
 
-            ProductVariantPackaging existingBase =
-                    packagingRepo.findByProductVariantIdAndIsBaseUnitTrueAndDeletedFalse(variantId);
-
-            if (existingBase != null) {
-                throw new IllegalStateException(
-                        "Base unit already exists for this variant"
+        boolean exists = packagingRepo.findByProductVariantIdAndDeletedFalse(variantId)
+                .stream()
+                .anyMatch(p ->
+                        !p.getId().equals(null) &&
+                                normalize(p.getName()).equals(normalized)
                 );
-            }
+
+        if (exists) {
+            throw new IllegalArgumentException("Packaging already exists: " + name);
         }
+
+        // 🔥 FIRST PACKAGING = BASE UNIT
+        boolean isFirst = packagingRepo
+                .findByProductVariantIdAndDeletedFalse(variantId)
+                .isEmpty();
 
         ProductVariantPackaging packaging = ProductVariantPackaging.builder()
                 .productVariant(variant)
-                .name(normalize(name))
+                .name(normalized)
                 .unitsPerPackaging(unitsPerPackaging)
-                .isBaseUnit(false)
+                .isBaseUnit(isFirst) // 🔥 FIXED
                 .tenantId(tenantId())
                 .branchId(branchId)
                 .build();
 
         cacheInvalidationService.evictPackaging(variantId);
         cacheInvalidationService.evictPricingByVariant(variantId, branchId);
-
-        boolean exists = packagingRepo.findByProductVariantIdAndDeletedFalse(variantId)
-                .stream()
-                .anyMatch(p ->
-                        !p.getId().equals(packaging.getId()) && // 🔥 critical
-                                normalize(p.getName()).equals(normalize(name))
-                );
-
-        if (exists) {
-            throw new IllegalArgumentException("Packaging already exists: " + name);
-        }
 
         return packagingRepo.save(packaging);
     }
@@ -100,23 +92,24 @@ public class ProductVariantPackagingService {
     ===================================================== */
     public Map<UUID, List<PackagingDTO>> getPackagingsBulk(List<UUID> variantIds) {
 
+        List<ProductVariantPackaging> all =
+                packagingRepo.findAllByVariantIds(variantIds);
+
         Map<UUID, List<PackagingDTO>> map = new HashMap<>();
 
-        for (UUID variantId : variantIds) {
+        for (ProductVariantPackaging p : all) {
 
-            List<ProductVariantPackaging> packagings = getPackagings(variantId); // cached
-
-            List<PackagingDTO> dtos = packagings.stream()
-                    .map(p -> PackagingDTO.builder()
+            map.computeIfAbsent(
+                    p.getProductVariant().getId(),
+                    k -> new ArrayList<>()
+            ).add(
+                    PackagingDTO.builder()
                             .packagingId(p.getId())
                             .name(p.getName())
                             .unitsPerPackaging(p.getUnitsPerPackaging())
                             .isBaseUnit(p.getIsBaseUnit())
                             .build()
-                    )
-                    .toList();
-
-            map.put(variantId, dtos);
+            );
         }
 
         return map;

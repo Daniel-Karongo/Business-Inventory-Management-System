@@ -19,6 +19,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.engine.StockEngine;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
@@ -60,6 +61,7 @@ public class SaleBulkService {
     private final ObjectMapper objectMapper;
     private final TaxSystemStateService taxSystemStateService;
     private final SellableResolutionService sellableResolutionService;
+    private final StockEngine stockEngine;
 
     /* ============================================================
        ENTRY POINT
@@ -264,10 +266,11 @@ public class SaleBulkService {
                     pricingJson = "{\"error\":\"pricing_serialization_failed\"}";
                 }
 
-                Long available = inventoryService.availableQuantity(
+                Long available = stockEngine.availableQuantity(
                         variant.getId(),
                         branch.getId()
                 );
+
 
                 items.add(
                         new PlannedLineItem(
@@ -450,12 +453,13 @@ public class SaleBulkService {
 
             if (mode == SaleImportMode.OPERATIONAL) {
                 for (PlannedLineItem li : plan.items()) {
-                    inventoryService.reserveStockVariant(
+                    stockEngine.reserve(
+                            sale.getId(),
+                            null,
                             li.variant().getId(),
+                            li.packaging().getId(),
                             li.branch().getId(),
-                            li.baseUnits(),
-                            "SALE:" + sale.getId(),
-                            null
+                            li.baseUnits()
                     );
                 }
             }

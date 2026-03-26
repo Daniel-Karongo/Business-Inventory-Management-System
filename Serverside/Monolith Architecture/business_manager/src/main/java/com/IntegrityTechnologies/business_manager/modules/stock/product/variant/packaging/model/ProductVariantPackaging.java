@@ -16,6 +16,10 @@ import java.util.UUID;
                 @UniqueConstraint(
                         name = "uk_packaging_variant_name",
                         columnNames = {"tenant_id", "branch_id", "product_variant_id", "name"}
+                ),
+                @UniqueConstraint(
+                        name = "uk_single_base_unit",
+                        columnNames = {"tenant_id", "branch_id", "product_variant_id", "is_base_unit"}
                 )
         },
         indexes = {
@@ -60,9 +64,15 @@ public class ProductVariantPackaging extends BranchAwareEntity {
     private Long version;
 
     @PrePersist
+    @PreUpdate
     public void validate() {
+
         if (unitsPerPackaging == null || unitsPerPackaging <= 0) {
             throw new IllegalStateException("unitsPerPackaging must be > 0");
+        }
+
+        if (Boolean.TRUE.equals(isBaseUnit) && unitsPerPackaging != 1) {
+            throw new IllegalStateException("Base unit must have unitsPerPackaging = 1");
         }
     }
 }

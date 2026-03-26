@@ -19,9 +19,7 @@ public interface ProductVariantPackagingRepository extends JpaRepository<Product
         WHERE p.productVariant.id IN :variantIds
           AND p.deleted = false
     """)
-    List<ProductVariantPackaging> findAllByVariantIds(
-            @Param("variantIds") List<UUID> variantIds
-    );
+    List<ProductVariantPackaging> findAllByVariantIds(List<UUID> variantIds);
 
     boolean existsByProductVariantIdAndIsBaseUnitFalseAndDeletedFalse(UUID variantId);
 

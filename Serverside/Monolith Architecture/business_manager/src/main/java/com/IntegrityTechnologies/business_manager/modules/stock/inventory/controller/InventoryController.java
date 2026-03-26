@@ -95,8 +95,10 @@ public class InventoryController {
 
         inventoryService.reserveStockVariant(
                 req.getProductVariantId(),
+                req.getPackagingId(),        // ✅ NEW
                 req.getBranchId(),
-                req.getQuantity(),
+                req.getBaseUnits(),          // ✅ NEW
+                req.getQuantity(),           // sell qty
                 req.getReference(),
                 req.getBatchSelections()
         );
@@ -109,9 +111,7 @@ public class InventoryController {
     public ResponseEntity<ApiResponse> releaseVariantReservation(@RequestBody ReleaseStockRequest req) {
 
         inventoryService.releaseReservationVariant(
-                req.getProductVariantId(),
                 req.getBranchId(),
-                req.getQuantity(),
                 req.getReference()
         );
 

@@ -12,7 +12,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class InventoryValuationEngine {
 
-    private final Map<String, ValuationStrategy> strategies;
+    private final FifoValuationStrategy fifo;
+    private final LifoValuationStrategy lifo;
+    private final WacValuationStrategy wac;
 
     public BigDecimal valuate(
             String method,
@@ -20,12 +22,19 @@ public class InventoryValuationEngine {
             UUID branchId,
             long qty
     ) {
-        ValuationStrategy strategy = strategies.get(method);
 
-        if (strategy == null) {
-            throw new IllegalArgumentException("Unsupported valuation method");
+        switch (method.toUpperCase()) {
+            case "FIFO":
+                return fifo.valuate(variantId, branchId, qty);
+
+            case "LIFO":
+                return lifo.valuate(variantId, branchId, qty);
+
+            case "WAC":
+                return wac.valuate(variantId, branchId, qty);
+
+            default:
+                throw new IllegalArgumentException("Unsupported valuation method: " + method);
         }
-
-        return strategy.valuate(variantId, branchId, qty);
     }
 }

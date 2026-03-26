@@ -22,74 +22,26 @@ public class StockTransactionController {
 
     private final StockTransactionService service;
 
-    @GetMapping("/product/{productId}")
-    public ResponseEntity<List<StockTransactionDTO>> getForProduct(
-            @PathVariable UUID productId
+    @GetMapping("/branch/{branchId}")
+    public ResponseEntity<List<StockTransactionDTO>> getAll(
+            @PathVariable UUID branchId
     ) {
-        return ResponseEntity.ok(
-                service.getByProduct(productId)
-        );
+        return ResponseEntity.ok(service.getAll(branchId));
     }
 
-    @GetMapping("/variant/{variantId}")
-    public ResponseEntity<List<StockTransactionDTO>> getForVariant(
+    @GetMapping("/branch/{branchId}/variant/{variantId}")
+    public ResponseEntity<List<StockTransactionDTO>> getByVariant(
+            @PathVariable UUID branchId,
             @PathVariable UUID variantId
     ) {
-        return ResponseEntity.ok(
-                service.getByVariant(variantId)
-        );
+        return ResponseEntity.ok(service.getByVariant(variantId, branchId));
     }
 
-    @GetMapping("/branch/{branchId}")
-    public ResponseEntity<List<StockTransactionDTO>> getForBranch(
-            @PathVariable UUID branchId
+    @GetMapping("/branch/{branchId}/product/{productId}")
+    public ResponseEntity<List<StockTransactionDTO>> getByProduct(
+            @PathVariable UUID branchId,
+            @PathVariable UUID productId
     ) {
-        return ResponseEntity.ok(
-                service.getByBranch(branchId)
-        );
-    }
-
-    @GetMapping("/product/{productId}/branch/{branchId}")
-    public ResponseEntity<List<StockTransactionDTO>> getForProductInBranch(
-            @PathVariable UUID productId,
-            @PathVariable UUID branchId
-    ) {
-        return ResponseEntity.ok(
-                service.getByProductAndBranch(productId, branchId)
-        );
-    }
-
-    @GetMapping("/variant/{variantId}/branch/{branchId}")
-    public ResponseEntity<List<StockTransactionDTO>> getForVariantInBranch(
-            @PathVariable UUID variantId,
-            @PathVariable UUID branchId
-    ) {
-        return ResponseEntity.ok(
-                service.getByVariantAndBranch(variantId, branchId)
-        );
-    }
-
-    @GetMapping("/range")
-    public ResponseEntity<List<StockTransactionDTO>> getByDateRange(
-            @RequestParam
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate from,
-
-            @RequestParam
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate to
-    ) {
-
-        if (from == null || to == null) {
-            throw new IllegalArgumentException("from and to dates are required");
-        }
-
-        if (to.isBefore(from)) {
-            throw new IllegalArgumentException("Invalid date range: 'to' cannot be before 'from'");
-        }
-
-        return ResponseEntity.ok(
-                service.getByDateRange(from, to)
-        );
+        return ResponseEntity.ok(service.getByProduct(productId, branchId));
     }
 }

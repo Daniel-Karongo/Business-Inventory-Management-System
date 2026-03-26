@@ -65,4 +65,15 @@ public interface BatchConsumptionRepository extends JpaRepository<BatchConsumpti
         AND bc.tenantId = :tenantId
     """)
     BigDecimal sumCostBySaleId(UUID saleId, UUID tenantId);
+
+    @Query("""
+        SELECT COALESCE(SUM(bc.quantity), 0)
+        FROM BatchConsumption bc
+        WHERE bc.saleId = :saleId
+          AND bc.tenantId = :tenantId
+    """)
+    long sumQuantityBySaleId(
+            @Param("saleId") UUID saleId,
+            @Param("tenantId") UUID tenantId
+    );
 }

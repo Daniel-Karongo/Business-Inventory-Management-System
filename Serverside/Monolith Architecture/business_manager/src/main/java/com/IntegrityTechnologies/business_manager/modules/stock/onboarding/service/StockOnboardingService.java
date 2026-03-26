@@ -253,26 +253,15 @@ public class StockOnboardingService {
                             pkg.getId()
                     );
 
-            if (!existing.isEmpty()) {
-                ProductPrice p = existing.stream()
-                        .filter(e -> e.getMinQuantity() == 1L)
-                        .findFirst()
-                        .orElse(null);
+            ProductPrice base =
+                    existing.stream()
+                            .filter(e -> e.getMinQuantity() == 1L)
+                            .findFirst()
+                            .orElse(null);
 
-                if (p != null) {
-                    p.setPrice(price.getSellingPrice());
-                    priceRepo.save(p);
-                } else {
-                    priceService.createPrice(
-                            variantId,
-                            pkg.getId(),
-                            price.getSellingPrice(),
-                            1L
-                    );
-                }
-
-                p.setPrice(price.getSellingPrice());
-                priceRepo.save(p);
+            if (base != null) {
+                base.setPrice(price.getSellingPrice());
+                priceRepo.save(base);
             } else {
                 priceService.createPrice(
                         variantId,

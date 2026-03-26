@@ -57,7 +57,9 @@ public class StockTransaction extends BranchAwareEntity {
     @Column(nullable = false)
     private Long quantityDelta;
 
+    @Column(nullable = false)
     private String reference;
+
     private String note;
 
     @Column(nullable = false, updatable = false)

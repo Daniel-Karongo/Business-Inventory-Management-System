@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.valuation;
 
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.ValuationStrategy;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryBatchRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
@@ -13,21 +14,19 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class WacValuationStrategy implements ValuationStrategy {
 
-    private final InventoryItemRepository itemRepo;
+    private final InventoryBatchRepository batchRepository;
 
     @Override
     public BigDecimal valuate(UUID variantId, UUID branchId, long qty) {
 
-        return itemRepo
-                .findByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
-                        variantId,
-                        TenantContext.getTenantId(),
-                        branchId
-                )
-                .map(i ->
-                        i.getAverageCost()
-                                .multiply(BigDecimal.valueOf(qty))
-                )
-                .orElse(BigDecimal.ZERO);
+        Object[] result = batchRepository.computeWeightedAverageRaw(
+                variantId,
+                TenantContext.getTenantId(),
+                branchId
+        );
+
+        BigDecimal totalValue = (BigDecimal) result[0];
+
+        return totalValue;
     }
 }

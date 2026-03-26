@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.variant
 
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.config.caffeine.CacheInvalidationService;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.ProductPrice;
@@ -23,6 +24,7 @@ public class ProductPriceService {
 
     private final ProductPriceRepository priceRepo;
     private final CacheInvalidationService cacheInvalidationService;
+    private final InventoryService inventoryService;
 
     private UUID tenantId() { return TenantContext.getTenantId(); }
     private UUID branchId() { return BranchContext.get(); }
@@ -61,6 +63,18 @@ public class ProductPriceService {
             BigDecimal price,
             Long minQty
     ) {
+
+        // 🔥 COST CHECK
+        BigDecimal avgCost = inventoryService.getAverageCost(variantId, branchId());
+
+        if (avgCost != null && avgCost.compareTo(BigDecimal.ZERO) > 0) {
+            if (price.compareTo(avgCost) < 0) {
+                throw new IllegalStateException(
+                        "Selling price cannot be below cost"
+                );
+            }
+        }
+
         ProductPrice p = ProductPrice.builder()
                 .productVariant(ProductVariant.builder().id(variantId).build())
                 .packaging(ProductVariantPackaging.builder().id(packagingId).build())

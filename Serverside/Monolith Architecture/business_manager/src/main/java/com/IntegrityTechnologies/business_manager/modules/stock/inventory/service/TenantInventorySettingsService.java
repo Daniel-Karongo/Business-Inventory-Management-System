@@ -37,6 +37,10 @@ public class TenantInventorySettingsService {
                 .valuationMethod(
                         InventoryValuationService.ValuationMethod.valueOf(def)
                 )
+                .enforcePackagingIntegrity(false)   // flexible by default
+                .allowPartialPackaging(true)        // allow breaking cartons
+                .enableReservationsExpiry(true)
+                .reservationTtlMinutes(30)
                 .locked(false)
                 .build());
     }
@@ -44,7 +48,7 @@ public class TenantInventorySettingsService {
     public void lock(UUID tenantId) {
 
         repo.findById(tenantId).ifPresent(s -> {
-            if (!s.isLocked()) {
+            if (!s.getLocked()) {
                 s.setLocked(true);
                 repo.save(s);
             }
@@ -56,7 +60,7 @@ public class TenantInventorySettingsService {
         TenantInventorySettings s = repo.findById(tenantId)
                 .orElseThrow();
 
-        if (s.isLocked()) {
+        if (s.getLocked()) {
             throw new IllegalStateException("Valuation method is locked");
         }
 

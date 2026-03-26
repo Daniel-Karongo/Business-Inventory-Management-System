@@ -44,6 +44,8 @@ public interface BatchReservationRepository
         WHERE r.productVariantId = :variantId
           AND r.tenantId = :tenantId
           AND r.branchId = :branchId
+          AND r.status = 'ACTIVE'
+          AND (r.expiresAt IS NULL OR r.expiresAt > CURRENT_TIMESTAMP)
     """)
     long sumReservedByVariantAndTenantAndBranch(
             UUID variantId,
@@ -92,6 +94,8 @@ public interface BatchReservationRepository
         WHERE r.tenantId = :tenantId
           AND r.branchId = :branchId
           AND r.productVariantId = :variantId
+          AND r.status = 'ACTIVE'
+          AND (r.expiresAt IS NULL OR r.expiresAt > CURRENT_TIMESTAMP)
         GROUP BY r.batch.id
     """)
     List<BatchReservationSummary> sumReservedByBatch(

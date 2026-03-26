@@ -1,8 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.service;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.*;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.ResolutionMode;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableContext;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableSnapshot;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.dto.AllocationResult;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.engine.StockEngine;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.service.ProductVariantPackagingService;
@@ -16,7 +19,8 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +31,7 @@ public class SellableResolutionService {
     private final InventoryService inventoryService;
     private final TaxSystemStateService taxSystemStateService;
     private final ObjectMapper objectMapper;
+    private final StockEngine stockEngine;
 
     public SellableSnapshot resolve(SellableContext ctx) {
 
@@ -47,7 +52,7 @@ public class SellableResolutionService {
         // =========================
         // 2. STOCK
         // =========================
-        long available = inventoryService.availableQuantity(
+        long available = stockEngine.availableQuantity(
                 ctx.getProductVariantId(),
                 ctx.getBranchId()
         );
@@ -82,7 +87,7 @@ public class SellableResolutionService {
 
         } else {
 
-            allocation = inventoryService.previewAllocation(
+            allocation = stockEngine.previewAllocation(
                     ctx.getProductVariantId(),
                     ctx.getBranchId(),
                     baseUnits,
@@ -109,7 +114,7 @@ public class SellableResolutionService {
                         .branchId(ctx.getBranchId())
                         .productVariantId(ctx.getProductVariantId())
                         .packagingId(packaging.getId())
-                        .quantity(baseUnits)
+                        .quantity(ctx.getQuantity())
                         .cost(unitCost)
                         .customerId(ctx.getCustomerId())
                         .customerGroupId(ctx.getCustomerGroupId())

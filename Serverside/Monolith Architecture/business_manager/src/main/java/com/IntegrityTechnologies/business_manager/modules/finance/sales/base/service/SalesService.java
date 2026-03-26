@@ -14,7 +14,6 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.mod
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineBatchSelection;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineItem;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.repository.SaleRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.controller.SellableController;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.ResolutionMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableContext;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableSnapshot;
@@ -24,18 +23,14 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.customer
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.repository.CustomerRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service.CustomerService;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.BatchConsumptionDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.BatchConsumption;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.engine.StockEngine;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.BatchConsumptionRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.service.ProductVariantPackagingService;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingAdjustment;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingPolicy;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingResult;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.service.PricingEngineService;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
@@ -51,7 +46,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -74,10 +68,10 @@ public class SalesService {
     private final JournalEntryRepository journalEntryRepository;
     private final BatchConsumptionRepository batchConsumptionRepository;
     private final RevenueRecognitionService revenueRecognitionService;
-    private final ProductVariantPackagingService packagingService;
-    private final PricingEngineService pricingEngine;
+
     private final ObjectMapper objectMapper;
     private final SellableResolutionService sellableResolutionService;
+    private final StockEngine stockEngine;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -269,11 +263,13 @@ public class SalesService {
         // RESERVE STOCK
         // =========================
         for (SaleLineItem li : lines) {
-            inventoryService.reserveStockVariant(
+            stockEngine.reserveWithSelection(
+                    saleId,
                     li.getProductVariantId(),
+                    li.getPackagingId(),      // ✅ CRITICAL
                     li.getBranchId(),
-                    li.getBaseUnits(),
-                    "SALE:" + saleId,
+                    li.getBaseUnits(),        // base units
+                    li.getQuantity(),         // sell units
                     li.getBatchSelections()
             );
         }
@@ -298,12 +294,9 @@ public class SalesService {
 
         for (SaleLineItem li : sale.getLineItems()) {
 
-            inventoryService.decrementVariantStock(
-                    li.getProductVariantId(),
+            stockEngine.consume(
                     li.getBranchId(),
-                    li.getBaseUnits().intValue(), // 🔥 FIXED
-                    "SALE_DELIVERY:" + sale.getId(),
-                    li.getBatchSelections()
+                    sale.getId()
             );
 
             totalCOGS = batchConsumptionRepository.sumCostBySaleId(saleId, tenantId());
@@ -312,56 +305,6 @@ public class SalesService {
         sale.setCostOfGoodsSold(totalCOGS);
         saleRepository.save(sale);
 
-        // -----------------------------------------
-        // 2️⃣ If DELIVERY mode → post revenue accrual
-        // -----------------------------------------
-//        if (accountingProperties.getRevenueRecognitionMode()
-//                == RevenueRecognitionMode.DELIVERY) {
-//
-//            if (!accountingFacade.isAlreadyPosted("SALE", sale.getId())) {
-//
-//                BigDecimal totalNet = sale.getLineItems().stream()
-//                        .map(SaleLineItem::getNetAmount)
-//                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-//
-//                BigDecimal totalVat = sale.getLineItems().stream()
-//                        .map(SaleLineItem::getVatAmount)
-//                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-//
-//                UUID branchId = extractSingleBranch(sale.getLineItems());
-//
-//                accountingFacade.post(
-//                        AccountingEvent.builder()
-//                                .eventId(UUID.randomUUID())
-//                                .sourceModule("SALE")
-//                                .sourceId(sale.getId())
-//                                .reference(sale.getReceiptNo())
-//                                .description("Revenue recognized on delivery")
-//                                .performedBy(SecurityUtils.currentUsername())
-//                                .branchId(branchId)
-//                                .entries(List.of(
-//                                        AccountingEvent.Entry.builder()
-//                                                .accountId(accountingAccounts.accountsReceivable())
-//                                                .direction(EntryDirection.DEBIT)
-//                                                .amount(totalNet.add(totalVat))
-//                                                .build(),
-//
-//                                        AccountingEvent.Entry.builder()
-//                                                .accountId(accountingAccounts.revenue())
-//                                                .direction(EntryDirection.CREDIT)
-//                                                .amount(totalNet)
-//                                                .build(),
-//
-//                                        AccountingEvent.Entry.builder()
-//                                                .accountId(accountingAccounts.outputVat())
-//                                                .direction(EntryDirection.CREDIT)
-//                                                .amount(totalVat)
-//                                                .build()
-//                                ))
-//                                .build()
-//                );
-//            }
-//        }
         sale.setStatus(Sale.SaleStatus.COMPLETED);
         saleRepository.save(sale);
 
@@ -434,11 +377,9 @@ public class SalesService {
 
         // RELEASE OLD
         for (SaleLineItem li : sale.getLineItems()) {
-            inventoryService.releaseReservationVariant(
-                    li.getProductVariantId(),
+            stockEngine.release(
                     li.getBranchId(),
-                    li.getBaseUnits(),
-                    "SALE:" + id
+                    sale.getId()
             );
         }
 
@@ -537,11 +478,13 @@ public class SalesService {
 
         // RE-RESERVE
         for (SaleLineItem li : newLines) {
-            inventoryService.reserveStockVariant(
+            stockEngine.reserveWithSelection(
+                    sale.getId(),
                     li.getProductVariantId(),
+                    li.getPackagingId(),
                     li.getBranchId(),
                     li.getBaseUnits(),
-                    "SALE:" + id,
+                    li.getQuantity(),
                     li.getBatchSelections()
             );
         }
@@ -564,11 +507,9 @@ public class SalesService {
         }
 
         for (SaleLineItem li : sale.getLineItems()) {
-            inventoryService.releaseReservationVariant(
-                    li.getProductVariantId(),
+            stockEngine.release(
                     li.getBranchId(),
-                    li.getBaseUnits(),
-                    "CANCEL:" + id
+                    sale.getId()
             );
         }
 
@@ -707,11 +648,9 @@ public class SalesService {
 
         for (SaleLineItem li : sale.getLineItems()) {
             try {
-                inventoryService.releaseReservationVariant(
-                        li.getProductVariantId(),
+                stockEngine.release(
                         li.getBranchId(),
-                        li.getBaseUnits(),
-                        "RELEASE:" + id
+                        sale.getId()
                 );
             } catch (Exception ignored) {}
         }
