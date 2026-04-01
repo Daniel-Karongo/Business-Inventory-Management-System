@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.tenant.model;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.listener.TenantEntityListener;
+import com.IntegrityTechnologies.business_manager.security.util.TenantEntityListener;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

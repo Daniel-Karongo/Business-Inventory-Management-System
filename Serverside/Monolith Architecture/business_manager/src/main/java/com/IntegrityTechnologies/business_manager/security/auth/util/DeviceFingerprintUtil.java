@@ -10,28 +10,25 @@ public final class DeviceFingerprintUtil {
 
     private DeviceFingerprintUtil() {}
 
-    public static String generate(HttpServletRequest request) {
-
+    public static String generate(HttpServletRequest request, String deviceId) {
         try {
-
-            String userAgent = request.getHeader("User-Agent");
-
-            if (userAgent == null) {
-                userAgent = "unknown";
+            if (deviceId == null || deviceId.isBlank()) {
+                throw new IllegalArgumentException("Missing deviceId");
             }
 
-            String raw = userAgent;
+            String userAgent = request.getHeader("User-Agent");
+            String accept = request.getHeader("Accept");
+            String ip = request.getRemoteAddr();
+
+            String raw = userAgent + "|" + accept + "|" + deviceId + "|" + ip;
 
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-
             byte[] hash = digest.digest(raw.getBytes(StandardCharsets.UTF_8));
 
             return HexFormat.of().formatHex(hash);
 
         } catch (Exception e) {
-
-            throw new RuntimeException("Failed to generate device fingerprint", e);
-
+            throw new RuntimeException("Fingerprint generation failed", e);
         }
     }
 }

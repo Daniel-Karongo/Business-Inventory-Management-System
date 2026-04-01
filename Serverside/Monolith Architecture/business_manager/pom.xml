@@ -184,6 +184,13 @@
 			<artifactId>spring-kafka</artifactId>
 		</dependency>
 
+		<!-- WEBAUTHN - FINGERPRINTS -->
+		<dependency>
+			<groupId>com.yubico</groupId>
+			<artifactId>webauthn-server-core</artifactId>
+			<version>2.5.1</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

@@ -35,6 +35,7 @@ import java.util.UUID;
 @SuperBuilder(toBuilder = true)
 @ToString
 public class Branch extends TenantAwareEntity {
+
     @Id
     @GeneratedValue
     @UuidGenerator
@@ -51,46 +52,43 @@ public class Branch extends TenantAwareEntity {
     private String email;
 
     /* ========================================
+       SECURITY (GEOFENCE + DEVICE POLICY)
+    ======================================== */
+
+    private Double latitude;
+    private Double longitude;
+    private Integer radiusMeters;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean enforceGeofence = true;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean enforceDevice = true;
+
+    /* ========================================
        RELATIONS
     ======================================== */
 
-    @OneToMany(
-            mappedBy = "branch",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
+    @OneToMany(mappedBy = "branch", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<UserBranch> userBranches = new HashSet<>();
 
-    @OneToMany(
-            mappedBy = "branch"
-    )
+    @OneToMany(mappedBy = "branch")
     @Builder.Default
     private Set<Department> departments = new HashSet<>();
 
     /* ========================================
-       SYSTEM FIELDS
+       SYSTEM
     ======================================== */
-
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
 
     @Column(nullable = false)
     @Builder.Default
     private Boolean deleted = false;
 
-    /* ========================================
-       LIFECYCLE
-    ======================================== */
-
     @PrePersist
     protected void onCreate() {
-
-        this.createdAt = LocalDateTime.now();
-
-        if (this.deleted == null) {
-            this.deleted = false;
-        }
-
+        if (this.deleted == null) this.deleted = false;
     }
 }

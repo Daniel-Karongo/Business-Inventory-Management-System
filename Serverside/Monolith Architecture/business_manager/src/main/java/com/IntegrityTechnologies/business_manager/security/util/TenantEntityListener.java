@@ -1,8 +1,6 @@
-package com.IntegrityTechnologies.business_manager.modules.platform.tenant.listener;
+package com.IntegrityTechnologies.business_manager.security.util;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.TenantAwareEntity;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;

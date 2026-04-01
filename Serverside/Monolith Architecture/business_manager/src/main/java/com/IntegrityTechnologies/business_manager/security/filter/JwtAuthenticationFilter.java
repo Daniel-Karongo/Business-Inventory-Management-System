@@ -62,7 +62,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 ========================================== */
 
                     String tokenDevice = jwtUtil.extractDevice(jwt);
-                    String requestDevice = DeviceFingerprintUtil.generate(request);
+                    String deviceId = request.getHeader("X-Device-Id");
+
+                    if (deviceId == null || deviceId.isBlank()) {
+                        throw new SecurityException("Missing device ID");
+                    }
+
+                    String requestDevice =
+                            DeviceFingerprintUtil.generate(request, deviceId);
 
                     if (tokenDevice == null || !tokenDevice.equals(requestDevice)) {
                         throw new SecurityException("Token device mismatch");

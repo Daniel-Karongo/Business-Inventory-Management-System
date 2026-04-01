@@ -6,25 +6,26 @@ import com.IntegrityTechnologies.business_manager.modules.person.entity.departme
 import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUserSession;
-import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserSessionRepository;
-import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthRequest;
-import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthResponse;
-import com.IntegrityTechnologies.business_manager.security.auth.util.DeviceFingerprintUtil;
-import com.IntegrityTechnologies.business_manager.security.auth.util.JwtUtil;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.UserSession;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.service.RollcallService;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUser;
+import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUserSession;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserSessionRepository;
+import com.IntegrityTechnologies.business_manager.security.audit.service.LoginAuditService;
+import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthRequest;
+import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthResponse;
 import com.IntegrityTechnologies.business_manager.security.auth.model.UserType;
+import com.IntegrityTechnologies.business_manager.security.auth.util.DeviceFingerprintUtil;
+import com.IntegrityTechnologies.business_manager.security.auth.util.JwtUtil;
+import com.IntegrityTechnologies.business_manager.security.device.service.DeviceSecurityService;
+import com.IntegrityTechnologies.business_manager.security.device.service.LocationSecurityService;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,7 +43,6 @@ public class AuthService {
     private static final int TENANT_USERS_MAX_SESSIONS_PER_DAY = 5;
     private static final int PLATFORM_USERS_MAX_SESSIONS_PER_DAY = 5;
 
-    private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -53,6 +53,9 @@ public class AuthService {
     private final TokenBlacklistService tokenBlacklistService;
     private final PlatformUserRepository platformUserRepository;
     private final PlatformUserSessionRepository platformUserSessionRepository;
+    private final LoginAuditService loginAuditService;
+    private final DeviceSecurityService deviceSecurityService;
+    private final LocationSecurityService locationSecurityService;
 
     /* =====================================================
        INTERNAL LOGIN RESULT (shared by login & bulk-login)
@@ -78,6 +81,19 @@ public class AuthService {
 
             PlatformUser platformUser = platformUserOpt.get();
 
+            if (request.getDeviceId() == null || request.getDeviceId().isBlank()) {
+                throw new BadCredentialsException("Device ID required");
+            }
+
+            String fingerprint =
+                    DeviceFingerprintUtil.generate(httpRequest, request.getDeviceId());
+
+            String ip = extractClientIp(httpRequest);
+
+            /* ================= DEVICE VALIDATION ================= */
+            deviceSecurityService.validate(null, null, fingerprint);
+
+            /* ================= PASSWORD AUTH ================= */
             if (!passwordEncoder.matches(request.getPassword(), platformUser.getPassword())) {
                 throw new BadCredentialsException("Invalid credentials");
             }
@@ -94,7 +110,6 @@ public class AuthService {
             }
 
             UUID tokenId = UUID.randomUUID();
-            String deviceFingerprint = DeviceFingerprintUtil.generate(httpRequest);
 
             String token = jwtUtil.generateToken(
                     UserType.PLATFORM.name(),
@@ -104,7 +119,7 @@ public class AuthService {
                     platformUser.getRole().name(),
                     tokenId,
                     null,
-                    deviceFingerprint
+                    fingerprint
             );
 
             long activeSessions =
@@ -142,8 +157,57 @@ public class AuthService {
     ===================================================== */
 
         UUID tenantId = TenantContext.getTenantId();
+        UUID branchId = request.getBranchId();
 
-        User user = userRepository
+        if (request.getDeviceId() == null || request.getDeviceId().isBlank()) {
+            throw new BadCredentialsException("Device ID required");
+        }
+
+        String fingerprint =
+                DeviceFingerprintUtil.generate(httpRequest, request.getDeviceId());
+
+        String ip = extractClientIp(httpRequest);
+
+        var branch = branchRepository
+                .findByTenantIdAndIdAndDeletedFalse(tenantId, branchId)
+                .orElseThrow(() -> new BadCredentialsException("Branch not found"));
+
+        try {
+
+            deviceSecurityService.validate(tenantId, branchId, fingerprint);
+
+            locationSecurityService.validate(
+                    branch,
+                    request.getLatitude(),
+                    request.getLongitude(),
+                    request.getAccuracy()
+            );
+
+        } catch (Exception ex) {
+
+            loginAuditService.log(
+                    tenantId,
+                    null,
+                    branchId,
+                    fingerprint,
+                    request.getLatitude(),
+                    request.getLongitude(),
+                    request.getAccuracy(),
+                    ip,
+                    "BLOCKED",
+                    ex.getMessage()
+            );
+
+            throw new BadCredentialsException(ex.getMessage());
+        }
+
+        /* ================= PASSWORD AUTH ================= */
+
+        User user;
+
+        identifier = request.getIdentifier();
+
+        user = userRepository
                 .findAuthUser(tenantId, identifier)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
@@ -151,36 +215,15 @@ public class AuthService {
             throw new BadCredentialsException("Invalid password");
         }
 
-        if (Boolean.TRUE.equals(user.getMustChangePassword())) {
-            throw new ResponseStatusException(
-                    HttpStatus.PRECONDITION_REQUIRED,
-                    "PASSWORD_CHANGE_REQUIRED"
-            );
-        }
-
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        user.getUsername(),
-                        request.getPassword()
-                )
-        );
+        /* ================= CONTINUE EXISTING FLOW ================= */
 
         UUID userId = user.getId();
-        UUID branchId = request.getBranchId();
         LocalDate today = LocalDate.now();
 
-        branchRepository.findByTenantIdAndIdAndDeletedFalse(
-                        TenantContext.getTenantId(),
-                        branchId
-                )
-                .orElseThrow(() -> new BadCredentialsException("Selected branch does not exist"));
-
         boolean belongs = branchRepository.findBranchesByUserId(
-                        TenantContext.getTenantId(),
-                        userId
-                )
-                .stream()
-                .anyMatch(b -> b.getId().equals(branchId));
+                tenantId,
+                userId
+        ).stream().anyMatch(b -> b.getId().equals(branchId));
 
         if (!belongs) {
             throw new BadCredentialsException("User is not assigned to this branch");
@@ -196,7 +239,6 @@ public class AuthService {
         }
 
         UUID tokenId = UUID.randomUUID();
-        String deviceFingerprint = DeviceFingerprintUtil.generate(httpRequest);
 
         String token = jwtUtil.generateToken(
                 UserType.TENANT.name(),
@@ -206,7 +248,7 @@ public class AuthService {
                 user.getRole().name(),
                 tokenId,
                 branchId,
-                deviceFingerprint
+                fingerprint
         );
 
         UserSession session = UserSession.builder()
@@ -242,6 +284,172 @@ public class AuthService {
                 branchId,
                 departments.stream().map(Department::getId).toList(),
                 UserType.TENANT
+        );
+
+        loginAuditService.log(
+                tenantId,
+                userId,
+                branchId,
+                fingerprint,
+                request.getLatitude(),
+                request.getLongitude(),
+                request.getAccuracy(),
+                ip,
+                "SUCCESS",
+                "OK"
+        );
+
+        return new LoginResult(token, response);
+    }
+
+    private String extractClientIp(HttpServletRequest request) {
+
+        String xf = request.getHeader("X-Forwarded-For");
+
+        if (xf != null && !xf.isBlank()) {
+            return xf.split(",")[0].trim();
+        }
+
+        return request.getRemoteAddr();
+    }
+
+    @Transactional
+    public LoginResult loginInternalBiometric(AuthRequest request, HttpServletRequest httpRequest) {
+
+        UUID userId = request.getUserId();
+
+        if (userId == null) {
+            throw new BadCredentialsException("Invalid biometric user");
+        }
+
+        UUID tenantId = TenantContext.getTenantId();
+        UUID branchId = request.getBranchId();
+
+        if (request.getDeviceId() == null || request.getDeviceId().isBlank()) {
+            throw new BadCredentialsException("Device ID required");
+        }
+
+        String fingerprint =
+                DeviceFingerprintUtil.generate(httpRequest, request.getDeviceId());
+
+        String ip = extractClientIp(httpRequest);
+
+        var branch = branchRepository
+                .findByTenantIdAndIdAndDeletedFalse(tenantId, branchId)
+                .orElseThrow(() -> new BadCredentialsException("Branch not found"));
+
+        try {
+
+            deviceSecurityService.validate(tenantId, branchId, fingerprint);
+
+            locationSecurityService.validate(
+                    branch,
+                    request.getLatitude(),
+                    request.getLongitude(),
+                    request.getAccuracy()
+            );
+
+        } catch (Exception ex) {
+
+            loginAuditService.log(
+                    tenantId,
+                    null,
+                    branchId,
+                    fingerprint,
+                    request.getLatitude(),
+                    request.getLongitude(),
+                    request.getAccuracy(),
+                    ip,
+                    "BLOCKED",
+                    ex.getMessage()
+            );
+
+            throw new BadCredentialsException(ex.getMessage());
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        UUID resolvedUserId = user.getId();
+        LocalDate today = LocalDate.now();
+
+        boolean belongs = branchRepository.findBranchesByUserId(
+                tenantId,
+                resolvedUserId
+        ).stream().anyMatch(b -> b.getId().equals(branchId));
+
+        if (!belongs) {
+            throw new BadCredentialsException("User is not assigned to this branch");
+        }
+
+        int activeCount =
+                userSessionRepository
+                        .findByUserIdAndLoginDateAndLogoutTimeIsNull(resolvedUserId, today)
+                        .size();
+
+        if (activeCount >= TENANT_USERS_MAX_SESSIONS_PER_DAY) {
+            throw new IllegalStateException("Maximum active sessions reached for today");
+        }
+
+        UUID tokenId = UUID.randomUUID();
+
+        String token = jwtUtil.generateToken(
+                UserType.TENANT.name(),
+                user.getTenantId(),
+                resolvedUserId,
+                user.getUsername(),
+                user.getRole().name(),
+                tokenId,
+                branchId,
+                fingerprint
+        );
+
+        UserSession session = UserSession.builder()
+                .userId(resolvedUserId)
+                .branchId(branchId)
+                .loginDate(today)
+                .loginTime(LocalDateTime.now())
+                .tokenId(tokenId)
+                .autoLoggedOut(false)
+                .build();
+
+        userSessionRepository.save(session);
+
+        List<Department> departments =
+                departmentRepository.findDepartmentsForUserInBranch(
+                        TenantContext.getTenantId(),
+                        resolvedUserId,
+                        branchId
+                );
+
+        if (departments.isEmpty()) {
+            rollcallService.recordLoginRollcall(resolvedUserId, null, branchId);
+        } else {
+            for (Department d : departments) {
+                rollcallService.recordLoginRollcall(resolvedUserId, d.getId(), branchId);
+            }
+        }
+
+        AuthResponse response = new AuthResponse(
+                resolvedUserId,
+                user.getUsername(),
+                user.getRole().name(),
+                branchId,
+                departments.stream().map(Department::getId).toList(),
+                UserType.TENANT
+        );
+
+        loginAuditService.log(
+                tenantId,
+                resolvedUserId,
+                branchId,
+                fingerprint,
+                request.getLatitude(),
+                request.getLongitude(),
+                request.getAccuracy(),
+                ip,
+                "SUCCESS",
+                "OK"
         );
 
         return new LoginResult(token, response);

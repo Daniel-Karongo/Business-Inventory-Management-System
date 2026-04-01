@@ -1,12 +1,18 @@
 package com.IntegrityTechnologies.business_manager.security.auth.controller;
 
-import com.IntegrityTechnologies.business_manager.security.auth.service.AuthService;
-import com.IntegrityTechnologies.business_manager.security.auth.util.JwtUtil;
 import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthRequest;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthResponse;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.BulkAuthResponse;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.UserSessionDTO;
+import com.IntegrityTechnologies.business_manager.security.auth.service.AuthService;
+import com.IntegrityTechnologies.business_manager.security.auth.util.JwtUtil;
+import com.IntegrityTechnologies.business_manager.security.biometric.dto.WebAuthnVerifyRequest;
+import com.IntegrityTechnologies.business_manager.security.biometric.service.WebAuthnService;
+import com.yubico.webauthn.AssertionRequest;
+import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
+import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
+import com.yubico.webauthn.data.PublicKeyCredential;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,6 +20,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -29,6 +36,7 @@ public class AuthController {
     private final AuthService authService;
     private final JwtUtil jwtUtil;
     private final UserSessionRepository userSessionRepository;
+    private final WebAuthnService webAuthnService;
 
     /* =====================================================
        LOGIN (BROWSER – HttpOnly COOKIE)
@@ -61,6 +69,81 @@ public class AuthController {
         return ResponseEntity.ok(result.response());
     }
 
+    @PostMapping("/biometric/challenge")
+    public ResponseEntity<?> challenge(@RequestParam String deviceId) {
+
+        AssertionRequest request = webAuthnService.startAssertion(deviceId);
+
+        return ResponseEntity.ok(request);
+    }
+
+    @PostMapping("/biometric/verify")
+    public ResponseEntity<AuthResponse> biometricLogin(
+            @RequestBody WebAuthnVerifyRequest request,
+            HttpServletRequest servletRequest,
+            HttpServletResponse response
+    ) {
+
+        PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> credential;
+
+        try {
+            credential = PublicKeyCredential.parseAssertionResponseJson(request.getRawJson());
+        } catch (Exception e) {
+            throw new BadCredentialsException("Invalid biometric payload", e);
+        }
+
+    /* =====================================================
+       1️⃣ VERIFY WEBAUTHN
+    ===================================================== */
+
+        var result = webAuthnService.finishAssertion(request.getDeviceId(), credential);
+
+    /* =====================================================
+       2️⃣ RESOLVE USER VIA CREDENTIAL ID (CORRECT WAY)
+    ===================================================== */
+
+        String credentialId = credential.getId().getBase64Url();
+
+        UUID userId = webAuthnService.resolveUserId(credentialId);
+
+    /* =====================================================
+       3️⃣ BUILD AUTH REQUEST
+    ===================================================== */
+
+        AuthRequest authRequest = new AuthRequest();
+
+        authRequest.setUserId(userId);
+        authRequest.setBranchId(request.getBranchId());
+        authRequest.setDeviceId(request.getDeviceId());
+        authRequest.setLatitude(request.getLatitude());
+        authRequest.setLongitude(request.getLongitude());
+        authRequest.setAccuracy(request.getAccuracy());
+
+    /* =====================================================
+       4️⃣ LOGIN (BIOMETRIC PATH)
+    ===================================================== */
+
+        AuthService.LoginResult loginResult =
+                authService.loginInternalBiometric(authRequest, servletRequest);
+
+    /* =====================================================
+       5️⃣ COOKIE
+    ===================================================== */
+
+        Cookie cookie = new Cookie("access_token", loginResult.jwt());
+        cookie.setHttpOnly(true);
+        cookie.setSecure(servletRequest.isSecure());
+        cookie.setPath("/");
+        cookie.setMaxAge((int) jwtUtil.secondsUntilMidnight());
+
+        cookie.setAttribute("SameSite",
+                servletRequest.isSecure() ? "None" : "Lax");
+
+        response.addCookie(cookie);
+
+        return ResponseEntity.ok(loginResult.response());
+    }
+    
     /* =====================================================
        BULK LOGIN (NON-BROWSER / ADMIN / AUTOMATION)
        ===================================================== */
