@@ -1,6 +1,6 @@
 //package com.IntegrityTechnologies.business_manager.modules.acl.service;
 //
-//import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+//import com.IntegrityTechnologies.business_manager.modules.person.model.user.Role;
 //import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 //import com.IntegrityTechnologies.business_manager.modules.acl.entity.EndpointPermission;
 //import com.IntegrityTechnologies.business_manager.modules.acl.entity.PermissionCondition;

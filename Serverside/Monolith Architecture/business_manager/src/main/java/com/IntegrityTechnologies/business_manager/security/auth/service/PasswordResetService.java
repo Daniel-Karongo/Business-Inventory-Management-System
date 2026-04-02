@@ -10,8 +10,8 @@ import com.IntegrityTechnologies.business_manager.security.auth.model.PasswordRe
 import com.IntegrityTechnologies.business_manager.security.auth.model.UserType;
 import com.IntegrityTechnologies.business_manager.security.auth.repository.PasswordResetAuditRepository;
 import com.IntegrityTechnologies.business_manager.security.auth.repository.PasswordResetTokenRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.user.model.User;
+import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 

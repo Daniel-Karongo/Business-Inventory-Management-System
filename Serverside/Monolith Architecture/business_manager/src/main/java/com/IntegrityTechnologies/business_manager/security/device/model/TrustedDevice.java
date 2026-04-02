@@ -33,7 +33,7 @@ public class TrustedDevice extends TenantAwareEntity {
     @GeneratedValue
     private UUID id;
 
-    @Column(name = "branch_id", nullable = false)
+    @Column(name = "branch_id", nullable = true)
     private UUID branchId;
 
     @Column(nullable = false, length = 128)

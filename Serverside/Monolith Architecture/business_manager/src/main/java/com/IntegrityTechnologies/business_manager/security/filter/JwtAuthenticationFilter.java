@@ -2,7 +2,7 @@ package com.IntegrityTechnologies.business_manager.security.filter;
 
 import com.IntegrityTechnologies.business_manager.security.auth.config.CustomUserDetails;
 import com.IntegrityTechnologies.business_manager.security.auth.config.CustomUserDetailsService;
-import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.security.auth.config.PlatformUserDetails;
 import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.auth.config.PlatformUserDetailsService;

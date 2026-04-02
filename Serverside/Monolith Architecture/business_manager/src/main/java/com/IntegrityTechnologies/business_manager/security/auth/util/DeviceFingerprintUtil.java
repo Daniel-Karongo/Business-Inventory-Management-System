@@ -17,10 +17,12 @@ public final class DeviceFingerprintUtil {
             }
 
             String userAgent = request.getHeader("User-Agent");
-            String accept = request.getHeader("Accept");
-            String ip = request.getRemoteAddr();
 
-            String raw = userAgent + "|" + accept + "|" + deviceId + "|" + ip;
+            if (userAgent == null) {
+                userAgent = "unknown";
+            }
+
+            String raw = userAgent + "|" + deviceId;
 
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(raw.getBytes(StandardCharsets.UTF_8));

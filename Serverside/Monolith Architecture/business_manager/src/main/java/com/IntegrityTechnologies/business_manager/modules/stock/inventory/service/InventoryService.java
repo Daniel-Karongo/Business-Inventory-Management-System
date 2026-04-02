@@ -12,10 +12,10 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.ser
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineBatchSelection;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.dto.AllocationResult;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.supplier.model.Supplier;
+import com.IntegrityTechnologies.business_manager.modules.person.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplier;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplierId;

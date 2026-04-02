@@ -3,7 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
+import com.IntegrityTechnologies.business_manager.modules.person.supplier.model.Supplier;
 import jakarta.persistence.criteria.*;
 import org.springframework.data.jpa.domain.Specification;
 

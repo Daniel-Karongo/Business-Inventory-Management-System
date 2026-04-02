@@ -17,8 +17,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableSnapshot;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.service.SellableResolutionService;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.engine.StockEngine;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;

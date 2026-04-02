@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model;
 
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
+import com.IntegrityTechnologies.business_manager.modules.person.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

@@ -1,8 +1,8 @@
 package com.IntegrityTechnologies.business_manager.security.auth.config;
 
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.user.model.Role;
+import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;

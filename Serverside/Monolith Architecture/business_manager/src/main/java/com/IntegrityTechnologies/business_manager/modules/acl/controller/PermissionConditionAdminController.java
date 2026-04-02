@@ -7,7 +7,7 @@
 //import com.IntegrityTechnologies.business_manager.modules.acl.repository.PermissionConditionRepository;
 //import com.IntegrityTechnologies.business_manager.modules.acl.repository.PermissionRepository;
 //import com.IntegrityTechnologies.business_manager.modules.acl.repository.RoleEntityRepository;
-//import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+//import com.IntegrityTechnologies.business_manager.modules.person.model.user.Role;
 //import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.PlatformAdminOnly;
 //import lombok.RequiredArgsConstructor;
 //import org.springframework.web.bind.annotation.*;

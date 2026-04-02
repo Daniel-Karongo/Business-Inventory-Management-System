@@ -2,9 +2,9 @@ package com.IntegrityTechnologies.business_manager.modules.stock.category.servic
 
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.supplier.model.Supplier;
+import com.IntegrityTechnologies.business_manager.modules.person.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.dto.CategoryBulkRow;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.dto.CategoryDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.mapper.CategoryMapper;

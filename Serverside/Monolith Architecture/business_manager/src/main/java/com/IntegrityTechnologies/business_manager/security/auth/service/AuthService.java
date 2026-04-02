@@ -1,14 +1,14 @@
 package com.IntegrityTechnologies.business_manager.security.auth.service;
 
 import com.IntegrityTechnologies.business_manager.exception.UserNotFoundException;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.UserSession;
-import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.service.RollcallService;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
+import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.user.model.User;
+import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model.UserSession;
+import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.service.RollcallService;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUser;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUserSession;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
@@ -57,6 +57,9 @@ public class AuthService {
     private final DeviceSecurityService deviceSecurityService;
     private final LocationSecurityService locationSecurityService;
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
     /* =====================================================
        INTERNAL LOGIN RESULT (shared by login & bulk-login)
        ===================================================== */
@@ -91,7 +94,13 @@ public class AuthService {
             String ip = extractClientIp(httpRequest);
 
             /* ================= DEVICE VALIDATION ================= */
-            deviceSecurityService.validate(null, null, fingerprint);
+            UUID platformTenantId = tenantId();
+
+            if (platformTenantId == null) {
+                throw new IllegalStateException("Platform tenant not resolved");
+            }
+
+            deviceSecurityService.validate(platformTenantId, null, fingerprint);
 
             /* ================= PASSWORD AUTH ================= */
             if (!passwordEncoder.matches(request.getPassword(), platformUser.getPassword())) {
@@ -156,7 +165,7 @@ public class AuthService {
        2️⃣ TENANT LOGIN
     ===================================================== */
 
-        UUID tenantId = TenantContext.getTenantId();
+        UUID tenantId = tenantId();
         UUID branchId = request.getBranchId();
 
         if (request.getDeviceId() == null || request.getDeviceId().isBlank()) {
@@ -264,7 +273,7 @@ public class AuthService {
 
         List<Department> departments =
                 departmentRepository.findDepartmentsForUserInBranch(
-                        TenantContext.getTenantId(),
+                        tenantId(),
                         userId,
                         branchId
                 );
@@ -322,7 +331,7 @@ public class AuthService {
             throw new BadCredentialsException("Invalid biometric user");
         }
 
-        UUID tenantId = TenantContext.getTenantId();
+        UUID tenantId = tenantId();
         UUID branchId = request.getBranchId();
 
         if (request.getDeviceId() == null || request.getDeviceId().isBlank()) {
@@ -367,8 +376,13 @@ public class AuthService {
             throw new BadCredentialsException(ex.getMessage());
         }
 
-        User user = userRepository.findById(userId)
+        User user = userRepository
+                .findByIdAndTenantId(userId, tenantId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        if (Boolean.TRUE.equals(user.getDeleted())) {
+            throw new BadCredentialsException("Account deleted");
+        }
 
         UUID resolvedUserId = user.getId();
         LocalDate today = LocalDate.now();
@@ -417,7 +431,7 @@ public class AuthService {
 
         List<Department> departments =
                 departmentRepository.findDepartmentsForUserInBranch(
-                        TenantContext.getTenantId(),
+                        tenantId(),
                         resolvedUserId,
                         branchId
                 );
@@ -476,7 +490,7 @@ public class AuthService {
 
         List<Department> departments =
                 departmentRepository.findDepartmentsForUserInBranch(
-                        TenantContext.getTenantId(),
+                        tenantId(),
                         userId,
                         branchId
                 );
@@ -537,7 +551,7 @@ public class AuthService {
             UUID branchId = s.getBranchId();
             List<Department> departments =
                     departmentRepository.findDepartmentsForUserInBranch(
-                            TenantContext.getTenantId(),
+                            tenantId(),
                             userId,
                             branchId
                     );
@@ -602,7 +616,7 @@ public class AuthService {
 
         List<Department> departments =
                 departmentRepository.findDepartmentsForUserInBranch(
-                        TenantContext.getTenantId(),
+                        tenantId(),
                         userId,
                         session.getBranchId()
                 );

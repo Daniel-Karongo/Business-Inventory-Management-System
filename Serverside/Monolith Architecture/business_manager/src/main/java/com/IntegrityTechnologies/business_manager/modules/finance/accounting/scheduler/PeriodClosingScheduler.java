@@ -1,7 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.scheduler;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.service.TenantExecutionService;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.PeriodClosingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;

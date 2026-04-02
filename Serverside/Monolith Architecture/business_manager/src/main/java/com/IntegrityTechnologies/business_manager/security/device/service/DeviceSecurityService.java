@@ -16,14 +16,16 @@ public class DeviceSecurityService {
     public void validate(UUID tenantId, UUID branchId, String fingerprint) {
 
         var device = repository
-                .findByTenantIdAndBranchIdAndFingerprint(tenantId, branchId, fingerprint)
+                .findByTenantIdAndBranchIdAndFingerprint(tenantId, branchId, fingerprint);
+
+        var resolved = device
                 .orElseThrow(() -> new SecurityException("Device not registered for this branch"));
 
-        if (!Boolean.TRUE.equals(device.getApproved())) {
-            throw new SecurityException("Device not approved");
+        if (!Boolean.TRUE.equals(resolved.getApproved())) {
+            throw new SecurityException("Device not approved for this branch");
         }
 
-        device.setLastSeenAt(LocalDateTime.now());
-        repository.save(device);
+        resolved.setLastSeenAt(LocalDateTime.now());
+        repository.save(resolved);
     }
 }

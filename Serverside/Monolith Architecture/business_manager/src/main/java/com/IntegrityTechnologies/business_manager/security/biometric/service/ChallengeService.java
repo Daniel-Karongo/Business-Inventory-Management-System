@@ -4,6 +4,7 @@ import com.yubico.webauthn.AssertionRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -11,15 +12,22 @@ public class ChallengeService {
 
     private final Map<String, TimedRequest> store = new ConcurrentHashMap<>();
 
-    private static final long TTL_MS = 120_000;
+    private static final long TTL_MS = 300_000; // 5 minutes
 
     record TimedRequest(AssertionRequest request, long timestamp) {}
 
-    public void store(String key, AssertionRequest request) {
-        store.put(key, new TimedRequest(request, System.currentTimeMillis()));
+    private String key(UUID tenantId, String fingerprint) {
+        return tenantId + "|" + fingerprint;
     }
 
-    public AssertionRequest get(String key) {
+    public void store(UUID tenantId, String fingerprint, AssertionRequest request) {
+        store.put(key(tenantId, fingerprint),
+                new TimedRequest(request, System.currentTimeMillis()));
+    }
+
+    public AssertionRequest get(UUID tenantId, String fingerprint) {
+
+        String key = key(tenantId, fingerprint);
 
         TimedRequest tr = store.remove(key);
 

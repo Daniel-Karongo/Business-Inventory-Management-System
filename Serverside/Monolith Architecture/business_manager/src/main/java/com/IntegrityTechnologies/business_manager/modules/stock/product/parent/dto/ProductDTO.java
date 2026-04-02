@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto;
 
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierMinimalDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.supplier.dto.SupplierMinimalDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

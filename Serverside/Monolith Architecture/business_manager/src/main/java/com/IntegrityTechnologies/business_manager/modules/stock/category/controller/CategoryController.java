@@ -7,7 +7,7 @@ import com.IntegrityTechnologies.business_manager.modules.stock.category.dto.Cat
 import com.IntegrityTechnologies.business_manager.modules.stock.category.dto.CategoryDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.service.CategoryBulkService;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.service.CategoryService;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.supplier.dto.SupplierDTO;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

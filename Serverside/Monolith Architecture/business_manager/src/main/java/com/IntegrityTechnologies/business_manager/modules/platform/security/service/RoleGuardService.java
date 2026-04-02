@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.security.service;
 
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+import com.IntegrityTechnologies.business_manager.modules.person.user.model.Role;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.*;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import lombok.extern.slf4j.Slf4j;

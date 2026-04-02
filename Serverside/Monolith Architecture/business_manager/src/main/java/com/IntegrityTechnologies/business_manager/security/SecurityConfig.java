@@ -2,9 +2,9 @@ package com.IntegrityTechnologies.business_manager.security;
 
 //import com.IntegrityTechnologies.business_manager.modules.acl.config.PermissionSecurityFilter;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.observability.filter.RequestMetricsFilter;
+import com.IntegrityTechnologies.business_manager.security.filter.RequestMetricsFilter;
 import com.IntegrityTechnologies.business_manager.security.filter.*;
-import com.IntegrityTechnologies.business_manager.modules.platform.security.rate.TenantRateLimitFilter;
+import com.IntegrityTechnologies.business_manager.security.filter.rate.TenantRateLimitFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -39,6 +39,7 @@ public class SecurityConfig {
     private final TenantResolutionFilter tenantResolutionFilter;
     private final RequestMetricsFilter requestMetricsFilter;
     private final TenantRateLimitFilter tenantRateLimitFilter;
+    private final AuthRateLimitFilter authRateLimitFilter;
     private final RequestContextCleanupFilter requestContextCleanupFilter;
 
     public SecurityConfig(
@@ -47,7 +48,7 @@ public class SecurityConfig {
 //            PermissionSecurityFilter permissionSecurityFilter,
             BranchContextFilter branchContextFilter,
             TenantContextFilter tenantContextFilter,
-            RoleGuardFilter roleGuardFilter, TenantResolutionFilter tenantResolutionFilter, RequestMetricsFilter requestMetricsFilter, TenantRateLimitFilter tenantRateLimitFilter, RequestContextCleanupFilter requestContextCleanupFilter) {
+            RoleGuardFilter roleGuardFilter, TenantResolutionFilter tenantResolutionFilter, RequestMetricsFilter requestMetricsFilter, TenantRateLimitFilter tenantRateLimitFilter, AuthRateLimitFilter authRateLimitFilter, RequestContextCleanupFilter requestContextCleanupFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.authenticationEntryPoint = authenticationEntryPoint;
 //        this.permissionSecurityFilter = permissionSecurityFilter;
@@ -57,6 +58,7 @@ public class SecurityConfig {
         this.tenantResolutionFilter = tenantResolutionFilter;
         this.requestMetricsFilter = requestMetricsFilter;
         this.tenantRateLimitFilter = tenantRateLimitFilter;
+        this.authRateLimitFilter = authRateLimitFilter;
         this.requestContextCleanupFilter = requestContextCleanupFilter;
     }
 
@@ -164,18 +166,22 @@ public class SecurityConfig {
 
                 .addFilterBefore(tenantResolutionFilter, UsernamePasswordAuthenticationFilter.class)
 
-                .addFilterAfter(requestMetricsFilter, TenantResolutionFilter.class)
-
-                .addFilterAfter(tenantRateLimitFilter, RequestMetricsFilter.class)
-
-                .addFilterAfter(jwtAuthFilter, TenantRateLimitFilter.class)
-
+                // 🔴 Context setup first
+                .addFilterAfter(jwtAuthFilter, TenantResolutionFilter.class)
                 .addFilterAfter(tenantContextFilter, JwtAuthenticationFilter.class)
-
                 .addFilterAfter(branchContextFilter, TenantContextFilter.class)
 
+                // 🔴 Metrics AFTER tenant is known
+                .addFilterAfter(requestMetricsFilter, TenantContextFilter.class)
+
+                // 🔴 Rate limiting AFTER context (so tenant + device available)
+                .addFilterAfter(authRateLimitFilter, RequestMetricsFilter.class)
+                .addFilterAfter(tenantRateLimitFilter, AuthRateLimitFilter.class)
+
+                // 🔴 Authorization layer
                 .addFilterAfter(roleGuardFilter, BranchContextFilter.class)
 
+                // 🔴 Cleanup LAST
                 .addFilterAfter(requestContextCleanupFilter, RoleGuardFilter.class)
         ;
 

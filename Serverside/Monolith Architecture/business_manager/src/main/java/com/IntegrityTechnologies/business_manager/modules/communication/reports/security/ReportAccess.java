@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.communication.reports.security;
 
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+import com.IntegrityTechnologies.business_manager.modules.person.user.model.Role;
 
 public enum ReportAccess {
 

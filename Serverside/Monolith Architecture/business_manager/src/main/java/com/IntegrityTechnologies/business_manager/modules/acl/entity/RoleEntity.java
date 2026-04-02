@@ -1,6 +1,6 @@
 //package com.IntegrityTechnologies.business_manager.modules.acl.entity;
 //
-//import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+//import com.IntegrityTechnologies.business_manager.modules.person.model.user.Role;
 //import jakarta.persistence.*;
 //import lombok.*;
 //

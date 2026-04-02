@@ -80,9 +80,8 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
             String subdomain = host.split("\\.")[0];
 
             if (
-                    subdomain.equalsIgnoreCase("platform") ||
-                            subdomain.equalsIgnoreCase("www") ||
-                            subdomain.equalsIgnoreCase("localhost")
+                subdomain.equalsIgnoreCase("www") ||
+                subdomain.equalsIgnoreCase("localhost")
             ) {
                 return null;
             }

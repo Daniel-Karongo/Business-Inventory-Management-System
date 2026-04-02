@@ -1,7 +1,7 @@
 //package com.IntegrityTechnologies.business_manager.common;
 //
 //import com.IntegrityTechnologies.business_manager.modules.person.entity.user.config.User;
-//import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
+//import com.IntegrityTechnologies.business_manager.modules.person.repository.user.UserRepository;
 //import com.IntegrityTechnologies.business_manager.security.util.auth.JwtUtil;
 //import com.fasterxml.jackson.databind.ObjectMapper;
 //import org.junit.jupiter.api.BeforeAll;

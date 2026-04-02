@@ -9,7 +9,7 @@ import com.IntegrityTechnologies.business_manager.security.auth.model.UserType;
 import com.IntegrityTechnologies.business_manager.security.auth.service.PasswordResetEmailService;
 import com.IntegrityTechnologies.business_manager.security.auth.service.PasswordResetService;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.service.SmsService;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.security.auth.service.PasswordResetSmsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

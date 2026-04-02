@@ -7,10 +7,10 @@ import com.IntegrityTechnologies.business_manager.modules.dashboard.repository.D
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchAuditRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentAuditRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierAuditRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.supplier.repository.SupplierAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserAuditRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.BatchConsumptionRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;

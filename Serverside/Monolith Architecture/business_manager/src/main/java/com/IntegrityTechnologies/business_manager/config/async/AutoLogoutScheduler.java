@@ -1,13 +1,12 @@
 package com.IntegrityTechnologies.business_manager.config.async;
 
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.department.model.Department;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.department.repository.DepartmentRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.UserSession;
-import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.service.RollcallService;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
+import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model.UserSession;
+import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.service.RollcallService;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.service.TenantExecutionService;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;

@@ -2,8 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.stock.category.mapper
 
 import com.IntegrityTechnologies.business_manager.modules.stock.category.dto.CategoryDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierMinimalDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
+import com.IntegrityTechnologies.business_manager.modules.person.supplier.dto.SupplierMinimalDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplier;
 import org.mapstruct.*;
 

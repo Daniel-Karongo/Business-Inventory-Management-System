@@ -2,7 +2,7 @@
 //
 //import com.IntegrityTechnologies.business_manager.modules.acl.entity.RoleEntity;
 //import com.IntegrityTechnologies.business_manager.modules.acl.repository.RoleEntityRepository;
-//import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+//import com.IntegrityTechnologies.business_manager.modules.person.model.user.Role;
 //import jakarta.annotation.PostConstruct;
 //import lombok.RequiredArgsConstructor;
 //import lombok.extern.slf4j.Slf4j;

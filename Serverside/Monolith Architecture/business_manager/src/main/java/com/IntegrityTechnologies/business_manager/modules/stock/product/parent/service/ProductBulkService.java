@@ -3,10 +3,10 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkOptions;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.config.util.PhoneAndEmailNormalizer;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.model.Supplier;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.repository.SupplierRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.service.SupplierService;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.supplier.model.Supplier;
+import com.IntegrityTechnologies.business_manager.modules.person.supplier.repository.SupplierRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.supplier.service.SupplierService;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.service.CategoryService;

@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.category.dto;
 
-import com.IntegrityTechnologies.business_manager.modules.person.entity.supplier.dto.SupplierMinimalDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.supplier.dto.SupplierMinimalDTO;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import jakarta.validation.constraints.NotBlank;

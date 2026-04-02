@@ -1,9 +1,9 @@
 package com.IntegrityTechnologies.business_manager.security.util;
 
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.repository.UserBranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.model.UserSession;
-import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.user.model.Role;
+import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserBranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model.UserSession;
+import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

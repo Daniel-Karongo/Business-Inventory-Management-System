@@ -1,7 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.snapshots;
 
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.service.TenantExecutionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

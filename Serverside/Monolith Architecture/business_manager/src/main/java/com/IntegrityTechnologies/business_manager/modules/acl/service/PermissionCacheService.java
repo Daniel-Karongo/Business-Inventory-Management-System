@@ -3,7 +3,7 @@
 //import com.IntegrityTechnologies.business_manager.modules.acl.entity.EndpointPermission;
 //import com.IntegrityTechnologies.business_manager.modules.acl.repository.EndpointPermissionRepository;
 //import com.IntegrityTechnologies.business_manager.modules.acl.repository.RolePermissionRepository;
-//import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+//import com.IntegrityTechnologies.business_manager.modules.person.model.user.Role;
 //import lombok.RequiredArgsConstructor;
 //import lombok.extern.slf4j.Slf4j;
 //import org.springframework.stereotype.Service;

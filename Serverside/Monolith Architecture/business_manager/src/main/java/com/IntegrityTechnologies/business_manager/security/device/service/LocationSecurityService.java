@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security.device.service;
 
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
 import org.springframework.stereotype.Service;
 
 @Service

@@ -7,8 +7,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.doma
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.policy.BudgetPolicy;
 import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.*;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.model.Branch;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;

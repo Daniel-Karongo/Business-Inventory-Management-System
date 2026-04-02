@@ -10,9 +10,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.payment.reposi
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.service.PaymentService;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.repository.SaleRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.dto.CustomerRequest;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.model.CustomerType;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.customer.service.CustomerService;
+import com.IntegrityTechnologies.business_manager.modules.person.customer.dto.CustomerRequest;
+import com.IntegrityTechnologies.business_manager.modules.person.customer.model.CustomerType;
+import com.IntegrityTechnologies.business_manager.modules.person.customer.service.CustomerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

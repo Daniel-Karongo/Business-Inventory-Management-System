@@ -1,14 +1,17 @@
 package com.IntegrityTechnologies.business_manager.security.auth.controller;
 
-import com.IntegrityTechnologies.business_manager.modules.person.function.rollcall.repository.UserSessionRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
+import com.IntegrityTechnologies.business_manager.security.audit.service.LoginAuditService;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthRequest;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthResponse;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.BulkAuthResponse;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.UserSessionDTO;
 import com.IntegrityTechnologies.business_manager.security.auth.service.AuthService;
+import com.IntegrityTechnologies.business_manager.security.auth.util.DeviceFingerprintUtil;
 import com.IntegrityTechnologies.business_manager.security.auth.util.JwtUtil;
 import com.IntegrityTechnologies.business_manager.security.biometric.dto.WebAuthnVerifyRequest;
 import com.IntegrityTechnologies.business_manager.security.biometric.service.WebAuthnService;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.yubico.webauthn.AssertionRequest;
 import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
 import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
@@ -37,6 +40,7 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final UserSessionRepository userSessionRepository;
     private final WebAuthnService webAuthnService;
+    private final LoginAuditService loginAuditService;
 
     /* =====================================================
        LOGIN (BROWSER – HttpOnly COOKIE)
@@ -53,16 +57,13 @@ public class AuthController {
         boolean isSecure = servletRequest.isSecure();
 
         Cookie cookie = new Cookie("access_token", result.jwt());
+
+        cookie.setSecure(isSecure);
         cookie.setHttpOnly(true);
-        cookie.setSecure(false);
         cookie.setPath("/");
         cookie.setMaxAge((int) jwtUtil.secondsUntilMidnight());
 
-        if (isSecure) {
-            cookie.setAttribute("SameSite", "None");
-        } else {
-            cookie.setAttribute("SameSite", "Lax");
-        }
+        cookie.setAttribute("SameSite", isSecure ? "None" : "Lax");
 
         response.addCookie(cookie);
 
@@ -70,11 +71,20 @@ public class AuthController {
     }
 
     @PostMapping("/biometric/challenge")
-    public ResponseEntity<?> challenge(@RequestParam String deviceId) {
+    public ResponseEntity<?> challenge(
+            @RequestParam String deviceId,
+            HttpServletRequest request
+    ) {
 
-        AssertionRequest request = webAuthnService.startAssertion(deviceId);
+        UUID tenantId = TenantContext.getTenantId();
 
-        return ResponseEntity.ok(request);
+        String fingerprint =
+                DeviceFingerprintUtil.generate(request, deviceId);
+
+        AssertionRequest assertion =
+                webAuthnService.startAssertion(tenantId, fingerprint);
+
+        return ResponseEntity.ok(assertion);
     }
 
     @PostMapping("/biometric/verify")
@@ -84,64 +94,109 @@ public class AuthController {
             HttpServletResponse response
     ) {
 
+        UUID tenantId = TenantContext.getTenantId();
+
+        String fingerprint =
+                DeviceFingerprintUtil.generate(servletRequest, request.getDeviceId());
+
+        String ip = servletRequest.getRemoteAddr();
+
         PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> credential;
 
         try {
             credential = PublicKeyCredential.parseAssertionResponseJson(request.getRawJson());
         } catch (Exception e) {
+
+            loginAuditService.log(
+                    tenantId,
+                    null,
+                    request.getBranchId(),
+                    fingerprint,
+                    request.getLatitude(),
+                    request.getLongitude(),
+                    request.getAccuracy(),
+                    ip,
+                    "BLOCKED",
+                    "INVALID_BIOMETRIC_PAYLOAD"
+            );
+
             throw new BadCredentialsException("Invalid biometric payload", e);
         }
+
+        try {
 
     /* =====================================================
        1️⃣ VERIFY WEBAUTHN
     ===================================================== */
 
-        var result = webAuthnService.finishAssertion(request.getDeviceId(), credential);
+            var result = webAuthnService.finishAssertion(
+                    tenantId,
+                    fingerprint,
+                    credential
+            );
 
     /* =====================================================
-       2️⃣ RESOLVE USER VIA CREDENTIAL ID (CORRECT WAY)
+       2️⃣ RESOLVE USER VIA CREDENTIAL ID
     ===================================================== */
 
-        String credentialId = credential.getId().getBase64Url();
+            String credentialId = credential.getId().getBase64Url();
 
-        UUID userId = webAuthnService.resolveUserId(credentialId);
+            UUID userId = webAuthnService.resolveUserId(credentialId);
 
     /* =====================================================
        3️⃣ BUILD AUTH REQUEST
     ===================================================== */
 
-        AuthRequest authRequest = new AuthRequest();
+            AuthRequest authRequest = new AuthRequest();
 
-        authRequest.setUserId(userId);
-        authRequest.setBranchId(request.getBranchId());
-        authRequest.setDeviceId(request.getDeviceId());
-        authRequest.setLatitude(request.getLatitude());
-        authRequest.setLongitude(request.getLongitude());
-        authRequest.setAccuracy(request.getAccuracy());
+            authRequest.setUserId(userId);
+            authRequest.setBranchId(request.getBranchId());
+            authRequest.setDeviceId(request.getDeviceId());
+            authRequest.setLatitude(request.getLatitude());
+            authRequest.setLongitude(request.getLongitude());
+            authRequest.setAccuracy(request.getAccuracy());
 
     /* =====================================================
        4️⃣ LOGIN (BIOMETRIC PATH)
     ===================================================== */
 
-        AuthService.LoginResult loginResult =
-                authService.loginInternalBiometric(authRequest, servletRequest);
+            AuthService.LoginResult loginResult =
+                    authService.loginInternalBiometric(authRequest, servletRequest);
 
     /* =====================================================
        5️⃣ COOKIE
     ===================================================== */
 
-        Cookie cookie = new Cookie("access_token", loginResult.jwt());
-        cookie.setHttpOnly(true);
-        cookie.setSecure(servletRequest.isSecure());
-        cookie.setPath("/");
-        cookie.setMaxAge((int) jwtUtil.secondsUntilMidnight());
+            Cookie cookie = new Cookie("access_token", loginResult.jwt());
+            cookie.setHttpOnly(true);
+            cookie.setSecure(servletRequest.isSecure());
+            cookie.setPath("/");
+            cookie.setMaxAge((int) jwtUtil.secondsUntilMidnight());
 
-        cookie.setAttribute("SameSite",
-                servletRequest.isSecure() ? "None" : "Lax");
+            cookie.setAttribute("SameSite",
+                    servletRequest.isSecure() ? "None" : "Lax");
 
-        response.addCookie(cookie);
+            response.addCookie(cookie);
 
-        return ResponseEntity.ok(loginResult.response());
+            return ResponseEntity.ok(loginResult.response());
+
+        } catch (Exception ex) {
+
+            loginAuditService.log(
+                    tenantId,
+                    null,
+                    request.getBranchId(),
+                    fingerprint,
+                    request.getLatitude(),
+                    request.getLongitude(),
+                    request.getAccuracy(),
+                    ip,
+                    "BLOCKED",
+                    "BIOMETRIC_FAILED: " + ex.getMessage()
+            );
+
+            throw new BadCredentialsException("Biometric authentication failed");
+        }
     }
     
     /* =====================================================
@@ -192,16 +247,12 @@ public class AuthController {
 
         Cookie cookie = new Cookie("access_token", "");
 
+        cookie.setSecure(isSecure);
         cookie.setHttpOnly(true);
-        cookie.setSecure(false);
         cookie.setPath("/");
         cookie.setMaxAge(0);
 
-        if (isSecure) {
-            cookie.setAttribute("SameSite", "None");
-        } else {
-            cookie.setAttribute("SameSite", "Lax");
-        }
+        cookie.setAttribute("SameSite", isSecure ? "None" : "Lax");
 
         response.addCookie(cookie);
 

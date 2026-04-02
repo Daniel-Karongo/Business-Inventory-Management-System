@@ -3,7 +3,7 @@
 //import com.IntegrityTechnologies.business_manager.modules.acl.entity.*;
 //import com.IntegrityTechnologies.business_manager.modules.acl.repository.*;
 //import com.IntegrityTechnologies.business_manager.modules.acl.util.PathTemplateNormalizer;
-//import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+//import com.IntegrityTechnologies.business_manager.modules.person.model.user.Role;
 //import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.*;
 //import jakarta.annotation.PostConstruct;
 //import lombok.RequiredArgsConstructor;

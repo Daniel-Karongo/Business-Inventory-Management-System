@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security.util;
 
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+import com.IntegrityTechnologies.business_manager.modules.person.user.model.Role;
 import com.IntegrityTechnologies.business_manager.security.auth.config.CustomUserDetails;
 import com.IntegrityTechnologies.business_manager.security.auth.config.PlatformUserDetails;
 import org.springframework.security.core.Authentication;

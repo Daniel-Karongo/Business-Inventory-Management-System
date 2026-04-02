@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.security;
 
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.Role;
+import com.IntegrityTechnologies.business_manager.modules.person.user.model.Role;
 import com.IntegrityTechnologies.business_manager.security.auth.config.PlatformUserDetails;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;

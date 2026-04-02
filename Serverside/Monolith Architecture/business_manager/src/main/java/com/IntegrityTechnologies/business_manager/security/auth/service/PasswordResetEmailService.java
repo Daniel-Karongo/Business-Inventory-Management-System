@@ -2,7 +2,7 @@ package com.IntegrityTechnologies.business_manager.security.auth.service;
 
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.dto.EmailRequest;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.service.EmailService;
-import com.IntegrityTechnologies.business_manager.modules.person.entity.user.model.User;
+import com.IntegrityTechnologies.business_manager.modules.person.user.model.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
