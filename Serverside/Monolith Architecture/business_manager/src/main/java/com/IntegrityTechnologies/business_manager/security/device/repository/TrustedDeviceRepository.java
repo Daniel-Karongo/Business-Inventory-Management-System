@@ -4,6 +4,7 @@ import com.IntegrityTechnologies.business_manager.security.device.model.TrustedD
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,4 +16,10 @@ public interface TrustedDeviceRepository extends JpaRepository<TrustedDevice, UU
             UUID branchId,
             String fingerprint
     );
+
+    boolean existsByTenantIdAndBranchId(UUID tenantId, UUID branchId);
+
+    List<TrustedDevice> findByTenantIdAndBranchId(UUID tenantId, UUID branchId);
+
+    Optional<TrustedDevice> findByIdAndTenantId(UUID id, UUID tenantId);
 }

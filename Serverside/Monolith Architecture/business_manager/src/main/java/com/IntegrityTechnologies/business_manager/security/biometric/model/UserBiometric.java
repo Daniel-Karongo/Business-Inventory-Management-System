@@ -11,9 +11,16 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "user_biometrics",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_biometric_credential",
+                        columnNames = {"credential_id"}
+                )
+        },
         indexes = {
-                @Index(name = "idx_ub_user", columnList = "user_id"),
-                @Index(name = "idx_ub_cred", columnList = "credential_id")
+                @Index(name = "idx_ub_user", columnList = "tenant_id, user_id"),
+                @Index(name = "idx_ub_cred", columnList = "credential_id"),
+                @Index(name = "idx_ub_fingerprint", columnList = "fingerprint")
         }
 )
 @Getter
@@ -36,15 +43,21 @@ public class UserBiometric extends TenantAwareEntity {
     @Column(name = "public_key", nullable = false, columnDefinition = "TEXT")
     private String publicKey;
 
+    @Column(nullable = false, length = 128)
+    private String fingerprint;
+
     private Long signCount;
 
     private String deviceName;
 
-    private LocalDateTime createdAt;
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean deleted = false;
+
+    private LocalDateTime deletedAt;
 
     @PrePersist
     void onCreate() {
-        createdAt = LocalDateTime.now();
         if (signCount == null) signCount = 0L;
     }
 }

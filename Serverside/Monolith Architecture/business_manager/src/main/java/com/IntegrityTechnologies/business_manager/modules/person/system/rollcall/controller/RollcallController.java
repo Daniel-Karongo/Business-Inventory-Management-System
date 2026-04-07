@@ -27,39 +27,6 @@ import java.util.UUID;
 public class RollcallController {
 
     private final RollcallService rollcallService;
-    private final PrivilegesChecker privilegesChecker;
-
-    /* ====================================
-       LOGIN ROLLCALL
-       ==================================== */
-
-    @PostMapping("/login")
-    public ResponseEntity<RollcallDTO> loginRollcall(
-            @RequestBody LoginRollcallRequest req
-    ) {
-
-        RollcallDTO r =
-                rollcallService.recordLoginRollcall(
-                        req.getUserId(),
-                        req.getDepartmentId(),
-                        req.getBranchId()
-                );
-
-        return ResponseEntity.ok(r);
-    }
-
-    /* ====================================
-       ABSENTEES
-       ==================================== */
-
-    @TenantManagerOnly
-    @PostMapping("/mark-absentees")
-    public ResponseEntity<List<RollcallDTO>> markAbsenteesManually() {
-
-        return ResponseEntity.ok(
-                rollcallService.markAbsenteesAndReturn()
-        );
-    }
 
     /* ====================================
        USER ROLLCALL

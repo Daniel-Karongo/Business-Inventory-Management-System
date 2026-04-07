@@ -39,14 +39,19 @@ public class TrustedDevice extends TenantAwareEntity {
     @Column(nullable = false, length = 128)
     private String fingerprint;
 
-    private Boolean approved;
+    @Column(name = "device_name")
+    private String deviceName;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean approved = false;
 
     private LocalDateTime firstSeenAt;
     private LocalDateTime lastSeenAt;
 
     @PrePersist
     void onCreate() {
-        if (approved == null) approved = true;
+        if (approved == null) approved = false;
         firstSeenAt = LocalDateTime.now();
         lastSeenAt = LocalDateTime.now();
     }

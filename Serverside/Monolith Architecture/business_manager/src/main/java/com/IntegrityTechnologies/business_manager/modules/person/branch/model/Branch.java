@@ -8,6 +8,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.UuidGenerator;
 
+import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -77,6 +78,15 @@ public class Branch extends TenantAwareEntity {
     @OneToMany(mappedBy = "branch")
     @Builder.Default
     private Set<Department> departments = new HashSet<>();
+
+    @Column(name = "rollcall_start_time")
+    private LocalTime rollcallStartTime;
+
+    @Column(name = "rollcall_grace_minutes")
+    private Integer rollcallGraceMinutes;
+
+    @Column(name = "logout_time")
+    private LocalTime logoutTime;
 
     /* ========================================
        SYSTEM

@@ -1,28 +1,29 @@
 package com.IntegrityTechnologies.business_manager.security.auth.controller;
 
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.security.audit.service.LoginAuditService;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthRequest;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthResponse;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.BulkAuthResponse;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.UserSessionDTO;
 import com.IntegrityTechnologies.business_manager.security.auth.service.AuthService;
+import com.IntegrityTechnologies.business_manager.security.auth.service.BiometricAuthFacadeService;
 import com.IntegrityTechnologies.business_manager.security.auth.util.DeviceFingerprintUtil;
 import com.IntegrityTechnologies.business_manager.security.auth.util.JwtUtil;
 import com.IntegrityTechnologies.business_manager.security.biometric.dto.WebAuthnVerifyRequest;
 import com.IntegrityTechnologies.business_manager.security.biometric.service.WebAuthnService;
+import com.IntegrityTechnologies.business_manager.security.device.service.DeviceSecurityService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.yubico.webauthn.AssertionRequest;
-import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
-import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
-import com.yubico.webauthn.data.PublicKeyCredential;
+import com.yubico.webauthn.data.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,7 +41,8 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final UserSessionRepository userSessionRepository;
     private final WebAuthnService webAuthnService;
-    private final LoginAuditService loginAuditService;
+    private final DeviceSecurityService deviceSecurityService;
+    private final BiometricAuthFacadeService biometricAuthFacadeService;
 
     /* =====================================================
        LOGIN (BROWSER – HttpOnly COOKIE)
@@ -87,6 +89,118 @@ public class AuthController {
         return ResponseEntity.ok(assertion);
     }
 
+//    @PostMapping("/biometric/verify")
+//    public ResponseEntity<AuthResponse> biometricLogin(
+//            @RequestBody WebAuthnVerifyRequest request,
+//            HttpServletRequest servletRequest,
+//            HttpServletResponse response
+//    ) {
+//
+//        UUID tenantId = TenantContext.getTenantId();
+//
+//        String fingerprint =
+//                DeviceFingerprintUtil.generate(servletRequest, request.getDeviceId());
+//
+//        String ip = servletRequest.getRemoteAddr();
+//
+//        PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> credential;
+//
+//        try {
+//            credential = PublicKeyCredential.parseAssertionResponseJson(request.getRawJson());
+//        } catch (Exception e) {
+//
+//            loginAuditService.log(
+//                    tenantId,
+//                    null,
+//                    request.getBranchId(),
+//                    fingerprint,
+//                    request.getLatitude(),
+//                    request.getLongitude(),
+//                    request.getAccuracy(),
+//                    ip,
+//                    "BLOCKED",
+//                    "INVALID_BIOMETRIC_PAYLOAD"
+//            );
+//
+//            throw new BadCredentialsException("Invalid biometric payload", e);
+//        }
+//
+//        try {
+//
+//    /* =====================================================
+//       1️⃣ VERIFY WEBAUTHN
+//    ===================================================== */
+//
+//            var result = webAuthnService.finishAssertion(
+//                    tenantId,
+//                    fingerprint,
+//                    credential
+//            );
+//
+//    /* =====================================================
+//       2️⃣ RESOLVE USER VIA CREDENTIAL ID
+//    ===================================================== */
+//
+//            String credentialId = credential.getId().getBase64Url();
+//
+//            UUID userId = webAuthnService.resolveUserId(credentialId);
+//
+//    /* =====================================================
+//       3️⃣ BUILD AUTH REQUEST
+//    ===================================================== */
+//
+//            AuthRequest authRequest = new AuthRequest();
+//
+//            authRequest.setUserId(userId);
+//            authRequest.setBranchId(request.getBranchId());
+//            authRequest.setDeviceId(request.getDeviceId());
+//            authRequest.setLatitude(request.getLatitude());
+//            authRequest.setLongitude(request.getLongitude());
+//            authRequest.setAccuracy(request.getAccuracy());
+//
+//    /* =====================================================
+//       4️⃣ LOGIN (BIOMETRIC PATH)
+//    ===================================================== */
+//
+//            AuthService.LoginResult loginResult =
+//                    authService.loginInternalBiometric(authRequest, servletRequest);
+//
+//    /* =====================================================
+//       5️⃣ COOKIE
+//    ===================================================== */
+//
+//            Cookie cookie = new Cookie("access_token", loginResult.jwt());
+//            cookie.setHttpOnly(true);
+//            cookie.setSecure(servletRequest.isSecure());
+//            cookie.setPath("/");
+//            cookie.setMaxAge((int) jwtUtil.secondsUntilMidnight());
+//
+//            cookie.setAttribute("SameSite",
+//                    servletRequest.isSecure() ? "None" : "Lax");
+//
+//            response.addCookie(cookie);
+//
+//            return ResponseEntity.ok(loginResult.response());
+//
+//        } catch (Exception ex) {
+//
+//            loginAuditService.log(
+//                    tenantId,
+//                    null,
+//                    request.getBranchId(),
+//                    fingerprint,
+//                    request.getLatitude(),
+//                    request.getLongitude(),
+//                    request.getAccuracy(),
+//                    ip,
+//                    "BLOCKED",
+//                    "BIOMETRIC_FAILED: " + ex.getMessage()
+//            );
+//
+//            throw new BadCredentialsException("Biometric authentication failed");
+//        }
+//    }
+
     @PostMapping("/biometric/verify")
     public ResponseEntity<AuthResponse> biometricLogin(
             @RequestBody WebAuthnVerifyRequest request,
@@ -94,116 +208,93 @@ public class AuthController {
             HttpServletResponse response
     ) {
 
+        AuthService.LoginResult loginResult =
+                biometricAuthFacadeService.biometricLogin(request, servletRequest);
+
+        Cookie cookie = new Cookie("access_token", loginResult.jwt());
+
+        cookie.setHttpOnly(true);
+        cookie.setSecure(servletRequest.isSecure());
+        cookie.setPath("/");
+        cookie.setMaxAge((int) jwtUtil.secondsUntilMidnight());
+        cookie.setAttribute("SameSite",
+                servletRequest.isSecure() ? "None" : "Lax");
+
+        response.addCookie(cookie);
+
+        return ResponseEntity.ok(loginResult.response());
+    }
+
+    @PostMapping("/biometric/register/start")
+    public ResponseEntity<?> startRegistration(
+            @RequestBody AuthRequest request,
+            HttpServletRequest servletRequest
+    ) {
         UUID tenantId = TenantContext.getTenantId();
+
+        // 🔐 Authenticate first (NO SESSION CREATION)
+        AuthService.LoginResult result =
+                authService.loginInternal(request, servletRequest);
+
+        UUID userId = result.response().getUserId();
 
         String fingerprint =
                 DeviceFingerprintUtil.generate(servletRequest, request.getDeviceId());
 
-        String ip = servletRequest.getRemoteAddr();
+        // 🔒 Device rule
+        boolean hasAnyDevice =
+                deviceSecurityService.hasAnyDeviceForTenantBranch(
+                        tenantId,
+                        request.getBranchId()
+                );
 
-        PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> credential;
-
-        try {
-            credential = PublicKeyCredential.parseAssertionResponseJson(request.getRawJson());
-        } catch (Exception e) {
-
-            loginAuditService.log(
-                    tenantId,
-                    null,
-                    request.getBranchId(),
-                    fingerprint,
-                    request.getLatitude(),
-                    request.getLongitude(),
-                    request.getAccuracy(),
-                    ip,
-                    "BLOCKED",
-                    "INVALID_BIOMETRIC_PAYLOAD"
-            );
-
-            throw new BadCredentialsException("Invalid biometric payload", e);
+        if (hasAnyDevice) {
+            deviceSecurityService.validate(tenantId, request.getBranchId(), fingerprint);
         }
 
-        try {
+        var options = webAuthnService.startRegistration(
+                tenantId,
+                userId,
+                result.response().getUsername(),
+                fingerprint
+        );
 
-    /* =====================================================
-       1️⃣ VERIFY WEBAUTHN
-    ===================================================== */
-
-            var result = webAuthnService.finishAssertion(
-                    tenantId,
-                    fingerprint,
-                    credential
-            );
-
-    /* =====================================================
-       2️⃣ RESOLVE USER VIA CREDENTIAL ID
-    ===================================================== */
-
-            String credentialId = credential.getId().getBase64Url();
-
-            UUID userId = webAuthnService.resolveUserId(credentialId);
-
-    /* =====================================================
-       3️⃣ BUILD AUTH REQUEST
-    ===================================================== */
-
-            AuthRequest authRequest = new AuthRequest();
-
-            authRequest.setUserId(userId);
-            authRequest.setBranchId(request.getBranchId());
-            authRequest.setDeviceId(request.getDeviceId());
-            authRequest.setLatitude(request.getLatitude());
-            authRequest.setLongitude(request.getLongitude());
-            authRequest.setAccuracy(request.getAccuracy());
-
-    /* =====================================================
-       4️⃣ LOGIN (BIOMETRIC PATH)
-    ===================================================== */
-
-            AuthService.LoginResult loginResult =
-                    authService.loginInternalBiometric(authRequest, servletRequest);
-
-    /* =====================================================
-       5️⃣ COOKIE
-    ===================================================== */
-
-            Cookie cookie = new Cookie("access_token", loginResult.jwt());
-            cookie.setHttpOnly(true);
-            cookie.setSecure(servletRequest.isSecure());
-            cookie.setPath("/");
-            cookie.setMaxAge((int) jwtUtil.secondsUntilMidnight());
-
-            cookie.setAttribute("SameSite",
-                    servletRequest.isSecure() ? "None" : "Lax");
-
-            response.addCookie(cookie);
-
-            return ResponseEntity.ok(loginResult.response());
-
-        } catch (Exception ex) {
-
-            loginAuditService.log(
-                    tenantId,
-                    null,
-                    request.getBranchId(),
-                    fingerprint,
-                    request.getLatitude(),
-                    request.getLongitude(),
-                    request.getAccuracy(),
-                    ip,
-                    "BLOCKED",
-                    "BIOMETRIC_FAILED: " + ex.getMessage()
-            );
-
-            throw new BadCredentialsException("Biometric authentication failed");
-        }
+        return ResponseEntity.ok(options);
     }
-    
+
+    @PostMapping("/biometric/register/finish")
+    public ResponseEntity<?> finishRegistration(
+            @RequestBody String rawJson,
+            @RequestParam String deviceId,
+            HttpServletRequest request
+    ) {
+        UUID tenantId = TenantContext.getTenantId();
+
+        String fingerprint =
+                DeviceFingerprintUtil.generate(request, deviceId);
+
+        PublicKeyCredential<AuthenticatorAttestationResponse, ClientRegistrationExtensionOutputs> credential;
+
+        try {
+            credential = PublicKeyCredential.parseRegistrationResponseJson(rawJson);
+        } catch (Exception e) {
+            throw new BadCredentialsException("Invalid registration payload");
+        }
+
+        webAuthnService.finishRegistration(
+                tenantId,
+                fingerprint,
+                credential
+        );
+
+        return ResponseEntity.ok().build();
+    }
+
     /* =====================================================
        BULK LOGIN (NON-BROWSER / ADMIN / AUTOMATION)
        ===================================================== */
     @PostMapping("/login/bulk")
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN')")
+    @TenantAdminOnly
     public ResponseEntity<List<BulkAuthResponse>> bulkLogin(
             @RequestBody List<AuthRequest> requests,
             HttpServletRequest servletRequest
@@ -275,7 +366,7 @@ public class AuthController {
        LOGOUT ALL (ADMIN)
        ===================================================== */
     @PostMapping("/logout-all/{userId}")
-    @PreAuthorize("hasAnyRole('SUPERUSER','ADMIN','MANAGER')")
+    @TenantManagerOnly
     public ResponseEntity<Void> logoutAllForUser(@PathVariable UUID userId) {
         authService.logoutAllSessions(userId, true);
         return ResponseEntity.ok().build();

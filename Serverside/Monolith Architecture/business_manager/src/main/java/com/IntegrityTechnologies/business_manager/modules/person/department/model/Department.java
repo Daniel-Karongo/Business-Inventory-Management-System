@@ -77,6 +77,9 @@ public class Department extends BranchAwareEntity {
 
     private Integer gracePeriodMinutes;
 
+    @Column(name = "logout_time")
+    private LocalTime logoutTime;
+
     @Column(nullable = false)
     private boolean deleted = false;
 }

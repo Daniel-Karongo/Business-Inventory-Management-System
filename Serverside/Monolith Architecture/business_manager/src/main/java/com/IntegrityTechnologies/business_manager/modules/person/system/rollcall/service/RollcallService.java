@@ -1,8 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.service;
 
-import com.IntegrityTechnologies.business_manager.exception.BiometricException;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
-import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.service.EmailService;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
@@ -16,15 +14,15 @@ import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.RollcallRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserRepository;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.service.TenantExecutionService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,15 +36,23 @@ public class RollcallService {
     private final DepartmentRepository departmentRepository;
     private final UserRepository userRepository;
     private final BranchRepository branchRepository;
-    private final EmailService notificationService;
-    private final TenantExecutionService tenantExecutionService;
+
+    @Value("${rollcall.default.start-time}")
+    private String defaultStartTime;
+
+    @Value("${rollcall.default.grace-minutes}")
+    private int defaultGraceMinutes;
+
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
 
     /* =====================================================
        LOGIN ROLLCALL
        ===================================================== */
 
     @Transactional
-    public RollcallDTO recordLoginRollcall(UUID userId, UUID departmentId, UUID branchId) {
+    public RollcallDTO recordLoginRollcall(UUID userId, UUID departmentId, UUID branchId, RollcallMethod method) {
 
         User user = userRepository.findByIdAndTenantIdAndDeletedFalse(userId, TenantContext.getTenantId())
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
@@ -74,29 +80,37 @@ public class RollcallService {
         }
 
         // 2️⃣ Earliest LOGIN wins
-        Optional<Rollcall> existing =
-                rollcallRepository.findByUserIdAndDepartmentIdAndBranchIdAndRollcallDateAndMethod(
-                        userId, departmentId, branchId, today, RollcallMethod.LOGIN
-                );
+        boolean alreadyExists =
+                rollcallRepository
+                        .findByUserIdAndDepartmentIdAndBranchIdAndRollcallDateAndMethodNot(
+                                userId, departmentId, branchId, today, RollcallMethod.LOGOUT
+                        )
+                        .isPresent();
 
-        if (existing.isPresent()) {
-            return RollcallDTO.from(existing.get());
+        if (alreadyExists) {
+            return rollcallRepository
+                    .findByUserIdAndDepartmentIdAndBranchIdAndRollcallDateAndMethodNot(
+                            userId, departmentId, branchId, today, RollcallMethod.LOGOUT
+                    )
+                    .map(RollcallDTO::from)
+                    .orElse(null);
         }
 
 
-        RollcallStatus status = computeStatusForDepartment(dept, now);
+        RollcallStatus status = computeStatus(branch, dept, now);
 
         Rollcall login = Rollcall.builder()
+                .tenantId(TenantContext.getTenantId())
+                .branchId(branch.getId())
                 .userId(userId)
                 .username(user.getUsername())
                 .departmentId(dept != null ? dept.getId() : null)
                 .departmentName(dept != null ? dept.getName() : null)
-                .branchId(branch.getId())
                 .branchName(branch.getName())
                 .timestamp(now)
                 .rollcallDate(today)
                 .status(status)
-                .method(RollcallMethod.LOGIN)
+                .method(method) // 🔥 key change
                 .performedBy("SYSTEM")
                 .build();
 
@@ -107,7 +121,9 @@ public class RollcallService {
                         .rollcallId(saved.getId())
                         .userId(userId)
                         .departmentId(departmentId)
+                        .tenantId(tenantId())
                         .branchId(branchId)
+                        .authMethod(method)
                         .action("CREATE")
                         .reason("Login rollcall recorded")
                         .performedBy("SYSTEM")
@@ -160,7 +176,9 @@ public class RollcallService {
                             .rollcallId(saved.getId())
                             .userId(userId)
                             .departmentId(departmentId)
+                            .tenantId(tenantId())
                             .branchId(branchId)
+                            .authMethod(RollcallMethod.LOGOUT)
                             .action("MODIFY")
                             .reason("Logout time updated")
                             .performedBy("SYSTEM")
@@ -172,11 +190,12 @@ public class RollcallService {
         }
 
         Rollcall logout = Rollcall.builder()
+                .tenantId(tenantId())
+                .branchId(branch.getId())
                 .userId(userId)
                 .username(user.getUsername())
                 .departmentId(dept != null ? dept.getId() : null)
                 .departmentName(dept != null ? dept.getName() : null)
-                .branchId(branch.getId())
                 .branchName(branch.getName())
                 .timestamp(now)
                 .rollcallDate(today)
@@ -186,77 +205,6 @@ public class RollcallService {
                 .build();
 
         return RollcallDTO.from(rollcallRepository.save(logout));
-    }
-
-    /* =====================================================
-       ABSENT MARKING (SCHEDULED)
-       ===================================================== */
-
-    @Transactional
-    public List<RollcallDTO> markAbsenteesAndReturn() {
-
-        List<RollcallDTO> created = new java.util.ArrayList<>();
-
-        List<Department> departments = departmentRepository.findByTenantIdAndDeletedFalse(
-                TenantContext.getTenantId()
-        );
-        LocalDate today = LocalDate.now();
-        LocalDateTime now = LocalDateTime.now();
-
-        for (Department d : departments) {
-            List<User> users = departmentRepository.findAllUsersInDepartment(
-                    TenantContext.getTenantId(),
-                    d.getId()
-            );
-
-            for (User u : users) {
-                for (Branch b : branchRepository.findBranchesForUserAndDepartment(
-                        TenantContext.getTenantId(),
-                        u.getId(),
-                        d.getId()
-                )) {
-
-                    boolean alreadyHasRollcall =
-                            rollcallRepository.existsByUserIdAndDepartmentIdAndBranchIdAndRollcallDate(
-                                    u.getId(), d.getId(), b.getId(), today
-                            );
-
-                    if (alreadyHasRollcall) continue;
-
-                    Rollcall absent = Rollcall.builder()
-                            .userId(u.getId())
-                            .username(u.getUsername())
-                            .departmentId(d.getId())
-                            .departmentName(d.getName())
-                            .branchId(b.getId())
-                            .branchName(b.getName())
-                            .timestamp(now)
-                            .rollcallDate(today)
-                            .status(RollcallStatus.ABSENT)
-                            .method(null)
-                            .performedBy("SYSTEM")
-                            .build();
-
-                    Rollcall saved = rollcallRepository.save(absent);
-//                    notificationService.notifyAbsent(d, u, saved);
-
-                    created.add(RollcallDTO.from(saved));
-                }
-            }
-        }
-
-        return created;
-    }
-
-    @Scheduled(cron = "${rollcall.absentees.mark.cron}")
-    @Transactional
-    public void markAbsentees() {
-
-        tenantExecutionService.forEachTenant(tenantId -> {
-
-            markAbsenteesAndReturn();
-
-        });
     }
 
     /* =====================================================
@@ -310,9 +258,11 @@ public class RollcallService {
 
         // 🚫 If a LOGIN already exists, do NOT upgrade
         boolean hasLogin =
-                rollcallRepository.existsByUserIdAndDepartmentIdAndBranchIdAndRollcallDateAndMethod(
-                        userId, departmentId, branchId, today, RollcallMethod.LOGIN
-                );
+                rollcallRepository
+                        .findByUserIdAndDepartmentIdAndBranchIdAndRollcallDateAndMethodNot(
+                                userId, departmentId, branchId, today, RollcallMethod.LOGOUT
+                        )
+                        .isPresent();
 
         if (hasLogin) {
             return null; // earliest LOGIN stays authoritative
@@ -332,7 +282,9 @@ public class RollcallService {
                         .rollcallId(saved.getId())
                         .userId(userId)
                         .departmentId(departmentId)
+                        .tenantId(tenantId())
                         .branchId(branchId)
+                        .authMethod(saved.getMethod())
                         .action("MODIFY")
                         .reason("ABSENT → LATE")
                         .performedBy("SYSTEM")
@@ -343,13 +295,37 @@ public class RollcallService {
         return RollcallDTO.from(saved);
     }
 
-    private RollcallStatus computeStatusForDepartment(Department dept, LocalDateTime now) {
-        if (dept == null || dept.getRollcallStartTime() == null) {
-            return RollcallStatus.PRESENT;
+    private RollcallStatus computeStatus(
+            Branch branch,
+            Department dept,
+            LocalDateTime now
+    ) {
+
+        LocalTime startTime = null;
+        Integer grace = null;
+
+        // 1️⃣ Department override
+        if (dept != null && dept.getRollcallStartTime() != null) {
+            startTime = dept.getRollcallStartTime();
+            grace = dept.getGracePeriodMinutes();
         }
 
-        LocalDateTime start = now.toLocalDate().atTime(dept.getRollcallStartTime());
-        int grace = dept.getGracePeriodMinutes() == null ? 15 : dept.getGracePeriodMinutes();
+        // 2️⃣ Branch default
+        if (startTime == null && branch.getRollcallStartTime() != null) {
+            startTime = branch.getRollcallStartTime();
+            grace = branch.getRollcallGraceMinutes();
+        }
+
+        // 3️⃣ Application fallback
+        if (startTime == null) {
+            startTime = LocalTime.parse(defaultStartTime);
+        }
+
+        if (grace == null) {
+            grace = defaultGraceMinutes;
+        }
+
+        LocalDateTime start = now.toLocalDate().atTime(startTime);
 
         return now.isBefore(start.plusMinutes(grace))
                 ? RollcallStatus.PRESENT

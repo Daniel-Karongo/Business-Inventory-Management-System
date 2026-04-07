@@ -1,7 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -11,31 +13,31 @@ import java.util.UUID;
 @Table(
         name = "rollcalls",
         uniqueConstraints = @UniqueConstraint(
-                columnNames = { "user_id", "department_id", "branch_id", "rollcall_date", "method" }
+                columnNames = { "tenant_id", "user_id", "department_id", "branch_id", "rollcall_date" }
         )
 )
 @Getter
 @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Rollcall {
+public class Rollcall extends BranchAwareEntity {
 
     @Id
     @GeneratedValue
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
-    @Column(name = "user_id", columnDefinition = "BINARY(16)", nullable = false)
+    @Column(name = "user_id", nullable = false, columnDefinition = "BINARY(16)")
     private UUID userId;
+
     private String username;
 
-    @Column(name = "department_id", columnDefinition = "BINARY(16)", nullable = false)
+    @Column(name = "department_id", columnDefinition = "BINARY(16)")
     private UUID departmentId;
+
     private String departmentName;
 
-    @Column(name = "branch_id", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID branchId;
     private String branchName;
 
     @Column(nullable = false)
@@ -49,10 +51,6 @@ public class Rollcall {
 
     @Enumerated(EnumType.STRING)
     private RollcallMethod method;
-
-    // If biometric, reference to biometric record id (if applicable)
-    @Column(columnDefinition = "BINARY(16)")
-    private UUID biometricRecordId;
 
     private String performedBy;
 }

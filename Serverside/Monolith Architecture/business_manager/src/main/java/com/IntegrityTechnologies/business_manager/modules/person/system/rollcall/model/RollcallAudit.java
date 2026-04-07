@@ -1,21 +1,22 @@
 package com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "rollcall_audits")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class RollcallAudit {
+@SuperBuilder
+public class RollcallAudit extends BranchAwareEntity {
+
     @Id
     @GeneratedValue
     @Column(columnDefinition = "BINARY(16)")
@@ -24,9 +25,21 @@ public class RollcallAudit {
     private UUID rollcallId;
     private UUID userId;
     private UUID departmentId;
-    private UUID branchId;
-    private String action; // e.g. RECORD, MODIFY, AUTO_ABSENT_MARK
+
+    @Enumerated(EnumType.STRING)
+    private RollcallMethod authMethod;
+
+    private String action;
     private String reason;
+
     private LocalDateTime timestamp;
+
     private String performedBy;
+
+    @PrePersist
+    void onCreate() {
+        if (timestamp == null) {
+            timestamp = LocalDateTime.now();
+        }
+    }
 }

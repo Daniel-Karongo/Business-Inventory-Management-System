@@ -4,11 +4,12 @@ import com.IntegrityTechnologies.business_manager.exception.UserNotFoundExceptio
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.user.model.User;
-import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model.RollcallMethod;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model.UserSession;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.service.RollcallService;
+import com.IntegrityTechnologies.business_manager.modules.person.user.model.User;
+import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUser;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUserSession;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
@@ -261,8 +262,9 @@ public class AuthService {
         );
 
         UserSession session = UserSession.builder()
-                .userId(userId)
+                .tenantId(tenantId)
                 .branchId(branchId)
+                .userId(userId)
                 .loginDate(today)
                 .loginTime(LocalDateTime.now())
                 .tokenId(tokenId)
@@ -279,10 +281,20 @@ public class AuthService {
                 );
 
         if (departments.isEmpty()) {
-            rollcallService.recordLoginRollcall(userId, null, branchId);
+            rollcallService.recordLoginRollcall(
+                    userId,
+                    null,
+                    branchId,
+                    RollcallMethod.LOGIN_PASSWORD
+            );
         } else {
             for (Department d : departments) {
-                rollcallService.recordLoginRollcall(userId, d.getId(), branchId);
+                rollcallService.recordLoginRollcall(
+                        userId,
+                        d.getId(),
+                        branchId,
+                        RollcallMethod.LOGIN_PASSWORD
+                );
             }
         }
 
@@ -419,8 +431,9 @@ public class AuthService {
         );
 
         UserSession session = UserSession.builder()
-                .userId(resolvedUserId)
+                .tenantId(tenantId)
                 .branchId(branchId)
+                .userId(resolvedUserId)
                 .loginDate(today)
                 .loginTime(LocalDateTime.now())
                 .tokenId(tokenId)
@@ -437,10 +450,20 @@ public class AuthService {
                 );
 
         if (departments.isEmpty()) {
-            rollcallService.recordLoginRollcall(resolvedUserId, null, branchId);
+            rollcallService.recordLoginRollcall(
+                    resolvedUserId,
+                    null,
+                    branchId,
+                    RollcallMethod.LOGIN_BIOMETRIC
+            );
         } else {
             for (Department d : departments) {
-                rollcallService.recordLoginRollcall(resolvedUserId, d.getId(), branchId);
+                rollcallService.recordLoginRollcall(
+                        resolvedUserId,
+                        d.getId(),
+                        branchId,
+                        RollcallMethod.LOGIN_BIOMETRIC
+                );
             }
         }
 

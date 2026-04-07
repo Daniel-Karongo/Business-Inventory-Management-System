@@ -1,10 +1,10 @@
 package com.IntegrityTechnologies.business_manager.security.biometric.service;
 
+import com.IntegrityTechnologies.business_manager.security.biometric.model.UserBiometric;
 import com.IntegrityTechnologies.business_manager.security.biometric.repository.UserBiometricRepository;
+import com.IntegrityTechnologies.business_manager.security.device.service.DeviceSecurityService;
 import com.yubico.webauthn.*;
-import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
-import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
-import com.yubico.webauthn.data.PublicKeyCredential;
+import com.yubico.webauthn.data.*;
 import com.yubico.webauthn.exception.AssertionFailedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,6 +18,8 @@ public class WebAuthnService {
     private final RelyingParty relyingParty;
     private final ChallengeService challengeService;
     private final UserBiometricRepository biometricRepository;
+    private final RegistrationChallengeService registrationChallengeService;
+    private final DeviceSecurityService deviceSecurityService;
 
     public AssertionRequest startAssertion(UUID tenantId, String fingerprint) {
 
@@ -70,6 +72,10 @@ public class WebAuthnService {
                     .findByCredentialId(credentialId)
                     .orElseThrow(() -> new SecurityException("Credential not recognized"));
 
+            if (!biometric.getFingerprint().equals(fingerprint)) {
+                throw new SecurityException("Biometric used on wrong device");
+            }
+
             long newCount = result.getSignatureCount();
 
             if (newCount > biometric.getSignCount()) {
@@ -90,11 +96,88 @@ public class WebAuthnService {
         }
     }
 
+    public PublicKeyCredentialCreationOptions startRegistration(
+            UUID tenantId,
+            UUID userId,
+            String username,
+            String fingerprint
+    ) {
+        UserIdentity user = UserIdentity.builder()
+                .name(username)
+                .displayName(username)
+                .id(new ByteArray(userId.toString().getBytes()))
+                .build();
+
+        PublicKeyCredentialCreationOptions options =
+                relyingParty.startRegistration(
+                        StartRegistrationOptions.builder()
+                                .user(user)
+                                .build()
+                );
+
+        registrationChallengeService.store(
+                tenantId,
+                fingerprint,
+                userId,
+                options
+        );
+        return options;
+    }
+
+    public void finishRegistration(
+            UUID tenantId,
+            String fingerprint,
+            PublicKeyCredential<AuthenticatorAttestationResponse, ClientRegistrationExtensionOutputs> credential
+    ) {
+        var ctx = registrationChallengeService.getFull(tenantId, fingerprint);
+
+        PublicKeyCredentialCreationOptions request = ctx.options();
+        UUID userId = ctx.userId();
+
+        deviceSecurityService.enforceDeviceLimit(tenantId, userId);
+
+        RegistrationResult result;
+
+        try {
+            result = relyingParty.finishRegistration(
+                    FinishRegistrationOptions.builder()
+                            .request(request)
+                            .response(credential)
+                            .build()
+            );
+        } catch (Exception e) {
+            throw new SecurityException("Registration failed", e);
+        }
+
+        String credentialId = credential.getId().getBase64Url();
+
+        biometricRepository.findByCredentialId(credentialId)
+                .ifPresent(b -> {
+                    throw new SecurityException("Credential already registered");
+                });
+
+        UserBiometric biometric = UserBiometric.builder()
+                .userId(userId)
+                .credentialId(credentialId)
+                .publicKey(result.getPublicKeyCose().getBase64())
+                .signCount(result.getSignatureCount())
+                .fingerprint(fingerprint)
+                .build();
+
+        biometricRepository.save(biometric);
+    }
+
     public UUID resolveUserId(String credentialId) {
 
         return biometricRepository
                 .findByCredentialId(credentialId)
                 .map(b -> b.getUserId())
+                .orElseThrow(() -> new SecurityException("Credential not recognized"));
+    }
+
+    public UserBiometric getBiometricByCredentialId(String credentialId) {
+        return biometricRepository
+                .findByCredentialId(credentialId)
                 .orElseThrow(() -> new SecurityException("Credential not recognized"));
     }
 }

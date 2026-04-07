@@ -1,7 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -11,16 +13,16 @@ import java.util.UUID;
 @Table(
         name = "user_sessions",
         indexes = {
-                @Index(name = "idx_session_user_day", columnList = "user_id, login_date"),
-                @Index(name = "idx_session_active", columnList = "user_id, logout_time")
+                @Index(name = "idx_session_user_day", columnList = "tenant_id, user_id, login_date"),
+                @Index(name = "idx_session_active", columnList = "tenant_id, user_id, logout_time")
         }
 )
 @Getter
 @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserSession {
+public class UserSession extends BranchAwareEntity {
 
     @Id
     @GeneratedValue
@@ -30,14 +32,8 @@ public class UserSession {
     @Column(name = "user_id", nullable = false, columnDefinition = "BINARY(16)")
     private UUID userId;
 
-    @Column(name = "branch_id", nullable = false, columnDefinition = "BINARY(16)")
-    private UUID branchId;
-
     /**
      * Calendar date of login (server timezone).
-     * Used for:
-     * - session caps per day
-     * - midnight expiry handling
      */
     @Column(name = "login_date", nullable = false)
     private LocalDate loginDate;
@@ -48,24 +44,13 @@ public class UserSession {
     @Column(name = "logout_time")
     private LocalDateTime logoutTime;
 
-    /**
-     * True if the session ended automatically
-     * (idle timeout or token expiry)
-     */
     @Column(name = "auto_logged_out", nullable = false)
     private boolean autoLoggedOut;
 
-    /**
-     * Optional but strongly recommended:
-     * Unique ID embedded into JWT (jti)
-     * Enables precise session validation.
-     */
     @Column(name = "token_id", columnDefinition = "BINARY(16)", nullable = false, unique = true)
     private UUID tokenId;
 
-    /* =====================
-       Convenience helpers
-       ===================== */
+    /* ===================== HELPERS ===================== */
 
     @Transient
     public boolean isActive() {

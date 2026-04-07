@@ -21,4 +21,8 @@ public class LogoutCronProvider {
         // Run once per day at HH:mm
         return String.format("0 %d %d * * *", minute, hour);
     }
+
+    public String getConfiguredTime() {
+        return logoutTimeString;
+    }
 }

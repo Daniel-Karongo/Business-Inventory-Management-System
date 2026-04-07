@@ -42,4 +42,6 @@ public interface UserSessionRepository extends JpaRepository<UserSession, UUID> 
 
     // 🔹 Latest active session (optional utility)
     Optional<UserSession> findTopByUserIdAndLogoutTimeIsNullOrderByLoginTimeDesc(UUID userId);
+
+    List<UserSession> findByTenantIdAndLogoutTimeIsNull(UUID tenantId);
 }
