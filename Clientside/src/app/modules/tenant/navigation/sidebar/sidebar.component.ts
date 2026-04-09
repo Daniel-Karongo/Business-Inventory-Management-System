@@ -79,6 +79,13 @@ export class SidebarComponent {
           { title: 'Tax', route: '/app/finance/tax', icon: 'tax' },
           { title: 'Payments', route: '/app/finance/payments', icon: 'payments' }
         ]
+      },
+
+      {
+        title: 'Devices',
+        route: '/app/security/devices',
+        icon: 'devices',
+        feature: 'devices'
       }
 
     ];

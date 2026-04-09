@@ -1,0 +1,94 @@
+<app-page-shell>
+
+  <!-- HEADER -->
+  <div page-header>
+    <div class="header">
+      <h1>Device Management</h1>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div page-toolbar>
+
+    <mat-form-field appearance="fill" class="search-field">
+      <mat-label>Search Devices</mat-label>
+      <input matInput [(ngModel)]="searchTerm" (input)="applySearch()" placeholder="Device name">
+    </mat-form-field>
+
+  </div>
+
+  <!-- CONTENT -->
+  <div page-content>
+
+    <div *ngIf="loading" class="text-center py-10">
+      Loading devices…
+    </div>
+
+    <div *ngIf="!loading && filtered.length === 0" class="text-center py-10">
+      No devices found
+    </div>
+
+    <div *ngIf="!loading && filtered.length > 0" class="table-wrapper">
+
+      <table mat-table [dataSource]="paged">
+
+        <ng-container matColumnDef="device">
+          <th mat-header-cell *matHeaderCellDef>Device</th>
+          <td mat-cell *matCellDef="let d">{{ d.deviceName }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let d">
+            {{ d.approved ? 'Approved' : 'Pending' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="usedBy">
+          <th mat-header-cell *matHeaderCellDef>Used By</th>
+          <td mat-cell *matCellDef="let d">
+            {{ d.usedByUserIds.length }} users
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="lastSeen">
+          <th mat-header-cell *matHeaderCellDef>Last Seen</th>
+          <td mat-cell *matCellDef="let d">
+            {{ d.lastSeenAt | date:'medium' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let d">
+
+            <button mat-flat-button color="primary" *ngIf="!d.approved" (click)="approve(d)">
+              Approve
+            </button>
+
+            <button mat-stroked-button color="warn" *ngIf="d.approved" (click)="reject(d)">
+              Revoke
+            </button>
+
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+      </table>
+
+    </div>
+
+    <div *ngIf="!loading" class="shared-paginator">
+      <mat-paginator
+        [length]="total"
+        [pageSize]="size"
+        [pageSizeOptions]="[10,25,50]"
+        (page)="changePage($event)">
+      </mat-paginator>
+    </div>
+
+  </div>
+
+</app-page-shell>

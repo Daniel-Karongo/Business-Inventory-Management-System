@@ -151,6 +151,17 @@ export const TENANT_ROUTES: Routes = [
         loadChildren: () =>
           import('./content/finance/finance.routes')
             .then(m => m.FINANCE_ROUTES)
+      },
+
+      /* ============================================================
+         DEVICES
+      ============================================================ */
+
+      {
+        path: 'security/devices',
+        loadComponent: () =>
+          import('./content/security/devices/tenant-devices.component')
+            .then(m => m.TenantDevicesComponent)
       }
 
     ]

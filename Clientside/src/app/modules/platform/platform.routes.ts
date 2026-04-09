@@ -20,6 +20,13 @@ export const PLATFORM_ROUTES: Routes = [
       },
 
       {
+        path: 'security/devices',
+        loadComponent: () =>
+          import('./pages/devices/platform-devices.component')
+            .then(m => m.PlatformDevicesComponent)
+      },
+      
+      {
         path: 'tenants',
         loadChildren: () =>
           import('./tenants/tenants.routes')

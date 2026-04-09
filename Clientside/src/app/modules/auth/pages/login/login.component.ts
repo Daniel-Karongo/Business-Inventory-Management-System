@@ -17,6 +17,12 @@ import { BranchService } from '../../../tenant/content/branches/services/branch.
 import { DomainContextService } from '../../../../core/services/domain-context.service';
 import { TenantBrandingService } from '../../../../core/services/tenant-branding.service';
 import { resolveTenantLanding } from '../../../../core/utils/role-landing.util';
+import { DeviceService } from '../../../../core/services/device.service';
+import { LocationService } from '../../../../core/services/location.service';
+import { WebAuthnService } from '../../../../core/services/webauthn.service';
+import { BiometricRegistrationService } from '../../../../core/services/biometric-registration.service';
+import { MatDialog } from '@angular/material/dialog';
+import { BiometricPromptDialog } from '../../../../shared/components/biometric-prompt-dialog/biometric-prompt-dialog.component';
 
 @Component({
   selector: 'app-login',
@@ -46,6 +52,11 @@ export class LoginComponent implements OnInit {
   private idle = inject(IdleLogoutService);
   private domain = inject(DomainContextService);
   private branding = inject(TenantBrandingService);
+  private deviceService = inject(DeviceService);
+  private locationService = inject(LocationService);
+  private webauthn = inject(WebAuthnService);
+  private biometric = inject(BiometricRegistrationService);
+  private dialog = inject(MatDialog);
 
   form = this.fb.nonNullable.group({
     identifier: ['', Validators.required],
@@ -106,58 +117,249 @@ export class LoginComponent implements OnInit {
     this.router.navigate(['/auth/forgot-password']);
   }
 
-  onSubmit() {
+  async onBiometricLogin() {
+
+    this.loading = true;
+
+    let location;
+
+    try {
+      location = await this.locationService.getLocation();
+    } catch {
+      this.loading = false;
+      this.snack.open(
+        'Location access is required for biometric login.',
+        'Close',
+        { duration: 5000 }
+      );
+      return;
+    }
+
+    const deviceId = this.deviceService.getDeviceId();
+
+    this.auth.biometricChallenge(deviceId).subscribe({
+      next: async (challenge) => {
+
+        try {
+          const credential = await this.webauthn.authenticate(challenge);
+
+          const payload = {
+            rawJson: JSON.stringify(credential),
+            branchId: this.domain.isPlatform
+              ? null
+              : this.form.value.branchId,
+            deviceId,
+            latitude: location.latitude,
+            longitude: location.longitude,
+            accuracy: location.accuracy
+          };
+
+          this.auth.biometricVerify(payload)
+            .pipe(finalize(() => (this.loading = false)))
+            .subscribe({
+              next: (res) => {
+
+                this.auth.setUser(res);
+                this.idle.start();
+
+                if (res.userType === 'PLATFORM') {
+                  this.router.navigateByUrl('/platform');
+                } else {
+                  const landing = resolveTenantLanding(res.role);
+                  this.router.navigateByUrl(landing);
+                }
+              },
+              error: (err) => {
+                this.handleBiometricError(err);
+              }
+            });
+
+        } catch (e) {
+          this.loading = false;
+          this.snack.open(
+            'Biometric authentication cancelled or failed.',
+            'Close',
+            { duration: 4000 }
+          );
+        }
+
+      },
+      error: () => {
+        this.loading = false;
+        this.snack.open(
+          'Unable to start biometric authentication.',
+          'Close',
+          { duration: 4000 }
+        );
+      }
+    });
+  }
+
+  private handleBiometricError(err: any) {
+
+    const msg = err?.error?.message ?? '';
+
+    if (msg === 'Device pending approval') {
+      this.router.navigate(['/auth/block/DEVICE_PENDING']);
+      return;
+    }
+
+    if (msg === 'Device not approved for this branch') {
+      this.router.navigate(['/auth/block/DEVICE_BLOCKED']);
+      return;
+    }
+
+    if (msg === 'Location required') {
+      this.router.navigate(['/auth/block/LOCATION_REQUIRED']);
+      return;
+    }
+
+    if (msg === 'Outside branch location') {
+      this.router.navigate(['/auth/block/LOCATION_OUTSIDE']);
+      return;
+    }
+
+    if (msg === 'Location accuracy too low') {
+      this.router.navigate(['/auth/block/LOCATION_ACCURACY']);
+      return;
+    }
+
+    if (msg === 'Biometric authentication failed') {
+      this.snack.open(
+        'Biometric authentication failed.',
+        'Close',
+        { duration: 4000 }
+      );
+      return;
+    }
+
+    this.snack.open(
+      msg || 'Biometric login failed',
+      'Close',
+      { duration: 5000 }
+    );
+  }
+
+  async onSubmit() {
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
 
     this.loading = true;
+
+    let location;
+
+    try {
+      location = await this.locationService.getLocation();
+    } catch {
+      this.loading = false;
+
+      this.snack.open(
+        'Location access is required to log in. Please enable it in your browser settings.',
+        'Close',
+        { duration: 6000 }
+      );
+
+      return;
+    }
+
     const payload: LoginRequest = {
       identifier: this.form.value.identifier!,
       password: this.form.value.password!,
       branchId: this.domain.isPlatform
         ? null as any
-        : this.form.value.branchId!
+        : this.form.value.branchId!,
+      deviceId: this.deviceService.getDeviceId(),
+      latitude: location.latitude,
+      longitude: location.longitude,
+      accuracy: location.accuracy
     };
+
+    this.auth.setLastLoginRequest(payload);
 
     this.auth.login(payload).pipe(
       finalize(() => (this.loading = false))
     ).subscribe({
       next: (res) => {
+
         this.auth.setUser(res);
+
+        this.auth.setLastLoginRequest(payload);
+
         this.snack.open('Login successful', undefined, { duration: 1200 });
-        console.log('Starting idle service...');
+
         this.idle.start();
-        console.log("Hello");
-        console.log(res);
-        if (res.userType === 'PLATFORM') {
-          console.log("PLATFORM");
-          this.router.navigateByUrl('/platform');
-        } else {
 
-          const landing = resolveTenantLanding(res.role);
+        const deviceId = this.deviceService.getDeviceId();
 
-          this.router.navigateByUrl(landing);
+        if (this.biometric.shouldPrompt(deviceId)) {
 
-        }
-      },
-      error: (err) => {
+          this.biometric.markPromptShown(deviceId);
 
-        const msg = err?.error?.message ?? err?.error;
+          const ref = this.dialog.open(BiometricPromptDialog);
 
-        if (msg === 'PASSWORD_CHANGE_REQUIRED') {
-
-          this.router.navigate(
-            ['/auth/reset-password'],
-            {
-              state: {
-                forced: true,
-                identifier: this.form.value.identifier
+          ref.afterClosed().subscribe(enable => {
+            if (enable) {
+              const last = this.auth.getLastLoginRequest();
+              if (last) {
+                this.biometric.register(last);
               }
             }
-          );
+          });
+        }
 
+        if (res.userType === 'PLATFORM') {
+          this.router.navigateByUrl('/platform');
+        } else {
+          const landing = resolveTenantLanding(res.role);
+          this.router.navigateByUrl(landing);
+        }
+      },
+
+      error: (err) => {
+
+        const msg = err?.error?.message ?? '';
+
+        if (msg === 'Device pending approval') {
+          this.router.navigate(['/auth/block/DEVICE_PENDING']);
+          return;
+        }
+
+        if (msg === 'Device not approved for this branch') {
+          this.router.navigate(['/auth/block/DEVICE_BLOCKED']);
+          return;
+        }
+
+        if (msg === 'Location required') {
+          this.router.navigate(['/auth/block/LOCATION_REQUIRED']);
+          return;
+        }
+
+        if (msg === 'Outside branch location') {
+          this.router.navigate(['/auth/block/LOCATION_OUTSIDE']);
+          return;
+        }
+
+        if (msg === 'Location accuracy too low') {
+          this.router.navigate(['/auth/block/LOCATION_ACCURACY']);
+          return;
+        }
+
+        if (msg === 'Maximum active sessions reached for today' ||
+          msg === 'Too many active sessions') {
+          this.router.navigate(['/auth/block/SESSION_LIMIT']);
+          return;
+        }
+
+        if (msg === 'PASSWORD_CHANGE_REQUIRED') {
+          this.router.navigate(['/auth/reset-password'], {
+            state: {
+              forced: true,
+              identifier: this.form.value.identifier
+            }
+          });
           return;
         }
 

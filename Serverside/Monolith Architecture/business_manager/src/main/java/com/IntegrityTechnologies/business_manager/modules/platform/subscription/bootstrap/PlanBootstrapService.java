@@ -2,7 +2,6 @@ package com.IntegrityTechnologies.business_manager.modules.platform.subscription
 
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.entity.Plan;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.repository.PlanRepository;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -12,7 +11,6 @@ public class PlanBootstrapService {
 
     private final PlanRepository repository;
 
-    @PostConstruct
     public void bootstrap() {
 
         if (repository.count() > 0) {

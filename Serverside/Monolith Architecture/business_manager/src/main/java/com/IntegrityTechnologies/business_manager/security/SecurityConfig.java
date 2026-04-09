@@ -148,7 +148,11 @@ public class SecurityConfig {
                                 "/api/users/register",
                                 "/api/payments/mpesa/stk/callback",
                                 "/api/payments/mpesa/c2b/**",
-                                "/api/platform/settings/logo"
+                                "/api/platform/settings/logo",
+                                "/api/auth/biometric/challenge",
+                                "/api/auth/biometric/verify",
+                                "/api/auth/biometric/register/start",
+                                "/api/auth/biometric/register/finish"
                         ).permitAll()
 
                         .requestMatchers(HttpMethod.GET, "/api/branches").permitAll()

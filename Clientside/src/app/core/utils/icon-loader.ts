@@ -28,7 +28,8 @@ export class IconLoader {
       'access-control',
       'budget',
       'tax',
-      'payments'
+      'payments',
+      'devices'
     ];
 
     icons.forEach(name =>

@@ -1,0 +1,53 @@
+:host {
+  display: block;
+}
+
+.inventory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.inventory-toolbar {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.search-field {
+  flex: 1;
+  min-width: 260px;
+}
+
+.table-wrapper {
+  margin-top: 1rem;
+  overflow: hidden;
+}
+
+.table-wrapper.compact .mat-mdc-row {
+  height: 30px;
+}
+
+.table-wrapper.compact .mat-mdc-cell,
+.table-wrapper.compact .mat-mdc-header-cell {
+  padding: 4px 8px !important;
+  font-size: 0.8rem;
+}
+
+.shared-paginator {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: center;
+}

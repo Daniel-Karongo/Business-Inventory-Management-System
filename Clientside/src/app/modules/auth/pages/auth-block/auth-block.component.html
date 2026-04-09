@@ -1,0 +1,46 @@
+<div class="block-root">
+  <div class="block-card" role="alert" aria-live="polite">
+
+    <div class="icon">⚠️</div>
+
+    <h1>{{ config().title }}</h1>
+
+    <p>{{ config().message }}</p>
+
+    <!-- PENDING -->
+    <div *ngIf="type === 'DEVICE_PENDING' && !timedOut" class="polling">
+
+      <mat-progress-spinner
+        diameter="36"
+        strokeWidth="4"
+        mode="indeterminate">
+      </mat-progress-spinner>
+
+      <p class="status">
+        Waiting for device approval...
+      </p>
+
+      <p class="attempt">
+        Attempt {{ attempt }}
+      </p>
+
+    </div>
+
+    <!-- TIMEOUT -->
+    <div *ngIf="timedOut" class="timeout">
+      This request has timed out.
+    </div>
+
+    <button
+      mat-flat-button
+      color="primary"
+      class="primary-btn"
+      [disabled]="loading && !timedOut"
+      (click)="onAction()">
+
+      {{ config().action }}
+
+    </button>
+
+  </div>
+</div>

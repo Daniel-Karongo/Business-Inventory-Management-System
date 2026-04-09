@@ -1,9 +1,6 @@
 <mat-sidenav-container class="layout">
 
-  <mat-sidenav
-    mode="side"
-    opened
-    class="sidebar">
+  <mat-sidenav mode="side" opened class="sidebar">
 
     <div class="logo">
 
@@ -19,6 +16,11 @@
 
         <span>Dashboard</span>
 
+      </a>
+
+      <a mat-list-item routerLink="/platform/security/devices" routerLinkActive="active">
+        <mat-icon>devices</mat-icon>
+        <span>Devices</span>
       </a>
 
       <a mat-list-item routerLink="/platform/tenants" routerLinkActive="active">

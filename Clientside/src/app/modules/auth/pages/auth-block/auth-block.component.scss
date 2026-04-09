@@ -1,0 +1,32 @@
+.block-card {
+  padding: clamp(20px, 4vw, 32px);
+}
+
+.polling {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.status {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.attempt {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.timeout {
+  color: #b91c1c;
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+}
+
+.primary-btn {
+  width: 100%;
+}

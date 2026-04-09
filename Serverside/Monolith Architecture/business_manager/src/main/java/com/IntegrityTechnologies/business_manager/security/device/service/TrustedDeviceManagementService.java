@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.security.device.service;
 
 import com.IntegrityTechnologies.business_manager.security.device.dto.TrustedDeviceDTO;
 import com.IntegrityTechnologies.business_manager.security.device.model.TrustedDevice;
+import com.IntegrityTechnologies.business_manager.security.device.repository.DeviceUsageRepository;
 import com.IntegrityTechnologies.business_manager.security.device.repository.TrustedDeviceRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import java.util.UUID;
 public class TrustedDeviceManagementService {
 
     private final TrustedDeviceRepository repository;
+    private final DeviceUsageRepository deviceUsageRepository;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -24,18 +26,19 @@ public class TrustedDeviceManagementService {
 
     public List<TrustedDeviceDTO> list(UUID branchId) {
 
-        return repository.findByTenantIdAndBranchId(tenantId(), branchId)
+        UUID tenantId = tenantId();
+
+        if (branchId == null) {
+            // PLATFORM → branchId null
+            return repository.findByTenantIdAndBranchId(tenantId, null)
+                    .stream()
+                    .map(this::toDto)
+                    .toList();
+        }
+
+        return repository.findByTenantIdAndBranchId(tenantId, branchId)
                 .stream()
-                .map(d -> TrustedDeviceDTO.builder()
-                        .id(d.getId())
-                        .branchId(d.getBranchId())
-                        .deviceName(d.getDeviceName())
-                        .fingerprint(d.getFingerprint())
-                        .approved(d.getApproved())
-                        .firstSeenAt(d.getFirstSeenAt())
-                        .lastSeenAt(d.getLastSeenAt())
-                        .build()
-                )
+                .map(this::toDto)
                 .toList();
     }
 
@@ -71,5 +74,26 @@ public class TrustedDeviceManagementService {
 
         d.setDeviceName(name);
         repository.save(d);
+    }
+
+    private TrustedDeviceDTO toDto(TrustedDevice d) {
+
+        List<UUID> userIds = deviceUsageRepository
+                .findByTenantIdAndDeviceId(tenantId(), d.getId())
+                .stream()
+                .map(u -> u.getUserId())
+                .distinct()
+                .toList();
+
+        return TrustedDeviceDTO.builder()
+                .id(d.getId())
+                .branchId(d.getBranchId())
+                .deviceName(d.getDeviceName())
+                .fingerprint(d.getFingerprint())
+                .approved(d.getApproved())
+                .firstSeenAt(d.getFirstSeenAt())
+                .lastSeenAt(d.getLastSeenAt())
+                .usedByUserIds(userIds)
+                .build();
     }
 }

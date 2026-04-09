@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security.device.controller;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.PlatformUserOrTenantManager;
 import com.IntegrityTechnologies.business_manager.security.device.dto.TrustedDeviceDTO;
 import com.IntegrityTechnologies.business_manager.security.device.service.TrustedDeviceManagementService;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +13,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/devices")
 @RequiredArgsConstructor
-@TenantManagerOnly
+@PlatformUserOrTenantManager
 public class TrustedDeviceController {
 
     private final TrustedDeviceManagementService service;

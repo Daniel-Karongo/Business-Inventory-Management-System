@@ -45,17 +45,20 @@ public class RoleGuardFilter extends OncePerRequestFilter {
         Annotation[] methodAnnotations =
                 handlerMethod.getMethod().getAnnotations();
 
+        // 1️⃣ METHOD annotations
         for (Annotation ann : methodAnnotations) {
 
+            if (isPublic(ann)) {
+                chain.doFilter(request, response);
+                return;
+            }
+
             if (isRoleGuardAnnotation(ann)) {
-
                 boolean allowed = roleGuardService.isAllowed(ann);
-
                 if (!allowed) {
                     deny(response);
                     return;
                 }
-
                 chain.doFilter(request, response);
                 return;
             }
@@ -67,6 +70,11 @@ public class RoleGuardFilter extends OncePerRequestFilter {
         Annotation[] classAnnotations = controllerClass.getAnnotations();
 
         for (Annotation ann : classAnnotations) {
+
+            if (isPublic(ann)) {
+                chain.doFilter(request, response);
+                return;
+            }
 
             if (isRoleGuardAnnotation(ann)) {
 
@@ -89,6 +97,7 @@ public class RoleGuardFilter extends OncePerRequestFilter {
                 request.getMethod(),
                 request.getRequestURI());
         deny(response);
+//        chain.doFilter(request, response);
     }
 
     private boolean isRoleGuardAnnotation(Annotation ann) {
@@ -102,6 +111,11 @@ public class RoleGuardFilter extends OncePerRequestFilter {
                 || ann instanceof TenantSupervisorOnly
                 || ann instanceof TenantUserOnly;
     }
+
+    private boolean isPublic(Annotation ann) {
+        return ann instanceof PublicEndpoint;
+    }
+
     private void deny(HttpServletResponse response) throws IOException {
 
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);

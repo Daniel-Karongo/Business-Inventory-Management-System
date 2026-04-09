@@ -1,9 +1,9 @@
 package com.IntegrityTechnologies.business_manager.security.auth.controller;
 
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.PublicEndpoint;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
-import com.IntegrityTechnologies.business_manager.security.audit.service.LoginAuditService;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthRequest;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthResponse;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.BulkAuthResponse;
@@ -17,7 +17,9 @@ import com.IntegrityTechnologies.business_manager.security.biometric.service.Web
 import com.IntegrityTechnologies.business_manager.security.device.service.DeviceSecurityService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.yubico.webauthn.AssertionRequest;
-import com.yubico.webauthn.data.*;
+import com.yubico.webauthn.data.AuthenticatorAttestationResponse;
+import com.yubico.webauthn.data.ClientRegistrationExtensionOutputs;
+import com.yubico.webauthn.data.PublicKeyCredential;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,6 +37,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@PublicEndpoint
 public class AuthController {
 
     private final AuthService authService;
@@ -88,118 +91,6 @@ public class AuthController {
 
         return ResponseEntity.ok(assertion);
     }
-
-//    @PostMapping("/biometric/verify")
-//    public ResponseEntity<AuthResponse> biometricLogin(
-//            @RequestBody WebAuthnVerifyRequest request,
-//            HttpServletRequest servletRequest,
-//            HttpServletResponse response
-//    ) {
-//
-//        UUID tenantId = TenantContext.getTenantId();
-//
-//        String fingerprint =
-//                DeviceFingerprintUtil.generate(servletRequest, request.getDeviceId());
-//
-//        String ip = servletRequest.getRemoteAddr();
-//
-//        PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> credential;
-//
-//        try {
-//            credential = PublicKeyCredential.parseAssertionResponseJson(request.getRawJson());
-//        } catch (Exception e) {
-//
-//            loginAuditService.log(
-//                    tenantId,
-//                    null,
-//                    request.getBranchId(),
-//                    fingerprint,
-//                    request.getLatitude(),
-//                    request.getLongitude(),
-//                    request.getAccuracy(),
-//                    ip,
-//                    "BLOCKED",
-//                    "INVALID_BIOMETRIC_PAYLOAD"
-//            );
-//
-//            throw new BadCredentialsException("Invalid biometric payload", e);
-//        }
-//
-//        try {
-//
-//    /* =====================================================
-//       1️⃣ VERIFY WEBAUTHN
-//    ===================================================== */
-//
-//            var result = webAuthnService.finishAssertion(
-//                    tenantId,
-//                    fingerprint,
-//                    credential
-//            );
-//
-//    /* =====================================================
-//       2️⃣ RESOLVE USER VIA CREDENTIAL ID
-//    ===================================================== */
-//
-//            String credentialId = credential.getId().getBase64Url();
-//
-//            UUID userId = webAuthnService.resolveUserId(credentialId);
-//
-//    /* =====================================================
-//       3️⃣ BUILD AUTH REQUEST
-//    ===================================================== */
-//
-//            AuthRequest authRequest = new AuthRequest();
-//
-//            authRequest.setUserId(userId);
-//            authRequest.setBranchId(request.getBranchId());
-//            authRequest.setDeviceId(request.getDeviceId());
-//            authRequest.setLatitude(request.getLatitude());
-//            authRequest.setLongitude(request.getLongitude());
-//            authRequest.setAccuracy(request.getAccuracy());
-//
-//    /* =====================================================
-//       4️⃣ LOGIN (BIOMETRIC PATH)
-//    ===================================================== */
-//
-//            AuthService.LoginResult loginResult =
-//                    authService.loginInternalBiometric(authRequest, servletRequest);
-//
-//    /* =====================================================
-//       5️⃣ COOKIE
-//    ===================================================== */
-//
-//            Cookie cookie = new Cookie("access_token", loginResult.jwt());
-//            cookie.setHttpOnly(true);
-//            cookie.setSecure(servletRequest.isSecure());
-//            cookie.setPath("/");
-//            cookie.setMaxAge((int) jwtUtil.secondsUntilMidnight());
-//
-//            cookie.setAttribute("SameSite",
-//                    servletRequest.isSecure() ? "None" : "Lax");
-//
-//            response.addCookie(cookie);
-//
-//            return ResponseEntity.ok(loginResult.response());
-//
-//        } catch (Exception ex) {
-//
-//            loginAuditService.log(
-//                    tenantId,
-//                    null,
-//                    request.getBranchId(),
-//                    fingerprint,
-//                    request.getLatitude(),
-//                    request.getLongitude(),
-//                    request.getAccuracy(),
-//                    ip,
-//                    "BLOCKED",
-//                    "BIOMETRIC_FAILED: " + ex.getMessage()
-//            );
-//
-//            throw new BadCredentialsException("Biometric authentication failed");
-//        }
-//    }
 
     @PostMapping("/biometric/verify")
     public ResponseEntity<AuthResponse> biometricLogin(

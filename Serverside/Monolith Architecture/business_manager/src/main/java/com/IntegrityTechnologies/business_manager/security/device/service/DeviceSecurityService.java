@@ -69,4 +69,11 @@ public class DeviceSecurityService {
             throw new SecurityException("Maximum registered devices reached");
         }
     }
+
+    public TrustedDevice getByFingerprint(UUID tenantId, UUID branchId, String fingerprint) {
+
+        return repository
+                .findByTenantIdAndBranchIdAndFingerprint(tenantId, branchId, fingerprint)
+                .orElseThrow();
+    }
 }

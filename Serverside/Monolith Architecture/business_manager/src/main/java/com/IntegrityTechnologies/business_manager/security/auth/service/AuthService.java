@@ -20,7 +20,9 @@ import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthResponse
 import com.IntegrityTechnologies.business_manager.security.auth.model.UserType;
 import com.IntegrityTechnologies.business_manager.security.auth.util.DeviceFingerprintUtil;
 import com.IntegrityTechnologies.business_manager.security.auth.util.JwtUtil;
+import com.IntegrityTechnologies.business_manager.security.device.model.TrustedDevice;
 import com.IntegrityTechnologies.business_manager.security.device.service.DeviceSecurityService;
+import com.IntegrityTechnologies.business_manager.security.device.service.DeviceUsageService;
 import com.IntegrityTechnologies.business_manager.security.device.service.LocationSecurityService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
@@ -57,6 +59,7 @@ public class AuthService {
     private final LoginAuditService loginAuditService;
     private final DeviceSecurityService deviceSecurityService;
     private final LocationSecurityService locationSecurityService;
+    private final DeviceUsageService deviceUsageService;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -139,6 +142,13 @@ public class AuthService {
             if (activeSessions >= PLATFORM_USERS_MAX_SESSIONS_PER_DAY) {
                 throw new IllegalStateException("Too many active sessions");
             }
+
+            // ================= DEVICE USAGE TRACKING =================
+
+            TrustedDevice device = deviceSecurityService
+                    .getByFingerprint(platformTenantId, null, fingerprint);
+
+            deviceUsageService.record(device.getId(), platformUser.getId());
 
             PlatformUserSession session = PlatformUserSession.builder()
                     .userId(platformUser.getId())
@@ -260,6 +270,13 @@ public class AuthService {
                 branchId,
                 fingerprint
         );
+
+        // ================= DEVICE USAGE TRACKING =================
+
+        TrustedDevice device = deviceSecurityService
+                .getByFingerprint(tenantId, branchId, fingerprint);
+
+        deviceUsageService.record(device.getId(), userId);
 
         UserSession session = UserSession.builder()
                 .tenantId(tenantId)
@@ -429,6 +446,13 @@ public class AuthService {
                 branchId,
                 fingerprint
         );
+
+        // ================= DEVICE USAGE TRACKING =================
+
+        TrustedDevice device = deviceSecurityService
+                .getByFingerprint(tenantId, branchId, fingerprint);
+
+        deviceUsageService.record(device.getId(), resolvedUserId);
 
         UserSession session = UserSession.builder()
                 .tenantId(tenantId)

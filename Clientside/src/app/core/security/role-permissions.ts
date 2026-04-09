@@ -13,6 +13,7 @@ export type Feature =
   | 'accounts'
   | 'payments'
   | 'finance'
+  | 'devices'
   | '*';
 
 export const ROLE_PERMISSIONS: Record<string, Feature[]> = {

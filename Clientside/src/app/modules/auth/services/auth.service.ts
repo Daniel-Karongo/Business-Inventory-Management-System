@@ -7,8 +7,11 @@ import { Observable, BehaviorSubject, tap } from 'rxjs';
 export class AuthService {
 
   private http = inject(HttpClient);
-
   private me$ = new BehaviorSubject<MeResponse | null>(null);
+  private RETRY_KEY = 'auth_retry_payload';
+  private RETRY_TTL_MS = 10 * 60 * 1000; // 10 minutes
+  private lastLoginRequestMemory: LoginRequest | null = null;
+
 
   /* =========================
      LOGIN
@@ -38,7 +41,7 @@ export class AuthService {
   setUser(me: MeResponse) {
     this.me$.next(me);
   }
-  
+
   getCurrentUser() {
     return this.me$.asObservable();
   }
@@ -80,6 +83,101 @@ export class AuthService {
       { withCredentials: true }
     );
   }
+
+  /* =========================
+   BIOMETRICS
+   ========================= */
+
+  biometricChallenge(deviceId: string) {
+    return this.http.post<any>(
+      `${environment.apiUrl}/auth/biometric/challenge?deviceId=${deviceId}`,
+      {},
+      { withCredentials: true }
+    );
+  }
+
+  biometricVerify(payload: any) {
+    return this.http.post<MeResponse>(
+      `${environment.apiUrl}/auth/biometric/verify`,
+      payload,
+      { withCredentials: true }
+    ).pipe(tap(me => this.me$.next(me)));
+  }
+
+  /* =========================
+   BIOMETRIC REGISTRATION
+   ========================= */
+
+  biometricRegisterStart(payload: LoginRequest) {
+    return this.http.post<any>(
+      `${environment.apiUrl}/auth/biometric/register/start`,
+      payload,
+      { withCredentials: true }
+    );
+  }
+
+  biometricRegisterFinish(rawJson: string, deviceId: string) {
+    return this.http.post<void>(
+      `${environment.apiUrl}/auth/biometric/register/finish?deviceId=${deviceId}`,
+      rawJson,
+      {
+        withCredentials: true,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+  }
+
+  /* =========================
+   POLLING
+   ========================= */
+
+  setLastLoginRequest(req: LoginRequest) {
+
+    this.lastLoginRequestMemory = req;
+
+    const data = {
+      payload: req,
+      createdAt: Date.now()
+    };
+
+    sessionStorage.setItem(this.RETRY_KEY, JSON.stringify(data));
+  }
+
+  getLastLoginRequest(): LoginRequest | null {
+
+    // 1. Memory (fast path)
+    if (this.lastLoginRequestMemory) {
+      return this.lastLoginRequestMemory;
+    }
+
+    // 2. SessionStorage fallback
+    const raw = sessionStorage.getItem(this.RETRY_KEY);
+    if (!raw) return null;
+
+    try {
+      const parsed = JSON.parse(raw);
+
+      const isExpired =
+        Date.now() - parsed.createdAt > this.RETRY_TTL_MS;
+
+      if (isExpired) {
+        this.clearLastLoginRequest();
+        return null;
+      }
+
+      this.lastLoginRequestMemory = parsed.payload;
+      return parsed.payload as LoginRequest;
+
+    } catch {
+      this.clearLastLoginRequest();
+      return null;
+    }
+  }
+
+  clearLastLoginRequest() {
+    this.lastLoginRequestMemory = null;
+    sessionStorage.removeItem(this.RETRY_KEY);
+  }
 }
 
 /* =========================
@@ -89,6 +187,10 @@ export interface LoginRequest {
   identifier: string;
   password: string;
   branchId: string;
+  deviceId: string;
+  latitude: number;
+  longitude: number;
+  accuracy: number;
 }
 
 export interface MeResponse {
