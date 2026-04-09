@@ -24,6 +24,7 @@ import { IconLoader } from './core/utils/icon-loader';
 import { AuthService } from './modules/auth/services/auth.service';
 import { tenantInterceptor } from './core/interceptors/tenant.interceptor';
 import { TenantBrandingService } from './core/services/tenant-branding.service';
+import { firstValueFrom } from 'rxjs';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -54,9 +55,7 @@ export const appConfig: ApplicationConfig = {
 
     provideAppInitializer(() => {
       const auth = inject(AuthService);
-      auth.loadMe().subscribe({
-        error: () => auth.clearLocalState()
-      });
+      return firstValueFrom(auth.init());
     }), provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000'
@@ -66,7 +65,7 @@ export const appConfig: ApplicationConfig = {
       const branding = inject(TenantBrandingService);
       branding.loadLogo();
     }),
-    
+
     DatePipe
   ]
 };

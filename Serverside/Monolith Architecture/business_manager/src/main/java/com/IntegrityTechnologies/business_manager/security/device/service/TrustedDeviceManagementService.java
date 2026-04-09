@@ -89,7 +89,7 @@ public class TrustedDeviceManagementService {
                 .id(d.getId())
                 .branchId(d.getBranchId())
                 .deviceName(d.getDeviceName())
-                .fingerprint(d.getFingerprint())
+                .deviceId(d.getDeviceId())
                 .approved(d.getApproved())
                 .firstSeenAt(d.getFirstSeenAt())
                 .lastSeenAt(d.getLastSeenAt())

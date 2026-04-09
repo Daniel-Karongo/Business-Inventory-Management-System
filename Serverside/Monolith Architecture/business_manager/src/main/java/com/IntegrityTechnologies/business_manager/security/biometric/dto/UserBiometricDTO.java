@@ -11,5 +11,5 @@ public class UserBiometricDTO {
 
     private UUID id;
     private String deviceName;
-    private String fingerprint;
+    private String deviceId;
 }

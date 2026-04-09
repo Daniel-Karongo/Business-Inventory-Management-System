@@ -5,14 +5,13 @@ import { DomainContextService } from '../services/domain-context.service';
 import { map, catchError, of } from 'rxjs';
 
 export const platformModeGuard: CanMatchFn = () => {
-
   const auth = inject(AuthService);
   const router = inject(Router);
   const domain = inject(DomainContextService);
 
-  return auth.loadMe().pipe(
-
+  return auth.init().pipe(
     map(user => {
+      if (!user) return router.parseUrl('/auth');
 
       if (!domain.isPlatform) {
         return router.parseUrl('/auth');
@@ -23,10 +22,7 @@ export const platformModeGuard: CanMatchFn = () => {
       }
 
       return true;
-
     }),
-
     catchError(() => of(router.parseUrl('/auth')))
   );
-
 };

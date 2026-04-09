@@ -21,24 +21,24 @@ public class WebAuthnService {
     private final RegistrationChallengeService registrationChallengeService;
     private final DeviceSecurityService deviceSecurityService;
 
-    public AssertionRequest startAssertion(UUID tenantId, String fingerprint) {
+    public AssertionRequest startAssertion(UUID tenantId, String deviceId) {
 
         AssertionRequest request = relyingParty.startAssertion(
                 StartAssertionOptions.builder().build()
         );
 
-        challengeService.store(tenantId, fingerprint, request);
+        challengeService.store(tenantId, deviceId, request);
 
         return request;
     }
 
     public AssertionResult finishAssertion(
             UUID tenantId,
-            String fingerprint,
+            String deviceId,
             PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> credential
     ) {
 
-        AssertionRequest request = challengeService.get(tenantId, fingerprint);
+        AssertionRequest request = challengeService.get(tenantId, deviceId);
 
         try {
 
@@ -72,7 +72,7 @@ public class WebAuthnService {
                     .findByCredentialId(credentialId)
                     .orElseThrow(() -> new SecurityException("Credential not recognized"));
 
-            if (!biometric.getFingerprint().equals(fingerprint)) {
+            if (!biometric.getDeviceId().equals(deviceId)) {
                 throw new SecurityException("Biometric used on wrong device");
             }
 
@@ -100,7 +100,7 @@ public class WebAuthnService {
             UUID tenantId,
             UUID userId,
             String username,
-            String fingerprint
+            String deviceId
     ) {
         UserIdentity user = UserIdentity.builder()
                 .name(username)
@@ -117,7 +117,7 @@ public class WebAuthnService {
 
         registrationChallengeService.store(
                 tenantId,
-                fingerprint,
+                deviceId,
                 userId,
                 options
         );
@@ -126,10 +126,10 @@ public class WebAuthnService {
 
     public void finishRegistration(
             UUID tenantId,
-            String fingerprint,
+            String deviceId,
             PublicKeyCredential<AuthenticatorAttestationResponse, ClientRegistrationExtensionOutputs> credential
     ) {
-        var ctx = registrationChallengeService.getFull(tenantId, fingerprint);
+        var ctx = registrationChallengeService.getFull(tenantId, deviceId);
 
         PublicKeyCredentialCreationOptions request = ctx.options();
         UUID userId = ctx.userId();
@@ -161,7 +161,7 @@ public class WebAuthnService {
                 .credentialId(credentialId)
                 .publicKey(result.getPublicKeyCose().getBase64())
                 .signCount(result.getSignatureCount())
-                .fingerprint(fingerprint)
+                .deviceId(deviceId)
                 .build();
 
         biometricRepository.save(biometric);

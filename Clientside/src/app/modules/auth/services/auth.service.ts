@@ -1,17 +1,39 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
-import { Observable, BehaviorSubject, tap } from 'rxjs';
+import { Observable, BehaviorSubject, tap, catchError, shareReplay, of, map } from 'rxjs';
+import { DeviceService } from '../../../core/services/device.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
 
   private http = inject(HttpClient);
+  private deviceService = inject(DeviceService);
+  
   private me$ = new BehaviorSubject<MeResponse | null>(null);
   private RETRY_KEY = 'auth_retry_payload';
   private RETRY_TTL_MS = 10 * 60 * 1000; // 10 minutes
   private lastLoginRequestMemory: LoginRequest | null = null;
+  private initialized = false;
+  private init$?: Observable<MeResponse | null>;
 
+
+  init(): Observable<MeResponse | null> {
+    if (this.initialized && this.init$) {
+      return this.init$;
+    }
+
+    this.init$ = this.loadMe().pipe(
+      catchError(() => {
+        this.clearLocalState();
+        return of(null);
+      }),
+      tap(() => this.initialized = true),
+      shareReplay(1)
+    );
+
+    return this.init$;
+  }
 
   /* =========================
      LOGIN
@@ -21,9 +43,17 @@ export class AuthService {
       .post<MeResponse>(
         `${environment.apiUrl}/auth/login`,
         payload,
-        { withCredentials: true }
+        {
+          withCredentials: true,
+          observe: 'response'
+        }
       )
-      .pipe(tap(me => this.me$.next(me)));
+      .pipe(
+        tap(res => {
+          this.me$.next(res.body!);
+        }),
+        map(res => res.body!)
+      );
   }
 
   /* =========================

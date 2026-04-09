@@ -8,9 +8,9 @@ import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthRequest;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthResponse;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.BulkAuthResponse;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.UserSessionDTO;
+import com.IntegrityTechnologies.business_manager.security.auth.orchestrator.AuthOrchestratorService;
 import com.IntegrityTechnologies.business_manager.security.auth.service.AuthService;
 import com.IntegrityTechnologies.business_manager.security.auth.service.BiometricAuthFacadeService;
-import com.IntegrityTechnologies.business_manager.security.auth.util.DeviceFingerprintUtil;
 import com.IntegrityTechnologies.business_manager.security.auth.util.JwtUtil;
 import com.IntegrityTechnologies.business_manager.security.biometric.dto.WebAuthnVerifyRequest;
 import com.IntegrityTechnologies.business_manager.security.biometric.service.WebAuthnService;
@@ -40,6 +40,7 @@ import java.util.UUID;
 @PublicEndpoint
 public class AuthController {
 
+    private final AuthOrchestratorService authOrchestrator;
     private final AuthService authService;
     private final JwtUtil jwtUtil;
     private final UserSessionRepository userSessionRepository;
@@ -57,7 +58,8 @@ public class AuthController {
             HttpServletRequest servletRequest
     ) {
 
-        AuthService.LoginResult result = authService.loginInternal(request, servletRequest);
+        AuthService.LoginResult result =
+                authOrchestrator.login(request, servletRequest);
 
         boolean isSecure = servletRequest.isSecure();
 
@@ -83,11 +85,8 @@ public class AuthController {
 
         UUID tenantId = TenantContext.getTenantId();
 
-        String fingerprint =
-                DeviceFingerprintUtil.generate(request, deviceId);
-
         AssertionRequest assertion =
-                webAuthnService.startAssertion(tenantId, fingerprint);
+                webAuthnService.startAssertion(tenantId, deviceId);
 
         return ResponseEntity.ok(assertion);
     }
@@ -125,12 +124,9 @@ public class AuthController {
 
         // 🔐 Authenticate first (NO SESSION CREATION)
         AuthService.LoginResult result =
-                authService.loginInternal(request, servletRequest);
+                authOrchestrator.login(request, servletRequest);
 
         UUID userId = result.response().getUserId();
-
-        String fingerprint =
-                DeviceFingerprintUtil.generate(servletRequest, request.getDeviceId());
 
         // 🔒 Device rule
         boolean hasAnyDevice =
@@ -140,14 +136,14 @@ public class AuthController {
                 );
 
         if (hasAnyDevice) {
-            deviceSecurityService.validate(tenantId, request.getBranchId(), fingerprint);
+            deviceSecurityService.validate(tenantId, request.getBranchId(), request.getDeviceId());
         }
 
         var options = webAuthnService.startRegistration(
                 tenantId,
                 userId,
                 result.response().getUsername(),
-                fingerprint
+                request.getDeviceId()
         );
 
         return ResponseEntity.ok(options);
@@ -161,9 +157,6 @@ public class AuthController {
     ) {
         UUID tenantId = TenantContext.getTenantId();
 
-        String fingerprint =
-                DeviceFingerprintUtil.generate(request, deviceId);
-
         PublicKeyCredential<AuthenticatorAttestationResponse, ClientRegistrationExtensionOutputs> credential;
 
         try {
@@ -174,7 +167,7 @@ public class AuthController {
 
         webAuthnService.finishRegistration(
                 tenantId,
-                fingerprint,
+                deviceId,
                 credential
         );
 
@@ -193,7 +186,8 @@ public class AuthController {
         List<BulkAuthResponse> responses = new ArrayList<>();
 
         for (AuthRequest request : requests) {
-            AuthService.LoginResult result = authService.loginInternal(request, servletRequest);
+            AuthService.LoginResult result =
+                    authOrchestrator.login(request, servletRequest);
 
             responses.add(
                     new BulkAuthResponse(

@@ -18,7 +18,8 @@ import com.IntegrityTechnologies.business_manager.security.audit.service.LoginAu
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthRequest;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthResponse;
 import com.IntegrityTechnologies.business_manager.security.auth.model.UserType;
-import com.IntegrityTechnologies.business_manager.security.auth.util.DeviceFingerprintUtil;
+import com.IntegrityTechnologies.business_manager.security.auth.platform.PlatformAuthService;
+import com.IntegrityTechnologies.business_manager.security.auth.tenant.TenantAuthService;
 import com.IntegrityTechnologies.business_manager.security.auth.util.JwtUtil;
 import com.IntegrityTechnologies.business_manager.security.device.model.TrustedDevice;
 import com.IntegrityTechnologies.business_manager.security.device.service.DeviceSecurityService;
@@ -60,6 +61,8 @@ public class AuthService {
     private final DeviceSecurityService deviceSecurityService;
     private final LocationSecurityService locationSecurityService;
     private final DeviceUsageService deviceUsageService;
+    private final PlatformAuthService platformAuthService;
+    private final TenantAuthService tenantAuthService;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -81,263 +84,25 @@ public class AuthService {
        1️⃣ TRY PLATFORM LOGIN
     ===================================================== */
 
-        var platformUserOpt =
-                platformUserRepository.findByUsernameAndDeletedFalse(identifier);
+        var platformResult = platformAuthService.login(request, httpRequest);
 
-        if (platformUserOpt.isPresent()) {
-
-            PlatformUser platformUser = platformUserOpt.get();
-
-            if (request.getDeviceId() == null || request.getDeviceId().isBlank()) {
-                throw new BadCredentialsException("Device ID required");
-            }
-
-            String fingerprint =
-                    DeviceFingerprintUtil.generate(httpRequest, request.getDeviceId());
-
-            String ip = extractClientIp(httpRequest);
-
-            /* ================= DEVICE VALIDATION ================= */
-            UUID platformTenantId = tenantId();
-
-            if (platformTenantId == null) {
-                throw new IllegalStateException("Platform tenant not resolved");
-            }
-
-            deviceSecurityService.validate(platformTenantId, null, fingerprint);
-
-            /* ================= PASSWORD AUTH ================= */
-            if (!passwordEncoder.matches(request.getPassword(), platformUser.getPassword())) {
-                throw new BadCredentialsException("Invalid credentials");
-            }
-
-            if (!platformUser.isActive() || platformUser.isLocked()) {
-                throw new BadCredentialsException("Account disabled");
-            }
-
-            if (Boolean.TRUE.equals(platformUser.getMustChangePassword())) {
-                throw new ResponseStatusException(
-                        HttpStatus.PRECONDITION_REQUIRED,
-                        "PASSWORD_CHANGE_REQUIRED"
-                );
-            }
-
-            UUID tokenId = UUID.randomUUID();
-
-            String token = jwtUtil.generateToken(
-                    UserType.PLATFORM.name(),
-                    null,
-                    platformUser.getId(),
-                    platformUser.getUsername(),
-                    platformUser.getRole().name(),
-                    tokenId,
-                    null,
-                    fingerprint
+        if (platformResult != null) {
+            return new LoginResult(
+                    platformResult.jwt(),
+                    platformResult.response()
             );
-
-            long activeSessions =
-                    platformUserSessionRepository
-                            .countByUserIdAndLogoutTimeIsNull(platformUser.getId());
-
-            if (activeSessions >= PLATFORM_USERS_MAX_SESSIONS_PER_DAY) {
-                throw new IllegalStateException("Too many active sessions");
-            }
-
-            // ================= DEVICE USAGE TRACKING =================
-
-            TrustedDevice device = deviceSecurityService
-                    .getByFingerprint(platformTenantId, null, fingerprint);
-
-            deviceUsageService.record(device.getId(), platformUser.getId());
-
-            PlatformUserSession session = PlatformUserSession.builder()
-                    .userId(platformUser.getId())
-                    .tokenId(tokenId)
-                    .loginDate(LocalDate.now())
-                    .loginTime(LocalDateTime.now())
-                    .autoLoggedOut(false)
-                    .build();
-
-            platformUserSessionRepository.save(session);
-
-            AuthResponse response = new AuthResponse(
-                    platformUser.getId(),
-                    platformUser.getUsername(),
-                    platformUser.getRole().name(),
-                    null,
-                    List.of(),
-                    UserType.PLATFORM
-            );
-
-            return new LoginResult(token, response);
         }
 
     /* =====================================================
        2️⃣ TENANT LOGIN
     ===================================================== */
 
-        UUID tenantId = tenantId();
-        UUID branchId = request.getBranchId();
+        var tenantResult = tenantAuthService.login(request, httpRequest);
 
-        if (request.getDeviceId() == null || request.getDeviceId().isBlank()) {
-            throw new BadCredentialsException("Device ID required");
-        }
-
-        String fingerprint =
-                DeviceFingerprintUtil.generate(httpRequest, request.getDeviceId());
-
-        String ip = extractClientIp(httpRequest);
-
-        var branch = branchRepository
-                .findByTenantIdAndIdAndDeletedFalse(tenantId, branchId)
-                .orElseThrow(() -> new BadCredentialsException("Branch not found"));
-
-        try {
-
-            deviceSecurityService.validate(tenantId, branchId, fingerprint);
-
-            locationSecurityService.validate(
-                    branch,
-                    request.getLatitude(),
-                    request.getLongitude(),
-                    request.getAccuracy()
-            );
-
-        } catch (Exception ex) {
-
-            loginAuditService.log(
-                    tenantId,
-                    null,
-                    branchId,
-                    fingerprint,
-                    request.getLatitude(),
-                    request.getLongitude(),
-                    request.getAccuracy(),
-                    ip,
-                    "BLOCKED",
-                    ex.getMessage()
-            );
-
-            throw new BadCredentialsException(ex.getMessage());
-        }
-
-        /* ================= PASSWORD AUTH ================= */
-
-        User user;
-
-        identifier = request.getIdentifier();
-
-        user = userRepository
-                .findAuthUser(tenantId, identifier)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
-
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BadCredentialsException("Invalid password");
-        }
-
-        /* ================= CONTINUE EXISTING FLOW ================= */
-
-        UUID userId = user.getId();
-        LocalDate today = LocalDate.now();
-
-        boolean belongs = branchRepository.findBranchesByUserId(
-                tenantId,
-                userId
-        ).stream().anyMatch(b -> b.getId().equals(branchId));
-
-        if (!belongs) {
-            throw new BadCredentialsException("User is not assigned to this branch");
-        }
-
-        int activeCount =
-                userSessionRepository
-                        .findByUserIdAndLoginDateAndLogoutTimeIsNull(userId, today)
-                        .size();
-
-        if (activeCount >= TENANT_USERS_MAX_SESSIONS_PER_DAY) {
-            throw new IllegalStateException("Maximum active sessions reached for today");
-        }
-
-        UUID tokenId = UUID.randomUUID();
-
-        String token = jwtUtil.generateToken(
-                UserType.TENANT.name(),
-                user.getTenantId(),
-                userId,
-                user.getUsername(),
-                user.getRole().name(),
-                tokenId,
-                branchId,
-                fingerprint
+        return new LoginResult(
+                tenantResult.jwt(),
+                tenantResult.response()
         );
-
-        // ================= DEVICE USAGE TRACKING =================
-
-        TrustedDevice device = deviceSecurityService
-                .getByFingerprint(tenantId, branchId, fingerprint);
-
-        deviceUsageService.record(device.getId(), userId);
-
-        UserSession session = UserSession.builder()
-                .tenantId(tenantId)
-                .branchId(branchId)
-                .userId(userId)
-                .loginDate(today)
-                .loginTime(LocalDateTime.now())
-                .tokenId(tokenId)
-                .autoLoggedOut(false)
-                .build();
-
-        userSessionRepository.save(session);
-
-        List<Department> departments =
-                departmentRepository.findDepartmentsForUserInBranch(
-                        tenantId(),
-                        userId,
-                        branchId
-                );
-
-        if (departments.isEmpty()) {
-            rollcallService.recordLoginRollcall(
-                    userId,
-                    null,
-                    branchId,
-                    RollcallMethod.LOGIN_PASSWORD
-            );
-        } else {
-            for (Department d : departments) {
-                rollcallService.recordLoginRollcall(
-                        userId,
-                        d.getId(),
-                        branchId,
-                        RollcallMethod.LOGIN_PASSWORD
-                );
-            }
-        }
-
-        AuthResponse response = new AuthResponse(
-                userId,
-                user.getUsername(),
-                user.getRole().name(),
-                branchId,
-                departments.stream().map(Department::getId).toList(),
-                UserType.TENANT
-        );
-
-        loginAuditService.log(
-                tenantId,
-                userId,
-                branchId,
-                fingerprint,
-                request.getLatitude(),
-                request.getLongitude(),
-                request.getAccuracy(),
-                ip,
-                "SUCCESS",
-                "OK"
-        );
-
-        return new LoginResult(token, response);
     }
 
     private String extractClientIp(HttpServletRequest request) {
@@ -354,166 +119,12 @@ public class AuthService {
     @Transactional
     public LoginResult loginInternalBiometric(AuthRequest request, HttpServletRequest httpRequest) {
 
-        UUID userId = request.getUserId();
+        var result = tenantAuthService.biometricLogin(request, httpRequest);
 
-        if (userId == null) {
-            throw new BadCredentialsException("Invalid biometric user");
-        }
-
-        UUID tenantId = tenantId();
-        UUID branchId = request.getBranchId();
-
-        if (request.getDeviceId() == null || request.getDeviceId().isBlank()) {
-            throw new BadCredentialsException("Device ID required");
-        }
-
-        String fingerprint =
-                DeviceFingerprintUtil.generate(httpRequest, request.getDeviceId());
-
-        String ip = extractClientIp(httpRequest);
-
-        var branch = branchRepository
-                .findByTenantIdAndIdAndDeletedFalse(tenantId, branchId)
-                .orElseThrow(() -> new BadCredentialsException("Branch not found"));
-
-        try {
-
-            deviceSecurityService.validate(tenantId, branchId, fingerprint);
-
-            locationSecurityService.validate(
-                    branch,
-                    request.getLatitude(),
-                    request.getLongitude(),
-                    request.getAccuracy()
-            );
-
-        } catch (Exception ex) {
-
-            loginAuditService.log(
-                    tenantId,
-                    null,
-                    branchId,
-                    fingerprint,
-                    request.getLatitude(),
-                    request.getLongitude(),
-                    request.getAccuracy(),
-                    ip,
-                    "BLOCKED",
-                    ex.getMessage()
-            );
-
-            throw new BadCredentialsException(ex.getMessage());
-        }
-
-        User user = userRepository
-                .findByIdAndTenantId(userId, tenantId)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
-
-        if (Boolean.TRUE.equals(user.getDeleted())) {
-            throw new BadCredentialsException("Account deleted");
-        }
-
-        UUID resolvedUserId = user.getId();
-        LocalDate today = LocalDate.now();
-
-        boolean belongs = branchRepository.findBranchesByUserId(
-                tenantId,
-                resolvedUserId
-        ).stream().anyMatch(b -> b.getId().equals(branchId));
-
-        if (!belongs) {
-            throw new BadCredentialsException("User is not assigned to this branch");
-        }
-
-        int activeCount =
-                userSessionRepository
-                        .findByUserIdAndLoginDateAndLogoutTimeIsNull(resolvedUserId, today)
-                        .size();
-
-        if (activeCount >= TENANT_USERS_MAX_SESSIONS_PER_DAY) {
-            throw new IllegalStateException("Maximum active sessions reached for today");
-        }
-
-        UUID tokenId = UUID.randomUUID();
-
-        String token = jwtUtil.generateToken(
-                UserType.TENANT.name(),
-                user.getTenantId(),
-                resolvedUserId,
-                user.getUsername(),
-                user.getRole().name(),
-                tokenId,
-                branchId,
-                fingerprint
+        return new LoginResult(
+                result.jwt(),
+                result.response()
         );
-
-        // ================= DEVICE USAGE TRACKING =================
-
-        TrustedDevice device = deviceSecurityService
-                .getByFingerprint(tenantId, branchId, fingerprint);
-
-        deviceUsageService.record(device.getId(), resolvedUserId);
-
-        UserSession session = UserSession.builder()
-                .tenantId(tenantId)
-                .branchId(branchId)
-                .userId(resolvedUserId)
-                .loginDate(today)
-                .loginTime(LocalDateTime.now())
-                .tokenId(tokenId)
-                .autoLoggedOut(false)
-                .build();
-
-        userSessionRepository.save(session);
-
-        List<Department> departments =
-                departmentRepository.findDepartmentsForUserInBranch(
-                        tenantId(),
-                        resolvedUserId,
-                        branchId
-                );
-
-        if (departments.isEmpty()) {
-            rollcallService.recordLoginRollcall(
-                    resolvedUserId,
-                    null,
-                    branchId,
-                    RollcallMethod.LOGIN_BIOMETRIC
-            );
-        } else {
-            for (Department d : departments) {
-                rollcallService.recordLoginRollcall(
-                        resolvedUserId,
-                        d.getId(),
-                        branchId,
-                        RollcallMethod.LOGIN_BIOMETRIC
-                );
-            }
-        }
-
-        AuthResponse response = new AuthResponse(
-                resolvedUserId,
-                user.getUsername(),
-                user.getRole().name(),
-                branchId,
-                departments.stream().map(Department::getId).toList(),
-                UserType.TENANT
-        );
-
-        loginAuditService.log(
-                tenantId,
-                resolvedUserId,
-                branchId,
-                fingerprint,
-                request.getLatitude(),
-                request.getLongitude(),
-                request.getAccuracy(),
-                ip,
-                "SUCCESS",
-                "OK"
-        );
-
-        return new LoginResult(token, response);
     }
 
     /* =====================================================

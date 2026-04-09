@@ -32,7 +32,7 @@ public class UserBiometricService {
                 .map(b -> UserBiometricDTO.builder()
                         .id(b.getId())
                         .deviceName(b.getDeviceName())
-                        .fingerprint(b.getFingerprint())
+                        .deviceId(b.getDeviceId())
                         .build()
                 )
                 .toList();

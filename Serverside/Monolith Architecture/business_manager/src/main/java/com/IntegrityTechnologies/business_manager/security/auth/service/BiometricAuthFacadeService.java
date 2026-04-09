@@ -1,7 +1,10 @@
 package com.IntegrityTechnologies.business_manager.security.auth.service;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
 import com.IntegrityTechnologies.business_manager.security.audit.service.LoginAuditService;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthRequest;
+import com.IntegrityTechnologies.business_manager.security.auth.platform.PlatformAuthService;
+import com.IntegrityTechnologies.business_manager.security.auth.tenant.TenantAuthService;
 import com.IntegrityTechnologies.business_manager.security.biometric.dto.WebAuthnVerifyRequest;
 import com.IntegrityTechnologies.business_manager.security.biometric.service.WebAuthnService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
@@ -24,6 +27,9 @@ public class BiometricAuthFacadeService {
     private final WebAuthnService webAuthnService;
     private final AuthService authService;
     private final LoginAuditService loginAuditService;
+    private final PlatformAuthService platformAuthService;
+    private final TenantAuthService tenantAuthService;
+    private final PlatformUserRepository platformUserRepository;
 
     public AuthService.LoginResult biometricLogin(
             WebAuthnVerifyRequest request,
@@ -31,10 +37,6 @@ public class BiometricAuthFacadeService {
     ) {
 
         UUID tenantId = TenantContext.getTenantId();
-
-        String fingerprint =
-                com.IntegrityTechnologies.business_manager.security.auth.util.DeviceFingerprintUtil
-                        .generate(servletRequest, request.getDeviceId());
 
         String ip = servletRequest.getRemoteAddr();
 
@@ -48,7 +50,7 @@ public class BiometricAuthFacadeService {
                     tenantId,
                     null,
                     request.getBranchId(),
-                    fingerprint,
+                    request.getDeviceId(),
                     request.getLatitude(),
                     request.getLongitude(),
                     request.getAccuracy(),
@@ -64,16 +66,16 @@ public class BiometricAuthFacadeService {
 
             /* ================= 1️⃣ VERIFY ================= */
 
-            var result = webAuthnService.finishAssertion(
+            var assertionResult  = webAuthnService.finishAssertion(
                     tenantId,
-                    fingerprint,
+                    request.getDeviceId(),
                     credential
             );
 
             /* ================= 2️⃣ RESOLVE USER ================= */
 
             // 🔥 REFACTOR: derive directly (no extra lookup needed)
-            ByteArray userHandle = result.getCredential().getUserHandle();
+            ByteArray userHandle = assertionResult .getCredential().getUserHandle();
 
             if (userHandle == null) {
                 throw new SecurityException("Missing user handle");
@@ -102,7 +104,28 @@ public class BiometricAuthFacadeService {
 
             /* ================= 4️⃣ LOGIN ================= */
 
-            return authService.loginInternalBiometric(authRequest, servletRequest);
+            // 🔍 Determine user type
+
+            boolean isPlatformUser =
+                    platformUserRepository.findById(userId).isPresent();
+
+            if (isPlatformUser) {
+
+                var platformLoginResult  = platformAuthService.biometricLogin(authRequest, servletRequest);
+
+                return new AuthService.LoginResult(
+                        platformLoginResult .jwt(),
+                        platformLoginResult .response()
+                );
+            }
+
+            // 👉 fallback = tenant
+            var tenantLoginResult  = tenantAuthService.biometricLogin(authRequest, servletRequest);
+
+            return new AuthService.LoginResult(
+                    tenantLoginResult .jwt(),
+                    tenantLoginResult .response()
+            );
 
         } catch (Exception ex) {
 
@@ -110,7 +133,7 @@ public class BiometricAuthFacadeService {
                     tenantId,
                     null,
                     request.getBranchId(),
-                    fingerprint,
+                    request.getDeviceId(),
                     request.getLatitude(),
                     request.getLongitude(),
                     request.getAccuracy(),

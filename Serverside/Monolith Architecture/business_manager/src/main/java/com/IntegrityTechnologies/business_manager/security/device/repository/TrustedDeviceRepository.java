@@ -11,7 +11,7 @@ import java.util.UUID;
 @Repository
 public interface TrustedDeviceRepository extends JpaRepository<TrustedDevice, UUID> {
 
-    Optional<TrustedDevice> findByTenantIdAndBranchIdAndFingerprint(
+    Optional<TrustedDevice> findByTenantIdAndBranchIdAndDeviceId(
             UUID tenantId,
             UUID branchId,
             String fingerprint

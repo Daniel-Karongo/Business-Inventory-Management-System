@@ -37,7 +37,7 @@ public class JwtUtil {
             String role,
             UUID tokenId,
             UUID branchId,
-            String deviceFingerprint
+            String deviceId
     ) {
 
         Date now = new Date();
@@ -51,7 +51,7 @@ public class JwtUtil {
                         "role", role,
                         "tokenId", tokenId.toString(),
                         "branchId", branchId != null ? branchId.toString() : "",
-                        "device", deviceFingerprint
+                        "device", deviceId
                 ))
                 .setSubject(username)
                 .setIssuedAt(now)

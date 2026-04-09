@@ -20,7 +20,7 @@ import java.util.UUID;
         indexes = {
                 @Index(name = "idx_ub_user", columnList = "tenant_id, user_id"),
                 @Index(name = "idx_ub_cred", columnList = "credential_id"),
-                @Index(name = "idx_ub_fingerprint", columnList = "fingerprint")
+                @Index(name = "idx_ub_device", columnList = "device_id")
         }
 )
 @Getter
@@ -44,7 +44,7 @@ public class UserBiometric extends TenantAwareEntity {
     private String publicKey;
 
     @Column(nullable = false, length = 128)
-    private String fingerprint;
+    private String deviceId;
 
     private Long signCount;
 

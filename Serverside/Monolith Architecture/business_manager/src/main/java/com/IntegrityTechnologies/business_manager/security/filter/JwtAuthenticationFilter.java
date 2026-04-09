@@ -1,15 +1,14 @@
 package com.IntegrityTechnologies.business_manager.security.filter;
 
+import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.security.auth.config.CustomUserDetails;
 import com.IntegrityTechnologies.business_manager.security.auth.config.CustomUserDetailsService;
-import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.security.auth.config.PlatformUserDetails;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.auth.config.PlatformUserDetailsService;
 import com.IntegrityTechnologies.business_manager.security.auth.service.TokenBlacklistService;
-import com.IntegrityTechnologies.business_manager.security.auth.util.DeviceFingerprintUtil;
 import com.IntegrityTechnologies.business_manager.security.auth.util.JwtUtil;
 import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
+import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -68,10 +67,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         throw new SecurityException("Missing device ID");
                     }
 
-                    String requestDevice =
-                            DeviceFingerprintUtil.generate(request, deviceId);
-
-                    if (tokenDevice == null || !tokenDevice.equals(requestDevice)) {
+                    if (tokenDevice == null || !tokenDevice.equals(deviceId)) {
                         throw new SecurityException("Token device mismatch");
                     }
 

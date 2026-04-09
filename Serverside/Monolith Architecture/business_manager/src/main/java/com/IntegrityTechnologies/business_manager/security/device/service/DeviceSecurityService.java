@@ -17,10 +17,10 @@ public class DeviceSecurityService {
     private final TrustedDeviceRepository repository;
     private final UserBiometricRepository biometricRepository;
 
-    public void validate(UUID tenantId, UUID branchId, String fingerprint) {
+    public void validate(UUID tenantId, UUID branchId, String deviceId) {
 
         var deviceOpt = repository
-                .findByTenantIdAndBranchIdAndFingerprint(tenantId, branchId, fingerprint);
+                .findByTenantIdAndBranchIdAndDeviceId(tenantId, branchId, deviceId);
 
         if (deviceOpt.isEmpty()) {
 
@@ -31,8 +31,8 @@ public class DeviceSecurityService {
                     TrustedDevice.builder()
                             .tenantId(tenantId)
                             .branchId(branchId)
-                            .fingerprint(fingerprint)
-                            .deviceName("Device-" + fingerprint.substring(0, 6))
+                            .deviceId(deviceId)
+                            .deviceName("Device-" + deviceId.substring(0, 6))
                             .approved(firstDevice)
                             .build()
             );
@@ -70,10 +70,10 @@ public class DeviceSecurityService {
         }
     }
 
-    public TrustedDevice getByFingerprint(UUID tenantId, UUID branchId, String fingerprint) {
+    public TrustedDevice getByDeviceId(UUID tenantId, UUID branchId, String deviceId) {
 
         return repository
-                .findByTenantIdAndBranchIdAndFingerprint(tenantId, branchId, fingerprint)
+                .findByTenantIdAndBranchIdAndDeviceId(tenantId, branchId, deviceId)
                 .orElseThrow();
     }
 }

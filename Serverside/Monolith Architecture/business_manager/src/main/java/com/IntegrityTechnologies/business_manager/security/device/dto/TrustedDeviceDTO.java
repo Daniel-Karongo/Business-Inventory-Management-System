@@ -14,7 +14,7 @@ public class TrustedDeviceDTO {
     private UUID id;
     private UUID branchId;
     private String deviceName;
-    private String fingerprint;
+    private String deviceId;
     private Boolean approved;
     private LocalDateTime firstSeenAt;
     private LocalDateTime lastSeenAt;

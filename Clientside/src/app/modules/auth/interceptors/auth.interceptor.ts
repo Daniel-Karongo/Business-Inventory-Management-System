@@ -2,26 +2,42 @@ import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
+import { DeviceService } from '../../../core/services/device.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
 
   req = req.clone({ withCredentials: true });
 
+  const deviceService = inject(DeviceService);
+
+  req = req.clone({
+    setHeaders: {
+      'X-Device-Id': deviceService.getDeviceId()
+    }
+  });
+
   return next(req).pipe(
     catchError(err => {
 
-      // ✅ IGNORE unauthenticated /auth/me on startup
+      // 1. Ignore bootstrap check (/auth/me)
       if (
         err.status === 401 &&
-        req.url.endsWith('/api/auth/me')
+        req.url.includes('/auth/me')
       ) {
         return throwError(() => err);
       }
 
-      // 🔐 REAL auth failure (after login)
+      // 2. Ignore auth endpoints themselves (login, reset, biometric)
+      if (req.url.includes('/auth/')) {
+        return throwError(() => err);
+      }
+
+      // 3. Only redirect for real session expiry
       if (err.status === 401) {
-        router.navigate(['/login']);
+        router.navigate(['/auth'], {
+          queryParams: { reason: 'expired' }
+        });
       }
 
       return throwError(() => err);

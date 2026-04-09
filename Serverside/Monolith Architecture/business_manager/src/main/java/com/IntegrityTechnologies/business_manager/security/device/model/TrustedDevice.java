@@ -13,13 +13,13 @@ import java.util.UUID;
         name = "trusted_devices",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_device_branch_fingerprint",
-                        columnNames = {"tenant_id", "branch_id", "fingerprint"}
+                        name = "uk_device_branch_device_id",
+                        columnNames = {"tenant_id", "branch_id", "device_id"}
                 )
         },
         indexes = {
                 @Index(name = "idx_td_branch", columnList = "branch_id"),
-                @Index(name = "idx_td_fingerprint", columnList = "fingerprint")
+                @Index(name = "idx_td_device_id", columnList = "device_id")
         }
 )
 @Getter
@@ -36,8 +36,8 @@ public class TrustedDevice extends TenantAwareEntity {
     @Column(name = "branch_id", nullable = true)
     private UUID branchId;
 
-    @Column(nullable = false, length = 128)
-    private String fingerprint;
+    @Column(name = "device_id", nullable = false, length = 64)
+    private String deviceId;
 
     @Column(name = "device_name")
     private String deviceName;
