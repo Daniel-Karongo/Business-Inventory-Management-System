@@ -16,11 +16,27 @@ export class DeviceService {
 
     if (this.cached) return this.cached;
 
-    const existing = localStorage.getItem(this.STORAGE_KEY);
+    const raw = localStorage.getItem(this.STORAGE_KEY);
 
-    if (existing) {
-      this.cached = existing;
-      return existing;
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+
+        // ✅ handle old object format
+        if (parsed?.id) {
+          this.cached = parsed.id;
+          localStorage.setItem(this.STORAGE_KEY, parsed.id);
+          if(this.cached !== null )
+            return this.cached;
+        }
+
+        this.cached = raw;
+        return raw;
+
+      } catch {
+        this.cached = raw;
+        return raw;
+      }
     }
 
     const id = crypto.randomUUID();

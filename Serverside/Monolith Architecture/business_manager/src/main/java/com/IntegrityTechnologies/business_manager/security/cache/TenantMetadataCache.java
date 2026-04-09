@@ -67,6 +67,15 @@ public class TenantMetadataCache {
        TENANT STATUS
     ========================================= */
 
+    public boolean isPlatformTenant(UUID tenantId) {
+
+        if (tenantId == null) return false;
+
+        return tenantRepository.findById(tenantId)
+                .map(Tenant::isPlatformTenant)
+                .orElse(false);
+    }
+
     public TenantStatus getTenantStatus(UUID tenantId) {
 
         TenantStatus status = tenantStatusCache.get(tenantId);
@@ -108,7 +117,9 @@ public class TenantMetadataCache {
 
         Plan plan = subscriptionService.getPlan(tenantId);
 
-        subscriptionCache.putIfAbsent(tenantId, plan);
+        if (plan != null) {
+            subscriptionCache.putIfAbsent(tenantId, plan);
+        }
 
         return plan;
     }

@@ -10,6 +10,11 @@ public class LocationSecurityService {
 
         if (!Boolean.TRUE.equals(branch.getEnforceGeofence())) return;
 
+        // ✅ prevent null crash
+        if (branch.getLatitude() == null || branch.getLongitude() == null) {
+            throw new SecurityException("Branch location not configured");
+        }
+
         if (lat == null || lng == null) {
             throw new SecurityException("Location required");
         }

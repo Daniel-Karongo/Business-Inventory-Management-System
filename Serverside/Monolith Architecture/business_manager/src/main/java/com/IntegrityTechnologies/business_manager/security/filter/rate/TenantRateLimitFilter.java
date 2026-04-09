@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security.filter.rate;
 
+import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -17,6 +18,7 @@ import java.util.UUID;
 public class TenantRateLimitFilter extends OncePerRequestFilter {
 
     private final TenantRateLimiter limiter;
+    private final TenantMetadataCache tenantMetadataCache;
 
     @Override
     protected void doFilterInternal(
@@ -28,6 +30,12 @@ public class TenantRateLimitFilter extends OncePerRequestFilter {
         UUID tenantId = TenantContext.getOrNull();
 
         if (tenantId != null) {
+
+            // ✅ SKIP platform tenant
+            if (tenantMetadataCache.isPlatformTenant(tenantId)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
 
             boolean allowed = limiter.allow(tenantId);
 

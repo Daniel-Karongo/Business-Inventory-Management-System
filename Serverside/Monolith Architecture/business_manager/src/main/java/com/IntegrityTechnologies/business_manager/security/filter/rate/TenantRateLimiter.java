@@ -48,9 +48,13 @@ public class TenantRateLimiter {
 
     public int resolveLimit(UUID tenantId) {
 
-        return tenantMetadataCache
-                .getSubscriptionPlan(tenantId)
-                .getRequestsPerMinute();
+        try {
+            return tenantMetadataCache
+                    .getSubscriptionPlan(tenantId)
+                    .getRequestsPerMinute();
+        } catch (Exception e) {
+            return 100; // safe fallback
+        }
     }
 
     private static class Counter {

@@ -68,6 +68,10 @@ public class TenantBootstrapService {
                             .location("Default Location")
                             .phone("+254700000000")
                             .email("main@tenant.com")
+
+                            // ✅ CRITICAL
+                            .enforceGeofence(false)
+
                             .deleted(false)
                             .build();
 

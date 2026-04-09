@@ -5,6 +5,9 @@ import com.IntegrityTechnologies.business_manager.modules.person.branch.reposito
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformRole;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUser;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.subscription.entity.TenantSubscription;
+import com.IntegrityTechnologies.business_manager.modules.platform.subscription.repository.PlanRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.subscription.repository.TenantSubscriptionRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.bootstrap.TenantBootstrapService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.Tenant;
@@ -29,6 +32,8 @@ public class SystemInitializationService {
     private final PlatformUserRepository platformUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final BranchRepository branchRepository;
+    private final PlanRepository planRepository;
+    private final TenantSubscriptionRepository tenantSubscriptionRepository;
 
     @Transactional
     public void initialize() {
@@ -102,6 +107,24 @@ public class SystemInitializationService {
                     );
 
                 });
+
+        planRepository.findByCode("FREE").ifPresent(plan -> {
+
+            boolean exists = tenantSubscriptionRepository
+                    .existsByTenantId(tenant.getId());
+
+            if (!exists) {
+
+                tenantSubscriptionRepository.save(
+                        TenantSubscription.builder()
+                                .tenantId(tenant.getId())
+                                .plan(plan)
+                                .build()
+                );
+
+                log.warn("✅ Default subscription assigned (FREE) to tenant {}", tenant.getCode());
+            }
+        });
 
         log.info("Ensuring tenant bootstrap...");
 

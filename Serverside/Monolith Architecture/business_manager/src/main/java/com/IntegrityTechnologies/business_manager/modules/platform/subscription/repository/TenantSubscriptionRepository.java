@@ -15,4 +15,6 @@ public interface TenantSubscriptionRepository extends JpaRepository<TenantSubscr
         WHERE s.tenantId = :tenantId
     """)
     Optional<TenantSubscription> findByTenantId(UUID tenantId);
+
+    boolean existsByTenantId(UUID tenantId);
 }

@@ -19,7 +19,6 @@ public class SubscriptionService {
 
         return planRepository
                 .findPlanByTenantId(tenantId)
-                .orElseThrow(() ->
-                        new IllegalStateException("Tenant has no subscription"));
+                .orElse(null); // ⚠️ allow null for platform
     }
 }

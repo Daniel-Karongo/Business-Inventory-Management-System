@@ -1,9 +1,7 @@
 package com.IntegrityTechnologies.business_manager.security.filter;
 
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
-import com.IntegrityTechnologies.business_manager.security.util.BranchResolver;
-import com.IntegrityTechnologies.business_manager.security.util.HibernateBranchFilterManager;
-import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
+import com.IntegrityTechnologies.business_manager.security.util.*;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,6 +21,7 @@ public class BranchContextFilter extends OncePerRequestFilter {
 
     private final BranchResolver branchResolver;
     private final HibernateBranchFilterManager branchFilterManager;
+    private final TenantMetadataCache tenantMetadataCache;
 
     @Override
     protected void doFilterInternal(
@@ -30,6 +29,13 @@ public class BranchContextFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
+
+        UUID tenantId = TenantContext.getOrNull();
+
+        if (tenantId != null && tenantMetadataCache.isPlatformTenant(tenantId)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         try {
             if (SecurityUtils.isPlatformAdmin()) {

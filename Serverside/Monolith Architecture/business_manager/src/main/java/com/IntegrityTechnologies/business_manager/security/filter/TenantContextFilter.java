@@ -30,17 +30,15 @@ public class TenantContextFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        /* =====================================================
-           PLATFORM ADMIN BYPASS
-        ===================================================== */
-        if (SecurityUtils.isPlatformAdmin()) {
+        UUID tenantId = TenantContext.getOrNull();
+
+        if (tenantId == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        UUID tenantId = TenantContext.getOrNull();
-
-        if (tenantId == null) {
+        // ✅ platform bypass
+        if (tenantMetadataCache.isPlatformTenant(tenantId)) {
             filterChain.doFilter(request, response);
             return;
         }
