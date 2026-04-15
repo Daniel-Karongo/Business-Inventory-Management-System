@@ -5,7 +5,6 @@ import com.IntegrityTechnologies.business_manager.modules.person.branch.reposito
 import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model.RollcallMethod;
-import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model.UserSession;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.service.RollcallService;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.User;
@@ -15,8 +14,6 @@ import com.IntegrityTechnologies.business_manager.security.auth.common.AuthRespo
 import com.IntegrityTechnologies.business_manager.security.auth.common.JwtFactory;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthRequest;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthResponse;
-import com.IntegrityTechnologies.business_manager.security.auth.model.UserType;
-import com.IntegrityTechnologies.business_manager.security.auth.util.JwtUtil;
 import com.IntegrityTechnologies.business_manager.security.device.model.TrustedDevice;
 import com.IntegrityTechnologies.business_manager.security.device.service.DeviceSecurityService;
 import com.IntegrityTechnologies.business_manager.security.device.service.DeviceUsageService;
@@ -29,7 +26,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,7 +35,6 @@ public class TenantAuthService {
 
     private static final int TENANT_USERS_MAX_SESSIONS_PER_DAY = 5;
 
-    private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RollcallService rollcallService;

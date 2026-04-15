@@ -12,10 +12,12 @@ import com.IntegrityTechnologies.business_manager.security.auth.orchestrator.Aut
 import com.IntegrityTechnologies.business_manager.security.auth.service.AuthService;
 import com.IntegrityTechnologies.business_manager.security.auth.service.BiometricAuthFacadeService;
 import com.IntegrityTechnologies.business_manager.security.auth.util.JwtUtil;
+import com.IntegrityTechnologies.business_manager.security.biometric.dto.BiometricStartRequest;
 import com.IntegrityTechnologies.business_manager.security.biometric.dto.WebAuthnVerifyRequest;
 import com.IntegrityTechnologies.business_manager.security.biometric.service.WebAuthnService;
 import com.IntegrityTechnologies.business_manager.security.device.service.DeviceSecurityService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yubico.webauthn.AssertionRequest;
 import com.yubico.webauthn.data.AuthenticatorAttestationResponse;
 import com.yubico.webauthn.data.ClientRegistrationExtensionOutputs;
@@ -31,6 +33,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Tag(name = "Auth")
@@ -47,6 +50,7 @@ public class AuthController {
     private final WebAuthnService webAuthnService;
     private final DeviceSecurityService deviceSecurityService;
     private final BiometricAuthFacadeService biometricAuthFacadeService;
+    private final ObjectMapper objectMapper;
 
     /* =====================================================
        LOGIN (BROWSER – HttpOnly COOKIE)
@@ -82,11 +86,15 @@ public class AuthController {
             @RequestParam String deviceId,
             HttpServletRequest request
     ) {
-
         UUID tenantId = TenantContext.getTenantId();
+        String origin = request.getHeader("Origin");
+
+        if (origin == null) {
+            throw new RuntimeException("Missing Origin header");
+        }
 
         AssertionRequest assertion =
-                webAuthnService.startAssertion(tenantId, deviceId);
+                webAuthnService.startAssertion(tenantId, deviceId, origin);
 
         return ResponseEntity.ok(assertion);
     }
@@ -98,8 +106,14 @@ public class AuthController {
             HttpServletResponse response
     ) {
 
+        String origin = servletRequest.getHeader("Origin");
+
+        if (origin == null) {
+            throw new RuntimeException("Missing Origin header");
+        }
+
         AuthService.LoginResult loginResult =
-                biometricAuthFacadeService.biometricLogin(request, servletRequest);
+                biometricAuthFacadeService.biometricLogin(request, servletRequest, origin);
 
         Cookie cookie = new Cookie("access_token", loginResult.jwt());
 
@@ -116,59 +130,82 @@ public class AuthController {
     }
 
     @PostMapping("/biometric/register/start")
-    public ResponseEntity<?> startRegistration(
-            @RequestBody AuthRequest request,
+    public ResponseEntity<?> initRegistration(
+            @RequestBody BiometricStartRequest request,
             HttpServletRequest servletRequest
     ) {
         UUID tenantId = TenantContext.getTenantId();
 
-        // 🔐 Authenticate first (NO SESSION CREATION)
-        AuthService.LoginResult result =
-                authOrchestrator.login(request, servletRequest);
+        UUID userId = jwtUtil.extractUserIdFromRequest(servletRequest);
+        String username = jwtUtil.extractUsernameFromRequest(servletRequest);
+        UUID branchId = jwtUtil.extractBranchId(jwtUtil.extractTokenFromRequest(servletRequest));
 
-        UUID userId = result.response().getUserId();
+        String deviceId = request.deviceId();
 
-        // 🔒 Device rule
-        boolean hasAnyDevice =
-                deviceSecurityService.hasAnyDeviceForTenantBranch(
-                        tenantId,
-                        request.getBranchId()
-                );
+        deviceSecurityService.validate(tenantId, branchId, deviceId);
 
-        if (hasAnyDevice) {
-            deviceSecurityService.validate(tenantId, request.getBranchId(), request.getDeviceId());
+        String origin = servletRequest.getHeader("Origin");
+
+        if (origin == null) {
+            throw new RuntimeException("Missing Origin header");
         }
 
         var options = webAuthnService.startRegistration(
                 tenantId,
                 userId,
-                result.response().getUsername(),
-                request.getDeviceId()
+                username,
+                deviceId,
+                origin
         );
 
-        return ResponseEntity.ok(options);
+        Map<String, Object> response =
+                objectMapper.convertValue(options, Map.class);
+
+        Map<String, Object> extensions =
+                (Map<String, Object>) response.get("extensions");
+
+        if (extensions != null && extensions.get("appidExclude") == null) {
+            extensions.remove("appidExclude");
+        }
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/biometric/register/finish")
     public ResponseEntity<?> finishRegistration(
-            @RequestBody String rawJson,
+            @RequestBody Map<String, Object> body,
             @RequestParam String deviceId,
             HttpServletRequest request
     ) {
         UUID tenantId = TenantContext.getTenantId();
+        String origin = request.getHeader("Origin");
+
+        if (origin == null) {
+            throw new RuntimeException("Missing Origin header");
+        }
+
+        String host = request.getServerName(); // platform.local.test
+
+        if (!origin.contains(host)) {
+            throw new RuntimeException("Origin mismatch");
+        }
 
         PublicKeyCredential<AuthenticatorAttestationResponse, ClientRegistrationExtensionOutputs> credential;
 
         try {
+            String rawJson = objectMapper.writeValueAsString(body); // ✅ convert back to JSON string
             credential = PublicKeyCredential.parseRegistrationResponseJson(rawJson);
         } catch (Exception e) {
-            throw new BadCredentialsException("Invalid registration payload");
+            e.printStackTrace(); // 🔥 ADD THIS
+            throw new RuntimeException("Invalid registration payload");
         }
 
+        // ✅ PASS userId
         webAuthnService.finishRegistration(
                 tenantId,
                 deviceId,
-                credential
+                credential,
+                origin
         );
 
         return ResponseEntity.ok().build();
@@ -286,9 +323,18 @@ public class AuthController {
        CURRENT USER (TOPBAR / APP INIT)
        ===================================================== */
     @GetMapping("/me")
-    public ResponseEntity<AuthResponse> me(
-            @CookieValue("access_token") String token
+    public ResponseEntity<?> me(
+            @CookieValue(name = "access_token", required = false) String token
     ) {
-        return ResponseEntity.ok(authService.resolveMe(token));
+
+        if (token == null || token.isBlank()) {
+            return ResponseEntity.status(401).build(); // clean 401
+        }
+
+        try {
+            return ResponseEntity.ok(authService.resolveMe(token));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(401).build();
+        }
     }
 }

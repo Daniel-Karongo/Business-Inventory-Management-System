@@ -141,7 +141,9 @@ export class LoginComponent implements OnInit {
       next: async (challenge) => {
 
         try {
-          const credential = await this.webauthn.authenticate(challenge);
+          const credential = await this.webauthn.authenticate(
+            challenge.publicKeyCredentialRequestOptions
+          );
 
           const payload = {
             rawJson: JSON.stringify(credential),
@@ -197,47 +199,39 @@ export class LoginComponent implements OnInit {
 
   private handleBiometricError(err: any) {
 
-    const msg = err?.error?.message ?? '';
+    const msg: string = err?.error?.message ?? '';
 
-    if (msg === 'Device pending approval') {
-      this.router.navigate(['/auth/block/DEVICE_PENDING']);
+    if (msg.includes('Device pending approval')) {
+      this.snack.open('Device pending approval. Please wait for admin approval.', 'Close', { duration: 5000 });
       return;
     }
 
-    if (msg === 'Device not approved for this branch') {
-      this.router.navigate(['/auth/block/DEVICE_BLOCKED']);
+    if (msg.includes('Device not approved for this branch')) {
+      this.snack.open('This device is not approved for this branch.', 'Close', { duration: 5000 });
       return;
     }
 
-    if (msg === 'Location required') {
-      this.router.navigate(['/auth/block/LOCATION_REQUIRED']);
+    if (msg.includes('Location required')) {
+      this.snack.open('Location is required for biometric login.', 'Close', { duration: 5000 });
       return;
     }
 
-    if (msg === 'Outside branch location') {
-      this.router.navigate(['/auth/block/LOCATION_OUTSIDE']);
+    if (msg.includes('Outside branch location')) {
+      this.snack.open('You are outside the allowed branch location.', 'Close', { duration: 5000 });
       return;
     }
 
-    if (msg === 'Location accuracy too low') {
-      this.router.navigate(['/auth/block/LOCATION_ACCURACY']);
+    if (msg.includes('Location accuracy too low')) {
+      this.snack.open('Location accuracy too low. Try again.', 'Close', { duration: 5000 });
       return;
     }
 
-    if (msg === 'Biometric authentication failed') {
-      this.snack.open(
-        'Biometric authentication failed.',
-        'Close',
-        { duration: 4000 }
-      );
+    if (msg.includes('Biometric authentication failed')) {
+      this.snack.open('Biometric authentication failed.', 'Close', { duration: 4000 });
       return;
     }
 
-    this.snack.open(
-      msg || 'Biometric login failed',
-      'Close',
-      { duration: 5000 }
-    );
+    this.snack.open(msg || 'Biometric login failed', 'Close', { duration: 5000 });
   }
 
   async onSubmit() {
@@ -277,16 +271,13 @@ export class LoginComponent implements OnInit {
       accuracy: location.accuracy
     };
 
-    this.auth.setLastLoginRequest(payload);
-
     this.auth.login(payload).pipe(
       finalize(() => (this.loading = false))
     ).subscribe({
       next: (res) => {
+        console.log('LOGIN SUCCESS', res);
 
         this.auth.setUser(res);
-
-        this.auth.setLastLoginRequest(payload);
 
         this.snack.open('Login successful', undefined, { duration: 1200 });
 
@@ -300,60 +291,61 @@ export class LoginComponent implements OnInit {
 
           const ref = this.dialog.open(BiometricPromptDialog);
 
-          ref.afterClosed().subscribe(enable => {
-            if (enable) {
-              const last = this.auth.getLastLoginRequest();
-              if (last) {
-                this.biometric.register(last);
-              }
+          ref.afterClosed().subscribe((enable) => {
+            if (enable === true) {
+              this.biometric.register();
             }
           });
         }
 
-        if (res.userType === 'PLATFORM') {
-          this.router.navigateByUrl('/platform');
-        } else {
-          const landing = resolveTenantLanding(res.role);
-          this.router.navigateByUrl(landing);
-        }
+        setTimeout(() => {
+          if (res.userType === 'PLATFORM') {
+            console.log('NAVIGATE PLATFORM');
+            this.router.navigateByUrl('/platform');
+          } else {
+            const landing = resolveTenantLanding(res.role);
+            console.log('NAVIGATE TENANT', landing);
+            this.router.navigateByUrl(landing);
+          }
+        }, 0);
       },
 
       error: (err) => {
 
-        const msg = err?.error?.message ?? '';
+        const msg: string = err?.error?.message ?? '';
 
-        if (msg === 'Device pending approval') {
-          this.router.navigate(['/auth/block/DEVICE_PENDING']);
+        if (msg.includes('Device pending approval')) {
+          this.snack.open('Device pending approval. Please wait.', 'Close', { duration: 5000 });
           return;
         }
 
-        if (msg === 'Device not approved for this branch') {
-          this.router.navigate(['/auth/block/DEVICE_BLOCKED']);
+        if (msg.includes('Device not approved for this branch')) {
+          this.snack.open('This device is not approved for this branch.', 'Close', { duration: 5000 });
           return;
         }
 
-        if (msg === 'Location required') {
-          this.router.navigate(['/auth/block/LOCATION_REQUIRED']);
+        if (msg.includes('Location required')) {
+          this.snack.open('Location access is required.', 'Close', { duration: 5000 });
           return;
         }
 
-        if (msg === 'Outside branch location') {
-          this.router.navigate(['/auth/block/LOCATION_OUTSIDE']);
+        if (msg.includes('Outside branch location')) {
+          this.snack.open('You are outside the allowed branch location.', 'Close', { duration: 5000 });
           return;
         }
 
-        if (msg === 'Location accuracy too low') {
-          this.router.navigate(['/auth/block/LOCATION_ACCURACY']);
+        if (msg.includes('Location accuracy too low')) {
+          this.snack.open('Location accuracy too low. Try again.', 'Close', { duration: 5000 });
           return;
         }
 
-        if (msg === 'Maximum active sessions reached for today' ||
-          msg === 'Too many active sessions') {
-          this.router.navigate(['/auth/block/SESSION_LIMIT']);
+        if (msg.includes('Maximum active sessions reached for today') ||
+          msg.includes('Too many active sessions')) {
+          this.snack.open('Maximum active sessions reached. Please log out from another device.', 'Close', { duration: 5000 });
           return;
         }
 
-        if (msg === 'PASSWORD_CHANGE_REQUIRED') {
+        if (msg.includes('PASSWORD_CHANGE_REQUIRED')) {
           this.router.navigate(['/auth/reset-password'], {
             state: {
               forced: true,

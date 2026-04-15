@@ -9,17 +9,13 @@ export const tenantModeGuard: CanMatchFn = () => {
   const router = inject(Router);
   const domain = inject(DomainContextService);
 
-  return auth.init().pipe(
+  return auth.getCurrentUser().pipe(
     map(user => {
       if (!user) return router.parseUrl('/auth');
 
-      if (!domain.isTenant) {
-        return router.parseUrl('/auth');
-      }
+      if (!domain.isTenant) return router.parseUrl('/auth');
 
-      if (user.userType !== 'TENANT') {
-        return router.parseUrl('/auth');
-      }
+      if (user.userType !== 'TENANT') return router.parseUrl('/auth');
 
       return true;
     }),

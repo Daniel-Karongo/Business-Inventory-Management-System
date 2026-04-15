@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.security.filter;
 
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserSessionRepository;
 import com.IntegrityTechnologies.business_manager.security.auth.config.CustomUserDetails;
 import com.IntegrityTechnologies.business_manager.security.auth.config.CustomUserDetailsService;
 import com.IntegrityTechnologies.business_manager.security.auth.config.PlatformUserDetails;
@@ -35,6 +36,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final TenantMetadataCache tenantMetadataCache;
     private final TokenBlacklistService tokenBlacklistService;
     private final PlatformUserDetailsService platformUserDetailsService;
+    private final PlatformUserSessionRepository platformUserSessionRepository;
+
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -42,55 +45,162 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
+        if (isPublic(request)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String jwt = extractTokenFromCookie(request);
 
-        if (jwt != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        try {
 
-            try {
+            if (jwt != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                if (tokenBlacklistService.isTokenBlacklisted(jwt)) {
-                    throw new SecurityException("Token revoked");
-                }
+                try {
 
-                var existingAuth = SecurityContextHolder.getContext().getAuthentication();
+                    if (tokenBlacklistService.isTokenBlacklisted(jwt)) {
+                        clearContext(request, "Token revoked");
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
 
-                if (existingAuth == null || !existingAuth.isAuthenticated()) {
+                    var existingAuth = SecurityContextHolder.getContext().getAuthentication();
+
+                    if (existingAuth == null || !existingAuth.isAuthenticated()) {
 
                 /* ==========================================
                    DEVICE FINGERPRINT CHECK
                 ========================================== */
 
-                    String tokenDevice = jwtUtil.extractDevice(jwt);
-                    String deviceId = request.getHeader("X-Device-Id");
+                        String tokenDevice = jwtUtil.extractDevice(jwt);
+                        String deviceId = request.getHeader("X-Device-Id");
 
-                    if (deviceId == null || deviceId.isBlank()) {
-                        throw new SecurityException("Missing device ID");
-                    }
+                        if (deviceId == null || deviceId.isBlank()) {
+                            clearContext(request, "Missing device ID");
+                            filterChain.doFilter(request, response);
+                            return;
+                        }
 
-                    if (tokenDevice == null || !tokenDevice.equals(deviceId)) {
-                        throw new SecurityException("Token device mismatch");
-                    }
+                        if (tokenDevice == null || !tokenDevice.equals(deviceId)) {
+                            clearContext(request, "Token device mismatch");
+                            filterChain.doFilter(request, response);
+                            return;
+                        }
 
                 /* ==========================================
                    USER TYPE
                 ========================================== */
 
-                    String userType = jwtUtil.extractUserType(jwt);
+                        String userType = jwtUtil.extractUserType(jwt);
 
                 /* =====================================================
                    PLATFORM USER FLOW
                 ===================================================== */
 
-                    if ("PLATFORM".equals(userType)) {
+                        if ("PLATFORM".equals(userType)) {
+
+                            String username = jwtUtil.extractUsername(jwt);
+
+                            PlatformUserDetails userDetails =
+                                    (PlatformUserDetails) platformUserDetailsService
+                                            .loadUserByUsername(username);
+
+                            if (!jwtUtil.validateToken(jwt, userDetails.getUsername())) {
+                                clearContext(request, "Invalid JWT");
+                                filterChain.doFilter(request, response);
+                                return;
+                            }
+
+                            UUID tokenId = jwtUtil.extractTokenId(jwt);
+
+                            boolean sessionValid =
+                                    platformUserSessionRepository
+                                            .findByTokenIdAndLogoutTimeIsNull(tokenId)
+                                            .isPresent();
+
+                            if (!sessionValid) {
+                                clearContext(request, "Session expired");
+                                filterChain.doFilter(request, response);
+                                return;
+                            }
+
+                            UsernamePasswordAuthenticationToken authToken =
+                                    new UsernamePasswordAuthenticationToken(
+                                            userDetails,
+                                            null,
+                                            userDetails.getAuthorities()
+                                    );
+
+                            authToken.setDetails(
+                                    new WebAuthenticationDetailsSource().buildDetails(request)
+                            );
+
+                            SecurityContextHolder
+                                    .getContext()
+                                    .setAuthentication(authToken);
+
+                            filterChain.doFilter(request, response);
+                            return;
+                        }
+
+                /* =====================================================
+                   TENANT USER FLOW
+                ===================================================== */
+
+                        UUID tenantId = jwtUtil.extractTenantId(jwt);
+
+                        if (!tenantMetadataCache.tenantExists(tenantId)) {
+                            clearContext(request, "Invalid tenant");
+                            filterChain.doFilter(request, response);
+                            return;
+                        }
+
+                        UUID branchId = jwtUtil.extractBranchId(jwt);
+
+                        boolean branchValid =
+                                tenantMetadataCache.branchExists(tenantId, branchId);
+
+                        if (!branchValid) {
+                            clearContext(request, "Invalid branch");
+                            filterChain.doFilter(request, response);
+                            return;
+                        }
+
+                        UUID currentTenant = TenantContext.getOrNull();
+
+                        if (currentTenant == null) {
+                            TenantContext.setTenantId(tenantId);
+                        } else if (!currentTenant.equals(tenantId)) {
+                            clearContext(request, "Tenant mismatch between request and token");
+                            filterChain.doFilter(request, response);
+                            return;
+                        }
+
+                        BranchContext.set(branchId);
 
                         String username = jwtUtil.extractUsername(jwt);
 
-                        PlatformUserDetails userDetails =
-                                (PlatformUserDetails) platformUserDetailsService
+                        CustomUserDetails userDetails =
+                                (CustomUserDetails) userDetailsService
                                         .loadUserByUsername(username);
 
                         if (!jwtUtil.validateToken(jwt, userDetails.getUsername())) {
-                            throw new SecurityException("Invalid JWT");
+                            clearContext(request, "Invalid JWT");
+                            filterChain.doFilter(request, response);
+                            return;
+                        }
+
+                        UUID tokenId = jwtUtil.extractTokenId(jwt);
+
+                        boolean sessionValid =
+                                userSessionRepository
+                                        .findByTokenIdAndLogoutTimeIsNull(tokenId)
+                                        .isPresent();
+
+                        if (!sessionValid) {
+                            clearContext(request, "Session expired");
+                            filterChain.doFilter(request, response);
+                            return;
                         }
 
                         UsernamePasswordAuthenticationToken authToken =
@@ -101,97 +211,45 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                 );
 
                         authToken.setDetails(
-                                new WebAuthenticationDetailsSource().buildDetails(request)
+                                new WebAuthenticationDetailsSource()
+                                        .buildDetails(request)
                         );
 
                         SecurityContextHolder
                                 .getContext()
                                 .setAuthentication(authToken);
-
-                        filterChain.doFilter(request, response);
-                        return;
                     }
 
-                /* =====================================================
-                   TENANT USER FLOW
-                ===================================================== */
+                }catch (Exception ex) {
 
-                    UUID tenantId = jwtUtil.extractTenantId(jwt);
-
-                    if (!tenantMetadataCache.tenantExists(tenantId)) {
-                        throw new SecurityException("Invalid tenant");
+                    if (jwt != null) {
+                        System.out.println("JWT ERROR: " + ex.getMessage());
                     }
 
-                    UUID branchId = jwtUtil.extractBranchId(jwt);
-
-                    boolean branchValid =
-                            tenantMetadataCache.branchExists(tenantId, branchId);
-
-                    if (!branchValid) {
-                        throw new SecurityException("Invalid branch");
-                    }
-
-                    UUID currentTenant = TenantContext.getOrNull();
-
-                    if (currentTenant == null) {
-                        TenantContext.setTenantId(tenantId);
-                    } else if (!currentTenant.equals(tenantId)) {
-                        throw new SecurityException("Tenant mismatch between request and token");
-                    }
-
-                    BranchContext.set(branchId);
-
-                    String username = jwtUtil.extractUsername(jwt);
-
-                    CustomUserDetails userDetails =
-                            (CustomUserDetails) userDetailsService
-                                    .loadUserByUsername(username);
-
-                    if (!jwtUtil.validateToken(jwt, userDetails.getUsername())) {
-                        throw new SecurityException("Invalid JWT");
-                    }
-
-                    UUID tokenId = jwtUtil.extractTokenId(jwt);
-
-                    boolean sessionValid =
-                            userSessionRepository
-                                    .findByTokenIdAndLogoutTimeIsNull(tokenId)
-                                    .isPresent();
-
-                    if (!sessionValid) {
-                        throw new SecurityException("Session expired");
-                    }
-
-                    UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(
-                                    userDetails,
-                                    null,
-                                    userDetails.getAuthorities()
-                            );
-
-                    authToken.setDetails(
-                            new WebAuthenticationDetailsSource()
-                                    .buildDetails(request)
-                    );
-
-                    SecurityContextHolder
-                            .getContext()
-                            .setAuthentication(authToken);
+                    clearContext(request, ex.getMessage());
                 }
-
-            } catch (Exception ex) {
-
-                ex.printStackTrace();   // ADD THIS
-
-                SecurityContextHolder.clearContext();
-                TenantContext.clear();
-                BranchContext.clear();
-
-                request.setAttribute("jwt_error", ex.getMessage());
             }
-        }
 
-        filterChain.doFilter(request, response);
+            filterChain.doFilter(request, response);
+
+        } catch (Exception ex) {
+
+            if (jwt != null) {
+                System.out.println("JWT ERROR: " + ex.getMessage());
+            }
+
+            System.out.println("=== JWT FILTER FAILURE ===");
+            System.out.println("URI: " + request.getRequestURI());
+            System.out.println("JWT ERROR: " + ex.getMessage());
+            System.out.println("Device Header: " + request.getHeader("X-Device-Id"));
+            System.out.println("==========================");
+
+            SecurityContextHolder.clearContext();
+            TenantContext.clear();
+            BranchContext.clear();
+
+            request.setAttribute("jwt_error", ex.getMessage());
+        }
     }
 
     private String extractTokenFromCookie(HttpServletRequest request) {
@@ -212,7 +270,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
 
-        String path = request.getServletPath();
+        String path = request.getRequestURI();
         String method = request.getMethod();
 
         return
@@ -221,6 +279,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         || path.equals("/api/payments/mpesa/stk/callback")
                         || path.startsWith("/api/payments/mpesa/c2b")
                         || path.equals("/api/platform/settings/logo")
+                        || path.startsWith("/api/auth/biometric/challenge")
+                        || path.startsWith("/api/auth/biometric/register/finish") // ✅ ADD
                         || (path.equals("/api/branches") && "GET".equals(method));
+    }
+
+    private boolean isPublic(HttpServletRequest request) {
+
+        String uri = request.getRequestURI();
+
+        return
+                uri.startsWith("/api/auth/login")
+                        || uri.startsWith("/api/auth/password-reset")
+                        || uri.startsWith("/api/auth/forgot-password")
+                        || uri.startsWith("/api/auth/reset-password")
+                        || uri.startsWith("/swagger")
+                        || uri.startsWith("/v3/api-docs");
+    }
+
+    private void clearContext(HttpServletRequest request, String reason) {
+        SecurityContextHolder.clearContext();
+        TenantContext.clear();
+        BranchContext.clear();
+        request.setAttribute("jwt_error", reason);
     }
 }

@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security.biometric.service;
 
+import com.IntegrityTechnologies.business_manager.security.biometric.config.RelyingPartyFactory;
 import com.IntegrityTechnologies.business_manager.security.biometric.model.UserBiometric;
 import com.IntegrityTechnologies.business_manager.security.biometric.repository.UserBiometricRepository;
 import com.IntegrityTechnologies.business_manager.security.device.service.DeviceSecurityService;
@@ -15,34 +16,39 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class WebAuthnService {
 
-    private final RelyingParty relyingParty;
+    private final RelyingPartyFactory relyingPartyFactory;
     private final ChallengeService challengeService;
     private final UserBiometricRepository biometricRepository;
     private final RegistrationChallengeService registrationChallengeService;
     private final DeviceSecurityService deviceSecurityService;
 
-    public AssertionRequest startAssertion(UUID tenantId, String deviceId) {
+    /* ================= ASSERTION ================= */
 
-        AssertionRequest request = relyingParty.startAssertion(
+    public AssertionRequest startAssertion(UUID tenantId, String deviceId, String origin) {
+
+        RelyingParty rp = relyingPartyFactory.forOrigin(origin);
+
+        AssertionRequest request = rp.startAssertion(
                 StartAssertionOptions.builder().build()
         );
 
         challengeService.store(tenantId, deviceId, request);
-
         return request;
     }
 
     public AssertionResult finishAssertion(
             UUID tenantId,
             String deviceId,
-            PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> credential
+            PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> credential,
+            String origin
     ) {
+
+        RelyingParty rp = relyingPartyFactory.forOrigin(origin);
 
         AssertionRequest request = challengeService.get(tenantId, deviceId);
 
         try {
-
-            AssertionResult result = relyingParty.finishAssertion(
+            AssertionResult result = rp.finishAssertion(
                     FinishAssertionOptions.builder()
                             .request(request)
                             .response(credential)
@@ -53,23 +59,14 @@ public class WebAuthnService {
                 throw new SecurityException("WebAuthn verification failed");
             }
 
-            /* =====================================================
-               ✅ ADD THIS BLOCK (CRITICAL)
-            ===================================================== */
-
             var userHandle = result.getUserHandle();
+            if (userHandle == null) throw new SecurityException("Missing user handle");
 
-            if (userHandle == null) {
-                throw new SecurityException("Missing user handle");
-            }
-
-            String userIdFromHandle = new String(userHandle.getBytes());
-            UUID userId = UUID.fromString(userIdFromHandle);
+            UUID userId = UUID.fromString(new String(userHandle.getBytes()));
 
             String credentialId = result.getCredentialId().getBase64Url();
 
-            var biometric = biometricRepository
-                    .findByCredentialId(credentialId)
+            var biometric = biometricRepository.findByCredentialId(credentialId)
                     .orElseThrow(() -> new SecurityException("Credential not recognized"));
 
             if (!biometric.getDeviceId().equals(deviceId)) {
@@ -83,10 +80,8 @@ public class WebAuthnService {
                 biometricRepository.save(biometric);
             }
 
-            UUID expectedUserId = biometric.getUserId();
-
-            if (!expectedUserId.equals(userId)) {
-                throw new SecurityException("User mismatch in WebAuthn assertion");
+            if (!biometric.getUserId().equals(userId)) {
+                throw new SecurityException("User mismatch");
             }
 
             return result;
@@ -96,12 +91,18 @@ public class WebAuthnService {
         }
     }
 
+    /* ================= REGISTRATION ================= */
+
     public PublicKeyCredentialCreationOptions startRegistration(
             UUID tenantId,
             UUID userId,
             String username,
-            String deviceId
+            String deviceId,
+            String origin
     ) {
+
+        RelyingParty rp = relyingPartyFactory.forOrigin(origin);
+
         UserIdentity user = UserIdentity.builder()
                 .name(username)
                 .displayName(username)
@@ -109,29 +110,28 @@ public class WebAuthnService {
                 .build();
 
         PublicKeyCredentialCreationOptions options =
-                relyingParty.startRegistration(
+                rp.startRegistration(
                         StartRegistrationOptions.builder()
                                 .user(user)
+                                .extensions(RegistrationExtensionInputs.builder().credProps().build())
                                 .build()
                 );
 
-        registrationChallengeService.store(
-                tenantId,
-                deviceId,
-                userId,
-                options
-        );
+        registrationChallengeService.store(tenantId, deviceId, userId, options);
         return options;
     }
 
     public void finishRegistration(
             UUID tenantId,
             String deviceId,
-            PublicKeyCredential<AuthenticatorAttestationResponse, ClientRegistrationExtensionOutputs> credential
+            PublicKeyCredential<AuthenticatorAttestationResponse, ClientRegistrationExtensionOutputs> credential,
+            String origin
     ) {
+
+        RelyingParty rp = relyingPartyFactory.forOrigin(origin);
+
         var ctx = registrationChallengeService.getFull(tenantId, deviceId);
 
-        PublicKeyCredentialCreationOptions request = ctx.options();
         UUID userId = ctx.userId();
 
         deviceSecurityService.enforceDeviceLimit(tenantId, userId);
@@ -139,45 +139,30 @@ public class WebAuthnService {
         RegistrationResult result;
 
         try {
-            result = relyingParty.finishRegistration(
+            result = rp.finishRegistration(
                     FinishRegistrationOptions.builder()
-                            .request(request)
+                            .request(ctx.options())
                             .response(credential)
                             .build()
             );
         } catch (Exception e) {
-            throw new SecurityException("Registration failed", e);
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage(), e);
         }
 
         String credentialId = credential.getId().getBase64Url();
 
         biometricRepository.findByCredentialId(credentialId)
-                .ifPresent(b -> {
-                    throw new SecurityException("Credential already registered");
-                });
+                .ifPresent(b -> { throw new SecurityException("Already registered"); });
 
-        UserBiometric biometric = UserBiometric.builder()
-                .userId(userId)
-                .credentialId(credentialId)
-                .publicKey(result.getPublicKeyCose().getBase64())
-                .signCount(result.getSignatureCount())
-                .deviceId(deviceId)
-                .build();
-
-        biometricRepository.save(biometric);
-    }
-
-    public UUID resolveUserId(String credentialId) {
-
-        return biometricRepository
-                .findByCredentialId(credentialId)
-                .map(b -> b.getUserId())
-                .orElseThrow(() -> new SecurityException("Credential not recognized"));
-    }
-
-    public UserBiometric getBiometricByCredentialId(String credentialId) {
-        return biometricRepository
-                .findByCredentialId(credentialId)
-                .orElseThrow(() -> new SecurityException("Credential not recognized"));
+        biometricRepository.save(
+                UserBiometric.builder()
+                        .userId(userId)
+                        .credentialId(credentialId)
+                        .publicKey(result.getPublicKeyCose().getBase64())
+                        .signCount(result.getSignatureCount())
+                        .deviceId(deviceId)
+                        .build()
+        );
     }
 }

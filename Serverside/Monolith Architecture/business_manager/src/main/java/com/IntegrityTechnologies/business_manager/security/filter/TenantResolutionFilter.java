@@ -65,6 +65,8 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
     }
 
     private String resolveTenant(HttpServletRequest request) {
+        System.out.println("X-Tenant: " + request.getHeader("X-Tenant"));
+        System.out.println("Host: " + request.getServerName());
 
         // 1️⃣ Header override
         String header = request.getHeader(TENANT_HEADER);
@@ -80,8 +82,8 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
             String subdomain = host.split("\\.")[0];
 
             if (
-                subdomain.equalsIgnoreCase("www") ||
-                subdomain.equalsIgnoreCase("localhost")
+                subdomain.equalsIgnoreCase("www")
+//                        ||  subdomain.equalsIgnoreCase("localhost")
             ) {
                 return null;
             }

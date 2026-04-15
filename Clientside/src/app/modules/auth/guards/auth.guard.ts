@@ -7,7 +7,7 @@ export const authGuard = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  return auth.init().pipe(
+  return auth.getCurrentUser().pipe(
     map(user => user ? true : router.parseUrl('/auth')),
     catchError(() => of(router.parseUrl('/auth')))
   );

@@ -71,9 +71,8 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowedOriginPatterns(List.of(
-                "http://localhost:*",
-                "http://*.localhost:*",
-                "https://*.ngrok-free.app"
+                "https://*.local.test",
+                "https://*.local.test:*"
         ));
 
         config.setAllowedMethods(List.of(
@@ -138,7 +137,6 @@ public class SecurityConfig {
                                 "/swagger-ui.html"
                         ).permitAll()
 
-                        // ===== PUBLIC API =====
                         .requestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/login/bulk",
@@ -152,7 +150,7 @@ public class SecurityConfig {
                                 "/api/auth/biometric/challenge",
                                 "/api/auth/biometric/verify",
                                 "/api/auth/biometric/register/start",
-                                "/api/auth/biometric/register/finish"
+                                "/api/auth/biometric/register/finish" // ✅ ADD THIS
                         ).permitAll()
 
                         .requestMatchers(HttpMethod.GET, "/api/branches").permitAll()

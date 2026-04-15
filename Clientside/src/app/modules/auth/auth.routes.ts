@@ -17,11 +17,5 @@ export const AUTH_ROUTES: Routes = [
     loadComponent: () =>
       import('./pages/reset-password/reset-password.component')
         .then(m => m.ResetPasswordComponent)
-  },
-  {
-    path: 'block/:type',
-    loadComponent: () =>
-      import('./pages/auth-block/auth-block.component')
-        .then(m => m.AuthBlockComponent)
   }
 ];

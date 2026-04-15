@@ -54,8 +54,23 @@ public class DeviceSecurityService {
         repository.save(device);
     }
 
-    public boolean hasAnyDeviceForTenantBranch(UUID tenantId, UUID branchId) {
-        return repository.existsByTenantIdAndBranchId(tenantId, branchId);
+    public void validateStrict(UUID tenantId, UUID branchId, String deviceId) {
+
+        var deviceOpt = repository
+                .findByTenantIdAndBranchIdAndDeviceId(tenantId, branchId, deviceId);
+
+        if (deviceOpt.isEmpty()) {
+            throw new SecurityException("Device not registered");
+        }
+
+        var device = deviceOpt.get();
+
+        if (!Boolean.TRUE.equals(device.getApproved())) {
+            throw new SecurityException("Device not approved for this branch");
+        }
+
+        device.setLastSeenAt(LocalDateTime.now());
+        repository.save(device);
     }
 
     @Value("${security.device.max-per-user:3}")

@@ -1,31 +1,35 @@
 package com.IntegrityTechnologies.business_manager.security.biometric.config;
 
 import com.IntegrityTechnologies.business_manager.security.biometric.repository.WebAuthnCredentialRepository;
-import com.yubico.webauthn.*;
+import com.yubico.webauthn.RelyingParty;
 import com.yubico.webauthn.data.RelyingPartyIdentity;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Component;
 
 import java.util.Set;
 
-@Configuration
-public class WebAuthnConfig {
+@Component
+@RequiredArgsConstructor
+public class RelyingPartyFactory {
 
-    @Bean
-    public RelyingParty relyingParty(
-            WebAuthnCredentialRepository credentialRepository,
-            @Value("${webauthn.rp-id}") String rpId,
-            @Value("${webauthn.rp-name}") String rpName,
-            @Value("${webauthn.origin}") String origin
-    ) {
+    private final WebAuthnCredentialRepository credentialRepository;
+
+    @Value("${webauthn.rp-id}")
+    private String rpId;
+
+    @Value("${webauthn.rp-name}")
+    private String rpName;
+
+    public RelyingParty forOrigin(String origin) {
 
         return RelyingParty.builder()
                 .identity(RelyingPartyIdentity.builder()
                         .id(rpId)
                         .name(rpName)
-                        .build())
-                .credentialRepository(credentialRepository)
+                        .build()
+                )
+                .credentialRepository(credentialRepository) // ✅ ORDER FIX
                 .origins(Set.of(origin))
                 .build();
     }

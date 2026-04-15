@@ -25,7 +25,6 @@ import java.util.UUID;
 public class BiometricAuthFacadeService {
 
     private final WebAuthnService webAuthnService;
-    private final AuthService authService;
     private final LoginAuditService loginAuditService;
     private final PlatformAuthService platformAuthService;
     private final TenantAuthService tenantAuthService;
@@ -33,7 +32,8 @@ public class BiometricAuthFacadeService {
 
     public AuthService.LoginResult biometricLogin(
             WebAuthnVerifyRequest request,
-            HttpServletRequest servletRequest
+            HttpServletRequest servletRequest,
+            String origin // ✅ ADD
     ) {
 
         UUID tenantId = TenantContext.getTenantId();
@@ -66,10 +66,11 @@ public class BiometricAuthFacadeService {
 
             /* ================= 1️⃣ VERIFY ================= */
 
-            var assertionResult  = webAuthnService.finishAssertion(
+            var assertionResult = webAuthnService.finishAssertion(
                     tenantId,
                     request.getDeviceId(),
-                    credential
+                    credential,
+                    origin // ✅ ADD
             );
 
             /* ================= 2️⃣ RESOLVE USER ================= */

@@ -6,7 +6,11 @@ export const tenantInterceptor: HttpInterceptorFn = (req, next) => {
 
   const domain = inject(DomainContextService);
 
-  const tenant = domain.tenantCode;
+  let tenant = domain.tenantCode;
+
+  if (!tenant && domain.isPlatform) {
+    tenant = 'platform';
+  }
 
   if (!tenant) {
     return next(req);

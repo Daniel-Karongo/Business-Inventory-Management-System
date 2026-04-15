@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
-import { Observable, BehaviorSubject, tap, catchError, shareReplay, of, map } from 'rxjs';
+import { Observable, BehaviorSubject, tap, catchError, shareReplay, of, map, filter, take } from 'rxjs';
 import { DeviceService } from '../../../core/services/device.service';
 
 @Injectable({ providedIn: 'root' })
@@ -9,13 +9,14 @@ export class AuthService {
 
   private http = inject(HttpClient);
   private deviceService = inject(DeviceService);
-  
+
   private me$ = new BehaviorSubject<MeResponse | null>(null);
   private RETRY_KEY = 'auth_retry_payload';
   private RETRY_TTL_MS = 10 * 60 * 1000; // 10 minutes
   private lastLoginRequestMemory: LoginRequest | null = null;
   private initialized = false;
   private init$?: Observable<MeResponse | null>;
+  private loaded = false;
 
 
   init(): Observable<MeResponse | null> {
@@ -24,11 +25,10 @@ export class AuthService {
     }
 
     this.init$ = this.loadMe().pipe(
-      catchError(() => {
-        this.clearLocalState();
-        return of(null);
+      tap(() => {
+        this.initialized = true;
+        this.loaded = true;
       }),
-      tap(() => this.initialized = true),
       shareReplay(1)
     );
 
@@ -59,13 +59,16 @@ export class AuthService {
   /* =========================
      CURRENT USER
      ========================= */
-  loadMe(): Observable<MeResponse> {
-    return this.http
-      .get<MeResponse>(
-        `${environment.apiUrl}/auth/me`,
-        { withCredentials: true }
-      )
-      .pipe(tap(me => this.me$.next(me)));
+  loadMe(): Observable<MeResponse | null> {
+    return this.http.get<MeResponse>(`${environment.apiUrl}/auth/me`, {
+      withCredentials: true
+    }).pipe(
+      tap(me => this.me$.next(me)),
+      catchError(() => {
+        this.me$.next(null);
+        return of(null);
+      })
+    );
   }
 
   setUser(me: MeResponse) {
@@ -73,7 +76,9 @@ export class AuthService {
   }
 
   getCurrentUser() {
-    return this.me$.asObservable();
+    return this.me$.pipe(
+      take(1)
+    );
   }
 
   getSnapshot(): MeResponse | null {
@@ -88,7 +93,7 @@ export class AuthService {
       `${environment.apiUrl}/auth/logout`,
       {},
       { withCredentials: true }
-    );
+    ).pipe(tap(() => this.clearLocalState()));
   }
 
   logoutAll(): Observable<void> {
@@ -138,75 +143,29 @@ export class AuthService {
    BIOMETRIC REGISTRATION
    ========================= */
 
-  biometricRegisterStart(payload: LoginRequest) {
+  biometricRegisterStart(deviceId: string) {
     return this.http.post<any>(
       `${environment.apiUrl}/auth/biometric/register/start`,
-      payload,
+      { deviceId },
       { withCredentials: true }
     );
   }
 
-  biometricRegisterFinish(rawJson: string, deviceId: string) {
+  biometricRegisterFinish(credential: any, deviceId: string) {
     return this.http.post<void>(
       `${environment.apiUrl}/auth/biometric/register/finish?deviceId=${deviceId}`,
-      rawJson,
+      credential,
       {
         withCredentials: true,
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json' // ✅ FORCE JSON
+        }
       }
     );
   }
 
-  /* =========================
-   POLLING
-   ========================= */
-
-  setLastLoginRequest(req: LoginRequest) {
-
-    this.lastLoginRequestMemory = req;
-
-    const data = {
-      payload: req,
-      createdAt: Date.now()
-    };
-
-    sessionStorage.setItem(this.RETRY_KEY, JSON.stringify(data));
-  }
-
-  getLastLoginRequest(): LoginRequest | null {
-
-    // 1. Memory (fast path)
-    if (this.lastLoginRequestMemory) {
-      return this.lastLoginRequestMemory;
-    }
-
-    // 2. SessionStorage fallback
-    const raw = sessionStorage.getItem(this.RETRY_KEY);
-    if (!raw) return null;
-
-    try {
-      const parsed = JSON.parse(raw);
-
-      const isExpired =
-        Date.now() - parsed.createdAt > this.RETRY_TTL_MS;
-
-      if (isExpired) {
-        this.clearLastLoginRequest();
-        return null;
-      }
-
-      this.lastLoginRequestMemory = parsed.payload;
-      return parsed.payload as LoginRequest;
-
-    } catch {
-      this.clearLastLoginRequest();
-      return null;
-    }
-  }
-
-  clearLastLoginRequest() {
-    this.lastLoginRequestMemory = null;
-    sessionStorage.removeItem(this.RETRY_KEY);
+  isAuthenticated(): boolean {
+    return this.me$.value !== null;
   }
 }
 

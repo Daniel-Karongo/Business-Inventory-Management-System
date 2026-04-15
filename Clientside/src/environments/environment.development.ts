@@ -3,7 +3,8 @@ export const environment = {
 
   idleLogoutMinutes: 60,
 
-  apiUrl: `http://${window.location.hostname}:8080/api`,
+  // apiUrl: `http://${window.location.hostname}:8080/api`,
+  apiUrl: `/api`,
 
   endpoints: {
     /* ============================================================

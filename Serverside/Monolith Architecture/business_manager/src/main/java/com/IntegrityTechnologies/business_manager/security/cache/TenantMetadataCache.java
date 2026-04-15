@@ -38,6 +38,18 @@ public class TenantMetadataCache {
     private final Map<UUID, Set<UUID>> tenantBranches =
             new ConcurrentHashMap<>();
 
+    public Set<String> getActiveTenantCodes() {
+
+        return tenantRepository
+                .findByStatusIn(java.util.List.of(
+                        TenantStatus.ACTIVE,
+                        TenantStatus.TRIAL
+                ))
+                .stream()
+                .map(Tenant::getCode)
+                .map(String::toLowerCase)
+                .collect(java.util.stream.Collectors.toSet());
+    }
 
     /* =========================================
        TENANT LOOKUP BY CODE

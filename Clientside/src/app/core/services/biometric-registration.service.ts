@@ -33,65 +33,55 @@ export class BiometricRegistrationService {
     return `${this.PROMPT_KEY_PREFIX}${deviceId}`;
   }
 
-  async register(loginPayload: LoginRequest) {
-
-    let location;
-
-    try {
-      location = await this.location.getLocation();
-    } catch {
-      this.snack.open('Location required for biometric setup', 'Close', { duration: 4000 });
-      return;
-    }
+  async register() {
 
     const deviceId = this.device.getDeviceId();
 
-    const payload = {
-      ...loginPayload,
-      deviceId,
-      latitude: location.latitude,
-      longitude: location.longitude,
-      accuracy: location.accuracy
-    };
-
-    this.auth.biometricRegisterStart(payload).subscribe({
+    console.log("DEVICE ID (REGISTER):", deviceId);
+    
+    this.auth.biometricRegisterStart(deviceId).subscribe({
       next: async (options) => {
 
         try {
           const credential = await this.webauthn.register(options);
 
           this.auth.biometricRegisterFinish(
-            JSON.stringify(credential),
+            credential, // ✅ NOT stringified
             deviceId
           ).subscribe({
             next: () => {
               this.snack.open('Biometric enabled successfully', 'Close', { duration: 3000 });
             },
-            error: (err) => this.handleError(err, payload, deviceId)
+            error: (err) => this.handleError(err, deviceId)
           });
 
-        } catch {
-          this.snack.open('Biometric registration cancelled', 'Close', { duration: 3000 });
+        } catch (e: any) {
+
+          if (e.name === 'NotAllowedError') {
+            this.snack.open('Biometric registration cancelled', 'Close', { duration: 3000 });
+          } else {
+            this.snack.open('Biometric setup failed', 'Close', { duration: 3000 });
+          }
         }
 
       },
-      error: (err) => this.handleError(err, payload, deviceId)
+      error: (err) => this.handleError(err, deviceId)
     });
   }
 
-  private handleError(err: any, payload: LoginRequest, deviceId: string) {
+  private handleError(err: any, deviceId: string) {
 
     const msg = err?.error?.message ?? '';
 
     if (msg === 'Credential already registered') {
-      this.promptOverwrite(payload, deviceId);
+      this.promptOverwrite(deviceId);
       return;
     }
 
     this.snack.open(msg || 'Biometric setup failed', 'Close', { duration: 4000 });
   }
 
-  private promptOverwrite(payload: LoginRequest, deviceId: string) {
+  private promptOverwrite(deviceId: string) {
 
     const ref = this.dialog.open(OverwriteBiometricDialog);
 
@@ -103,13 +93,13 @@ export class BiometricRegistrationService {
       }
 
       if (choice === 'overwrite') {
-        this.deleteAndReRegister(payload, deviceId);
+        this.deleteAndReRegister(deviceId);
       }
 
     });
   }
 
-  private deleteAndReRegister(payload: LoginRequest, deviceId: string) {
+  private deleteAndReRegister(deviceId: string) {
 
     this.biometricApi.list().subscribe({
       next: (list) => {
@@ -117,7 +107,7 @@ export class BiometricRegistrationService {
         const matches = list;
 
         if (!matches.length) {
-          this.register(payload);
+          this.register();
           return;
         }
 
@@ -128,7 +118,7 @@ export class BiometricRegistrationService {
             next: () => {
               completed++;
               if (completed === matches.length) {
-                this.register(payload);
+                this.register();
               }
             },
             error: () => {

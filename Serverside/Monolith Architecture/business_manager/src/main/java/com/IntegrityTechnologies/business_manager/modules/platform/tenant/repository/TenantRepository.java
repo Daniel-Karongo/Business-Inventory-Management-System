@@ -21,4 +21,8 @@ public interface TenantRepository extends JpaRepository<Tenant, UUID> {
             TenantStatus status,
             Pageable pageable
     );
+
+    List<Tenant> findByStatusIn(List<TenantStatus> statuses);
+
+    List<Tenant> findAllBy();
 }

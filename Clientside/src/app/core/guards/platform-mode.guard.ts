@@ -9,17 +9,13 @@ export const platformModeGuard: CanMatchFn = () => {
   const router = inject(Router);
   const domain = inject(DomainContextService);
 
-  return auth.init().pipe(
+  return auth.getCurrentUser().pipe(
     map(user => {
       if (!user) return router.parseUrl('/auth');
 
-      if (!domain.isPlatform) {
-        return router.parseUrl('/auth');
-      }
+      if (!domain.isPlatform) return router.parseUrl('/auth');
 
-      if (user.userType !== 'PLATFORM') {
-        return router.parseUrl('/auth');
-      }
+      if (user.userType !== 'PLATFORM') return router.parseUrl('/auth');
 
       return true;
     }),
