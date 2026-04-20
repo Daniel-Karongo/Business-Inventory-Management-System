@@ -2,17 +2,16 @@ package com.IntegrityTechnologies.business_manager.security.biometric.dto;
 
 import lombok.Data;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Data
 public class WebAuthnVerifyRequest {
 
-    private String rawJson;
-//    private String credentialId;
-//    private String clientDataJSON;
-//    private String authenticatorData;
-//    private String signature;
+    // ✅ PURE WEBAUTHN PAYLOAD ONLY
+    private Map<String, Object> credential;
 
+    // ✅ METADATA
     private UUID branchId;
     private String deviceId;
     private Double latitude;

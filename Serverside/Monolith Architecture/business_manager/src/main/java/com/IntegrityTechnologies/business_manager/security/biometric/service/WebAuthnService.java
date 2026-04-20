@@ -22,17 +22,49 @@ public class WebAuthnService {
     private final RegistrationChallengeService registrationChallengeService;
     private final DeviceSecurityService deviceSecurityService;
 
+    private void validateOrigin(String origin) {
+
+        if (origin == null || origin.isBlank()) {
+            throw new SecurityException("Missing origin");
+        }
+
+        if (!origin.startsWith("https://")) {
+            throw new SecurityException("Invalid origin scheme");
+        }
+
+        // ✅ allow ALL tenants + platform
+        if (!origin.contains(".local.test")) {
+            throw new SecurityException("Invalid origin domain");
+        }
+    }
+
     /* ================= ASSERTION ================= */
 
     public AssertionRequest startAssertion(UUID tenantId, String deviceId, String origin) {
 
         RelyingParty rp = relyingPartyFactory.forOrigin(origin);
 
+        System.out.println("hello start assertion");
+        System.out.println(rp);
+
+        // ✅ Validate device has biometrics (fast fail)
+        boolean hasBiometric = biometricRepository
+                .findByTenantIdAndDeviceIdAndDeletedFalse(tenantId, deviceId)
+                .isEmpty() == false;
+
+        if (!hasBiometric) {
+            throw new SecurityException("No biometrics registered for this device");
+        }
+
+        // ✅ DO NOT set allowCredentials (handled internally by repository)
         AssertionRequest request = rp.startAssertion(
-                StartAssertionOptions.builder().build()
+                StartAssertionOptions.builder()
+                        .userVerification(UserVerificationRequirement.PREFERRED)
+                        .build()
         );
 
         challengeService.store(tenantId, deviceId, request);
+
         return request;
     }
 
@@ -44,6 +76,9 @@ public class WebAuthnService {
     ) {
 
         RelyingParty rp = relyingPartyFactory.forOrigin(origin);
+
+        System.out.println("Hello finish assertion");
+        System.out.println(rp);
 
         AssertionRequest request = challengeService.get(tenantId, deviceId);
 
@@ -59,15 +94,18 @@ public class WebAuthnService {
                 throw new SecurityException("WebAuthn verification failed");
             }
 
-            var userHandle = result.getUserHandle();
-            if (userHandle == null) throw new SecurityException("Missing user handle");
-
-            UUID userId = UUID.fromString(new String(userHandle.getBytes()));
-
             String credentialId = result.getCredentialId().getBase64Url();
 
-            var biometric = biometricRepository.findByCredentialId(credentialId)
+            System.out.println("STORED credentialId: " + credential.getId().getBase64Url());
+
+            UserBiometric biometric = biometricRepository.findByCredentialId(credentialId)
                     .orElseThrow(() -> new SecurityException("Credential not recognized"));
+
+            if (!biometric.getCredentialId().equals(credential.getId().getBase64Url())) {
+                throw new SecurityException("Credential mismatch");
+            }
+
+            UUID userId = biometric.getUserId();
 
             if (!biometric.getDeviceId().equals(deviceId)) {
                 throw new SecurityException("Biometric used on wrong device");
@@ -87,7 +125,8 @@ public class WebAuthnService {
             return result;
 
         } catch (AssertionFailedException e) {
-            throw new SecurityException("WebAuthn verification failed", e);
+            e.printStackTrace();
+            throw new SecurityException("WebAuthn verification failed: " + e.getMessage(), e);
         }
     }
 
@@ -113,11 +152,25 @@ public class WebAuthnService {
                 rp.startRegistration(
                         StartRegistrationOptions.builder()
                                 .user(user)
-                                .extensions(RegistrationExtensionInputs.builder().credProps().build())
+
+                                // 🔥 CRITICAL FIX
+                                .authenticatorSelection(
+                                        AuthenticatorSelectionCriteria.builder()
+                                                .residentKey(ResidentKeyRequirement.REQUIRED)
+                                                .userVerification(UserVerificationRequirement.PREFERRED)
+                                                .build()
+                                )
+
+                                .extensions(
+                                        RegistrationExtensionInputs.builder()
+                                                .credProps()
+                                                .build()
+                                )
                                 .build()
                 );
 
         registrationChallengeService.store(tenantId, deviceId, userId, options);
+
         return options;
     }
 
@@ -151,6 +204,8 @@ public class WebAuthnService {
         }
 
         String credentialId = credential.getId().getBase64Url();
+
+        System.out.println("STORED credentialId: " + credentialId);
 
         biometricRepository.findByCredentialId(credentialId)
                 .ifPresent(b -> { throw new SecurityException("Already registered"); });

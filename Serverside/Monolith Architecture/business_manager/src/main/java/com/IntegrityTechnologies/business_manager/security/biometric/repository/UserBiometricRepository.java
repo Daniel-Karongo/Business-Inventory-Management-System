@@ -12,6 +12,7 @@ public interface UserBiometricRepository extends JpaRepository<UserBiometric, UU
     Optional<UserBiometric> findByCredentialId(String credentialId);
 
     List<UserBiometric> findByTenantIdAndUserIdAndDeletedFalse(UUID tenantId, UUID userId);
+    List<UserBiometric> findByTenantIdAndDeviceIdAndDeletedFalse(UUID tenantId, String deviceId);
 
     Optional<UserBiometric> findByIdAndTenantId(UUID id, UUID tenantId);
 

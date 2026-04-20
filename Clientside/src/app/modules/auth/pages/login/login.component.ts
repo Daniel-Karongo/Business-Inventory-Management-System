@@ -142,14 +142,16 @@ export class LoginComponent implements OnInit {
 
         try {
           const credential = await this.webauthn.authenticate(
-            challenge.publicKeyCredentialRequestOptions
+            challenge
           );
 
           const payload = {
-            rawJson: JSON.stringify(credential),
+            credential: { ...credential },
+
             branchId: this.domain.isPlatform
               ? null
               : this.form.value.branchId,
+
             deviceId,
             latitude: location.latitude,
             longitude: location.longitude,
@@ -178,10 +180,11 @@ export class LoginComponent implements OnInit {
 
         } catch (e) {
           this.loading = false;
+          console.error('WEBAUTHN ERROR:', e);
           this.snack.open(
             'Biometric authentication cancelled or failed.',
             'Close',
-            { duration: 4000 }
+            { duration: 6000 }
           );
         }
 

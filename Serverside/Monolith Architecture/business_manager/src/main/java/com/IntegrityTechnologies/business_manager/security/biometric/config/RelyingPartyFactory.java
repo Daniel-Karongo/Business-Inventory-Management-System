@@ -25,12 +25,15 @@ public class RelyingPartyFactory {
 
         return RelyingParty.builder()
                 .identity(RelyingPartyIdentity.builder()
-                        .id(rpId)
+                        .id(rpId) // local.test
                         .name(rpName)
-                        .build()
-                )
-                .credentialRepository(credentialRepository) // ✅ ORDER FIX
+                        .build())
+                .credentialRepository(credentialRepository)
                 .origins(Set.of(origin))
+
+                .allowOriginSubdomain(true)
+                .allowOriginPort(true)
+
                 .build();
     }
 }

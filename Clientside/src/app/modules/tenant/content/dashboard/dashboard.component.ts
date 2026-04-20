@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 
 import { AuthService } from '../../../auth/services/auth.service';
 import { DashboardService } from './dashboard.service';
@@ -21,6 +21,8 @@ import jsPDF from 'jspdf';
 import { BranchService } from '../branches/services/branch.service';
 import { BranchMinimalDTO } from '../branches/models/branch.model';
 import { DateUtilsService } from '../../../../core/services/date-utils';
+import { BiometricPromptDialog } from '../../../../shared/components/biometric-prompt-dialog/biometric-prompt-dialog.component';
+import { BiometricRegistrationService } from '../../../../core/services/biometric-registration.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -41,6 +43,7 @@ import { DateUtilsService } from '../../../../core/services/date-utils';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardComponent implements OnInit {
+  private biometric = inject(BiometricRegistrationService);
 
   summary?: DashboardSummary;
 
@@ -161,8 +164,8 @@ export class DashboardComponent implements OnInit {
       { title: 'Accounts Payable', value: this.formatCurrency(f.accountsPayable) },
       { title: 'Inventory Value', value: this.formatCurrency(f.inventoryValue) },
       { title: 'Corporate Tax Accrued', value: this.formatCurrency(f.corporateTaxAccrued) },
-      { title: 'Gross Margin %', value: f.grossMarginPercent != null ? `${f.grossMarginPercent.toFixed(2)}%` : '—'},
-      { title: 'Inventory Turnover', value: f.inventoryTurnover != null ? f.inventoryTurnover.toFixed(2) : '—'},
+      { title: 'Gross Margin %', value: f.grossMarginPercent != null ? `${f.grossMarginPercent.toFixed(2)}%` : '—' },
+      { title: 'Inventory Turnover', value: f.inventoryTurnover != null ? f.inventoryTurnover.toFixed(2) : '—' },
 
       // 🔥 NEW
       {
@@ -505,5 +508,15 @@ export class DashboardComponent implements OnInit {
     });
 
     doc.save(`board-pack-${this.summary.date}.pdf`);
+  }
+
+  debugRegister() {
+    const ref = this.dialog.open(BiometricPromptDialog);
+
+    ref.afterClosed().subscribe((enable) => {
+      if (enable === true) {
+        this.biometric.register();
+      }
+    });
   }
 }

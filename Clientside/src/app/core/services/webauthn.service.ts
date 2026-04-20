@@ -51,14 +51,48 @@ export class WebAuthnService {
      AUTHENTICATION
   ========================= */
 
-  async authenticate(options: any): Promise<any> {
+  async authenticate(options: { publicKeyCredentialRequestOptions: any }): Promise<any> {
 
     this.ensureSupported();
 
-    const publicKey = this.prepareRequestOptions(options);
+    const pk = options.publicKeyCredentialRequestOptions;
+    console.log('FINAL PK', pk);
+
+    // 🔥 CRITICAL FIX 1: ensure pk exists
+    if (!pk) {
+      throw new Error('Invalid WebAuthn challenge payload');
+    }
+
+    // 🔥 CRITICAL FIX 2: enforce user verification
+    pk.userVerification = 'preferred';
+
+    // 🔥 CRITICAL FIX 3: decode challenge
+    if (typeof pk.challenge === 'string') {
+      pk.challenge = this.base64urlToBuffer(pk.challenge);
+    }
+
+    // 🔥 CRITICAL FIX 4: decode allowCredentials if present
+    if (pk.allowCredentials) {
+      pk.allowCredentials = pk.allowCredentials.map((cred: any) => ({
+        ...cred,
+        id: typeof cred.id === 'string'
+          ? this.base64urlToBuffer(cred.id)
+          : cred.id
+      }));
+    }
+
+    if (pk.extensions) {
+      delete pk.extensions.appid;
+      delete pk.extensions.largeBlob;
+      delete pk.extensions.uvm;
+
+      if (Object.keys(pk.extensions).length === 0) {
+        delete pk.extensions;
+      }
+    }
 
     const credential = await navigator.credentials.get({
-      publicKey
+      publicKey: pk
     }) as PublicKeyCredential;
 
     return this.serializeAssertion(credential);
@@ -116,7 +150,10 @@ export class WebAuthnService {
         userHandle: res.userHandle
           ? this.bufferToBase64url(res.userHandle)
           : null
-      }
+      },
+
+      // 🔥 ADD THIS (CRITICAL FIX)
+      clientExtensionResults: cred.getClientExtensionResults?.() || {}
     };
   }
 

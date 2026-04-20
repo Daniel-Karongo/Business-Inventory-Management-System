@@ -5,11 +5,11 @@ import com.IntegrityTechnologies.business_manager.security.audit.service.LoginAu
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthRequest;
 import com.IntegrityTechnologies.business_manager.security.auth.platform.PlatformAuthService;
 import com.IntegrityTechnologies.business_manager.security.auth.tenant.TenantAuthService;
-import com.IntegrityTechnologies.business_manager.security.biometric.dto.WebAuthnVerifyRequest;
+import com.IntegrityTechnologies.business_manager.security.biometric.repository.UserBiometricRepository;
 import com.IntegrityTechnologies.business_manager.security.biometric.service.WebAuthnService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
-import com.yubico.webauthn.data.ByteArray;
 import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
 import com.yubico.webauthn.data.PublicKeyCredential;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @Service
@@ -29,121 +28,124 @@ public class BiometricAuthFacadeService {
     private final PlatformAuthService platformAuthService;
     private final TenantAuthService tenantAuthService;
     private final PlatformUserRepository platformUserRepository;
+    private final UserBiometricRepository biometricRepository;
+    private final ObjectMapper objectMapper;
 
     public AuthService.LoginResult biometricLogin(
-            WebAuthnVerifyRequest request,
+            PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> credential,
+            String deviceId,
+            UUID branchId,
+            Double latitude,
+            Double longitude,
+            Double accuracy,
             HttpServletRequest servletRequest,
-            String origin // ✅ ADD
+            String origin
     ) {
 
         UUID tenantId = TenantContext.getTenantId();
-
         String ip = servletRequest.getRemoteAddr();
 
-        PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> credential;
-
-        try {
-            credential = PublicKeyCredential.parseAssertionResponseJson(request.getRawJson());
-        } catch (Exception e) {
-
+        if (credential == null) {
             loginAuditService.log(
                     tenantId,
                     null,
-                    request.getBranchId(),
-                    request.getDeviceId(),
-                    request.getLatitude(),
-                    request.getLongitude(),
-                    request.getAccuracy(),
+                    branchId,
+                    deviceId,
+                    latitude,
+                    longitude,
+                    accuracy,
                     ip,
                     "BLOCKED",
                     "INVALID_BIOMETRIC_PAYLOAD"
             );
-
-            throw new BadCredentialsException("Invalid biometric payload", e);
+            throw new BadCredentialsException("Invalid biometric payload");
         }
 
+        System.out.println("Hello");
         try {
 
             /* ================= 1️⃣ VERIFY ================= */
 
             var assertionResult = webAuthnService.finishAssertion(
                     tenantId,
-                    request.getDeviceId(),
+                    deviceId,
                     credential,
-                    origin // ✅ ADD
+                    origin
             );
 
+            System.out.println("assertionResult: ");
+            System.out.println(assertionResult);
             /* ================= 2️⃣ RESOLVE USER ================= */
 
-            // 🔥 REFACTOR: derive directly (no extra lookup needed)
-            ByteArray userHandle = assertionResult .getCredential().getUserHandle();
+            String credentialId = assertionResult.getCredentialId().getBase64Url();
 
-            if (userHandle == null) {
-                throw new SecurityException("Missing user handle");
-            }
+            System.out.println("credentialId: ");
+            System.out.println(credentialId);
 
-            UUID userId;
-
-            try {
-                userId = UUID.fromString(
-                        new String(userHandle.getBytes(), StandardCharsets.UTF_8)
-                );
-            } catch (Exception e) {
-                throw new SecurityException("Invalid user handle format");
-            }
+            UUID userId = biometricRepository
+                    .findByCredentialId(credentialId)
+                    .map(b -> b.getUserId())
+                    .orElseThrow(() -> new SecurityException("User not found"));
 
             /* ================= 3️⃣ BUILD AUTH REQUEST ================= */
 
             AuthRequest authRequest = new AuthRequest();
 
             authRequest.setUserId(userId);
-            authRequest.setBranchId(request.getBranchId());
-            authRequest.setDeviceId(request.getDeviceId());
-            authRequest.setLatitude(request.getLatitude());
-            authRequest.setLongitude(request.getLongitude());
-            authRequest.setAccuracy(request.getAccuracy());
+            authRequest.setBranchId(branchId);
+            authRequest.setDeviceId(deviceId);
+            authRequest.setLatitude(latitude);
+            authRequest.setLongitude(longitude);
+            authRequest.setAccuracy(accuracy);
 
             /* ================= 4️⃣ LOGIN ================= */
 
-            // 🔍 Determine user type
+            System.out.println("USER ID: " + userId);
+            System.out.println("IS PLATFORM USER: " +
+                    platformUserRepository.findById(userId).isPresent());
 
             boolean isPlatformUser =
                     platformUserRepository.findById(userId).isPresent();
 
             if (isPlatformUser) {
 
-                var platformLoginResult  = platformAuthService.biometricLogin(authRequest, servletRequest);
+                var result = platformAuthService.biometricLogin(authRequest, servletRequest);
 
                 return new AuthService.LoginResult(
-                        platformLoginResult .jwt(),
-                        platformLoginResult .response()
+                        result.jwt(),
+                        result.response()
                 );
             }
 
-            // 👉 fallback = tenant
-            var tenantLoginResult  = tenantAuthService.biometricLogin(authRequest, servletRequest);
+            var result = tenantAuthService.biometricLogin(authRequest, servletRequest);
 
             return new AuthService.LoginResult(
-                    tenantLoginResult .jwt(),
-                    tenantLoginResult .response()
+                    result.jwt(),
+                    result.response()
             );
 
         } catch (Exception ex) {
+            ex.printStackTrace();
+
+            String reason = ex.getMessage();
+            if (reason != null && reason.length() > 255) {
+                reason = reason.substring(0, 255);
+            }
 
             loginAuditService.log(
                     tenantId,
                     null,
-                    request.getBranchId(),
-                    request.getDeviceId(),
-                    request.getLatitude(),
-                    request.getLongitude(),
-                    request.getAccuracy(),
+                    branchId,
+                    deviceId,
+                    latitude,
+                    longitude,
+                    accuracy,
                     ip,
                     "BLOCKED",
-                    "BIOMETRIC_FAILED: " + ex.getMessage()
+                    "BIOMETRIC_FAILED: " + reason
             );
 
-            throw new BadCredentialsException("Biometric authentication failed");
+            throw new BadCredentialsException("Biometric authentication failed", ex);
         }
     }
 }

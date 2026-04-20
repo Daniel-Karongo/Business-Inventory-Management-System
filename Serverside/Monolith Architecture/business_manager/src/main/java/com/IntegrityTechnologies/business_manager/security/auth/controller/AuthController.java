@@ -19,9 +19,7 @@ import com.IntegrityTechnologies.business_manager.security.device.service.Device
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yubico.webauthn.AssertionRequest;
-import com.yubico.webauthn.data.AuthenticatorAttestationResponse;
-import com.yubico.webauthn.data.ClientRegistrationExtensionOutputs;
-import com.yubico.webauthn.data.PublicKeyCredential;
+import com.yubico.webauthn.data.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,10 +29,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Tag(name = "Auth")
 @RestController
@@ -96,7 +91,50 @@ public class AuthController {
         AssertionRequest assertion =
                 webAuthnService.startAssertion(tenantId, deviceId, origin);
 
-        return ResponseEntity.ok(assertion);
+        // ✅ Let Jackson handle everything (including ByteArray via your serializer)
+        Map<String, Object> response =
+                objectMapper.convertValue(assertion, Map.class);
+
+        // ✅ Ensure extensions is always present (frontend expects it)
+        Map<String, Object> pk =
+                (Map<String, Object>) response.get("publicKeyCredentialRequestOptions");
+
+        if (pk != null) {
+
+            // ✅ REMOVE invalid extensions completely
+            Map<String, Object> extensions = (Map<String, Object>) pk.get("extensions");
+
+            if (extensions != null) {
+
+                // REMOVE appid if null
+                if (extensions.get("appid") == null) {
+                    extensions.remove("appid");
+                }
+
+                if (extensions.get("largeBlob") == null) {
+                    extensions.remove("largeBlob");
+                }
+
+                if (extensions.get("uvm") == null) {
+                    extensions.remove("uvm");
+                }
+
+                // If empty → remove entire extensions object
+                if (extensions.isEmpty()) {
+                    pk.remove("extensions");
+                }
+            }
+        }
+
+        // Ensure allowCredentials exists
+        if (pk.get("allowCredentials") == null) {
+            pk.put("allowCredentials", List.of());
+        }
+
+        // ✅ Optional debug (you can remove later)
+        System.out.println("FINAL RESPONSE: " + response);
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/biometric/verify")
@@ -112,11 +150,47 @@ public class AuthController {
             throw new RuntimeException("Missing Origin header");
         }
 
+        /* ================= 1️⃣ PARSE WEBAUTHN ================= */
+
+        PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> credential;
+
+        try {
+            String rawJson = objectMapper.writeValueAsString(request.getCredential());
+
+            credential = PublicKeyCredential.parseAssertionResponseJson(rawJson);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid authentication payload", e);
+        }
+
+        System.out.println("Hello");
+        System.out.println(credential);
+
+        /* ================= 2️⃣ EXTRACT METADATA ================= */
+
+        UUID branchId = request.getBranchId();
+        String deviceId = request.getDeviceId();
+        Double latitude = request.getLatitude();
+        Double longitude = request.getLongitude();
+        Double accuracy = request.getAccuracy();
+
+        /* ================= 3️⃣ SERVICE ================= */
+
         AuthService.LoginResult loginResult =
-                biometricAuthFacadeService.biometricLogin(request, servletRequest, origin);
+                biometricAuthFacadeService.biometricLogin(
+                        credential,
+                        deviceId,
+                        branchId,
+                        latitude,
+                        longitude,
+                        accuracy,
+                        servletRequest,
+                        origin
+                );
+
+        /* ================= 4️⃣ COOKIE ================= */
 
         Cookie cookie = new Cookie("access_token", loginResult.jwt());
-
         cookie.setHttpOnly(true);
         cookie.setSecure(servletRequest.isSecure());
         cookie.setPath("/");
