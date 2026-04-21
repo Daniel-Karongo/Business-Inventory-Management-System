@@ -1,5 +1,7 @@
 package com.IntegrityTechnologies.business_manager.security.biometric.service;
 
+import com.IntegrityTechnologies.business_manager.exception.AppSecurityException;
+import com.IntegrityTechnologies.business_manager.security.model.SecurityErrorCode;
 import com.yubico.webauthn.AssertionRequest;
 import org.springframework.stereotype.Service;
 
@@ -32,7 +34,10 @@ public class ChallengeService {
         TimedRequest tr = store.remove(key);
 
         if (tr == null || System.currentTimeMillis() - tr.timestamp > TTL_MS) {
-            throw new SecurityException("Challenge expired");
+            throw new AppSecurityException(
+                    SecurityErrorCode.BIOMETRIC_CHALLENGE_EXPIRED,
+                    "Challenge expired"
+            );
         }
 
         return tr.request();

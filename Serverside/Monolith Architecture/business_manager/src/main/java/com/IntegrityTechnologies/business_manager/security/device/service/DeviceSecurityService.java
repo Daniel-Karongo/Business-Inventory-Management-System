@@ -1,8 +1,10 @@
 package com.IntegrityTechnologies.business_manager.security.device.service;
 
+import com.IntegrityTechnologies.business_manager.exception.AppSecurityException;
 import com.IntegrityTechnologies.business_manager.security.biometric.repository.UserBiometricRepository;
 import com.IntegrityTechnologies.business_manager.security.device.model.TrustedDevice;
 import com.IntegrityTechnologies.business_manager.security.device.repository.TrustedDeviceRepository;
+import com.IntegrityTechnologies.business_manager.security.model.SecurityErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -38,7 +40,10 @@ public class DeviceSecurityService {
             );
 
             if (!firstDevice) {
-                throw new SecurityException("Device pending approval");
+                throw new AppSecurityException(
+                        SecurityErrorCode.DEVICE_PENDING_APPROVAL,
+                        "Device pending approval"
+                );
             }
 
             return;
@@ -47,7 +52,12 @@ public class DeviceSecurityService {
         var device = deviceOpt.get();
 
         if (!Boolean.TRUE.equals(device.getApproved())) {
-            throw new SecurityException("Device not approved for this branch");
+            if (!Boolean.TRUE.equals(device.getApproved())) {
+                throw new AppSecurityException(
+                        SecurityErrorCode.DEVICE_NOT_APPROVED,
+                        "Device not approved for this branch"
+                );
+            }
         }
 
         device.setLastSeenAt(LocalDateTime.now());
@@ -60,7 +70,10 @@ public class DeviceSecurityService {
                 .findByTenantIdAndBranchIdAndDeviceId(tenantId, branchId, deviceId);
 
         if (deviceOpt.isEmpty()) {
-            throw new SecurityException("Device not registered");
+            throw new AppSecurityException(
+                    SecurityErrorCode.DEVICE_NOT_REGISTERED,
+                    "Device not registered"
+            );
         }
 
         var device = deviceOpt.get();
@@ -81,7 +94,10 @@ public class DeviceSecurityService {
         long count = biometricRepository.countByTenantIdAndUserIdAndDeletedFalse(tenantId, userId);
 
         if (count >= maxDevicesPerUser) {
-            throw new SecurityException("Maximum registered devices reached");
+            throw new AppSecurityException(
+                    SecurityErrorCode.DEVICE_LIMIT_REACHED,
+                    "Maximum registered devices reached"
+            );
         }
     }
 

@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security.auth.tenant;
 
+import com.IntegrityTechnologies.business_manager.exception.AppSecurityException;
 import com.IntegrityTechnologies.business_manager.exception.UserNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
@@ -18,6 +19,7 @@ import com.IntegrityTechnologies.business_manager.security.device.model.TrustedD
 import com.IntegrityTechnologies.business_manager.security.device.service.DeviceSecurityService;
 import com.IntegrityTechnologies.business_manager.security.device.service.DeviceUsageService;
 import com.IntegrityTechnologies.business_manager.security.device.service.LocationSecurityService;
+import com.IntegrityTechnologies.business_manager.security.model.SecurityErrorCode;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -57,14 +59,14 @@ public class TenantAuthService {
         UUID branchId = request.getBranchId();
 
         if (request.getDeviceId() == null || request.getDeviceId().isBlank()) {
-            throw new BadCredentialsException("Device ID required");
+            throw new AppSecurityException(SecurityErrorCode.DEVICE_ID_REQUIRED, "Device ID required");
         }
 
         String ip = extractClientIp(httpRequest);
 
         var branch = branchRepository
                 .findByTenantIdAndIdAndDeletedFalse(tenantId, branchId)
-                .orElseThrow(() -> new BadCredentialsException("Branch not found"));
+                .orElseThrow(() -> new AppSecurityException(SecurityErrorCode.BRANCH_NOT_FOUND, "Branch not found"));
 
         try {
             deviceSecurityService.validate(tenantId, branchId, request.getDeviceId());
@@ -76,6 +78,22 @@ public class TenantAuthService {
                     request.getAccuracy()
             );
 
+        } catch (AppSecurityException ex) {
+
+            loginAuditService.log(
+                    tenantId,
+                    null,
+                    branchId,
+                    request.getDeviceId(),
+                    request.getLatitude(),
+                    request.getLongitude(),
+                    request.getAccuracy(),
+                    ip,
+                    "BLOCKED",
+                    ex.getCode().name()
+            );
+
+            throw ex; // 🔥 preserve code
         } catch (Exception ex) {
 
             loginAuditService.log(
@@ -88,18 +106,27 @@ public class TenantAuthService {
                     request.getAccuracy(),
                     ip,
                     "BLOCKED",
-                    ex.getMessage()
+                    "UNKNOWN"
             );
 
-            throw new BadCredentialsException(ex.getMessage());
+            throw new AppSecurityException(
+                    SecurityErrorCode.UNKNOWN,
+                    "Login failed"
+            );
         }
 
         User user = userRepository
                 .findAuthUser(tenantId, request.getIdentifier())
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+                .orElseThrow(() -> new AppSecurityException(
+                        SecurityErrorCode.USER_NOT_FOUND,
+                        "User not found"
+                ));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BadCredentialsException("Invalid password");
+            throw new AppSecurityException(
+                    SecurityErrorCode.INVALID_CREDENTIALS,
+                    "Invalid username or password"
+            );
         }
 
         UUID userId = user.getId();
@@ -111,7 +138,10 @@ public class TenantAuthService {
         ).stream().anyMatch(b -> b.getId().equals(branchId));
 
         if (!belongs) {
-            throw new BadCredentialsException("User is not assigned to this branch");
+            throw new AppSecurityException(
+                    SecurityErrorCode.USER_NOT_IN_BRANCH,
+                    "User not assigned to this branch"
+            );
         }
 
         int activeCount =
@@ -120,7 +150,7 @@ public class TenantAuthService {
                         .size();
 
         if (activeCount >= TENANT_USERS_MAX_SESSIONS_PER_DAY) {
-            throw new IllegalStateException("Maximum active sessions reached for today");
+            throw new AppSecurityException(SecurityErrorCode.DEVICE_LIMIT_REACHED, "Maximum active sessions reached");
         }
 
         UUID tokenId = UUID.randomUUID();
@@ -204,14 +234,14 @@ public class TenantAuthService {
         UUID branchId = request.getBranchId();
 
         if (request.getDeviceId() == null || request.getDeviceId().isBlank()) {
-            throw new BadCredentialsException("Device ID required");
+            throw new AppSecurityException(SecurityErrorCode.DEVICE_ID_REQUIRED, "Device ID required");
         }
 
         String ip = extractClientIp(httpRequest);
 
         var branch = branchRepository
                 .findByTenantIdAndIdAndDeletedFalse(tenantId, branchId)
-                .orElseThrow(() -> new BadCredentialsException("Branch not found"));
+                .orElseThrow(() -> new AppSecurityException(SecurityErrorCode.BRANCH_NOT_FOUND, "Branch not found"));
 
         try {
             deviceSecurityService.validate(tenantId, branchId, request.getDeviceId());
@@ -223,6 +253,22 @@ public class TenantAuthService {
                     request.getAccuracy()
             );
 
+        } catch (AppSecurityException ex) {
+
+            loginAuditService.log(
+                    tenantId,
+                    null,
+                    branchId,
+                    request.getDeviceId(),
+                    request.getLatitude(),
+                    request.getLongitude(),
+                    request.getAccuracy(),
+                    ip,
+                    "BLOCKED",
+                    ex.getCode().name()
+            );
+
+            throw ex; // 🔥 preserve code
         } catch (Exception ex) {
 
             loginAuditService.log(
@@ -235,18 +281,27 @@ public class TenantAuthService {
                     request.getAccuracy(),
                     ip,
                     "BLOCKED",
-                    ex.getMessage()
+                    "UNKNOWN"
             );
 
-            throw new BadCredentialsException(ex.getMessage());
+            throw new AppSecurityException(
+                    SecurityErrorCode.UNKNOWN,
+                    "Login failed"
+            );
         }
 
         User user = userRepository
                 .findByIdAndTenantId(request.getUserId(), tenantId)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+                .orElseThrow(() -> new AppSecurityException(
+                    SecurityErrorCode.USER_NOT_FOUND,
+                    "User not found"
+                ));
 
         if (Boolean.TRUE.equals(user.getDeleted())) {
-            throw new BadCredentialsException("Account deleted");
+            throw new AppSecurityException(
+                    SecurityErrorCode.ACCOUNT_DELETED,
+                    "Account deleted"
+            );
         }
 
         UUID userId = user.getId();
@@ -258,7 +313,10 @@ public class TenantAuthService {
         ).stream().anyMatch(b -> b.getId().equals(branchId));
 
         if (!belongs) {
-            throw new BadCredentialsException("User is not assigned to this branch");
+            throw new AppSecurityException(
+                SecurityErrorCode.USER_NOT_IN_BRANCH,
+                "User not assigned to this branch"
+            );
         }
 
         int activeCount =
@@ -267,7 +325,7 @@ public class TenantAuthService {
                         .size();
 
         if (activeCount >= TENANT_USERS_MAX_SESSIONS_PER_DAY) {
-            throw new IllegalStateException("Maximum active sessions reached for today");
+            throw new AppSecurityException(SecurityErrorCode.DEVICE_LIMIT_REACHED, "Maximum active sessions reached");
         }
 
         UUID tokenId = UUID.randomUUID();

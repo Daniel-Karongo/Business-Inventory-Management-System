@@ -23,6 +23,7 @@ import { WebAuthnService } from '../../../../core/services/webauthn.service';
 import { BiometricRegistrationService } from '../../../../core/services/biometric-registration.service';
 import { MatDialog } from '@angular/material/dialog';
 import { BiometricPromptDialog } from '../../../../shared/components/biometric-prompt-dialog/biometric-prompt-dialog.component';
+import { AuthErrorService } from '../../../../core/services/auth-error.service';
 
 @Component({
   selector: 'app-login',
@@ -57,6 +58,7 @@ export class LoginComponent implements OnInit {
   private webauthn = inject(WebAuthnService);
   private biometric = inject(BiometricRegistrationService);
   private dialog = inject(MatDialog);
+  private errorHandler = inject(AuthErrorService);
 
   form = this.fb.nonNullable.group({
     identifier: ['', Validators.required],
@@ -105,7 +107,21 @@ export class LoginComponent implements OnInit {
           }
 
         },
-        error: () => {
+        error: (err) => {
+
+          if (err.status === 0) {
+            return;
+          }
+
+          if (err.status === 500 && !err.error) {
+            this.snack.open(
+              'Server is unavailable. Please try again later.',
+              'Close',
+              { duration: 4000 }
+            );
+            return;
+          }
+
           this.snack.open('Could not load branches', 'Close', { duration: 3500 });
         }
       });
@@ -174,7 +190,7 @@ export class LoginComponent implements OnInit {
                 }
               },
               error: (err) => {
-                this.handleBiometricError(err);
+                this.errorHandler.handle(err, 'biometric');
               }
             });
 
@@ -198,43 +214,6 @@ export class LoginComponent implements OnInit {
         );
       }
     });
-  }
-
-  private handleBiometricError(err: any) {
-
-    const msg: string = err?.error?.message ?? '';
-
-    if (msg.includes('Device pending approval')) {
-      this.snack.open('Device pending approval. Please wait for admin approval.', 'Close', { duration: 5000 });
-      return;
-    }
-
-    if (msg.includes('Device not approved for this branch')) {
-      this.snack.open('This device is not approved for this branch.', 'Close', { duration: 5000 });
-      return;
-    }
-
-    if (msg.includes('Location required')) {
-      this.snack.open('Location is required for biometric login.', 'Close', { duration: 5000 });
-      return;
-    }
-
-    if (msg.includes('Outside branch location')) {
-      this.snack.open('You are outside the allowed branch location.', 'Close', { duration: 5000 });
-      return;
-    }
-
-    if (msg.includes('Location accuracy too low')) {
-      this.snack.open('Location accuracy too low. Try again.', 'Close', { duration: 5000 });
-      return;
-    }
-
-    if (msg.includes('Biometric authentication failed')) {
-      this.snack.open('Biometric authentication failed.', 'Close', { duration: 4000 });
-      return;
-    }
-
-    this.snack.open(msg || 'Biometric login failed', 'Close', { duration: 5000 });
   }
 
   async onSubmit() {
@@ -314,55 +293,7 @@ export class LoginComponent implements OnInit {
       },
 
       error: (err) => {
-
-        const msg: string = err?.error?.message ?? '';
-
-        if (msg.includes('Device pending approval')) {
-          this.snack.open('Device pending approval. Please wait.', 'Close', { duration: 5000 });
-          return;
-        }
-
-        if (msg.includes('Device not approved for this branch')) {
-          this.snack.open('This device is not approved for this branch.', 'Close', { duration: 5000 });
-          return;
-        }
-
-        if (msg.includes('Location required')) {
-          this.snack.open('Location access is required.', 'Close', { duration: 5000 });
-          return;
-        }
-
-        if (msg.includes('Outside branch location')) {
-          this.snack.open('You are outside the allowed branch location.', 'Close', { duration: 5000 });
-          return;
-        }
-
-        if (msg.includes('Location accuracy too low')) {
-          this.snack.open('Location accuracy too low. Try again.', 'Close', { duration: 5000 });
-          return;
-        }
-
-        if (msg.includes('Maximum active sessions reached for today') ||
-          msg.includes('Too many active sessions')) {
-          this.snack.open('Maximum active sessions reached. Please log out from another device.', 'Close', { duration: 5000 });
-          return;
-        }
-
-        if (msg.includes('PASSWORD_CHANGE_REQUIRED')) {
-          this.router.navigate(['/auth/reset-password'], {
-            state: {
-              forced: true,
-              identifier: this.form.value.identifier
-            }
-          });
-          return;
-        }
-
-        this.snack.open(
-          msg || 'Invalid login credentials',
-          'Close',
-          { duration: 5000 }
-        );
+        this.errorHandler.handle(err, 'login');
       }
     });
   }

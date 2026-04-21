@@ -1,5 +1,7 @@
 package com.IntegrityTechnologies.business_manager.security.auth.util;
 
+import com.IntegrityTechnologies.business_manager.exception.AppSecurityException;
+import com.IntegrityTechnologies.business_manager.security.model.SecurityErrorCode;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -157,7 +159,10 @@ public class JwtUtil {
     public UUID extractUserIdFromRequest(HttpServletRequest request) {
         String token = extractTokenFromRequest(request);
         if (token == null) {
-            throw new SecurityException("Missing authentication token");
+            throw new AppSecurityException(
+                    SecurityErrorCode.INVALID_REQUEST,
+                    "Missing authentication token"
+            );
         }
         return extractUserId(token);
     }
@@ -165,7 +170,10 @@ public class JwtUtil {
     public String extractUsernameFromRequest(HttpServletRequest request) {
         String token = extractTokenFromRequest(request);
         if (token == null) {
-            throw new SecurityException("Missing authentication token");
+            throw new AppSecurityException(
+                    SecurityErrorCode.INVALID_REQUEST,
+                    "Missing authentication token"
+            );
         }
         return extractUsername(token);
     }

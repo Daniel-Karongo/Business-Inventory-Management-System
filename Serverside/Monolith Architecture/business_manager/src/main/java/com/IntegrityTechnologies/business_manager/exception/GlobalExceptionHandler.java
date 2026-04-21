@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.exception;
 
 import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
+import com.IntegrityTechnologies.business_manager.security.model.SecurityErrorCode;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.SignatureException;
@@ -30,34 +31,130 @@ public class GlobalExceptionHandler {
 
     /* ====================== AUTHENTICATION & JWT ====================== */
 
+    @ExceptionHandler(AppSecurityException.class)
+    public ResponseEntity<?> handleSecurity(AppSecurityException ex) {
+
+        HttpStatus status = resolveStatus(ex.getCode());
+
+        return ResponseEntity.status(status).body(Map.of(
+                "error", status.getReasonPhrase(),
+                "code", ex.getCode().name(),
+                "message", ex.getMessage(),
+                "status", status.value(),
+                "timestamp", System.currentTimeMillis()
+        ));
+    }
+
+    private HttpStatus resolveStatus(SecurityErrorCode code) {
+        return switch (code) {
+
+            // AUTH
+            case INVALID_CREDENTIALS,
+                    USER_NOT_FOUND -> HttpStatus.UNAUTHORIZED;
+
+            case ACCOUNT_DISABLED,
+                    ACCOUNT_DELETED,
+                    PASSWORD_CHANGE_REQUIRED -> HttpStatus.FORBIDDEN;
+
+            // DEVICE
+            case DEVICE_PENDING_APPROVAL,
+                    DEVICE_NOT_APPROVED,
+                    DEVICE_NOT_REGISTERED,
+                    DEVICE_ID_REQUIRED -> HttpStatus.FORBIDDEN;
+
+            case DEVICE_LIMIT_REACHED -> HttpStatus.TOO_MANY_REQUESTS;
+
+            // LOCATION
+            case LOCATION_REQUIRED,
+                    LOCATION_OUTSIDE_BOUNDARY,
+                    LOCATION_ACCURACY_LOW,
+                    LOCATION_NOT_CONFIGURED -> HttpStatus.FORBIDDEN;
+
+            // ACCESS
+            case USER_NOT_IN_BRANCH,
+                    BRANCH_NOT_FOUND -> HttpStatus.FORBIDDEN;
+
+            // BIOMETRIC
+            case BIOMETRIC_INVALID_PAYLOAD,
+                    BIOMETRIC_VERIFICATION_FAILED,
+                    BIOMETRIC_CREDENTIAL_NOT_FOUND,
+                    BIOMETRIC_DEVICE_MISMATCH,
+                    BIOMETRIC_TENANT_MISMATCH,
+                    BIOMETRIC_USER_MISMATCH,
+                    BIOMETRIC_CHALLENGE_EXPIRED -> HttpStatus.UNAUTHORIZED;
+
+            // DEFAULT
+            case INVALID_REQUEST,
+                    UNKNOWN -> HttpStatus.BAD_REQUEST;
+
+            default -> HttpStatus.BAD_REQUEST; // ✅ prevents future breakage
+        };
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<Map<String, Object>> handleBadCredentials(BadCredentialsException ex) {
-        return buildResponse("Invalid username, password or branch", HttpStatus.UNAUTHORIZED);
+    public ResponseEntity<?> handleBadCredentials(BadCredentialsException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                "error", "Unauthorized",
+                "code", SecurityErrorCode.INVALID_CREDENTIALS.name(),
+                "message", "Invalid username, password or branch",
+                "status", 401,
+                "timestamp", System.currentTimeMillis()
+        ));
     }
 
     @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<Map<String, Object>> handleAuthenticationException(AuthenticationException ex) {
-        return buildResponse("Authentication failed: " + ex.getMessage(), HttpStatus.UNAUTHORIZED);
+    public ResponseEntity<?> handleAuthenticationException(AuthenticationException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                "error", "Unauthorized",
+                "code", SecurityErrorCode.INVALID_CREDENTIALS.name(),
+                "message", "Authentication failed",
+                "status", 401,
+                "timestamp", System.currentTimeMillis()
+        ));
     }
 
     @ExceptionHandler(ExpiredJwtException.class)
-    public ResponseEntity<Map<String, Object>> handleExpiredJwt(ExpiredJwtException ex) {
-        return buildResponse("JWT token has expired", HttpStatus.UNAUTHORIZED);
+    public ResponseEntity<?> handleExpiredJwt(ExpiredJwtException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                "error", "Unauthorized",
+                "code", SecurityErrorCode.INVALID_REQUEST.name(),
+                "message", "Session expired. Please log in again.",
+                "status", 401,
+                "timestamp", System.currentTimeMillis()
+        ));
     }
 
     @ExceptionHandler(SignatureException.class)
-    public ResponseEntity<Map<String, Object>> handleSignatureException(SignatureException ex) {
-        return buildResponse("Invalid JWT signature", HttpStatus.UNAUTHORIZED);
+    public ResponseEntity<?> handleSignatureException(SignatureException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                "error", "Unauthorized",
+                "code", SecurityErrorCode.INVALID_REQUEST.name(),
+                "message", "Invalid session token",
+                "status", 401,
+                "timestamp", System.currentTimeMillis()
+        ));
     }
 
     @ExceptionHandler(MalformedJwtException.class)
-    public ResponseEntity<Map<String, Object>> handleMalformedJwt(MalformedJwtException ex) {
-        return buildResponse("Malformed JWT token", HttpStatus.BAD_REQUEST);
+    public ResponseEntity<?> handleMalformedJwt(MalformedJwtException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "error", "Bad Request",
+                "code", SecurityErrorCode.INVALID_REQUEST.name(),
+                "message", "Invalid token format",
+                "status", 400,
+                "timestamp", System.currentTimeMillis()
+        ));
     }
 
     @ExceptionHandler(InvalidTokenException.class)
-    public ResponseEntity<Map<String, Object>> handleInvalidToken(InvalidTokenException ex) {
-        return buildResponse(ex.getMessage(), HttpStatus.UNAUTHORIZED);
+    public ResponseEntity<?> handleInvalidToken(InvalidTokenException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                "error", "Unauthorized",
+                "code", SecurityErrorCode.INVALID_REQUEST.name(),
+                "message", ex.getMessage(),
+                "status", 401,
+                "timestamp", System.currentTimeMillis()
+        ));
     }
 
     /* ====================== VALIDATION ERRORS ====================== */
@@ -237,10 +334,22 @@ public class GlobalExceptionHandler {
 
     /* ====================== HELPER METHOD ====================== */
 
-    private ResponseEntity<Map<String, Object>> buildResponse(String message, HttpStatus status) {
+    private ResponseEntity<Map<String, Object>> buildResponse(
+            String message,
+            HttpStatus status
+    ) {
+        return buildResponse(message, status, SecurityErrorCode.UNKNOWN);
+    }
+
+    private ResponseEntity<Map<String, Object>> buildResponse(
+            String message,
+            HttpStatus status,
+            SecurityErrorCode code
+    ) {
         Map<String, Object> body = new HashMap<>();
         body.put("status", status.value());
         body.put("error", status.getReasonPhrase());
+        body.put("code", code.name());
         body.put("message", message);
         body.put("timestamp", System.currentTimeMillis());
         return new ResponseEntity<>(body, status);

@@ -72,7 +72,10 @@ export class WebAuthnService {
     }
 
     // 🔥 CRITICAL FIX 4: decode allowCredentials if present
-    if (pk.allowCredentials) {
+    // 🔥 FIX: normalize allowCredentials
+    if (pk.allowCredentials == null) {
+      delete pk.allowCredentials; // CRITICAL
+    } else {
       pk.allowCredentials = pk.allowCredentials.map((cred: any) => ({
         ...cred,
         id: typeof cred.id === 'string'

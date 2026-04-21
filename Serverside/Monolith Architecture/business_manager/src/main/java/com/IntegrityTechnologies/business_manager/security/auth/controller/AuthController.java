@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security.auth.controller;
 
+import com.IntegrityTechnologies.business_manager.exception.AppSecurityException;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.PublicEndpoint;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
@@ -16,6 +17,7 @@ import com.IntegrityTechnologies.business_manager.security.biometric.dto.Biometr
 import com.IntegrityTechnologies.business_manager.security.biometric.dto.WebAuthnVerifyRequest;
 import com.IntegrityTechnologies.business_manager.security.biometric.service.WebAuthnService;
 import com.IntegrityTechnologies.business_manager.security.device.service.DeviceSecurityService;
+import com.IntegrityTechnologies.business_manager.security.model.SecurityErrorCode;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yubico.webauthn.AssertionRequest;
@@ -26,10 +28,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Tag(name = "Auth")
 @RestController
@@ -84,10 +88,6 @@ public class AuthController {
         UUID tenantId = TenantContext.getTenantId();
         String origin = request.getHeader("Origin");
 
-        if (origin == null) {
-            throw new RuntimeException("Missing Origin header");
-        }
-
         AssertionRequest assertion =
                 webAuthnService.startAssertion(tenantId, deviceId, origin);
 
@@ -131,9 +131,6 @@ public class AuthController {
             pk.put("allowCredentials", List.of());
         }
 
-        // ✅ Optional debug (you can remove later)
-        System.out.println("FINAL RESPONSE: " + response);
-
         return ResponseEntity.ok(response);
     }
 
@@ -146,10 +143,6 @@ public class AuthController {
 
         String origin = servletRequest.getHeader("Origin");
 
-        if (origin == null) {
-            throw new RuntimeException("Missing Origin header");
-        }
-
         /* ================= 1️⃣ PARSE WEBAUTHN ================= */
 
         PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> credential;
@@ -160,11 +153,11 @@ public class AuthController {
             credential = PublicKeyCredential.parseAssertionResponseJson(rawJson);
 
         } catch (Exception e) {
-            throw new RuntimeException("Invalid authentication payload", e);
+            throw new AppSecurityException(
+                    SecurityErrorCode.BIOMETRIC_INVALID_PAYLOAD,
+                    "Invalid authentication payload"
+            );
         }
-
-        System.out.println("Hello");
-        System.out.println(credential);
 
         /* ================= 2️⃣ EXTRACT METADATA ================= */
 
@@ -220,10 +213,6 @@ public class AuthController {
 
         String origin = servletRequest.getHeader("Origin");
 
-        if (origin == null) {
-            throw new RuntimeException("Missing Origin header");
-        }
-
         var options = webAuthnService.startRegistration(
                 tenantId,
                 userId,
@@ -255,13 +244,19 @@ public class AuthController {
         String origin = request.getHeader("Origin");
 
         if (origin == null) {
-            throw new RuntimeException("Missing Origin header");
+            throw new AppSecurityException(
+                    SecurityErrorCode.INVALID_REQUEST,
+                    "Missing Origin header"
+            );
         }
 
         String host = request.getServerName(); // platform.local.test
 
         if (!origin.contains(host)) {
-            throw new RuntimeException("Origin mismatch");
+            throw new AppSecurityException(
+                    SecurityErrorCode.INVALID_REQUEST,
+                    "Origin mismatch"
+            );
         }
 
         PublicKeyCredential<AuthenticatorAttestationResponse, ClientRegistrationExtensionOutputs> credential;

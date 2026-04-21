@@ -1,6 +1,8 @@
 package com.IntegrityTechnologies.business_manager.security.device.service;
 
+import com.IntegrityTechnologies.business_manager.exception.AppSecurityException;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.security.model.SecurityErrorCode;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -12,11 +14,17 @@ public class LocationSecurityService {
 
         // ✅ prevent null crash
         if (branch.getLatitude() == null || branch.getLongitude() == null) {
-            throw new SecurityException("Branch location not configured");
+            throw new AppSecurityException(
+                    SecurityErrorCode.LOCATION_NOT_CONFIGURED,
+                    "Branch location not configured"
+            );
         }
 
         if (lat == null || lng == null) {
-            throw new SecurityException("Location required");
+            throw new AppSecurityException(
+                    SecurityErrorCode.LOCATION_REQUIRED,
+                    "Location required"
+            );
         }
 
         double distance = distanceMeters(
@@ -27,11 +35,17 @@ public class LocationSecurityService {
         );
 
         if (distance > branch.getRadiusMeters()) {
-            throw new SecurityException("Outside branch location");
+            throw new AppSecurityException(
+                    SecurityErrorCode.LOCATION_OUTSIDE_BOUNDARY,
+                    "Outside allowed location"
+            );
         }
 
         if (accuracy != null && accuracy > branch.getRadiusMeters()) {
-            throw new SecurityException("Location accuracy too low");
+            throw new AppSecurityException(
+                    SecurityErrorCode.LOCATION_ACCURACY_LOW,
+                    "Location accuracy too low"
+            );
         }
     }
 

@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security.auth.service;
 
+import com.IntegrityTechnologies.business_manager.exception.AppSecurityException;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
 import com.IntegrityTechnologies.business_manager.security.audit.service.LoginAuditService;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthRequest;
@@ -7,6 +8,7 @@ import com.IntegrityTechnologies.business_manager.security.auth.platform.Platfor
 import com.IntegrityTechnologies.business_manager.security.auth.tenant.TenantAuthService;
 import com.IntegrityTechnologies.business_manager.security.biometric.repository.UserBiometricRepository;
 import com.IntegrityTechnologies.business_manager.security.biometric.service.WebAuthnService;
+import com.IntegrityTechnologies.business_manager.security.model.SecurityErrorCode;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
@@ -58,10 +60,12 @@ public class BiometricAuthFacadeService {
                     "BLOCKED",
                     "INVALID_BIOMETRIC_PAYLOAD"
             );
-            throw new BadCredentialsException("Invalid biometric payload");
+            throw new AppSecurityException(
+                    SecurityErrorCode.BIOMETRIC_INVALID_PAYLOAD,
+                    "Invalid biometric payload"
+            );
         }
 
-        System.out.println("Hello");
         try {
 
             /* ================= 1️⃣ VERIFY ================= */
@@ -73,19 +77,17 @@ public class BiometricAuthFacadeService {
                     origin
             );
 
-            System.out.println("assertionResult: ");
-            System.out.println(assertionResult);
             /* ================= 2️⃣ RESOLVE USER ================= */
 
             String credentialId = assertionResult.getCredentialId().getBase64Url();
 
-            System.out.println("credentialId: ");
-            System.out.println(credentialId);
-
             UUID userId = biometricRepository
                     .findByCredentialId(credentialId)
                     .map(b -> b.getUserId())
-                    .orElseThrow(() -> new SecurityException("User not found"));
+                    .orElseThrow(() -> new AppSecurityException(
+                            SecurityErrorCode.BIOMETRIC_CREDENTIAL_NOT_FOUND,
+                            "Biometric credential not recognized"
+                    ));
 
             /* ================= 3️⃣ BUILD AUTH REQUEST ================= */
 
@@ -99,10 +101,6 @@ public class BiometricAuthFacadeService {
             authRequest.setAccuracy(accuracy);
 
             /* ================= 4️⃣ LOGIN ================= */
-
-            System.out.println("USER ID: " + userId);
-            System.out.println("IS PLATFORM USER: " +
-                    platformUserRepository.findById(userId).isPresent());
 
             boolean isPlatformUser =
                     platformUserRepository.findById(userId).isPresent();
@@ -124,13 +122,7 @@ public class BiometricAuthFacadeService {
                     result.response()
             );
 
-        } catch (Exception ex) {
-            ex.printStackTrace();
-
-            String reason = ex.getMessage();
-            if (reason != null && reason.length() > 255) {
-                reason = reason.substring(0, 255);
-            }
+        } catch (AppSecurityException ex) {
 
             loginAuditService.log(
                     tenantId,
@@ -142,10 +134,29 @@ public class BiometricAuthFacadeService {
                     accuracy,
                     ip,
                     "BLOCKED",
-                    "BIOMETRIC_FAILED: " + reason
+                    ex.getCode().name()
             );
 
-            throw new BadCredentialsException("Biometric authentication failed", ex);
+            throw ex; // 🔥 DO NOT WRAP
+        } catch (Exception ex) {
+
+            loginAuditService.log(
+                    tenantId,
+                    null,
+                    branchId,
+                    deviceId,
+                    latitude,
+                    longitude,
+                    accuracy,
+                    ip,
+                    "BLOCKED",
+                    "UNKNOWN"
+            );
+
+            throw new AppSecurityException(
+                    SecurityErrorCode.UNKNOWN,
+                    "Biometric authentication failed"
+            );
         }
     }
 }

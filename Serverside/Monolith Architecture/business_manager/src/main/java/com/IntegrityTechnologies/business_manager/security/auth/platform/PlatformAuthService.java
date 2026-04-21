@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security.auth.platform;
 
+import com.IntegrityTechnologies.business_manager.exception.AppSecurityException;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUser;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUserSession;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
@@ -11,6 +12,7 @@ import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthResponse
 import com.IntegrityTechnologies.business_manager.security.device.model.TrustedDevice;
 import com.IntegrityTechnologies.business_manager.security.device.service.DeviceSecurityService;
 import com.IntegrityTechnologies.business_manager.security.device.service.DeviceUsageService;
+import com.IntegrityTechnologies.business_manager.security.model.SecurityErrorCode;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -55,7 +57,7 @@ public class PlatformAuthService {
         }
 
         if (request.getDeviceId() == null || request.getDeviceId().isBlank()) {
-            throw new BadCredentialsException("Device ID required");
+            throw new AppSecurityException(SecurityErrorCode.DEVICE_ID_REQUIRED, "Device ID required");
         }
 
         UUID platformTenantId = TenantContext.getTenantId();
@@ -63,15 +65,18 @@ public class PlatformAuthService {
         deviceSecurityService.validate(platformTenantId, null, request.getDeviceId());
 
         if (!passwordEncoder.matches(request.getPassword(), platformUser.getPassword())) {
-            throw new BadCredentialsException("Invalid credentials");
+            throw new AppSecurityException(SecurityErrorCode.INVALID_CREDENTIALS, "Invalid credentials");
         }
 
         if (!platformUser.isActive() || platformUser.isLocked()) {
-            throw new BadCredentialsException("Account disabled");
+            throw new AppSecurityException(SecurityErrorCode.ACCOUNT_DISABLED, "Account disabled");
         }
 
         if (Boolean.TRUE.equals(platformUser.getMustChangePassword())) {
-            throw new RuntimeException("PASSWORD_CHANGE_REQUIRED");
+            throw new AppSecurityException(
+                    SecurityErrorCode.PASSWORD_CHANGE_REQUIRED,
+                    "Password change required"
+            );
         }
 
         UUID tokenId = tokenId();
@@ -89,7 +94,7 @@ public class PlatformAuthService {
                         .countByUserIdAndLogoutTimeIsNull(platformUser.getId());
 
         if (activeSessions >= PLATFORM_USERS_MAX_SESSIONS_PER_DAY) {
-            throw new IllegalStateException("Too many active sessions");
+            throw new AppSecurityException(SecurityErrorCode.DEVICE_LIMIT_REACHED, "Too many active sessions");
         }
 
         TrustedDevice device = deviceSecurityService
@@ -121,19 +126,25 @@ public class PlatformAuthService {
         UUID userId = request.getUserId();
 
         if (userId == null) {
-            throw new BadCredentialsException("Invalid biometric user");
+            throw new AppSecurityException(
+                    SecurityErrorCode.INVALID_REQUEST,
+                    "Invalid biometric user"
+            );
         }
 
         if (request.getDeviceId() == null || request.getDeviceId().isBlank()) {
-            throw new BadCredentialsException("Device ID required");
+            throw new AppSecurityException(SecurityErrorCode.DEVICE_ID_REQUIRED, "Device ID required");
         }
 
         PlatformUser user = platformUserRepository
                 .findById(userId)
-                .orElseThrow(() -> new BadCredentialsException("Platform user not found"));
+                .orElseThrow(() -> new AppSecurityException(
+                        SecurityErrorCode.USER_NOT_FOUND,
+                        "Platform user not found"
+                ));
 
         if (!user.isActive() || user.isLocked()) {
-            throw new BadCredentialsException("Account disabled");
+            throw new AppSecurityException(SecurityErrorCode.ACCOUNT_DISABLED, "Account disabled");
         }
 
         UUID tokenId = tokenId();
@@ -151,7 +162,7 @@ public class PlatformAuthService {
                         .countByUserIdAndLogoutTimeIsNull(user.getId());
 
         if (activeSessions >= PLATFORM_USERS_MAX_SESSIONS_PER_DAY) {
-            throw new IllegalStateException("Too many active sessions");
+            throw new AppSecurityException(SecurityErrorCode.DEVICE_LIMIT_REACHED, "Too many active sessions");
         }
 
         UUID platformTenantId = TenantContext.getTenantId();

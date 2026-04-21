@@ -38,7 +38,7 @@ export class BiometricRegistrationService {
     const deviceId = this.device.getDeviceId();
 
     console.log("DEVICE ID (REGISTER):", deviceId);
-    
+
     this.auth.biometricRegisterStart(deviceId).subscribe({
       next: async (options) => {
 
@@ -72,8 +72,9 @@ export class BiometricRegistrationService {
   private handleError(err: any, deviceId: string) {
 
     const msg = err?.error?.message ?? '';
+    const code = err?.error?.code;
 
-    if (msg === 'Credential already registered') {
+    if (code === 'INVALID_REQUEST' && msg === 'Biometric already registered') {
       this.promptOverwrite(deviceId);
       return;
     }

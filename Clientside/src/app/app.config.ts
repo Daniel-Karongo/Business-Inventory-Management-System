@@ -25,6 +25,7 @@ import { AuthService } from './modules/auth/services/auth.service';
 import { tenantInterceptor } from './core/interceptors/tenant.interceptor';
 import { TenantBrandingService } from './core/services/tenant-branding.service';
 import { catchError, firstValueFrom, of } from 'rxjs';
+import { networkErrorInterceptor } from './core/interceptors/network-error.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -36,7 +37,8 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([
         authInterceptor,
         loggingInterceptor,
-        tenantInterceptor
+        tenantInterceptor,
+        networkErrorInterceptor
       ])
     ),
 

@@ -13,8 +13,8 @@ import java.util.UUID;
         name = "user_biometrics",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_biometric_credential",
-                        columnNames = {"credential_id"}
+                        name = "uk_biometric_tenant_credential",
+                        columnNames = {"tenant_id", "credential_id"}
                 )
         },
         indexes = {

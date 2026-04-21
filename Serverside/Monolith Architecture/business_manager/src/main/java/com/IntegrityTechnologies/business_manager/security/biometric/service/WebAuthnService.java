@@ -1,12 +1,15 @@
 package com.IntegrityTechnologies.business_manager.security.biometric.service;
 
+import com.IntegrityTechnologies.business_manager.exception.AppSecurityException;
 import com.IntegrityTechnologies.business_manager.security.biometric.config.RelyingPartyFactory;
 import com.IntegrityTechnologies.business_manager.security.biometric.model.UserBiometric;
 import com.IntegrityTechnologies.business_manager.security.biometric.repository.UserBiometricRepository;
 import com.IntegrityTechnologies.business_manager.security.device.service.DeviceSecurityService;
+import com.IntegrityTechnologies.business_manager.security.model.SecurityErrorCode;
 import com.yubico.webauthn.*;
 import com.yubico.webauthn.data.*;
 import com.yubico.webauthn.exception.AssertionFailedException;
+import com.yubico.webauthn.exception.RegistrationFailedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -25,16 +28,42 @@ public class WebAuthnService {
     private void validateOrigin(String origin) {
 
         if (origin == null || origin.isBlank()) {
-            throw new SecurityException("Missing origin");
+            throw new AppSecurityException(
+                    SecurityErrorCode.INVALID_REQUEST,
+                    "Missing origin"
+            );
         }
 
         if (!origin.startsWith("https://")) {
-            throw new SecurityException("Invalid origin scheme");
+            throw new AppSecurityException(
+                    SecurityErrorCode.INVALID_REQUEST,
+                    "Invalid origin scheme"
+            );
         }
 
-        // ✅ allow ALL tenants + platform
-        if (!origin.contains(".local.test")) {
-            throw new SecurityException("Invalid origin domain");
+        try {
+            java.net.URI uri = java.net.URI.create(origin);
+            String host = uri.getHost();
+
+            if (host == null) {
+                throw new AppSecurityException(
+                        SecurityErrorCode.INVALID_REQUEST,
+                        "Invalid origin host"
+                );
+            }
+
+            if (!host.equals("local.test") && !host.endsWith(".local.test")) {
+                throw new AppSecurityException(
+                        SecurityErrorCode.INVALID_REQUEST,
+                        "Invalid origin domain"
+                );
+            }
+
+        } catch (Exception e) {
+            throw new AppSecurityException(
+                    SecurityErrorCode.INVALID_REQUEST,
+                    "Invalid origin format"
+            );
         }
     }
 
@@ -42,21 +71,22 @@ public class WebAuthnService {
 
     public AssertionRequest startAssertion(UUID tenantId, String deviceId, String origin) {
 
+        validateOrigin(origin);
+
         RelyingParty rp = relyingPartyFactory.forOrigin(origin);
 
-        System.out.println("hello start assertion");
-        System.out.println(rp);
-
-        // ✅ Validate device has biometrics (fast fail)
-        boolean hasBiometric = biometricRepository
-                .findByTenantIdAndDeviceIdAndDeletedFalse(tenantId, deviceId)
-                .isEmpty() == false;
+        boolean hasBiometric =
+                !biometricRepository
+                        .findByTenantIdAndDeviceIdAndDeletedFalse(tenantId, deviceId)
+                        .isEmpty();
 
         if (!hasBiometric) {
-            throw new SecurityException("No biometrics registered for this device");
+            throw new AppSecurityException(
+                    SecurityErrorCode.BIOMETRIC_CREDENTIAL_NOT_FOUND,
+                    "No biometrics registered for this device"
+            );
         }
 
-        // ✅ DO NOT set allowCredentials (handled internally by repository)
         AssertionRequest request = rp.startAssertion(
                 StartAssertionOptions.builder()
                         .userVerification(UserVerificationRequirement.PREFERRED)
@@ -75,14 +105,16 @@ public class WebAuthnService {
             String origin
     ) {
 
-        RelyingParty rp = relyingPartyFactory.forOrigin(origin);
+        validateOrigin(origin);
 
-        System.out.println("Hello finish assertion");
-        System.out.println(rp);
-
-        AssertionRequest request = challengeService.get(tenantId, deviceId);
+        WebAuthnRequestContext.setDeviceId(deviceId); // 🔥 ADD THIS
 
         try {
+
+            RelyingParty rp = relyingPartyFactory.forOrigin(origin);
+
+            AssertionRequest request = challengeService.get(tenantId, deviceId);
+
             AssertionResult result = rp.finishAssertion(
                     FinishAssertionOptions.builder()
                             .request(request)
@@ -91,24 +123,40 @@ public class WebAuthnService {
             );
 
             if (!result.isSuccess()) {
-                throw new SecurityException("WebAuthn verification failed");
+                throw new AppSecurityException(
+                        SecurityErrorCode.BIOMETRIC_VERIFICATION_FAILED,
+                        "WebAuthn verification failed"
+                );
             }
 
             String credentialId = result.getCredentialId().getBase64Url();
 
-            System.out.println("STORED credentialId: " + credential.getId().getBase64Url());
+            UUID tenantIdCtx =
+                    com.IntegrityTechnologies.business_manager.security.util.TenantContext.getTenantId();
 
-            UserBiometric biometric = biometricRepository.findByCredentialId(credentialId)
-                    .orElseThrow(() -> new SecurityException("Credential not recognized"));
-
-            if (!biometric.getCredentialId().equals(credential.getId().getBase64Url())) {
-                throw new SecurityException("Credential mismatch");
-            }
-
-            UUID userId = biometric.getUserId();
+            UserBiometric biometric = biometricRepository
+                    .findByTenantIdAndCredentialId(tenantIdCtx, credentialId)
+                    .orElseThrow(() -> new AppSecurityException(
+                            SecurityErrorCode.BIOMETRIC_CREDENTIAL_NOT_FOUND,
+                            "Credential not registered for this tenant/device"
+                    ));
 
             if (!biometric.getDeviceId().equals(deviceId)) {
-                throw new SecurityException("Biometric used on wrong device");
+                throw new AppSecurityException(
+                        SecurityErrorCode.BIOMETRIC_DEVICE_MISMATCH,
+                        "Biometric belongs to a different device"
+                );
+            }
+
+            UUID userIdFromHandle = UUID.fromString(
+                    new String(result.getUserHandle().getBytes())
+            );
+
+            if (!biometric.getUserId().equals(userIdFromHandle)) {
+                throw new AppSecurityException(
+                        SecurityErrorCode.BIOMETRIC_USER_MISMATCH,
+                        "Biometric does not belong to this user"
+                );
             }
 
             long newCount = result.getSignatureCount();
@@ -118,15 +166,41 @@ public class WebAuthnService {
                 biometricRepository.save(biometric);
             }
 
-            if (!biometric.getUserId().equals(userId)) {
-                throw new SecurityException("User mismatch");
-            }
-
             return result;
 
         } catch (AssertionFailedException e) {
-            e.printStackTrace();
-            throw new SecurityException("WebAuthn verification failed: " + e.getMessage(), e);
+
+            String credentialId = credential.getId().getBase64Url();
+
+            UUID tenantIdCtx =
+                    com.IntegrityTechnologies.business_manager.security.util.TenantContext.getTenantId();
+
+            boolean existsInAnyTenant =
+                    biometricRepository.findByCredentialId(credentialId).isPresent();
+
+            boolean existsInThisTenant =
+                    biometricRepository.findByTenantIdAndCredentialId(tenantIdCtx, credentialId).isPresent();
+
+            if (!existsInAnyTenant) {
+                throw new AppSecurityException(
+                        SecurityErrorCode.BIOMETRIC_CREDENTIAL_NOT_FOUND,
+                        "Credential not registered"
+                );
+            }
+
+            if (!existsInThisTenant) {
+                throw new AppSecurityException(
+                        SecurityErrorCode.BIOMETRIC_TENANT_MISMATCH,
+                        "Credential not registered for this tenant/device"
+                );
+            }
+
+            throw new AppSecurityException(
+                    SecurityErrorCode.BIOMETRIC_VERIFICATION_FAILED,
+                    "Biometric verification failed"
+            );
+        } finally {
+            WebAuthnRequestContext.clear();
         }
     }
 
@@ -139,6 +213,7 @@ public class WebAuthnService {
             String deviceId,
             String origin
     ) {
+        validateOrigin(origin);
 
         RelyingParty rp = relyingPartyFactory.forOrigin(origin);
 
@@ -180,6 +255,7 @@ public class WebAuthnService {
             PublicKeyCredential<AuthenticatorAttestationResponse, ClientRegistrationExtensionOutputs> credential,
             String origin
     ) {
+        validateOrigin(origin);
 
         RelyingParty rp = relyingPartyFactory.forOrigin(origin);
 
@@ -198,21 +274,28 @@ public class WebAuthnService {
                             .response(credential)
                             .build()
             );
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException(e.getMessage(), e);
+        } catch (RegistrationFailedException e) {
+            throw new AppSecurityException(
+                    SecurityErrorCode.BIOMETRIC_INVALID_PAYLOAD,
+                    "Biometric registration failed"
+            );
         }
 
         String credentialId = credential.getId().getBase64Url();
 
-        System.out.println("STORED credentialId: " + credentialId);
-
-        biometricRepository.findByCredentialId(credentialId)
-                .ifPresent(b -> { throw new SecurityException("Already registered"); });
+        biometricRepository
+                .findByTenantIdAndCredentialId(tenantId, credentialId)
+                .ifPresent(b -> {
+                    throw new AppSecurityException(
+                        SecurityErrorCode.INVALID_REQUEST,
+                        "Biometric already registered"
+                    );
+                });
 
         biometricRepository.save(
                 UserBiometric.builder()
                         .userId(userId)
+                        .tenantId(tenantId)
                         .credentialId(credentialId)
                         .publicKey(result.getPublicKeyCose().getBase64())
                         .signCount(result.getSignatureCount())

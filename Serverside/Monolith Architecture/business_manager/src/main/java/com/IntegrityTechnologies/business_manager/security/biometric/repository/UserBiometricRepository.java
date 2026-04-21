@@ -10,6 +10,7 @@ import java.util.UUID;
 public interface UserBiometricRepository extends JpaRepository<UserBiometric, UUID> {
 
     Optional<UserBiometric> findByCredentialId(String credentialId);
+    Optional<UserBiometric> findByTenantIdAndCredentialId(UUID tenantId, String credentialId);
 
     List<UserBiometric> findByTenantIdAndUserIdAndDeletedFalse(UUID tenantId, UUID userId);
     List<UserBiometric> findByTenantIdAndDeviceIdAndDeletedFalse(UUID tenantId, String deviceId);

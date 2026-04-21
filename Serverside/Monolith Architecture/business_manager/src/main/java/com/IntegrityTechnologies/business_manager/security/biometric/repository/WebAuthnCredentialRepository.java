@@ -1,14 +1,19 @@
 package com.IntegrityTechnologies.business_manager.security.biometric.repository;
 
 import com.IntegrityTechnologies.business_manager.security.biometric.model.UserBiometric;
+import com.IntegrityTechnologies.business_manager.security.biometric.service.WebAuthnRequestContext;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.yubico.webauthn.CredentialRepository;
 import com.yubico.webauthn.RegisteredCredential;
-import com.yubico.webauthn.data.*;
+import com.yubico.webauthn.data.ByteArray;
+import com.yubico.webauthn.data.PublicKeyCredentialDescriptor;
 import com.yubico.webauthn.data.exception.Base64UrlException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -24,25 +29,28 @@ public class WebAuthnCredentialRepository implements CredentialRepository {
 
         String idBase64Url = credentialId.getBase64Url();
 
-        Optional<UserBiometric> opt = repository.findByCredentialId(idBase64Url);
+        UUID tenantId = TenantContext.getTenantId();
+        String deviceId = WebAuthnRequestContext.getDeviceId();
 
-        if (opt.isEmpty()) {
-            return Optional.empty();
-        }
+        Optional<UserBiometric> opt =
+                repository.findByTenantIdAndCredentialId(tenantId, idBase64Url);
+
+        if (opt.isEmpty()) return Optional.empty();
 
         UserBiometric b = opt.get();
 
-        if (Boolean.TRUE.equals(b.getDeleted())) {
+        if (Boolean.TRUE.equals(b.getDeleted())) return Optional.empty();
+
+        // 🔥 DEVICE FILTER (CRITICAL)
+        if (deviceId != null && !deviceId.equals(b.getDeviceId())) {
             return Optional.empty();
         }
 
-        // 🔥 CRITICAL FIX: ignore incoming userHandle mismatch
-        // Yubico may pass different handle depending on flow
         try {
             return Optional.of(
                     RegisteredCredential.builder()
                             .credentialId(ByteArray.fromBase64Url(b.getCredentialId()))
-                            .userHandle(new ByteArray(b.getUserId().toString().getBytes())) // canonical
+                            .userHandle(new ByteArray(b.getUserId().toString().getBytes()))
                             .publicKeyCose(ByteArray.fromBase64(b.getPublicKey()))
                             .signatureCount(b.getSignCount())
                             .build()
@@ -60,15 +68,20 @@ public class WebAuthnCredentialRepository implements CredentialRepository {
 
         String idBase64Url = credentialId.getBase64Url();
 
-        Optional<UserBiometric> opt = repository.findByCredentialId(idBase64Url);
+        UUID tenantId = TenantContext.getTenantId();
+        String deviceId = WebAuthnRequestContext.getDeviceId();
 
-        if (opt.isEmpty()) {
-            return Set.of();
-        }
+        Optional<UserBiometric> opt =
+                repository.findByTenantIdAndCredentialId(tenantId, idBase64Url);
+
+        if (opt.isEmpty()) return Set.of();
 
         UserBiometric b = opt.get();
 
-        if (Boolean.TRUE.equals(b.getDeleted())) {
+        if (Boolean.TRUE.equals(b.getDeleted())) return Set.of();
+
+        // 🔥 DEVICE FILTER
+        if (deviceId != null && !deviceId.equals(b.getDeviceId())) {
             return Set.of();
         }
 
@@ -76,7 +89,7 @@ public class WebAuthnCredentialRepository implements CredentialRepository {
             return Set.of(
                     RegisteredCredential.builder()
                             .credentialId(ByteArray.fromBase64Url(b.getCredentialId()))
-                            .userHandle(new ByteArray(b.getUserId().toString().getBytes())) // canonical
+                            .userHandle(new ByteArray(b.getUserId().toString().getBytes()))
                             .publicKeyCose(ByteArray.fromBase64(b.getPublicKey()))
                             .signatureCount(b.getSignCount())
                             .build()
