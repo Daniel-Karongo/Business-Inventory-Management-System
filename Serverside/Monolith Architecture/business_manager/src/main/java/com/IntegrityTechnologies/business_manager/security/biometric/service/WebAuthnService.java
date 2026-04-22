@@ -209,6 +209,7 @@ public class WebAuthnService {
     public PublicKeyCredentialCreationOptions startRegistration(
             UUID tenantId,
             UUID userId,
+            UUID branchId,
             String username,
             String deviceId,
             String origin
@@ -244,7 +245,13 @@ public class WebAuthnService {
                                 .build()
                 );
 
-        registrationChallengeService.store(tenantId, deviceId, userId, options);
+        registrationChallengeService.store(
+                tenantId,
+                deviceId,
+                userId,
+                branchId,
+                options
+        );
 
         return options;
     }
@@ -263,7 +270,11 @@ public class WebAuthnService {
 
         UUID userId = ctx.userId();
 
-        deviceSecurityService.enforceDeviceLimit(tenantId, userId);
+        deviceSecurityService.enforceDeviceLimit(
+                tenantId,
+                userId,
+                ctx.branchId()
+        );
 
         RegistrationResult result;
 

@@ -206,6 +206,7 @@ public class AuthController {
         var options = webAuthnService.startRegistration(
                 tenantId,
                 userId,
+                branchId,
                 username,
                 deviceId,
                 origin

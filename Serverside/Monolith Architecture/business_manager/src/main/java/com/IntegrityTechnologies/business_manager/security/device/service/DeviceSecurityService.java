@@ -1,9 +1,9 @@
 package com.IntegrityTechnologies.business_manager.security.device.service;
 
 import com.IntegrityTechnologies.business_manager.exception.AppSecurityException;
+import com.IntegrityTechnologies.business_manager.modules.platform.settings.service.TenantSettingsService;
 import com.IntegrityTechnologies.business_manager.security.audit.service.LoginAuditService;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthRequest;
-import com.IntegrityTechnologies.business_manager.security.biometric.repository.UserBiometricRepository;
 import com.IntegrityTechnologies.business_manager.security.device.model.DeviceApprovalStatus;
 import com.IntegrityTechnologies.business_manager.security.device.model.DeviceRegistrationContext;
 import com.IntegrityTechnologies.business_manager.security.device.model.TrustedDevice;
@@ -11,6 +11,7 @@ import com.IntegrityTechnologies.business_manager.security.device.repository.Tru
 import com.IntegrityTechnologies.business_manager.security.model.SecurityErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,13 +23,16 @@ import java.util.UUID;
 public class DeviceSecurityService {
 
     private final TrustedDeviceRepository repository;
-    private final UserBiometricRepository biometricRepository;
+    private final TenantSettingsService tenantSettingsService;
     private final DeviceRegistrationService deviceRegistrationService;
     private final DeviceUsageService deviceUsageService;
     private final LoginAuditService loginAuditService;
 
-    @Transactional
-    public void validate(
+    @Value("${security.device.default-max-per-user:3}")
+    private int defaultMaxDevicesPerUser;
+
+    @Transactional(noRollbackFor = AppSecurityException.class)
+    public TrustedDevice validate(
             UUID tenantId,
             UUID branchId,
             String deviceId,
@@ -55,24 +59,25 @@ public class DeviceSecurityService {
 
         if (deviceOpt.isEmpty()) {
 
-            if (branchId == null) {
-                repository.lockPlatformDevices(tenantId);
-            } else {
-                repository.lockBranchDevices(
+            if (attemptingUserId != null) {
+                enforceDeviceLimit(
                         tenantId,
-                        branchId
+                        attemptingUserId,
+                        request.getBranchId()
                 );
             }
 
             boolean firstDevice =
                     branchId == null
-                            ? !repository.existsByTenantIdAndBranchIdIsNull(
-                            tenantId
-                    )
-                            : !repository.existsByTenantIdAndBranchId(
+                            ? repository.countByTenantIdAndBranchIdIsNullAndStatus(
                             tenantId,
-                            branchId
-                    );
+                            DeviceApprovalStatus.APPROVED
+                    ) == 0
+                            : repository.countByTenantIdAndBranchIdAndStatus(
+                            tenantId,
+                            branchId,
+                            DeviceApprovalStatus.APPROVED
+                    ) == 0;
 
             DeviceRegistrationContext ctx =
                     DeviceRegistrationContext.builder()
@@ -87,17 +92,35 @@ public class DeviceSecurityService {
                             .ipAddress(ipAddress)
                             .build();
 
-            TrustedDevice savedDevice =
-                    deviceRegistrationService.registerPending(ctx, firstDevice);
+            TrustedDevice savedDevice;
 
-            if (!firstDevice) {
+            try {
+                savedDevice =
+                        deviceRegistrationService.registerPending(
+                                ctx,
+                                firstDevice
+                        );
+            } catch (DataIntegrityViolationException ex) {
 
-                if (attemptingUserId != null) {
-                    deviceUsageService.record(
-                            savedDevice.getId(),
-                            attemptingUserId
+                // Another concurrent request inserted same device first
+                TrustedDevice existing =
+                        getByDeviceId(
+                                tenantId,
+                                branchId,
+                                deviceId
+                        );
+
+                if (existing.getStatus() == DeviceApprovalStatus.PENDING) {
+                    throw new AppSecurityException(
+                            SecurityErrorCode.DEVICE_PENDING_APPROVAL,
+                            "Device pending approval"
                     );
                 }
+
+                return existing;
+            }
+
+            if (!firstDevice) {
 
                 // record attempt in existing audit table
                 loginAuditService.log(
@@ -119,7 +142,7 @@ public class DeviceSecurityService {
                 );
             }
 
-            return;
+            return savedDevice;
         }
 
         TrustedDevice device = deviceOpt.get();
@@ -179,7 +202,7 @@ public class DeviceSecurityService {
         ========================= */
 
         device.setLastSeenAt(LocalDateTime.now());
-        repository.save(device);
+        return repository.save(device);
     }
 
 
@@ -200,23 +223,31 @@ public class DeviceSecurityService {
         );
     }
 
-    @Value("${security.device.max-per-user:3}")
-    private int maxDevicesPerUser;
-
-
     public void enforceDeviceLimit(
             UUID tenantId,
-            UUID userId
+            UUID userId,
+            UUID branchId
     ) {
+        deviceUsageService.lockUserDevices(
+                tenantId,
+                userId
+        );
+
+        var settings = tenantSettingsService.getSettings();
+
+        int maxDevices =
+                settings.getMaxDevicesPerUser() != null
+                        ? settings.getMaxDevicesPerUser()
+                        : defaultMaxDevicesPerUser;
 
         long count =
-                biometricRepository
-                        .countByTenantIdAndUserIdAndDeletedFalse(
-                                tenantId,
-                                userId
-                        );
+                deviceUsageService.countDevicesForUser(
+                        tenantId,
+                        userId,
+                        branchId
+                );
 
-        if (count >= maxDevicesPerUser) {
+        if (count >= maxDevices) {
 
             throw new AppSecurityException(
                     SecurityErrorCode.DEVICE_LIMIT_REACHED,
@@ -238,7 +269,10 @@ public class DeviceSecurityService {
                             tenantId,
                             deviceId
                     )
-                    .orElseThrow();
+                    .orElseThrow(() -> new AppSecurityException(
+                            SecurityErrorCode.DEVICE_NOT_FOUND,
+                            "Trusted device not found"
+                    ));
         }
 
         return repository
@@ -247,7 +281,10 @@ public class DeviceSecurityService {
                         branchId,
                         deviceId
                 )
-                .orElseThrow();
+                .orElseThrow(() -> new AppSecurityException(
+                        SecurityErrorCode.DEVICE_NOT_FOUND,
+                        "Trusted device not found"
+                ));
     }
 
     private String buildFriendlyDeviceName(AuthRequest request) {

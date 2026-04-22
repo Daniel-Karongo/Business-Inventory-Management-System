@@ -53,7 +53,28 @@ export class AuthErrorService {
                 return this.toast('This device is not approved.');
 
             case 'DEVICE_LIMIT_REACHED':
-                return this.toast('Too many active sessions.');
+                return this.toast(msg || 'Device or session limit reached.');
+
+            case 'SESSION_EXPIRED':
+                return this.toast('Session expired. Please log in again.');
+
+            case 'PASSWORD_RESET_INVALID':
+                return this.toast('Invalid or expired reset code.');
+
+            case 'DEVICE_NOT_FOUND':
+                return this.toast('Device not found.');
+
+            case 'DEVICE_NOT_REGISTERED':
+                return this.toast('Device not registered.');
+
+            case 'LOCATION_NOT_CONFIGURED':
+                return this.toast('Location security is not configured.');
+
+            case 'BIOMETRIC_TENANT_MISMATCH':
+                return this.toast('Biometric does not belong to this tenant.');
+
+            case 'DEVICE_ID_REQUIRED':
+                return this.toast('Device ID is required.');
 
             case 'LOCATION_REQUIRED':
                 return this.toast('Location access is required.');

@@ -5,6 +5,7 @@ import com.IntegrityTechnologies.business_manager.security.device.repository.Dev
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -40,6 +41,29 @@ public class DeviceUsageService {
                         .userId(userId)
                         .lastUsedAt(LocalDateTime.now())
                         .build()
+        );
+    }
+
+    public long countDevicesForUser(
+            UUID tenantId,
+            UUID userId,
+            UUID branchId
+    ) {
+        return repository.countDistinctDevicesForUserInBranch(
+                tenantId,
+                userId,
+                branchId
+        );
+    }
+
+    @Transactional
+    public void lockUserDevices(
+            UUID tenantId,
+            UUID userId
+    ) {
+        repository.lockUserDevices(
+                tenantId,
+                userId
         );
     }
 }

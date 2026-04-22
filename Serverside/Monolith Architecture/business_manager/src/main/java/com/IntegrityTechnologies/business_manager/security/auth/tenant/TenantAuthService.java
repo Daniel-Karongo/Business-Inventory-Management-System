@@ -1,7 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security.auth.tenant;
 
 import com.IntegrityTechnologies.business_manager.exception.AppSecurityException;
-import com.IntegrityTechnologies.business_manager.exception.UserNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentRepository;
@@ -23,7 +22,6 @@ import com.IntegrityTechnologies.business_manager.security.model.SecurityErrorCo
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -75,16 +73,18 @@ public class TenantAuthService {
                         "User not found"
                 ));
 
+        TrustedDevice device = null;
+
         try {
             if (Boolean.TRUE.equals(branch.getEnforceDevice())) {
 
-                deviceSecurityService.validate(
-                        tenantId,
-                        branchId,
-                        request.getDeviceId(),
-                        user.getId(),
-                        request,
-                        ip
+                device = deviceSecurityService.validate(
+                    tenantId,
+                    branchId,
+                    request.getDeviceId(),
+                    user.getId(),
+                    request,
+                    ip
                 );
             }
             locationSecurityService.validate(
@@ -138,6 +138,13 @@ public class TenantAuthService {
             );
         }
 
+        if (Boolean.TRUE.equals(user.getMustChangePassword())) {
+            throw new AppSecurityException(
+                    SecurityErrorCode.PASSWORD_CHANGE_REQUIRED,
+                    "Password change required"
+            );
+        }
+
         UUID userId = user.getId();
         LocalDate today = LocalDate.now();
 
@@ -174,10 +181,9 @@ public class TenantAuthService {
                 request.getDeviceId()
         );
 
-        TrustedDevice device = deviceSecurityService
-                .getByDeviceId(tenantId, branchId, request.getDeviceId());
-
-        deviceUsageService.record(device.getId(), userId);
+        if (device != null) {
+            deviceUsageService.record(device.getId(), userId);
+        }
         sessionService.create(tenantId, branchId, userId, tokenId);
 
         List<Department> departments =
@@ -259,15 +265,17 @@ public class TenantAuthService {
                         "User not found"
                 ));
 
+        TrustedDevice device = null;
+
         try {
             if (Boolean.TRUE.equals(branch.getEnforceDevice())) {
-                deviceSecurityService.validate(
-                        tenantId,
-                        branchId,
-                        request.getDeviceId(),
-                        user.getId(),
-                        request,
-                        ip
+                device = deviceSecurityService.validate(
+                    tenantId,
+                    branchId,
+                    request.getDeviceId(),
+                    user.getId(),
+                    request,
+                    ip
                 );
             }
 
@@ -358,10 +366,9 @@ public class TenantAuthService {
                 request.getDeviceId()
         );
 
-        TrustedDevice device = deviceSecurityService
-                .getByDeviceId(tenantId, branchId, request.getDeviceId());
-
-        deviceUsageService.record(device.getId(), userId);
+        if (device != null) {
+            deviceUsageService.record(device.getId(), userId);
+        }
 
         sessionService.create(tenantId, branchId, userId, tokenId);
 

@@ -16,6 +16,7 @@ public class RegistrationChallengeService {
     record Timed(
             PublicKeyCredentialCreationOptions options,
             UUID userId,
+            UUID branchId,
             long ts
     ) {}
 
@@ -23,12 +24,22 @@ public class RegistrationChallengeService {
         return tenantId + "|" + fingerprint;
     }
 
-    public void store(UUID tenantId, String fingerprint, UUID userId,
-                      PublicKeyCredentialCreationOptions options) {
+    public void store(
+            UUID tenantId,
+            String fingerprint,
+            UUID userId,
+            UUID branchId,
+            PublicKeyCredentialCreationOptions options
+    ) {
 
         store.put(
                 key(tenantId, fingerprint),
-                new Timed(options, userId, System.currentTimeMillis())
+                new Timed(
+                        options,
+                        userId,
+                        branchId,
+                        System.currentTimeMillis()
+                )
         );
     }
 

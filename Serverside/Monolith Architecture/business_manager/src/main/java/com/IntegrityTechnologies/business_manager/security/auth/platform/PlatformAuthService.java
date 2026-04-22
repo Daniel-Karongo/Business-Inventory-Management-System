@@ -49,7 +49,7 @@ public class PlatformAuthService {
                 .orElse(null);
 
         if (platformUser == null) {
-            return null; // IMPORTANT: fallback to tenant flow
+            return null; // allow fallback to tenant auth
         }
 
         if (request.getDeviceId() == null || request.getDeviceId().isBlank()) {
@@ -60,21 +60,17 @@ public class PlatformAuthService {
 
         String ip = extractClientIp(httpRequest);
 
-        deviceSecurityService.validate(
-                platformTenantId,
-                null,
-                request.getDeviceId(),
-                platformUser.getId(),
-                request,
-                ip
+        TrustedDevice device = deviceSecurityService.validate(
+            platformTenantId,
+            null,
+            request.getDeviceId(),
+            platformUser.getId(),
+            request,
+            ip
         );
 
         if (!passwordEncoder.matches(request.getPassword(), platformUser.getPassword())) {
             throw new AppSecurityException(SecurityErrorCode.INVALID_CREDENTIALS, "Invalid credentials");
-        }
-
-        if (!platformUser.isActive() || platformUser.isLocked()) {
-            throw new AppSecurityException(SecurityErrorCode.ACCOUNT_DISABLED, "Account disabled");
         }
 
         if (Boolean.TRUE.equals(platformUser.getMustChangePassword())) {
@@ -82,6 +78,10 @@ public class PlatformAuthService {
                     SecurityErrorCode.PASSWORD_CHANGE_REQUIRED,
                     "Password change required"
             );
+        }
+
+        if (!platformUser.isActive() || platformUser.isLocked()) {
+            throw new AppSecurityException(SecurityErrorCode.ACCOUNT_DISABLED, "Account disabled");
         }
 
         UUID tokenId = tokenId();
@@ -101,9 +101,6 @@ public class PlatformAuthService {
         if (activeSessions >= PLATFORM_USERS_MAX_SESSIONS_PER_DAY) {
             throw new AppSecurityException(SecurityErrorCode.DEVICE_LIMIT_REACHED, "Too many active sessions");
         }
-
-        TrustedDevice device = deviceSecurityService
-                .getByDeviceId(platformTenantId, null, request.getDeviceId());
 
         deviceUsageService.record(device.getId(), platformUser.getId());
 
@@ -148,13 +145,13 @@ public class PlatformAuthService {
 
         String ip = extractClientIp(httpRequest);
 
-        deviceSecurityService.validate(
-                platformTenantId,
-                null,
-                request.getDeviceId(),
-                platformUser.getId(),
-                request,
-                ip
+        TrustedDevice device = deviceSecurityService.validate(
+            platformTenantId,
+            null,
+            request.getDeviceId(),
+            platformUser.getId(),
+            request,
+            ip
         );
 
         UUID tokenId = tokenId();
@@ -174,9 +171,6 @@ public class PlatformAuthService {
         if (activeSessions >= PLATFORM_USERS_MAX_SESSIONS_PER_DAY) {
             throw new AppSecurityException(SecurityErrorCode.DEVICE_LIMIT_REACHED, "Too many active sessions");
         }
-
-        TrustedDevice device = deviceSecurityService
-                .getByDeviceId(platformTenantId, null, request.getDeviceId());
 
         deviceUsageService.record(device.getId(), platformUser.getId());
 

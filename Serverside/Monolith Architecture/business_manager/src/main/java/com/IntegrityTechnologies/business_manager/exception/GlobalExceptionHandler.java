@@ -55,12 +55,15 @@ public class GlobalExceptionHandler {
             case ACCOUNT_DISABLED,
                     ACCOUNT_DELETED,
                     PASSWORD_CHANGE_REQUIRED -> HttpStatus.FORBIDDEN;
+            case SESSION_EXPIRED -> HttpStatus.UNAUTHORIZED;
 
             // DEVICE
             case DEVICE_PENDING_APPROVAL,
                     DEVICE_NOT_APPROVED,
                     DEVICE_NOT_REGISTERED,
                     DEVICE_ID_REQUIRED -> HttpStatus.FORBIDDEN;
+            case DEVICE_NOT_FOUND,
+                    PASSWORD_RESET_INVALID -> HttpStatus.BAD_REQUEST;
 
             case DEVICE_LIMIT_REACHED -> HttpStatus.TOO_MANY_REQUESTS;
 
@@ -117,7 +120,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleExpiredJwt(ExpiredJwtException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
                 "error", "Unauthorized",
-                "code", SecurityErrorCode.INVALID_REQUEST.name(),
+                "code", SecurityErrorCode.SESSION_EXPIRED.name(),
                 "message", "Session expired. Please log in again.",
                 "status", 401,
                 "timestamp", System.currentTimeMillis()
@@ -128,7 +131,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleSignatureException(SignatureException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
                 "error", "Unauthorized",
-                "code", SecurityErrorCode.INVALID_REQUEST.name(),
+                "code", SecurityErrorCode.SESSION_EXPIRED.name(),
                 "message", "Invalid session token",
                 "status", 401,
                 "timestamp", System.currentTimeMillis()
@@ -150,7 +153,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleInvalidToken(InvalidTokenException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
                 "error", "Unauthorized",
-                "code", SecurityErrorCode.INVALID_REQUEST.name(),
+                "code", SecurityErrorCode.SESSION_EXPIRED.name(),
                 "message", ex.getMessage(),
                 "status", 401,
                 "timestamp", System.currentTimeMillis()
@@ -169,7 +172,7 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = new HashMap<>();
         body.put("status", HttpStatus.FORBIDDEN.value());
         body.put("error", HttpStatus.FORBIDDEN.getReasonPhrase());
-        body.put("message", "You do not enough privileges to access this resource(s)");
+        body.put("message", "You do not have enough privileges to access this resource(s)");
         body.put("timestamp", System.currentTimeMillis());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }

@@ -53,7 +53,10 @@ public class PasswordResetService {
     ) {
 
         User user = userRepository.findByIdentifier(identifier, TenantContext.getTenantId())
-                .orElseThrow(() -> new RuntimeException("Invalid reset request"));
+                .orElseThrow(() -> new AppSecurityException(
+                        SecurityErrorCode.PASSWORD_RESET_INVALID,
+                        "Invalid reset request"
+                ));
 
         try {
             validateIdentity(user, idNumber, email, phone);
@@ -69,7 +72,7 @@ public class PasswordResetService {
                     "Identity reset"
             );
 
-        } catch (RuntimeException ex) {
+        } catch (AppSecurityException ex) {
             audit(
                     user.getId(),
                     UserType.TENANT,
@@ -132,16 +135,25 @@ public class PasswordResetService {
 
         PasswordResetToken token = tokenRepo
                 .findByTokenHashAndUsedFalse(hash)
-                .orElseThrow(() -> new RuntimeException("Invalid or expired token"));
+                .orElseThrow(() -> new AppSecurityException(
+                        SecurityErrorCode.PASSWORD_RESET_INVALID,
+                        "Invalid or expired token"
+                ));
 
         if (token.getExpiresAt().isBefore(LocalDateTime.now())) {
             recordFailure(token, "Token expired");
-            throw new RuntimeException("Invalid or expired token");
+            throw new AppSecurityException(
+                    SecurityErrorCode.PASSWORD_RESET_INVALID,
+                    "Invalid or expired token"
+            );
         }
 
         if (token.getAttempts() >= props.getMaxAttempts()) {
             recordFailure(token, "Too many attempts");
-            throw new RuntimeException("Too many attempts");
+            throw new AppSecurityException(
+                    SecurityErrorCode.INVALID_REQUEST,
+                    "Too many attempts"
+            );
         }
 
         token.incrementAttempts();
@@ -151,7 +163,10 @@ public class PasswordResetService {
 
             PlatformUser user = platformUserRepository
                     .findById(token.getUserId())
-                    .orElseThrow();
+                    .orElseThrow(() -> new AppSecurityException(
+                            SecurityErrorCode.USER_NOT_FOUND,
+                            "Platform user not found"
+                    ));
 
             user.setPassword(passwordEncoder.encode(newPassword));
             user.setMustChangePassword(false);
@@ -174,7 +189,11 @@ public class PasswordResetService {
             return;
         }
 
-        User user = userRepository.findById(token.getUserId()).orElseThrow();
+        User user = userRepository.findById(token.getUserId())
+                .orElseThrow(() -> new AppSecurityException(
+                        SecurityErrorCode.USER_NOT_FOUND,
+                        "User not found"
+                ));
 
         try {
             applyPasswordChange(user, newPassword);
@@ -192,7 +211,7 @@ public class PasswordResetService {
                     "Token reset"
             );
 
-        } catch (RuntimeException ex) {
+        } catch (AppSecurityException ex) {
             audit(
                     user.getId(),
                     UserType.TENANT,
@@ -249,14 +268,23 @@ public class PasswordResetService {
 
         PasswordResetToken token = tokenRepo
                 .findByTokenHashAndUsedFalse(hash)
-                .orElseThrow(() -> new RuntimeException("Invalid or expired code"));
+                .orElseThrow(() -> new AppSecurityException(
+                        SecurityErrorCode.PASSWORD_RESET_INVALID,
+                        "Invalid or expired code"
+                ));
 
         if (token.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("Invalid or expired code");
+            throw new AppSecurityException(
+                    SecurityErrorCode.PASSWORD_RESET_INVALID,
+                    "Invalid or expired code"
+            );
         }
 
         if (token.getAttempts() >= props.getMaxAttempts()) {
-            throw new RuntimeException("Too many attempts");
+            throw new AppSecurityException(
+                    SecurityErrorCode.INVALID_REQUEST,
+                    "Too many attempts"
+            );
         }
 
         // ⚠️ IMPORTANT:
@@ -302,7 +330,10 @@ public class PasswordResetService {
         }
 
         if (!matched) {
-            throw new RuntimeException("Invalid reset request");
+            throw new AppSecurityException(
+                    SecurityErrorCode.PASSWORD_RESET_INVALID,
+                    "Invalid reset request"
+            );
         }
     }
 

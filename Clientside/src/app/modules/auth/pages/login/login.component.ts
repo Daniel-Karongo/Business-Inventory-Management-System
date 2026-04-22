@@ -135,6 +135,15 @@ export class LoginComponent implements OnInit {
 
   async onBiometricLogin() {
 
+    if (!this.domain.isPlatform && !this.form.value.branchId) {
+      this.snack.open(
+        'Select a branch before biometric login.',
+        'Close',
+        { duration: 4000 }
+      );
+      return;
+    }
+
     this.loading = true;
 
     let location;

@@ -31,4 +31,7 @@ public class TenantSettings {
 
     private String logoUrl;
 
+    @Builder.Default
+    private Integer maxDevicesPerUser = 3;
+
 }

@@ -7,6 +7,8 @@ public enum SecurityErrorCode {
     USER_NOT_FOUND,
     ACCOUNT_DISABLED,
     PASSWORD_CHANGE_REQUIRED,
+    SESSION_EXPIRED,
+    PASSWORD_RESET_INVALID,
 
     /* ================= BIOMETRIC ================= */
     BIOMETRIC_INVALID_PAYLOAD,
@@ -23,6 +25,7 @@ public enum SecurityErrorCode {
     DEVICE_NOT_APPROVED,
     DEVICE_PENDING_APPROVAL,
     DEVICE_LIMIT_REACHED,
+    DEVICE_NOT_FOUND,
 
     /* ================= LOCATION ================= */
     LOCATION_REQUIRED,

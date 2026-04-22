@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security.auth.service;
 
+import com.IntegrityTechnologies.business_manager.exception.AppSecurityException;
 import com.IntegrityTechnologies.business_manager.exception.UserNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentRepository;
@@ -17,6 +18,7 @@ import com.IntegrityTechnologies.business_manager.security.auth.model.UserType;
 import com.IntegrityTechnologies.business_manager.security.auth.platform.PlatformAuthService;
 import com.IntegrityTechnologies.business_manager.security.auth.tenant.TenantAuthService;
 import com.IntegrityTechnologies.business_manager.security.auth.util.JwtUtil;
+import com.IntegrityTechnologies.business_manager.security.model.SecurityErrorCode;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -111,10 +113,12 @@ public class AuthService {
     @Transactional
     public void logout(UUID tokenId, boolean auto) {
 
-        UserSession session =
-                userSessionRepository
-                        .findByTokenIdAndLogoutTimeIsNull(tokenId)
-                        .orElse(null);
+        UserSession session = userSessionRepository
+                .findByTokenIdAndLogoutTimeIsNull(tokenId)
+                .orElseThrow(() -> new AppSecurityException(
+                        SecurityErrorCode.SESSION_EXPIRED,
+                        "Session expired"
+                ));
 
         if (session == null) return;
 
@@ -236,7 +240,10 @@ public class AuthService {
 
             PlatformUser user = platformUserRepository
                     .findById(userId)
-                    .orElseThrow(() -> new RuntimeException("Platform user not found"));
+                    .orElseThrow(() -> new AppSecurityException(
+                            SecurityErrorCode.USER_NOT_FOUND,
+                            "Platform user not found"
+                    ));
 
             return new AuthResponse(
                     user.getId(),
@@ -257,14 +264,23 @@ public class AuthService {
 
         userSessionRepository
                 .findByTokenIdAndLogoutTimeIsNull(tokenId)
-                .orElseThrow(() -> new RuntimeException("Session expired"));
+                .orElseThrow(() -> new AppSecurityException(
+                        SecurityErrorCode.SESSION_EXPIRED,
+                        "Session expired"
+                ));
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+                .orElseThrow(() -> new AppSecurityException(
+                        SecurityErrorCode.USER_NOT_FOUND,
+                        "User not found"
+                ));
 
         UserSession session =
                 userSessionRepository.findByTokenIdAndLogoutTimeIsNull(tokenId)
-                        .orElseThrow();
+                        .orElseThrow(() -> new AppSecurityException(
+                                SecurityErrorCode.SESSION_EXPIRED,
+                                "Session expired"
+                        ));
 
         List<Department> departments =
                 departmentRepository.findDepartmentsForUserInBranch(
