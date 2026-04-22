@@ -6,17 +6,16 @@ import com.IntegrityTechnologies.business_manager.security.audit.service.LoginAu
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthRequest;
 import com.IntegrityTechnologies.business_manager.security.auth.platform.PlatformAuthService;
 import com.IntegrityTechnologies.business_manager.security.auth.tenant.TenantAuthService;
+import com.IntegrityTechnologies.business_manager.security.biometric.dto.WebAuthnVerifyRequest;
 import com.IntegrityTechnologies.business_manager.security.biometric.repository.UserBiometricRepository;
 import com.IntegrityTechnologies.business_manager.security.biometric.service.WebAuthnService;
 import com.IntegrityTechnologies.business_manager.security.model.SecurityErrorCode;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
 import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
 import com.yubico.webauthn.data.PublicKeyCredential;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -31,21 +30,22 @@ public class BiometricAuthFacadeService {
     private final TenantAuthService tenantAuthService;
     private final PlatformUserRepository platformUserRepository;
     private final UserBiometricRepository biometricRepository;
-    private final ObjectMapper objectMapper;
 
     public AuthService.LoginResult biometricLogin(
             PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> credential,
-            String deviceId,
-            UUID branchId,
-            Double latitude,
-            Double longitude,
-            Double accuracy,
+            WebAuthnVerifyRequest request,
             HttpServletRequest servletRequest,
             String origin
     ) {
 
         UUID tenantId = TenantContext.getTenantId();
-        String ip = servletRequest.getRemoteAddr();
+        String ip = extractClientIp(servletRequest);
+        String deviceId = request.getDeviceId();
+        UUID branchId = request.getBranchId();
+
+        Double latitude = request.getLatitude();
+        Double longitude = request.getLongitude();
+        Double accuracy = request.getAccuracy();
 
         if (credential == null) {
             loginAuditService.log(
@@ -99,6 +99,10 @@ public class BiometricAuthFacadeService {
             authRequest.setLatitude(latitude);
             authRequest.setLongitude(longitude);
             authRequest.setAccuracy(accuracy);
+            authRequest.setUserAgent(request.getUserAgent());
+            authRequest.setBrowserName(request.getBrowserName());
+            authRequest.setOsName(request.getOsName());
+            authRequest.setPlatform(request.getPlatform());
 
             /* ================= 4️⃣ LOGIN ================= */
 
@@ -158,5 +162,16 @@ public class BiometricAuthFacadeService {
                     "Biometric authentication failed"
             );
         }
+    }
+
+    private String extractClientIp(HttpServletRequest request) {
+
+        String xf = request.getHeader("X-Forwarded-For");
+
+        if (xf != null && !xf.isBlank()) {
+            return xf.split(",")[0].trim();
+        }
+
+        return request.getRemoteAddr();
     }
 }

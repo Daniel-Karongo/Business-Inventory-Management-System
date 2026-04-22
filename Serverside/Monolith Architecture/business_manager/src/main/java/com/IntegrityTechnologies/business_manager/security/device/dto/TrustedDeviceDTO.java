@@ -14,8 +14,18 @@ public class TrustedDeviceDTO {
     private UUID id;
     private UUID branchId;
     private String deviceName;
+
+    private String browserName;
+    private String osName;
+    private String platform;
+    private String ipAddress;
+    private String userAgent;
+
+    private List<UUID> attemptedByUserIds;
+    private Integer pendingAttemptCount;
+
     private String deviceId;
-    private Boolean approved;
+    private String status;
     private LocalDateTime firstSeenAt;
     private LocalDateTime lastSeenAt;
     private List<UUID> usedByUserIds;

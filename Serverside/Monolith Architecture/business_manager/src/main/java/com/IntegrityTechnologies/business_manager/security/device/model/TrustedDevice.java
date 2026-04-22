@@ -14,12 +14,12 @@ import java.util.UUID;
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_device_branch_device_id",
-                        columnNames = {"tenant_id", "branch_id", "device_id"}
+                        columnNames = {"tenant_id","branch_id","device_id"}
                 )
         },
         indexes = {
-                @Index(name = "idx_td_branch", columnList = "branch_id"),
-                @Index(name = "idx_td_device_id", columnList = "device_id")
+                @Index(name="idx_td_branch", columnList="branch_id"),
+                @Index(name="idx_td_device_id", columnList="device_id")
         }
 )
 @Getter
@@ -33,26 +33,34 @@ public class TrustedDevice extends TenantAwareEntity {
     @GeneratedValue
     private UUID id;
 
-    @Column(name = "branch_id", nullable = true)
+    @Column(name="branch_id")
     private UUID branchId;
 
-    @Column(name = "device_id", nullable = false, length = 128)
+    @Column(name="device_id", nullable=false, length=128)
     private String deviceId;
 
-    @Column(name = "device_name")
     private String deviceName;
 
-    @Column(nullable = false)
+    private String browserName;
+    private String osName;
+    private String platform;
+    private String userAgent;
+    private String ipAddress;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable=false)
     @Builder.Default
-    private Boolean approved = false;
+    private DeviceApprovalStatus status = DeviceApprovalStatus.PENDING;
 
     private LocalDateTime firstSeenAt;
     private LocalDateTime lastSeenAt;
 
     @PrePersist
     void onCreate() {
-        if (approved == null) approved = false;
-        firstSeenAt = LocalDateTime.now();
+        if (status == null) {
+            status = DeviceApprovalStatus.PENDING;
+        }
+        if (firstSeenAt == null) firstSeenAt = LocalDateTime.now();
         lastSeenAt = LocalDateTime.now();
     }
 }

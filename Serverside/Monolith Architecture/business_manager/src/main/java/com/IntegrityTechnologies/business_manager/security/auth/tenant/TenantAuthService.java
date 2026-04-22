@@ -68,9 +68,25 @@ public class TenantAuthService {
                 .findByTenantIdAndIdAndDeletedFalse(tenantId, branchId)
                 .orElseThrow(() -> new AppSecurityException(SecurityErrorCode.BRANCH_NOT_FOUND, "Branch not found"));
 
-        try {
-            deviceSecurityService.validate(tenantId, branchId, request.getDeviceId());
+        User user = userRepository
+                .findAuthUser(tenantId, request.getIdentifier())
+                .orElseThrow(() -> new AppSecurityException(
+                        SecurityErrorCode.USER_NOT_FOUND,
+                        "User not found"
+                ));
 
+        try {
+            if (Boolean.TRUE.equals(branch.getEnforceDevice())) {
+
+                deviceSecurityService.validate(
+                        tenantId,
+                        branchId,
+                        request.getDeviceId(),
+                        user.getId(),
+                        request,
+                        ip
+                );
+            }
             locationSecurityService.validate(
                     branch,
                     request.getLatitude(),
@@ -114,13 +130,6 @@ public class TenantAuthService {
                     "Login failed"
             );
         }
-
-        User user = userRepository
-                .findAuthUser(tenantId, request.getIdentifier())
-                .orElseThrow(() -> new AppSecurityException(
-                        SecurityErrorCode.USER_NOT_FOUND,
-                        "User not found"
-                ));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new AppSecurityException(
@@ -243,8 +252,24 @@ public class TenantAuthService {
                 .findByTenantIdAndIdAndDeletedFalse(tenantId, branchId)
                 .orElseThrow(() -> new AppSecurityException(SecurityErrorCode.BRANCH_NOT_FOUND, "Branch not found"));
 
+        User user = userRepository
+                .findByIdAndTenantId(request.getUserId(), tenantId)
+                .orElseThrow(() -> new AppSecurityException(
+                        SecurityErrorCode.USER_NOT_FOUND,
+                        "User not found"
+                ));
+
         try {
-            deviceSecurityService.validate(tenantId, branchId, request.getDeviceId());
+            if (Boolean.TRUE.equals(branch.getEnforceDevice())) {
+                deviceSecurityService.validate(
+                        tenantId,
+                        branchId,
+                        request.getDeviceId(),
+                        user.getId(),
+                        request,
+                        ip
+                );
+            }
 
             locationSecurityService.validate(
                     branch,
@@ -289,13 +314,6 @@ public class TenantAuthService {
                     "Login failed"
             );
         }
-
-        User user = userRepository
-                .findByIdAndTenantId(request.getUserId(), tenantId)
-                .orElseThrow(() -> new AppSecurityException(
-                    SecurityErrorCode.USER_NOT_FOUND,
-                    "User not found"
-                ));
 
         if (Boolean.TRUE.equals(user.getDeleted())) {
             throw new AppSecurityException(

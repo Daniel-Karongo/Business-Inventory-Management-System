@@ -102,7 +102,7 @@ export class AuthErrorService {
                 return this.toast('Biometric belongs to another user.');
 
             case 'BIOMETRIC_CREDENTIAL_NOT_FOUND':
-                return this.toast('No biometrics registered.');
+                return this.toast('No biometrics registered for this device.');
 
             case 'BIOMETRIC_INVALID_PAYLOAD':
                 return this.toast('Invalid biometric data.');

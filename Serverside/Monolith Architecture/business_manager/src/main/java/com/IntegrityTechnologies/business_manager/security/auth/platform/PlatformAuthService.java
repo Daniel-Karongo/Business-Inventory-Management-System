@@ -2,7 +2,6 @@ package com.IntegrityTechnologies.business_manager.security.auth.platform;
 
 import com.IntegrityTechnologies.business_manager.exception.AppSecurityException;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUser;
-import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUserSession;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserSessionRepository;
 import com.IntegrityTechnologies.business_manager.security.auth.common.AuthResponseFactory;
@@ -16,12 +15,9 @@ import com.IntegrityTechnologies.business_manager.security.model.SecurityErrorCo
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -62,7 +58,16 @@ public class PlatformAuthService {
 
         UUID platformTenantId = TenantContext.getTenantId();
 
-        deviceSecurityService.validate(platformTenantId, null, request.getDeviceId());
+        String ip = extractClientIp(httpRequest);
+
+        deviceSecurityService.validate(
+                platformTenantId,
+                null,
+                request.getDeviceId(),
+                platformUser.getId(),
+                request,
+                ip
+        );
 
         if (!passwordEncoder.matches(request.getPassword(), platformUser.getPassword())) {
             throw new AppSecurityException(SecurityErrorCode.INVALID_CREDENTIALS, "Invalid credentials");
@@ -102,14 +107,6 @@ public class PlatformAuthService {
 
         deviceUsageService.record(device.getId(), platformUser.getId());
 
-        PlatformUserSession session = PlatformUserSession.builder()
-                .userId(platformUser.getId())
-                .tokenId(tokenId)
-                .loginDate(LocalDate.now())
-                .loginTime(LocalDateTime.now())
-                .autoLoggedOut(false)
-                .build();
-
         sessionService.create(platformUser.getId(), tokenId);
 
         AuthResponse response = responseFactory.platform(
@@ -136,50 +133,69 @@ public class PlatformAuthService {
             throw new AppSecurityException(SecurityErrorCode.DEVICE_ID_REQUIRED, "Device ID required");
         }
 
-        PlatformUser user = platformUserRepository
+        PlatformUser platformUser = platformUserRepository
                 .findById(userId)
                 .orElseThrow(() -> new AppSecurityException(
                         SecurityErrorCode.USER_NOT_FOUND,
                         "Platform user not found"
                 ));
 
-        if (!user.isActive() || user.isLocked()) {
+        if (!platformUser.isActive() || platformUser.isLocked()) {
             throw new AppSecurityException(SecurityErrorCode.ACCOUNT_DISABLED, "Account disabled");
         }
+
+        UUID platformTenantId = TenantContext.getTenantId();
+
+        String ip = extractClientIp(httpRequest);
+
+        deviceSecurityService.validate(
+                platformTenantId,
+                null,
+                request.getDeviceId(),
+                platformUser.getId(),
+                request,
+                ip
+        );
 
         UUID tokenId = tokenId();
 
         String token = jwtFactory.generatePlatformToken(
-                user.getId(),
-                user.getUsername(),
-                user.getRole().name(),
+                platformUser.getId(),
+                platformUser.getUsername(),
+                platformUser.getRole().name(),
                 tokenId,
                 request.getDeviceId()
         );
 
         long activeSessions =
                 platformUserSessionRepository
-                        .countByUserIdAndLogoutTimeIsNull(user.getId());
+                        .countByUserIdAndLogoutTimeIsNull(platformUser.getId());
 
         if (activeSessions >= PLATFORM_USERS_MAX_SESSIONS_PER_DAY) {
             throw new AppSecurityException(SecurityErrorCode.DEVICE_LIMIT_REACHED, "Too many active sessions");
         }
 
-        UUID platformTenantId = TenantContext.getTenantId();
-
         TrustedDevice device = deviceSecurityService
                 .getByDeviceId(platformTenantId, null, request.getDeviceId());
 
-        deviceUsageService.record(device.getId(), user.getId());
+        deviceUsageService.record(device.getId(), platformUser.getId());
 
-        sessionService.create(user.getId(), tokenId);
+        sessionService.create(platformUser.getId(), tokenId);
 
         AuthResponse response = responseFactory.platform(
-                user.getId(),
-                user.getUsername(),
-                user.getRole().name()
+                platformUser.getId(),
+                platformUser.getUsername(),
+                platformUser.getRole().name()
         );
 
         return new Result(token, response);
+    }
+
+    private String extractClientIp(HttpServletRequest request) {
+        String xf = request.getHeader("X-Forwarded-For");
+        if (xf != null && !xf.isBlank()) {
+            return xf.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }

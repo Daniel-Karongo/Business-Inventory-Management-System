@@ -17,4 +17,10 @@ public class AuthRequest {
     private Double accuracy;
 
     private String deviceId;
+
+    // new
+    private String userAgent;
+    private String browserName;
+    private String osName;
+    private String platform;
 }

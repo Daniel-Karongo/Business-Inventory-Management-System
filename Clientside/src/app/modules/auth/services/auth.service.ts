@@ -175,11 +175,19 @@ export class AuthService {
 export interface LoginRequest {
   identifier: string;
   password: string;
-  branchId: string;
+
+  branchId: string | null;
+
   deviceId: string;
+
   latitude: number;
   longitude: number;
   accuracy: number;
+
+  userAgent: string;
+  browserName: string;
+  osName: string;
+  platform: string;
 }
 
 export interface MeResponse {

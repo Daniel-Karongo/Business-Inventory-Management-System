@@ -14,7 +14,17 @@ import java.util.UUID;
         indexes = {
                 @Index(name = "idx_du_device", columnList = "device_id"),
                 @Index(name = "idx_du_user", columnList = "user_id")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        columnNames={
+                                "tenant_id",
+                                "device_id",
+                                "user_id"
+                        }
+                )
         }
+
 )
 @Getter
 @Setter

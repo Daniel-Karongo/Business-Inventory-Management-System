@@ -161,6 +161,8 @@ export class LoginComponent implements OnInit {
             challenge
           );
 
+          const ua = navigator.userAgent;
+
           const payload = {
             credential: { ...credential },
 
@@ -169,9 +171,15 @@ export class LoginComponent implements OnInit {
               : this.form.value.branchId,
 
             deviceId,
+
             latitude: location.latitude,
             longitude: location.longitude,
-            accuracy: location.accuracy
+            accuracy: location.accuracy,
+
+            userAgent: ua,
+            browserName: this.detectBrowser(ua),
+            osName: this.detectOS(ua),
+            platform: navigator.platform
           };
 
           this.auth.biometricVerify(payload)
@@ -205,13 +213,8 @@ export class LoginComponent implements OnInit {
         }
 
       },
-      error: () => {
-        this.loading = false;
-        this.snack.open(
-          'Unable to start biometric authentication.',
-          'Close',
-          { duration: 4000 }
-        );
+      error: (err) => {
+        this.errorHandler.handle(err, 'biometric');
       }
     });
   }
@@ -241,16 +244,25 @@ export class LoginComponent implements OnInit {
       return;
     }
 
+    const ua = navigator.userAgent;
+
     const payload: LoginRequest = {
       identifier: this.form.value.identifier!,
       password: this.form.value.password!,
       branchId: this.domain.isPlatform
-        ? null as any
+        ? null
         : this.form.value.branchId!,
       deviceId: this.deviceService.getDeviceId(),
+
       latitude: location.latitude,
       longitude: location.longitude,
-      accuracy: location.accuracy
+      accuracy: location.accuracy,
+
+      userAgent: ua,
+
+      browserName: this.detectBrowser(ua),
+      osName: this.detectOS(ua),
+      platform: navigator.platform
     };
 
     this.auth.login(payload).pipe(
@@ -296,5 +308,25 @@ export class LoginComponent implements OnInit {
         this.errorHandler.handle(err, 'login');
       }
     });
+  }
+
+  private detectBrowser(ua: string): string {
+
+    if (ua.includes('Edg')) return 'Edge';
+    if (ua.includes('Chrome')) return 'Chrome';
+    if (ua.includes('Firefox')) return 'Firefox';
+    if (ua.includes('Safari')) return 'Safari';
+
+    return 'Unknown';
+  }
+
+  private detectOS(ua: string): string {
+
+    if (ua.includes('Windows')) return 'Windows';
+    if (ua.includes('Android')) return 'Android';
+    if (ua.includes('Mac OS')) return 'macOS';
+    if (ua.includes('Linux')) return 'Linux';
+
+    return 'Unknown';
   }
 }

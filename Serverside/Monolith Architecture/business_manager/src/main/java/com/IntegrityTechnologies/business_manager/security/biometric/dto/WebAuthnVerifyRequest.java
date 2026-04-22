@@ -8,13 +8,19 @@ import java.util.UUID;
 @Data
 public class WebAuthnVerifyRequest {
 
-    // ✅ PURE WEBAUTHN PAYLOAD ONLY
-    private Map<String, Object> credential;
+    private Map<String,Object> credential;
 
-    // ✅ METADATA
     private UUID branchId;
+
     private String deviceId;
+
     private Double latitude;
     private Double longitude;
     private Double accuracy;
+
+    // add
+    private String browserName;
+    private String osName;
+    private String platform;
+    private String userAgent;
 }

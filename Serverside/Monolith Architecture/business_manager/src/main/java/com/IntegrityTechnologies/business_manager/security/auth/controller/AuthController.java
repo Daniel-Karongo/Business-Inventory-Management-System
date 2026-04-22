@@ -72,6 +72,7 @@ public class AuthController {
         cookie.setHttpOnly(true);
         cookie.setPath("/");
         cookie.setMaxAge((int) jwtUtil.secondsUntilMidnight());
+        cookie.setDomain(servletRequest.getServerName());
 
         cookie.setAttribute("SameSite", isSecure ? "None" : "Lax");
 
@@ -159,24 +160,12 @@ public class AuthController {
             );
         }
 
-        /* ================= 2️⃣ EXTRACT METADATA ================= */
-
-        UUID branchId = request.getBranchId();
-        String deviceId = request.getDeviceId();
-        Double latitude = request.getLatitude();
-        Double longitude = request.getLongitude();
-        Double accuracy = request.getAccuracy();
-
         /* ================= 3️⃣ SERVICE ================= */
 
         AuthService.LoginResult loginResult =
                 biometricAuthFacadeService.biometricLogin(
                         credential,
-                        deviceId,
-                        branchId,
-                        latitude,
-                        longitude,
-                        accuracy,
+                        request,
                         servletRequest,
                         origin
                 );
@@ -190,6 +179,7 @@ public class AuthController {
         cookie.setMaxAge((int) jwtUtil.secondsUntilMidnight());
         cookie.setAttribute("SameSite",
                 servletRequest.isSecure() ? "None" : "Lax");
+        cookie.setDomain(servletRequest.getServerName());
 
         response.addCookie(cookie);
 
@@ -209,7 +199,7 @@ public class AuthController {
 
         String deviceId = request.deviceId();
 
-        deviceSecurityService.validate(tenantId, branchId, deviceId);
+        deviceSecurityService.validate(tenantId, branchId, deviceId, userId);
 
         String origin = servletRequest.getHeader("Origin");
 
@@ -265,8 +255,10 @@ public class AuthController {
             String rawJson = objectMapper.writeValueAsString(body); // ✅ convert back to JSON string
             credential = PublicKeyCredential.parseRegistrationResponseJson(rawJson);
         } catch (Exception e) {
-            e.printStackTrace(); // 🔥 ADD THIS
-            throw new RuntimeException("Invalid registration payload");
+            throw new AppSecurityException(
+                    SecurityErrorCode.BIOMETRIC_INVALID_PAYLOAD,
+                    "Invalid registration payload"
+            );
         }
 
         // ✅ PASS userId
@@ -333,7 +325,7 @@ public class AuthController {
         cookie.setHttpOnly(true);
         cookie.setPath("/");
         cookie.setMaxAge(0);
-
+        cookie.setDomain(request.getServerName());
         cookie.setAttribute("SameSite", isSecure ? "None" : "Lax");
 
         response.addCookie(cookie);

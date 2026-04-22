@@ -1,41 +1,28 @@
 package com.IntegrityTechnologies.business_manager.security.auth.service;
 
 import com.IntegrityTechnologies.business_manager.exception.UserNotFoundException;
-import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model.RollcallMethod;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model.UserSession;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.service.RollcallService;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUser;
-import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUserSession;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserSessionRepository;
-import com.IntegrityTechnologies.business_manager.security.audit.service.LoginAuditService;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthRequest;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthResponse;
 import com.IntegrityTechnologies.business_manager.security.auth.model.UserType;
 import com.IntegrityTechnologies.business_manager.security.auth.platform.PlatformAuthService;
 import com.IntegrityTechnologies.business_manager.security.auth.tenant.TenantAuthService;
 import com.IntegrityTechnologies.business_manager.security.auth.util.JwtUtil;
-import com.IntegrityTechnologies.business_manager.security.device.model.TrustedDevice;
-import com.IntegrityTechnologies.business_manager.security.device.service.DeviceSecurityService;
-import com.IntegrityTechnologies.business_manager.security.device.service.DeviceUsageService;
-import com.IntegrityTechnologies.business_manager.security.device.service.LocationSecurityService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -44,23 +31,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private static final int TENANT_USERS_MAX_SESSIONS_PER_DAY = 5;
-    private static final int PLATFORM_USERS_MAX_SESSIONS_PER_DAY = 5;
-
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
     private final RollcallService rollcallService;
     private final DepartmentRepository departmentRepository;
-    private final BranchRepository branchRepository;
     private final UserSessionRepository userSessionRepository;
     private final TokenBlacklistService tokenBlacklistService;
     private final PlatformUserRepository platformUserRepository;
     private final PlatformUserSessionRepository platformUserSessionRepository;
-    private final LoginAuditService loginAuditService;
-    private final DeviceSecurityService deviceSecurityService;
-    private final LocationSecurityService locationSecurityService;
-    private final DeviceUsageService deviceUsageService;
     private final PlatformAuthService platformAuthService;
     private final TenantAuthService tenantAuthService;
 
@@ -196,29 +174,45 @@ public class AuthService {
     @Transactional
     public void logoutAllSessions(UUID userId, boolean auto) {
 
-        List<UserSession> sessions =
-                userSessionRepository.findAllByUserIdAndLogoutTimeIsNull(userId);
-
         LocalDateTime now = LocalDateTime.now();
 
+        platformUserSessionRepository
+                .findAllByUserIdAndLogoutTimeIsNull(userId)
+                .forEach(s -> {
+                    s.logout(now, auto);
+                    platformUserSessionRepository.save(s);
+                });
+
+        List<UserSession> sessions =
+                userSessionRepository
+                        .findAllByUserIdAndLogoutTimeIsNull(userId);
+
         for (UserSession s : sessions) {
-            tokenBlacklistService.blacklistToken(s.getTokenId().toString());
+
             s.logout(now, auto);
             userSessionRepository.save(s);
 
             UUID branchId = s.getBranchId();
+
             List<Department> departments =
-                    departmentRepository.findDepartmentsForUserInBranch(
-                            tenantId(),
-                            userId,
-                            branchId
-                    );
+                    departmentRepository
+                            .findDepartmentsForUserInBranch(
+                                    tenantId(),
+                                    userId,
+                                    branchId
+                            );
 
             if (departments.isEmpty()) {
-                rollcallService.recordLogoutRollcall(userId, null, branchId);
+                rollcallService.recordLogoutRollcall(
+                        userId, null, branchId
+                );
             } else {
                 for (Department d : departments) {
-                    rollcallService.recordLogoutRollcall(userId, d.getId(), branchId);
+                    rollcallService.recordLogoutRollcall(
+                            userId,
+                            d.getId(),
+                            branchId
+                    );
                 }
             }
         }
