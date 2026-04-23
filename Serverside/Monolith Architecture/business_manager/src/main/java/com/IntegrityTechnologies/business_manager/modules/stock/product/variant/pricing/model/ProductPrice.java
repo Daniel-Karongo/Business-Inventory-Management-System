@@ -79,7 +79,8 @@ public class ProductPrice extends BranchAwareEntity {
     private LocalDateTime deletedAt;
 
     @Version
-    private Long version;
+    @Column(nullable = false)
+    private Long version = 0L;
 
     @PrePersist
     @PreUpdate
@@ -94,6 +95,10 @@ public class ProductPrice extends BranchAwareEntity {
         // 🔥 HARD RULE
         if (minQuantity == 1 && price.compareTo(BigDecimal.ZERO) == 0) {
             throw new IllegalStateException("Base price cannot be zero");
+        }
+
+        if (version == null) {
+            version = 0L;
         }
     }
 }

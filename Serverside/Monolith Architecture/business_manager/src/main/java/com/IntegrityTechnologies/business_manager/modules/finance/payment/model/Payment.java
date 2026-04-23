@@ -56,5 +56,13 @@ public class Payment {
     private String transactionCode;
 
     @Version
-    private Long version;
+    @Column(nullable = false)
+    private Long version = 0L;
+
+    @PrePersist
+    public void prePersist() {
+        if (version == null) {
+            version = 0L;
+        }
+    }
 }

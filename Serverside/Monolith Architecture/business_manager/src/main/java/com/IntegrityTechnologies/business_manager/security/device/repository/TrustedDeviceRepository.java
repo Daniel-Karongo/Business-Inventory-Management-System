@@ -32,12 +32,23 @@ public interface TrustedDeviceRepository extends JpaRepository<TrustedDevice, UU
             DeviceApprovalStatus status
     );
 
+    List<TrustedDevice> findByTenantIdAndStatus(
+            UUID tenantId,
+            DeviceApprovalStatus status
+    );
+
     long countByTenantIdAndBranchIdIsNullAndStatus(
             UUID tenantId,
             DeviceApprovalStatus status
     );
 
+    long countByTenantIdAndStatus(
+            UUID tenantId,
+            DeviceApprovalStatus status
+    );
+
     List<TrustedDevice> findByTenantIdAndBranchId(UUID tenantId, UUID branchId);
+    List<TrustedDevice> findByTenantIdAndBranchIdIsNull(UUID tenantId);
 
     Optional<TrustedDevice> findByIdAndTenantId(UUID id, UUID tenantId);
 }

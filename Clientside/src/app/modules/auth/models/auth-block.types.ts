@@ -1,7 +1,0 @@
-export type AuthBlockType =
-  | 'DEVICE_PENDING'
-  | 'DEVICE_BLOCKED'
-  | 'LOCATION_REQUIRED'
-  | 'LOCATION_OUTSIDE'
-  | 'LOCATION_ACCURACY'
-  | 'SESSION_LIMIT';

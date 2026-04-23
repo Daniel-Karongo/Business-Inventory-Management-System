@@ -11,6 +11,7 @@ import com.yubico.webauthn.data.*;
 import com.yubico.webauthn.exception.AssertionFailedException;
 import com.yubico.webauthn.exception.RegistrationFailedException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -25,6 +26,8 @@ public class WebAuthnService {
     private final RegistrationChallengeService registrationChallengeService;
     private final DeviceSecurityService deviceSecurityService;
 
+    @Value("${security.allowed-origin-suffix}")
+    private String allowedOriginSuffix;
     private void validateOrigin(String origin) {
 
         if (origin == null || origin.isBlank()) {
@@ -52,7 +55,12 @@ public class WebAuthnService {
                 );
             }
 
-            if (!host.equals("local.test") && !host.endsWith(".local.test")) {
+            String rootHost =
+                    allowedOriginSuffix.startsWith(".")
+                            ? allowedOriginSuffix.substring(1)
+                            : allowedOriginSuffix;
+
+            if (!host.equals(rootHost) && !host.endsWith(allowedOriginSuffix)) {
                 throw new AppSecurityException(
                         SecurityErrorCode.INVALID_REQUEST,
                         "Invalid origin domain"

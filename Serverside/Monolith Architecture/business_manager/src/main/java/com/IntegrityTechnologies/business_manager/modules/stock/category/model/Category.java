@@ -38,7 +38,8 @@ public class Category extends BranchAwareEntity {
     private Long id;
 
     @Version
-    private Long version;
+    @Column(nullable = false)
+    private Long version = 0L;
 
     @Column(nullable = false)
     private String name;
@@ -70,4 +71,11 @@ public class Category extends BranchAwareEntity {
     private boolean deleted = false;
 
     private LocalDateTime deletedAt;
+
+    @PrePersist
+    public void prePersist() {
+        if (version == null) {
+            version = 0L;
+        }
+    }
 }

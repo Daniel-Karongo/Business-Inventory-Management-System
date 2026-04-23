@@ -34,6 +34,10 @@ public class UserBiometric extends TenantAwareEntity {
     @GeneratedValue
     private UUID id;
 
+    @Version
+    @Column(nullable = false)
+    private Long version = 0L;
+
     @Column(nullable = false)
     private UUID userId;
 
@@ -59,5 +63,9 @@ public class UserBiometric extends TenantAwareEntity {
     @PrePersist
     void onCreate() {
         if (signCount == null) signCount = 0L;
+
+        if (version == null) {
+            version = 0L;
+        }
     }
 }

@@ -61,7 +61,8 @@ public class ProductVariantPackaging extends BranchAwareEntity {
     private LocalDateTime deletedAt;
 
     @Version
-    private Long version;
+    @Column(nullable = false)
+    private Long version = 0L;
 
     @PrePersist
     @PreUpdate
@@ -73,6 +74,10 @@ public class ProductVariantPackaging extends BranchAwareEntity {
 
         if (Boolean.TRUE.equals(isBaseUnit) && unitsPerPackaging != 1) {
             throw new IllegalStateException("Base unit must have unitsPerPackaging = 1");
+        }
+
+        if (version == null) {
+            version = 0L;
         }
     }
 }

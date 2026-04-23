@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security.device.service;
 
-import com.IntegrityTechnologies.business_manager.security.audit.repository.LoginAuditRepository;
+import com.IntegrityTechnologies.business_manager.security.device.dto.DeviceStatsDTO;
 import com.IntegrityTechnologies.business_manager.security.device.dto.TrustedDeviceDTO;
 import com.IntegrityTechnologies.business_manager.security.device.model.DeviceApprovalStatus;
 import com.IntegrityTechnologies.business_manager.security.device.model.TrustedDevice;
@@ -9,17 +9,18 @@ import com.IntegrityTechnologies.business_manager.security.device.repository.Tru
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class TrustedDeviceManagementService {
+public class TenantTrustedDeviceManagementService {
 
     private final TrustedDeviceRepository repository;
-    private final DeviceUsageRepository deviceUsageRepository;
-    private final LoginAuditRepository auditRepository;
+    private final DeviceUsageRepository usageRepository;
+    private final DeviceApprovalAuditService approvalAuditService;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -27,11 +28,9 @@ public class TrustedDeviceManagementService {
 
     public List<TrustedDeviceDTO> list(UUID branchId) {
 
-        UUID tenantId = tenantId();
-
         if (branchId == null) {
             return repository
-                    .findByTenantIdAndBranchId(tenantId,null)
+                    .findByTenantIdAndBranchIdIsNull(tenantId())
                     .stream()
                     .map(this::toDto)
                     .toList();
@@ -39,7 +38,7 @@ public class TrustedDeviceManagementService {
 
         return repository
                 .findByTenantIdAndBranchId(
-                        tenantId,
+                        tenantId(),
                         branchId
                 )
                 .stream()
@@ -47,47 +46,64 @@ public class TrustedDeviceManagementService {
                 .toList();
     }
 
-    public void approve(UUID deviceId) {
+    public List<TrustedDeviceDTO> pendingDevices() {
+
+        return repository
+                .findByTenantIdAndStatus(
+                        tenantId(),
+                        DeviceApprovalStatus.PENDING
+                )
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    @Transactional
+    public void approve(UUID id, String reason) {
 
         TrustedDevice d =
                 repository
-                        .findByIdAndTenantId(
-                                deviceId,
-                                tenantId()
-                        )
+                        .findByIdAndTenantId(id, tenantId())
                         .orElseThrow();
 
         d.setStatus(DeviceApprovalStatus.APPROVED);
 
         repository.save(d);
+
+        approvalAuditService.log(
+                d.getId(),
+                "APPROVED",
+                reason
+        );
     }
 
-    public void reject(UUID deviceId) {
+    @Transactional
+    public void reject(UUID id, String reason) {
 
         TrustedDevice d =
                 repository
-                        .findByIdAndTenantId(
-                                deviceId,
-                                tenantId()
-                        )
+                        .findByIdAndTenantId(id, tenantId())
                         .orElseThrow();
 
         d.setStatus(DeviceApprovalStatus.REJECTED);
 
         repository.save(d);
+
+        approvalAuditService.log(
+                d.getId(),
+                "REJECTED",
+                reason
+        );
     }
 
+    @Transactional
     public void rename(
-            UUID deviceId,
+            UUID id,
             String name
     ) {
-
         TrustedDevice d =
                 repository
-                        .findByIdAndTenantId(
-                                deviceId,
-                                tenantId()
-                        )
+                        .findByIdAndTenantId(id, tenantId())
                         .orElseThrow();
 
         d.setDeviceName(name);
@@ -97,46 +113,16 @@ public class TrustedDeviceManagementService {
 
     private TrustedDeviceDTO toDto(TrustedDevice d) {
 
-        UUID tenantId = tenantId();
-
-        List<UUID> usedByUsers =
-                deviceUsageRepository
+        var users =
+                usageRepository
                         .findByTenantIdAndDeviceId(
-                                tenantId,
+                                tenantId(),
                                 d.getId()
                         )
                         .stream()
                         .map(x -> x.getUserId())
                         .distinct()
                         .toList();
-
-        var audits =
-                auditRepository.findByTenantIdAndFingerprint(
-                        tenantId,
-                        d.getDeviceId()
-                );
-
-        List<UUID> attemptedByUsers =
-                audits.stream()
-                        .map(a -> a.getUserId())
-                        .filter(x -> x != null)
-                        .distinct()
-                        .toList();
-
-        int pendingAttempts =
-                (int) auditRepository
-                        .countByTenantIdAndFingerprintAndReason(
-                                tenantId,
-                                d.getDeviceId(),
-                                "DEVICE_PENDING_APPROVAL"
-                        );
-
-        String lastIp =
-                audits.stream()
-                        .map(a -> a.getIp())
-                        .filter(x -> x != null)
-                        .reduce((a,b)->b)
-                        .orElse(null);
 
         return TrustedDeviceDTO.builder()
                 .id(d.getId())
@@ -146,10 +132,36 @@ public class TrustedDeviceManagementService {
                 .status(d.getStatus().name())
                 .firstSeenAt(d.getFirstSeenAt())
                 .lastSeenAt(d.getLastSeenAt())
-                .usedByUserIds(usedByUsers)
-                .attemptedByUserIds(attemptedByUsers)
-                .pendingAttemptCount(pendingAttempts)
-                .ipAddress(lastIp)
+                .usedByUserIds(users)
+                .build();
+    }
+
+    public DeviceStatsDTO stats() {
+
+        return DeviceStatsDTO.builder()
+                .approvedDevices(
+                        repository.countByTenantIdAndStatus(
+                                tenantId(),
+                                DeviceApprovalStatus.APPROVED
+                        )
+                )
+                .pendingDevices(
+                        repository.countByTenantIdAndStatus(
+                                tenantId(),
+                                DeviceApprovalStatus.PENDING
+                        )
+                )
+                .rejectedDevices(
+                        repository.countByTenantIdAndStatus(
+                                tenantId(),
+                                DeviceApprovalStatus.REJECTED
+                        )
+                )
+                .devicesInUse(
+                        usageRepository.countDistinctUserIdByTenantId(
+                                tenantId()
+                        )
+                )
                 .build();
     }
 }

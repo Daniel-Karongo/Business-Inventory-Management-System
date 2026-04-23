@@ -58,9 +58,10 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
 
             filterChain.doFilter(request, response);
 
-        } finally {
-            // Safety net (final cleanup filter also handles it)
-            TenantContext.clear();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } catch (ServletException e) {
+            throw new RuntimeException(e);
         }
     }
 

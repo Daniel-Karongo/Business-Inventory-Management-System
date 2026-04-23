@@ -18,6 +18,15 @@ public interface DeviceUsageRepository extends JpaRepository<DeviceUsage, UUID> 
             UUID userId
     );
 
+    @Query("""
+        select count(distinct du.userId)
+        from DeviceUsage du
+        where du.tenantId = :tenantId
+    """)
+    long countDistinctUserIdByTenantId(
+            UUID tenantId
+    );
+
     List<DeviceUsage> findByTenantIdAndDeviceId(UUID tenantId, UUID deviceId);
 
     @Query("""

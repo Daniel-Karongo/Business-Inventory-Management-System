@@ -61,5 +61,13 @@ public class InventoryItem extends BranchAwareEntity {
     private Boolean deleted = false;
 
     @Version
-    private Long version;
+    @Column(nullable = false)
+    private Long version = 0L;
+
+    @PrePersist
+    public void prePersist() {
+        if (version == null) {
+            version = 0L;
+        }
+    }
 }

@@ -163,9 +163,7 @@ export const TENANT_ROUTES: Routes = [
           import('./content/security/devices/tenant-devices.component')
             .then(m => m.TenantDevicesComponent)
       }
-
     ]
 
   }
-
 ];

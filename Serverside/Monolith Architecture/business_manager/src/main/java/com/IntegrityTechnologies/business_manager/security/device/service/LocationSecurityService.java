@@ -34,6 +34,13 @@ public class LocationSecurityService {
                 lng
         );
 
+        if (branch.getRadiusMeters() == null) {
+            throw new AppSecurityException(
+                    SecurityErrorCode.LOCATION_NOT_CONFIGURED,
+                    "Branch radius not configured"
+            );
+        }
+
         if (distance > branch.getRadiusMeters()) {
             throw new AppSecurityException(
                     SecurityErrorCode.LOCATION_OUTSIDE_BOUNDARY,

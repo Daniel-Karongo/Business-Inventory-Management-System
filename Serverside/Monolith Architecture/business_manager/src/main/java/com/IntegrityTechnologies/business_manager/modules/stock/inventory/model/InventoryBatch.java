@@ -48,5 +48,13 @@ public class InventoryBatch extends BranchAwareEntity {
     private LocalDateTime receivedAt;
 
     @Version
-    private Long version;
+    @Column(nullable = false)
+    private Long version = 0L;
+
+    @PrePersist
+    public void prePersist() {
+        if (version == null) {
+            version = 0L;
+        }
+    }
 }

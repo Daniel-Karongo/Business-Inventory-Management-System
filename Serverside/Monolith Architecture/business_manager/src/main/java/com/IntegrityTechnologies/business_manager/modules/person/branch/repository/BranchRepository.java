@@ -67,15 +67,17 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
     );
 
     @Query("""
-        SELECT DISTINCT ub.branch
+        SELECT CASE WHEN COUNT(ub) > 0 THEN TRUE ELSE FALSE END
         FROM UserBranch ub
         WHERE ub.user.id = :userId
-          AND ub.branch.tenantId = :tenantId
-          AND ub.branch.deleted = false
+        AND ub.branch.id = :branchId
+        AND ub.branch.tenantId = :tenantId
+        AND ub.branch.deleted = false
     """)
-    List<Branch> findBranchesByUserId(
+    boolean userBelongsToBranch(
             @Param("tenantId") UUID tenantId,
-            @Param("userId") UUID userId
+            @Param("userId") UUID userId,
+            @Param("branchId") UUID branchId
     );
 
     @Query("""

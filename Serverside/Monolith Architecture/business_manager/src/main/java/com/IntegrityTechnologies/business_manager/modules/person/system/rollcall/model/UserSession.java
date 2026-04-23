@@ -50,6 +50,10 @@ public class UserSession extends BranchAwareEntity {
     @Column(name = "token_id", columnDefinition = "BINARY(16)", nullable = false, unique = true)
     private UUID tokenId;
 
+    @Version
+    @Column(nullable = false)
+    private Long version = 0L;
+
     /* ===================== HELPERS ===================== */
 
     @Transient
@@ -61,6 +65,13 @@ public class UserSession extends BranchAwareEntity {
         if (this.logoutTime == null) {
             this.logoutTime = when;
             this.autoLoggedOut = auto;
+        }
+    }
+
+    @PrePersist
+    public void prePersist() {
+        if (version == null) {
+            version = 0L;
         }
     }
 }

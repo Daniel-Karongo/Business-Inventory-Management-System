@@ -437,6 +437,45 @@ export const environment = {
     },
     manualJournals: {
       base: '/accounting/manual-journals'
+    },
+
+    /* ============================================================
+       DEVICES AND BIOMETRICS
+    ============================================================ */
+
+    security: {
+
+      devices: {
+        list: (branchId: string | null) =>
+          branchId
+            ? `/admin/devices/branch/${branchId}`
+            : `/admin/devices/branch/null`,
+
+        pending: `/admin/devices/pending`,
+
+        approve: (id: string) => `/admin/devices/${id}/approve`,
+        reject: (id: string) => `/admin/devices/${id}/reject`,
+        rename: (id: string) => `/admin/devices/${id}/rename`,
+        stats: `/admin/devices/stats`,
+        audit: (id: string) => `/admin/devices/${id}/audit`
+      },
+
+      platformDevices: {
+        list: '/platform/devices',
+        approve: (id: string) => `/platform/devices/${id}/approve`,
+        reject: (id: string) => `/platform/devices/${id}/reject`,
+        audit: (id: string) => `/platform/devices/${id}/audit`
+      },
+
+      biometrics: {
+        mine: '/biometrics',
+        rename: (id: string) => `/biometrics/${id}/rename`,
+        delete: (id: string) => `/biometrics/${id}`,
+        adminUser: (userId: string) => `/admin/biometrics/user/${userId}`,
+        stats: '/admin/biometrics/stats',
+        adminDelete: (id: string) => `/admin/biometrics/${id}`
+      }
+
     }
   }
 };

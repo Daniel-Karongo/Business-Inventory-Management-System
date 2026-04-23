@@ -2,17 +2,81 @@
 
   <!-- HEADER -->
   <div page-header>
+    <div class="device-stats">
+
+      <div class="stat-card">
+        <div class="stat-label">
+          Approved
+        </div>
+
+        <div class="stat-value">
+          {{stats.approvedDevices}}
+        </div>
+      </div>
+
+
+      <div class="stat-card">
+        <div class="stat-label">
+          Pending
+        </div>
+
+        <div class="stat-value">
+          {{stats.pendingDevices}}
+        </div>
+      </div>
+
+
+      <div class="stat-card">
+        <div class="stat-label">
+          Rejected
+        </div>
+
+        <div class="stat-value">
+          {{stats.rejectedDevices}}
+        </div>
+      </div>
+
+
+      <div class="stat-card">
+        <div class="stat-label">
+          In Use
+        </div>
+
+        <div class="stat-value">
+          {{stats.devicesInUse}}
+        </div>
+      </div>
+
+    </div>
+
     <div class="inventory-header">
 
       <div class="header-left">
-        <h1>Devices</h1>
+        <h2 class="text-xl font-semibold">Devices</h2>
       </div>
 
       <div class="header-right">
-        <button mat-flat-button color="primary" disabled>
-          <mat-icon>security</mat-icon>
-          Managed Devices
+
+        <button mat-icon-button matTooltip="Toggle Density" (click)="toggleDensity()">
+
+          <mat-icon>
+            {{compactView ? 'density_small' : 'density_medium'}}
+          </mat-icon>
+
         </button>
+
+        <mat-button-toggle-group [(ngModel)]="viewMode" (change)="setView($event.value)" class="view-toggle">
+
+          <mat-button-toggle matTooltip="table view" value="table">
+            <mat-icon>table_rows</mat-icon>
+          </mat-button-toggle>
+
+          <mat-button-toggle matTooltip="card view" value="cards">
+            <mat-icon>view_module</mat-icon>
+          </mat-button-toggle>
+
+        </mat-button-toggle-group>
+
       </div>
 
     </div>
@@ -22,17 +86,57 @@
   <div page-toolbar class="inventory-toolbar">
 
     <mat-form-field appearance="fill" class="search-field">
-      <mat-label>Search Devices</mat-label>
-      <input matInput [(ngModel)]="searchTerm" (input)="applySearch()">
-      <button matSuffix mat-icon-button *ngIf="searchTerm" (click)="searchTerm=''; applySearch()">
-        <mat-icon>close</mat-icon>
-      </button>
-    </mat-form-field>
+        <mat-label>Search Devices</mat-label>
+
+        <input matInput [(ngModel)]="searchTerm" (input)="applySearch()">
+
+        <button matSuffix mat-icon-button *ngIf="searchTerm" (click)="searchTerm=''; applySearch()">
+          <mat-icon>close</mat-icon>
+        </button>
+
+      </mat-form-field>
+
+      <mat-button-toggle-group class="status-segment" [(ngModel)]="statusFilter" (change)="applySearch()">
+
+        <mat-button-toggle value="ALL">
+          All
+        </mat-button-toggle>
+
+        <mat-button-toggle value="APPROVED">
+          Approved
+        </mat-button-toggle>
+
+        <mat-button-toggle value="PENDING">
+          Pending
+        </mat-button-toggle>
+
+        <mat-button-toggle value="REJECTED">
+          Rejected
+        </mat-button-toggle>
+
+      </mat-button-toggle-group>
 
   </div>
 
   <!-- CONTENT -->
   <div page-content>
+
+    <div class="bulk-toolbar" *ngIf="hasSelection">
+
+      <span>
+        {{selectedIds.size}}
+        selected
+      </span>
+
+      <button mat-flat-button (click)="bulkApprove()">
+        Approve Selected
+      </button>
+
+      <button mat-stroked-button (click)="bulkReject()">
+        Reject Selected
+      </button>
+
+    </div>
 
     <div *ngIf="loading" class="text-center py-10">
       Loading devices…
@@ -42,10 +146,25 @@
       No devices found
     </div>
 
-    <div *ngIf="!loading && filtered.length > 0"
-         class="table-wrapper compact bg-[var(--surface)] rounded shadow">
+    <div class="table-wrapper" [class.compact]="compactView"
+      *ngIf="!loading && filtered.length>0 && viewMode==='table'">
 
       <table mat-table [dataSource]="paged">
+
+        <ng-container matColumnDef="select">
+
+          <th mat-header-cell *matHeaderCellDef>
+            <mat-checkbox [checked]="allVisibleSelected" [indeterminate]="partiallyVisibleSelected"
+              (click)="$event.stopPropagation(); toggleAll()">
+            </mat-checkbox>
+          </th>
+
+          <td mat-cell *matCellDef="let d">
+            <mat-checkbox [checked]="selectedIds.has(d.id)" (change)="toggleSelected(d.id)">
+            </mat-checkbox>
+          </td>
+
+        </ng-container>
 
         <ng-container matColumnDef="device">
           <th mat-header-cell *matHeaderCellDef>Device</th>
@@ -55,7 +174,14 @@
         <ng-container matColumnDef="status">
           <th mat-header-cell *matHeaderCellDef>Status</th>
           <td mat-cell *matCellDef="let d">
-            {{ d.approved ? 'Approved' : 'Pending' }}
+
+            <span class="status-badge" [class.status-approved]="d.status==='APPROVED'"
+              [class.status-pending]="d.status==='PENDING'" [class.status-rejected]="d.status==='REJECTED'">
+
+              {{d.status}}
+
+            </span>
+
           </td>
         </ng-container>
 
@@ -77,34 +203,106 @@
           <th mat-header-cell *matHeaderCellDef>Actions</th>
           <td mat-cell *matCellDef="let d">
 
-            <button mat-icon-button matTooltip="Approve"
-                    *ngIf="!d.approved"
-                    (click)="approve(d)">
+            <button mat-icon-button matTooltip="Approve" *ngIf="d.status !== 'APPROVED'"
+              (click)="$event.stopPropagation(); approve(d)">
               <mat-icon>check_circle</mat-icon>
             </button>
 
-            <button mat-icon-button matTooltip="Revoke"
-                    *ngIf="d.approved"
-                    (click)="reject(d)">
+            <button mat-icon-button matTooltip="Revoke" *ngIf="d.status==='APPROVED'"
+              (click)="$event.stopPropagation(); reject(d)">
               <mat-icon>cancel</mat-icon>
             </button>
 
+            <button mat-icon-button matTooltip="Rename" (click)="$event.stopPropagation(); rename(d)">
+              <mat-icon>edit</mat-icon>
+            </button>
+
+            <button mat-icon-button matTooltip="Audit" (click)="$event.stopPropagation(); audit(d)">
+              <mat-icon>history</mat-icon>
+            </button>
           </td>
         </ng-container>
 
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns" (click)="toggleSelected(row.id)"
+          [class.row-selected]="selectedIds.has(row.id)">
+        </tr>
 
       </table>
 
     </div>
 
+    <div class="device-cards" [class.compact-cards]="compactView"
+      *ngIf="!loading && filtered.length>0 && viewMode==='cards'">
+
+      <div class="device-card" *ngFor="let d of paged" (click)="toggleSelected(d.id)"
+        [class.card-selected]=" selectedIds.has(d.id)">
+
+        <div class="card-selector" (click)="$event.stopPropagation()">
+
+          <mat-checkbox [checked]="selectedIds.has(d.id)" (change)="toggleSelected(d.id)">
+          </mat-checkbox>
+
+        </div>
+
+        <h3> {{d.deviceName}} </h3>
+
+        <div>
+          Status:
+          <span class="status-badge" [class.status-approved]="d.status==='APPROVED'"
+            [class.status-pending]="d.status==='PENDING'" [class.status-rejected]="d.status==='REJECTED'">
+
+            {{d.status}}
+
+          </span>
+        </div>
+
+        <div>
+          Used By:
+          {{getUsers(d)}}
+        </div>
+
+        <div>
+          Last Seen:
+          {{d.lastSeenAt | date:'medium'}}
+        </div>
+
+        <div class="card-actions">
+
+          <button mat-icon-button matTooltip="Approve" (click)="$event.stopPropagation(); approve(d)"
+            *ngIf="d.status!=='APPROVED'">
+            <mat-icon>
+              check_circle
+            </mat-icon>
+          </button>
+
+          <button mat-icon-button matTooltip="Revoke" (click)="$event.stopPropagation(); reject(d)"
+            *ngIf="d.status==='APPROVED'">
+            <mat-icon>
+              cancel
+            </mat-icon>
+          </button>
+
+          <button mat-icon-button matTooltip="Rename" (click)="$event.stopPropagation(); rename(d)">
+            <mat-icon>
+              edit
+            </mat-icon>
+          </button>
+
+          <button mat-icon-button matTooltip="Audit" (click)="$event.stopPropagation(); audit(d)">
+            <mat-icon>
+              history
+            </mat-icon>
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
     <div *ngIf="!loading" class="shared-paginator">
-      <mat-paginator
-        [length]="total"
-        [pageSize]="size"
-        [pageSizeOptions]="[10,25,50,100]"
-        showFirstLastButtons
+      <mat-paginator [length]="total" [pageSize]="size" [pageSizeOptions]="[10,25,50,100]" showFirstLastButtons
         (page)="changePage($event)">
       </mat-paginator>
     </div>

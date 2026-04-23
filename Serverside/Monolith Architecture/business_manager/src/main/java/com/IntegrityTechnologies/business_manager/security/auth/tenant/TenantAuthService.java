@@ -148,10 +148,11 @@ public class TenantAuthService {
         UUID userId = user.getId();
         LocalDate today = LocalDate.now();
 
-        boolean belongs = branchRepository.findBranchesByUserId(
+        boolean belongs = branchRepository.userBelongsToBranch(
                 tenantId,
-                userId
-        ).stream().anyMatch(b -> b.getId().equals(branchId));
+                userId,
+                branchId
+        );
 
         if (!belongs) {
             throw new AppSecurityException(
@@ -333,10 +334,11 @@ public class TenantAuthService {
         UUID userId = user.getId();
         LocalDate today = LocalDate.now();
 
-        boolean belongs = branchRepository.findBranchesByUserId(
+        boolean belongs = branchRepository.userBelongsToBranch(
                 tenantId,
-                userId
-        ).stream().anyMatch(b -> b.getId().equals(branchId));
+                userId,
+                branchId
+        );
 
         if (!belongs) {
             throw new AppSecurityException(

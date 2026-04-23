@@ -44,7 +44,15 @@ public class AccountBalance extends BranchAwareEntity {
     private LocalDateTime updatedAt;
 
     @Version
-    private Long version;
+    @Column(nullable = false)
+    private Long version = 0L;
+
+    @PrePersist
+    public void prePersist() {
+        if (version == null) {
+            version = 0L;
+        }
+    }
 
     public static class AccountBalanceId implements Serializable {
 
