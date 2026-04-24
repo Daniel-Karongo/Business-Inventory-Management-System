@@ -1,5 +1,5 @@
-import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import {
@@ -7,25 +7,24 @@ import {
   DeviceDTO
 } from '../../../../../core/services/device-api.service';
 
-import { UserService } from '../../users/services/user/user.service';
 import { BranchContextService } from '../../../../../core/services/branch-context.service';
 
-import { MatTableModule } from '@angular/material/table';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
-import { MatInputModule } from '@angular/material/input';
-import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatCheckboxModule }
-  from '@angular/material/checkbox';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatTableModule } from '@angular/material/table';
 
-import { PageShellComponent } from '../../../../../shared/layout/page-shell/page-shell.component';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
-import { DeviceAuditDialogComponent } from '../../../../../shared/components/device-audit-dialog/device-audit-dialog.component';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { RenameDeviceDialogComponent } from '../../../../../shared/components/rename-device-dialog/rename-device-dialog.component';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { forkJoin } from 'rxjs';
+import { DeviceAuditDialogComponent } from '../../../../../shared/components/device-audit-dialog/device-audit-dialog.component';
+import { RenameDeviceDialogComponent } from '../../../../../shared/components/rename-device-dialog/rename-device-dialog.component';
+import { PageShellComponent } from '../../../../../shared/layout/page-shell/page-shell.component';
 
 @Component({
   standalone: true,
@@ -52,11 +51,11 @@ export class TenantDevicesComponent implements OnInit {
 
   private api = inject(DeviceApiService);
   private branchCtx = inject(BranchContextService);
-  private users = inject(UserService);
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
 
   loading = true;
+  actionBusy = false;
 
   devices: DeviceDTO[] = [];
   filtered: DeviceDTO[] = [];
@@ -68,8 +67,6 @@ export class TenantDevicesComponent implements OnInit {
   page = 0;
   size = 10;
   total = 0;
-
-  userMap: Record<string, string> = {};
 
   displayedColumns = [
     'select',
@@ -195,54 +192,11 @@ export class TenantDevicesComponent implements OnInit {
     ).subscribe({
       next: data => {
         this.devices = data;
-        this.resolveUsers();
         this.applySearch();
         this.loading = false;
       },
       error: () => this.loading = false
     });
-
-  }
-
-  resolveUsers() {
-
-    const ids = new Set<string>();
-
-    this.devices.forEach(d =>
-      (d.usedByUserIds || []).forEach(
-        id => ids.add(id)
-      )
-    );
-
-    if (!ids.size) return;
-
-    this.users.list(0, 1000).subscribe(res => {
-
-      res.data.forEach(u => {
-
-        if (ids.has(u.id)) {
-          this.userMap[u.id] = u.username;
-        }
-
-      });
-
-    });
-
-  }
-
-  getUsers(d: DeviceDTO): string {
-
-    const names = (d.usedByUserIds || [])
-      .map(id => this.userMap[id])
-      .filter(Boolean);
-
-    if (!names.length) return '—';
-
-    if (names.length <= 2) {
-      return names.join(', ');
-    }
-
-    return `${names[0]}, ${names[1]} +${names.length - 2}`;
 
   }
 
@@ -262,7 +216,8 @@ export class TenantDevicesComponent implements OnInit {
             .includes(term);
 
         const userMatch =
-          this.getUsers(d)
+          (d.usedByUsernames || [])
+            .join(', ')
             .toLowerCase()
             .includes(term);
 
@@ -464,26 +419,59 @@ export class TenantDevicesComponent implements OnInit {
 
     const ids = [...this.selectedIds];
 
-    ids.forEach(id =>
-      this.api.approve(
-        id,
-        'Bulk approved'
-      ).subscribe()
-    );
+    if (!ids.length) {
+      return;
+    }
 
-    this.snack.open(
-      'Bulk approval submitted',
-      'Close',
-      { duration: 3000 }
-    );
+    this.actionBusy = true;
 
-    this.selectedIds.clear();
-    this.hasSelection = false;
+    forkJoin(
+      ids.map(id =>
+        this.api.approve(
+          id,
+          'Bulk approved'
+        ))
+    )
+      .subscribe({
 
-    setTimeout(
-      () => this.load(),
-      900
-    );
+        next: () => {
+
+          this.actionBusy = false;
+
+          this.snack.open(
+            'All selected devices approved',
+            'Close',
+            { duration: 3000 }
+          );
+
+          this.selectedIds.clear();
+          this.hasSelection = false;
+
+          this.load();
+
+        },
+
+        error: (err) => {
+
+          this.actionBusy = false;
+
+          const conflict =
+            err?.error?.code ===
+            'CONCURRENT_UPDATE';
+
+          this.snack.open(
+            conflict
+              ? 'Some devices changed elsewhere. Reloaded.'
+              : 'Bulk action failed',
+            'Close',
+            { duration: 4500 }
+          );
+
+          this.load();
+
+        }
+
+      });
 
   }
 
@@ -491,26 +479,59 @@ export class TenantDevicesComponent implements OnInit {
 
     const ids = [...this.selectedIds];
 
-    ids.forEach(id =>
-      this.api.reject(
-        id,
-        'Bulk rejected'
-      ).subscribe()
-    );
+    if (!ids.length) {
+      return;
+    }
 
-    this.snack.open(
-      'Bulk rejection submitted',
-      'Close',
-      { duration: 3000 }
-    );
+    this.actionBusy = true;
 
-    this.selectedIds.clear();
-    this.hasSelection = false;
+    forkJoin(
+      ids.map(id =>
+        this.api.reject(
+          id,
+          'Bulk rejected'
+        ))
+    )
+      .subscribe({
 
-    setTimeout(
-      () => this.load(),
-      900
-    );
+        next: () => {
+
+          this.actionBusy = false;
+
+          this.snack.open(
+            'All selected devices rejected',
+            'Close',
+            { duration: 3000 }
+          );
+
+          this.selectedIds.clear();
+          this.hasSelection = false;
+
+          this.load();
+
+        },
+
+        error: (err) => {
+
+          this.actionBusy = false;
+
+          const conflict =
+            err?.error?.code ===
+            'CONCURRENT_UPDATE';
+
+          this.snack.open(
+            conflict
+              ? 'Some devices changed elsewhere. Reloaded.'
+              : 'Bulk action failed',
+            'Close',
+            { duration: 4500 }
+          );
+
+          this.load();
+
+        }
+
+      });
 
   }
 }

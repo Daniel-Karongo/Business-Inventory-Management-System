@@ -188,7 +188,7 @@
         <ng-container matColumnDef="usedBy">
           <th mat-header-cell *matHeaderCellDef>Used By</th>
           <td mat-cell *matCellDef="let d">
-            {{ getUsers(d) }}
+            {{ (d.usedByUsernames || []).join(', ') || '—' }}
           </td>
         </ng-container>
 
@@ -259,7 +259,7 @@
 
         <div>
           Used By:
-          {{getUsers(d)}}
+          {{ (d.usedByUsernames || []).join(', ') || '—' }}
         </div>
 
         <div>

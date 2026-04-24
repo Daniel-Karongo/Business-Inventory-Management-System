@@ -32,8 +32,8 @@ export class UserService {
     let params = new HttpParams()
       .set('page', page)
       .set('size', size);
-    
-      if (sortField) {
+
+    if (sortField) {
       params = params.set('sort', `${sortField},${sortDir}`);
     }
 
@@ -209,10 +209,7 @@ export class UserService {
     );
   }
 
-  listImages(
-    identifier: string,
-    deleted?: boolean
-  ): Observable<UserImage[]> {
+  listImages(identifier: string, deleted?: boolean) {
 
     let params = new HttpParams();
 
@@ -220,9 +217,15 @@ export class UserService {
       params = params.set('deleted', String(deleted));
     }
 
-    return this.http.get<UserImage[]>(
+    return this.http.get<any>(
       `${this.base}/images/all/${identifier}`,
       { params }
+    ).pipe(
+      map(res =>
+        Array.isArray(res)
+          ? res
+          : res?.content ?? res?.data ?? []
+      )
     );
   }
 
@@ -278,9 +281,14 @@ export class UserService {
   ============================================================ */
 
   auditsForUser(identifier: string) {
-
-    return this.http.get<any[]>(
+    return this.http.get<any>(
       `${this.base}/audits/${identifier}/target`
+    ).pipe(
+      map(res =>
+        Array.isArray(res)
+          ? res
+          : res?.content ?? res?.data ?? []
+      )
     );
   }
 
@@ -310,9 +318,14 @@ export class UserService {
   ============================================================ */
 
   getUserRollcalls(userId: string) {
-
-    return this.http.get<any[]>(
+    return this.http.get<any>(
       `${environment.apiUrl}/rollcall/user/${userId}`
+    ).pipe(
+      map(res =>
+        Array.isArray(res)
+          ? res
+          : res?.content ?? res?.data ?? []
+      )
     );
   }
 

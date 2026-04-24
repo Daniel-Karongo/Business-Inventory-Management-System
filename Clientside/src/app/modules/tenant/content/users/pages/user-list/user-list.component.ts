@@ -14,7 +14,7 @@ import { MatSortModule } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 
 import { User } from '../../models/user.model';
@@ -121,7 +121,8 @@ export class UserListComponent implements OnInit {
     private entityAction: EntityActionService,
     private snackbar: MatSnackBar,
     private dialog: MatDialog,
-    public router: Router
+    public router: Router,
+    private route: ActivatedRoute,
   ) { }
 
   ngOnInit() {
@@ -393,10 +394,25 @@ export class UserListComponent implements OnInit {
   }
 
   // navigation helpers
-  goCreate() { this.router.navigate(['/users/create']); }
-  edit(u: User) { this.router.navigate([`/users/${u.username}/edit`]); }
-  view(u: User) { this.router.navigate([`/users/${u.username}`]); }
+  goCreate() {
+    this.router.navigate(['create'], {
+      relativeTo: this.route
+    });
+  }
 
+  edit(u: User) {
+    this.router.navigate(
+      [u.username, 'edit'],
+      { relativeTo: this.route }
+    );
+  }
+
+  view(u: User) {
+    this.router.navigate(
+      [u.username],
+      { relativeTo: this.route }
+    );
+  }
   openBulkImport() {
     this.dialog.open(UserBulkImportDialogComponent, {
       width: '1100px',

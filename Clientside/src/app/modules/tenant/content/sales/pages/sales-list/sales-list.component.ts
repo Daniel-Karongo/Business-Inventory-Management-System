@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
@@ -72,8 +72,9 @@ export class SalesListComponent implements OnInit {
   constructor(
     private salesService: SalesService,
     private router: Router,
+    private route: ActivatedRoute,
     private dialog: MatDialog
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loadAll();
@@ -215,11 +216,15 @@ export class SalesListComponent implements OnInit {
   }
 
   view(sale: any) {
-    this.router.navigate(['/sales', sale.id]);
+    this.router.navigate([sale.id], {
+      relativeTo: this.route
+    });
   }
 
   create() {
-    this.router.navigate(['/sales/new']);
+    this.router.navigate(['new'], {
+      relativeTo: this.route
+    });
   }
 
   openBulkImport() {

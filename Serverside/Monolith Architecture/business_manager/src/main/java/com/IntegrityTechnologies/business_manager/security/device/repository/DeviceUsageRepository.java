@@ -57,4 +57,28 @@ public interface DeviceUsageRepository extends JpaRepository<DeviceUsage, UUID> 
             UUID tenantId,
             UUID userId
     );
+
+    @Query("""
+        select du.deviceId, u.username
+        from DeviceUsage du
+        join User u on u.id = du.userId
+        where du.tenantId = :tenantId
+        and du.deviceId in :deviceIds
+    """)
+    List<Object[]> findDeviceUsernames(
+            UUID tenantId,
+            List<UUID> deviceIds
+    );
+
+    @Query("""
+        select du.deviceId, pu.username
+        from DeviceUsage du
+        join PlatformUser pu on pu.id = du.userId
+        where du.tenantId = :tenantId
+        and du.deviceId in :deviceIds
+    """)
+    List<Object[]> findPlatformDeviceUsernames(
+            UUID tenantId,
+            List<UUID> deviceIds
+    );
 }

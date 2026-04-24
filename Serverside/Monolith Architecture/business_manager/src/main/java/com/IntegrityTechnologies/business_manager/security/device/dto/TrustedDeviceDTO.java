@@ -29,4 +29,5 @@ public class TrustedDeviceDTO {
     private LocalDateTime firstSeenAt;
     private LocalDateTime lastSeenAt;
     private List<UUID> usedByUserIds;
+    private List<String> usedByUsernames;
 }

@@ -298,16 +298,27 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({
+            ConcurrentUpdateException.class,
             OptimisticLockException.class,
             ObjectOptimisticLockingFailureException.class,
             OptimisticLockingFailureException.class
     })
-    public ApiResponse handleOptimisticLockConflict(Exception ex, WebRequest request) {
-        return new ApiResponse(
-                "error",
-                "Another user/process updated this record moments ago. Please retry.",
-                null
-        );
+    public ResponseEntity<ApiResponse>
+    handleOptimisticLockConflict(
+            Exception ex,
+            WebRequest request
+    ){
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(
+                        new ApiResponse(
+                                "CONCURRENT_UPDATE",
+                                "Another user/process updated this record moments ago. Please retry.",
+                                null
+                        )
+                );
+
     }
 
     /* ====================== FALLBACK HANDLER ====================== */

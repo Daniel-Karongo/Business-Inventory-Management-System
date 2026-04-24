@@ -66,15 +66,4 @@ export class PlatformDashboardComponent implements OnInit {
       });
 
   }
-
-  debugRegister() {
-    const ref = this.dialog.open(BiometricPromptDialog);
-
-    ref.afterClosed().subscribe((enable) => {
-      if (enable === true) {
-        this.biometric.register();
-      }
-    });
-  }
-
 }

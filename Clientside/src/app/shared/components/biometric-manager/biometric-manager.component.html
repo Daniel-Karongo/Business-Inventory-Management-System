@@ -1,0 +1,103 @@
+<div class="bio-container">
+
+    <div class="bio-header">
+
+        <div>
+            <h3>Biometric Credentials</h3>
+
+            <p>
+                Manage passkeys registered
+                for this account.
+            </p>
+        </div>
+
+        <button mat-flat-button color="primary" [disabled]="registerBusy" (click)="registerCredential()">
+
+            <mat-icon>
+                fingerprint
+            </mat-icon>
+
+            Register New
+
+        </button>
+
+    </div>
+
+
+    <div *ngIf="loading" class="loading">
+
+        <mat-spinner diameter="34">
+        </mat-spinner>
+
+    </div>
+
+
+    <div *ngIf="
+      !loading &&
+      biometrics.length===0
+    " class="empty-state">
+
+        <mat-icon>
+            fingerprint
+        </mat-icon>
+
+        <p>
+            No credentials registered.
+        </p>
+
+        <button mat-stroked-button (click)="registerCredential()">
+
+            Register First Credential
+
+        </button>
+
+    </div>
+
+
+    <div class="bio-grid" *ngIf="
+      !loading &&
+      biometrics.length
+    ">
+
+        <mat-card class="bio-card" *ngFor="
+        let b of biometrics
+      ">
+
+            <div class="card-main">
+
+                <div class="device-name">
+
+                    {{b.deviceName}}
+
+                </div>
+
+                <div class="device-id">
+
+                    {{b.deviceId}}
+
+                </div>
+
+            </div>
+
+
+            <div class="card-actions">
+
+                <button mat-stroked-button color="warn" [disabled]="rowBusy[b.id]" (click)="
+            removeCredential(b)
+          ">
+
+                    <mat-icon>
+                        delete
+                    </mat-icon>
+
+                    Remove
+
+                </button>
+
+            </div>
+
+        </mat-card>
+
+    </div>
+
+</div>

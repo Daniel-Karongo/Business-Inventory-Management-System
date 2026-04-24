@@ -64,7 +64,7 @@ export class UserEditComponent implements OnInit {
     private branchService: BranchService,
     private departmentService: DepartmentService,
     private snackbar: MatSnackBar
-  ) {}
+  ) { }
 
   /* ============================================================
      INIT
@@ -197,7 +197,10 @@ export class UserEditComponent implements OnInit {
         this.snackbar.open('User updated successfully', 'Close', {
           duration: 2000
         });
-        this.router.navigate(['/users', payload.username]);
+        this.router.navigate(
+          ['../../', payload.username],
+          { relativeTo: this.route }
+        );
       },
       error: () =>
         this.snackbar.open('Failed to update user', 'Close', {
@@ -207,7 +210,10 @@ export class UserEditComponent implements OnInit {
   }
 
   cancel() {
-    this.router.navigate(['/users', this.originalUsername]);
+    this.router.navigate(
+      ['../'],
+      { relativeTo: this.route }
+    );
   }
 
   /* ============================================================

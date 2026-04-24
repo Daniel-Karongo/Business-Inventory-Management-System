@@ -5,7 +5,7 @@ import {
   FormArray, FormBuilder, FormGroup, Validators, ReactiveFormsModule
 } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -13,7 +13,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatDialog, MatDialogModule, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
 import { FormsModule } from '@angular/forms';
 import { finalize, of } from 'rxjs';
@@ -77,6 +77,7 @@ export class UserCreateComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
+    private route: ActivatedRoute,
     private userService: UserService,
     private branchService: BranchService,
     private departmentService: DepartmentService,
@@ -473,10 +474,20 @@ export class UserCreateComponent implements OnInit {
       .subscribe({
         next: () => {
           this.snackbar.open('User created', 'Close', { duration: 2000 });
-          this.router.navigate(['/users']);
+          this.router.navigate(
+            ['../'],
+            { relativeTo: this.route }
+          );
         },
         error: () =>
           this.snackbar.open('Failed to create user', 'Close', { duration: 2000 })
       });
+  }
+
+  cancel() {
+    this.router.navigate(
+      ['../'],
+      { relativeTo: this.route }
+    );
   }
 }

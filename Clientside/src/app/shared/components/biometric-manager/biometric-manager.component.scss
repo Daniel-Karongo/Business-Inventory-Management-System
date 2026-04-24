@@ -1,0 +1,120 @@
+:host {
+    display: block;
+}
+
+.bio-container {
+    max-width: 1200px;
+    margin: auto;
+    width: 100%;
+}
+
+.bio-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.loading {
+    display: flex;
+    justify-content: center;
+    padding: 40px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+}
+
+.bio-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit, minmax(280px, 1fr));
+    gap: 18px;
+}
+
+.bio-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 170px;
+    padding: 18px;
+}
+
+.card-main {
+    min-width: 0;
+}
+
+.device-name {
+    font-weight: 600;
+    font-size: 1rem;
+    word-break: break-word;
+}
+
+.device-id {
+    margin-top: 12px;
+    font-size: .78rem;
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+}
+
+.card-actions {
+    margin-top: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.card-actions button {
+    min-height: 44px;
+}
+
+@media(max-width:900px) {
+
+    .bio-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+}
+
+@media(max-width:640px) {
+
+    .bio-header {
+        display: block;
+    }
+
+    .bio-header button {
+        margin-top: 12px;
+        width: 100%;
+    }
+
+    .bio-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .bio-card {
+        padding: 14px;
+    }
+
+    .card-actions {
+        flex-direction: column;
+    }
+
+    .card-actions button {
+        width: 100%;
+    }
+
+}
+
+@media(min-width:1800px) {
+
+    .bio-container {
+        max-width: 1500px;
+    }
+
+}

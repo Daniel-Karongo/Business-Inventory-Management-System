@@ -290,15 +290,14 @@ export class LoginComponent implements OnInit {
 
         if (this.biometric.shouldPrompt(deviceId)) {
 
-          this.biometric.markPromptShown(deviceId);
-
           const ref = this.dialog.open(BiometricPromptDialog);
 
-          ref.afterClosed().subscribe((enable) => {
-            if (enable === true) {
-              this.biometric.register();
-            }
-          });
+          ref.afterClosed().subscribe(enable => {
+              if (enable === true) {
+                this.biometric.markPromptShown(deviceId);
+                this.biometric.register();
+              }
+            });
         }
 
         setTimeout(() => {

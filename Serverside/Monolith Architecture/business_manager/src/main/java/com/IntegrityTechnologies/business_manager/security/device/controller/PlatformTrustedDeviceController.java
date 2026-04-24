@@ -19,29 +19,52 @@ import java.util.UUID;
 public class PlatformTrustedDeviceController {
 
     private final PlatformTrustedDeviceManagementService service;
+
     private final DeviceApprovalAuditService auditService;
 
     @GetMapping
     public ResponseEntity<List<TrustedDeviceDTO>> list() {
-        return ResponseEntity.ok(service.listPlatformDevices());
+
+        return ResponseEntity.ok(
+                service.listPlatformDevices()
+        );
     }
 
     @PatchMapping("/{id}/approve")
     public ResponseEntity<Void> approve(
             @PathVariable UUID id,
-            @RequestParam(required=false) String reason
+            @RequestParam(required = false)
+            String reason
     ){
         service.approve(id, reason);
+
         return ResponseEntity.ok().build();
     }
 
     @PatchMapping("/{id}/reject")
     public ResponseEntity<Void> reject(
             @PathVariable UUID id,
-            @RequestParam(required=false) String reason
+            @RequestParam(required = false)
+            String reason
     ){
         service.reject(id, reason);
+
         return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{id}/rename")
+    public ResponseEntity<Void> rename(
+            @PathVariable UUID id,
+            @RequestParam String name
+    ){
+
+        service.rename(
+                id,
+                name
+        );
+
+        return ResponseEntity.ok().build();
+
     }
 
     @GetMapping("/{id}/audit")
@@ -52,4 +75,5 @@ public class PlatformTrustedDeviceController {
                 auditService.history(id)
         );
     }
+
 }

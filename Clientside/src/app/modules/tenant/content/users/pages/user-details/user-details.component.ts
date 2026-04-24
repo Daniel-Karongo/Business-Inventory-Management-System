@@ -1,28 +1,29 @@
-import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
-import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTabsModule } from '@angular/material/tabs';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTabsModule } from '@angular/material/tabs';
 
-import { UserService } from '../../services/user/user.service';
 import { User } from '../../models/user.model';
+import { UserService } from '../../services/user/user.service';
 
 import { UserImageAdapter } from '../../services/user/user-image.adapter';
 
 import { UserAuditTimelineComponent } from '../user-audit-timeline/user-audit-timeline.component';
 import { UserRollcallsComponent } from '../user-rollcalls/user-rollcalls.component';
 
+import { BiometricManagerComponent } from '../../../../../../shared/components/biometric-manager/biometric-manager.component';
+import { EntityImageManagerComponent } from '../../../../../../shared/components/entity-image-manager/entity-image-manager.component';
+import { EntityActionConfig, EntityActionService } from '../../../../../../shared/services/entity-action.service';
+import { AuthService } from '../../../../../auth/services/auth.service';
 import {
   USER_ACTION_REASONS,
   UserActionType
 } from '../../models/user-action-reasons.model';
-import { EntityImageManagerComponent } from '../../../../../../shared/components/entity-image-manager/entity-image-manager.component';
-import { EntityActionConfig, EntityActionService } from '../../../../../../shared/services/entity-action.service';
-import { AuthService } from '../../../../../auth/services/auth.service';
 
 @Component({
   selector: 'app-user-details',
@@ -36,7 +37,8 @@ import { AuthService } from '../../../../../auth/services/auth.service';
     MatSnackBarModule,
     EntityImageManagerComponent,
     UserAuditTimelineComponent,
-    UserRollcallsComponent
+    UserRollcallsComponent,
+    BiometricManagerComponent
   ],
   templateUrl: './user-details.component.html',
   styleUrls: ['./user-details.component.scss']
@@ -65,7 +67,11 @@ export class UserDetailsComponent implements OnInit {
 
   ngOnInit() {
 
+    console.log("Hello");
     const username = this.route.snapshot.paramMap.get('username');
+    console.log("Hello");
+    console.log(username);
+
     if (!username) return;
 
     this.auth.getCurrentUser().subscribe(u => {
@@ -173,7 +179,10 @@ export class UserDetailsComponent implements OnInit {
   }
 
   editUser() {
-    this.router.navigate(['/users', this.user.username, 'edit']);
+    this.router.navigate(
+      ['edit'],
+      { relativeTo: this.route }
+    );
   }
 
   /* ================= ACTION HANDLER ================= */

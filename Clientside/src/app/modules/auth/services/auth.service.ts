@@ -1,19 +1,14 @@
-import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { BehaviorSubject, Observable, catchError, map, of, shareReplay, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { Observable, BehaviorSubject, tap, catchError, shareReplay, of, map, filter, take } from 'rxjs';
-import { DeviceService } from '../../../core/services/device.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
 
   private http = inject(HttpClient);
-  private deviceService = inject(DeviceService);
 
   private me$ = new BehaviorSubject<MeResponse | null>(null);
-  private RETRY_KEY = 'auth_retry_payload';
-  private RETRY_TTL_MS = 10 * 60 * 1000; // 10 minutes
-  private lastLoginRequestMemory: LoginRequest | null = null;
   private initialized = false;
   private init$?: Observable<MeResponse | null>;
   private loaded = false;
@@ -76,9 +71,13 @@ export class AuthService {
   }
 
   getCurrentUser() {
-    return this.me$.pipe(
-      take(1)
-    );
+    const snapshot = this.me$.value;
+
+    if (snapshot) {
+      return of(snapshot);
+    }
+
+    return this.loadMe();
   }
 
   getSnapshot(): MeResponse | null {

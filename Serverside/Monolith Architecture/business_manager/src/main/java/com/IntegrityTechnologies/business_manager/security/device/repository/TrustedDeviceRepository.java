@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.security.device.repository;
 
 import com.IntegrityTechnologies.business_manager.security.device.model.DeviceApprovalStatus;
 import com.IntegrityTechnologies.business_manager.security.device.model.TrustedDevice;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -51,4 +52,6 @@ public interface TrustedDeviceRepository extends JpaRepository<TrustedDevice, UU
     List<TrustedDevice> findByTenantIdAndBranchIdIsNull(UUID tenantId);
 
     Optional<TrustedDevice> findByIdAndTenantId(UUID id, UUID tenantId);
+
+    List<TrustedDevice> findAllByTenantId(UUID tenantId);
 }

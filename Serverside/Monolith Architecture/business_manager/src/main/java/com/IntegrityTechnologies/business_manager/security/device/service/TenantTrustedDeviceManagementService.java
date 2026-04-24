@@ -11,8 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -28,45 +27,111 @@ public class TenantTrustedDeviceManagementService {
 
     public List<TrustedDeviceDTO> list(UUID branchId) {
 
-        if (branchId == null) {
-            return repository
-                    .findByTenantIdAndBranchIdIsNull(tenantId())
-                    .stream()
-                    .map(this::toDto)
-                    .toList();
-        }
-
-        return repository
-                .findByTenantIdAndBranchId(
+        List<TrustedDevice> devices =
+                branchId == null
+                        ? repository.findByTenantIdAndBranchIdIsNull(
+                        tenantId()
+                )
+                        : repository.findByTenantIdAndBranchId(
                         tenantId(),
                         branchId
-                )
-                .stream()
-                .map(this::toDto)
-                .toList();
+                );
+
+        return enrich(devices);
     }
 
     public List<TrustedDeviceDTO> pendingDevices() {
 
-        return repository
-                .findByTenantIdAndStatus(
+        return enrich(
+                repository.findByTenantIdAndStatus(
                         tenantId(),
                         DeviceApprovalStatus.PENDING
                 )
-                .stream()
-                .map(this::toDto)
+        );
+    }
+
+    public List<TrustedDeviceDTO> listAllAccessible() {
+
+        return enrich(
+                repository.findAllByTenantId(
+                        tenantId()
+                )
+        );
+    }
+
+    private List<TrustedDeviceDTO> enrich(
+            List<TrustedDevice> devices
+    ) {
+
+        if (devices.isEmpty()) {
+            return List.of();
+        }
+
+        List<UUID> ids =
+                devices.stream()
+                        .map(TrustedDevice::getId)
+                        .toList();
+
+        var rows =
+                usageRepository.findDeviceUsernames(
+                        tenantId(),
+                        ids
+                );
+
+        Map<UUID,List<String>> usersByDevice =
+                new HashMap<>();
+
+        for (Object[] row : rows) {
+
+            UUID deviceId =
+                    (UUID) row[0];
+
+            String username =
+                    (String) row[1];
+
+            usersByDevice
+                    .computeIfAbsent(
+                            deviceId,
+                            k -> new ArrayList<>()
+                    )
+                    .add(username);
+        }
+
+        return devices.stream()
+                .map(d ->
+                        TrustedDeviceDTO.builder()
+                                .id(d.getId())
+                                .branchId(d.getBranchId())
+                                .deviceName(d.getDeviceName())
+                                .deviceId(d.getDeviceId())
+                                .status(d.getStatus().name())
+                                .firstSeenAt(d.getFirstSeenAt())
+                                .lastSeenAt(d.getLastSeenAt())
+                                .usedByUsernames(
+                                        usersByDevice.getOrDefault(
+                                                d.getId(),
+                                                List.of()
+                                        )
+                                )
+                                .build()
+                )
                 .toList();
     }
 
     @Transactional
-    public void approve(UUID id, String reason) {
+    public void approve(UUID id,String reason){
 
-        TrustedDevice d =
+        var d =
                 repository
-                        .findByIdAndTenantId(id, tenantId())
+                        .findByIdAndTenantId(
+                                id,
+                                tenantId()
+                        )
                         .orElseThrow();
 
-        d.setStatus(DeviceApprovalStatus.APPROVED);
+        d.setStatus(
+                DeviceApprovalStatus.APPROVED
+        );
 
         repository.save(d);
 
@@ -78,14 +143,19 @@ public class TenantTrustedDeviceManagementService {
     }
 
     @Transactional
-    public void reject(UUID id, String reason) {
+    public void reject(UUID id,String reason){
 
-        TrustedDevice d =
+        var d =
                 repository
-                        .findByIdAndTenantId(id, tenantId())
+                        .findByIdAndTenantId(
+                                id,
+                                tenantId()
+                        )
                         .orElseThrow();
 
-        d.setStatus(DeviceApprovalStatus.REJECTED);
+        d.setStatus(
+                DeviceApprovalStatus.REJECTED
+        );
 
         repository.save(d);
 
@@ -100,10 +170,14 @@ public class TenantTrustedDeviceManagementService {
     public void rename(
             UUID id,
             String name
-    ) {
-        TrustedDevice d =
+    ){
+
+        var d =
                 repository
-                        .findByIdAndTenantId(id, tenantId())
+                        .findByIdAndTenantId(
+                                id,
+                                tenantId()
+                        )
                         .orElseThrow();
 
         d.setDeviceName(name);
@@ -111,32 +185,7 @@ public class TenantTrustedDeviceManagementService {
         repository.save(d);
     }
 
-    private TrustedDeviceDTO toDto(TrustedDevice d) {
-
-        var users =
-                usageRepository
-                        .findByTenantIdAndDeviceId(
-                                tenantId(),
-                                d.getId()
-                        )
-                        .stream()
-                        .map(x -> x.getUserId())
-                        .distinct()
-                        .toList();
-
-        return TrustedDeviceDTO.builder()
-                .id(d.getId())
-                .branchId(d.getBranchId())
-                .deviceName(d.getDeviceName())
-                .deviceId(d.getDeviceId())
-                .status(d.getStatus().name())
-                .firstSeenAt(d.getFirstSeenAt())
-                .lastSeenAt(d.getLastSeenAt())
-                .usedByUserIds(users)
-                .build();
-    }
-
-    public DeviceStatsDTO stats() {
+    public DeviceStatsDTO stats(){
 
         return DeviceStatsDTO.builder()
                 .approvedDevices(
@@ -164,4 +213,5 @@ public class TenantTrustedDeviceManagementService {
                 )
                 .build();
     }
+
 }

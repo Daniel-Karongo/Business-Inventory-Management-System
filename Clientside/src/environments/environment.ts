@@ -464,6 +464,7 @@ export const environment = {
         list: '/platform/devices',
         approve: (id: string) => `/platform/devices/${id}/approve`,
         reject: (id: string) => `/platform/devices/${id}/reject`,
+        rename: (id: string) => `/platform/devices/${id}/rename`,
         audit: (id: string) => `/platform/devices/${id}/audit`
       },
 

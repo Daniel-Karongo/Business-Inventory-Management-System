@@ -25,7 +25,8 @@ export interface DeviceDTO {
   attemptedByUserIds: string[];
   pendingAttemptCount: number;
 
-  usedByUserIds: string[];
+  usedByUserIds?: string[];
+  usedByUsernames?: string[];
 
   status: DeviceStatus;
 
@@ -63,11 +64,13 @@ export class DeviceApiService {
      TENANT DEVICES
   ========================= */
 
-  list(branchId: string | null): Observable<DeviceDTO[]> {
+  list(branchId?: string | null): Observable<DeviceDTO[]> {
 
-    return this.http.get<DeviceDTO[]>(
-      `${environment.apiUrl}${this.tenantDevices.list(branchId)}`
-    );
+    const url = branchId
+      ? `${environment.apiUrl}${this.tenantDevices.list(branchId)}`
+      : `${environment.apiUrl}/admin/devices`;
+
+    return this.http.get<DeviceDTO[]>(url);
   }
 
   pending(): Observable<DeviceDTO[]> {
@@ -183,6 +186,23 @@ export class DeviceApiService {
       {},
       { params }
     );
+  }
+
+  platformRename(
+    id: string,
+    name: string
+  ): Observable<void> {
+
+    const params =
+      new HttpParams()
+        .set('name', name);
+
+    return this.http.patch<void>(
+      `${environment.apiUrl}${this.platformDevices.rename(id)}`,
+      {},
+      { params }
+    );
+
   }
 
   platformAudit(

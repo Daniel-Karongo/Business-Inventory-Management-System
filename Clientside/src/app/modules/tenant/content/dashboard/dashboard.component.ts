@@ -509,14 +509,4 @@ export class DashboardComponent implements OnInit {
 
     doc.save(`board-pack-${this.summary.date}.pdf`);
   }
-
-  debugRegister() {
-    const ref = this.dialog.open(BiometricPromptDialog);
-
-    ref.afterClosed().subscribe((enable) => {
-      if (enable === true) {
-        this.biometric.register();
-      }
-    });
-  }
 }

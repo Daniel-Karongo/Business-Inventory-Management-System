@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.config.spring;
 
+import com.IntegrityTechnologies.business_manager.exception.ConcurrentUpdateException;
 import jakarta.persistence.OptimisticLockException;
 import org.hibernate.StaleObjectStateException;
 
@@ -22,7 +23,10 @@ public class OptimisticRetryRunner {
             } catch (StaleObjectStateException | OptimisticLockException e) {
                 attempts++;
                 if (attempts >= maxRetries) {
-                    throw new RuntimeException("Concurrent update conflict after " + attempts + " attempts", e);
+                    throw new ConcurrentUpdateException(
+                            "CONCURRENT_UPDATE",
+                            e
+                    );
                 }
                 try {
                     Thread.sleep(sleepMs);

@@ -122,6 +122,11 @@
           <app-user-rollcalls [userId]="user.id!" />
         </mat-tab>
 
+        <mat-tab label="Biometrics">
+          <app-biometric-manager [adminMode]="canManageUser()" [targetUserId]="user.id">
+          </app-biometric-manager>
+        </mat-tab>
+
       </mat-tab-group>
     </div>
   </div>

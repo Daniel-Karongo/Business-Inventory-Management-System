@@ -1,29 +1,47 @@
 import { inject } from '@angular/core';
 import { CanMatchFn, Router } from '@angular/router';
 import { AuthService } from '../../modules/auth/services/auth.service';
-import { ROLE_HIERARCHY, Role } from '../security/role-hierarchy';
+import { ROLE_HIERARCHY, Role } from './role-hierarchy';
+import { map, catchError, of } from 'rxjs';
 
-export function roleAtLeast(required: Role): CanMatchFn {
+export function roleAtLeast(
+  required: Role
+): CanMatchFn {
 
   return () => {
 
     const auth = inject(AuthService);
     const router = inject(Router);
 
-    const userRole = auth.getSnapshot()?.role as Role | undefined;
+    return auth.getCurrentUser().pipe(
 
-    if (!userRole) {
-      return router.parseUrl('/auth');
-    }
+      map(user => {
 
-    const userLevel = ROLE_HIERARCHY.indexOf(userRole);
-    const requiredLevel = ROLE_HIERARCHY.indexOf(required);
+        if (!user) {
+          return router.parseUrl('/auth');
+        }
 
-    if (userLevel >= requiredLevel) {
-      return true;
-    }
+        const userLevel =
+          ROLE_HIERARCHY.indexOf(
+            user.role as Role
+          );
 
-    return router.parseUrl('/app');
+        const requiredLevel =
+          ROLE_HIERARCHY.indexOf(required);
+
+        if (userLevel >= requiredLevel) {
+          return true;
+        }
+
+        return router.parseUrl('/app');
+
+      }),
+
+      catchError(() =>
+        of(router.parseUrl('/auth'))
+      )
+
+    );
 
   };
 

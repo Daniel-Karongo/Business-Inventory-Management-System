@@ -22,6 +22,13 @@ public class TenantTrustedDeviceController {
     private final TenantTrustedDeviceManagementService service;
     private final DeviceApprovalAuditService approvalAuditService;
 
+    @GetMapping
+    public ResponseEntity<List<TrustedDeviceDTO>> listAll() {
+        return ResponseEntity.ok(
+                service.listAllAccessible()
+        );
+    }
+
     @GetMapping("/branch/{branchId}")
     public ResponseEntity<List<TrustedDeviceDTO>> list(
             @PathVariable UUID branchId

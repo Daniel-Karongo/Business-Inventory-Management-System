@@ -150,9 +150,18 @@ export class TopbarComponent implements OnInit {
     this.branchMenu = !this.branchMenu;
   }
 
-  @HostListener('document:click')
-  closeDropdown() {
-    this.branchMenu = false;
+  @HostListener('document:click', ['$event'])
+  closeDropdown(event: MouseEvent) {
+
+    const target =
+      event.target as HTMLElement;
+
+    if (
+      !target.closest('.branch-menu-trigger') &&
+      !target.closest('.branch-menu-panel')
+    ) {
+      this.branchMenu = false;
+    }
   }
 
   setTheme(pref: 'light' | 'dark' | 'system') {
@@ -161,7 +170,11 @@ export class TopbarComponent implements OnInit {
 
   goToProfile() {
     if (!this.currentUser?.username) return;
-    this.router.navigate(['/users', this.currentUser.username]);
+
+    this.router.navigate([
+      '/app/users',
+      this.currentUser.username
+    ]);
   }
 
   logout() {
@@ -196,18 +209,22 @@ export class TopbarComponent implements OnInit {
   private finalizeLogoutCurrent() {
     this.auth.logout().subscribe(() => {
       this.auth.clearLocalState();
-      this.router.navigate(['/login'], {
-        replaceUrl: true,
-      });
+
+      this.router.navigate(
+        ['/auth'],
+        { replaceUrl: true }
+      );
     });
   }
 
   private finalizeLogoutAll() {
     this.auth.logoutAll().subscribe(() => {
       this.auth.clearLocalState();
-      this.router.navigate(['/login'], {
-        replaceUrl: true,
-      });
+
+      this.router.navigate(
+        ['/auth'],
+        { replaceUrl: true }
+      );
     });
   }
 }
