@@ -63,6 +63,7 @@ export class LedgerViewComponent implements OnInit {
   }
 
   back() {
-    this.router.navigate(['/accounts/ledger']);
+    this.router.navigate(['/app/accounts/ledger']);
   }
 }
+

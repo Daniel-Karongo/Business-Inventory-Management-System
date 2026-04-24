@@ -86,6 +86,6 @@ export class JournalDetailsComponent {
   }
 
   back() {
-    this.router.navigate(['/accounts/journals']);
+    this.router.navigate(['/app/accounts/journals']);
   }
 }

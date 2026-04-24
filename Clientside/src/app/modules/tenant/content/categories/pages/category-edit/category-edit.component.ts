@@ -65,7 +65,7 @@ export class CategoryEditComponent implements OnInit, OnDestroy {
       next: () => {
         event.done();
         this.snackbar.open('Category updated', 'Close', { duration: 3000 });
-        this.router.navigate(['/categories', this.category!.id]);
+        this.router.navigate(['/app/categories', this.category!.id]);
       },
       error: (err) => {
         event.done();

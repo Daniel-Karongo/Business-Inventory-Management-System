@@ -119,6 +119,6 @@ export class CustomerEditComponent implements OnInit {
     if (this.fg.invalid) return;
 
     this.service.update(this.id, this.fg.value)
-      .subscribe(() => this.router.navigate(['/customers', this.id]));
+      .subscribe(() => this.router.navigate(['/app/customers', this.id]));
   }
 }

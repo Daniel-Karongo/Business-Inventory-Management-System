@@ -66,7 +66,7 @@ export class CustomerDetailsComponent implements OnInit {
   /* ================= ACTIONS ================= */
 
   edit(): void {
-    this.router.navigate(['/customers', this.id, 'edit']);
+    this.router.navigate(['/app/customers', this.id, 'edit']);
   }
 
   toggleActive(): void {

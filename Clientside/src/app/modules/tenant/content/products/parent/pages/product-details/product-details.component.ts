@@ -48,7 +48,7 @@ export class ProductDetailsComponent implements OnInit {
     const deleted = history.state?.deleted === true;
 
     if (!id) {
-      this.router.navigate(['/products']);
+      this.router.navigate(['/app/products']);
       return;
     }
 
@@ -57,7 +57,7 @@ export class ProductDetailsComponent implements OnInit {
         this.product = p;
         this.loading = false;
       },
-      error: () => this.router.navigate(['/products'])
+      error: () => this.router.navigate(['/app/products'])
     });
   }
 }

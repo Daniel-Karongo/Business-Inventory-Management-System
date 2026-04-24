@@ -89,6 +89,6 @@ export class CategoryDetailsComponent implements OnInit, OnDestroy {
   }
 
   back(): void {
-    this.router.navigate(['/categories']);
+    this.router.navigate(['/app/categories']);
   }
 }

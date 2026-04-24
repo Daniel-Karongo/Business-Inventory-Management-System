@@ -27,7 +27,7 @@
           Bulk Import
         </button>
 
-        <button mat-flat-button routerLink="/products/create">
+        <button mat-flat-button routerLink="/app/products/create">
           + Create Product
         </button>
       </div>
@@ -165,11 +165,11 @@
             <mat-icon>point_of_sale</mat-icon>
           </button>
 
-          <button mat-icon-button [disabled]="p.deleted" matTooltip="View" [routerLink]="['/products', p.id]">
+          <button mat-icon-button [disabled]="p.deleted" matTooltip="View" [routerLink]="['/app/products', p.id]">
             <mat-icon>visibility</mat-icon>
           </button>
 
-          <button mat-icon-button [disabled]="p.deleted" matTooltip="Edit" [routerLink]="['/products', p.id, 'edit']">
+          <button mat-icon-button [disabled]="p.deleted" matTooltip="Edit" [routerLink]="['/app/products', p.id, 'edit']">
             <mat-icon>edit</mat-icon>
           </button>
           <button mat-icon-button matTooltip="{{ p.deleted ? 'Restore/Delete' : 'Disable' }}"
@@ -219,7 +219,7 @@
             </th>
 
             <td mat-cell *matCellDef="let row">
-              <a [routerLink]="['/products', row.id]" [state]="{ deleted: row.deleted }"
+              <a [routerLink]="['/app/products', row.id]" [state]="{ deleted: row.deleted }"
                 class="text-blue-600 hover:underline">
                 {{ row.name }}
               </a>
@@ -341,11 +341,11 @@
                 <mat-icon>point_of_sale</mat-icon>
               </button>
               <button mat-icon-button [disabled]="row.deleted" matTooltip="View Product"
-                [routerLink]="['/products', row.id]" [state]="{ deleted: row.deleted }">
+                [routerLink]="['/app/products', row.id]" [state]="{ deleted: row.deleted }">
                 <mat-icon>visibility</mat-icon>
               </button>
               <button mat-icon-button [disabled]="row.deleted" matTooltip="Edit Product"
-                [routerLink]="['/products', row.id, 'edit']" [state]="{ deleted: row.deleted }">
+                [routerLink]="['/app/products', row.id, 'edit']" [state]="{ deleted: row.deleted }">
                 <mat-icon>edit</mat-icon>
               </button>
               <button mat-icon-button matTooltip="{{ row.deleted ? 'Restore/Delete' : 'Disable' }}"
@@ -425,12 +425,12 @@
             </button>
 
             <button mat-icon-button [disabled]="p.deleted" matTooltip="View" (click)="$event.stopPropagation()"
-              [routerLink]="['/products', p.id]">
+              [routerLink]="['/app/products', p.id]">
               <mat-icon>visibility</mat-icon>
             </button>
 
             <button mat-icon-button [disabled]="p.deleted" matTooltip="Edit" (click)="$event.stopPropagation()"
-              [routerLink]="['/products', p.id, 'edit']">
+              [routerLink]="['/app/products', p.id, 'edit']">
               <mat-icon>edit</mat-icon>
             </button>
 
@@ -450,3 +450,5 @@
   </div>
 
 </app-page-shell>
+
+

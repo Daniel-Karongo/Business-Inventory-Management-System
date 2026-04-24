@@ -56,7 +56,7 @@ export class AccountEditComponent implements OnInit {
   }
 
   cancel() {
-    this.router.navigate(['/accounts/chart']);
+    this.router.navigate(['/app/accounts/chart']);
   }
 
   save() {

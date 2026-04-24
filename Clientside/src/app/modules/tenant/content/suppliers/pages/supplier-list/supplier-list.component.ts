@@ -280,15 +280,15 @@ export class SupplierListComponent implements OnInit {
   ============================================================ */
 
   view(s: Supplier) {
-    this.router.navigate(['/suppliers', s.id], { state: { deleted: s.deleted } });
+    this.router.navigate(['/app/suppliers', s.id], { state: { deleted: s.deleted } });
   }
 
   edit(s: Supplier) {
-    this.router.navigate(['/suppliers', s.id, 'edit'], { state: { deleted: s.deleted } });
+    this.router.navigate(['/app/suppliers', s.id, 'edit'], { state: { deleted: s.deleted } });
   }
 
   goCreate() {
-    this.router.navigate(['/suppliers/create']);
+    this.router.navigate(['/app/suppliers/create']);
   }
 
   openBulkImport() {

@@ -29,10 +29,10 @@ export class AccountListComponent implements OnInit {
   }
 
   create() {
-    this.router.navigate(['/accounts/chart/create']);
+    this.router.navigate(['/app/accounts/chart/create']);
   }
 
   edit(a: any) {
-    this.router.navigate(['/accounts/chart', a.id]);
+    this.router.navigate(['/app/accounts/chart', a.id]);
   }
 }

@@ -442,7 +442,7 @@ export class ProductListComponent implements OnInit {
   }
 
   createSale(row: Product) {
-    this.router.navigate(['/sales/new'], {
+    this.router.navigate(['/app/sales/new'], {
       state: {
         inventorySeed: {
           productId: row.id,

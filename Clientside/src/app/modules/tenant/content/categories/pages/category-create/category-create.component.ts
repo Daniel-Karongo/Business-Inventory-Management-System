@@ -26,7 +26,7 @@ export class CategoryCreateComponent {
       next: (created) => {
         event.done();
         this.snackbar.open('Category created', 'Close', { duration: 3000 });
-        this.router.navigate(['/categories', created.id]);
+        this.router.navigate(['/app/categories', created.id]);
       },
       error: () => {
         event.done();

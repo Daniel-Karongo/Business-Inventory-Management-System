@@ -107,6 +107,6 @@ export class DepartmentCreateComponent implements OnInit {
       headIds: this.headIds,
       memberIds: this.memberIds,
       branchIds: this.branchIds
-    }).subscribe(() => this.router.navigate(['/departments']));
+    }).subscribe(() => this.router.navigate(['/app/departments']));
   }
 }

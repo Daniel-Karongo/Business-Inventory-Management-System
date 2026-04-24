@@ -287,7 +287,7 @@ export class SupplierCreateComponent implements OnInit {
       .subscribe({
         next: () => {
           this.snackbar.open('Supplier created', 'Close', { duration: 2000 });
-          this.router.navigate(['/suppliers']);
+          this.router.navigate(['/app/suppliers']);
         },
         error: () =>
           this.snackbar.open('Failed to create supplier', 'Close', { duration: 3000 })

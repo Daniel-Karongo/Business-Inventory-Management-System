@@ -23,6 +23,6 @@ export class LedgerHomeComponent implements OnInit {
   }
 
   open(accountId: string) {
-    this.router.navigate(['/accounts/ledger', accountId]);
+    this.router.navigate(['/app/accounts/ledger', accountId]);
   }
 }

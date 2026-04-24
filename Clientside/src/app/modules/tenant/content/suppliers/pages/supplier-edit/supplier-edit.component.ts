@@ -94,7 +94,7 @@ export class SupplierEditComponent implements OnInit {
       .subscribe({
         next: () => {
           this.snackbar.open('Supplier updated', 'Close', { duration: 2000 });
-          this.router.navigate(['/suppliers', this.supplierId]);
+          this.router.navigate(['/app/suppliers', this.supplierId]);
         }
       });
   }

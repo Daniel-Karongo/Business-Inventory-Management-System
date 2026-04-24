@@ -52,7 +52,7 @@ export class AccountCreateComponent {
   }
 
   cancel() {
-    this.router.navigate(['/accounts/chart']);
+    this.router.navigate(['/app/accounts/chart']);
   }
 
   submit() {

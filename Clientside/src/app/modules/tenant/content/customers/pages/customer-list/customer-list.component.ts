@@ -356,8 +356,8 @@ export class CustomerListComponent implements OnInit {
     });
   }
 
-  view(id: string) { this.router.navigate(['/customers', id]); }
-  edit(id: string) { this.router.navigate(['/customers', id, 'edit']); }
+  view(id: string) { this.router.navigate(['/app/customers', id]); }
+  edit(id: string) { this.router.navigate(['/app/customers', id, 'edit']); }
 
   openBulkImport() {
     this.dialog.open(CustomerBulkImportDialogComponent, {

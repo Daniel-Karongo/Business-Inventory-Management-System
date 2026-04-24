@@ -308,7 +308,7 @@ export class InventoryListComponent implements OnInit {
   }
 
   createSaleFromInventory(row: InventoryResponse) {
-    this.router.navigate(['/sales/new'], {
+    this.router.navigate(['/app/sales/new'], {
       state: {
         inventorySeed: {
           productId: row.productId,

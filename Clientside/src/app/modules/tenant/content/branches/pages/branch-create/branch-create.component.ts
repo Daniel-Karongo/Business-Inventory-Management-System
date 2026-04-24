@@ -124,6 +124,6 @@ export class BranchCreateComponent implements OnInit {
       ...this.fg.value,
       userIds: this.userIds,
       departmentIds: this.departmentIds
-    }).subscribe(() => this.router.navigate(['/branches']));
+    }).subscribe(() => this.router.navigate(['/app/branches']));
   }
 }

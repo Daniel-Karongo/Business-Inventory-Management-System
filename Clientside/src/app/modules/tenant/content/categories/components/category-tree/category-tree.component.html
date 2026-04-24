@@ -17,7 +17,7 @@
           (change)="toggleSelect(cat.id)">
         </mat-checkbox>
 
-        <a [routerLink]="['/categories', cat.id]" class="tree-link" (click)="$event.stopPropagation()">
+        <a [routerLink]="['/app/categories', cat.id]" class="tree-link" (click)="$event.stopPropagation()">
           {{ cat.name }}
         </a>
 
@@ -36,3 +36,5 @@
   </ng-container>
 
 </div>
+
+

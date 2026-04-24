@@ -58,7 +58,7 @@ export class ProductEditComponent implements OnInit {
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
-      this.router.navigate(['/products']);
+      this.router.navigate(['/app/products']);
       return;
     }
 
@@ -104,7 +104,7 @@ export class ProductEditComponent implements OnInit {
         this.loading = false;
       },
       error: () => {
-        this.router.navigate(['/products']);
+        this.router.navigate(['/app/products']);
       }
     });
   }
@@ -123,7 +123,7 @@ export class ProductEditComponent implements OnInit {
       this.productService.update(this.productId, payload).subscribe({
         next: () => {
           this.snackbar.open('Product updated', 'Close', { duration: 2000 });
-          this.router.navigate(['/products', this.productId]);
+          this.router.navigate(['/app/products', this.productId]);
         },
         error: () => {
           this.saving = false;
@@ -143,6 +143,6 @@ export class ProductEditComponent implements OnInit {
   }
 
   cancel() {
-    this.router.navigate(['/products', this.productId]);
+    this.router.navigate(['/app/products', this.productId]);
   }
 }

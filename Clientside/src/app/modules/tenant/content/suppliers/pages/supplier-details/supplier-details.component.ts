@@ -105,7 +105,7 @@ export class SupplierDetailsComponent implements OnInit {
       },
       error: () => {
         this.snackbar.open('Failed to load supplier', 'Close', { duration: 3000 });
-        this.router.navigate(['/suppliers']);
+        this.router.navigate(['/app/suppliers']);
       }
     });
   }
@@ -181,7 +181,7 @@ export class SupplierDetailsComponent implements OnInit {
   }
 
   goProduct(id: string) {
-    this.router.navigate(['/products', id]);
+    this.router.navigate(['/app/products', id]);
   }
 
   status(): string {

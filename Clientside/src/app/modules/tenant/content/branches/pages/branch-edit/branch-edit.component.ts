@@ -113,7 +113,7 @@ export class BranchEditComponent implements OnInit {
       userIds: this.userIds,
       departmentIds: this.departmentIds
     }).subscribe(() =>
-      this.router.navigate(['/branches', this.id])
+      this.router.navigate(['/app/branches', this.id])
     );
   }
 }

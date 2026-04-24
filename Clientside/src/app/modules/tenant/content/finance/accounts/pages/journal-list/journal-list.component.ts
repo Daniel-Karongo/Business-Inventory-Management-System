@@ -73,6 +73,6 @@ export class JournalListComponent implements OnInit {
   }
 
   view(j: JournalEntry) {
-    this.router.navigate(['/accounts/journals', j.id]);
+    this.router.navigate(['/app/accounts/journals', j.id]);
   }
 }

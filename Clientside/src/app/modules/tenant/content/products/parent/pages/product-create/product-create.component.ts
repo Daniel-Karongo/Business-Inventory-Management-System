@@ -36,7 +36,7 @@ export class ProductCreateComponent {
     this.productService.fullCreate(formData).subscribe({
       next: product => {
         this.snackbar.open('Product created successfully', 'Close', { duration: 3000 });
-        this.router.navigate(['/products', product.id]);
+        this.router.navigate(['/app/products', product.id]);
       },
       error: () => {
         this.saving = false;
@@ -46,6 +46,6 @@ export class ProductCreateComponent {
   }
 
   cancel() {
-    this.router.navigate(['/products']);
+    this.router.navigate(['/app/products']);
   }
 }

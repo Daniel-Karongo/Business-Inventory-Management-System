@@ -37,3 +37,4 @@ export interface DepartmentPositionDTO {
   departmentName: string;
   position: "head" | "member";
 }
+

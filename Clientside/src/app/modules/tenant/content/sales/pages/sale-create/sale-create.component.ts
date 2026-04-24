@@ -846,7 +846,7 @@ export class SaleCreateComponent implements OnInit {
     }
 
     this.salesService.create(payload).subscribe({
-      next: sale => this.router.navigate(['/sales', sale.id])
+      next: sale => this.router.navigate(['/app/sales', sale.id])
     });
   }
 }

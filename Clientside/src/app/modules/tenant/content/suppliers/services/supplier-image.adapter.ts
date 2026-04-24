@@ -36,3 +36,4 @@ export const SupplierImageAdapter = (service: SupplierService): EntityImageAdapt
     hardDeleteImage: (id, file) =>
         service.hardDeleteImage(id, file)
 });
+

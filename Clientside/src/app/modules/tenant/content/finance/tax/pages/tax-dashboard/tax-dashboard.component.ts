@@ -14,6 +14,6 @@ export class TaxDashboardComponent {
 
   constructor(private router: Router) {}
 
-  goVat() { this.router.navigate(['/finance/tax/vat']); }
-  goCorporate() { this.router.navigate(['/finance/tax/corporate']); }
+  goVat() { this.router.navigate(['/app/finance/tax/vat']); }
+  goCorporate() { this.router.navigate(['/app/finance/tax/corporate']); }
 }

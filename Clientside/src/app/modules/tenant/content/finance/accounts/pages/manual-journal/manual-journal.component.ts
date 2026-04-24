@@ -91,7 +91,7 @@ export class ManualJournalComponent implements OnInit {
         this.snackbar.open('Journal posted successfully', 'Close', {
           duration: 2500
         });
-        this.router.navigate(['/accounts/journals']);
+        this.router.navigate(['/app/accounts/journals']);
       },
       error: () => {
         this.snackbar.open('Failed to post journal', 'Close', {
@@ -103,6 +103,6 @@ export class ManualJournalComponent implements OnInit {
   }
 
   cancel(): void {
-    this.router.navigate(['/accounts/journals']);
+    this.router.navigate(['/app/accounts/journals']);
   }
 }

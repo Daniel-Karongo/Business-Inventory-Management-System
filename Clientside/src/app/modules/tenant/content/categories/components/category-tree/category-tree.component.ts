@@ -28,7 +28,7 @@ export class CategoryTreeComponent {
   constructor(private router: Router) { }
 
   navigate(id: number) {
-    this.router.navigate(['/categories', id]);
+    this.router.navigate(['/app/categories', id]);
   }
 
   toggleExpand(id: number) {

@@ -122,7 +122,7 @@ export class DepartmentEditComponent implements OnInit {
       memberIds: this.memberIds,
       branchIds: this.branchIds
     }).subscribe(() =>
-      this.router.navigate(['/departments', this.id])
+      this.router.navigate(['/app/departments', this.id])
     );
   }
 }

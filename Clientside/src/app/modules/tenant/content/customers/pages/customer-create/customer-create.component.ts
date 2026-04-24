@@ -124,7 +124,7 @@ export class CustomerCreateComponent implements OnInit {
     this.service.create(this.fg.value).subscribe({
       next: () => {
         this.snackbar.open('Customer created successfully', 'Close', { duration: 2000 });
-        this.router.navigate(['/customers']);
+        this.router.navigate(['/app/customers']);
       },
       error: () =>
         this.snackbar.open('Failed to create customer', 'Close', { duration: 2000 })

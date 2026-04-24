@@ -192,11 +192,11 @@
 
         <div class="flex gap-2">
             <button mat-stroked-button *ngIf="sale.status === 'COMPLETED'"
-                [routerLink]="['/sales', sale.id, 'receipt']">
+                [routerLink]="['/app/sales', sale.id, 'receipt']">
                 Receipt
             </button>
 
-            <button mat-flat-button color="primary" *ngIf="sale.status === 'COMPLETED'" routerLink="/sales/new">
+            <button mat-flat-button color="primary" *ngIf="sale.status === 'COMPLETED'" routerLink="/app/sales/new">
                 New Sale
             </button>
         </div>
@@ -213,3 +213,5 @@
 
     </div>
 </div>
+
+
