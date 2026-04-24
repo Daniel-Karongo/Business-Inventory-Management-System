@@ -35,8 +35,7 @@ public class AutoLogoutScheduler {
     @Value("${rollcall.logout.start-time}")
     private String startTimeString;
 
-    @Scheduled(cron = "0 * * * * *")
-    @Transactional
+    @Scheduled(cron="0 * * * * *")
     public void autoLogoutMissingUsers() {
         LocalTime startTime = LocalTime.parse(startTimeString);
         LocalTime nowTime = LocalTime.now();

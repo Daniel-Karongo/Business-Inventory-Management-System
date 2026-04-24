@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.platform.tenant.servi
 
 import com.IntegrityTechnologies.business_manager.modules.platform.audit.entity.AuditEntityType;
 import com.IntegrityTechnologies.business_manager.modules.platform.audit.service.AuditService;
+import com.IntegrityTechnologies.business_manager.modules.platform.subscription.repository.TenantSubscriptionRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.bootstrap.TenantBootstrapService;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.dto.TenantCreateRequest;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.dto.TenantResponse;
@@ -25,6 +26,8 @@ public class TenantServiceImpl implements TenantService {
     private final TenantBootstrapService tenantBootstrapService;
     private final AuditService auditService;
     private final TenantProvisioningService tenantProvisioningService;
+    private final TenantSubscriptionRepository subscriptionRepository;
+
 
     /* ==========================================
        CREATE TENANT
@@ -49,7 +52,18 @@ public class TenantServiceImpl implements TenantService {
                 request.getAdminPassword() != null ? request.getAdminPassword() : "ChangeMe123!"
         );
 
-        return TenantMapper.toDto(tenant);
+        var sub =
+                subscriptionRepository
+                        .findByTenantId(
+                                tenant.getId()
+                        )
+                        .orElseThrow();
+
+        return TenantMapper.toDto(
+                tenant,
+                sub.getPlan().getCode(),
+                sub.getStatus().name()
+        );
     }
 
     /* ==========================================
@@ -62,7 +76,18 @@ public class TenantServiceImpl implements TenantService {
         Tenant tenant = tenantRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Tenant not found"));
 
-        return TenantMapper.toDto(tenant);
+        var sub =
+                subscriptionRepository
+                        .findByTenantId(
+                                tenant.getId()
+                        )
+                        .orElseThrow();
+
+        return TenantMapper.toDto(
+                tenant,
+                sub.getPlan().getCode(),
+                sub.getStatus().name()
+        );
     }
 
     /* ==========================================
@@ -70,35 +95,48 @@ public class TenantServiceImpl implements TenantService {
     ========================================== */
 
     @Override
-    public Page<TenantResponse> getTenants(int page, int size) {
+    public Page<TenantResponse> getTenants(
+            int page,
+            int size
+    ) {
 
-        return tenantRepository
-                .findAll(PageRequest.of(page, size))
-                .map(TenantMapper::toDto);
+        Page<Tenant> tenants =
+                tenantRepository.findAll(
+                        PageRequest.of(page,size)
+                );
 
+        var ids =
+                tenants.getContent()
+                        .stream()
+                        .map(Tenant::getId)
+                        .toList();
+
+        var subscriptions =
+                subscriptionRepository
+                        .findAllByTenantIds(ids);
+
+        var byTenant =
+                subscriptions.stream()
+                        .collect(
+                                java.util.stream.Collectors.toMap(
+                                        s -> s.getTenantId(),
+                                        s -> s
+                                )
+                        );
+
+        return tenants.map(t -> {
+
+            var sub =
+                    byTenant.get(
+                            t.getId()
+                    );
+
+            return TenantMapper.toDto(
+                    t,
+                    sub.getPlan().getCode(),
+                    sub.getStatus().name()
+            );
+
+        });
     }
-
-    /* ==========================================
-       DEACTIVATE TENANT
-    ========================================== */
-
-    @Override
-    public void deactivateTenant(UUID id) {
-
-        Tenant tenant = tenantRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Tenant not found"));
-
-        tenant.setStatus(TenantStatus.SUSPENDED);
-
-        tenantRepository.save(tenant);
-
-        auditService.log(
-                AuditEntityType.TENANT,
-                tenant.getId(),
-                "DEACTIVATE",
-                tenant.getStatus().name(),
-                TenantStatus.SUSPENDED.name()
-        );
-    }
-
 }

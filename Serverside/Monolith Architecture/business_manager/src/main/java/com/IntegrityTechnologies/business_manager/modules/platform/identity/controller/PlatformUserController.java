@@ -1,14 +1,14 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.identity.controller;
 
+import com.IntegrityTechnologies.business_manager.config.response.PageWrapper;
+import com.IntegrityTechnologies.business_manager.modules.platform.identity.dto.PlatformUserAuditResponse;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.dto.PlatformUserCreateRequest;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.dto.PlatformUserResponse;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.dto.PlatformUserUpdateRequest;
-import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUserAudit;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.service.PlatformUserService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.PlatformAdminOnly;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.PlatformSuperAdminOnly;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,12 +30,7 @@ public class PlatformUserController {
     public PlatformUserResponse create(
             @RequestBody PlatformUserCreateRequest request
     ) {
-
-        return service.createUser(
-                request.getUsername(),
-                request.getPassword(),
-                request.getRole()
-        );
+        return service.createUser(request);
     }
 
     /* =====================================================
@@ -44,11 +39,13 @@ public class PlatformUserController {
 
     @GetMapping
     @PlatformSuperAdminOnly
-    public Page<PlatformUserResponse> users(
+    public PageWrapper<PlatformUserResponse> users(
             Pageable pageable
     ) {
 
-        return service.getUsers(pageable);
+        return new PageWrapper<>(
+                service.getUsers(pageable)
+        );
     }
 
     /* =====================================================
@@ -113,10 +110,11 @@ public class PlatformUserController {
     ===================================================== */
     @GetMapping("/audit")
     @PlatformSuperAdminOnly
-    public Page<PlatformUserAudit> audit(
+    public PageWrapper<PlatformUserAuditResponse> audit(
             Pageable pageable
-    ){
-        return service.auditLogs(pageable);
+    ) {
+        return new PageWrapper<>(
+                service.auditLogs(pageable)
+        );
     }
-
 }

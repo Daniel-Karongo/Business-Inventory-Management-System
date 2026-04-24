@@ -16,4 +16,6 @@ public class TenantResponse {
     private TenantStatus status;
     private boolean platformTenant;
     private LocalDateTime createdAt;
+    private String planCode;
+    private String subscriptionStatus;
 }

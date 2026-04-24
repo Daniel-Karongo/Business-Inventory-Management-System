@@ -5,9 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 @Table(
@@ -61,7 +59,7 @@ public class PlatformUser {
     )
     @Column(name = "email")
     @Builder.Default
-    private List<String> emailAddresses = new ArrayList<>();
+    private Set<String> emailAddresses = new LinkedHashSet<>();
 
 
 /* =====================================
@@ -84,7 +82,7 @@ public class PlatformUser {
     )
     @Column(name = "phone")
     @Builder.Default
-    private List<String> phoneNumbers = new ArrayList<>();
+    private Set<String> phoneNumbers = new LinkedHashSet<>();
 
 
     /* =====================================

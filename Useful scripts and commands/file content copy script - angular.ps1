@@ -7,15 +7,33 @@ $outputFile = Join-Path $basePath "Selected_Modules_Combined.txt"
 
 $targetFolders = @(
     "package.json",
-    "src\environments\environments.ts",
+    "src\environments\environment.ts",
     "src\styles.scss",
     "src\app\app.config.ts",
     "src\app\app.routes.ts",
-    "src\app\core\interceptors",
-    "src\app\core\layout",
-    "src\app\core\navigation",
-    "src\app\core\services",
-    "src\app\modules\auth"
+    "src\app\core\services\auth-error.service.ts",
+    "src\app\modules\auth\services\auth.service.ts",
+    "src\app\core\services\domain-context.service.ts",
+    "src\app\core\services\device.service.ts",
+    "src\app\core\services\webauthn.service.ts",
+    "src\app\core\guards",
+    "src\app\modules\auth\guards\auth.guard.ts",
+    "src\app\modules\auth\interceptors\auth.interceptor.ts",
+    "src\app\core\interceptors\network-error.interceptor.ts",
+    "src\app\core\interceptors\tenant.interceptor.ts"
+    "src\app\core\services\date-formats.ts",
+    "src\app\core\services\date-utils.ts",
+    "src\app\shared\services",
+    "src\app\shared\layout\page-shell",
+    "src\app\shared\components\confirm-dialog",
+    "src\app\shared\components\biometric-manager",
+    "src\app\shared\components\biometric-prompt-dialog",
+    "src\app\shared\components\overwrite-biometric-dialog",
+    "src\app\shared\components\rename-device-dialog",
+    "src\app\core\services\biometric-api.service.ts",
+    "src\app\core\services\biometric-registration.service.ts",
+    "src\app\core\services\device-api.service.ts",
+    "src\app\modules\platform"
 )
 
 # ================================
@@ -32,7 +50,7 @@ foreach ($folder in $targetFolders) {
 
         Write-Host "Processing $fullPath"
 
-        Get-ChildItem -Path $fullPath -Recurse -Include *.ts, *.scss, *.html -File | ForEach-Object {
+        Get-ChildItem -Path $fullPath -Recurse -Include *.json, *.ts, *.scss, *.html -File | ForEach-Object {
 
             $builder.AppendLine("") | Out-Null
             $builder.AppendLine("============================================================") | Out-Null

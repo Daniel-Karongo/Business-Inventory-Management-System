@@ -1,80 +1,31 @@
-<mat-sidenav-container class="layout">
+<div class="flex h-screen overflow-hidden">
 
-  <mat-sidenav mode="side" opened class="sidebar">
+  <aside class="sidebar" [class.sidebar-collapsed]="sidebar.isCollapsed$ | async"
+    [class.sidebar-expanded]="!(sidebar.isCollapsed$ | async)">
 
-    <div class="logo">
+    <app-platform-sidebar>
+    </app-platform-sidebar>
 
-      <span>Platform Console</span>
+  </aside>
 
-    </div>
+  <div *ngIf="!(sidebar.isCollapsed$ | async)" class="sidebar-backdrop" (click)="sidebar.toggle()">
+  </div>
 
-    <mat-nav-list>
+  <div class="flex flex-col flex-1 min-w-0">
 
-      <a mat-list-item routerLink="/platform" routerLinkActive="active">
+    <header>
+      <app-platform-topbar>
+      </app-platform-topbar>
+    </header>
 
-        <mat-icon>dashboard</mat-icon>
+    <app-breadcrumb>
+    </app-breadcrumb>
 
-        <span>Dashboard</span>
+    <main>
+      <router-outlet>
+      </router-outlet>
+    </main>
 
-      </a>
+  </div>
 
-      <a mat-list-item routerLink="/platform/security/devices" routerLinkActive="active">
-        <mat-icon>devices</mat-icon>
-        <span>Devices</span>
-      </a>
-
-      <a mat-list-item routerLink="/platform/tenants" routerLinkActive="active">
-
-        <mat-icon>apartment</mat-icon>
-
-        <span>Tenants</span>
-
-      </a>
-
-      <a mat-list-item routerLink="/platform/plans" routerLinkActive="active">
-
-        <mat-icon>workspace_premium</mat-icon>
-
-        <span>Plans</span>
-
-      </a>
-
-      <a mat-list-item routerLink="/platform/analytics" routerLinkActive="active">
-
-        <mat-icon>insights</mat-icon>
-
-        <span>Analytics</span>
-
-      </a>
-
-      <a mat-list-item routerLink="/platform/audit" routerLinkActive="active">
-
-        <mat-icon>history</mat-icon>
-
-        <span>Audit Logs</span>
-
-      </a>
-
-    </mat-nav-list>
-
-  </mat-sidenav>
-
-  <mat-sidenav-content>
-
-    <mat-toolbar class="toolbar">
-
-      <span>Platform Administration</span>
-
-    </mat-toolbar>
-
-    <div class="content">
-
-      <router-outlet></router-outlet>
-
-    </div>
-
-  </mat-sidenav-content>
-
-</mat-sidenav-container>
-
-
+</div>

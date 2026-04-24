@@ -1,0 +1,119 @@
+<mat-toolbar class="topbar flex justify-between items-center px-4">
+
+    <div class="flex items-center gap-3">
+
+        <button mat-icon-button (click)="toggleSidebar()" aria-label="Toggle sidebar">
+
+            <mat-icon>
+                menu
+            </mat-icon>
+
+        </button>
+
+        <div class="text-lg font-medium hidden sm:block">
+            {{ currentPage }}
+        </div>
+
+    </div>
+
+    <div class="flex items-center gap-5">
+
+        <!-- THEME -->
+
+        <button mat-button [matMenuTriggerFor]="themeMenu" class="meta-btn">
+
+            <mat-icon class="meta-icon">
+                brightness_6
+            </mat-icon>
+
+            <div class="meta-text hidden sm:flex">
+                <div class="meta-title">
+                    Theme
+                </div>
+            </div>
+
+        </button>
+
+        <mat-menu #themeMenu="matMenu">
+
+            <button mat-menu-item (click)="setTheme('light')">
+
+                <mat-icon>
+                    light_mode
+                </mat-icon>
+
+                Light
+
+            </button>
+
+            <button mat-menu-item (click)="setTheme('dark')">
+
+                <mat-icon>
+                    dark_mode
+                </mat-icon>
+
+                Dark
+
+            </button>
+
+            <button mat-menu-item (click)="setTheme('system')">
+
+                <mat-icon>
+                    settings
+                </mat-icon>
+
+                System
+
+            </button>
+
+        </mat-menu>
+
+        <!-- USER -->
+
+        <button mat-button [matMenuTriggerFor]="userMenu" class="meta-btn">
+
+            <mat-icon class="meta-icon">
+                person
+            </mat-icon>
+
+            <div class="meta-text hidden sm:flex">
+
+                <div class="meta-title">
+                    {{ currentUser?.username }}
+                </div>
+
+                <div class="meta-subtitle">
+                    {{ currentUser?.role }}
+                </div>
+
+            </div>
+
+        </button>
+
+        <mat-menu #userMenu="matMenu">
+
+            <button mat-menu-item (click)="goProfile()">
+
+                <mat-icon>
+                    account_circle
+                </mat-icon>
+
+                Profile
+
+            </button>
+
+            <button mat-menu-item (click)="logout()">
+
+                <mat-icon>
+                    logout
+                </mat-icon>
+
+                Logout
+
+            </button>
+
+        </mat-menu>
+
+    </div>
+
+</mat-toolbar>

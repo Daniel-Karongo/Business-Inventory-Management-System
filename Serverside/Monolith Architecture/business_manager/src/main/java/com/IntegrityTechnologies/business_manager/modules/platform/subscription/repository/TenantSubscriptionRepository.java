@@ -4,17 +4,28 @@ import com.IntegrityTechnologies.business_manager.modules.platform.subscription.
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface TenantSubscriptionRepository extends JpaRepository<TenantSubscription, UUID> {
     @Query("""
-        SELECT s
-        FROM TenantSubscription s
-        JOIN FETCH s.plan
-        WHERE s.tenantId = :tenantId
-    """)
+                SELECT s
+                FROM TenantSubscription s
+                JOIN FETCH s.plan
+                WHERE s.tenantId = :tenantId
+            """)
     Optional<TenantSubscription> findByTenantId(UUID tenantId);
 
     boolean existsByTenantId(UUID tenantId);
+
+    @Query("""
+            select s
+            from TenantSubscription s
+            join fetch s.plan
+            where s.tenantId in :tenantIds
+            """)
+    List<TenantSubscription> findAllByTenantIds(
+            List<UUID> tenantIds
+    );
 }

@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.security.device.controller;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.security.device.dto.DeviceApprovalAuditDTO;
+import com.IntegrityTechnologies.business_manager.security.device.dto.DeviceAttemptDTO;
 import com.IntegrityTechnologies.business_manager.security.device.dto.DeviceStatsDTO;
 import com.IntegrityTechnologies.business_manager.security.device.dto.TrustedDeviceDTO;
 import com.IntegrityTechnologies.business_manager.security.device.service.DeviceApprovalAuditService;
@@ -44,7 +45,7 @@ public class TenantTrustedDeviceController {
     @PatchMapping("/{id}/approve")
     public ResponseEntity<Void> approve(
             @PathVariable UUID id,
-            @RequestParam(required=false) String reason
+            @RequestParam(required = false) String reason
     ) {
         service.approve(id, reason);
         return ResponseEntity.ok().build();
@@ -53,7 +54,7 @@ public class TenantTrustedDeviceController {
     @PatchMapping("/{id}/reject")
     public ResponseEntity<Void> reject(
             @PathVariable UUID id,
-            @RequestParam(required=false) String reason
+            @RequestParam(required = false) String reason
     ) {
         service.reject(id, reason);
         return ResponseEntity.ok().build();
@@ -69,7 +70,7 @@ public class TenantTrustedDeviceController {
     }
 
     @GetMapping("/stats")
-    public ResponseEntity<DeviceStatsDTO> stats(){
+    public ResponseEntity<DeviceStatsDTO> stats() {
         return ResponseEntity.ok(
                 service.stats()
         );
@@ -78,9 +79,18 @@ public class TenantTrustedDeviceController {
     @GetMapping("/{id}/audit")
     public ResponseEntity<List<DeviceApprovalAuditDTO>> audit(
             @PathVariable UUID id
-    ){
+    ) {
         return ResponseEntity.ok(
                 approvalAuditService.history(id)
+        );
+    }
+
+    @GetMapping("/{id}/attempts")
+    public ResponseEntity<List<DeviceAttemptDTO>> attempts(
+            @PathVariable UUID id
+    ) {
+        return ResponseEntity.ok(
+                approvalAuditService.pendingAttempts(id)
         );
     }
 }

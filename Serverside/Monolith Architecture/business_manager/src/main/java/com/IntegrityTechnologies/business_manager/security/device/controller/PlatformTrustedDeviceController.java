@@ -2,6 +2,8 @@ package com.IntegrityTechnologies.business_manager.security.device.controller;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.PlatformAdminOnly;
 import com.IntegrityTechnologies.business_manager.security.device.dto.DeviceApprovalAuditDTO;
+import com.IntegrityTechnologies.business_manager.security.device.dto.DeviceAttemptDTO;
+import com.IntegrityTechnologies.business_manager.security.device.dto.DeviceStatsDTO;
 import com.IntegrityTechnologies.business_manager.security.device.dto.TrustedDeviceDTO;
 import com.IntegrityTechnologies.business_manager.security.device.service.DeviceApprovalAuditService;
 import com.IntegrityTechnologies.business_manager.security.device.service.PlatformTrustedDeviceManagementService;
@@ -76,4 +78,19 @@ public class PlatformTrustedDeviceController {
         );
     }
 
+    @GetMapping("/stats")
+    public ResponseEntity<DeviceStatsDTO> stats(){
+        return ResponseEntity.ok(
+                service.stats()
+        );
+    }
+
+    @GetMapping("/{id}/attempts")
+    public ResponseEntity<List<DeviceAttemptDTO>> attempts(
+            @PathVariable UUID id
+    ){
+        return ResponseEntity.ok(
+                auditService.pendingAttempts(id)
+        );
+    }
 }

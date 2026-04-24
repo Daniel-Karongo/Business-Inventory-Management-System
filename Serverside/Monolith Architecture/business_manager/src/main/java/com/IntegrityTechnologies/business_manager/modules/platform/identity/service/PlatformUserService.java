@@ -1,5 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.identity.service;
 
+import com.IntegrityTechnologies.business_manager.config.util.PhoneAndEmailNormalizer;
+import com.IntegrityTechnologies.business_manager.modules.platform.identity.dto.PlatformUserAuditResponse;
+import com.IntegrityTechnologies.business_manager.modules.platform.identity.dto.PlatformUserCreateRequest;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.dto.PlatformUserResponse;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.dto.PlatformUserUpdateRequest;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformRole;
@@ -8,41 +11,71 @@ import com.IntegrityTechnologies.business_manager.modules.platform.identity.enti
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.mapper.PlatformUserMapper;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
+import com.IntegrityTechnologies.business_manager.security.auth.service.AuthService;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class PlatformUserService {
 
     private final PlatformUserRepository repository;
     private final PlatformUserAuditRepository auditRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuthService authService;
 
     /* =====================================================
        CREATE
     ===================================================== */
 
     public PlatformUserResponse createUser(
-            String username,
-            String password,
-            String role
+            PlatformUserCreateRequest request
     ) {
 
-        if (repository.existsByUsername(username)) {
+        if (repository.existsByUsername(request.getUsername())) {
             throw new IllegalStateException("Platform user already exists");
         }
 
         PlatformUser user = PlatformUser.builder()
-                .username(username)
-                .password(passwordEncoder.encode(password))
-                .role(PlatformRole.valueOf(role))
+                .username(request.getUsername())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .role(PlatformRole.valueOf(request.getRole()))
+                .mustChangePassword(
+                        Boolean.TRUE.equals(
+                                request.getMustChangePassword()
+                        )
+                )
+
+                .emailAddresses(
+                        PhoneAndEmailNormalizer.normalizeEmails(
+                                request.getEmailAddresses() == null
+                                        ? List.of()
+                                        : List.copyOf(request.getEmailAddresses())
+                        )
+                )
+
+                .phoneNumbers(
+                        PhoneAndEmailNormalizer.normalizePhones(
+                                request.getPhoneNumbers() == null
+                                        ? List.of()
+                                        : List.copyOf(request.getPhoneNumbers())
+                        )
+                )
+
+                .idNumber(
+                        request.getIdNumber()
+                )
                 .active(true)
                 .locked(false)
                 .deleted(false)
@@ -72,7 +105,7 @@ public class PlatformUserService {
 
     public PlatformUserResponse getUser(UUID id) {
 
-        PlatformUser user = repository.findById(id)
+        PlatformUser user = repository.findDetailedById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         return PlatformUserMapper.toResponse(user);
@@ -86,11 +119,16 @@ public class PlatformUserService {
             UUID id,
             PlatformUserUpdateRequest request
     ) {
-
-        PlatformUser user = repository.findById(id)
+        PlatformUser user = repository.findDetailedById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        ensureNotSuperuser(user);
+        boolean editingSelf =
+                user.getUsername()
+                        .equals(SecurityUtils.currentUsername());
+
+        if (!editingSelf) {
+            ensureNotSuperuser(user);
+        }
 
         if (request.getUsername() != null) {
             user.setUsername(request.getUsername());
@@ -109,20 +147,65 @@ public class PlatformUserService {
         }
 
         if (request.getEmailAddresses() != null) {
-            user.setEmailAddresses(request.getEmailAddresses());
+            user.setEmailAddresses(
+                    PhoneAndEmailNormalizer.normalizeEmails(
+                            List.copyOf(request.getEmailAddresses())
+                    )
+            );
         }
 
         if (request.getPhoneNumbers() != null) {
-            user.setPhoneNumbers(request.getPhoneNumbers());
+            user.setPhoneNumbers(
+                    PhoneAndEmailNormalizer.normalizePhones(
+                            List.copyOf(request.getPhoneNumbers())
+                    )
+            );
         }
 
         if (request.getIdNumber() != null) {
             user.setIdNumber(request.getIdNumber());
         }
 
+        if (request.getMustChangePassword() != null) {
+            user.setMustChangePassword(
+                    request.getMustChangePassword()
+            );
+        }
+
+        /* SELF password change only */
+        if (request.getPassword() != null &&
+                !request.getPassword().isBlank()) {
+
+            if (!editingSelf) {
+                throw new IllegalStateException(
+                        "Only the authenticated user may change their own password"
+                );
+            }
+
+            user.setPassword(
+                    passwordEncoder.encode(
+                            request.getPassword()
+                    )
+            );
+
+            user.setMustChangePassword(false);
+            authService.logoutAllSessions(
+                    user.getId(),
+                    true
+            );
+
+            audit(
+                    user,
+                    "PASSWORD_CHANGE",
+                    "Password changed"
+            );
+        }
+
         repository.save(user);
 
-        audit(user, "UPDATE", "Platform user updated");
+        if (request.getPassword() == null || request.getPassword().isBlank()) {
+            audit(user, "UPDATE", "Platform user updated");
+        }
 
         return PlatformUserMapper.toResponse(user);
     }
@@ -133,7 +216,7 @@ public class PlatformUserService {
 
     public void lockUser(UUID id) {
 
-        PlatformUser user = repository.findById(id)
+        PlatformUser user = repository.findDetailedById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         ensureNotSuperuser(user);
@@ -151,7 +234,7 @@ public class PlatformUserService {
 
     public void unlockUser(UUID id) {
 
-        PlatformUser user = repository.findById(id)
+        PlatformUser user = repository.findDetailedById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         user.setLocked(false);
@@ -167,7 +250,7 @@ public class PlatformUserService {
 
     public void deleteUser(UUID id) {
 
-        PlatformUser user = repository.findById(id)
+        PlatformUser user = repository.findDetailedById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (user.getUsername().equals(SecurityUtils.currentUsername())) {
@@ -187,8 +270,14 @@ public class PlatformUserService {
        AUDIT
     ===================================================== */
 
-    public Page<PlatformUserAudit> auditLogs(Pageable pageable) {
-        return auditRepository.findAll(pageable);
+    public Page<PlatformUserAuditResponse> auditLogs(
+            Pageable pageable
+    ) {
+
+        return auditRepository
+                .findAll(pageable)
+                .map(PlatformUserMapper::toAuditResponse);
+
     }
 
     /* =====================================================

@@ -11,9 +11,9 @@ import java.util.UUID;
 public class DeviceApprovalAuditDTO {
 
     private UUID actedByUserId;
+    private String actedByUsername;
 
     private String action;
-
     private String reason;
 
     private LocalDateTime actedAt;

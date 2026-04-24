@@ -35,10 +35,23 @@ public class TenantEntityListener {
             return;
         }
 
-        UUID current = TenantContext.getTenantId();
+    /*
+     Defensive hardening:
+     During scheduler/async flushes there may be no tenant
+     context present yet or it may have already been cleared.
+
+     Do not explode inside entity listener.
+    */
+        UUID current = TenantContext.getOrNull();
+
+        if (current == null) {
+            return;
+        }
 
         if (!current.equals(tenantAware.getTenantId())) {
-            throw new SecurityException("Cross-tenant modification attempt");
+            throw new SecurityException(
+                    "Cross-tenant modification attempt"
+            );
         }
     }
 }

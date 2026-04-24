@@ -1,11 +1,14 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
+import { AsyncPipe } from '@angular/common';
 
-import { MatSidenavModule } from '@angular/material/sidenav';
-import { MatListModule } from '@angular/material/list';
-import { MatIconModule } from '@angular/material/icon';
-import { MatToolbarModule } from '@angular/material/toolbar';
+import { SidebarService } from '../../../core/services/sidebar.service';
+
+import { BreadcrumbComponent }
+  from '../../../shared/components/breadcrumb/breadcrumb.component';
+import { PlatformTopbarComponent } from '../navigation/topbar/platform-topbar.component';
+import { PlatformSidebarComponent } from '../navigation/sidebar/platform-sidebar.component';
 
 @Component({
   standalone: true,
@@ -14,11 +17,17 @@ import { MatToolbarModule } from '@angular/material/toolbar';
   styleUrls: ['./platform-layout.component.scss'],
   imports: [
     CommonModule,
-    RouterModule,
-    MatSidenavModule,
-    MatListModule,
-    MatIconModule,
-    MatToolbarModule
+    RouterOutlet,
+    AsyncPipe,
+    PlatformSidebarComponent,
+    PlatformTopbarComponent,
+    BreadcrumbComponent
   ]
 })
-export class PlatformLayoutComponent {}
+export class PlatformLayoutComponent {
+
+  constructor(
+    public sidebar: SidebarService
+  ) { }
+
+}

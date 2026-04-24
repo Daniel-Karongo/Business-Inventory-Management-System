@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -21,6 +22,7 @@ public class TenantExecutionService {
     private static final int TENANT_BATCH_SIZE = 100;
 
     private final TenantRepository tenantRepository;
+    private final TransactionTemplate txTemplate;
 
     /**
      * Execute a task once for every active tenant.
@@ -48,7 +50,9 @@ public class TenantExecutionService {
 
                     log.debug("Executing task for tenant {}", tenantId);
 
-                    task.accept(tenantId);
+                    txTemplate.executeWithoutResult(status -> {
+                        task.accept(tenantId);
+                    });
 
                 } catch (Exception e) {
 

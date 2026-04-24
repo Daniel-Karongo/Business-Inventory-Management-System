@@ -152,6 +152,12 @@ export class DeviceApiService {
     );
   }
 
+  platformStats() {
+    return this.http.get<any>(
+      `${environment.apiUrl}/platform/devices/stats`
+    );
+  }
+
   platformApprove(
     id: string,
     reason?: string
@@ -214,4 +220,9 @@ export class DeviceApiService {
     );
   }
 
+  platformAttempts(id: string) {
+    return this.http.get<any[]>(
+      `${environment.apiUrl}/platform/devices/${id}/attempts`
+    );
+  }
 }

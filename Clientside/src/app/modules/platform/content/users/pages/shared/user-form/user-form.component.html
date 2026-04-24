@@ -1,0 +1,203 @@
+<div class="user-form-shell">
+
+    <div class="hero">
+        <h2>
+            {{mode==='create'
+            ?'Create Platform User'
+            :'Edit Platform User'}}
+        </h2>
+        <p>
+            Identity, access, contacts and account controls.
+        </p>
+    </div>
+
+    <form [formGroup]="form">
+
+        <section class="panel">
+
+            <h3>Identity</h3>
+
+            <div class="grid">
+
+                <mat-form-field appearance="fill">
+                    <mat-label>Username</mat-label>
+                    <input matInput formControlName="username">
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+                    <mat-label>ID Number</mat-label>
+                    <input matInput formControlName="idNumber">
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+                    <mat-label>Role</mat-label>
+
+                    <mat-select formControlName="role">
+                        <mat-option value="PLATFORM_ADMIN">
+                            Platform Admin
+                        </mat-option>
+
+                        <mat-option value="PLATFORM_SUPER_ADMIN">
+                            Platform Super Admin
+                        </mat-option>
+                    </mat-select>
+
+                </mat-form-field>
+
+            </div>
+
+        </section>
+
+
+        <section class="panel" *ngIf="mode==='create' || allowPasswordEdit">
+
+            <h3>
+                Credentials
+                <small *ngIf="mode==='edit'">
+                    (Leave blank to keep current password)
+                </small>
+            </h3>
+
+            <div class="grid">
+
+                <mat-form-field appearance="fill">
+                    <mat-label>Password</mat-label>
+
+                    <input matInput [type]="showPassword?'text':'password'" formControlName="password">
+
+                    <button mat-icon-button matSuffix type="button" (click)="showPassword=!showPassword">
+                        <mat-icon>
+                            {{showPassword?'visibility_off':'visibility'}}
+                        </mat-icon>
+                    </button>
+
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+
+                    <mat-label>
+                        Confirm Password
+                    </mat-label>
+
+                    <input matInput [type]="showPassword?'text':'password'" formControlName="confirmPassword">
+
+                    <button mat-icon-button matSuffix type="button" (click)="showPassword=!showPassword">
+
+                        <mat-icon>
+                            {{showPassword?'visibility_off':'visibility'}}
+                        </mat-icon>
+
+                    </button>
+
+                    <mat-error *ngIf="passwordMismatch()">
+                        Passwords do not match
+                    </mat-error>
+
+                </mat-form-field>
+            </div>
+
+            <mat-slide-toggle formControlName="mustChangePassword">
+                Force password change at login
+            </mat-slide-toggle>
+
+        </section>
+
+
+        <section class="panel">
+
+            <h3>Email Addresses</h3>
+
+            <div formArrayName="emailAddresses">
+
+                <div class="repeat-row" *ngFor="let c of emails.controls; let i=index">
+
+                    <mat-form-field appearance="fill">
+                        <mat-label>Email</mat-label>
+
+                        <input matInput type="email" [formControlName]="i">
+
+                    </mat-form-field>
+
+                    <button mat-icon-button type="button" (click)="removeEmail(i)">
+                        <mat-icon>
+                            delete
+                        </mat-icon>
+                    </button>
+
+                </div>
+
+            </div>
+
+            <button mat-stroked-button type="button" (click)="addEmail()">
+                Add Email
+            </button>
+
+        </section>
+
+
+        <section class="panel">
+
+            <h3>Phone Numbers</h3>
+
+            <div formArrayName="phoneNumbers">
+
+                <div class="repeat-row" *ngFor="let c of phones.controls; let i=index">
+
+                    <mat-form-field appearance="fill">
+                        <mat-label>Phone</mat-label>
+                        <input matInput [formControlName]="i">
+                    </mat-form-field>
+
+                    <button mat-icon-button type="button" (click)="removePhone(i)">
+                        <mat-icon>
+                            delete
+                        </mat-icon>
+                    </button>
+
+                </div>
+
+            </div>
+
+            <button mat-stroked-button type="button" (click)="addPhone()">
+                Add Phone
+            </button>
+
+        </section>
+
+
+        <section class="panel" *ngIf="mode==='edit'">
+
+            <h3>Account Controls</h3>
+
+            <div class="grid">
+
+                <mat-slide-toggle formControlName="active">
+                    Active
+                </mat-slide-toggle>
+
+                <mat-slide-toggle formControlName="locked">
+                    Locked
+                </mat-slide-toggle>
+
+            </div>
+
+        </section>
+
+
+        <div class="actions">
+
+            <button mat-stroked-button type="button" (click)="cancel.emit()">
+                Cancel
+            </button>
+
+            <button mat-flat-button type="button" [disabled]="loading" (click)="submit()">
+                {{mode==='create'
+                ?'Create User'
+                :'Save Changes'}}
+            </button>
+
+        </div>
+
+    </form>
+
+</div>

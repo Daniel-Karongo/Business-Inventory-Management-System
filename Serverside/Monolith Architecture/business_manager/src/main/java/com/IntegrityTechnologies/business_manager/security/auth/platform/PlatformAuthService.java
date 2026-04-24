@@ -45,7 +45,7 @@ public class PlatformAuthService {
         String identifier = request.getIdentifier();
 
         PlatformUser platformUser = platformUserRepository
-                .findByUsernameAndDeletedFalse(identifier)
+                .findByIdentifier(identifier)
                 .orElse(null);
 
         if (platformUser == null) {

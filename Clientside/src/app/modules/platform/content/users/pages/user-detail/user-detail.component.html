@@ -1,0 +1,93 @@
+<app-page-shell>
+
+    <div page-header>
+
+        <div class="hero-card">
+
+            <div class="hero-main">
+
+                <div>
+                    <h2>
+                        {{user?.username}}
+                    </h2>
+
+                    <div class="meta-row">
+                        <span class="badge">
+                            {{user?.role}}
+                        </span>
+
+                        <span class="status" [class.locked]="status()==='LOCKED'">
+                            {{status()}}
+                        </span>
+                    </div>
+
+                </div>
+
+                <div class="hero-actions">
+
+                    <button mat-stroked-button (click)="back()">
+                        Back
+                    </button>
+
+                    <button mat-stroked-button [routerLink]="['/platform/users', user?.id, 'edit']">
+                        Edit User
+                    </button>
+
+                    <button *ngIf="user && !user.locked && canModify()" mat-flat-button [disabled]="actionBusy"
+                        (click)="lock()">
+                        Lock
+                    </button>
+
+                    <button *ngIf="user?.locked" mat-flat-button [disabled]="actionBusy" (click)="unlock()">
+                        Unlock
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div page-content>
+
+        <div *ngIf="loading" class="loading-box">
+            Loading...
+        </div>
+
+        <div *ngIf="user" class="detail-grid">
+
+            <div class="detail-card">
+                <label>ID Number</label>
+                <div>
+                    {{user.idNumber || '—'}}
+                </div>
+            </div>
+
+            <div class="detail-card">
+                <label>Email Addresses</label>
+                <div>
+                    {{(user.emailAddresses || []).join(', ') || '—'}}
+                </div>
+            </div>
+
+            <div class="detail-card">
+                <label>Phone Numbers</label>
+                <div>
+                    {{(user.phoneNumbers || []).join(', ') || '—'}}
+                </div>
+            </div>
+
+            <div class="detail-card">
+                <label>Created</label>
+                <div>
+                    {{user.createdAt | date:'medium'}}
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</app-page-shell>

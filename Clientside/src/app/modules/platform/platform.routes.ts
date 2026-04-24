@@ -6,58 +6,118 @@ export const PLATFORM_ROUTES: Routes = [
   {
     path: '',
     canMatch: [platformModeGuard],
+
     loadComponent: () =>
       import('./layout/platform-layout.component')
         .then(m => m.PlatformLayoutComponent),
 
     children: [
 
+      /* =========================
+         DASHBOARD
+      ========================= */
+
       {
         path: '',
+        data: {
+          title: 'Dashboard'
+        },
         loadComponent: () =>
-          import('./pages/platform-dashboard/platform-dashboard.component')
+          import('./content/platform-dashboard/platform-dashboard.component')
             .then(m => m.PlatformDashboardComponent)
       },
 
+      /* =========================
+         DEVICES
+      ========================= */
+
       {
         path: 'security/devices',
+        data: {
+          title: 'Devices'
+        },
         loadComponent: () =>
-          import('./pages/devices/platform-devices.component')
+          import('./content/devices/platform-devices.component')
             .then(m => m.PlatformDevicesComponent)
       },
-      
+
+      /* =========================
+         TENANTS
+      ========================= */
+
       {
         path: 'tenants',
+        data: {
+          title: 'Tenants'
+        },
         loadChildren: () =>
-          import('./tenants/tenants.routes')
+          import('./content/tenants/tenants.routes')
             .then(m => m.TENANT_ROUTES)
       },
 
+      /* =========================
+         PLANS
+      ========================= */
+
       {
         path: 'plans',
+        data: {
+          title: 'Plans'
+        },
         loadChildren: () =>
-          import('./plans/plans.routes')
+          import('./content/plans/plans.routes')
             .then(m => m.PLAN_ROUTES)
       },
 
       {
+        path: 'users',
+        data: {
+          title: 'Platform Users'
+        },
+        loadChildren: () =>
+          import('./content/users/users.routes')
+            .then(m => m.USER_ROUTES)
+      },
+
+      /* =========================
+         TENANT SUBSCRIPTION
+      ========================= */
+
+      {
         path: 'tenants/:id/subscription',
+        data: {
+          title: 'Tenant Subscription'
+        },
         loadComponent: () =>
-          import('./tenants/pages/tenant-subscription/tenant-subscription.component')
+          import('./content/tenants/pages/tenant-subscription/tenant-subscription.component')
             .then(m => m.TenantSubscriptionComponent)
       },
 
+      /* =========================
+         ANALYTICS
+      ========================= */
+
       {
         path: 'analytics',
+        data: {
+          title: 'Analytics'
+        },
         loadComponent: () =>
-          import('./pages/platform-analytics/platform-analytics.component')
+          import('./content/platform-analytics/platform-analytics.component')
             .then(m => m.PlatformAnalyticsComponent)
       },
 
+      /* =========================
+         AUDIT
+      ========================= */
+
       {
         path: 'audit',
+        data: {
+          title: 'Audit Logs'
+        },
         loadComponent: () =>
-          import('./pages/platform-audit/platform-audit.component')
+          import('./content/platform-audit/platform-audit.component')
             .then(m => m.PlatformAuditComponent)
       }
 

@@ -103,10 +103,10 @@ body.theme-fade-out * {
   --success: #1a73e8;
   --text-success: #21a752;
 
-  --status-active-bg: rgba(34,197,94,0.12);
+  --status-active-bg: rgba(34, 197, 94, 0.12);
   --status-active-text: #16a34a;
 
-  --status-disabled-bg: rgba(239,68,68,0.12);
+  --status-disabled-bg: rgba(239, 68, 68, 0.12);
   --status-disabled-text: #dc2626;
 
   /* Disabled state */
@@ -497,18 +497,61 @@ body.dark * {
   z-index: 110000 !important;
 }
 
+/* =========================================
+LIGHT MODE
+========================================= */
+
 .mat-mdc-snack-bar-container {
-  background: #1f2937 !important;
-  color: white !important;
+
+  background: var(--surface) !important;
+  color: var(--text-primary) !important;
+
+  border: 1px solid var(--border) !important;
+
   border-radius: 8px !important;
+
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, .18) !important;
 }
 
+/* =========================================
+DARK MODE
+========================================= */
+
+body.dark .mat-mdc-snack-bar-container {
+
+  background: #1a1d24 !important;
+
+  color: var(--text-primary) !important;
+
+  border: 1px solid #2f3440 !important;
+
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, .45) !important;
+}
+
+/* =========================================
+MESSAGE
+========================================= */
+
+.mat-mdc-snack-bar-label {
+  font-weight: 500;
+  letter-spacing: .2px;
+}
+
+/* =========================================
+ACTION BUTTON
+========================================= */
+
 .mat-mdc-snack-bar-action .mdc-button__label {
+
   color: var(--active) !important;
+
   font-weight: 600 !important;
 }
 
 .mat-mdc-snack-bar-action .mdc-button:hover .mdc-button__label {
+
   color: #93c5fd !important;
 }
 
