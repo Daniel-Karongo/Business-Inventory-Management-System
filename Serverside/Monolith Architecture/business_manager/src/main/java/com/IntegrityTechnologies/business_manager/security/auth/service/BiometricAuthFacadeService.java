@@ -82,7 +82,10 @@ public class BiometricAuthFacadeService {
             String credentialId = assertionResult.getCredentialId().getBase64Url();
 
             UUID userId = biometricRepository
-                    .findByCredentialId(credentialId)
+                    .findByTenantIdAndCredentialId(
+                            tenantId,
+                            credentialId
+                    )
                     .map(b -> b.getUserId())
                     .orElseThrow(() -> new AppSecurityException(
                             SecurityErrorCode.BIOMETRIC_CREDENTIAL_NOT_FOUND,

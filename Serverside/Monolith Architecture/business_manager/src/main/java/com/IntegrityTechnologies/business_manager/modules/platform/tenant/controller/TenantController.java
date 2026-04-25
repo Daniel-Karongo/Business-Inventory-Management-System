@@ -48,10 +48,15 @@ public class TenantController {
 
     @GetMapping
     public Page<TenantResponse> getTenants(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue="0") int page,
+            @RequestParam(defaultValue="20") int size,
+            @RequestParam(required = false) String search
     ) {
-        return tenantService.getTenants(page, size);
+        return tenantService.getTenants(
+                page,
+                size,
+                search
+        );
     }
 
 }

@@ -1,105 +1,173 @@
-<div class="bio-container">
+<div class="bio-shell">
 
-    <div class="bio-header">
+    <div class="metric-strip" *ngIf="adminMode">
 
-        <div>
-            <h3>Biometric Credentials</h3>
-
-            <p>
-                Manage passkeys registered
-                for this account.
-            </p>
+        <div class="metric-card">
+            <div class="metric-label">Credentials</div>
+            <div class="metric-value">
+                {{stats.activeCredentials}}
+            </div>
         </div>
 
-        <button mat-flat-button color="primary" [disabled]="registerBusy" (click)="registerCredential()">
+        <div class="metric-card">
+            <div class="metric-label">Trusted Devices</div>
+            <div class="metric-value">
+                {{stats.uniqueDevices}}
+            </div>
+        </div>
 
-            <mat-icon>
-                fingerprint
-            </mat-icon>
-
-            Register New
-
-        </button>
-
-    </div>
-
-
-    <div *ngIf="loading" class="loading">
-
-        <mat-spinner diameter="34">
-        </mat-spinner>
+        <div class="metric-card">
+            <div class="metric-label">Users With Passkeys</div>
+            <div class="metric-value">
+                {{stats.uniqueUsers}}
+            </div>
+        </div>
 
     </div>
 
 
-    <div *ngIf="
-      !loading &&
-      biometrics.length===0
-    " class="empty-state">
+    <div class="bio-panel">
 
-        <mat-icon>
-            fingerprint
-        </mat-icon>
+        <div class="section-head">
 
-        <p>
-            No credentials registered.
-        </p>
+            <div>
+                <h3>Biometric Credentials</h3>
+                <div class="sub">
+                    Registered Passkeys: {{credentialCount}}
+                </div>
+            </div>
 
-        <button mat-stroked-button (click)="registerCredential()">
-
-            Register First Credential
-
-        </button>
-
-    </div>
+        </div>
 
 
-    <div class="bio-grid" *ngIf="
-      !loading &&
-      biometrics.length
-    ">
+        <div *ngIf="loading" class="loading-wrap">
+            <mat-spinner diameter="34"></mat-spinner>
+        </div>
 
-        <mat-card class="bio-card" *ngFor="
-        let b of biometrics
-      ">
 
-            <div class="card-main">
+        <div *ngIf="!loading && !biometrics.length" class="empty-state">
 
-                <div class="device-name">
+            <div class="empty-visual">
 
-                    {{b.deviceName}}
-
+                <div class="empty-icon-ring">
+                    <mat-icon>
+                        fingerprint
+                    </mat-icon>
                 </div>
 
-                <div class="device-id">
-
-                    {{b.deviceId}}
-
-                </div>
+                <div class="empty-pulse"></div>
 
             </div>
 
 
-            <div class="card-actions">
+            <div class="empty-content">
 
-                <button mat-stroked-button color="warn" [disabled]="rowBusy[b.id]" (click)="
-            removeCredential(b)
-          ">
+                <div class="empty-eyebrow">
+                    Security Credentials
+                </div>
 
-                    <mat-icon>
-                        delete
-                    </mat-icon>
+                <h4>
+                    No passkeys registered
+                </h4>
 
-                    Remove
+                <p>
+                    This account does not yet have a registered biometric credential.
+                    Register a passkey to enable stronger passwordless authentication.
+                </p>
+
+            </div>
+
+
+            <div class="empty-actions">
+
+                <button mat-flat-button color="primary" class="register-btn" [disabled]="registerBusy"
+                    (click)="registerCredential()">
+
+                    <mat-spinner *ngIf="registerBusy" diameter="18">
+                    </mat-spinner>
+
+                    <ng-container *ngIf="!registerBusy">
+
+                        <mat-icon>
+                            fingerprint
+                        </mat-icon>
+
+                    </ng-container>
+
+                    {{
+                    registerBusy
+                    ? 'Registering...'
+                    : 'Register Passkey'
+                    }}
 
                 </button>
 
             </div>
 
-        </mat-card>
+
+            <div class="empty-footer">
+
+                <mat-icon>
+                    verified_user
+                </mat-icon>
+
+                <span>
+                    Passkeys use phishing-resistant authentication
+                </span>
+
+            </div>
+
+        </div>
+
+        <div class="credential-grid" *ngIf="!loading && biometrics.length">
+
+            <mat-card class="credential-card" *ngFor="let b of biometrics; trackBy: trackById">
+
+                <div class="cred-top">
+
+                    <div class="device-pill">
+                        <mat-icon>devices</mat-icon>
+
+                        <span>
+                            {{b.deviceName || 'Unnamed Passkey Device'}}
+                        </span>
+
+                    </div>
+
+                    <div class="cred-id">
+                        {{b.deviceId}}
+                    </div>
+
+                </div>
+
+
+                <div class="cred-actions">
+
+                    <button mat-stroked-button (click)="renameCredential(b)" [disabled]="rowBusy[b.id]">
+
+                        <mat-icon>edit</mat-icon>
+                        Rename
+
+                    </button>
+
+                    <button mat-stroked-button color="warn" (click)="removeCredential(b)" [disabled]="rowBusy[b.id]">
+
+                        <mat-icon>delete</mat-icon>
+                        Remove
+
+                    </button>
+
+                    <button *ngIf="adminMode" mat-button (click)="hardDeleteCredential(b)" [disabled]="rowBusy[b.id]">
+
+                        Hard Delete
+
+                    </button>
+
+                </div>
+
+            </mat-card>
+
+        </div>
 
     </div>
-
 </div>
-
-

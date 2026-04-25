@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { TenantResponse, TenantCreateRequest } from '../models/tenant.model';
+import { TenantResponse, TenantCreateRequest, TenantPage } from '../models/tenant.model';
 import { environment } from '../../../../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -14,16 +14,18 @@ export class TenantService {
     page = 0,
     size = 20,
     search = ''
-  ): Observable<any> {
+  ): Observable<TenantPage> {
 
-    let url = `${this.base}?page=${page}&size=${size}`;
+    let url =
+      `${this.base}?page=${page}&size=${size}`;
 
-    if (search) {
-      url += `&search=${search}`;
+    if (search?.trim()) {
+      url += `&search=${encodeURIComponent(
+        search.trim()
+      )}`;
     }
 
-    return this.http.get(url);
-
+    return this.http.get<TenantPage>(url);
   }
 
   getTenant(id: string): Observable<TenantResponse> {

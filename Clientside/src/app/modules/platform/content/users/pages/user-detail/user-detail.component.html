@@ -4,21 +4,26 @@
 
         <div class="hero-card">
 
-            <div class="hero-main">
+            <div class="hero-grid">
 
-                <div>
+                <div class="hero-identity">
+
                     <h2>
                         {{user?.username}}
                     </h2>
 
                     <div class="meta-row">
+
                         <span class="badge">
                             {{user?.role}}
                         </span>
 
                         <span class="status" [class.locked]="status()==='LOCKED'">
+
                             {{status()}}
+
                         </span>
+
                     </div>
 
                 </div>
@@ -33,13 +38,16 @@
                         Edit User
                     </button>
 
-                    <button *ngIf="user && !user.locked && canModify()" mat-flat-button [disabled]="actionBusy"
-                        (click)="lock()">
+                    <button *ngIf="user && !user.locked && canModify()" mat-flat-button [disabled]="actionBusy" (click)="lock()">
+
                         Lock
+
                     </button>
 
                     <button *ngIf="user?.locked" mat-flat-button [disabled]="actionBusy" (click)="unlock()">
+
                         Unlock
+
                     </button>
 
                 </div>
@@ -56,37 +64,50 @@
             Loading...
         </div>
 
-        <div *ngIf="user" class="detail-grid">
+        <ng-container *ngIf="user">
 
-            <div class="detail-card">
-                <label>ID Number</label>
-                <div>
-                    {{user.idNumber || '—'}}
+            <div class="detail-grid">
+
+                <div class="detail-card">
+                    <label>ID Number</label>
+                    <div>
+                        {{user.idNumber || '—'}}
+                    </div>
                 </div>
+
+                <div class="detail-card">
+                    <label>Email Addresses</label>
+                    <div>
+                        {{(user.emailAddresses||[])
+                        .join(', ') || '—'}}
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <label>Phone Numbers</label>
+                    <div>
+                        {{(user.phoneNumbers||[])
+                        .join(', ') || '—'}}
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <label>Created</label>
+                    <div>
+                        {{user.createdAt|date:'medium'}}
+                    </div>
+                </div>
+
             </div>
 
-            <div class="detail-card">
-                <label>Email Addresses</label>
-                <div>
-                    {{(user.emailAddresses || []).join(', ') || '—'}}
-                </div>
-            </div>
+            <section class="security-section">
 
-            <div class="detail-card">
-                <label>Phone Numbers</label>
-                <div>
-                    {{(user.phoneNumbers || []).join(', ') || '—'}}
-                </div>
-            </div>
+                <app-biometric-manager [adminMode]="true" [targetUserId]="user.id">
+                </app-biometric-manager>
 
-            <div class="detail-card">
-                <label>Created</label>
-                <div>
-                    {{user.createdAt | date:'medium'}}
-                </div>
-            </div>
+            </section>
 
-        </div>
+        </ng-container>
 
     </div>
 

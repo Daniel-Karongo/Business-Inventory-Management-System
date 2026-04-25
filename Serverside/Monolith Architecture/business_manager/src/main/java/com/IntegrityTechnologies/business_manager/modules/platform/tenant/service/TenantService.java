@@ -9,5 +9,5 @@ import java.util.UUID;
 public interface TenantService {
     TenantResponse createTenant(TenantCreateRequest request);
     TenantResponse getTenant(UUID id);
-    Page<TenantResponse> getTenants(int page, int size);
+    Page<TenantResponse> getTenants(int page, int size, String search);
 }

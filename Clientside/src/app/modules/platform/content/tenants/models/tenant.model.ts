@@ -1,10 +1,26 @@
 export interface TenantResponse {
-  id: string;
-  name: string;
-  code: string;
-  status: 'ACTIVE' | 'TRIAL' | 'SUSPENDED' | 'EXPIRED' | 'DELETED';
-  platformTenant: boolean;
-  createdAt: string;
+ id:string;
+ name:string;
+ code:string;
+ status:
+  | 'ACTIVE'
+  | 'TRIAL'
+  | 'SUSPENDED'
+  | 'EXPIRED'
+  | 'DELETED';
+ createdAt:string;
+ planCode:string;
+ subscriptionStatus:string;
+ platformTenant:boolean;
+}
+
+export interface TenantPage {
+  content: TenantResponse[];
+  totalElements: number;
+  totalPages: number;
+  pageNumber: number;
+  pageSize: number;
+  last: boolean;
 }
 
 export interface TenantCreateRequest {

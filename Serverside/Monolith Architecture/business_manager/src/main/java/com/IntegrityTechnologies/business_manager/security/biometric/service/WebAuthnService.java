@@ -4,6 +4,8 @@ import com.IntegrityTechnologies.business_manager.exception.AppSecurityException
 import com.IntegrityTechnologies.business_manager.security.biometric.config.RelyingPartyFactory;
 import com.IntegrityTechnologies.business_manager.security.biometric.model.UserBiometric;
 import com.IntegrityTechnologies.business_manager.security.biometric.repository.UserBiometricRepository;
+import com.IntegrityTechnologies.business_manager.security.device.model.TrustedDevice;
+import com.IntegrityTechnologies.business_manager.security.device.repository.TrustedDeviceRepository;
 import com.IntegrityTechnologies.business_manager.security.device.service.DeviceSecurityService;
 import com.IntegrityTechnologies.business_manager.security.model.SecurityErrorCode;
 import com.yubico.webauthn.*;
@@ -25,9 +27,11 @@ public class WebAuthnService {
     private final UserBiometricRepository biometricRepository;
     private final RegistrationChallengeService registrationChallengeService;
     private final DeviceSecurityService deviceSecurityService;
+    private final TrustedDeviceRepository trustedDeviceRepository;
 
     @Value("${security.allowed-origin-suffix}")
     private String allowedOriginSuffix;
+
     private void validateOrigin(String origin) {
 
         if (origin == null || origin.isBlank()) {
@@ -306,8 +310,8 @@ public class WebAuthnService {
                 .findByTenantIdAndCredentialId(tenantId, credentialId)
                 .ifPresent(b -> {
                     throw new AppSecurityException(
-                        SecurityErrorCode.INVALID_REQUEST,
-                        "Biometric already registered"
+                            SecurityErrorCode.INVALID_REQUEST,
+                            "Biometric already registered"
                     );
                 });
 
@@ -319,6 +323,17 @@ public class WebAuthnService {
                         .publicKey(result.getPublicKeyCose().getBase64())
                         .signCount(result.getSignatureCount())
                         .deviceId(deviceId)
+                        .deviceName(
+                                trustedDeviceRepository
+                                        .findByTenantIdAndDeviceIdAndBranchIdIsNull(
+                                                tenantId,
+                                                deviceId
+                                        )
+                                        .map(
+                                                TrustedDevice::getDeviceName
+                                        )
+                                        .orElse("Passkey Device")
+                        )
                         .build()
         );
     }

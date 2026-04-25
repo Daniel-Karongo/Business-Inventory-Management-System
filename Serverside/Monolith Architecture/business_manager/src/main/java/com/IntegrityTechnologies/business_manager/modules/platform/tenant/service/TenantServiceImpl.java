@@ -2,6 +2,10 @@ package com.IntegrityTechnologies.business_manager.modules.platform.tenant.servi
 
 import com.IntegrityTechnologies.business_manager.modules.platform.audit.entity.AuditEntityType;
 import com.IntegrityTechnologies.business_manager.modules.platform.audit.service.AuditService;
+import com.IntegrityTechnologies.business_manager.modules.platform.subscription.entity.Plan;
+import com.IntegrityTechnologies.business_manager.modules.platform.subscription.entity.SubscriptionStatus;
+import com.IntegrityTechnologies.business_manager.modules.platform.subscription.entity.TenantSubscription;
+import com.IntegrityTechnologies.business_manager.modules.platform.subscription.repository.PlanRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.repository.TenantSubscriptionRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.bootstrap.TenantBootstrapService;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.dto.TenantCreateRequest;
@@ -16,6 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Service
@@ -27,6 +32,7 @@ public class TenantServiceImpl implements TenantService {
     private final AuditService auditService;
     private final TenantProvisioningService tenantProvisioningService;
     private final TenantSubscriptionRepository subscriptionRepository;
+    private final PlanRepository planRepository;
 
 
     /* ==========================================
@@ -77,11 +83,27 @@ public class TenantServiceImpl implements TenantService {
                 .orElseThrow(() -> new RuntimeException("Tenant not found"));
 
         var sub =
-                subscriptionRepository
-                        .findByTenantId(
-                                tenant.getId()
-                        )
-                        .orElseThrow();
+                subscriptionRepository.findByTenantId(
+                        tenant.getId()
+                ).orElseGet(() -> {
+
+                    Plan freePlan =
+                            planRepository
+                                    .findByCode("FREE")
+                                    .orElseThrow();
+
+                    return subscriptionRepository.save(
+                            TenantSubscription.builder()
+                                    .tenantId(tenant.getId())
+                                    .plan(freePlan)
+                                    .status(
+                                            SubscriptionStatus.ACTIVE
+                                    )
+                                    .startDate(LocalDate.now())
+                                    .build()
+                    );
+
+                });
 
         return TenantMapper.toDto(
                 tenant,
@@ -97,12 +119,14 @@ public class TenantServiceImpl implements TenantService {
     @Override
     public Page<TenantResponse> getTenants(
             int page,
-            int size
+            int size,
+            String search
     ) {
 
         Page<Tenant> tenants =
-                tenantRepository.findAll(
-                        PageRequest.of(page,size)
+                tenantRepository.searchTenants(
+                        search,
+                        PageRequest.of(page, size)
                 );
 
         var ids =
@@ -112,8 +136,7 @@ public class TenantServiceImpl implements TenantService {
                         .toList();
 
         var subscriptions =
-                subscriptionRepository
-                        .findAllByTenantIds(ids);
+                subscriptionRepository.findAllByTenantIds(ids);
 
         var byTenant =
                 subscriptions.stream()
@@ -127,9 +150,29 @@ public class TenantServiceImpl implements TenantService {
         return tenants.map(t -> {
 
             var sub =
-                    byTenant.get(
-                            t.getId()
-                    );
+                    byTenant.get(t.getId());
+
+            if (sub == null) {
+
+                Plan freePlan =
+                        planRepository
+                                .findByCode("FREE")
+                                .orElseThrow();
+
+                sub =
+                        subscriptionRepository.save(
+                                TenantSubscription.builder()
+                                        .tenantId(t.getId())
+                                        .plan(freePlan)
+                                        .status(
+                                                SubscriptionStatus.ACTIVE
+                                        )
+                                        .startDate(
+                                                LocalDate.now()
+                                        )
+                                        .build()
+                        );
+            }
 
             return TenantMapper.toDto(
                     t,

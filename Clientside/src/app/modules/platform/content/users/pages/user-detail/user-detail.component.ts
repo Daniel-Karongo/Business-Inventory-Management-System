@@ -9,6 +9,7 @@ import { PlatformUserApiService } from '../../services/platform-user-api.service
 
 import { PageShellComponent } from '../../../../../../shared/layout/page-shell/page-shell.component';
 import { PlatformUser } from '../../models/user.model';
+import { BiometricManagerComponent } from '../../../../../../shared/components/biometric-manager/biometric-manager.component';
 
 @Component({
     selector: 'app-user-detail',
@@ -18,7 +19,8 @@ import { PlatformUser } from '../../models/user.model';
         PageShellComponent,
         MatButtonModule,
         MatSnackBarModule,
-        RouterModule
+        RouterModule,
+        BiometricManagerComponent
     ],
     templateUrl: './user-detail.component.html',
     styleUrls: ['./user-detail.component.scss']

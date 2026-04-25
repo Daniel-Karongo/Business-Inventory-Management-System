@@ -33,40 +33,88 @@ export class BiometricRegistrationService {
     return `${this.PROMPT_KEY_PREFIX}${deviceId}`;
   }
 
-  async register() {
+  async register(): Promise<boolean> {
 
-    const deviceId = this.device.getDeviceId();
+    const deviceId =
+      this.device.getDeviceId();
 
-    console.log("DEVICE ID (REGISTER):", deviceId);
+    return new Promise<boolean>((resolve) => {
 
-    this.auth.biometricRegisterStart(deviceId).subscribe({
-      next: async (options) => {
+      this.auth.biometricRegisterStart(
+        deviceId
+      ).subscribe({
 
-        try {
-          const credential = await this.webauthn.register(options);
+        next: async (options) => {
 
-          this.auth.biometricRegisterFinish(
-            credential, // ✅ NOT stringified
-            deviceId
-          ).subscribe({
-            next: () => {
-              this.snack.open('Biometric enabled successfully', 'Close', { duration: 3000 });
-            },
-            error: (err) => this.handleError(err, deviceId)
-          });
+          try {
 
-        } catch (e: any) {
+            const credential =
+              await this.webauthn.register(
+                options
+              );
 
-          if (e.name === 'NotAllowedError') {
-            this.snack.open('Biometric registration cancelled', 'Close', { duration: 3000 });
-          } else {
-            this.snack.open('Biometric setup failed', 'Close', { duration: 3000 });
+            this.auth.biometricRegisterFinish(
+              credential,
+              deviceId
+            ).subscribe({
+
+              next: () => {
+                this.snack.open(
+                  'Biometric enabled successfully',
+                  'Close',
+                  { duration: 3000 }
+                );
+                resolve(true);
+              },
+
+              error: (err) => {
+                this.handleError(
+                  err,
+                  deviceId
+                );
+                resolve(false);
+              }
+
+            });
+
           }
+          catch (e: any) {
+
+            if (
+              e.name === 'NotAllowedError'
+            ) {
+              this.snack.open(
+                'Biometric registration cancelled',
+                'Close',
+                { duration: 3000 }
+              );
+            }
+            else {
+              this.snack.open(
+                'Biometric setup failed',
+                'Close',
+                { duration: 3000 }
+              );
+            }
+
+            resolve(false);
+
+          }
+
+        },
+
+        error: (err) => {
+          this.handleError(
+            err,
+            deviceId
+          );
+          resolve(false);
         }
 
-      },
-      error: (err) => this.handleError(err, deviceId)
+      });
+
     });
+
   }
 
   private handleError(err: any, deviceId: string) {

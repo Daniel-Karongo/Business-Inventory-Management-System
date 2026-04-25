@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security.device.repository;
 
+import com.IntegrityTechnologies.business_manager.security.biometric.service.ChallengeService;
 import com.IntegrityTechnologies.business_manager.security.device.model.DeviceApprovalStatus;
 import com.IntegrityTechnologies.business_manager.security.device.model.TrustedDevice;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -25,6 +26,7 @@ public interface TrustedDeviceRepository extends JpaRepository<TrustedDevice, UU
     );
 
     boolean existsByTenantIdAndBranchId(UUID tenantId, UUID branchId);
+
     boolean existsByTenantIdAndBranchIdIsNull(UUID tenantId);
 
     long countByTenantIdAndBranchIdAndStatus(
@@ -49,9 +51,15 @@ public interface TrustedDeviceRepository extends JpaRepository<TrustedDevice, UU
     );
 
     List<TrustedDevice> findByTenantIdAndBranchId(UUID tenantId, UUID branchId);
+
     List<TrustedDevice> findByTenantIdAndBranchIdIsNull(UUID tenantId);
 
     Optional<TrustedDevice> findByIdAndTenantId(UUID id, UUID tenantId);
 
     List<TrustedDevice> findAllByTenantId(UUID tenantId);
+
+    Optional<TrustedDevice> findByTenantIdAndDeviceIdAndBranchIdIsNull(
+            UUID tenantId,
+            String deviceId
+    );
 }

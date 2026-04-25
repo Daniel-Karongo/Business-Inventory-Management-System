@@ -59,6 +59,10 @@ mat-form-field {
     border-top: 1px solid var(--border);
 }
 
+#force-password-toggle {
+    margin-top: 7px;
+}
+
 @media(max-width:900px) {
     .grid {
         grid-template-columns: 1fr;

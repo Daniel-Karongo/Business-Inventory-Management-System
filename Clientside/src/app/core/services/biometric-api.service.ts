@@ -1,12 +1,18 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 export interface UserBiometricDTO {
   id: string;
   deviceName: string;
   deviceId: string;
+}
+
+export interface BiometricStatsDTO {
+  activeCredentials: number;
+  uniqueUsers: number;
+  uniqueDevices: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -16,36 +22,65 @@ export class BiometricApiService {
   private base = `${environment.apiUrl}/biometrics`;
 
   list(): Observable<UserBiometricDTO[]> {
-    return this.http.get<UserBiometricDTO[]>(this.base, {
-      withCredentials: true
-    });
+    return this.http.get<UserBiometricDTO[]>(
+      this.base,
+      { withCredentials: true }
+    );
   }
 
-  delete(id: string) {
-    return this.http.delete(`${this.base}/${id}`, {
-      withCredentials: true
-    });
+  rename(
+    id: string,
+    name: string
+  ): Observable<void> {
+    return this.http.put<void>(
+      `${this.base}/${id}/rename`,
+      {},
+      {
+        params: { name },
+        withCredentials: true
+      }
+    );
   }
 
-  adminListForUser(userId: string): Observable<UserBiometricDTO[]> {
+  delete(
+    id: string,
+    hard = false
+  ): Observable<void> {
+    return this.http.delete<void>(
+      `${this.base}/${id}`,
+      {
+        params: { hard },
+        withCredentials: true
+      }
+    );
+  }
 
+  adminListForUser(
+    userId: string
+  ): Observable<UserBiometricDTO[]> {
     return this.http.get<UserBiometricDTO[]>(
       `${environment.apiUrl}/admin/biometrics/user/${userId}`,
-      {
-        withCredentials: true
-      }
+      { withCredentials: true }
     );
-
   }
 
-  adminDelete(id: string) {
+  stats(): Observable<BiometricStatsDTO> {
+    return this.http.get<BiometricStatsDTO>(
+      `${environment.apiUrl}/admin/biometrics/stats`,
+      { withCredentials: true }
+    );
+  }
 
-    return this.http.delete(
+  adminDelete(
+    id: string,
+    hard = false
+  ): Observable<void> {
+    return this.http.delete<void>(
       `${environment.apiUrl}/admin/biometrics/${id}`,
       {
+        params: { hard },
         withCredentials: true
       }
     );
-
   }
 }
