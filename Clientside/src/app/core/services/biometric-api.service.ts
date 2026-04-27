@@ -1,12 +1,21 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface UserBiometricDTO {
   id: string;
   deviceName: string;
   deviceId: string;
+  browserName?: string;
+  osName?: string;
+  platform?: string;
+  firstSeenAt?: string;
+  lastSeenAt?: string;
+  trustedDeviceStatus?:
+  'APPROVED'
+  | 'PENDING'
+  | 'REJECTED';
 }
 
 export interface BiometricStatsDTO {
@@ -28,6 +37,20 @@ export class BiometricApiService {
     );
   }
 
+  hasCredentialForCurrentDevice(
+    deviceId: string
+  ): Observable<boolean> {
+
+    return this.list().pipe(
+      map(list =>
+        list.some(
+          b => b.deviceId === deviceId
+        )
+      )
+    );
+
+  }
+  
   rename(
     id: string,
     name: string

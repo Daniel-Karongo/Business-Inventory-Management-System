@@ -62,24 +62,32 @@
     <!-- FOOTER -->
     <footer class="dialog-footer">
 
-      <button mat-flat-button color="primary" class="primary-action" [disabled]="loading || form.invalid"
-        (click)="onSubmit()">
+      <button mat-flat-button color="primary" class="primary-action"
+        [disabled]="loginLoading || biometricLoading || form.invalid" (click)="onSubmit()">
 
-        <ng-container *ngIf="!loading">Sign in</ng-container>
-
-        <ng-container *ngIf="loading">
-          <mat-progress-spinner diameter="20" strokeWidth="3" mode="indeterminate">
-          </mat-progress-spinner>
+        <ng-container *ngIf="!loginLoading">
+          Sign in
         </ng-container>
+
+        <mat-icon *ngIf="loginLoading" class="spin">
+          autorenew
+        </mat-icon>
 
       </button>
 
       <div class="divider">or</div>
 
-      <button mat-stroked-button color="primary" class="w-full mt-3" (click)="onBiometricLogin()" [disabled]="loading">
+      <button mat-stroked-button color="primary" class="primary-action" (click)="onBiometricLogin()"
+        [disabled]="loginLoading || biometricLoading">
 
-        <mat-icon>fingerprint</mat-icon>
-        Use Biometrics
+        <ng-container *ngIf="!biometricLoading">
+          <mat-icon>fingerprint</mat-icon>
+          <span>Use Biometrics</span>
+        </ng-container>
+
+        <mat-icon *ngIf="biometricLoading" class="spin">
+          autorenew
+        </mat-icon>
 
       </button>
 
@@ -91,5 +99,3 @@
 
   </div>
 </div>
-
-

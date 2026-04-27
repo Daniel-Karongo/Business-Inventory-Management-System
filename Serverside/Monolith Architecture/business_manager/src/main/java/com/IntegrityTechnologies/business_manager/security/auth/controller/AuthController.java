@@ -84,13 +84,14 @@ public class AuthController {
     @PostMapping("/biometric/challenge")
     public ResponseEntity<?> challenge(
             @RequestParam String deviceId,
+            @RequestParam UUID branchId,
             HttpServletRequest request
     ) {
         UUID tenantId = TenantContext.getTenantId();
         String origin = request.getHeader("Origin");
 
         AssertionRequest assertion =
-                webAuthnService.startAssertion(tenantId, deviceId, origin);
+                webAuthnService.startAssertion(tenantId, branchId, deviceId, origin);
 
         // ✅ Let Jackson handle everything (including ByteArray via your serializer)
         Map<String, Object> response =

@@ -1,29 +1,28 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
-import { AuthService, LoginRequest } from '../../services/auth.service';
-import { ActivatedRoute, Router } from '@angular/router';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs/operators';
+import { AuthService, LoginRequest } from '../../services/auth.service';
 
 import { CommonModule } from '@angular/common';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { IdleLogoutService } from '../../../../core/services/IdleLogoutService';
-import { BranchService } from '../../../tenant/content/branches/services/branch.service';
-import { DomainContextService } from '../../../../core/services/domain-context.service';
-import { TenantBrandingService } from '../../../../core/services/tenant-branding.service';
-import { resolveTenantLanding } from '../../../../core/utils/role-landing.util';
-import { DeviceService } from '../../../../core/services/device.service';
-import { LocationService } from '../../../../core/services/location.service';
-import { WebAuthnService } from '../../../../core/services/webauthn.service';
-import { BiometricRegistrationService } from '../../../../core/services/biometric-registration.service';
-import { MatDialog } from '@angular/material/dialog';
-import { BiometricPromptDialog } from '../../../../shared/components/biometric-prompt-dialog/biometric-prompt-dialog.component';
 import { AuthErrorService } from '../../../../core/services/auth-error.service';
+import { BiometricRegistrationService } from '../../../../core/services/biometric-registration.service';
+import { DeviceService } from '../../../../core/services/device.service';
+import { DomainContextService } from '../../../../core/services/domain-context.service';
+import { IdleLogoutService } from '../../../../core/services/IdleLogoutService';
+import { LocationService } from '../../../../core/services/location.service';
+import { TenantBrandingService } from '../../../../core/services/tenant-branding.service';
+import { WebAuthnService } from '../../../../core/services/webauthn.service';
+import { resolveTenantLanding } from '../../../../core/utils/role-landing.util';
+import { BiometricPromptDialog } from '../../../../shared/components/biometric-prompt-dialog/biometric-prompt-dialog.component';
+import { BranchService } from '../../../tenant/content/branches/services/branch.service';
 
 @Component({
   selector: 'app-login',
@@ -36,7 +35,6 @@ import { AuthErrorService } from '../../../../core/services/auth-error.service';
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule,
     MatSnackBarModule
   ],
   templateUrl: './login.component.html',
@@ -68,7 +66,8 @@ export class LoginComponent implements OnInit {
 
   branches: Array<{ id: string; name: string }> = [];
   hide = true;
-  loading = false;
+  loginLoading = false;
+  biometricLoading = false;
   currentYear = new Date().getFullYear();
   isPlatform = this.domain.isPlatform;
   logo$ = this.branding.logo$;
@@ -144,14 +143,14 @@ export class LoginComponent implements OnInit {
       return;
     }
 
-    this.loading = true;
+    this.biometricLoading = true;
 
     let location;
 
     try {
       location = await this.locationService.getLocation();
     } catch {
-      this.loading = false;
+      this.biometricLoading = false;
       this.snack.open(
         'Location access is required for biometric login.',
         'Close',
@@ -162,7 +161,10 @@ export class LoginComponent implements OnInit {
 
     const deviceId = this.deviceService.getDeviceId();
 
-    this.auth.biometricChallenge(deviceId).subscribe({
+    this.auth.biometricChallenge(
+      deviceId,
+      this.form.value.branchId??null
+    ).subscribe({
       next: async (challenge) => {
 
         try {
@@ -192,10 +194,10 @@ export class LoginComponent implements OnInit {
           };
 
           this.auth.biometricVerify(payload)
-            .pipe(finalize(() => (this.loading = false)))
+            .pipe(finalize(() => (this.biometricLoading = false)))
             .subscribe({
               next: (res) => {
-
+                this.biometricLoading = false;
                 this.auth.setUser(res);
                 this.idle.start();
 
@@ -212,8 +214,7 @@ export class LoginComponent implements OnInit {
             });
 
         } catch (e) {
-          this.loading = false;
-          console.error('WEBAUTHN ERROR:', e);
+          this.biometricLoading = false;
           this.snack.open(
             'Biometric authentication cancelled or failed.',
             'Close',
@@ -224,6 +225,7 @@ export class LoginComponent implements OnInit {
       },
       error: (err) => {
         this.errorHandler.handle(err, 'biometric');
+        this.biometricLoading = false;
       }
     });
   }
@@ -235,14 +237,14 @@ export class LoginComponent implements OnInit {
       return;
     }
 
-    this.loading = true;
+    this.loginLoading = true;
 
     let location;
 
     try {
       location = await this.locationService.getLocation();
     } catch {
-      this.loading = false;
+      this.loginLoading = false;
 
       this.snack.open(
         'Location access is required to log in. Please enable it in your browser settings.',
@@ -275,10 +277,10 @@ export class LoginComponent implements OnInit {
     };
 
     this.auth.login(payload).pipe(
-      finalize(() => (this.loading = false))
+      finalize(() => (this.loginLoading = false))
     ).subscribe({
       next: (res) => {
-        console.log('LOGIN SUCCESS', res);
+        this.loginLoading = false;
 
         this.auth.setUser(res);
 
@@ -293,20 +295,18 @@ export class LoginComponent implements OnInit {
           const ref = this.dialog.open(BiometricPromptDialog);
 
           ref.afterClosed().subscribe(enable => {
-              if (enable === true) {
-                this.biometric.markPromptShown(deviceId);
-                this.biometric.register();
-              }
-            });
+            if (enable === true) {
+              this.biometric.markPromptShown(deviceId);
+              this.biometric.register();
+            }
+          });
         }
 
         setTimeout(() => {
           if (res.userType === 'PLATFORM') {
-            console.log('NAVIGATE PLATFORM');
             this.router.navigateByUrl('/platform');
           } else {
             const landing = resolveTenantLanding(res.role);
-            console.log('NAVIGATE TENANT', landing);
             this.router.navigateByUrl(landing);
           }
         }, 0);
@@ -314,6 +314,7 @@ export class LoginComponent implements OnInit {
 
       error: (err) => {
         this.errorHandler.handle(err, 'login');
+        this.loginLoading = false;
       }
     });
   }

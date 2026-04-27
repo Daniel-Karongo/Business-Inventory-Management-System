@@ -13,8 +13,12 @@ import java.util.UUID;
         name = "user_biometrics",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_biometric_tenant_credential",
-                        columnNames = {"tenant_id", "credential_id"}
+                        name="uk_biometric_tenant_credential",
+                        columnNames={"tenant_id","credential_id"}
+                ),
+                @UniqueConstraint(
+                        name="uk_biometric_user_device",
+                        columnNames={"tenant_id","user_id","device_id"}
                 )
         },
         indexes = {
@@ -41,7 +45,7 @@ public class UserBiometric extends TenantAwareEntity {
     @Column(nullable = false)
     private UUID userId;
 
-    @Column(name = "credential_id", nullable = false, length = 256, unique = true)
+    @Column(name = "credential_id", nullable = false, length = 256)
     private String credentialId;
 
     @Column(name = "public_key", nullable = false, columnDefinition = "TEXT")

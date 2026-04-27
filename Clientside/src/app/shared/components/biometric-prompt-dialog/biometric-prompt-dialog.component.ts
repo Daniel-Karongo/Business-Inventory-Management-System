@@ -9,13 +9,13 @@ import { MatDialogModule, MatDialogRef } from "@angular/material/dialog";
     <h2 mat-dialog-title>Enable Biometrics</h2>
 
     <mat-dialog-content>
-      Enable biometric login on this device?
+      Register your biometrics on this device for login?
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
       <button mat-button (click)="close(false)">Skip</button>
       <button mat-flat-button color="primary" (click)="close(true)">
-        Enable
+        Register
       </button>
     </mat-dialog-actions>
   `,

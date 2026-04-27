@@ -12,6 +12,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { BiometricApiService, UserBiometricDTO, BiometricStatsDTO } from '../../../core/services/biometric-api.service';
 import { BiometricRegistrationService } from '../../../core/services/biometric-registration.service';
 import { RenameDeviceDialogComponent } from '../rename-device-dialog/rename-device-dialog.component';
+import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 
 @Component({
     standalone: true, selector: 'app-biometric-manager', imports: [
@@ -148,8 +149,13 @@ export class BiometricManagerComponent
 
         const ref = this.dialog.open(
             RenameDeviceDialogComponent, {
-            width: '420px', data: {
-                currentName: row.deviceName
+            width: '520px',
+            maxWidth: '95vw',
+            data: {
+                currentName: row.deviceName,
+                title: 'Rename Credential',
+                subtitle: 'Update the display name used to identify this biometric credential.',
+                label: 'Credential Name'
             }
         }
         );
@@ -188,106 +194,140 @@ export class BiometricManagerComponent
             });
     }
 
-    removeCredential(
-        row: UserBiometricDTO
-    ) {
+    removeCredential(row: UserBiometricDTO) {
 
-        if (
-            this.rowBusy[row.id]
-        ) {
+        if (this.rowBusy[row.id]) {
             return;
         }
 
-        if (
-            !window.confirm(
-                `Remove credential "${row.deviceName}"?`
-            )
-        ) {
-            return;
-        }
+        const ref = this.dialog.open(
+            ConfirmDialogComponent,
+            {
+                width: '420px',
+                data: {
+                    title: 'Remove Credential',
+                    message: `Remove "${row.deviceName}"?`,
+                    confirmText: 'Remove',
+                    cancelText: 'Cancel'
+                }
+            }
+        );
 
-        this.rowBusy[row.id] = true;
-        const req = this.adminMode
-            ? this.api.adminDelete(
-                row.id, false
-            )
-            : this.api.delete(
-                row.id, false
-            );
-        req.subscribe({
+        ref.afterClosed().subscribe(confirmed => {
 
-            next: () => {
+            if (!confirmed) {
+                return;
+            }
 
-                delete this.rowBusy[row.id];
-                this.snack.open(
-                    'Credential removed', 'Close', { duration: 3000 }
-                );
-                this.load();
-            },
+            this.rowBusy[row.id] = true;
 
-            error: (err) => {
+            const req = this.adminMode
+                ? this.api.adminDelete(row.id, false)
+                : this.api.delete(row.id, false);
 
-                delete this.rowBusy[row.id];
-                const msg = err?.error?.message;
-                if (
-                    msg === 'Cannot delete last credential'
-                ) {
+            req.subscribe({
+
+                next: () => {
+
+                    delete this.rowBusy[row.id];
 
                     this.snack.open(
-                        'At least one credential must remain.', 'Close', { duration: 4500 }
+                        'Credential removed',
+                        'Close',
+                        { duration: 3000 }
                     );
-                    return;
+
+                    this.load();
+                },
+
+                error: (err) => {
+
+                    delete this.rowBusy[row.id];
+
+                    const message =
+                        err?.error?.message ||
+                        err?.error ||
+                        'Credential removal failed';
+
+                    this.snack.open(
+                        message,
+                        'Close',
+                        { duration: 5000 }
+                    );
                 }
 
-                this.snack.open(
-                    'Credential removal failed', 'Close', { duration: 4500 }
-                );
-            }
+            });
 
         });
+
     }
 
-    hardDeleteCredential(
-        row: UserBiometricDTO
-    ) {
+    hardDeleteCredential(row: UserBiometricDTO) {
 
-        if (
-            !this.adminMode
-        ) {
+        if (!this.adminMode || this.rowBusy[row.id]) {
             return;
         }
 
-        if (
-            !window.confirm(
-                `Permanently hard delete "${row.deviceName}"?`
-            )
-        ) {
-            return;
-        }
+        const ref = this.dialog.open(
+            ConfirmDialogComponent,
+            {
+                width: '420px',
+                data: {
+                    title: 'Hard Delete Credential',
+                    message:
+                        `Permanently delete "${row.deviceName}"? This cannot be undone.`,
+                    confirmText: 'Delete',
+                    cancelText: 'Cancel'
+                }
+            }
+        );
 
-        this.rowBusy[row.id] = true;
-        this.api.adminDelete(
-            row.id, true
-        ).subscribe({
+        ref.afterClosed().subscribe(confirmed => {
 
-            next: () => {
-
-                delete this.rowBusy[row.id];
-                this.snack.open(
-                    'Credential hard deleted', 'Close', { duration: 3000 }
-                );
-                this.load();
-            },
-
-            error: () => {
-
-                delete this.rowBusy[row.id];
-                this.snack.open(
-                    'Hard delete failed', 'Close', { duration: 4000 }
-                );
+            if (!confirmed) {
+                return;
             }
 
+            this.rowBusy[row.id] = true;
+
+            this.api.adminDelete(
+                row.id,
+                true
+            ).subscribe({
+
+                next: () => {
+
+                    delete this.rowBusy[row.id];
+
+                    this.snack.open(
+                        'Credential hard deleted',
+                        'Close',
+                        { duration: 3000 }
+                    );
+
+                    this.load();
+                },
+
+                error: (err) => {
+
+                    delete this.rowBusy[row.id];
+
+                    const message =
+                        err?.error?.message ||
+                        err?.error ||
+                        'Hard delete failed';
+
+                    this.snack.open(
+                        message,
+                        'Close',
+                        { duration: 5000 }
+                    );
+                }
+
+            });
+
         });
+
     }
 
     trackById(

@@ -122,11 +122,23 @@ export class AuthService {
    BIOMETRICS
    ========================= */
 
-  biometricChallenge(deviceId: string) {
-    return this.http.post<any>(
-      `${environment.apiUrl}/auth/biometric/challenge?deviceId=${deviceId}`,
+  biometricChallenge(
+    deviceId: string,
+    branchId: string | null
+  ): Observable<{ publicKeyCredentialRequestOptions: any }> {
+
+    return this.http.post<{
+      publicKeyCredentialRequestOptions: any
+    }>(
+      `${environment.apiUrl}/auth/biometric/challenge`,
       {},
-      { withCredentials: true }
+      {
+        params: {
+          deviceId,
+          branchId: branchId ?? ''
+        },
+        withCredentials: true
+      }
     );
   }
 

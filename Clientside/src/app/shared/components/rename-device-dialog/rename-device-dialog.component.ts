@@ -1,73 +1,200 @@
-import { Component, Inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import {
-    MAT_DIALOG_DATA,
-    MatDialogRef,
-    MatDialogModule
-} from '@angular/material/dialog';
-
-import { FormsModule } from '@angular/forms';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
+import { CommonModule } from "@angular/common";
+import { Component, Inject } from "@angular/core";
+import { FormsModule } from "@angular/forms";
+import { MatButtonModule } from "@angular/material/button";
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from "@angular/material/dialog";
+import { MatInputModule } from "@angular/material/input";
 
 @Component({
-    standalone: true,
-    imports: [
-        CommonModule,
-        FormsModule,
-        MatDialogModule,
-        MatInputModule,
-        MatButtonModule
-    ],
-    template: `
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatDialogModule,
+    MatInputModule,
+    MatButtonModule
+  ],
+  template: `
 
-<h2 class="text-xl font-semibold">Rename Device</h2>
+<div class="rename-dialog">
 
-<mat-dialog-content>
+  <header class="dialog-header">
+    <h2 mat-dialog-title class="dialog-title">
+      {{ title }}
+    </h2>
 
-<mat-form-field appearance="fill">
-<input
-matInput
-[(ngModel)]="name">
-</mat-form-field>
+    <p class="dialog-subtitle">
+      {{ subtitle }}
+    </p>
+  </header>
 
-</mat-dialog-content>
+  <mat-dialog-content class="dialog-content">
 
-<mat-dialog-actions align="end">
+    <mat-form-field
+      appearance="fill"
+      class="full-width">
 
-<button
-mat-stroked-button
-(click)="close()">
-Cancel
-</button>
+      <mat-label>{{ label }}</mat-label>
 
-<button
-mat-flat-button
-(click)="save()">
-Save
-</button>
+      <input
+        matInput
+        maxlength="64"
+        autocomplete="off"
+        [(ngModel)]="name"
+        (keydown.enter)="save()"
+        cdkFocusInitial />
 
-</mat-dialog-actions>
+      <mat-hint align="end">
+        {{ name.length || 0 }}/64
+      </mat-hint>
 
-`
+    </mat-form-field>
+
+  </mat-dialog-content>
+
+  <mat-dialog-actions
+    align="end"
+    class="dialog-actions">
+
+    <button
+      mat-stroked-button
+      type="button"
+      (click)="close()">
+      Cancel
+    </button>
+
+    <button
+      mat-flat-button
+      color="primary"
+      type="button"
+      [disabled]="!name.trim()"
+      (click)="save()">
+
+      Save Changes
+
+    </button>
+
+  </mat-dialog-actions>
+
+</div>
+
+`,
+  styles: [`
+
+:host {
+  display: block;
+}
+
+.rename-dialog {
+  width: min(100%, 520px);
+  padding: clamp(20px, 3vw, 28px);
+  background: var(--surface);
+}
+
+.dialog-header {
+  margin-bottom: 20px;
+}
+
+.dialog-title {
+  margin: 0;
+  font-size: clamp(1.15rem, 2vw, 1.35rem);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.dialog-subtitle {
+  margin: 8px 0 0;
+  font-size: .92rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.dialog-content {
+  padding: 0 !important;
+  overflow: visible;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.dialog-actions {
+  margin-top: 24px;
+  padding: 0 !important;
+  gap: 12px;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.dialog-actions button {
+  min-width: 120px;
+}
+
+@media (max-width: 480px) {
+
+  .rename-dialog {
+    padding: 18px;
+  }
+
+  .dialog-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .dialog-actions button {
+    width: 100%;
+  }
+
+}
+
+`]
 })
 export class RenameDeviceDialogComponent {
 
-    name = '';
+  name = '';
+  title = '';
+  subtitle = '';
+  label = '';
 
-    constructor(
-        private ref: MatDialogRef<RenameDeviceDialogComponent>,
-        @Inject(MAT_DIALOG_DATA) data: any
-    ) {
-        this.name = data.currentName;
+  constructor(
+    private ref: MatDialogRef<RenameDeviceDialogComponent>,
+    @Inject(MAT_DIALOG_DATA) data: {
+      currentName: string;
+      title?: string;
+      subtitle?: string;
+      label?: string;
+    }
+  ) {
+
+    this.name = data.currentName;
+
+    if (data.title) {
+      this.title = data.title;
     }
 
-    close() {
-        this.ref.close();
+    if (data.subtitle) {
+      this.subtitle = data.subtitle;
     }
 
-    save() {
-        this.ref.close(this.name);
+    if (data.label) {
+      this.label = data.label;
     }
+
+  }
+
+  close() {
+    this.ref.close();
+  }
+
+  save() {
+
+    const value = this.name?.trim();
+
+    if (!value) {
+      return;
+    }
+
+    this.ref.close(value);
+  }
 
 }

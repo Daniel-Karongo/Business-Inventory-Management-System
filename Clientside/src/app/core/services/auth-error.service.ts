@@ -129,7 +129,9 @@ export class AuthErrorService {
                 return this.toast('Invalid biometric data.');
 
             case 'INVALID_REQUEST':
-                return this.toast('Invalid request.');
+                return this.toast(
+                    msg || 'Invalid request.'
+                );
 
             case 'UNKNOWN':
             default:

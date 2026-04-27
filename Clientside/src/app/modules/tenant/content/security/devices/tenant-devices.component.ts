@@ -307,9 +307,13 @@ export class TenantDevicesComponent implements OnInit {
     const ref = this.dialog.open(
       RenameDeviceDialogComponent,
       {
-        width: '420px',
+        width: '520px',
+        maxWidth: '95vw',
         data: {
-          currentName: d.deviceName
+          currentName: d.deviceName,
+          title: 'Rename Device',
+          subtitle: 'Update the display name used to identify this trusted device.',
+          label: 'Device Name'
         }
       }
     );

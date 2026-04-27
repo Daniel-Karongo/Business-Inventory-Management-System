@@ -3,118 +3,122 @@
     width: 100%;
 }
 
+/* =========================
+   ROOT
+========================= */
+
 .bio-shell {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 20px;
 }
 
-.metric-strip {
-    display: grid;
-    grid-template-columns:
-        repeat(auto-fit, minmax(220px, 1fr));
-    gap: 16px;
-}
-
-.metric-card {
-    background: var(--surface-bg);
-    border: 1px solid var(--surface-border);
-    border-radius: var(--surface-radius);
-    box-shadow: var(--surface-shadow);
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-}
-
-.metric-card::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background: var(--active);
-}
-
-.metric-label {
-    font-size: .76rem;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: .08em;
-}
-
-.metric-value {
-    margin-top: 10px;
-    font-size: 2rem;
-    font-weight: 600;
-}
+/* =========================
+   MAIN PANEL
+========================= */
 
 .bio-panel {
     background: var(--surface-bg);
     border: 1px solid var(--surface-border);
     border-radius: var(--surface-radius);
     box-shadow: var(--surface-shadow);
-    padding: 22px;
+    padding: clamp(18px, 2vw, 24px);
+    overflow: hidden;
 }
 
+/* =========================
+   SECTION HEADER
+========================= */
+
 .section-head {
-    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--surface-border);
 }
 
 .section-head h3 {
-    margin: 0 0 8px;
+    margin: 0 0 6px;
+    font-size: clamp(1.08rem, 2vw, 1.3rem);
+    font-weight: 650;
+    line-height: 1.25;
 }
 
 .sub {
-    font-size: .85rem;
+    font-size: .84rem;
     color: var(--text-secondary);
+    line-height: 1.4;
 }
+
+.register-btn {
+    min-height: 46px;
+    min-width: 158px;
+    padding-inline: 20px;
+    border-radius: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: 0 6px 18px rgba(37, 99, 235, .18);
+}
+
+.register-btn .mat-icon {
+    margin-right: 6px;
+}
+
+/* =========================
+   LOADING
+========================= */
 
 .loading-wrap {
-    padding: 40px;
+    padding: 52px 20px;
     display: flex;
     justify-content: center;
+    align-items: center;
 }
 
-/* =========================================
-EMPTY STATE UPGRADE
-========================================= */
+/* =========================
+   EMPTY STATE
+========================= */
 
 .empty-state {
     position: relative;
     text-align: center;
-    padding: 72px 34px;
-    border-radius: 18px;
+    padding: clamp(42px, 7vw, 74px) clamp(18px, 4vw, 34px);
+    border-radius: 20px;
     overflow: hidden;
+
     border: 1px solid var(--surface-border);
+
     background:
         radial-gradient(circle at top,
             rgba(59, 130, 246, .07),
-            transparent 55%),
+            transparent 56%),
         linear-gradient(180deg,
             rgba(255, 255, 255, .02),
             transparent),
         var(--surface-bg);
+
     box-shadow:
-        0 1px 4px rgba(0, 0, 0, .06),
-        0 10px 30px rgba(0, 0, 0, .05);
+        0 1px 4px rgba(0, 0, 0, .05),
+        0 12px 30px rgba(0, 0, 0, .04);
 }
 
-/* soft top accent */
 .empty-state::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
+    inset: 0 auto auto 0;
+    width: 100%;
     height: 4px;
-    background:
-        linear-gradient(90deg,
+    background: linear-gradient(90deg,
             #2563eb,
             #3b82f6);
 }
 
-/* ========= ICON ZONE ========= */
+/* Visual */
+
 .empty-visual {
     position: relative;
     width: 110px;
@@ -126,25 +130,29 @@ EMPTY STATE UPGRADE
     width: 100px;
     height: 100px;
     margin: auto;
+
     border-radius: 50%;
+
     display: flex;
     align-items: center;
     justify-content: center;
+
     background:
         radial-gradient(circle,
             rgba(37, 99, 235, .14),
             rgba(37, 99, 235, .03));
-    border:
-        1px solid rgba(37, 99, 235, .18);
+
+    border: 1px solid rgba(37, 99, 235, .18);
+
     box-shadow:
         0 0 0 10px rgba(37, 99, 235, .04),
-        0 8px 22px rgba(37, 99, 235, .12);
+        0 8px 22px rgba(37, 99, 235, .10);
 }
 
 .empty-icon-ring mat-icon {
     font-size: 44px;
-    height: 44px;
     width: 44px;
+    height: 44px;
     color: #2563eb;
 }
 
@@ -152,27 +160,30 @@ EMPTY STATE UPGRADE
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    border:
-        1px solid rgba(37, 99, 235, .14);
-    animation:
-        credentialPulse 3s infinite;
+    border: 1px solid rgba(37, 99, 235, .14);
+    animation: credentialPulse 3s infinite;
 }
 
 @keyframes credentialPulse {
+
     0% {
         transform: scale(.92);
         opacity: .8;
     }
+
     70% {
         transform: scale(1.15);
         opacity: 0;
     }
+
     100% {
         opacity: 0;
     }
+
 }
 
-/* ========= CONTENT ========= */
+/* Text */
+
 .empty-eyebrow {
     font-size: .74rem;
     text-transform: uppercase;
@@ -184,42 +195,28 @@ EMPTY STATE UPGRADE
 
 .empty-content h4 {
     margin: 0 0 14px;
-    font-size: 1.45rem;
-    font-weight: 600;
+    font-size: clamp(1.2rem, 2vw, 1.45rem);
+    font-weight: 650;
 }
 
 .empty-content p {
     max-width: 540px;
     margin: 0 auto;
-    color: var(--text-secondary);
     line-height: 1.7;
     font-size: .96rem;
+    color: var(--text-secondary);
 }
 
-/* ========= ACTION ========= */
-.empty-actions {
-    margin-top: 34px;
-}
-
-.register-btn {
-    min-height: 48px;
-    padding-inline: 24px;
-    border-radius: 12px;
-    font-weight: 600;
-    box-shadow:
-        0 6px 18px rgba(37, 99, 235, .22);
-}
-
-/* ========= FOOTER ========= */
 .empty-footer {
     margin-top: 30px;
     padding-top: 18px;
-    border-top:
-        1px solid var(--surface-border);
+    border-top: 1px solid var(--surface-border);
+
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
+
     font-size: .82rem;
     color: var(--text-secondary);
 }
@@ -231,67 +228,9 @@ EMPTY STATE UPGRADE
     color: #2563eb;
 }
 
-/* =========================================
-TABLET
-========================================= */
-@media(max-width:900px) {
-    .empty-state {
-        padding: 56px 26px;
-    }
-    .empty-content h4 {
-        font-size: 1.25rem;
-    }
-}
-
-/* =========================================
-MOBILE
-========================================= */
-@media(max-width:640px) {
-    .empty-state {
-        padding: 42px 18px;
-    }
-    .empty-visual {
-        width: 88px;
-        height: 88px;
-    }
-    .empty-icon-ring {
-        width: 78px;
-        height: 78px;
-    }
-    .empty-icon-ring mat-icon {
-        font-size: 34px;
-        width: 34px;
-        height: 34px;
-    }
-    .register-btn {
-        width: 100%;
-    }
-    .empty-footer {
-        flex-direction: column;
-        gap: 8px;
-    }
-}
-
-/* =========================================
-DARK MODE
-========================================= */
-body.dark .empty-state {
-    background:
-        linear-gradient(180deg,
-            rgba(30, 41, 59, .72),
-            rgba(17, 24, 39, .96));
-    border-color: #334155;
-    box-shadow:
-        0 4px 18px rgba(0, 0, 0, .35);
-}
-body.dark .empty-icon-ring {
-    background:
-        radial-gradient(circle,
-            rgba(59, 130, 246, .20),
-            rgba(59, 130, 246, .04));
-    border-color:
-        rgba(59, 130, 246, .30);
-}
+/* =========================
+   CREDENTIAL GRID
+========================= */
 
 .credential-grid {
     display: grid;
@@ -301,51 +240,302 @@ body.dark .empty-icon-ring {
 }
 
 .credential-card {
-    padding: 20px;
+    padding: 22px;
+    border-radius: 16px;
     border: 1px solid var(--surface-border);
     box-shadow: var(--surface-shadow);
-    min-height: 220px;
+
+    min-height: 230px;
+
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+
+    transition:
+        transform .18s ease,
+        box-shadow .18s ease,
+        border-color .18s ease;
+}
+
+.credential-card:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 6px 18px rgba(0, 0, 0, .06);
+}
+
+/* top */
+
+.cred-top {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
 }
 
 .device-pill {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+
     padding: 10px 14px;
-    border-radius: 999px;
-    background: var(--surface-hover);
-    font-weight: 600;
+
     max-width: 100%;
+    width: fit-content;
+
+    border-radius: 999px;
+
+    background: var(--surface-hover);
+    border: 1px solid var(--surface-border);
+
+    font-weight: 600;
+}
+
+.device-pill span {
+    overflow-wrap: anywhere;
 }
 
 .cred-id {
-    margin-top: 20px;
     font-family: monospace;
-    font-size: .8rem;
+    font-size: .78rem;
+    line-height: 1.55;
     overflow-wrap: anywhere;
     color: var(--text-secondary);
+
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--surface-hover);
 }
+
+/* =========================
+   METADATA
+========================= */
+
+.meta-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(auto-fit,
+            minmax(140px, 1fr));
+
+    gap: 12px;
+
+    margin-top: 18px;
+
+}
+
+.meta-item {
+
+    padding: 12px 14px;
+
+    border-radius: 12px;
+
+    background:
+        var(--surface-hover);
+
+    border:
+        1px solid var(--surface-border);
+
+}
+
+.meta-item span {
+
+    display: block;
+
+    font-size: .72rem;
+
+    text-transform: uppercase;
+
+    letter-spacing: .06em;
+
+    color:
+        var(--text-secondary);
+
+    margin-bottom: 6px;
+
+}
+
+.meta-item strong {
+
+    display: block;
+
+    font-size: .88rem;
+
+    font-weight: 650;
+
+    overflow-wrap: anywhere;
+
+}
+
+.trust-badge {
+
+    margin-top: 14px;
+
+    width: fit-content;
+
+    padding: 7px 12px;
+
+    border-radius: 999px;
+
+    font-size: .74rem;
+
+    font-weight: 700;
+
+    letter-spacing: .04em;
+
+    border: 1px solid transparent;
+
+}
+
+.trust-badge.approved {
+
+    background:
+        rgba(16, 185, 129, .10);
+
+    color: #10b981;
+
+    border-color:
+        rgba(16, 185, 129, .25);
+
+}
+
+.trust-badge.pending {
+
+    background:
+        rgba(245, 158, 11, .10);
+
+    color: #f59e0b;
+
+    border-color:
+        rgba(245, 158, 11, .25);
+
+}
+
+.trust-badge.rejected {
+
+    background:
+        rgba(239, 68, 68, .10);
+
+    color: #ef4444;
+
+    border-color:
+        rgba(239, 68, 68, .25);
+
+}
+
+/* actions */
 
 .cred-actions {
     margin-top: 24px;
+
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
 }
-@media(max-width:640px) {
-    .bio-panel {
-        padding: 16px;
+
+.cred-actions button {
+    min-height: 40px;
+}
+
+/* =========================
+   TABLET
+========================= */
+
+@media (max-width: 900px) {
+
+    .empty-state {
+        padding: 54px 24px;
     }
+
     .credential-grid {
         grid-template-columns: 1fr;
     }
+
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 640px) {
+
+    .bio-panel {
+        padding: 16px;
+    }
+
+    .section-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .register-btn {
+        width: 100%;
+    }
+
+    .empty-state {
+        padding: 42px 18px;
+    }
+
+    .empty-visual {
+        width: 88px;
+        height: 88px;
+    }
+
+    .empty-icon-ring {
+        width: 78px;
+        height: 78px;
+    }
+
+    .empty-icon-ring mat-icon {
+        font-size: 34px;
+        width: 34px;
+        height: 34px;
+    }
+
+    .empty-footer {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .credential-card {
+        padding: 18px;
+        min-height: auto;
+    }
+
     .cred-actions {
         flex-direction: column;
     }
+
     .cred-actions button {
         width: 100%;
     }
+
+    .meta-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =========================
+   DARK MODE
+========================= */
+
+body.dark .empty-state {
+    background:
+        linear-gradient(180deg,
+            rgba(30, 41, 59, .72),
+            rgba(17, 24, 39, .96));
+
+    border-color: #334155;
+
+    box-shadow:
+        0 4px 18px rgba(0, 0, 0, .35);
+}
+
+body.dark .empty-icon-ring {
+    background:
+        radial-gradient(circle,
+            rgba(59, 130, 246, .20),
+            rgba(59, 130, 246, .04));
+
+    border-color:
+        rgba(59, 130, 246, .30);
 }

@@ -40,146 +40,144 @@ export class BiometricRegistrationService {
 
     return new Promise<boolean>((resolve) => {
 
-      this.auth.biometricRegisterStart(
-        deviceId
-      ).subscribe({
+      this.biometricApi
+        .hasCredentialForCurrentDevice(
+          deviceId
+        )
+        .subscribe({
 
-        next: async (options) => {
+          next: exists => {
 
-          try {
+            if (exists) {
 
-            const credential =
-              await this.webauthn.register(
-                options
-              );
-
-            this.auth.biometricRegisterFinish(
-              credential,
-              deviceId
-            ).subscribe({
-
-              next: () => {
-                this.snack.open(
-                  'Biometric enabled successfully',
-                  'Close',
-                  { duration: 3000 }
+              const ref =
+                this.dialog.open(
+                  OverwriteBiometricDialog
                 );
-                resolve(true);
-              },
 
-              error: (err) => {
-                this.handleError(
-                  err,
-                  deviceId
-                );
-                resolve(false);
-              }
+              ref.afterClosed()
+                .subscribe(choice => {
 
-            });
+                  if (choice === 'reuse') {
 
-          }
-          catch (e: any) {
+                    this.snack.open(
+                      'Using existing biometric',
+                      'Close',
+                      { duration: 3000 }
+                    );
 
-            if (
-              e.name === 'NotAllowedError'
-            ) {
-              this.snack.open(
-                'Biometric registration cancelled',
-                'Close',
-                { duration: 3000 }
-              );
+                    resolve(false);
+                    return;
+
+                  }
+
+                  if (choice === 'overwrite') {
+
+                    this.startRegistration(
+                      deviceId,
+                      resolve
+                    );
+
+                    return;
+                  }
+
+                  resolve(false);
+
+                });
+
+              return;
             }
-            else {
-              this.snack.open(
-                'Biometric setup failed',
-                'Close',
-                { duration: 3000 }
-              );
-            }
+
+            this.startRegistration(
+              deviceId,
+              resolve
+            );
+
+          },
+
+          error: () => {
+
+            this.snack.open(
+              'Failed checking existing credential',
+              'Close',
+              { duration: 4000 }
+            );
 
             resolve(false);
 
           }
 
-        },
-
-        error: (err) => {
-          this.handleError(
-            err,
-            deviceId
-          );
-          resolve(false);
-        }
-
-      });
-
-    });
-
-  }
-
-  private handleError(err: any, deviceId: string) {
-
-    const msg = err?.error?.message ?? '';
-    const code = err?.error?.code;
-
-    if (code === 'INVALID_REQUEST' && msg === 'Biometric already registered') {
-      this.promptOverwrite(deviceId);
-      return;
-    }
-
-    this.snack.open(msg || 'Biometric setup failed', 'Close', { duration: 4000 });
-  }
-
-  private promptOverwrite(deviceId: string) {
-
-    const ref = this.dialog.open(OverwriteBiometricDialog);
-
-    ref.afterClosed().subscribe(choice => {
-
-      if (choice === 'reuse') {
-        this.snack.open('Using existing biometric', 'Close', { duration: 3000 });
-        return;
-      }
-
-      if (choice === 'overwrite') {
-        this.deleteAndReRegister(deviceId);
-      }
-
-    });
-  }
-
-  private deleteAndReRegister(deviceId: string) {
-
-    this.biometricApi.list().subscribe({
-      next: (list) => {
-
-        const matches = list;
-
-        if (!matches.length) {
-          this.register();
-          return;
-        }
-
-        let completed = 0;
-
-        matches.forEach(b => {
-          this.biometricApi.delete(b.id).subscribe({
-            next: () => {
-              completed++;
-              if (completed === matches.length) {
-                this.register();
-              }
-            },
-            error: () => {
-              this.snack.open('Failed to remove existing biometric', 'Close', { duration: 4000 });
-            }
-          });
         });
 
-      },
-      error: () => {
-        this.snack.open('Failed to fetch biometrics', 'Close', { duration: 4000 });
-      }
     });
+
+  }
+
+  private startRegistration(
+    deviceId: string,
+    resolve: (v: boolean) => void
+  ) {
+
+    this.auth.biometricRegisterStart(
+      deviceId
+    ).subscribe({
+
+      next: async options => {
+
+        try {
+
+          const credential =
+            await this.webauthn.register(
+              options
+            );
+
+          this.auth.biometricRegisterFinish(
+            credential,
+            deviceId
+          ).subscribe({
+
+            next: () => {
+
+              this.snack.open(
+                'Biometric enabled successfully',
+                'Close',
+                { duration: 3000 }
+              );
+
+              resolve(true);
+
+            },
+
+            error: () => {
+
+              this.snack.open(
+                'Biometric setup failed',
+                'Close',
+                { duration: 4000 }
+              );
+
+              resolve(false);
+
+            }
+
+          });
+
+        }
+        catch {
+
+          resolve(false);
+
+        }
+
+      },
+
+      error: () => {
+
+        resolve(false);
+
+      }
+
+    });
+
   }
 }

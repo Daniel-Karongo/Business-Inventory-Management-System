@@ -209,7 +209,7 @@ export class PlatformDevicesComponent
                 );
             });
     }
-    
+
     applySearch() {
 
         const term =
@@ -379,10 +379,13 @@ export class PlatformDevicesComponent
             this.dialog.open(
                 RenameDeviceDialogComponent,
                 {
-                    width: '420px',
+                    width: '520px',
+                    maxWidth: '95vw',
                     data: {
-                        currentName:
-                            d.deviceName
+                        currentName: d.deviceName,
+                        title: 'Rename Device',
+                        subtitle: 'Update the display name used to identify this trusted device.',
+                        label: 'Device Name'
                     }
                 }
             );

@@ -1,6 +1,6 @@
 <div class="bio-shell">
 
-    <div class="metric-strip" *ngIf="adminMode">
+    <!-- <div class="metric-strip" *ngIf="adminMode">
 
         <div class="metric-card">
             <div class="metric-label">Credentials</div>
@@ -23,7 +23,7 @@
             </div>
         </div>
 
-    </div>
+    </div> -->
 
 
     <div class="bio-panel">
@@ -32,10 +32,29 @@
 
             <div>
                 <h3>Biometric Credentials</h3>
+
                 <div class="sub">
-                    Registered Passkeys: {{credentialCount}}
+                    Registered Passkeys: {{ credentialCount }}
                 </div>
             </div>
+
+            <button mat-flat-button color="primary" class="register-btn" [disabled]="registerBusy"
+                (click)="registerCredential()">
+
+                <mat-icon *ngIf="!registerBusy">
+                    add
+                </mat-icon>
+
+                <mat-spinner *ngIf="registerBusy" diameter="18">
+                </mat-spinner>
+
+                {{
+                registerBusy
+                ? 'Registering...'
+                : 'Add Passkey'
+                }}
+
+            </button>
 
         </div>
 
@@ -77,34 +96,6 @@
 
             </div>
 
-
-            <div class="empty-actions">
-
-                <button mat-flat-button color="primary" class="register-btn" [disabled]="registerBusy"
-                    (click)="registerCredential()">
-
-                    <mat-spinner *ngIf="registerBusy" diameter="18">
-                    </mat-spinner>
-
-                    <ng-container *ngIf="!registerBusy">
-
-                        <mat-icon>
-                            fingerprint
-                        </mat-icon>
-
-                    </ng-container>
-
-                    {{
-                    registerBusy
-                    ? 'Registering...'
-                    : 'Register Passkey'
-                    }}
-
-                </button>
-
-            </div>
-
-
             <div class="empty-footer">
 
                 <mat-icon>
@@ -140,7 +131,33 @@
 
                 </div>
 
+                <div class="meta-grid">
 
+                    <div class="meta-item">
+                        <span>Browser</span>
+                        <strong>{{b.browserName || 'Unknown'}}</strong>
+                    </div>
+
+                    <div class="meta-item">
+                        <span>OS</span>
+                        <strong>{{b.osName || 'Unknown'}}</strong>
+                    </div>
+
+                    <div class="meta-item">
+                        <span>Last Used</span>
+                        <strong>
+                            {{ b.lastSeenAt | date:'medium' }}
+                        </strong>
+                    </div>
+
+                </div>
+
+                <div class="trust-badge" [ngClass]="b.trustedDeviceStatus?.toLowerCase()">
+
+                    {{b.trustedDeviceStatus}}
+
+                </div>
+                
                 <div class="cred-actions">
 
                     <button mat-stroked-button (click)="renameCredential(b)" [disabled]="rowBusy[b.id]">

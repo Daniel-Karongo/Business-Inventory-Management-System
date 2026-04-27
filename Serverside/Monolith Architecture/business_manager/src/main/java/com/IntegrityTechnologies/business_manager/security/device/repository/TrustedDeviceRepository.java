@@ -62,4 +62,11 @@ public interface TrustedDeviceRepository extends JpaRepository<TrustedDevice, UU
             UUID tenantId,
             String deviceId
     );
+
+    Optional<TrustedDevice> findByTenantIdAndDeviceIdAndBranchId(UUID tenantId, String deviceId, UUID branchId);
+
+    Optional<TrustedDevice> findByTenantIdAndDeviceId(
+            UUID tenantId,
+            String deviceId
+    );
 }

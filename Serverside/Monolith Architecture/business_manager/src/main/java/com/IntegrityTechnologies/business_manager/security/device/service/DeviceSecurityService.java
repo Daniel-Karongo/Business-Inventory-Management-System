@@ -287,6 +287,21 @@ public class DeviceSecurityService {
                 ));
     }
 
+    public TrustedDevice getByDeviceIdAnyBranch(
+            UUID tenantId,
+            String deviceId
+    ) {
+
+        return repository
+                .findByTenantIdAndDeviceId(tenantId, deviceId)
+                .orElseThrow(() ->
+                        new AppSecurityException(
+                                SecurityErrorCode.DEVICE_NOT_FOUND,
+                                "Trusted device not found"
+                        ));
+
+    }
+
     private String buildFriendlyDeviceName(AuthRequest request) {
 
         if (request.getBrowserName() != null &&
