@@ -29,7 +29,7 @@
                 <mat-form-field appearance="fill">
                     <mat-label>Role</mat-label>
 
-                    <mat-select formControlName="role" [disabled]="mode==='edit' && targetUserId===currentUserId">
+                    <mat-select formControlName="role">
 
                         <mat-option *ngFor="let r of roles" [value]="r">
                             {{r}}
@@ -58,8 +58,7 @@
 
                 <mat-form-field appearance="fill">
                     <mat-label>Password</mat-label>
-                    <input matInput [type]="showPassword ? 'text':'password'" formControlName="password"
-                        [disabled]="mode==='edit' && targetUserId !== currentUserId">
+                    <input matInput [type]="showPassword ? 'text':'password'" formControlName="password">
                     <button mat-icon-button matSuffix type="button" (click)="showPassword=!showPassword">
                         <mat-icon>{{showPassword?'visibility_off':'visibility'}}</mat-icon>
                     </button>
@@ -68,7 +67,7 @@
                 <mat-form-field appearance="fill">
                     <mat-label>Confirm Password</mat-label>
                     <input matInput [type]="showPassword ? 'text':'password'" formControlName="confirmPassword"
-                        [disabled]="mode==='edit' && targetUserId !== currentUserId">
+                        >
                     <mat-error *ngIf="passwordMismatch()">
                         Passwords do not match
                     </mat-error>

@@ -96,7 +96,16 @@ public class FileStorageService {
     }
 
     public Path userRoot() {
-        return moduleRoot(".users");
+
+        // USERS ARE TENANT-SCOPED, NOT BRANCH-SCOPED
+
+        Path dir = tenantRoot()
+                .resolve(".users")
+                .normalize();
+
+        createAndSecure(dir);
+
+        return dir;
     }
 
     public Path supplierRoot() {

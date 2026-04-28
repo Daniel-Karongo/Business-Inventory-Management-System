@@ -81,7 +81,10 @@ public class UserImageService {
 
             checkDiskSpace(userDir, actualFile.getSize());
 
-            String fileName = System.currentTimeMillis() + "_" + actualFile.getOriginalFilename();
+            String fileName =
+                    UUID.randomUUID()
+                            + "_"
+                            + actualFile.getOriginalFilename();
 
             Path saved;
 

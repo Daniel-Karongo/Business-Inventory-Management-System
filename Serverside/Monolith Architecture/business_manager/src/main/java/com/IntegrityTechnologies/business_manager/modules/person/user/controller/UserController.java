@@ -67,7 +67,7 @@ public class UserController {
 
     /* ====================== UPDATE ====================== */
 
-    @TenantManagerOnly
+    @TenantUserOnly
     @PatchMapping("/{identifier}")
     public ResponseEntity<UserDTO> updateUser(
             @PathVariable String identifier,
@@ -83,7 +83,7 @@ public class UserController {
 
     /* ====================== USER IMAGES ====================== */
 
-    @TenantManagerOnly
+    @TenantUserOnly
     @PatchMapping(
             value = "/{identifier}/images",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
@@ -117,6 +117,7 @@ public class UserController {
     }
 
     @GetMapping("/all")
+    @TenantSupervisorOnly
     public ResponseEntity<Page<UserDTO>> getUsers(
             @RequestParam(required = false) Boolean deleted,
             @RequestParam(required = false) String role,
@@ -131,6 +132,7 @@ public class UserController {
     }
 
     @GetMapping("/role/{role}")
+    @TenantManagerOnly
     public ResponseEntity<Page<UserDTO>> getUsersByRole(
             @PathVariable String role,
             @RequestParam(required = false) Boolean deleted,

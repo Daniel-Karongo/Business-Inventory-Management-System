@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.person.user.model;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 
 import java.sql.Types;
@@ -28,7 +29,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class UserImage extends BranchAwareEntity {
 
     @Id
@@ -63,18 +64,18 @@ public class UserImage extends BranchAwareEntity {
     @PrePersist
     public void onCreate() {
 
-        uploadedAt = LocalDateTime.now();
+        if (uploadedAt == null) {
+            uploadedAt = LocalDateTime.now();
+        }
 
         if (deleted == null) {
             deleted = false;
         }
 
-        if (getBranchId() == null && user != null && !user.getBranches().isEmpty()) {
-
-            user.getBranches().stream()
-                    .filter(UserBranch::isPrimaryBranch)
-                    .findFirst()
-                    .ifPresent(ub -> setBranchId(ub.getBranch().getId()));
+        if (getBranchId() == null) {
+            throw new IllegalStateException(
+                    "branchId must be assigned before persisting UserImage"
+            );
         }
     }
 }

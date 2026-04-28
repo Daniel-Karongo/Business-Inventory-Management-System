@@ -128,7 +128,7 @@ public class UserBulkService {
                     );
                 }
 
-                if (!currentUserRole.canAccess(targetRole)) {
+                if (!currentUserRole.canManage(targetRole)) {
                     throw new IllegalArgumentException(
                             "Insufficient privilege to assign role: " + targetRole
                     );

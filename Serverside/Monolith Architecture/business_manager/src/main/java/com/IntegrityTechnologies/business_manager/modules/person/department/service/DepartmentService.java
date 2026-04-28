@@ -6,6 +6,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.department.mapp
 import com.IntegrityTechnologies.business_manager.modules.person.department.model.DepartmentMembershipRole;
 import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.user.model.Role;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.UserDepartment;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.UserDepartmentId;
@@ -76,8 +77,8 @@ public class DepartmentService {
 
         department = departmentRepository.save(department);
 
-        assignUsersToDepartment(dto.getHeadIds(), department, DepartmentMembershipRole.HEAD);
-        assignUsersToDepartment(dto.getMemberIds(), department, DepartmentMembershipRole.MEMBER);
+        assignUsersToDepartment(dto.getHeadIds(), department, DepartmentMembershipRole.HEAD, authentication);
+        assignUsersToDepartment(dto.getMemberIds(), department, DepartmentMembershipRole.MEMBER, authentication);
 
         logAudit(department, "CREATE", null, dto.toString(), authentication, null);
 
@@ -87,7 +88,8 @@ public class DepartmentService {
     private void assignUsersToDepartment(
             Set<UUID> userIds,
             Department department,
-            DepartmentMembershipRole role
+            DepartmentMembershipRole role,
+            Authentication authentication
     ) {
 
         if (userIds == null) return;
@@ -109,6 +111,37 @@ public class DepartmentService {
                     .build();
 
             userDepartmentRepository.save(relation);
+
+            if (role == DepartmentMembershipRole.HEAD
+                    && user.getRole().getLevel() < Role.SUPERVISOR.getLevel()) {
+
+                Role oldRole = user.getRole();
+
+                user.setRole(Role.SUPERVISOR);
+                userRepository.save(user);
+
+                // audit promotion
+                departmentAuditRepository.save(
+                        DepartmentAudit.builder()
+                                .departmentId(department.getId())
+                                .departmentName(department.getName())
+                                .action("AUTO_PROMOTE")
+                                .oldValue(oldRole.name())
+                                .newValue(Role.SUPERVISOR.name())
+                                .reason("Promoted automatically because assigned as department head")
+                                .performedById(
+                                        privilegesChecker
+                                                .getAuthenticatedUser(authentication)
+                                                .getId()
+                                )
+                                .performedByUsername(
+                                        privilegesChecker
+                                                .getAuthenticatedUser(authentication)
+                                                .getUsername()
+                                )
+                                .build()
+                );
+            }
         }
     }
 
@@ -147,8 +180,8 @@ public class DepartmentService {
         userDepartmentRepository.deleteByDepartmentId(tenantId(), department.getId());
 
         // 🔹 Reassign users
-        assignUsersToDepartment(dto.getHeadIds(), department, DepartmentMembershipRole.HEAD);
-        assignUsersToDepartment(dto.getMemberIds(), department, DepartmentMembershipRole.MEMBER);
+        assignUsersToDepartment(dto.getHeadIds(), department, DepartmentMembershipRole.HEAD, authentication);
+        assignUsersToDepartment(dto.getMemberIds(), department, DepartmentMembershipRole.MEMBER, authentication);
 
         Map<String, String> newValues = mapDepartment(department);
 
@@ -181,8 +214,8 @@ public class DepartmentService {
 
         userDepartmentRepository.deleteByDepartmentId(tenantId(), existing.getId());
 
-        assignUsersToDepartment(dto.getHeadIds(), existing, DepartmentMembershipRole.HEAD);
-        assignUsersToDepartment(dto.getMemberIds(), existing, DepartmentMembershipRole.MEMBER);
+        assignUsersToDepartment(dto.getHeadIds(), existing, DepartmentMembershipRole.HEAD, authentication);
+        assignUsersToDepartment(dto.getMemberIds(), existing, DepartmentMembershipRole.MEMBER, authentication);
 
         logAudit(
                 existing,

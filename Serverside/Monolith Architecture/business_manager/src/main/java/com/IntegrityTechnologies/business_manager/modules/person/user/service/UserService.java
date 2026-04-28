@@ -115,10 +115,12 @@ public class UserService {
         if (creator != null) {
             Role creatorRole = creator.getRole();
 
-            if (!creatorRole.canAccess(newUserRole)) {
+            if (!creatorRole.canManage(newUserRole)) {
                 throw new UnauthorizedAccessException(
-                        "You cannot create a user with role " + newUserRole +
-                                " because your role is " + creatorRole
+                        "You cannot create a user with role "
+                                + newUserRole
+                                + " because your role is "
+                                + creatorRole
                 );
             }
         }
@@ -214,7 +216,7 @@ public class UserService {
                 .orElseThrow(() -> new UserNotFoundException("Updater not found"));
 
         // 3️⃣ Validate access using centralized method
-        if (!privilegesChecker.isAuthorized(updater, user)) {
+        if (!privilegesChecker.isAuthorizedWithinDepartment(updater, user)) {
             throw new UnauthorizedAccessException(
                     "You are not authorized to update user: " + user.getUsername()
             );
@@ -311,15 +313,36 @@ public class UserService {
 
         // 9️⃣ Role
         if (updatedData.getRole() != null) {
-            if (user.getId().equals(updater.getId()))
-                throw new UnauthorizedAccessException("You cannot change your own role");
 
-            Role newRole = Role.valueOf(updatedData.getRole().toUpperCase());
-            if (!updater.getRole().canAccess(newRole)) {
-                throw new UnauthorizedAccessException("You are not authorized to assign this role");
+            if (user.getId().equals(updater.getId())) {
+                throw new UnauthorizedAccessException(
+                        "You cannot change your own role"
+                );
             }
 
-            changes.put("role", new String[]{user.getRole().name(), newRole.name()});
+            if (!updater.getRole().canManage(user.getRole())) {
+                throw new UnauthorizedAccessException(
+                        "You cannot modify a peer or higher role"
+                );
+            }
+
+            Role newRole =
+                    Role.valueOf(updatedData.getRole().toUpperCase());
+
+            if (!updater.getRole().canManage(newRole)) {
+                throw new UnauthorizedAccessException(
+                        "You are not authorized to assign this role"
+                );
+            }
+
+            changes.put(
+                    "role",
+                    new String[]{
+                            user.getRole().name(),
+                            newRole.name()
+                    }
+            );
+
             user.setRole(newRole);
         }
 
@@ -401,7 +424,7 @@ public class UserService {
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         User requester = privilegesChecker.getAuthenticatedUser(auth);
-        if (!privilegesChecker.isAuthorized(requester, target)) {
+        if (!privilegesChecker.isAuthorizedWithinDepartment(requester, target)) {
             throw new UnauthorizedAccessException("You are not authorized to " + action + " for user: " + target.getUsername());
         }
         return target;
@@ -630,9 +653,25 @@ public class UserService {
             value = "users",
             key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#id)")
     public ResponseEntity<ApiResponse> softDeleteUser(UUID id, Authentication authentication, String reason) {
+
         User user = userRepository
                 .findByIdAndTenantId(id, tenantId())
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
+
+        User actor =
+                privilegesChecker.getAuthenticatedUser(authentication);
+
+        if (!privilegesChecker.isAuthorizedWithinDepartment(actor, user)) {
+            throw new UnauthorizedAccessException(
+                    "Not authorized to modify this user"
+            );
+        }
+
+        if (actor.getId().equals(user.getId())) {
+            throw new UnauthorizedAccessException(
+                    "Self destructive operations prohibited"
+            );
+        }
 
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
         String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
@@ -647,26 +686,55 @@ public class UserService {
     }
 
     @Transactional
-    @CacheEvict(
-            value = "users",
-            allEntries = true
-    )
-    public ResponseEntity<ApiResponse> softDeleteUsersInBulk(List<UUID> userIds, String reason, Authentication authentication) {
-        UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
-        String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
+    @CacheEvict(value = "users", allEntries = true)
+    public ResponseEntity<ApiResponse> softDeleteUsersInBulk(
+            List<UUID> userIds,
+            String reason,
+            Authentication authentication
+    ) {
 
-        List<Map<String, Object>> modifiedUsers = new ArrayList<>();
+        User actor =
+                privilegesChecker.getAuthenticatedUser(authentication);
+
+        UUID performedById = actor.getId();
+        String performedByUsername = actor.getUsername();
+
+        List<Map<String, Object>> modifiedUsers =
+                new ArrayList<>();
+
         for (UUID id : userIds) {
-            User user = userRepository.findByIdAndTenantId(id, tenantId())
-                    .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
-            modifiedUsers.add(softDeleteUserInternal(user, performedById, performedByUsername, reason));
+
+            User user = userRepository
+                    .findByIdAndTenantId(id, tenantId())
+                    .orElseThrow(() ->
+                            new UserNotFoundException(
+                                    "User not found: " + id
+                            )
+                    );
+
+            validateManagementAction(
+                    actor,
+                    user,
+                    false
+            );
+
+            modifiedUsers.add(
+                    softDeleteUserInternal(
+                            user,
+                            performedById,
+                            performedByUsername,
+                            reason
+                    )
+            );
         }
 
-        return ResponseEntity.ok(new ApiResponse(
-                "success",
-                "Users soft deleted successfully",
-                modifiedUsers
-        ));
+        return ResponseEntity.ok(
+                new ApiResponse(
+                        "success",
+                        "Users soft deleted successfully",
+                        modifiedUsers
+                )
+        );
     }
 
     /**
@@ -717,8 +785,25 @@ public class UserService {
             value = "users",
             key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#id)")
     public ResponseEntity<ApiResponse> restoreUser(UUID id, Authentication authentication, String reason) throws IOException {
-        User user = userRepository.findByIdAndTenantId(id, tenantId())
+
+        User user = userRepository
+                .findByIdAndTenantId(id, tenantId())
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
+
+        User actor =
+                privilegesChecker.getAuthenticatedUser(authentication);
+
+        if (!privilegesChecker.isAuthorizedWithinDepartment(actor, user)) {
+            throw new UnauthorizedAccessException(
+                    "Not authorized to modify this user"
+            );
+        }
+
+        if (actor.getId().equals(user.getId())) {
+            throw new UnauthorizedAccessException(
+                    "You cannot restore yourself"
+            );
+        }
 
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
         String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
@@ -733,26 +818,55 @@ public class UserService {
     }
 
     @Transactional
-    @CacheEvict(
-            value = "users",
-            allEntries = true
-    )
-    public ResponseEntity<ApiResponse> restoreUsersInBulk(List<UUID> userIds, String reason, Authentication authentication) throws IOException {
-        UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
-        String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
+    @CacheEvict(value = "users", allEntries = true)
+    public ResponseEntity<ApiResponse> restoreUsersInBulk(
+            List<UUID> userIds,
+            String reason,
+            Authentication authentication
+    ) throws IOException {
 
-        List<Map<String, Object>> restoredUsers = new ArrayList<>();
+        User actor =
+                privilegesChecker.getAuthenticatedUser(authentication);
+
+        UUID performedById = actor.getId();
+        String performedByUsername = actor.getUsername();
+
+        List<Map<String, Object>> restoredUsers =
+                new ArrayList<>();
+
         for (UUID id : userIds) {
-            User user = userRepository.findByIdAndTenantId(id, tenantId())
-                    .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
-            restoredUsers.add(restoreUserInternal(user, performedById, performedByUsername, reason));
+
+            User user = userRepository
+                    .findByIdAndTenantId(id, tenantId())
+                    .orElseThrow(() ->
+                            new UserNotFoundException(
+                                    "User not found: " + id
+                            )
+                    );
+
+            validateManagementAction(
+                    actor,
+                    user,
+                    false
+            );
+
+            restoredUsers.add(
+                    restoreUserInternal(
+                            user,
+                            performedById,
+                            performedByUsername,
+                            reason
+                    )
+            );
         }
 
-        return ResponseEntity.ok(new ApiResponse(
-                "success",
-                "Users restored successfully",
-                restoredUsers
-        ));
+        return ResponseEntity.ok(
+                new ApiResponse(
+                        "success",
+                        "Users restored successfully",
+                        restoredUsers
+                )
+        );
     }
 
     /**
@@ -803,8 +917,24 @@ public class UserService {
             value = "users",
             key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#id)")
     public ResponseEntity<ApiResponse> hardDeleteUser(UUID id, Authentication authentication) throws IOException {
-        User user = userRepository.findByIdAndTenantId(id, tenantId())
+        User user = userRepository
+                .findByIdAndTenantId(id, tenantId())
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
+
+        User actor =
+                privilegesChecker.getAuthenticatedUser(authentication);
+
+        if (!privilegesChecker.isAuthorizedWithinDepartment(actor, user)) {
+            throw new UnauthorizedAccessException(
+                    "Not authorized to modify this user"
+            );
+        }
+
+        if (actor.getId().equals(user.getId())) {
+            throw new UnauthorizedAccessException(
+                    "Self destructive operations prohibited"
+            );
+        }
 
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
         String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
@@ -819,26 +949,53 @@ public class UserService {
     }
 
     @Transactional
-    @CacheEvict(
-            value = "users",
-            allEntries = true
-    )
-    public ResponseEntity<ApiResponse> hardDeleteUsersInBulk(List<UUID> userIds, Authentication authentication) throws IOException {
-        UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
-        String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
+    @CacheEvict(value = "users", allEntries = true)
+    public ResponseEntity<ApiResponse> hardDeleteUsersInBulk(
+            List<UUID> userIds,
+            Authentication authentication
+    ) throws IOException {
 
-        List<Map<String, Object>> deletedUsers = new ArrayList<>();
+        User actor =
+                privilegesChecker.getAuthenticatedUser(authentication);
+
+        UUID performedById = actor.getId();
+        String performedByUsername = actor.getUsername();
+
+        List<Map<String, Object>> deletedUsers =
+                new ArrayList<>();
+
         for (UUID id : userIds) {
-            User user = userRepository.findByIdAndTenantId(id, tenantId())
-                    .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
-            deletedUsers.add(hardDeleteUserInternal(user, performedById, performedByUsername));
+
+            User user = userRepository
+                    .findByIdAndTenantId(id, tenantId())
+                    .orElseThrow(() ->
+                            new UserNotFoundException(
+                                    "User not found: " + id
+                            )
+                    );
+
+            validateManagementAction(
+                    actor,
+                    user,
+                    false
+            );
+
+            deletedUsers.add(
+                    hardDeleteUserInternal(
+                            user,
+                            performedById,
+                            performedByUsername
+                    )
+            );
         }
 
-        return ResponseEntity.ok(new ApiResponse(
-                "success",
-                "Users permanently deleted",
-                deletedUsers
-        ));
+        return ResponseEntity.ok(
+                new ApiResponse(
+                        "success",
+                        "Users permanently deleted",
+                        deletedUsers
+                )
+        );
     }
 
     /**
@@ -896,6 +1053,24 @@ public class UserService {
 
     /* ====================== HELPER METHODS ====================== */
 
+    private void validateManagementAction(
+            User actor,
+            User target,
+            boolean allowSelf
+    ) {
+        if (!privilegesChecker.isAuthorizedWithinDepartment(actor, target)) {
+            throw new UnauthorizedAccessException(
+                    "Not authorized to manage user: " + target.getUsername()
+            );
+        }
+
+        if (!allowSelf && actor.getId().equals(target.getId())) {
+            throw new UnauthorizedAccessException(
+                    "Self destructive operations prohibited"
+            );
+        }
+    }
+
     /* =====================================================
    SOFT DELETE OLD IMAGES
    ===================================================== */
@@ -937,6 +1112,14 @@ public class UserService {
         );
 
         for (String url : uploadedUrls.keySet()) {
+            UUID imageBranchId =
+                    target.getBranches()
+                            .stream()
+                            .filter(UserBranch::isPrimaryBranch)
+                            .map(ub -> ub.getBranch().getId())
+                            .findFirst()
+                            .orElseThrow();
+
             UserImage img = UserImage.builder()
                     .fileName(Paths.get(url).getFileName().toString())
                     .filePath(url)
@@ -944,6 +1127,7 @@ public class UserService {
                     .user(target)
                     .uploadedAt(LocalDateTime.now())
                     .deleted(false)
+                    .branchId(imageBranchId)
                     .build();
 
             userImageRepository.save(img);
@@ -1182,13 +1366,22 @@ public class UserService {
             transactionalFileManager.track(physicalFile);
 
             // Persist UserImage in DB with API-friendly URL
+            UUID imageBranchId =
+                    user.getBranches()
+                            .stream()
+                            .filter(UserBranch::isPrimaryBranch)
+                            .map(ub -> ub.getBranch().getId())
+                            .findFirst()
+                            .orElseThrow();
+
             UserImage image = UserImage.builder()
                     .fileName(fileName)
-                    .filePath(apiUrl)       // ✅ store API URL, not disk path
+                    .filePath(apiUrl)
                     .fileDescription(apiUrls.get(apiUrl))
                     .user(user)
                     .uploadedAt(LocalDateTime.now())
                     .deleted(false)
+                    .branchId(imageBranchId)
                     .build();
             userImageRepository.save(image);
 

@@ -49,7 +49,7 @@ public class BranchController {
        CREATE
        ==================================== */
 
-    @TenantSupervisorOnly
+    @TenantAdminOnly
     @PostMapping
     public ResponseEntity<ApiResponse> create(
             @RequestBody BranchDTO request,
@@ -92,7 +92,7 @@ public class BranchController {
        UPDATE
        ==================================== */
 
-    @TenantSupervisorOnly
+    @TenantManagerOnly
     @PatchMapping("/{id}")
     public ResponseEntity<BranchDTO> update(
             @PathVariable UUID id,

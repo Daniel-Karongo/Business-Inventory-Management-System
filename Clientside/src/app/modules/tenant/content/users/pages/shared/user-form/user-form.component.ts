@@ -92,6 +92,8 @@ export class UserFormComponent implements OnInit {
                 );
             });
         });
+
+        this.syncDisabledStates();
     }
 
     @Output() save = new EventEmitter<any>();
@@ -112,9 +114,12 @@ export class UserFormComponent implements OnInit {
     });
 
     ngOnInit() {
+
         if (!this.emails.length) this.addEmail();
         if (!this.phones.length) this.addPhone();
         if (!this.assignments.length) this.addAssignment();
+
+        this.syncDisabledStates();
     }
 
     get emails() {
@@ -127,6 +132,37 @@ export class UserFormComponent implements OnInit {
 
     get assignments() {
         return this.form.get('departmentsAndPositions') as FormArray<FormGroup>;
+    }
+
+    private syncDisabledStates(): void {
+
+        const selfEdit =
+            this.mode === 'edit'
+            && this.targetUserId === this.currentUserId;
+
+        const editingAnotherUser =
+            this.mode === 'edit'
+            && !!this.targetUserId
+            && !!this.currentUserId
+            && this.targetUserId !== this.currentUserId;
+
+        const roleCtrl = this.form.get('role');
+        const passCtrl = this.form.get('password');
+        const confirmCtrl = this.form.get('confirmPassword');
+
+        if (selfEdit) {
+            roleCtrl?.disable({ emitEvent: false });
+        } else {
+            roleCtrl?.enable({ emitEvent: false });
+        }
+
+        if (editingAnotherUser) {
+            passCtrl?.disable({ emitEvent: false });
+            confirmCtrl?.disable({ emitEvent: false });
+        } else {
+            passCtrl?.enable({ emitEvent: false });
+            confirmCtrl?.enable({ emitEvent: false });
+        }
     }
 
     addEmail() {
