@@ -18,7 +18,7 @@
 
 .image-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 16px;
 }
 
@@ -144,6 +144,7 @@ body.dark .image-card:hover {
 
 .audit-file {
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .audit-meta {
@@ -169,6 +170,10 @@ body.dark .image-card:hover {
   color: #3b82f6;
 }
 
+.audit-action.retrieve {
+  color: #8b5cf6;
+}
+
 .image-card.deleted {
   opacity: 0.55;
 }
@@ -187,4 +192,47 @@ body.dark .image-card:hover {
   font-size: 0.75rem;
   color: var(--text-secondary);
   margin-left: 6px;
+}
+
+.actions button[color="warn"] {
+  border: 1px solid rgba(239, 68, 68, .2);
+}
+
+.actions button[color="warn"]:hover {
+  background: rgba(239, 68, 68, .08);
+}
+
+@media (max-width: 640px) {
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .toolbar button {
+    width: 100%;
+  }
+
+  .audit-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .audit-action {
+    align-self: flex-start;
+  }
+
+  .actions button {
+    width: 44px;
+    height: 44px;
+  }
+
+}
+
+@media (max-width:480px) {
+  .image-grid {
+    grid-template-columns: 1fr;
+  }
 }

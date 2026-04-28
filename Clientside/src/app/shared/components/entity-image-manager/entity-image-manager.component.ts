@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnChanges } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,6 +9,7 @@ import { Observable } from 'rxjs';
 
 import { FileViewerDialog } from '../file-viewer/file-viewer.component';
 import { ImageUploadDialogComponent } from '../image-upload-dialog/image-upload-dialog.component';
+import { ReasonDialogComponent } from '../reason-dialog/reason-dialog.component';
 
 export interface EntityImage {
   fileName: string;
@@ -18,14 +19,27 @@ export interface EntityImage {
   pdf?: boolean;
 }
 
+export type EntityImageAuditAction =
+  | 'UPLOAD'
+  | 'SOFT_DELETE'
+  | 'DELETE'
+  | 'RESTORE'
+  | 'RETRIEVE'
+  | 'DOWNLOAD'
+  | 'SOFT_DELETE_ALL'
+  | 'DELETE_ALL'
+  | 'RESTORE_ALL';
+
 export interface EntityImageAudit {
   fileName: string;
-  action: 'UPLOAD' | 'DELETE' | 'RESTORE' | 'HARD_DELETE';
+  action: EntityImageAuditAction | string; // tolerant of future backend additions
+  reason?: string | null;
   performedByUsername: string;
   timestamp: string;
 }
 
 export interface EntityImageAdapter {
+
   listImages(id: string): Observable<EntityImage[]>;
   listImageAudits(id: string): Observable<EntityImageAudit[]>;
 
@@ -40,9 +54,24 @@ export interface EntityImageAdapter {
     files: { file: File; description: string }[]
   ): Observable<any>;
 
-  softDeleteImage(id: string, fileName: string): Observable<any>;
-  restoreImage(id: string, fileName: string): Observable<any>;
-  hardDeleteImage(id: string, fileName: string): Observable<any>;
+  softDeleteImage(
+    id: string,
+    fileName: string,
+    reason?: string | null
+  ): Observable<any>;
+
+  restoreImage(
+    id: string,
+    fileName: string,
+    reason?: string | null
+  ): Observable<any>;
+
+  hardDeleteImage(
+    id: string,
+    fileName: string,
+    reason?: string | null
+  ): Observable<any>;
+
 }
 
 @Component({
@@ -76,20 +105,30 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
   constructor(
     private snackbar: MatSnackBar,
     private dialog: MatDialog
-  ) {}
+  ) { }
 
-  ngOnInit(): void {
+  ngOnInit() {
     if (this.entityId) {
       this.loadAll();
     }
   }
 
-  ngOnChanges(): void {
-    if (this.entityId) {
+  ngOnChanges(changes: SimpleChanges) {
+    if (
+      changes['entityId'] &&
+      !changes['entityId'].firstChange &&
+      this.entityId
+    ) {
       this.loadAll();
     }
   }
 
+  ngOnDestroy(): void {
+    this.imageUrlMap.forEach(url =>
+      URL.revokeObjectURL(url)
+    );
+  }
+  
   /* ================= LOAD ================= */
 
   private loadAll() {
@@ -158,6 +197,28 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
     });
   }
 
+  displayAction(action: string): string {
+    switch (action) {
+      case 'SOFT_DELETE':
+        return 'Soft Delete';
+
+      case 'SOFT_DELETE_ALL':
+        return 'Bulk Soft Delete';
+
+      case 'DELETE':
+        return 'Hard Delete';
+
+      case 'DELETE_ALL':
+        return 'Bulk Hard Delete';
+
+      case 'RESTORE_ALL':
+        return 'Bulk Restore';
+
+      default:
+        return action.replaceAll('_', ' ');
+    }
+  }
+
   /* ================= VIEW ================= */
 
   view(img: EntityImage) {
@@ -222,25 +283,162 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
   /* ================= ACTIONS ================= */
 
   primaryAction(img: EntityImage) {
-    const action$ = img.deleted
-      ? this.adapter.restoreImage(this.entityId, img.fileName)
-      : this.adapter.softDeleteImage(this.entityId, img.fileName);
 
-    action$.subscribe(() => {
-      this.snackbar.open(
-        img.deleted ? 'Document restored' : 'Document deleted',
-        'Close',
-        { duration: 2000 }
-      );
-      this.loadAll();
-    });
+    const restoring = !!img.deleted;
+
+    const ref = this.dialog.open(
+      ReasonDialogComponent,
+      {
+        width: '480px',
+        data: {
+          title: restoring
+            ? 'Restore Document'
+            : 'Soft Delete Document',
+
+          message: restoring
+            ? 'Restore this document and make it active again?'
+            : 'Soft-delete this document? It can be restored later.',
+
+          action: restoring
+            ? 'RESTORE'
+            : 'DELETE',
+
+          confirmText: restoring
+            ? 'Restore'
+            : 'Delete',
+
+          cancelText: 'Cancel',
+
+          reasons: [
+            'Duplicate',
+            'Outdated',
+            'Incorrect file',
+            'Administrative cleanup'
+          ],
+
+          allowCustomReason: true
+        }
+      }
+    );
+
+    ref.afterClosed()
+      .subscribe(result => {
+
+        if (!result?.confirmed) {
+          return;
+        }
+
+        const reason = result.reason ?? null;
+
+        const action$ = restoring
+          ? this.adapter.restoreImage(
+            this.entityId,
+            img.fileName,
+            reason
+          )
+          : this.adapter.softDeleteImage(
+            this.entityId,
+            img.fileName,
+            reason
+          );
+
+        action$.subscribe({
+          next: () => {
+
+            this.snackbar.open(
+              restoring
+                ? 'Document restored'
+                : 'Document deleted (recoverable)',
+              'Close',
+              { duration: 3000 }
+            );
+
+            this.loadAll();
+          },
+
+          error: () => {
+
+            this.snackbar.open(
+              restoring
+                ? 'Restore failed'
+                : 'Delete failed',
+              'Close',
+              { duration: 4000 }
+            );
+
+          }
+        });
+
+      });
+
   }
 
   hardDelete(img: EntityImage) {
-    this.adapter.hardDeleteImage(this.entityId, img.fileName)
-      .subscribe(() => {
-        this.snackbar.open('Document permanently deleted', 'Close', { duration: 2000 });
-        this.loadAll();
+
+    const ref = this.dialog.open(
+      ReasonDialogComponent,
+      {
+        width: '500px',
+        data: {
+          title: 'Permanent Delete',
+
+          message:
+            'Permanently delete this document? This cannot be undone.',
+
+          action: 'DELETE',
+
+          confirmText: 'Delete Permanently',
+
+          cancelText: 'Cancel',
+
+          reasons: [
+            'Legal retention expired',
+            'Corrupted file',
+            'Duplicate permanent purge',
+            'Security cleanup'
+          ],
+
+          allowCustomReason: true
+        }
+      }
+    );
+
+    ref.afterClosed()
+      .subscribe(result => {
+
+        if (!result?.confirmed) {
+          return;
+        }
+
+        this.adapter.hardDeleteImage(
+          this.entityId,
+          img.fileName,
+          result.reason ?? null
+        )
+          .subscribe({
+            next: () => {
+
+              this.snackbar.open(
+                'Document permanently deleted',
+                'Close',
+                { duration: 4000 }
+              );
+
+              this.loadAll();
+            },
+
+            error: () => {
+
+              this.snackbar.open(
+                'Permanent delete failed',
+                'Close',
+                { duration: 4000 }
+              );
+
+            }
+          });
+
       });
+
   }
 }

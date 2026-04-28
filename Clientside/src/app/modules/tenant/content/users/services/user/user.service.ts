@@ -236,20 +236,30 @@ export class UserService {
     );
   }
 
-  restoreImage(identifier: string, filename: string) {
+  restoreImage(
+    identifier: string,
+    filename: string,
+    reason?: string | null
+  ) {
 
     return this.http.patch(
       `${this.base}/images/${identifier}/${filename}/restore`,
-      {},
+      reason ?? '',
       { responseType: 'text' }
     );
   }
 
-  softDeleteImage(identifier: string, filename: string) {
-
+  softDeleteImage(
+    identifier: string,
+    filename: string,
+    reason?: string | null
+  ) {
     return this.http.delete(
       `${this.base}/images/${identifier}/${filename}/soft`,
-      { responseType: 'text' }
+      {
+        body: reason ?? '',
+        responseType: 'text'
+      }
     );
   }
 
@@ -261,11 +271,18 @@ export class UserService {
     );
   }
 
-  hardDeleteImage(identifier: string, filename: string) {
+  hardDeleteImage(
+    identifier: string,
+    filename: string,
+    reason?: string | null
+  ) {
 
     return this.http.delete(
       `${this.base}/images/${identifier}/${filename}/hard`,
-      { responseType: 'text' }
+      {
+        body: reason ?? '',
+        responseType: 'text'
+      }
     );
   }
 

@@ -11,26 +11,24 @@ import java.util.UUID;
 public interface UserImageAuditRepository extends JpaRepository<UserImageAudit, UUID> {
 
     @Query("""
-        SELECT ua
-        FROM UserImageAudit ua
-        WHERE ua.tenantId = :tenantId
-          AND ua.branchId = :branchId
-          AND ua.userId = :userId
-        ORDER BY ua.timestamp DESC
-    """)
+                SELECT ua
+                FROM UserImageAudit ua
+                WHERE ua.tenantId = :tenantId
+                  AND ua.userId = :userId
+                ORDER BY ua.timestamp DESC
+            """)
     List<UserImageAudit> findByUserIdOrderByTimestampDesc(
             @Param("tenantId") UUID tenantId,
             @Param("userId") UUID userId
     );
 
     @Query("""
-        SELECT ua
-        FROM UserImageAudit ua
-        WHERE ua.tenantId = :tenantId
-          AND ua.branchId = :branchId
-          AND ua.performedById = :performedById
-        ORDER BY ua.timestamp DESC
-    """)
+            SELECT ua
+            FROM UserImageAudit ua
+            WHERE ua.tenantId=:tenantId
+            AND ua.performedById=:performedById
+            ORDER BY ua.timestamp DESC
+            """)
     List<UserImageAudit> findByPerformedByIdOrderByTimestampDesc(
             @Param("tenantId") UUID tenantId,
             @Param("performedById") UUID performedById

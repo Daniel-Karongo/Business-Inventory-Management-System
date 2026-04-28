@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -33,10 +34,24 @@ public interface UserImageRepository extends JpaRepository<UserImage, UUID> {
     );
 
     @Query("""
-        SELECT ui
-        FROM UserImage ui
-        JOIN FETCH ui.user
-        WHERE ui.tenantId = :tenantId
-    """)
+                SELECT ui
+                FROM UserImage ui
+                JOIN FETCH ui.user
+                WHERE ui.tenantId = :tenantId
+            """)
     Page<UserImage> findByTenantIdWithUser(UUID tenantId, Pageable pageable);
+
+    @Query("""
+                SELECT ui
+                FROM UserImage ui
+                WHERE ui.user.id = :userId
+                  AND ui.tenantId = :tenantId
+                  AND (:deleted IS NULL OR ui.deleted = :deleted)
+                ORDER BY ui.uploadedAt DESC
+            """)
+    List<UserImage> findImagesForUser(
+            @Param("tenantId") UUID tenantId,
+            @Param("userId") UUID userId,
+            @Param("deleted") Boolean deleted
+    );
 }

@@ -26,6 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
@@ -279,15 +280,49 @@ public class UserImageService {
         return response;
     }
 
+    @Transactional(readOnly = true)
     public List<UserImageDTO> getAllUserImagesForAUser(
             String identifier,
             Authentication authentication,
             Boolean deleted
     ) {
-        User target = validateAccess(identifier, authentication, "view");
 
-        return target.getImages().stream()
-                .filter(img -> deleted == null || img.getDeleted().equals(deleted))
+        User target = validateAccess(
+                identifier,
+                authentication,
+                "view"
+        );
+
+        List<UserImage> images =
+                userImageRepository.findImagesForUser(
+                        tenantId(),
+                        target.getId(),
+                        deleted
+                );
+
+        if(images.isEmpty()){
+            return List.of();
+        }
+
+        User actor =
+                privilegesChecker.getAuthenticatedUser(
+                        authentication
+                );
+
+        userImageAuditRepository.save(
+                UserImageAudit.builder()
+                        .userId(target.getId())
+                        .username(target.getUsername())
+                        .fileName("ALL")
+                        .filePath("ALL")
+                        .action("RETRIEVE")
+                        .performedById(actor.getId())
+                        .performedByUsername(actor.getUsername())
+                        .timestamp(LocalDateTime.now())
+                        .build()
+        );
+
+        return images.stream()
                 .map(UserImageMapper::toDto)
                 .toList();
     }
@@ -439,7 +474,7 @@ public class UserImageService {
                 .body(resource);
     }
 
-    public ResponseEntity<?> softdeleteUserImage(String identifier, String filename, Authentication authentication) throws IOException {
+    public ResponseEntity<?> softdeleteUserImage(String identifier, String filename, Authentication authentication, String reason) throws IOException {
         User target = validateAccess(identifier, authentication, "delete");
 
         userImageRepository.findByUserAndFileName(target, filename).ifPresent(image -> {
@@ -454,6 +489,7 @@ public class UserImageService {
                     .filePath(image.getFilePath())
                     .action("SOFT_DELETE")
                     .performedById(privilegesChecker.getAuthenticatedUser(authentication).getId())
+                    .reason(reason)
                     .performedByUsername(privilegesChecker.getAuthenticatedUser(authentication).getUsername())
                     .timestamp(LocalDateTime.now())
                     .build());
@@ -491,7 +527,7 @@ public class UserImageService {
         return ResponseEntity.ok("All user images deleted for user: " + target.getUploadFolder());
     }
 
-    public ResponseEntity<?> restoreUserImage(String identifier, String filename, Authentication authentication) throws IOException {
+    public ResponseEntity<?> restoreUserImage(String identifier, String filename, Authentication authentication, String reason) throws IOException {
         User target = validateAccess(identifier, authentication, "restore");
 
         Optional<UserImage> imageOpt = userImageRepository.findByUserAndFileName(target, filename);
@@ -521,6 +557,7 @@ public class UserImageService {
                 .fileName(image.getFileName())
                 .filePath(image.getFilePath())
                 .action("RESTORE")
+                .reason(reason)
                 .performedById(privilegesChecker.getAuthenticatedUser(authentication).getId())
                 .performedByUsername(privilegesChecker.getAuthenticatedUser(authentication).getUsername())
                 .timestamp(LocalDateTime.now())
@@ -558,7 +595,7 @@ public class UserImageService {
         return ResponseEntity.ok("All soft-deleted images restored for user: " + target.getUploadFolder());
     }
 
-    public ResponseEntity<?> harddeleteUserImage(String identifier, String filename, Authentication authentication) throws IOException {
+    public ResponseEntity<?> harddeleteUserImage(String identifier, String filename, Authentication authentication, String reason) throws IOException {
         User target = validateAccess(identifier, authentication, "delete");
         Path userDir = fileStorageService.userRoot()
                 .resolve(target.getUploadFolder())
@@ -593,6 +630,7 @@ public class UserImageService {
                     .filePath(image.getFilePath())
                     .action("DELETE")
                     .performedById(privilegesChecker.getAuthenticatedUser(authentication).getId())
+                    .reason(reason)
                     .performedByUsername(privilegesChecker.getAuthenticatedUser(authentication).getUsername())
                     .timestamp(LocalDateTime.now())
                     .build());

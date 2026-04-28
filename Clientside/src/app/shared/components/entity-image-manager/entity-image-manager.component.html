@@ -39,15 +39,28 @@
             </div>
 
             <div class="actions">
-                <button mat-icon-button (click)="primaryAction(img)"
-                    [matTooltip]="img.deleted ? 'Restore document' : 'Delete document'">
-                    <mat-icon>{{ img.deleted ? 'restore' : 'delete' }}</mat-icon>
+
+                <button mat-icon-button (click)="primaryAction(img)" [matTooltip]="
+                    img.deleted
+                    ? 'Restore document'
+                    : 'Soft delete (can be restored)'
+                ">
+
+                    <mat-icon>
+                        {{ img.deleted ? 'restore' : 'delete' }}
+                    </mat-icon>
+
                 </button>
 
-                <button *ngIf="img.deleted && allowHardDelete" mat-icon-button color="warn"
-                    matTooltip="Delete permanently" (click)="hardDelete(img)">
-                    <mat-icon>delete_forever</mat-icon>
+                <button *ngIf="img.deleted && allowHardDelete" mat-icon-button color="warn" (click)="hardDelete(img)"
+                    matTooltip="Permanent delete (cannot be undone)">
+
+                    <mat-icon>
+                        delete_forever
+                    </mat-icon>
+
                 </button>
+
             </div>
 
         </div>
@@ -71,15 +84,24 @@
                     </div>
                 </div>
 
-                <div class="audit-action" [class.upload]="audit.action === 'UPLOAD'"
-                    [class.delete]="audit.action === 'DELETE'" [class.restore]="audit.action === 'RESTORE'"
-                    [class.hard]="audit.action === 'HARD_DELETE'">
-                    {{ audit.action }}
+                <div class="audit-action" [class.upload]="audit.action === 'UPLOAD'" [class.delete]="
+                    audit.action === 'SOFT_DELETE' ||
+                    audit.action === 'DELETE' ||
+                    audit.action === 'SOFT_DELETE_ALL' ||
+                    audit.action === 'DELETE_ALL'
+                    " [class.restore]="
+                    audit.action === 'RESTORE' ||
+                    audit.action === 'RESTORE_ALL'
+                    " [class.retrieve]="
+                    audit.action === 'RETRIEVE' ||
+                    audit.action === 'DOWNLOAD'
+                ">
+
+                    {{ displayAction(audit.action) }}
+
                 </div>
             </div>
         </div>
 
     </details>
 </div>
-
-

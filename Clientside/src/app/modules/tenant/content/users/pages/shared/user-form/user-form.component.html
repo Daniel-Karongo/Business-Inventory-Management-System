@@ -1,0 +1,258 @@
+<div class="user-form-shell">
+
+    <div class="hero">
+        <h2>User Profile</h2>
+
+        <div class="hero-meta" *ngIf="mode==='edit'">
+            Editing account settings
+        </div>
+    </div>
+
+    <form [formGroup]="form">
+
+        <section class="panel">
+
+            <h3>Identity</h3>
+
+            <div class="grid">
+
+                <mat-form-field appearance="fill">
+                    <mat-label>Username</mat-label>
+                    <input matInput formControlName="username">
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+                    <mat-label>ID Number</mat-label>
+                    <input matInput formControlName="idNumber">
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+                    <mat-label>Role</mat-label>
+
+                    <mat-select formControlName="role" [disabled]="mode==='edit' && targetUserId===currentUserId">
+
+                        <mat-option *ngFor="let r of roles" [value]="r">
+                            {{r}}
+                        </mat-option>
+
+                    </mat-select>
+
+                </mat-form-field>
+
+            </div>
+
+        </section>
+
+        <section class="panel" *ngIf="mode==='create' || targetUserId===currentUserId">
+
+            <h3>Credentials</h3>
+
+            <div class="credential-hint" *ngIf="mode==='edit' && !credentialChangePending()">
+
+                <mat-icon>info</mat-icon>
+                Leave password blank to keep the current password unchanged.
+
+            </div>
+
+            <div class="grid">
+
+                <mat-form-field appearance="fill">
+                    <mat-label>Password</mat-label>
+                    <input matInput [type]="showPassword ? 'text':'password'" formControlName="password"
+                        [disabled]="mode==='edit' && targetUserId !== currentUserId">
+                    <button mat-icon-button matSuffix type="button" (click)="showPassword=!showPassword">
+                        <mat-icon>{{showPassword?'visibility_off':'visibility'}}</mat-icon>
+                    </button>
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+                    <mat-label>Confirm Password</mat-label>
+                    <input matInput [type]="showPassword ? 'text':'password'" formControlName="confirmPassword"
+                        [disabled]="mode==='edit' && targetUserId !== currentUserId">
+                    <mat-error *ngIf="passwordMismatch()">
+                        Passwords do not match
+                    </mat-error>
+                </mat-form-field>
+
+            </div>
+
+            <div class="warning-banner" *ngIf="mode==='edit' && credentialChangePending()">
+                <mat-icon>warning</mat-icon>
+                Changing username or password will sign this user out of all active sessions.
+            </div>
+
+            <div class="info-banner" *ngIf="mode==='edit' && targetUserId !== currentUserId">
+
+                <mat-icon>lock</mat-icon>
+
+                Password changes are restricted.
+                Users may only change their own password.
+
+            </div>
+
+        </section>
+
+        <section class="panel">
+            <h3>Email Addresses</h3>
+
+            <div formArrayName="emailAddresses">
+                <div *ngFor="let c of emails.controls;let i=index" class="repeat-row">
+                    <mat-form-field appearance="fill">
+                        <mat-label>Email</mat-label>
+                        <input matInput [formControlName]="i">
+                    </mat-form-field>
+
+                    <button mat-icon-button type="button" (click)="removeEmail(i)">
+                        <mat-icon>delete</mat-icon>
+                    </button>
+                </div>
+            </div>
+
+            <button mat-stroked-button type="button" (click)="addEmail()">
+                Add Email
+            </button>
+
+        </section>
+
+        <section class="panel">
+            <h3>Phone Numbers</h3>
+
+            <div formArrayName="phoneNumbers">
+                <div *ngFor="let c of phones.controls;let i=index" class="repeat-row">
+                    <mat-form-field appearance="fill">
+                        <mat-label>Phone</mat-label>
+                        <input matInput [formControlName]="i">
+                    </mat-form-field>
+
+                    <button mat-icon-button type="button" (click)="removePhone(i)">
+                        <mat-icon>delete</mat-icon>
+                    </button>
+                </div>
+            </div>
+
+            <button mat-stroked-button type="button" (click)="addPhone()">
+                Add Phone
+            </button>
+
+        </section>
+
+        <section class="panel">
+
+            <h3>Assignments</h3>
+
+            <div formArrayName="departmentsAndPositions">
+
+                <div *ngFor="let g of assignments.controls;let i=index" [formGroupName]="i" class="assignment-row">
+
+                    <mat-form-field appearance="fill">
+                        <mat-label>Branch</mat-label>
+                        <mat-select formControlName="branchId">
+                            <mat-option *ngFor="let b of branches" [value]="b.id">
+                                {{b.name}}
+                            </mat-option>
+                        </mat-select>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="fill">
+                        <mat-label>Department</mat-label>
+                        <mat-select formControlName="departmentId">
+                            <mat-option *ngFor="let d of departmentsForBranch(g.get('branchId')?.value)" [value]="d.id">
+                                {{d.name}}
+                            </mat-option>
+                        </mat-select>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="fill">
+                        <mat-label>Position</mat-label>
+                        <mat-select formControlName="position">
+                            <mat-option value="member">Member</mat-option>
+                            <mat-option value="head">Head</mat-option>
+                        </mat-select>
+                    </mat-form-field>
+
+                    <button mat-icon-button type="button" (click)="removeAssignment(i)">
+                        <mat-icon>delete</mat-icon>
+                    </button>
+
+                </div>
+
+            </div>
+
+            <button mat-stroked-button type="button" (click)="addAssignment()">
+                Add Assignment
+            </button>
+
+            <div class="info-banner" *ngIf="
+                mode==='create' &&
+                (
+                assignments.length === 0 ||
+                (
+                    assignments.length === 1 &&
+                    !assignments.at(0).get('branchId')?.value &&
+                    !assignments.at(0).get('departmentId')?.value
+                )
+                )
+            ">
+
+                <mat-icon>info</mat-icon>
+
+                No assignment selected.
+                User will automatically be assigned
+                MAIN / GENERAL on creation.
+
+            </div>
+        </section>
+
+        <section class="panel" *ngIf="mode === 'create'">
+
+            <h3>Documents</h3>
+
+            <div class="upload-toolbar">
+
+                <button mat-stroked-button type="button" (click)="openFilePicker()">
+                    <mat-icon>upload</mat-icon>
+                    Add Document
+                </button>
+
+            </div>
+
+            <div class="file-list" *ngIf="pendingFiles.length">
+
+                <div class="file-row" *ngFor="let f of pendingFiles;let i=index">
+
+                    <div class="file-meta">
+                        <div class="file-name">
+                            {{f.file.name}}
+                        </div>
+
+                        <div class="file-desc">
+                            {{f.description}}
+                        </div>
+                    </div>
+
+                    <button mat-icon-button type="button" (click)="removePendingFile(i)">
+                        <mat-icon>delete</mat-icon>
+                    </button>
+
+                </div>
+
+            </div>
+
+            <div class="empty-upload" *ngIf="!pendingFiles.length">
+                No documents attached
+            </div>
+
+        </section>
+        <div class="actions">
+            <button mat-stroked-button type="button" (click)="cancel.emit()">
+                Cancel
+            </button>
+
+            <button mat-flat-button type="button" [disabled]="loading" (click)="submit()">
+                {{mode==='create'?'Create User':'Save Changes'}}
+            </button>
+
+        </div>
+
+    </form>
+</div>

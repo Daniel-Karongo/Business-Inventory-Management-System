@@ -12,10 +12,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.user.model.User
 import com.IntegrityTechnologies.business_manager.modules.person.user.service.UserBulkService;
 import com.IntegrityTechnologies.business_manager.modules.person.user.service.UserImageService;
 import com.IntegrityTechnologies.business_manager.modules.person.user.service.UserService;
-import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.PlatformAdminOnly;
-import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
-import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
-import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -203,7 +200,7 @@ public class UserController {
 
     /* ====================== HARD DELETE ====================== */
 
-    @PlatformAdminOnly
+    @TenantSuperuserOnly
     @DeleteMapping("/hard/{id}")
     public ResponseEntity<ApiResponse> hardDeleteUser(
             @PathVariable UUID id,
@@ -213,7 +210,7 @@ public class UserController {
         return userService.hardDeleteUser(id, authentication);
     }
 
-    @PlatformAdminOnly
+    @TenantSuperuserOnly
     @DeleteMapping("/hard/bulk")
     public ResponseEntity<ApiResponse> hardDeleteUsersInBulk(
             @RequestBody List<UUID> userIds,
@@ -291,9 +288,15 @@ public class UserController {
     public ResponseEntity<?> softdeleteUserImage(
             @PathVariable String identifier,
             @PathVariable String filename,
+            @RequestBody(required=false) String reason,
             Authentication authentication
     ) throws IOException {
-        return userImageService.softdeleteUserImage(identifier, filename, authentication);
+        return userImageService.softdeleteUserImage(
+                identifier,
+                filename,
+                authentication,
+                reason
+        );
     }
 
     @TenantManagerOnly
@@ -301,9 +304,10 @@ public class UserController {
     public ResponseEntity<?> restoreUserImage(
             @PathVariable String identifier,
             @PathVariable String filename,
+            @RequestBody(required=false) String reason,
             Authentication authentication
     ) throws IOException {
-        return userImageService.restoreUserImage(identifier, filename, authentication);
+        return userImageService.restoreUserImage(identifier, filename, authentication, reason);
     }
 
     @TenantManagerOnly
@@ -315,17 +319,18 @@ public class UserController {
         return userImageService.restoreAllUserImages(identifier, authentication);
     }
 
-    @PlatformAdminOnly
+    @TenantSuperuserOnly
     @DeleteMapping("/images/{identifier}/{filename:.+}/hard")
     public ResponseEntity<?> harddeleteUserImage(
             @PathVariable String identifier,
             @PathVariable String filename,
+            @RequestBody(required=false) String reason,
             Authentication authentication
     ) throws IOException {
-        return userImageService.harddeleteUserImage(identifier, filename, authentication);
+        return userImageService.harddeleteUserImage(identifier, filename, authentication, reason);
     }
 
-    @PlatformAdminOnly
+    @TenantSuperuserOnly
     @DeleteMapping("/images/all/{identifier}/hard")
     public ResponseEntity<?> harddeleteAllUserImages(
             @PathVariable String identifier,
@@ -336,7 +341,7 @@ public class UserController {
 
     /* ====================== AUDITS ====================== */
 
-    @PlatformAdminOnly
+    @TenantManagerOnly
     @GetMapping("/audits/{identifier}/target")
     public ResponseEntity<Page<UserAudit>> getUserAuditsTarget(
             @PathVariable String identifier,
@@ -350,7 +355,7 @@ public class UserController {
         );
     }
 
-    @PlatformAdminOnly
+    @TenantManagerOnly
     @GetMapping("/audits/{identifier}/doer")
     public ResponseEntity<List<UserAudit>> getUserAuditsPerpetrated(
             @PathVariable String identifier
@@ -364,7 +369,7 @@ public class UserController {
 
     }
 
-    @PlatformAdminOnly
+    @TenantManagerOnly
     @GetMapping("/images/audits/{identifier}/receiver")
     public ResponseEntity<List<UserImageAuditDTO>> getUserImageAuditsTarget(
             @PathVariable String identifier
@@ -381,7 +386,7 @@ public class UserController {
 
     }
 
-    @PlatformAdminOnly
+    @TenantManagerOnly
     @GetMapping("/images/audits/{identifier}/doer")
     public ResponseEntity<List<UserImageAudit>> getUserImageAuditsPerpetrated(
             @PathVariable String identifier

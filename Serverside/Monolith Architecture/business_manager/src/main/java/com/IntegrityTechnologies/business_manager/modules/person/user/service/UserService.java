@@ -21,6 +21,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.user.dto.UserDT
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.*;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.service.SubscriptionGuard;
+import com.IntegrityTechnologies.business_manager.security.auth.service.AuthService;
 import com.IntegrityTechnologies.business_manager.security.util.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
@@ -65,6 +66,7 @@ public class UserService {
     private final UserDepartmentRepository userDepartmentRepository;
     private final UserBranchRepository userBranchRepository;
     private final SubscriptionGuard subscriptionGuard;
+    private final AuthService authService;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -192,9 +194,13 @@ public class UserService {
     /* ====================== UPDATE USER ====================== */
     @Transactional
     @CacheEvict(
-        value = "users",
-        allEntries = true)
+            value = "users",
+            allEntries = true)
     public UserDTO updateUser(String identifier, UserDTO updatedData, Authentication authentication) throws IOException {
+
+        boolean usernameChanged = false;
+        boolean passwordChanged = false;
+
         String updaterUsername = (authentication != null && authentication.getPrincipal() instanceof UserDetails userDetails)
                 ? userDetails.getUsername()
                 : null;
@@ -217,15 +223,25 @@ public class UserService {
         Map<String, String[]> changes = new HashMap<>();
 
         // 4️⃣ Username
-        if (updatedData.getUsername() != null && !updatedData.getUsername().isBlank()
+        if (updatedData.getUsername() != null
+                && !updatedData.getUsername().isBlank()
                 && !updatedData.getUsername().equals(user.getUsername())) {
+
             if (userRepository.existsByUsernameAndTenantId(
                     updatedData.getUsername(),
-                    TenantContext.getTenantId()
-            ))
+                    tenantId()
+            )) {
                 throw new InvalidUserDataException("Username already in use");
-            changes.put("username", new String[]{user.getUsername(), updatedData.getUsername()});
+            }
+
+            changes.put(
+                    "username",
+                    new String[]{user.getUsername(), updatedData.getUsername()}
+            );
+
             user.setUsername(updatedData.getUsername());
+
+            usernameChanged = true;
         }
 
         // 5️⃣ Emails
@@ -258,14 +274,44 @@ public class UserService {
             user.setIdNumber(updatedData.getIdNumber());
         }
 
-        // 8️⃣ Password
-        if (updatedData.getPassword() != null && !updatedData.getPassword().isBlank()) {
-            user.setPassword(passwordEncoder.encode(updatedData.getPassword()));
+        // 8️⃣ Password (SELF-SERVICE ONLY ENFORCEMENT)
+        if (updatedData.getPassword() != null
+                && !updatedData.getPassword().isBlank()) {
+        /*
+         Only the authenticated user may change
+         their own password.
+        */
+            if (!updater.getId().equals(user.getId())) {
+
+                userAuditRepository.save(
+                        UserAudit.builder()
+                                .userId(user.getId())
+                                .username(user.getUsername())
+                                .action("PASSWORD_CHANGE_BLOCKED")
+                                .reason("Attempted password change for another user denied")
+                                .performedById(updater.getId())
+                                .performedByUsername(updaterUsername)
+                                .timestamp(LocalDateTime.now())
+                                .build()
+                );
+
+                throw new UnauthorizedAccessException(
+                        "Users may only change their own password."
+                );
+            }
+
+            user.setPassword(
+                    passwordEncoder.encode(
+                            updatedData.getPassword()
+                    )
+            );
+
+            passwordChanged = true;
         }
 
         // 9️⃣ Role
         if (updatedData.getRole() != null) {
-            if (user.getUsername().equals(updaterUsername))
+            if (user.getId().equals(updater.getId()))
                 throw new UnauthorizedAccessException("You cannot change your own role");
 
             Role newRole = Role.valueOf(updatedData.getRole().toUpperCase());
@@ -279,6 +325,29 @@ public class UserService {
 
         // 1️⃣0️⃣ Save and audit
         user = userRepository.save(user);
+
+        boolean credentialsChanged =
+                usernameChanged || passwordChanged;
+
+        if (credentialsChanged) {
+
+            authService.logoutAllSessions(
+                    user.getId(),
+                    true
+            );
+
+            userAuditRepository.save(
+                    UserAudit.builder()
+                            .userId(user.getId())
+                            .username(user.getUsername())
+                            .action("FORCED_LOGOUT_ALL")
+                            .reason("All sessions revoked due to credential change")
+                            .performedById(updater.getId())
+                            .performedByUsername(updaterUsername)
+                            .timestamp(LocalDateTime.now())
+                            .build()
+            );
+        }
 
         applyDepartmentAndBranchAssignments(updatedData, user, authentication);
 
@@ -470,17 +539,14 @@ public class UserService {
 
         return switch (field) {
 
-            case "username" ->
-                    Comparator.comparing(u -> Optional.ofNullable(u.getUsername()).orElse("").toLowerCase());
+            case "username" -> Comparator.comparing(u -> Optional.ofNullable(u.getUsername()).orElse("").toLowerCase());
 
-            case "role" ->
-                    Comparator.comparing(u -> Optional.ofNullable(u.getRole()).map(Enum::name).orElse(""));
+            case "role" -> Comparator.comparing(u -> Optional.ofNullable(u.getRole()).map(Enum::name).orElse(""));
 
             case "createdAt" ->
                     Comparator.comparing(User::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()));
 
-            case "deleted" ->
-                    Comparator.comparing(u -> Optional.ofNullable(u.getDeleted()).orElse(false));
+            case "deleted" -> Comparator.comparing(u -> Optional.ofNullable(u.getDeleted()).orElse(false));
 
             default -> null;
         };
@@ -550,6 +616,7 @@ public class UserService {
     public List<UserImageAudit> getUserImageAuditsTarget(UUID userId) {
         return userImageAuditRepository.findByUserIdOrderByTimestampDesc(tenantId(), userId);
     }
+
     public List<UserImageAudit> getUserImageAuditsPerpetrated(UUID userId) {
         return userImageAuditRepository.findByPerformedByIdOrderByTimestampDesc(tenantId(), userId);
     }
@@ -560,8 +627,8 @@ public class UserService {
 
     @Transactional
     @CacheEvict(
-        value = "users",
-        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#id)")
+            value = "users",
+            key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#id)")
     public ResponseEntity<ApiResponse> softDeleteUser(UUID id, Authentication authentication, String reason) {
         User user = userRepository
                 .findByIdAndTenantId(id, tenantId())
@@ -581,8 +648,8 @@ public class UserService {
 
     @Transactional
     @CacheEvict(
-        value = "users",
-        allEntries = true
+            value = "users",
+            allEntries = true
     )
     public ResponseEntity<ApiResponse> softDeleteUsersInBulk(List<UUID> userIds, String reason, Authentication authentication) {
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
@@ -602,7 +669,9 @@ public class UserService {
         ));
     }
 
-    /** Internal helper for soft delete */
+    /**
+     * Internal helper for soft delete
+     */
     private Map<String, Object> softDeleteUserInternal(User user, UUID performedById, String performedByUsername, String reason) {
         // Audit user
         userAuditRepository.save(UserAudit.builder()
@@ -645,8 +714,8 @@ public class UserService {
 
     @Transactional
     @CacheEvict(
-        value = "users",
-        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#id)")
+            value = "users",
+            key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#id)")
     public ResponseEntity<ApiResponse> restoreUser(UUID id, Authentication authentication, String reason) throws IOException {
         User user = userRepository.findByIdAndTenantId(id, tenantId())
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
@@ -665,8 +734,8 @@ public class UserService {
 
     @Transactional
     @CacheEvict(
-        value = "users",
-        allEntries = true
+            value = "users",
+            allEntries = true
     )
     public ResponseEntity<ApiResponse> restoreUsersInBulk(List<UUID> userIds, String reason, Authentication authentication) throws IOException {
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
@@ -686,7 +755,9 @@ public class UserService {
         ));
     }
 
-    /** Internal helper for restore */
+    /**
+     * Internal helper for restore
+     */
     private Map<String, Object> restoreUserInternal(User user, UUID performedById, String performedByUsername, String reason) throws IOException {
         // Audit restore
         userAuditRepository.save(UserAudit.builder()
@@ -729,8 +800,8 @@ public class UserService {
 
     @Transactional
     @CacheEvict(
-        value = "users",
-        key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#id)")
+            value = "users",
+            key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#id)")
     public ResponseEntity<ApiResponse> hardDeleteUser(UUID id, Authentication authentication) throws IOException {
         User user = userRepository.findByIdAndTenantId(id, tenantId())
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
@@ -749,8 +820,8 @@ public class UserService {
 
     @Transactional
     @CacheEvict(
-        value = "users",
-        allEntries = true
+            value = "users",
+            allEntries = true
     )
     public ResponseEntity<ApiResponse> hardDeleteUsersInBulk(List<UUID> userIds, Authentication authentication) throws IOException {
         UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
@@ -770,7 +841,9 @@ public class UserService {
         ));
     }
 
-    /** Internal helper for hard delete */
+    /**
+     * Internal helper for hard delete
+     */
     private Map<String, Object> hardDeleteUserInternal(User user, UUID performedById, String performedByUsername) throws IOException {
         // Audit hard delete
         userAuditRepository.save(UserAudit.builder()
@@ -890,7 +963,6 @@ public class UserService {
     }
 
 
-
     private void checkEmailUniqueness(Set<String> emails) {
         UUID tenantId = TenantContext.getTenantId();
         for (String email : emails) {
@@ -907,7 +979,9 @@ public class UserService {
             if (!oldEmails.contains(email)) {
                 userRepository.findByEmailElementIgnoreCase(email, tenantId())
                         .filter(u -> !u.getId().equals(currentUserId))
-                        .ifPresent(u -> { throw new InvalidUserDataException("Email already in use: " + email); });
+                        .ifPresent(u -> {
+                            throw new InvalidUserDataException("Email already in use: " + email);
+                        });
             }
         }
     }
@@ -928,7 +1002,9 @@ public class UserService {
             if (!oldPhones.contains(phone)) {
                 userRepository.findByPhoneNumberElement(phone, tenantId())
                         .filter(u -> !u.getId().equals(currentUserId))
-                        .ifPresent(u -> { throw new InvalidUserDataException("Phone number already in use: " + phone); });
+                        .ifPresent(u -> {
+                            throw new InvalidUserDataException("Phone number already in use: " + phone);
+                        });
             }
         }
     }

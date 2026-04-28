@@ -1,229 +1,371 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import {
-  FormArray,
-  FormBuilder,
-  FormGroup,
-  Validators,
-  ReactiveFormsModule
-} from '@angular/forms';
+import { CommonModule } from '@angular/common';
 
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTabsModule } from '@angular/material/tabs';
 
-import { UserService } from '../../services/user/user.service';
-import { RoleService } from '../../services/role/role.service';
-import { BranchService } from '../../../branches/services/branch.service';
-import { DepartmentService } from '../../../departments/services/department.service';
+import { PageShellComponent }
+  from '../../../../../../shared/layout/page-shell/page-shell.component';
 
-import { User } from '../../models/user.model';
-import {
-  DepartmentAssignmentDTO,
-  DepartmentDTO
-} from '../../../departments/models/department.model';
-import { BranchHierarchyDTO } from '../../../branches/models/branch.model';
+import { UserFormComponent }
+  from '../shared/user-form/user-form.component';
+
+import { EntityImageManagerComponent }
+  from '../../../../../../shared/components/entity-image-manager/entity-image-manager.component';
+
+import { UserService }
+  from '../../services/user/user.service';
+
+import { UserImageAdapter }
+  from '../../services/user/user-image.adapter';
+
+import { RoleService }
+  from '../../services/role/role.service';
+
+import { BranchService }
+  from '../../../branches/services/branch.service';
+
+import { DepartmentService }
+  from '../../../departments/services/department.service';
+
+import { AuthService }
+  from '../../../../../auth/services/auth.service';
+
 
 @Component({
-  selector: 'app-user-edit',
   standalone: true,
+
   imports: [
     CommonModule,
-    ReactiveFormsModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatSelectModule,
-    MatInputModule,
-    MatButtonModule,
-    MatIconModule,
-    MatSnackBarModule
+    PageShellComponent,
+    UserFormComponent,
+    EntityImageManagerComponent,
+    MatTabsModule
   ],
-  templateUrl: './user-edit.component.html',
-  styleUrls: ['./user-edit.component.scss']
+
+  template: `
+<app-page-shell>
+
+<div page-content>
+
+<section class="edit-workspace">
+
+<mat-tab-group
+ class="user-tabs"
+ animationDuration="150ms"
+ dynamicHeight>
+
+<mat-tab label="Profile">
+
+<div class="tab-pane profile-pane">
+
+<app-user-form
+[currentUserId]="currentUserId"
+mode="edit"
+[value]="user"
+[loading]="loading"
+[roles]="roles"
+[branches]="branches"
+[departments]="departments"
+(save)="save($event)"
+(cancel)="cancel()">
+</app-user-form>
+
+</div>
+
+</mat-tab>
+
+
+<mat-tab label="Documents">
+
+<div class="tab-pane">
+
+<div class="documents-panel">
+
+<header class="documents-header">
+<h3>Documents</h3>
+<p>
+Manage uploads, deleted files
+and document lifecycle.
+</p>
+</header>
+
+<app-entity-image-manager
+*ngIf="user?.username"
+[entityId]="user.username"
+[adapter]="imageAdapter"
+[allowHardDelete]="true">
+</app-entity-image-manager>
+
+</div>
+
+</div>
+
+</mat-tab>
+
+</mat-tab-group>
+
+</section>
+
+</div>
+
+</app-page-shell>
+`,
+
+  styles: [`
+
+:host{
+display:block;
+}
+
+[page-content]{
+padding-bottom:40px;
+}
+
+
+/* one outer wrapper only */
+.edit-workspace{
+margin-top:8px;
+}
+
+
+/* soften tabs */
+.user-tabs{
+background:transparent;
+}
+
+
+/* remove ugly boxed divisions */
+.tab-pane{
+padding:20px 0 8px 0;
+}
+
+
+/* make form feel primary */
+.profile-pane{
+padding-top:8px;
+}
+
+
+/* documents section should feel related,
+not like another independent page */
+.documents-panel{
+margin-top:10px;
+padding:24px 26px;
+border-radius:16px;
+background:var(--surface);
+border:1px solid var(--border);
+box-shadow:0 2px 8px rgba(0,0,0,.03);
+}
+
+
+/* cleaner header */
+.documents-header{
+margin-bottom:18px;
+}
+
+.documents-header h3{
+margin:0;
+font-size:.95rem;
+font-weight:600;
+letter-spacing:.01em;
+}
+
+.documents-header p{
+margin:6px 0 0;
+font-size:.82rem;
+color:var(--text-secondary);
+line-height:1.45;
+}
+
+
+/* remove nested "card inside card" feel */
+.documents-panel app-entity-image-manager{
+display:block;
+margin-top:14px;
+}
+
+
+/* Angular Material tab polish */
+::ng-deep .mat-mdc-tab-header{
+border-bottom:1px solid var(--border);
+margin-bottom:8px;
+}
+
+::ng-deep .mat-mdc-tab{
+min-width:120px;
+}
+
+::ng-deep .mdc-tab__text-label{
+font-size:.88rem;
+font-weight:500;
+}
+
+
+/* mobile */
+@media(max-width:700px){
+
+.tab-pane{
+padding-top:14px;
+}
+
+.documents-panel{
+padding:16px;
+border-radius:12px;
+}
+
+}
+
+`]
+
 })
-export class UserEditComponent implements OnInit {
+export class UserEditComponent {
 
-  form!: FormGroup;
-  originalUsername = '';
+  private api = inject(UserService);
+  private rolesApi = inject(RoleService);
+  private branchApi = inject(BranchService);
+  private deptApi = inject(DepartmentService);
+  private auth = inject(AuthService);
 
-  roles: any[] = [];
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private snack = inject(MatSnackBar);
+
+  imageAdapter = UserImageAdapter(this.api);
+
+  id =
+    this.route.snapshot.paramMap.get('username')!;
+
+  loading = false;
+
+  user: any;
+
+  roles: string[] = [];
   branches: any[] = [];
-  departments: DepartmentDTO[] = [];
+  departments: any[] = [];
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private fb: FormBuilder,
-    private userService: UserService,
-    private roleService: RoleService,
-    private branchService: BranchService,
-    private departmentService: DepartmentService,
-    private snackbar: MatSnackBar
-  ) { }
+  currentUserId = '';
 
-  /* ============================================================
-     INIT
-  ============================================================ */
 
-  ngOnInit(): void {
-    const username = this.route.snapshot.paramMap.get('username');
-    if (!username) return;
+  constructor() {
 
-    this.originalUsername = username;
-
-    this.form = this.fb.group({
-      username: ['', Validators.required],
-      idNumber: [''],
-      role: ['', Validators.required],
-
-      emailsInput: [''],
-      phonesInput: [''],
-
-      departmentsAndPositions: this.fb.array([])
-    });
-
-    this.roleService.list().subscribe(r => (this.roles = r));
-    this.branchService.getAll().subscribe(b => (this.branches = b));
-    this.departmentService.getAll().subscribe(d => (this.departments = d));
-
-    this.userService.get(username).subscribe(user => this.patchUser(user));
-  }
-
-  /* ============================================================
-     ASSIGNMENTS (FORM ARRAY)
-  ============================================================ */
-
-  get assignments(): FormArray<FormGroup> {
-    return this.form.get('departmentsAndPositions') as FormArray<FormGroup>;
-  }
-
-  addAssignment(data?: DepartmentAssignmentDTO) {
-    const group = this.fb.group({
-      branchId: [data?.branchId || '', Validators.required],
-      departmentId: [data?.departmentId || '', Validators.required],
-      position: [data?.position || 'member', Validators.required]
-    });
-
-    // reset department when branch changes
-    group.get('branchId')!.valueChanges.subscribe(() => {
-      group.get('departmentId')!.reset();
-    });
-
-    this.assignments.push(group);
-  }
-
-  removeAssignment(index: number) {
-    this.assignments.removeAt(index);
-  }
-
-  /**
-   * Correct filtering:
-   * DepartmentDTO does NOT have branchId
-   * It has branches: BranchMinimalDTO[]
-   */
-  departmentsForBranch(branchId: string): DepartmentDTO[] {
-    if (!branchId) return [];
-    return this.departments.filter(dep =>
-      dep.branches?.some(b => b.id === branchId)
-    );
-  }
-
-  /* ============================================================
-     PATCH USER (READ SIDE)
-  ============================================================ */
-
-  private patchUser(user: User) {
-    this.form.patchValue({
-      username: user.username,
-      idNumber: user.idNumber,
-      role: user.role,
-      emailsInput: (user.emailAddresses || []).join(', '),
-      phonesInput: (user.phoneNumbers || []).join(', ')
-    });
-
-    // Clear existing assignments
-    this.assignments.clear();
-
-    // 🔑 READ from branchHierarchy (authoritative read model)
-    if (user.branchHierarchy?.length) {
-      this.hydrateAssignmentsFromHierarchy(user.branchHierarchy);
-    }
-  }
-
-  /**
-   * Converts READ-ONLY BranchHierarchyDTO[]
-   * → WRITE DepartmentAssignmentDTO[]
-   */
-  private hydrateAssignmentsFromHierarchy(
-    hierarchy: BranchHierarchyDTO[]
-  ) {
-    hierarchy.forEach(branch => {
-      branch.departments.forEach(dep => {
-        this.addAssignment({
-          branchId: branch.branchId,
-          departmentId: dep.departmentId,
-          position:
-            dep.position?.toLowerCase() === 'head'
-              ? 'head'
-              : 'member'
-        });
+    this.auth.getCurrentUser()
+      .subscribe(me => {
+        this.currentUserId =
+          me?.userId || '';
       });
-    });
+
+    this.rolesApi.list()
+      .subscribe(r => {
+        this.roles =
+          r.map(x => x.name);
+      });
+
+    this.branchApi.getAll()
+      .subscribe(v => {
+        this.branches = v;
+      });
+
+    this.deptApi.getAll()
+      .subscribe(v => {
+        this.departments = v;
+      });
+
+    this.api.get(this.id)
+      .subscribe(v => {
+        this.user = v;
+      });
+
   }
 
-  /* ============================================================
-     SUBMIT (WRITE SIDE)
-  ============================================================ */
 
-  submit() {
-    if (this.form.invalid) return;
 
-    const payload: Partial<User> = {
-      username: this.form.value.username,
-      idNumber: this.form.value.idNumber,
-      role: this.form.value.role,
-      emailAddresses: this.split(this.form.value.emailsInput),
-      phoneNumbers: this.split(this.form.value.phonesInput),
-      departmentsAndPositions: this.assignments.value
-    };
+  save(payload: any) {
 
-    this.userService.update(this.originalUsername, payload).subscribe({
+    this.loading = true;
+
+    this.api.update(
+      this.id,
+      payload
+    ).subscribe({
+
       next: () => {
-        this.snackbar.open('User updated successfully', 'Close', {
-          duration: 2000
-        });
-        this.router.navigate(
-          ['../../', payload.username],
-          { relativeTo: this.route }
+
+        this.loading = false;
+
+        const credentialChanged =
+          payload.username !== this.user?.username ||
+          !!payload.password?.trim();
+
+        const message =
+          credentialChanged
+            ? 'User updated. All active sessions were revoked.'
+            : 'User updated successfully';
+
+        this.snack.open(
+          message,
+          'Close',
+          { duration: 6000 }
         );
+
+        const selfCredentialChange =
+          this.currentUserId === this.user?.id &&
+          (
+            payload.username !== this.user?.username ||
+            !!payload.password?.trim()
+          );
+
+        if (selfCredentialChange) {
+
+          this.snack.open(
+            'Credentials changed. You have been signed out.',
+            'Close',
+            { duration: 5000 }
+          );
+
+          this.auth.logout();
+
+          this.router.navigate(
+            ['/auth/login']
+          );
+
+          return;
+
+        }
+
+        this.router.navigate(
+          ['/app/users', payload.username]
+        );
+
       },
-      error: () =>
-        this.snackbar.open('Failed to update user', 'Close', {
-          duration: 3000
-        })
+
+      error: (err) => {
+
+        this.loading = false;
+
+        this.snack.open(
+          err?.error?.message ||
+          err?.error?.detail ||
+          'Update failed',
+          'Close',
+          { duration: 6000 }
+        );
+
+      }
+
     });
+
   }
+
+
 
   cancel() {
+
     this.router.navigate(
-      ['../'],
-      { relativeTo: this.route }
+      ['/app/users', this.id]
     );
+
   }
 
-  /* ============================================================
-     UTIL
-  ============================================================ */
-
-  private split(v: string): string[] {
-    return (v || '')
-      .split(',')
-      .map(x => x.trim())
-      .filter(Boolean);
-  }
 }

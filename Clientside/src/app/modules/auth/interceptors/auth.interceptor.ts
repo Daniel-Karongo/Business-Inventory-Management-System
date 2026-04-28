@@ -17,8 +17,6 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     }
   });
 
-  console.log("X-Device-Id HEADER:", deviceService.getDeviceId());
-
   return next(req).pipe(
     catchError(err => {
 

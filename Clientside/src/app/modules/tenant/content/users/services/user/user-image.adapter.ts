@@ -18,12 +18,36 @@ export const UserImageAdapter = (
   uploadImages: (id: string, files) =>
     service.uploadImages(id, files),
 
-  softDeleteImage: (id: string, fileName: string) =>
-    service.softDeleteImage(id, fileName),
+  softDeleteImage: (
+    id: string,
+    fileName: string,
+    reason?: string | null
+  ) =>
+    service.softDeleteImage(
+      id,
+      fileName,
+      reason
+    ),
 
-  restoreImage: (id: string, fileName: string) =>
-    service.restoreImage(id, fileName),
+  restoreImage: (
+    id: string,
+    fileName: string,
+    reason?: string | null
+  ) =>
+    service.restoreImage(
+      id,
+      fileName,
+      reason
+    ),
 
-  hardDeleteImage: (id: string, fileName: string) =>
-    service.hardDeleteImage(id, fileName)
+  hardDeleteImage: (
+    id: string,
+    fileName: string,
+    reason?: string | null
+  ) =>
+    service.hardDeleteImage(
+      id,
+      fileName,
+      reason
+    )
 });
