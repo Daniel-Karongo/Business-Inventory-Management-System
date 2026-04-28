@@ -34,3 +34,33 @@
   font-size: 0.85rem;
   color: var(--text-secondary);
 }
+
+.rollcall-mobile {
+  display: none;
+}
+
+@media(max-width:768px) {
+
+  .rollcall-desktop {
+    display: none;
+  }
+
+  .rollcall-mobile {
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .rollcall-card {
+    padding: 14px;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .rollcall-card div {
+    padding: 6px 0;
+    overflow-wrap: anywhere;
+  }
+
+}

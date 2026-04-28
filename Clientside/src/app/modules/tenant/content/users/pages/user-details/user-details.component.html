@@ -13,25 +13,62 @@
     </button>
   </div>
 
-  <div class="content-grid">
+  <div class="content-stack">
 
     <!-- LEFT -->
     <mat-card class="identity-card">
-      <div class="avatar">{{ initials() }}</div>
-      <div class="user-id" *ngIf="canViewUserId()">
-        {{ user.id }}
-      </div>
-      <div class="username">{{ user.username }}</div>
 
-      <div class="role-chip" [class.deleted]="user.deleted">
-        {{ user.deleted ? 'DISABLED' : user.role }}
+      <div class="identity-hero">
+
+        <ng-container *ngIf="hasThumbnail(); else fallbackAvatar">
+          <img [src]="thumbnailObjectUrl" class="profile-thumb" alt="User profile image">
+        </ng-container>
+
+        <ng-template #fallbackAvatar>
+          <div class="avatar-fallback">
+            {{ initials() }}
+          </div>
+        </ng-template>
+
+        <div class="identity-meta">
+
+          <div class="username-row">
+            <h3>{{ user.username }}</h3>
+
+            <span class="status-pill" [class.disabled]="user.deleted">
+              {{ status() }}
+            </span>
+
+          </div>
+
+          <div class="user-id" *ngIf="canViewUserId()">
+            {{ user.id }}
+          </div>
+
+          <div class="mini-stats">
+
+            <div class="stat">
+              <span>Branches</span>
+              <strong>
+                {{ user.branchHierarchy?.length || 0 }}
+              </strong>
+            </div>
+
+            <div class="stat">
+              <span>Departments</span>
+              <strong>
+                {{ departmentCount() }}
+              </strong>
+            </div>
+
+          </div>
+
+        </div>
+
       </div>
 
       <div class="identity-actions" *ngIf="canManageUser()">
-
-        <!-- SOFT DISABLE -->
-        <button mat-stroked-button *ngIf="canManageUser()" [color]="user.deleted ? 'primary' : 'warn'"
-          (click)="toggleUser()">
+        <button mat-stroked-button [color]="user.deleted ? 'primary' : 'warn'" (click)="toggleUser()">
 
           <mat-icon>
             {{ user.deleted ? 'restore' : 'block' }}
@@ -41,6 +78,7 @@
 
         </button>
       </div>
+
     </mat-card>
 
     <!-- RIGHT -->
@@ -79,18 +117,20 @@
                 <div>{{ status() }}</div>
               </div>
 
-              <div class="col-span-2">
-                <label>Branches & Departments</label>
+              <div class="assignment-grid">
+                <div class="assignment-card" *ngFor="let b of user.branchHierarchy">
 
-                <div class="branch-block" *ngFor="let b of user.branchHierarchy">
-                  <div class="branch-name">{{ b.branchName }}</div>
+                  <h4>{{ b.branchName }}</h4>
 
-                  <ul class="department-list">
-                    <li *ngFor="let d of b.departments">
-                      <span class="dept-name">{{ d.departmentName }}</span>
-                      <span class="dept-role">{{ d.position }}</span>
-                    </li>
-                  </ul>
+                  <div class="dept-chip-row">
+                    <span class="dept-chip" *ngFor="let d of b.departments">
+
+                      {{ d.departmentName }}
+                      <small>{{ d.position }}</small>
+
+                    </span>
+                  </div>
+
                 </div>
               </div>
             </div>
@@ -135,5 +175,3 @@
 <ng-template #loadingTpl>
   <div class="loading">Loading user…</div>
 </ng-template>
-
-

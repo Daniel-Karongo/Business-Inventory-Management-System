@@ -54,6 +54,8 @@ export class UserDetailsComponent implements OnInit {
   rollcallCount = 0;
   imageAdapter!: any;
 
+  thumbnailObjectUrl = '';
+
   private actionConfig!: EntityActionConfig<User>;
 
   constructor(
@@ -67,10 +69,7 @@ export class UserDetailsComponent implements OnInit {
 
   ngOnInit() {
 
-    console.log("Hello");
     const username = this.route.snapshot.paramMap.get('username');
-    console.log("Hello");
-    console.log(username);
 
     if (!username) return;
 
@@ -83,15 +82,55 @@ export class UserDetailsComponent implements OnInit {
     this.userService.get(username).subscribe({
       next: u => {
         this.user = u;
+
+        if (u.profileThumbnailUrl) {
+
+          const fileName =
+            u.profileThumbnailUrl
+              .split('/')
+              .pop();
+
+          this.userService
+            .getUserImageBlob(
+              u.id!,
+              fileName!
+            )
+            .subscribe(blob => {
+              this.thumbnailObjectUrl =
+                URL.createObjectURL(blob);
+            });
+        }
+
         this.loading = false;
         this.initializeActionConfig();
         this.loadCounts();
-      },
-      error: () => {
-        this.snackbar.open('Failed to load user', 'Close', { duration: 3000 });
-        this.loading = false;
       }
     });
+  }
+
+  hasThumbnail(): boolean {
+    return !!this.user?.profileThumbnailUrl;
+  }
+
+  thumbnailUrl(): string {
+    if (!this.user?.profileThumbnailUrl) {
+      return '';
+    }
+
+    return this.user.profileThumbnailUrl.startsWith('/api')
+      ? this.user.profileThumbnailUrl
+      : `/api${this.user.profileThumbnailUrl}`;
+  }
+
+  departmentCount(): number {
+
+    return (this.user?.branchHierarchy || [])
+      .reduce(
+        (sum: number, b: any) =>
+          sum + (b?.departments?.length || 0),
+        0
+      );
+
   }
 
   /* ================= ACTION CONFIG ================= */

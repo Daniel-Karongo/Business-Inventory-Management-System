@@ -31,14 +31,26 @@ export const ProductImageAdapter =
     },
 
     softDeleteImage: () => {
-      throw new Error('Delete not allowed from selector');
+      throw new Error(
+        'Delete not allowed from selector'
+      );
     },
 
     restoreImage: () => {
-      throw new Error('Restore not allowed from selector');
+      throw new Error(
+        'Restore not allowed from selector'
+      );
     },
 
     hardDeleteImage: () => {
-      throw new Error('Hard delete not allowed from selector');
+      throw new Error(
+        'Hard delete not allowed from selector'
+      );
+    },
+
+    setProfileThumbnail: () => {
+      throw new Error(
+        'Profile thumbnails not supported for products'
+      );
     }
   });

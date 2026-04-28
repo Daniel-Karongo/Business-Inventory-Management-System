@@ -40,6 +40,14 @@
 
             <div class="actions">
 
+                <button *ngIf="adapter.setProfileThumbnail" mat-icon-button (click)="makePrimary(img)">
+
+                    <mat-icon>
+                        account_circle
+                    </mat-icon>
+
+                </button>
+
                 <button mat-icon-button (click)="primaryAction(img)" [matTooltip]="
                     img.deleted
                     ? 'Restore document'

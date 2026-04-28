@@ -18,6 +18,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.department.mode
 import com.IntegrityTechnologies.business_manager.modules.person.department.model.DepartmentMembershipRole;
 import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.user.dto.UserDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.user.mapper.UserImageMapper;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.*;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.service.SubscriptionGuard;
@@ -1071,6 +1072,35 @@ public class UserService {
         }
     }
 
+    private void enforceSingleProfileThumbnail(
+            User user,
+            String incomingDescription
+    ) {
+
+        if (incomingDescription == null ||
+                !incomingDescription.trim()
+                        .equalsIgnoreCase("profile-thumbnail")) {
+            return;
+        }
+
+        List<UserImage> existing =
+                userImageRepository.findByUser(user);
+
+        existing.stream()
+                .filter(i -> !Boolean.TRUE.equals(i.getDeleted()))
+                .filter(i ->
+                        i.getFileDescription() != null &&
+                                i.getFileDescription()
+                                        .trim()
+                                        .equalsIgnoreCase("profile-thumbnail")
+                )
+                .forEach(i -> {
+                    // demote old thumbnail back to normal image
+                    i.setFileDescription("passport");
+                    userImageRepository.save(i);
+                });
+    }
+
     /* =====================================================
    SOFT DELETE OLD IMAGES
    ===================================================== */
@@ -1119,11 +1149,18 @@ public class UserService {
                             .map(ub -> ub.getBranch().getId())
                             .findFirst()
                             .orElseThrow();
+            String description =
+                    uploadedUrls.get(url);
+
+            enforceSingleProfileThumbnail(
+                    target,
+                    description
+            );
 
             UserImage img = UserImage.builder()
                     .fileName(Paths.get(url).getFileName().toString())
                     .filePath(url)
-                    .fileDescription(uploadedUrls.get(url))
+                    .fileDescription(description)
                     .user(target)
                     .uploadedAt(LocalDateTime.now())
                     .deleted(false)
@@ -1374,10 +1411,17 @@ public class UserService {
                             .findFirst()
                             .orElseThrow();
 
+            String description = apiUrls.get(apiUrl);
+
+            enforceSingleProfileThumbnail(
+                    user,
+                    description
+            );
+
             UserImage image = UserImage.builder()
                     .fileName(fileName)
                     .filePath(apiUrl)
-                    .fileDescription(apiUrls.get(apiUrl))
+                    .fileDescription(description)
                     .user(user)
                     .uploadedAt(LocalDateTime.now())
                     .deleted(false)
@@ -1497,6 +1541,11 @@ public class UserService {
                 .role(user.getRole() != null ? user.getRole().name() : null)
                 .deleted(Boolean.TRUE.equals(user.getDeleted()))
                 .createdAt(user.getCreatedAt())
+                .profileThumbnailUrl(
+                        UserImageMapper.resolveProfileThumbnail(
+                                user.getImages()
+                        )
+                )
                 .build();
 
         Map<Branch, List<DepartmentPositionDTO>> grouped = new HashMap<>();

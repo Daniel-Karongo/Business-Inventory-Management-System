@@ -114,6 +114,84 @@ public class UserImageService {
         if (path.toFile().getFreeSpace() < fileSize) throw new StorageFullException("Not enough disk space to save file");
     }
 
+    @Transactional
+    public ResponseEntity<?> setProfileThumbnail(
+            String identifier,
+            String filename,
+            Authentication authentication
+    ) {
+
+        User target = validateAccess(
+                identifier,
+                authentication,
+                "set thumbnail"
+        );
+
+        UserImage selected =
+                userImageRepository
+                        .findByUserAndFileName(
+                                target,
+                                filename
+                        )
+                        .orElseThrow(() ->
+                                new ImageNotFoundException(
+                                        "Image not found: " + filename
+                                )
+                        );
+
+        if (Boolean.TRUE.equals(selected.getDeleted())) {
+            throw new ImageAccessDeniedException(
+                    "Deleted image cannot be profile thumbnail"
+            );
+        }
+
+        // clear old thumbnail
+        userImageRepository.findByUser(target)
+                .stream()
+                .filter(i ->
+                        "profile-thumbnail"
+                                .equalsIgnoreCase(
+                                        i.getFileDescription()
+                                )
+                )
+                .forEach(i -> {
+                    i.setFileDescription("passport");
+                    userImageRepository.save(i);
+                });
+
+        // promote selected
+        selected.setFileDescription(
+                "profile-thumbnail"
+        );
+
+        userImageRepository.save(selected);
+
+        userImageAuditRepository.save(
+                UserImageAudit.builder()
+                        .userId(target.getId())
+                        .username(target.getUsername())
+                        .fileName(selected.getFileName())
+                        .filePath(selected.getFilePath())
+                        .action("SET_PROFILE_THUMBNAIL")
+                        .performedById(
+                                privilegesChecker
+                                        .getAuthenticatedUser(authentication)
+                                        .getId()
+                        )
+                        .performedByUsername(
+                                privilegesChecker
+                                        .getAuthenticatedUser(authentication)
+                                        .getUsername()
+                        )
+                        .timestamp(LocalDateTime.now())
+                        .build()
+        );
+
+        return ResponseEntity.ok(
+                "Profile thumbnail updated"
+        );
+    }
+
     /* ====================== RETRIEVE / DOWNLOAD / DELETE ====================== */
 
     public List<String> getAllUsersImages(Boolean deletedImages,

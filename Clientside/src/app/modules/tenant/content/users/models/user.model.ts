@@ -31,6 +31,7 @@ export interface User {
 
   // read-only
   idImageUrls?: string[];
+  profileThumbnailUrl?: string;
 }
 
 export interface MinimalUserDTO {

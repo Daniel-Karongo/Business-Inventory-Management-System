@@ -209,6 +209,16 @@ export class UserService {
     );
   }
 
+  setProfileThumbnail(
+    identifier: string,
+    fileName: string
+  ) {
+    return this.http.patch(
+      `${this.base}/images/${identifier}/${encodeURIComponent(fileName)}/thumbnail`,
+      {}
+    );
+  }
+  
   listImages(identifier: string, deleted?: boolean) {
 
     let params = new HttpParams();

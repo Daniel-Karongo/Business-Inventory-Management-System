@@ -54,6 +54,11 @@ export interface EntityImageAdapter {
     files: { file: File; description: string }[]
   ): Observable<any>;
 
+  setProfileThumbnail?(
+    id: string,
+    fileName: string
+  ): Observable<any>;
+
   softDeleteImage(
     id: string,
     fileName: string,
@@ -128,7 +133,7 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
       URL.revokeObjectURL(url)
     );
   }
-  
+
   /* ================= LOAD ================= */
 
   private loadAll() {
@@ -277,6 +282,29 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
             this.snackbar.open('Upload failed', 'Close', { duration: 3000 });
           }
         });
+      });
+  }
+
+  makePrimary(img: EntityImage) {
+
+    if (!this.adapter.setProfileThumbnail) {
+      return;
+    }
+
+    this.adapter
+      .setProfileThumbnail(
+        this.entityId,
+        img.fileName
+      )
+      .subscribe({
+        next: () => {
+          this.snackbar.open(
+            'Profile thumbnail updated',
+            'Close',
+            { duration: 3000 }
+          );
+          this.loadAll();
+        }
       });
   }
 

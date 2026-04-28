@@ -18,6 +18,15 @@ export const UserImageAdapter = (
   uploadImages: (id: string, files) =>
     service.uploadImages(id, files),
 
+  setProfileThumbnail: (
+    id: string,
+    fileName: string
+  ) =>
+    service.setProfileThumbnail(
+      id,
+      fileName
+    ),
+
   softDeleteImage: (
     id: string,
     fileName: string,

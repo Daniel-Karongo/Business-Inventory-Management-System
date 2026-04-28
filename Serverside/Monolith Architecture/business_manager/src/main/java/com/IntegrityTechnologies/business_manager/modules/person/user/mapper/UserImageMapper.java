@@ -3,6 +3,8 @@ package com.IntegrityTechnologies.business_manager.modules.person.user.mapper;
 import com.IntegrityTechnologies.business_manager.modules.person.user.dto.UserImageDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.UserImage;
 
+import java.util.List;
+
 public class UserImageMapper {
 
     public static UserImageDTO toDto(UserImage img) {
@@ -25,5 +27,80 @@ public class UserImageMapper {
                                 fileName.endsWith(".webp")
                 )
                 .build();
+    }
+
+    public static String resolveProfileThumbnail(
+            List<UserImage> images
+    ) {
+
+        if (images == null || images.isEmpty()) {
+            return null;
+        }
+
+        // 1 explicit thumbnail
+        String explicitThumbnail =
+                images.stream()
+                        .filter(i -> !Boolean.TRUE.equals(i.getDeleted()))
+                        .filter(i ->
+                                "profile-thumbnail"
+                                        .equalsIgnoreCase(
+                                                i.getFileDescription()
+                                        )
+                        )
+                        .findFirst()
+                        .map(UserImage::getFilePath)
+                        .orElse(null);
+
+        if (explicitThumbnail != null) {
+            return explicitThumbnail;
+        }
+
+        // 2 passport
+        String passport =
+                images.stream()
+                        .filter(i -> !Boolean.TRUE.equals(i.getDeleted()))
+                        .filter(i ->
+                                "passport"
+                                        .equalsIgnoreCase(
+                                                i.getFileDescription()
+                                        )
+                        )
+                        .findFirst()
+                        .map(UserImage::getFilePath)
+                        .orElse(null);
+
+        if (passport != null) {
+            return passport;
+        }
+
+        // 3 id
+        String id =
+                images.stream()
+                        .filter(i -> !Boolean.TRUE.equals(i.getDeleted()))
+                        .filter(i ->
+                                "id"
+                                        .equalsIgnoreCase(
+                                                i.getFileDescription()
+                                        )
+                        )
+                        .findFirst()
+                        .map(UserImage::getFilePath)
+                        .orElse(null);
+
+        if (id != null) {
+            return id;
+        }
+
+        // 4 any image
+        return images.stream()
+                .filter(i -> !Boolean.TRUE.equals(i.getDeleted()))
+                .filter(i ->
+                        i.getFileName().matches(
+                                ".*\\.(jpg|jpeg|png|webp)$"
+                        )
+                )
+                .findFirst()
+                .map(UserImage::getFilePath)
+                .orElse(null);
     }
 }

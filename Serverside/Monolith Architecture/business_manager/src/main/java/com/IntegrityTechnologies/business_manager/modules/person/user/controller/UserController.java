@@ -103,6 +103,21 @@ public class UserController {
         );
     }
 
+    @TenantUserOnly
+    @PatchMapping("/images/{identifier}/{filename:.+}/thumbnail")
+    public ResponseEntity<?> setProfileThumbnail(
+            @PathVariable String identifier,
+            @PathVariable String filename,
+            Authentication authentication
+    ) throws IOException {
+
+        return userImageService.setProfileThumbnail(
+                identifier,
+                filename,
+                authentication
+        );
+    }
+
     /* ====================== GET USERS ====================== */
 
     @GetMapping("/user/{identifier}")

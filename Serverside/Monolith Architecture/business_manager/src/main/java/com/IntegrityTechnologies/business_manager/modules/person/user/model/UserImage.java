@@ -47,6 +47,10 @@ public class UserImage extends BranchAwareEntity {
     @Column(nullable = false)
     private String fileDescription;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean profileThumbnail = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @ToString.Exclude
@@ -63,6 +67,10 @@ public class UserImage extends BranchAwareEntity {
 
     @PrePersist
     public void onCreate() {
+
+        if (profileThumbnail == null) {
+            profileThumbnail = false;
+        }
 
         if (uploadedAt == null) {
             uploadedAt = LocalDateTime.now();

@@ -34,6 +34,12 @@ export const SupplierImageAdapter = (service: SupplierService): EntityImageAdapt
         service.restoreImage(id, file),
 
     hardDeleteImage: (id, file) =>
-        service.hardDeleteImage(id, file)
+        service.hardDeleteImage(id, file),
+
+    setProfileThumbnail: () => {
+        throw new Error(
+            'Profile thumbnails not supported for suppliers'
+        );
+    }
 });
 

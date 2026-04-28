@@ -44,15 +44,6 @@ public class UserDTO {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private LocalDateTime createdAt;
 
-//    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-//    private String createdBy;
-//
-//    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-//    private String lastModifiedBy;
-//
-//    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-//    private LocalDateTime lastModifiedAt;
-
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private boolean deleted;
 
@@ -63,6 +54,8 @@ public class UserDTO {
     @Schema(description = "List of stored ID image URLs (response only)")
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private List<String> idImageUrls;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String profileThumbnailUrl;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private String branchCode;
