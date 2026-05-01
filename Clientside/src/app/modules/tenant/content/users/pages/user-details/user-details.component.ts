@@ -24,6 +24,8 @@ import {
   USER_ACTION_REASONS,
   UserActionType
 } from '../../models/user-action-reasons.model';
+import { firstValueFrom } from 'rxjs';
+import * as pdfjsLib from 'pdfjs-dist';
 
 @Component({
   selector: 'app-user-details',
@@ -55,6 +57,8 @@ export class UserDetailsComponent implements OnInit {
   imageAdapter!: any;
 
   thumbnailObjectUrl = '';
+  currentUserUsername = '';
+  currentUserRole = '';
 
   private actionConfig!: EntityActionConfig<User>;
 
@@ -75,32 +79,25 @@ export class UserDetailsComponent implements OnInit {
 
     this.auth.getCurrentUser().subscribe(u => {
       this.role = u?.role ?? '';
+      this.currentUserRole = u?.role ?? '';
+      this.currentUserUsername = u?.username ?? '';
     });
 
-    this.imageAdapter = UserImageAdapter(this.userService);
+    this.imageAdapter = UserImageAdapter(
+      this.userService,
+      () => {
+        this.userService.get(this.user.username, null).subscribe(u => {
+          this.user = u;
+          this.loadThumbnail(u);
+        });
+      }
+    );
 
-    this.userService.get(username).subscribe({
+    this.userService.get(username, null).subscribe({
       next: u => {
         this.user = u;
 
-        if (u.profileThumbnailUrl) {
-
-          const fileName =
-            u.profileThumbnailUrl
-              .split('/')
-              .pop();
-
-          this.userService
-            .getUserImageBlob(
-              u.id!,
-              fileName!
-            )
-            .subscribe(blob => {
-              this.thumbnailObjectUrl =
-                URL.createObjectURL(blob);
-            });
-        }
-
+        this.loadThumbnail(u);
         this.loading = false;
         this.initializeActionConfig();
         this.loadCounts();
@@ -154,12 +151,104 @@ export class UserDetailsComponent implements OnInit {
       hardDelete: (id, reason) =>
         this.userService.hardDelete(id, reason),
 
-      reload: () => {
-        this.userService.get(this.user.username).subscribe(u => {
-          this.user = u;
-        });
-      }
+      reload: () => this.reloadUserDetails()
     };
+  }
+
+  private reloadUserDetails() {
+
+    if (!this.user?.username) return;
+
+    this.loading = true;
+
+    this.userService.get(this.user.username, null).subscribe({
+      next: u => {
+        this.user = u;
+
+        // ✅ refresh thumbnail
+        this.loadThumbnail(u);
+
+        // ✅ refresh counts
+        this.loadCounts();
+
+        this.imageAdapter = UserImageAdapter(
+          this.userService,
+          () => {
+            this.userService.get(this.user.username, null).subscribe(u => {
+              this.user = u;
+              this.loadThumbnail(u);
+            });
+          }
+        );
+
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+      }
+    });
+  }
+
+  private async loadThumbnail(u: User) {
+
+    if (!u.profileThumbnailUrl) {
+      this.thumbnailObjectUrl = '';
+      return;
+    }
+
+    const fileName = u.profileThumbnailUrl.split('/').pop()!;
+    const ext = fileName.split('.').pop()?.toLowerCase();
+
+    const blob = await firstValueFrom(
+      this.userService.getUserImageBlob(u.id!, fileName, null)
+    );
+
+    if (this.thumbnailObjectUrl) {
+      URL.revokeObjectURL(this.thumbnailObjectUrl);
+    }
+
+    // ✅ IMAGE → direct render
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext!)) {
+      this.thumbnailObjectUrl = URL.createObjectURL(blob);
+      return;
+    }
+
+    // ✅ PDF → generate thumbnail (same as manager)
+    if (ext === 'pdf') {
+      this.thumbnailObjectUrl =
+        await this.generatePdfThumbnail(blob);
+    }
+  }
+
+  private async generatePdfThumbnail(blob: Blob): Promise<string> {
+    try {
+      const pdf = await pdfjsLib.getDocument({
+        data: await blob.arrayBuffer()
+      }).promise;
+
+      const page = await pdf.getPage(1);
+
+      const viewport = page.getViewport({ scale: 0.5 });
+
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+
+      if (!context) return '';
+
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+
+      await page.render({
+        canvasContext: context,
+        viewport
+      } as any).promise;
+
+      return canvas.toDataURL();
+
+    } catch (e) {
+      console.error('PDF thumbnail failed:', e);
+      return '';
+    }
   }
 
   /* ================= ROLE GUARDS ================= */
@@ -184,6 +273,28 @@ export class UserDetailsComponent implements OnInit {
     return ['ADMIN', 'SUPERUSER'].includes(this.role);
   }
 
+  isSelf(): boolean {
+    return this.user?.username === this.currentUserUsername;
+  }
+
+  canViewBiometrics(): boolean {
+    return this.isSelf();
+  }
+
+  roleRank(role: string): number {
+    return ['EMPLOYEE', 'SUPERVISOR', 'MANAGER', 'ADMIN', 'SUPERUSER'].indexOf(role);
+  }
+
+  canToggleUser(): boolean {
+    if (!this.canManageUser()) return false;
+    if (this.isSelf()) return false;
+
+    const targetRank = this.roleRank(this.user.role);
+    const currentRank = this.roleRank(this.currentUserRole);
+
+    return targetRank < currentRank;
+  }
+
   /* ================= BADGE COUNTS ================= */
 
   private loadCounts() {
@@ -195,9 +306,10 @@ export class UserDetailsComponent implements OnInit {
     }
 
     if (this.canViewImages()) {
-      this.userService.listImages(this.user.id!).subscribe(i =>
-        this.imageCount = i?.length || 0
-      );
+      this.userService.listImages(this.user.id!).subscribe({
+        next: i => this.imageCount = i?.length || 0,
+        error: () => this.imageCount = 0 // 👈 suppress error
+      });
     }
 
     if (this.canViewRollcalls()) {
@@ -236,4 +348,9 @@ export class UserDetailsComponent implements OnInit {
     );
   }
 
+  ngOnDestroy() {
+    if (this.thumbnailObjectUrl) {
+      URL.revokeObjectURL(this.thumbnailObjectUrl);
+    }
+  }
 }

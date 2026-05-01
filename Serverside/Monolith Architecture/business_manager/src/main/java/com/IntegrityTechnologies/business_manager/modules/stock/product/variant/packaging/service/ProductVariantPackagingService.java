@@ -59,7 +59,7 @@ public class ProductVariantPackagingService {
         boolean exists = packagingRepo.findByProductVariantIdAndDeletedFalse(variantId)
                 .stream()
                 .anyMatch(p ->
-                        !p.getId().equals(null) &&
+                        p.getId() != null &&
                                 normalize(p.getName()).equals(normalized)
                 );
 
@@ -81,10 +81,16 @@ public class ProductVariantPackagingService {
                 .branchId(branchId)
                 .build();
 
-        cacheInvalidationService.evictPackaging(variantId);
-        cacheInvalidationService.evictPricingByVariant(variantId, branchId);
+        ProductVariantPackaging saved = packagingRepo.save(packaging);
+        cacheInvalidationService.evictPackaging(
+                TenantContext.getTenantId(),
+                variantId
+        );
+        cacheInvalidationService.evictPricingByVariant(tenantId(), variantId);
+        cacheInvalidationService.evictVariantSearch(tenantId(), branchId);
+        cacheInvalidationService.evictBarcode(tenantId(), branchId);
 
-        return packagingRepo.save(packaging);
+        return saved;
     }
 
     /* =====================================================
@@ -117,7 +123,10 @@ public class ProductVariantPackagingService {
 
     @Cacheable(
             value = "packaging",
-            key = "T(com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.cache.SellableCacheKey).packaging(#variantId)"
+            key = "T(com.IntegrityTechnologies.business_manager.config.caffeine.CacheKeys)" +
+                    ".packaging(" +
+                    "T(com.IntegrityTechnologies.business_manager.security.util.TenantContext).getTenantId(), " +
+                    "#variantId)"
     )
     public List<ProductVariantPackaging> getPackagings(UUID variantId) {
         return packagingRepo.findByProductVariantIdAndDeletedFalse(variantId);
@@ -209,8 +218,13 @@ public class ProductVariantPackagingService {
 
         UUID variantId = packaging.getProductVariant().getId();
 
-        cacheInvalidationService.evictPackaging(variantId);
-        cacheInvalidationService.evictPricingByVariant(variantId, branchId);
+        cacheInvalidationService.evictPackaging(
+                TenantContext.getTenantId(),
+                variantId
+        );
+        cacheInvalidationService.evictPricingByVariant(tenantId(), variantId);
+        cacheInvalidationService.evictVariantSearch(tenantId(), branchId);
+        cacheInvalidationService.evictBarcode(tenantId(), branchId);
 
         boolean exists = packagingRepo.findByProductVariantIdAndDeletedFalse(variantId)
                 .stream()
@@ -246,8 +260,10 @@ public class ProductVariantPackagingService {
         packaging.setDeleted(true);
         packaging.setDeletedAt(java.time.LocalDateTime.now());
 
-        cacheInvalidationService.evictPackaging(packaging.getProductVariant().getId());
-        cacheInvalidationService.evictPricingByVariant(packaging.getProductVariant().getId(), branchId);
+        cacheInvalidationService.evictPackaging(tenantId(), packaging.getProductVariant().getId());
+        cacheInvalidationService.evictPricingByVariant(tenantId(), packaging.getProductVariant().getId());
+        cacheInvalidationService.evictVariantSearch(tenantId(), branchId);
+        cacheInvalidationService.evictBarcode(tenantId(), branchId);
 
         packagingRepo.save(packaging);
     }

@@ -44,7 +44,7 @@ public class FinancialReportCacheInvalidator {
 
             String k = key.toString();
 
-            return k.contains(tenant) && k.contains(branch);
+            return k.startsWith(tenant + "::") && k.contains("::" + branch + "::");
 
         });
     }

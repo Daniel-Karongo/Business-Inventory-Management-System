@@ -1,19 +1,46 @@
 <div class="timeline">
 
   <div *ngFor="let a of audits" class="timeline-item">
-    <mat-icon>history</mat-icon>
 
+    <!-- ICON -->
+    <div class="icon">
+      <mat-icon>
+        {{ getIcon(a.action) }}
+      </mat-icon>
+    </div>
+
+    <!-- CONTENT -->
     <div class="content">
-      <div class="title">{{ a.action }}</div>
-      <div class="meta">
-        {{ a.timestamp | date:'medium' }} — by {{ a.performedByUsername }}
+
+      <!-- ACTION TITLE -->
+      <div class="title" [class.create]="a.action === 'CREATE'" [class.update]="a.action === 'UPDATE'"
+        [class.delete]="a.action === 'SOFT_DELETE' || a.action === 'HARD_DELETE'"
+        [class.restore]="a.action === 'RESTORE'"
+        [class.security]="a.action === 'PASSWORD_CHANGE_BLOCKED' || a.action === 'FORCED_LOGOUT_ALL'">
+        {{ displayAction(a.action) }}
       </div>
-      <div class="change">
+
+      <!-- META -->
+      <div class="meta">
+        {{ a.timestamp | date:'medium' }} — {{ a.performedByUsername }}
+      </div>
+
+      <!-- FIELD CHANGE -->
+      <div class="change" *ngIf="a.fieldChanged">
+        <strong>{{ a.fieldChanged }}</strong>:
         {{ a.oldValue || '—' }} → {{ a.newValue || '—' }}
       </div>
+
+      <!-- REASON -->
+      <div class="reason" *ngIf="a.reason">
+        {{ a.reason }}
+      </div>
+
     </div>
+
   </div>
 
+  <!-- EMPTY STATE -->
   <div *ngIf="!audits.length" class="muted">
     No audit records
   </div>

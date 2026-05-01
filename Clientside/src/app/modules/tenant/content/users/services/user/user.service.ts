@@ -64,10 +64,16 @@ export class UserService {
      GET SINGLE USER
   ============================================================ */
 
-  get(identifier: string, deleted = false): Observable<User> {
+  get(
+    identifier: string,
+    deleted?: boolean | null
+  ): Observable<User> {
 
-    const params = new HttpParams()
-      .set('deleted', deleted);
+    let params = new HttpParams();
+
+    if (deleted !== undefined && deleted !== null) {
+      params = params.set('deleted', String(deleted));
+    }
 
     return this.http.get<User>(
       `${this.base}/user/${identifier}`,
@@ -218,7 +224,19 @@ export class UserService {
       {}
     );
   }
-  
+
+  updateImageDescription(
+    identifier: string,
+    fileName: string,
+    description: string
+  ) {
+    return this.http.patch(
+      `${this.base}/images/${identifier}/${encodeURIComponent(fileName)}/description`,
+      description,
+      { responseType: 'text' }
+    );
+  }
+
   listImages(identifier: string, deleted?: boolean) {
 
     let params = new HttpParams();
@@ -359,12 +377,14 @@ export class UserService {
   getUserImageBlob(
     userId: string,
     fileName: string,
-    deleted = false
+    deleted?: boolean | null
   ) {
+    let url = `${this.base}/images/${userId}/${encodeURIComponent(fileName)}`;
 
-    return this.http.get(
-      `${this.base}/images/${userId}/${encodeURIComponent(fileName)}?deleted=${deleted}`,
-      { responseType: 'blob' }
-    );
+    if (deleted !== undefined && deleted !== null) {
+      url += `?deleted=${deleted}`;
+    }
+
+    return this.http.get(url, { responseType: 'blob' });
   }
 }

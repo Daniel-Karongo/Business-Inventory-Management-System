@@ -37,16 +37,11 @@ public class UserImageMapper {
             return null;
         }
 
-        // 1 explicit thumbnail
+        // 1️⃣ explicit thumbnail (CORRECT SOURCE OF TRUTH)
         String explicitThumbnail =
                 images.stream()
                         .filter(i -> !Boolean.TRUE.equals(i.getDeleted()))
-                        .filter(i ->
-                                "profile-thumbnail"
-                                        .equalsIgnoreCase(
-                                                i.getFileDescription()
-                                        )
-                        )
+                        .filter(i -> Boolean.TRUE.equals(i.getProfileThumbnail()))
                         .findFirst()
                         .map(UserImage::getFilePath)
                         .orElse(null);
@@ -55,15 +50,12 @@ public class UserImageMapper {
             return explicitThumbnail;
         }
 
-        // 2 passport
+        // 2️⃣ fallback: passport
         String passport =
                 images.stream()
                         .filter(i -> !Boolean.TRUE.equals(i.getDeleted()))
                         .filter(i ->
-                                "passport"
-                                        .equalsIgnoreCase(
-                                                i.getFileDescription()
-                                        )
+                                "passport".equalsIgnoreCase(i.getFileDescription())
                         )
                         .findFirst()
                         .map(UserImage::getFilePath)
@@ -73,15 +65,12 @@ public class UserImageMapper {
             return passport;
         }
 
-        // 3 id
+        // 3️⃣ fallback: id
         String id =
                 images.stream()
                         .filter(i -> !Boolean.TRUE.equals(i.getDeleted()))
                         .filter(i ->
-                                "id"
-                                        .equalsIgnoreCase(
-                                                i.getFileDescription()
-                                        )
+                                "id".equalsIgnoreCase(i.getFileDescription())
                         )
                         .findFirst()
                         .map(UserImage::getFilePath)
@@ -91,13 +80,11 @@ public class UserImageMapper {
             return id;
         }
 
-        // 4 any image
+        // 4️⃣ fallback: any image
         return images.stream()
                 .filter(i -> !Boolean.TRUE.equals(i.getDeleted()))
                 .filter(i ->
-                        i.getFileName().matches(
-                                ".*\\.(jpg|jpeg|png|webp)$"
-                        )
+                        i.getFileName().matches(".*\\.(jpg|jpeg|png|webp)$")
                 )
                 .findFirst()
                 .map(UserImage::getFilePath)

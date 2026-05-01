@@ -57,6 +57,20 @@ body.dark .image-card:hover {
   object-fit: cover;
 }
 
+/* ================= ACTIVE IMAGE ================= */
+
+.image-card.active {
+  border: 2px solid var(--active);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+  transform: translateY(-4px);
+}
+
+/* subtle highlight */
+.image-card.active .filename {
+  color: var(--active);
+  font-weight: 700;
+}
+
 .pdf-card {
   height: 140px;
   display: flex;
@@ -108,6 +122,38 @@ body.dark .image-card:hover {
   transform: scale(1.02);
 }
 
+/* ================= AUDIT FILTER ================= */
+
+.active-filter {
+  font-size: 0.8rem;
+  margin-bottom: 10px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.audit-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.audit-filter label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.audit-filter select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.8rem;
+}
+
 .audit-section {
   margin-top: 32px;
   border-top: 1px solid var(--border);
@@ -129,7 +175,8 @@ body.dark .image-card:hover {
 .audit-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start; // 🔥 FIX
+  gap: 12px; // helps spacing
   padding: 8px 12px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -140,11 +187,13 @@ body.dark .image-card:hover {
 .audit-left {
   display: flex;
   flex-direction: column;
+  flex: 1; // takes available space
 }
 
 .audit-file {
   font-weight: 600;
-  overflow-wrap: anywhere;
+  white-space: normal; // 🔥 FIX (remove nowrap)
+  word-break: break-word; // ensure long strings wrap
 }
 
 .audit-meta {
@@ -156,6 +205,10 @@ body.dark .image-card:hover {
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 4px;
+
+  flex-shrink: 0; // 🔥 prevents weird squeezing
+  max-width: 140px; // optional: keeps it neat
+  text-align: right;
 }
 
 .audit-action.upload {
@@ -172,6 +225,17 @@ body.dark .image-card:hover {
 
 .audit-action.retrieve {
   color: #8b5cf6;
+}
+
+.audit-action.thumbnail {
+  color: #f59e0b;
+  // background: rgba(245, 158, 11, 0.1);
+}
+
+.audit-action.update {
+  color: #0ea5e9; // blue (edit-like)
+  // optional subtle background
+  // background: rgba(14, 165, 233, 0.1);
 }
 
 .image-card.deleted {
@@ -222,6 +286,10 @@ body.dark .image-card:hover {
 
   .audit-action {
     align-self: flex-start;
+    width: 100%;
+    max-width: none;
+    text-align: left;
+    word-break: break-word;
   }
 
   .actions button {

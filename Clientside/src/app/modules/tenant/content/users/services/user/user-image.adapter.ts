@@ -3,7 +3,8 @@ import { UserService } from './user.service';
 
 
 export const UserImageAdapter = (
-  service: UserService
+  service: UserService,
+  onThumbnailUpdated?: () => void
 ): EntityImageAdapter => ({
 
   listImages: (id: string) =>
@@ -26,6 +27,9 @@ export const UserImageAdapter = (
       id,
       fileName
     ),
+
+  updateDescription: (id, fileName, description) =>
+    service.updateImageDescription(id, fileName, description),
 
   softDeleteImage: (
     id: string,
@@ -58,5 +62,7 @@ export const UserImageAdapter = (
       id,
       fileName,
       reason
-    )
+    ),
+  
+  onThumbnailUpdated
 });

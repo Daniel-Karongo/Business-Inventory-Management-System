@@ -163,7 +163,7 @@ export class UserCreateComponent {
         this.loading = false;
 
         this.snack.open(
-          err?.error?.message || 'Create failed',
+          err?.error?.message || 'User Creation failed. Contact system support or try a little bit later',
           'Close',
           { duration: 5000 }
         );

@@ -1,15 +1,24 @@
-import { Component, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Observable } from 'rxjs';
 
+import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { FileViewerDialog } from '../file-viewer/file-viewer.component';
 import { ImageUploadDialogComponent } from '../image-upload-dialog/image-upload-dialog.component';
 import { ReasonDialogComponent } from '../reason-dialog/reason-dialog.component';
+
+import * as pdfjsLib from 'pdfjs-dist';
+import { RenameDeviceDialogComponent } from '../rename-device-dialog/rename-device-dialog.component';
+
+// 👇 THIS is the fix
+(pdfjsLib as any).GlobalWorkerOptions.workerSrc =
+  '/assets/pdf.worker.mjs';
 
 export interface EntityImage {
   fileName: string;
@@ -38,6 +47,16 @@ export interface EntityImageAudit {
   timestamp: string;
 }
 
+const ACTION_LABELS: Record<string, string> = {
+  SOFT_DELETE: 'Soft Delete',
+  DELETE: 'Hard Delete',
+  RESTORE: 'Restore',
+  RETRIEVE: 'Retrieve',
+  DOWNLOAD: 'Download',
+  UPLOAD: 'Upload',
+  UPDATE_DESCRIPTION: 'Update Description'
+};
+
 export interface EntityImageAdapter {
 
   listImages(id: string): Observable<EntityImage[]>;
@@ -59,6 +78,12 @@ export interface EntityImageAdapter {
     fileName: string
   ): Observable<any>;
 
+  updateDescription?: (
+    id: string,
+    fileName: string,
+    description: string
+  ) => Observable<any>;
+
   softDeleteImage(
     id: string,
     fileName: string,
@@ -77,6 +102,7 @@ export interface EntityImageAdapter {
     reason?: string | null
   ): Observable<any>;
 
+  onThumbnailUpdated?: () => void;
 }
 
 @Component({
@@ -86,7 +112,8 @@ export interface EntityImageAdapter {
     CommonModule,
     MatButtonModule,
     MatIconModule,
-    MatTooltipModule
+    MatTooltipModule,
+    FormsModule
   ],
   templateUrl: './entity-image-manager.component.html',
   styleUrls: ['./entity-image-manager.component.scss']
@@ -106,6 +133,9 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
   uploading = false;
 
   imageUrlMap = new Map<string, string>();
+  selectedFile: string | 'ALL' = 'ALL';
+  selectedAction: string | 'ALL' = 'ALL';
+  makingPrimary = false;
 
   constructor(
     private snackbar: MatSnackBar,
@@ -136,9 +166,45 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
 
   /* ================= LOAD ================= */
 
+  get uniqueFiles(): string[] {
+    return this.images.map(i => i.fileName);
+  }
+
+  get uniqueActions(): string[] {
+    const actions = this.audits.map(a => a.action);
+    return Array.from(new Set(actions));
+  }
+
+  get entityAuditScope(): EntityImageAudit[] {
+    const fileSet = new Set(this.images.map(i => i.fileName));
+    return this.audits.filter(a => fileSet.has(a.fileName));
+  }
+
+  get filteredAudits(): EntityImageAudit[] {
+    return this.entityAuditScope.filter(a => {
+
+      const fileMatch =
+        this.selectedFile === 'ALL' ||
+        a.fileName === this.selectedFile;
+
+      const actionMatch =
+        this.selectedAction === 'ALL' ||
+        a.action === this.selectedAction;
+
+      return fileMatch && actionMatch;
+    });
+  }
+
   private loadAll() {
+    this.selectedFile = 'ALL';
+    this.selectedAction = 'ALL';
     this.loadImages();
     this.loadAudits();
+  }
+
+  selectFile(fileName: string) {
+    this.selectedFile =
+      this.selectedFile === fileName ? 'ALL' : fileName;
   }
 
   private loadImages() {
@@ -148,14 +214,28 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
       next: imgs => {
         this.images = this.enrichTypes(imgs || []);
 
-        this.images
-          .filter(i => i.image)
-          .forEach(i => this.loadBlob(i));
+        this.images.forEach(img => {
+          if (img.image) {
+            this.loadBlob(img);
+          } else if (img.pdf) {
+            this.generatePdfThumbnail(img.fileName);
+          }
+        });
 
         this.loading = false;
       },
-      error: () => {
-        this.snackbar.open('Failed to load documents', 'Close', { duration: 3000 });
+      error: (err) => {
+
+        // 🚫 suppress "User not found" for deleted users
+        if (err?.status === 404) {
+          this.images = [];
+          this.loading = false;
+          return;
+        }
+
+        // ✅ only show real errors
+        const message = err?.error?.message || 'Failed to load images';
+        this.snackbar.open(message, 'Close', { duration: 3000 });
         this.loading = false;
       }
     });
@@ -203,24 +283,45 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
   }
 
   displayAction(action: string): string {
-    switch (action) {
-      case 'SOFT_DELETE':
-        return 'Soft Delete';
+    return ACTION_LABELS[action] ??
+      action.toLowerCase().replace(/_/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase());
+  }
 
-      case 'SOFT_DELETE_ALL':
-        return 'Bulk Soft Delete';
+  async generatePdfThumbnail(fileName: string) {
+    try {
+      const blob = await firstValueFrom(
+        this.adapter.getImageBlob(this.entityId, fileName)
+      );
 
-      case 'DELETE':
-        return 'Hard Delete';
+      if (!blob) return;
 
-      case 'DELETE_ALL':
-        return 'Bulk Hard Delete';
+      const pdf = await pdfjsLib.getDocument({
+        data: await blob.arrayBuffer()
+      }).promise;
 
-      case 'RESTORE_ALL':
-        return 'Bulk Restore';
+      const page = await pdf.getPage(1);
 
-      default:
-        return action.replaceAll('_', ' ');
+      const viewport = page.getViewport({ scale: 0.5 });
+
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+
+      if (!context) return;
+
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+
+      await page.render({
+        canvasContext: context,
+        viewport
+      } as any).promise;
+
+      const url = canvas.toDataURL();
+      this.imageUrlMap.set(fileName, url);
+
+    } catch (e) {
+      console.error('PDF thumbnail failed:', fileName, e);
     }
   }
 
@@ -285,17 +386,59 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
       });
   }
 
+  editDescription(img: EntityImage) {
+
+    if (!this.adapter.updateDescription) return;
+
+    const ref = this.dialog.open(RenameDeviceDialogComponent, {
+      width: '520px',
+      data: {
+        currentName: img.description || '',
+        title: 'Edit Document Description',
+        subtitle: 'Update the description for this document.',
+        label: 'Description'
+      }
+    });
+
+    ref.afterClosed().subscribe(result => {
+
+      if (!result) return;
+
+      this.adapter.updateDescription!(
+        this.entityId,
+        img.fileName,
+        result
+      ).subscribe({
+        next: () => {
+
+          this.snackbar.open(
+            'Description updated',
+            'Close',
+            { duration: 2500 }
+          );
+
+          this.loadAll();
+        },
+        error: () => {
+          this.snackbar.open(
+            'Failed to update description',
+            'Close',
+            { duration: 3000 }
+          );
+        }
+      });
+
+    });
+  }
+
   makePrimary(img: EntityImage) {
 
-    if (!this.adapter.setProfileThumbnail) {
-      return;
-    }
+    if (!this.adapter.setProfileThumbnail) return;
+
+    this.makingPrimary = true;
 
     this.adapter
-      .setProfileThumbnail(
-        this.entityId,
-        img.fileName
-      )
+      .setProfileThumbnail(this.entityId, img.fileName)
       .subscribe({
         next: () => {
           this.snackbar.open(
@@ -303,7 +446,23 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
             'Close',
             { duration: 3000 }
           );
+
           this.loadAll();
+
+          if (this.adapter.onThumbnailUpdated) {
+            this.adapter.onThumbnailUpdated();
+          }
+
+          this.makingPrimary = false;
+        },
+        error: (err) => {
+          const msg =
+            err?.error?.message ||
+            err?.error?.text ||
+            'Failed to update thumbnail';
+
+          this.snackbar.open(msg, 'Close', { duration: 4000 });
+          this.makingPrimary = false;
         }
       });
   }

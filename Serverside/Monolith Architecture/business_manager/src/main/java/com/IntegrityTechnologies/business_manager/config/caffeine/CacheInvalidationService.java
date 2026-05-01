@@ -1,16 +1,11 @@
 package com.IntegrityTechnologies.business_manager.config.caffeine;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.cache.SellableCacheKey;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Component
@@ -19,88 +14,89 @@ public class CacheInvalidationService {
 
     private final CacheManager cacheManager;
 
-    private UUID tenantId() {
-        return TenantContext.getTenantId();
-    }
+    /* ============================================================
+       LOW LEVEL HELPERS
+    ============================================================ */
 
-    private UUID branchId() {
-        return BranchContext.getOrNull();
-    }
-    public void evictPackaging(UUID variantId) {
-        Cache cache = cacheManager.getCache("packaging");
+    private void evict(String cacheName, String key) {
+        Cache cache = cacheManager.getCache(cacheName);
         if (cache != null) {
-            cache.evict(
-                    SellableCacheKey.packaging(variantId)
-            );
+            cache.evict(key);
         }
     }
 
-    public void evictPricing(
-            UUID variantId,
-            UUID packagingId,
-            UUID branchId,
-            UUID customerId,
-            UUID groupId,
-            Long quantity
-    ) {
-        Cache cache = cacheManager.getCache("pricing-preview");
+    private void evictByPrefix(String cacheName, String prefix) {
+        Cache cache = cacheManager.getCache(cacheName);
+        if (cache == null) return;
 
-        if (cache != null) {
-            cache.evict(
-                    SellableCacheKey.pricing(
-                            variantId,
-                            packagingId,
-                            branchId,
-                            customerId,
-                            groupId,
-                            quantity
-                    )
-            );
+        Object nativeCache = cache.getNativeCache();
+
+        if (nativeCache instanceof com.github.benmanes.caffeine.cache.Cache<?, ?> caffeineCache) {
+            caffeineCache.asMap().keySet()
+                    .removeIf(k -> k.toString().startsWith(prefix));
         }
     }
 
-    public void evictPricingByVariant(UUID variantId, UUID branchId) {
-        Cache cache = cacheManager.getCache("pricing-preview");
+    /* ============================================================
+       PACKAGING
+    ============================================================ */
 
-        if (cache != null && cache instanceof org.springframework.cache.concurrent.ConcurrentMapCache cmc) {
-
-            Map<Object, Object> nativeCache = cmc.getNativeCache();
-            String prefix = TenantContext.getTenantId()
-                    + "::pricing::" + variantId + "::" + branchId;
-
-            nativeCache.keySet().removeIf(key ->
-                    key.toString().startsWith(prefix)
-            );
-        }
+    public void evictPackaging(UUID tenantId, UUID variantId) {
+        evict("packaging", CacheKeys.packaging(tenantId, variantId));
     }
 
-    public void evictVariantSearch(UUID branchId) {
-        Cache cache = cacheManager.getCache("variant-search");
+    /* ============================================================
+       PRICING
+    ============================================================ */
 
-        if (cache != null && cache instanceof ConcurrentMapCache cmc) {
-            Map<Object, Object> nativeCache = cmc.getNativeCache();
-
-            nativeCache.keySet().removeIf(key ->
-                    key.toString().contains("::" + branchId + "::")
-            );
-        }
+    public void evictPricingByVariant(UUID tenantId, UUID variantId) {
+        String prefix = tenantId + "::pricing::" + variantId + "::";
+        evictByPrefix("pricing-preview", prefix);
     }
 
-    public void evictCategoryCaches(UUID branch) {
-        UUID tenant = tenantId();
+    /* ============================================================
+       VARIANT SEARCH
+    ============================================================ */
 
-        List<String> prefixes = List.of(
-                tenant + "::" + branch + "::category::tree",
-                tenant + "::" + branch + "::category::flat",
-                tenant + "::" + branch + "::category::search"
-        );
+    public void evictVariantSearch(UUID tenantId, UUID branchId) {
+        String prefix = tenantId + "::variant-search::" + branchId + "::";
+        evictByPrefix("variant-search", prefix);
+    }
 
-        for (String cacheName : List.of("category-tree", "category-flat", "category-search")) {
+    /* ============================================================
+       BARCODE
+    ============================================================ */
 
-            var cache = cacheManager.getCache(cacheName);
-            if (cache == null) continue;
+    public void evictBarcode(UUID tenantId, UUID branchId) {
+        String prefix = tenantId + "::barcode::" + branchId + "::";
+        evictByPrefix("barcode-scan", prefix);
+    }
 
-            cache.invalidate(); // OR iterate keys if using advanced cache
-        }
+    /* ============================================================
+       CATEGORY
+    ============================================================ */
+
+    public void evictCategoryCaches(UUID tenantId, UUID branchId) {
+        evict("category-tree", CacheKeys.categoryTree(tenantId, branchId));
+        evict("category-flat", CacheKeys.categoryFlat(tenantId, branchId));
+
+        String prefix = tenantId + "::category::search::" + branchId + "::";
+        evictByPrefix("category-search", prefix);
+    }
+
+    /* ============================================================
+       USERS
+    ============================================================ */
+
+    /* ============================================================
+   USERS (SAFE + FAST)
+============================================================ */
+    public void evictUsers(UUID tenantId) {
+
+        String userPrefix = tenantId + "::user::";
+        evictByPrefix("user-by-identifier", userPrefix);
+
+        String pagePrefix = tenantId + "::users::";
+        evictByPrefix("users-page", pagePrefix);
     }
 }

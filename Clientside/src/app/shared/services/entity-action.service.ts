@@ -49,8 +49,8 @@ export class EntityActionService {
   ) {
     request$.subscribe({
       next: () => {
+        reload(); // runs AFTER backend completes
         this.snackbar.open(successMessage, 'Close', { duration: 2500 });
-        reload();
       },
       error: (err) => {
         const message =
@@ -110,13 +110,9 @@ export class EntityActionService {
     entity: T,
     config: EntityActionConfig<T>
   ) {
-
     const isDeleted = !!entity.deleted;
 
-    /* ================= DISABLE ================= */
-
     if (!isDeleted) {
-
       this.openReasonDialog(
         `Disable ${config.entityName}?`,
         `Provide a reason for disabling ${config.displayName(entity)} (optional).`,
@@ -135,8 +131,6 @@ export class EntityActionService {
       return;
     }
 
-    /* ================= RESTORE ================= */
-
     this.openReasonDialog(
       `Restore ${config.entityName}?`,
       `Provide a reason for restoring ${config.displayName(entity)} (optional).`,
@@ -154,8 +148,8 @@ export class EntityActionService {
   }
 
   /* ============================================================
-     BULK DISABLE
-  ============================================================ */
+   BULK DISABLE
+============================================================ */
 
   bulkDisable<T extends { id: string }>(
     entities: T[],

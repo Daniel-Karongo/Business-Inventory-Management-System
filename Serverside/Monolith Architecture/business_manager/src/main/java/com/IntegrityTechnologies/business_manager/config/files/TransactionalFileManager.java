@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Component
@@ -37,18 +38,14 @@ public class TransactionalFileManager implements TransactionSynchronization {
 
     @Override
     public void afterCompletion(int status) {
-
         List<Path> written = WRITTEN.get();
 
         if (status != STATUS_COMMITTED) {
-
             for (Path p : written) {
-
                 try {
-                    Files.deleteIfExists(p);
+                    deleteRecursivelySafe(p);
                     log.info("Deleted file after rollback: {}", p);
-
-                } catch (IOException e) {
+                } catch (Exception e) {
                     log.warn("Failed to delete file after rollback: {}", p, e);
                 }
             }
@@ -57,6 +54,20 @@ public class TransactionalFileManager implements TransactionSynchronization {
         written.clear();
         WRITTEN.remove();
         REGISTERED.remove();
+    }
+
+    private void deleteRecursivelySafe(Path path) throws IOException {
+        if (path == null || !Files.exists(path)) return;
+
+        Files.walk(path)
+                .sorted(Comparator.reverseOrder())
+                .forEach(p -> {
+                    try {
+                        Files.deleteIfExists(p);
+                    } catch (IOException e) {
+                        log.warn("Failed deleting: {}", p);
+                    }
+                });
     }
 
     public void runAfterCommit(Runnable action) {

@@ -97,8 +97,8 @@ public class ProductVariantService {
         // ✅ CRITICAL: ensure base packaging exists
         createBasePackaging(v);
 
-        cacheInvalidationService.evictVariantSearch(branchId());
-        cacheInvalidationService.evictPricingByVariant(v.getId(), branchId());
+        cacheInvalidationService.evictVariantSearch(tenantId(), branchId());
+        cacheInvalidationService.evictPricingByVariant(tenantId(), v.getId());
 
         return barcodeService.generateBarcodeIfMissing(v.getId());
     }
@@ -191,8 +191,12 @@ public class ProductVariantService {
         v.setMinimumPercentageProfit(dto.getMinimumPercentageProfit());
         v.setMinimumProfit(dto.getMinimumProfit());
 
-        cacheInvalidationService.evictVariantSearch(branchId());
-        cacheInvalidationService.evictPricingByVariant(v.getId(), branchId());
+        cacheInvalidationService.evictVariantSearch(tenantId(), branchId());
+        cacheInvalidationService.evictPricingByVariant(
+                tenantId(),
+                v.getId()
+        );
+        cacheInvalidationService.evictBarcode(tenantId(), branchId());
 
         return mapper.toDTO(variantRepo.save(v));
     }
@@ -260,9 +264,18 @@ public class ProductVariantService {
         variant.setDeleted(true);
         variantRepo.save(variant);
 
-        cacheInvalidationService.evictVariantSearch(branchId());
-        cacheInvalidationService.evictPricingByVariant(variant.getId(), branchId());
-        cacheInvalidationService.evictPackaging(variantId);
+        cacheInvalidationService.evictVariantSearch(
+                tenantId(),
+                branchId()
+        );
+        cacheInvalidationService.evictPricingByVariant(
+                tenantId(),
+                variant.getId()
+        );
+        cacheInvalidationService.evictPackaging(
+                TenantContext.getTenantId(),
+                variantId
+        );
     }
 
     // SKU is immutable once created unless explicitly overridden

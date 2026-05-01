@@ -10,6 +10,7 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +34,14 @@ public class ProductPriceService {
        RESOLVE PRICE (CRITICAL METHOD)
     ===================================================== */
 
+    @Cacheable(
+            value = "pricing-preview",
+            key = "T(com.IntegrityTechnologies.business_manager.config.caffeine.CacheKeys).pricing(" +
+                    "T(com.IntegrityTechnologies.business_manager.security.util.TenantContext).getTenantId()," +
+                    "#variantId, #packagingId, " +
+                    "T(com.IntegrityTechnologies.business_manager.security.util.BranchContext).get()," +
+                    "null, null, #quantity)"
+    )
     public ProductPrice resolvePrice(
             UUID variantId,
             UUID packagingId,
@@ -84,7 +93,10 @@ public class ProductPriceService {
                 .branchId(branchId())
                 .build();
 
-        cacheInvalidationService.evictPricingByVariant(variantId, branchId());
+        cacheInvalidationService.evictPricingByVariant(
+                tenantId(),
+                variantId
+        );
 
         return priceRepo.save(p);
     }
@@ -97,7 +109,10 @@ public class ProductPriceService {
 
         p.setPrice(price);
 
-        cacheInvalidationService.evictPricingByVariant(p.getProductVariant().getId(), branchId());
+        cacheInvalidationService.evictPricingByVariant(
+                tenantId(),
+                p.getProductVariant().getId()
+        );
 
         return priceRepo.save(p);
     }
@@ -110,7 +125,10 @@ public class ProductPriceService {
         p.setDeleted(true);
         p.setDeletedAt(LocalDateTime.now());
 
-        cacheInvalidationService.evictPricingByVariant(p.getProductVariant().getId(), branchId());
+        cacheInvalidationService.evictPricingByVariant(
+                tenantId(),
+                p.getProductVariant().getId()
+        );
 
         priceRepo.save(p);
     }

@@ -105,8 +105,8 @@ public class SellableProductService {
 
     @Cacheable(
             value = "variant-search",
-            key = "T(com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.cache.SellableCacheKey)" +
-                    ".variants(#branchId, #search, #pageable.pageNumber, #pageable.pageSize)"
+            key = "T(com.IntegrityTechnologies.business_manager.config.caffeine.CacheKeys)" +
+                    ".variantSearch(#tenantId, #branchId, #search, #pageable.pageNumber, #pageable.pageSize)"
     )
     public Page<ProductVariant> fetchVariantsPaged(
             UUID tenantId,

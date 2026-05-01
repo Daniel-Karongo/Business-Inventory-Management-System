@@ -156,7 +156,7 @@ export class UserListComponent implements OnInit {
       .pipe(finalize(() => this.loading = false))
       .subscribe({
         next: r => {
-          this.users = r.data;
+          this.users = [...r.data];
           this.total = r.total;
           this.selection.clear();
         },

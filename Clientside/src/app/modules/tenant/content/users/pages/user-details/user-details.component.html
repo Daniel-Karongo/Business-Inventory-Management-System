@@ -18,65 +18,64 @@
     <!-- LEFT -->
     <mat-card class="identity-card">
 
-      <div class="identity-hero">
+      <div class="identity-layout">
 
-        <ng-container *ngIf="hasThumbnail(); else fallbackAvatar">
-          <img [src]="thumbnailObjectUrl" class="profile-thumb" alt="User profile image">
-        </ng-container>
+        <!-- LEFT: Avatar -->
+        <div class="identity-avatar">
+          <ng-container *ngIf="hasThumbnail(); else fallbackAvatar">
+            <img *ngIf="thumbnailObjectUrl; else fallbackAvatar" [src]="thumbnailObjectUrl" />
+          </ng-container>
 
-        <ng-template #fallbackAvatar>
-          <div class="avatar-fallback">
-            {{ initials() }}
-          </div>
-        </ng-template>
+          <ng-template #fallbackAvatar>
+            <div class="avatar-fallback">
+              {{ initials() }}
+            </div>
+          </ng-template>
+        </div>
 
-        <div class="identity-meta">
+        <!-- CENTER: Identity -->
+        <div class="identity-main">
 
-          <div class="username-row">
-            <h3>{{ user.username }}</h3>
+          <div class="identity-top">
+            <h2 class="username">{{ user.username }}</h2>
 
             <span class="status-pill" [class.disabled]="user.deleted">
               {{ status() }}
             </span>
-
           </div>
 
-          <div class="user-id" *ngIf="canViewUserId()">
-            {{ user.id }}
+          <div class="identity-sub">
+            Role: <strong>{{ user.role }}</strong>
           </div>
 
-          <div class="mini-stats">
-
+          <!-- Stats -->
+          <div class="identity-stats">
             <div class="stat">
               <span>Branches</span>
-              <strong>
-                {{ user.branchHierarchy?.length || 0 }}
-              </strong>
+              <strong>{{ user.branchHierarchy?.length || 0 }}</strong>
             </div>
 
             <div class="stat">
               <span>Departments</span>
-              <strong>
-                {{ departmentCount() }}
-              </strong>
+              <strong>{{ departmentCount() }}</strong>
             </div>
-
           </div>
 
         </div>
 
-      </div>
+        <!-- RIGHT: Actions -->
+        <div class="identity-actions" *ngIf="canToggleUser()">
+          <button mat-stroked-button class="action-btn" [class.restore]="user.deleted" [class.disable]="!user.deleted"
+            (click)="toggleUser()">
 
-      <div class="identity-actions" *ngIf="canManageUser()">
-        <button mat-stroked-button [color]="user.deleted ? 'primary' : 'warn'" (click)="toggleUser()">
+            <mat-icon>
+              {{ user.deleted ? 'restore' : 'block' }}
+            </mat-icon>
 
-          <mat-icon>
-            {{ user.deleted ? 'restore' : 'block' }}
-          </mat-icon>
+            {{ user.deleted ? 'Restore User' : 'Disable User' }}
+          </button>
+        </div>
 
-          {{ user.deleted ? 'Restore' : 'Disable' }}
-
-        </button>
       </div>
 
     </mat-card>
@@ -89,51 +88,96 @@
         <!-- PROFILE -->
         <mat-tab label="Profile">
           <mat-card class="info-card">
-            <h3>Profile</h3>
 
-            <div class="info-grid">
-              <div>
-                <label>ID Number</label>
-                <div>{{ user.idNumber || '—' }}</div>
-              </div>
+            <!-- SECTION: BASIC -->
+            <div class="section">
+              <h3>Basic Information</h3>
 
-              <div>
-                <label>Role</label>
-                <div>{{ user.role }}</div>
-              </div>
+              <div class="info-grid">
 
-              <div>
-                <label>Emails</label>
-                <div *ngFor="let e of user.emailAddresses">{{ e }}</div>
-              </div>
+                <div class="info-item">
+                  <label>Username</label>
+                  <div class="value strong">{{ user.username }}</div>
+                </div>
 
-              <div>
-                <label>Phones</label>
-                <div *ngFor="let p of user.phoneNumbers">{{ p }}</div>
-              </div>
+                <div class="info-item">
+                  <label>Role</label>
+                  <div class="value role-badge">{{ user.role }}</div>
+                </div>
 
-              <div>
-                <label>Status</label>
-                <div>{{ status() }}</div>
+                <div class="info-item">
+                  <label>Status</label>
+                  <div class="value">
+                    <span class="status-pill" [class.disabled]="user.deleted">
+                      {{ status() }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="info-item">
+                  <label>ID Number</label>
+                  <div class="value">{{ user.idNumber || '—' }}</div>
+                </div>
+
               </div>
+            </div>
+
+            <!-- SECTION: CONTACT -->
+            <div class="section">
+              <h3>Contact Information</h3>
+
+              <div class="info-grid">
+
+                <div class="info-item full">
+                  <label>Emails</label>
+                  <div class="chip-row">
+                    <span class="chip" *ngFor="let e of user.emailAddresses">
+                      {{ e }}
+                    </span>
+                    <span *ngIf="!user.emailAddresses || user.emailAddresses.length === 0">—</span>
+                  </div>
+                </div>
+
+                <div class="info-item full">
+                  <label>Phone Numbers</label>
+                  <div class="chip-row">
+                    <span class="chip" *ngFor="let p of user.phoneNumbers">
+                      {{ p }}
+                    </span>
+                    <span *ngIf="!user.phoneNumbers || !user.phoneNumbers.length">—</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- SECTION: ACCESS -->
+            <div class="section">
+              <h3>Branch & Department Access</h3>
 
               <div class="assignment-grid">
+
                 <div class="assignment-card" *ngFor="let b of user.branchHierarchy">
 
-                  <h4>{{ b.branchName }}</h4>
+                  <div class="branch-header">
+                    <h4>{{ b.branchName }}</h4>
+                    <span class="branch-count">
+                      {{ b.departments.length }} dept
+                    </span>
+                  </div>
 
                   <div class="dept-chip-row">
                     <span class="dept-chip" *ngFor="let d of b.departments">
-
                       {{ d.departmentName }}
                       <small>{{ d.position }}</small>
-
                     </span>
                   </div>
 
                 </div>
+
               </div>
             </div>
+
           </mat-card>
         </mat-tab>
 
@@ -162,7 +206,7 @@
           <app-user-rollcalls [userId]="user.id!" />
         </mat-tab>
 
-        <mat-tab label="Biometrics">
+        <mat-tab *ngIf="canViewBiometrics()" label="Biometrics">
           <app-biometric-manager [adminMode]="canManageUser()" [targetUserId]="user.id">
           </app-biometric-manager>
         </mat-tab>

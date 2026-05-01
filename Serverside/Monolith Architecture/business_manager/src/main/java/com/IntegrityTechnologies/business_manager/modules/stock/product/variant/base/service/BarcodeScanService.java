@@ -31,7 +31,8 @@ public class BarcodeScanService {
 
     @Cacheable(
             value = "barcode-scan",
-            key = "T(java.util.Objects).hash(#root.target.tenantId(), #root.target.branchId(), #barcode)"
+            key = "T(com.IntegrityTechnologies.business_manager.config.caffeine.CacheKeys)" +
+                    ".barcode(#root.target.tenantId(), #root.target.branchId(), #barcode)"
     )
     public BarcodeScanResponse scan(String barcode) {
 

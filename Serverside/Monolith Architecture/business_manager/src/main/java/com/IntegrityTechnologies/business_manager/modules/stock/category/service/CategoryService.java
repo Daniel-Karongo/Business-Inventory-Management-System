@@ -164,7 +164,7 @@ public class CategoryService {
                         : List.of()
         );
 
-        cacheInvalidationService.evictCategoryCaches(branchId);
+        cacheInvalidationService.evictCategoryCaches(tenantId(), branchId);
         return result;
     }
 
@@ -211,7 +211,7 @@ public class CategoryService {
                     return categoryRepository.save(newCategory);
                 });
 
-        cacheInvalidationService.evictCategoryCaches(branchId);
+        cacheInvalidationService.evictCategoryCaches(tenantId(), branchId);
         return category;
     }
 
@@ -353,7 +353,7 @@ public class CategoryService {
                         : List.of()
         );
 
-        cacheInvalidationService.evictCategoryCaches(branchId);
+        cacheInvalidationService.evictCategoryCaches(tenantId(), branchId);
         return result;
     }
 
@@ -429,7 +429,8 @@ public class CategoryService {
 
     @Cacheable(
             value = "category-tree",
-            key = "T(com.IntegrityTechnologies.business_manager.modules.stock.category.cache.CategoryCacheKey).tree(#branchId, #deleted)"
+            key = "T(com.IntegrityTechnologies.business_manager.config.caffeine.CacheKeys)" +
+                    ".categoryTree(T(com.IntegrityTechnologies.business_manager.security.util.TenantContext).getTenantId(), #branchId)"
     )
     public List<CategoryDTO> getAllCategoriesTree(UUID branchId, Boolean deleted) {
 
@@ -460,7 +461,8 @@ public class CategoryService {
 
     @Cacheable(
             value = "category-flat",
-            key = "T(com.IntegrityTechnologies.business_manager.modules.stock.category.cache.CategoryCacheKey).flat(#branchId, #deleted)"
+            key = "T(com.IntegrityTechnologies.business_manager.config.caffeine.CacheKeys)" +
+                    ".categoryFlat(T(com.IntegrityTechnologies.business_manager.security.util.TenantContext).getTenantId(), #branchId)"
     )
     public List<CategoryDTO> getAllCategoriesFlat(UUID branchId, Boolean deleted) {
 
@@ -651,7 +653,7 @@ public class CategoryService {
                 branchId
         );
 
-        cacheInvalidationService.evictCategoryCaches(branchId);
+        cacheInvalidationService.evictCategoryCaches(tenantId(), branchId);
         return ResponseEntity.ok(
                 new ApiResponse("success", "Category and subcategories soft deleted")
         );
@@ -677,7 +679,7 @@ public class CategoryService {
             );
         }
 
-        cacheInvalidationService.evictCategoryCaches(branchId);
+        cacheInvalidationService.evictCategoryCaches(tenantId(), branchId);
         return ResponseEntity.ok(
                 new ApiResponse("success", "Categories and subcategories soft deleted")
         );
@@ -702,7 +704,7 @@ public class CategoryService {
                 branchId
         );
 
-        cacheInvalidationService.evictCategoryCaches(branchId);
+        cacheInvalidationService.evictCategoryCaches(tenantId(), branchId);
         return ResponseEntity.ok(
                 new ApiResponse("success", "Category permanently deleted")
         );
@@ -728,7 +730,7 @@ public class CategoryService {
             );
         }
 
-        cacheInvalidationService.evictCategoryCaches(branchId);
+        cacheInvalidationService.evictCategoryCaches(tenantId(), branchId);
         return ResponseEntity.ok(
                 new ApiResponse("success", "Categories permanently deleted")
         );
@@ -754,7 +756,7 @@ public class CategoryService {
 
         Map<String, Object> restored = Map.of("id", category.getId(), "name", category.getName());
 
-        cacheInvalidationService.evictCategoryCaches(branchId);
+        cacheInvalidationService.evictCategoryCaches(tenantId(), branchId);
         return ResponseEntity.ok(
                 new ApiResponse("success", "Category restored", restored)
         );
@@ -784,7 +786,7 @@ public class CategoryService {
             );
         }
 
-        cacheInvalidationService.evictCategoryCaches(branchId);
+        cacheInvalidationService.evictCategoryCaches(tenantId(), branchId);
         return ResponseEntity.ok(
                 new ApiResponse("success", "Categories restored", restoredCategories)
         );
@@ -809,7 +811,7 @@ public class CategoryService {
                 branchId
         );
 
-        cacheInvalidationService.evictCategoryCaches(branchId);
+        cacheInvalidationService.evictCategoryCaches(tenantId(), branchId);
         return ResponseEntity.ok(
                 new ApiResponse("success", "Category and subcategories restored")
         );
@@ -837,7 +839,7 @@ public class CategoryService {
             );
         }
 
-        cacheInvalidationService.evictCategoryCaches(branchId);
+        cacheInvalidationService.evictCategoryCaches(tenantId(), branchId);
         return ResponseEntity.ok(
                 new ApiResponse("success", "Categories and subcategories restored")
         );
@@ -851,7 +853,10 @@ public class CategoryService {
      */
     @Cacheable(
             value = "category-search",
-            key = "T(com.IntegrityTechnologies.business_manager.modules.stock.category.cache.CategoryCacheKey).search(#branchId, #keyword, #deleted)"
+            key = "T(com.IntegrityTechnologies.business_manager.config.caffeine.CacheKeys)" +
+                    ".categorySearch(" +
+                    "T(com.IntegrityTechnologies.business_manager.security.util.TenantContext).getTenantId(), " +
+                    "#branchId, #keyword)"
     )
     public List<CategoryDTO> searchByKeyword(UUID branchId, String keyword, boolean deleted) {
 

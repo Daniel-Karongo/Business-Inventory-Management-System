@@ -118,12 +118,27 @@ public class UserController {
         );
     }
 
+    @PatchMapping("/images/{id}/{filename}/description")
+    public ResponseEntity<?> updateDescription(
+            @PathVariable String id,
+            @PathVariable String filename,
+            @RequestBody String description,
+            Authentication authentication
+    ) {
+        return userImageService.updateDescription(
+                id,
+                filename,
+                description,
+                authentication
+        );
+    }
+
     /* ====================== GET USERS ====================== */
 
     @GetMapping("/user/{identifier}")
     public ResponseEntity<UserDTO> getUser(
             @PathVariable String identifier,
-            @RequestParam Boolean deleted
+            @RequestParam(required = false) Boolean deleted
     ) {
 
         return ResponseEntity.ok(

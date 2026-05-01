@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.onboarding.service;
 
-import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
+import com.IntegrityTechnologies.business_manager.config.caffeine.CacheInvalidationService;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.ReceiveStockRequest;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.SupplierUnit;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
@@ -38,8 +38,8 @@ public class StockOnboardingService {
     private final ProductPriceService priceService;
     private final ProductPriceRepository priceRepo;
     private final InventoryService inventoryService;
-    private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
+    private final CacheInvalidationService cacheInvalidationService;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -100,6 +100,8 @@ public class StockOnboardingService {
                 .map(s -> s.getUnitCost().multiply(BigDecimal.valueOf(s.getUnitsSupplied())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        evictAll(variantId, req.getBranchId());
+
         return StockOnboardingResponse.builder()
                 .productId(product.getId())
                 .variantId(variantId)
@@ -108,6 +110,13 @@ public class StockOnboardingService {
                 .totalCost(totalCost)
                 .message("Stock onboarded successfully")
                 .build();
+    }
+
+    private void evictAll(UUID variantId, UUID branchId) {
+        cacheInvalidationService.evictPricingByVariant(tenantId(), variantId);
+        cacheInvalidationService.evictPackaging(tenantId(), variantId);
+        cacheInvalidationService.evictVariantSearch(tenantId(), branchId);
+        cacheInvalidationService.evictBarcode(tenantId(), branchId);
     }
 
     // =====================================================

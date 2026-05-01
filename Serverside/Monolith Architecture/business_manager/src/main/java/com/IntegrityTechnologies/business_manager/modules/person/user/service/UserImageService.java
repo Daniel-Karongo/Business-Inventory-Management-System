@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.user.service;
 
+import com.IntegrityTechnologies.business_manager.config.caffeine.CacheInvalidationService;
 import com.IntegrityTechnologies.business_manager.config.files.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserImageAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserImageRepository;
@@ -27,6 +28,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
@@ -48,6 +51,7 @@ public class UserImageService {
     private final FileStorageService fileStorageService;
     private final PrivilegesChecker privilegesChecker;
     private final TransactionalFileManager transactionalFileManager;
+    private final CacheInvalidationService cacheInvalidationService;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -60,7 +64,7 @@ public class UserImageService {
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + identifier));
 
         if (!privilegesChecker.isAuthorized(requester, target)) {
-            throw new UnauthorizedAccessException("You do not have permission to " + action + " this user's images");
+            throw new UnauthorizedAccessException("You do not have permission to " + action + " this user's documents");
         }
         return target;
     }
@@ -148,21 +152,11 @@ public class UserImageService {
         // clear old thumbnail
         userImageRepository.findByUser(target)
                 .stream()
-                .filter(i ->
-                        "profile-thumbnail"
-                                .equalsIgnoreCase(
-                                        i.getFileDescription()
-                                )
-                )
-                .forEach(i -> {
-                    i.setFileDescription("passport");
-                    userImageRepository.save(i);
-                });
+                .filter(i -> Boolean.TRUE.equals(i.getProfileThumbnail()))
+                .forEach(i -> i.setProfileThumbnail(false));
 
         // promote selected
-        selected.setFileDescription(
-                "profile-thumbnail"
-        );
+        selected.setProfileThumbnail(true);
 
         userImageRepository.save(selected);
 
@@ -187,8 +181,84 @@ public class UserImageService {
                         .build()
         );
 
-        return ResponseEntity.ok(
-                "Profile thumbnail updated"
+        evictUsersAfterCommit();
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Profile thumbnail updated"
+        ));
+    }
+
+    @Transactional
+    public ResponseEntity<?> updateDescription(
+            String identifier,
+            String filename,
+            String description,
+            Authentication authentication
+    ) {
+
+        User target = validateAccess(
+                identifier,
+                authentication,
+                "update image description"
+        );
+
+        UserImage img = userImageRepository
+                .findByUserAndFileName(target, filename)
+                .orElseThrow(() ->
+                        new ImageNotFoundException(
+                                "Image not found: " + filename
+                        )
+                );
+
+        if (Boolean.TRUE.equals(img.getDeleted())) {
+            throw new ImageAccessDeniedException(
+                    "Cannot update description of deleted image"
+            );
+        }
+
+        String oldDescription = img.getFileDescription();
+
+        img.setFileDescription(description);
+
+        // audit
+        userImageAuditRepository.save(
+                UserImageAudit.builder()
+                        .userId(target.getId())
+                        .username(target.getUsername())
+                        .fileName(img.getFileName())
+                        .filePath(img.getFilePath())
+                        .action("UPDATE_DESCRIPTION")
+                        .reason("From: " + oldDescription + " → To: " + description)
+                        .performedById(
+                                privilegesChecker
+                                        .getAuthenticatedUser(authentication)
+                                        .getId()
+                        )
+                        .performedByUsername(
+                                privilegesChecker
+                                        .getAuthenticatedUser(authentication)
+                                        .getUsername()
+                        )
+                        .timestamp(LocalDateTime.now())
+                        .build()
+        );
+
+        // ✅ CRITICAL: invalidate cache
+        evictUsersAfterCommit();
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Description updated"
+        ));
+    }
+
+    public void evictUsersAfterCommit() {
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        cacheInvalidationService.evictUsers(tenantId());
+                    }
+                }
         );
     }
 

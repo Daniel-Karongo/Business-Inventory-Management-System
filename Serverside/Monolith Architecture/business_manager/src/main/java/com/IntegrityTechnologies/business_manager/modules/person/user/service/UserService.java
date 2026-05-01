@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.user.service;
 
+import com.IntegrityTechnologies.business_manager.config.caffeine.CacheInvalidationService;
 import com.IntegrityTechnologies.business_manager.config.files.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.config.files.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.files.TransactionalFileManager;
@@ -28,7 +29,6 @@ import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -41,6 +41,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -68,6 +70,7 @@ public class UserService {
     private final UserBranchRepository userBranchRepository;
     private final SubscriptionGuard subscriptionGuard;
     private final AuthService authService;
+    private final CacheInvalidationService cacheInvalidationService;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -75,7 +78,6 @@ public class UserService {
 
     /* ====================== REGISTER USER ====================== */
     @Transactional
-    @CacheEvict(value = "users", allEntries = true)
     public UserDTO registerUser(UserDTO dto, Authentication authentication) throws IOException {
         subscriptionGuard.checkUserLimit();
 
@@ -190,15 +192,15 @@ public class UserService {
 
         Hibernate.initialize(user.getEmailAddresses());
         Hibernate.initialize(user.getPhoneNumbers());
+
+        evictUsersAfterCommit();
+
         return mapToDTO(user);
     }
 
 
     /* ====================== UPDATE USER ====================== */
     @Transactional
-    @CacheEvict(
-            value = "users",
-            allEntries = true)
     public UserDTO updateUser(String identifier, UserDTO updatedData, Authentication authentication) throws IOException {
 
         boolean usernameChanged = false;
@@ -379,13 +381,13 @@ public class UserService {
 
         Hibernate.initialize(user.getEmailAddresses());
         Hibernate.initialize(user.getPhoneNumbers());
+
+        evictUsersAfterCommit();
+
         return mapToDTO(user);
     }
 
     @Transactional
-    @CacheEvict(
-            value = "users",
-            allEntries = true)
     public ResponseEntity<?> updateUserImages(
             String identifier,
             List<FIleUploadDTO> newFiles,
@@ -416,6 +418,9 @@ public class UserService {
         userRepository.save(target);
         Hibernate.initialize(target.getEmailAddresses());
         Hibernate.initialize(target.getPhoneNumbers());
+
+        cacheInvalidationService.evictUsers(tenantId());
+
         return ResponseEntity.ok(mapToDTO(target));
     }
 
@@ -445,8 +450,11 @@ public class UserService {
     /* ====================== GET USERS ====================== */
 
     @Cacheable(
-            value = "users",
-            key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#identifier)"
+            value = "user-by-identifier",
+            key = "T(com.IntegrityTechnologies.business_manager.config.caffeine.CacheKeys)" +
+                    ".user(" +
+                    "T(com.IntegrityTechnologies.business_manager.security.util.TenantContext).getTenantId(), " +
+                    "#identifier, #deleted)"
     )
     @Transactional(readOnly = true)
     public UserDTO getUser(String identifier, Boolean deleted) {
@@ -479,9 +487,12 @@ public class UserService {
     }
 
     @Cacheable(
-            value = "users",
-            key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey)"
-                    + ".allUsers(#deleted, #pageable.pageNumber, #pageable.pageSize)"
+            value = "users-page",
+            key = "T(com.IntegrityTechnologies.business_manager.config.caffeine.CacheKeys)" +
+                    ".usersPage(" +
+                    "T(com.IntegrityTechnologies.business_manager.security.util.TenantContext).getTenantId(), " +
+                    "#deleted, #role, #branchId, #departmentId, #q, " +
+                    "#pageable.pageNumber, #pageable.pageSize, #pageable.sort.toString())"
     )
     @Transactional(readOnly = true)
     public Page<UserDTO> getUsersFiltered(
@@ -650,34 +661,32 @@ public class UserService {
     // ====================== SOFT DELETE ======================
 
     @Transactional
-    @CacheEvict(
-            value = "users",
-            key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#id)")
     public ResponseEntity<ApiResponse> softDeleteUser(UUID id, Authentication authentication, String reason) {
-
         User user = userRepository
                 .findByIdAndTenantId(id, tenantId())
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + id));
 
-        User actor =
-                privilegesChecker.getAuthenticatedUser(authentication);
+        User actor = privilegesChecker.getAuthenticatedUser(authentication);
 
         if (!privilegesChecker.isAuthorizedWithinDepartment(actor, user)) {
-            throw new UnauthorizedAccessException(
-                    "Not authorized to modify this user"
-            );
+            throw new UnauthorizedAccessException("Not authorized to modify this user");
         }
 
         if (actor.getId().equals(user.getId())) {
-            throw new UnauthorizedAccessException(
-                    "Self destructive operations prohibited"
-            );
+            throw new UnauthorizedAccessException("Self destructive operations prohibited");
         }
 
-        UUID performedById = privilegesChecker.getAuthenticatedUser(authentication).getId();
-        String performedByUsername = privilegesChecker.getAuthenticatedUser(authentication).getUsername();
+        UUID performedById = actor.getId();
+        String performedByUsername = actor.getUsername();
 
-        Map<String, Object> modified = softDeleteUserInternal(user, performedById, performedByUsername, reason);
+        Map<String, Object> modified = softDeleteUserInternal(
+                user,
+                performedById,
+                performedByUsername,
+                reason
+        );
+
+        evictUsersAfterCommit();
 
         return ResponseEntity.ok(new ApiResponse(
                 "success",
@@ -687,7 +696,6 @@ public class UserService {
     }
 
     @Transactional
-    @CacheEvict(value = "users", allEntries = true)
     public ResponseEntity<ApiResponse> softDeleteUsersInBulk(
             List<UUID> userIds,
             String reason,
@@ -729,6 +737,7 @@ public class UserService {
             );
         }
 
+        evictUsersAfterCommit();
         return ResponseEntity.ok(
                 new ApiResponse(
                         "success",
@@ -782,9 +791,6 @@ public class UserService {
 // ====================== RESTORE ======================
 
     @Transactional
-    @CacheEvict(
-            value = "users",
-            key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#id)")
     public ResponseEntity<ApiResponse> restoreUser(UUID id, Authentication authentication, String reason) throws IOException {
 
         User user = userRepository
@@ -811,6 +817,8 @@ public class UserService {
 
         Map<String, Object> restored = restoreUserInternal(user, performedById, performedByUsername, reason);
 
+        evictUsersAfterCommit();
+
         return ResponseEntity.ok(new ApiResponse(
                 "success",
                 "User restored successfully",
@@ -819,7 +827,6 @@ public class UserService {
     }
 
     @Transactional
-    @CacheEvict(value = "users", allEntries = true)
     public ResponseEntity<ApiResponse> restoreUsersInBulk(
             List<UUID> userIds,
             String reason,
@@ -860,6 +867,8 @@ public class UserService {
                     )
             );
         }
+
+        evictUsersAfterCommit();
 
         return ResponseEntity.ok(
                 new ApiResponse(
@@ -914,9 +923,6 @@ public class UserService {
 // ====================== HARD DELETE ======================
 
     @Transactional
-    @CacheEvict(
-            value = "users",
-            key = "T(com.IntegrityTechnologies.business_manager.security.cache.TenantCacheKey).user(#id)")
     public ResponseEntity<ApiResponse> hardDeleteUser(UUID id, Authentication authentication) throws IOException {
         User user = userRepository
                 .findByIdAndTenantId(id, tenantId())
@@ -942,6 +948,8 @@ public class UserService {
 
         Map<String, Object> deleted = hardDeleteUserInternal(user, performedById, performedByUsername);
 
+        evictUsersAfterCommit();
+
         return ResponseEntity.ok(new ApiResponse(
                 "success",
                 "User permanently deleted",
@@ -950,7 +958,6 @@ public class UserService {
     }
 
     @Transactional
-    @CacheEvict(value = "users", allEntries = true)
     public ResponseEntity<ApiResponse> hardDeleteUsersInBulk(
             List<UUID> userIds,
             Authentication authentication
@@ -989,6 +996,8 @@ public class UserService {
                     )
             );
         }
+
+        evictUsersAfterCommit();
 
         return ResponseEntity.ok(
                 new ApiResponse(
@@ -1053,6 +1062,17 @@ public class UserService {
 
 
     /* ====================== HELPER METHODS ====================== */
+
+    public void evictUsersAfterCommit() {
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        cacheInvalidationService.evictUsers(tenantId());
+                    }
+                }
+        );
+    }
 
     private void validateManagementAction(
             User actor,
@@ -1398,18 +1418,19 @@ public class UserService {
             // Extract the filename from API URL
             String fileName = Paths.get(apiUrl).getFileName().toString();
 
-            // Track physical file for rollback
             Path physicalFile = userUploadDir.resolve(fileName);
-            transactionalFileManager.track(physicalFile);
 
             // Persist UserImage in DB with API-friendly URL
             UUID imageBranchId =
-                    user.getBranches()
+                    userBranchRepository
+                            .findByUserId(tenantId(), user.getId())
                             .stream()
                             .filter(UserBranch::isPrimaryBranch)
                             .map(ub -> ub.getBranch().getId())
                             .findFirst()
-                            .orElseThrow();
+                            .orElseThrow(() ->
+                                    new IllegalStateException("User has no primary branch assigned")
+                            );
 
             String description = apiUrls.get(apiUrl);
 

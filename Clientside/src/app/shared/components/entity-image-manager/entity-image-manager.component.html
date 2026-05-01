@@ -17,17 +17,23 @@
 
     <!-- GRID -->
     <div class="image-grid" *ngIf="!loading">
-        <div class="image-card" *ngFor="let img of images" [class.deleted]="img.deleted">
+        <div class="image-card" *ngFor="let img of images" [class.deleted]="img.deleted"
+            [class.active]="selectedFile === img.fileName" (click)="selectFile(img.fileName)">
 
             <ng-container *ngIf="img.image; else pdfTpl">
                 <img [src]="imageUrl(img)" (click)="view(img)" class="clickable-image" />
             </ng-container>
 
             <ng-template #pdfTpl>
-                <div class="pdf-card" (click)="view(img)">
-                    <mat-icon>picture_as_pdf</mat-icon>
-                    <span>{{ img.fileName }}</span>
-                </div>
+                <img *ngIf="imageUrl(img); else fallbackPdf" [src]="imageUrl(img)" (click)="view(img)"
+                    class="clickable-image" />
+
+                <ng-template #fallbackPdf>
+                    <div class="pdf-card" (click)="view(img)">
+                        <mat-icon>picture_as_pdf</mat-icon>
+                        <span>{{ img.fileName }}</span>
+                    </div>
+                </ng-template>
             </ng-template>
 
             <div class="image-meta">
@@ -39,16 +45,18 @@
             </div>
 
             <div class="actions">
-
-                <button *ngIf="adapter.setProfileThumbnail" mat-icon-button (click)="makePrimary(img)">
-
-                    <mat-icon>
-                        account_circle
-                    </mat-icon>
-
+                <button mat-icon-button (click)="$event.stopPropagation(); editDescription(img)"
+                    matTooltip="Edit document description">
+                    <mat-icon>edit</mat-icon>
                 </button>
 
-                <button mat-icon-button (click)="primaryAction(img)" [matTooltip]="
+                <button *ngIf="adapter.setProfileThumbnail" mat-icon-button [disabled]="makingPrimary"
+                    (click)="$event.stopPropagation(); makePrimary(img)" matTooltip="Use as thumbnail">
+
+                    <mat-icon>account_circle</mat-icon>
+                </button>
+
+                <button mat-icon-button (click)="$event.stopPropagation(); primaryAction(img)" [matTooltip]="
                     img.deleted
                     ? 'Restore document'
                     : 'Soft delete (can be restored)'
@@ -60,7 +68,8 @@
 
                 </button>
 
-                <button *ngIf="img.deleted && allowHardDelete" mat-icon-button color="warn" (click)="hardDelete(img)"
+                <button *ngIf="img.deleted && allowHardDelete" mat-icon-button color="warn"
+                    (click)="$event.stopPropagation(); hardDelete(img)"
                     matTooltip="Permanent delete (cannot be undone)">
 
                     <mat-icon>
@@ -79,11 +88,49 @@
 
         <summary class="audit-summary">
             Document Audit Log
-            <span class="count">({{ audits.length }})</span>
+            <span class="count">
+                ({{ selectedFile === 'ALL' && selectedAction === 'ALL'
+                ? entityAuditScope.length
+                : filteredAudits.length }})
+            </span>
         </summary>
 
+        <!-- FILTER -->
+        <div class="audit-filter">
+            <label>Filter</label>
+
+            <select [(ngModel)]="selectedFile">
+                <option value="ALL">All Documents</option>
+                <option *ngFor="let file of uniqueFiles" [value]="file">
+                    {{ file }}
+                </option>
+            </select>
+        </div>
+
+        <div class="audit-filter">
+            <label>Action</label>
+
+            <select [(ngModel)]="selectedAction">
+                <option value="ALL">All Actions</option>
+                <option *ngFor="let a of uniqueActions" [value]="a">
+                    {{ displayAction(a) }}
+                </option>
+            </select>
+        </div>
+
+        <div class="active-filter" *ngIf="selectedFile !== 'ALL'">
+            Showing logs for:
+            <strong>{{ selectedFile }}</strong>
+
+            <button mat-button (click)="selectedFile = 'ALL'">
+                Clear
+            </button>
+        </div>
+
+        <!-- LIST -->
         <div class="audit-list">
-            <div class="audit-row" *ngFor="let audit of audits">
+            <div class="audit-row" *ngFor="let audit of filteredAudits">
+
                 <div class="audit-left">
                     <div class="audit-file">{{ audit.fileName }}</div>
                     <div class="audit-meta">
@@ -93,21 +140,20 @@
                 </div>
 
                 <div class="audit-action" [class.upload]="audit.action === 'UPLOAD'" [class.delete]="
-                    audit.action === 'SOFT_DELETE' ||
-                    audit.action === 'DELETE' ||
-                    audit.action === 'SOFT_DELETE_ALL' ||
-                    audit.action === 'DELETE_ALL'
-                    " [class.restore]="
-                    audit.action === 'RESTORE' ||
-                    audit.action === 'RESTORE_ALL'
-                    " [class.retrieve]="
-                    audit.action === 'RETRIEVE' ||
-                    audit.action === 'DOWNLOAD'
-                ">
+                        audit.action === 'SOFT_DELETE'
+                            || audit.action === 'DELETE'
+                            || audit.action === 'SOFT_DELETE_ALL'
+                            || audit.action === 'DELETE_ALL'" [class.restore]="
+                        audit.action === 'RESTORE' 
+                            || audit.action === 'RESTORE_ALL'" [class.retrieve]="
+                        audit.action === 'RETRIEVE'
+                            || audit.action === 'DOWNLOAD'" [class.thumbnail]="
+                        audit.action === 'SET_PROFILE_THUMBNAIL'" [class.update]="
+                        audit.action === 'UPDATE_DESCRIPTION'">
 
                     {{ displayAction(audit.action) }}
-
                 </div>
+
             </div>
         </div>
 
