@@ -28,16 +28,39 @@
   padding-bottom: 6px;
 }
 
-.grid-2 {
+/* =========================
+   RESPONSIVE GRID SYSTEM
+========================= */
+
+.grid-2,
+.grid-3 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
+/* Desktop */
 .grid-3 {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+
+  .grid-2,
+  .grid-3 {
+    grid-template-columns: 1fr;
+  }
 }
 
 .mat-form-field {

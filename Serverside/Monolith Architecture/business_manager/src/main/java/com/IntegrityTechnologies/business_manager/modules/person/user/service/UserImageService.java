@@ -150,10 +150,8 @@ public class UserImageService {
         }
 
         // clear old thumbnail
-        userImageRepository.findByUser(target)
-                .stream()
-                .filter(i -> Boolean.TRUE.equals(i.getProfileThumbnail()))
-                .forEach(i -> i.setProfileThumbnail(false));
+        userImageRepository.clearExistingThumbnail(target);
+        selected.setProfileThumbnail(true);
 
         // promote selected
         selected.setProfileThumbnail(true);
@@ -311,16 +309,16 @@ public class UserImageService {
         }
 
         // Audit retrieval
-        userImageAuditRepository.save(UserImageAudit.builder()
-                .userId(null)
-                .username("all users")
-                .fileName("all images")
-                .filePath("all images")
-                .action("RETRIEVE")
-                .performedById(performedBy.getId())
-                .performedByUsername(performedBy.getUsername())
-                .timestamp(LocalDateTime.now())
-                .build());
+//        userImageAuditRepository.save(UserImageAudit.builder()
+//                .userId(null)
+//                .username("all users")
+//                .fileName("all images")
+//                .filePath("all images")
+//                .action("RETRIEVE")
+//                .performedById(performedBy.getId())
+//                .performedByUsername(performedBy.getUsername())
+//                .timestamp(LocalDateTime.now())
+//                .build());
 
         return authorizedImages.stream()
                 .map(UserImage::getFilePath)
@@ -460,18 +458,18 @@ public class UserImageService {
                         authentication
                 );
 
-        userImageAuditRepository.save(
-                UserImageAudit.builder()
-                        .userId(target.getId())
-                        .username(target.getUsername())
-                        .fileName("ALL")
-                        .filePath("ALL")
-                        .action("RETRIEVE")
-                        .performedById(actor.getId())
-                        .performedByUsername(actor.getUsername())
-                        .timestamp(LocalDateTime.now())
-                        .build()
-        );
+//        userImageAuditRepository.save(
+//                UserImageAudit.builder()
+//                        .userId(target.getId())
+//                        .username(target.getUsername())
+//                        .fileName("ALL")
+//                        .filePath("ALL")
+//                        .action("RETRIEVE")
+//                        .performedById(actor.getId())
+//                        .performedByUsername(actor.getUsername())
+//                        .timestamp(LocalDateTime.now())
+//                        .build()
+//        );
 
         return images.stream()
                 .map(UserImageMapper::toDto)
@@ -625,13 +623,23 @@ public class UserImageService {
                 .body(resource);
     }
 
+    @Transactional
     public ResponseEntity<?> softdeleteUserImage(String identifier, String filename, Authentication authentication, String reason) throws IOException {
         User target = validateAccess(identifier, authentication, "delete");
 
         userImageRepository.findByUserAndFileName(target, filename).ifPresent(image -> {
+
+            boolean wasThumbnail = Boolean.TRUE.equals(image.getProfileThumbnail());
+
             image.setDeleted(true);
             image.setDeletedAt(LocalDateTime.now());
+            image.setProfileThumbnail(false);
+
             userImageRepository.save(image);
+
+            if (wasThumbnail) {
+                maintainThumbnailInvariant(target);
+            }
 
             userImageAuditRepository.save(UserImageAudit.builder()
                     .userId(target.getId())
@@ -646,9 +654,12 @@ public class UserImageService {
                     .build());
         });
 
+        evictUsersAfterCommit();
+
         return ResponseEntity.ok("Image deleted successfully: " + filename);
     }
 
+    @Transactional
     public ResponseEntity<?> softdeleteAllUserImages(String identifier, Authentication authentication) throws IOException {
         User target = validateAccess(identifier, authentication, "delete");
 
@@ -660,6 +671,7 @@ public class UserImageService {
         images.forEach(image -> {
             image.setDeleted(true);
             image.setDeletedAt(now);
+            image.setProfileThumbnail(false);
             userImageRepository.save(image);
 
             // Audit
@@ -675,9 +687,12 @@ public class UserImageService {
                     .build());
         });
 
+        evictUsersAfterCommit();
+
         return ResponseEntity.ok("All user images deleted for user: " + target.getUploadFolder());
     }
 
+    @Transactional
     public ResponseEntity<?> restoreUserImage(String identifier, String filename, Authentication authentication, String reason) throws IOException {
         User target = validateAccess(identifier, authentication, "restore");
 
@@ -714,9 +729,13 @@ public class UserImageService {
                 .timestamp(LocalDateTime.now())
                 .build());
 
+        maintainThumbnailInvariant(target);
+        evictUsersAfterCommit();
+
         return ResponseEntity.ok("Image restored successfully: " + filename);
     }
 
+    @Transactional
     public ResponseEntity<?> restoreAllUserImages(String identifier, Authentication authentication) throws IOException {
         User target = validateAccess(identifier, authentication, "restore");
 
@@ -743,9 +762,13 @@ public class UserImageService {
                             .build());
                 });
 
+        maintainThumbnailInvariant(target);
+        evictUsersAfterCommit();
+
         return ResponseEntity.ok("All soft-deleted images restored for user: " + target.getUploadFolder());
     }
 
+    @Transactional
     public ResponseEntity<?> harddeleteUserImage(String identifier, String filename, Authentication authentication, String reason) throws IOException {
         User target = validateAccess(identifier, authentication, "delete");
         Path userDir = fileStorageService.userRoot()
@@ -761,18 +784,28 @@ public class UserImageService {
             throw new DirectoryNotFoundException("User", target.getUsername(), filePath.toString());
         }
 
-        Files.delete(filePath);
+        // schedule deletion AFTER COMMIT
+        transactionalFileManager.runAfterCommit(() -> {
+            try {
+                Files.deleteIfExists(filePath);
 
-        // If user directory is empty after deletion, remove it
-        try (var files = Files.list(userDir)) {
-            if (!files.findAny().isPresent()) {
-                Files.deleteIfExists(userDir);
+                try (var files = Files.list(userDir)) {
+                    if (!files.findAny().isPresent()) {
+                        Files.deleteIfExists(userDir);
+                    }
+                }
+
+                log.info("File deleted after commit: {}", filePath);
+
+            } catch (Exception e) {
+                log.error("Failed to delete file after commit: {}", filePath, e);
             }
-        }
+        });
 
 
         // Delete record & audit
         userImageRepository.findByUserAndFileName(target, filename).ifPresent(image -> {
+            boolean wasThumbnail = image.getProfileThumbnail();
             userImageRepository.delete(image);
             userImageAuditRepository.save(UserImageAudit.builder()
                     .userId(target.getId())
@@ -785,13 +818,17 @@ public class UserImageService {
                     .performedByUsername(privilegesChecker.getAuthenticatedUser(authentication).getUsername())
                     .timestamp(LocalDateTime.now())
                     .build());
+            if (wasThumbnail) {
+                maintainThumbnailInvariant(target);
+            }
         });
+
+        evictUsersAfterCommit();
 
         return ResponseEntity.ok("Image deleted successfully: " + filename);
     }
 
-
-
+    @Transactional
     public ResponseEntity<?> harddeleteAllUserImages(String identifier, Authentication authentication) throws IOException {
         User target = validateAccess(identifier, authentication, "delete");
         Path userDir = fileStorageService.userRoot()
@@ -802,7 +839,14 @@ public class UserImageService {
             throw new DirectoryNotFoundException("User", target.getUsername(), userDir.toString());
         }
 
-        deleteUserUploadDirectory(userDir);
+        transactionalFileManager.runAfterCommit(() -> {
+            try {
+                deleteUserUploadDirectory(userDir);
+                log.info("User directory deleted after commit: {}", userDir);
+            } catch (Exception e) {
+                log.error("Failed deleting user directory after commit: {}", userDir, e);
+            }
+        });
 
         // Delete DB records & audits
         List<UserImage> images = userImageRepository.findByUser(target);
@@ -820,10 +864,54 @@ public class UserImageService {
             userImageRepository.delete(image);
         });
 
+        evictUsersAfterCommit();
+
         return ResponseEntity.ok("All images and upload directory deleted successfully for user: " + target.getUploadFolder());
     }
 
     public void deleteUserUploadDirectory(Path userDir) throws IOException {
         fileStorageService.deleteDirectory(userDir);
+    }
+
+    private void maintainThumbnailInvariant(User user) {
+
+        List<UserImage> activeImages =
+                userImageRepository.findByUser(user)
+                        .stream()
+                        .filter(i -> !Boolean.TRUE.equals(i.getDeleted()))
+                        .toList();
+
+        if (activeImages.isEmpty()) {
+            return; // nothing to assign
+        }
+
+        List<UserImage> thumbnails =
+                activeImages.stream()
+                        .filter(i -> Boolean.TRUE.equals(i.getProfileThumbnail()))
+                        .toList();
+
+        // ❗ Case 1: multiple thumbnails → fix
+        if (thumbnails.size() > 1) {
+            UserImage keep = thumbnails.get(0);
+
+            thumbnails.forEach(img -> img.setProfileThumbnail(false));
+            keep.setProfileThumbnail(true);
+
+            userImageRepository.saveAll(thumbnails);
+            return;
+        }
+
+        // ❗ Case 2: no thumbnail → assign one
+        if (thumbnails.isEmpty()) {
+
+            UserImage fallback =
+                    activeImages.stream()
+                            .filter(i -> "passport".equalsIgnoreCase(i.getFileDescription()))
+                            .findFirst()
+                            .orElse(activeImages.get(0));
+
+            fallback.setProfileThumbnail(true);
+            userImageRepository.save(fallback);
+        }
     }
 }

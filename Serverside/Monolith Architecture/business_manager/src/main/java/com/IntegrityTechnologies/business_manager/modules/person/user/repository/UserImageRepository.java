@@ -5,6 +5,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.user.model.User
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -54,4 +55,13 @@ public interface UserImageRepository extends JpaRepository<UserImage, UUID> {
             @Param("userId") UUID userId,
             @Param("deleted") Boolean deleted
     );
+
+    @Modifying
+    @Query("""
+                UPDATE UserImage i
+                SET i.profileThumbnail = false
+                WHERE i.user = :user
+                  AND i.profileThumbnail = true
+            """)
+    void clearExistingThumbnail(User user);
 }

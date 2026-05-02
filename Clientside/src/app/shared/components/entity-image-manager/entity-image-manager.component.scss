@@ -125,33 +125,95 @@ body.dark .image-card:hover {
 /* ================= AUDIT FILTER ================= */
 
 .active-filter {
-  font-size: 0.8rem;
-  margin-bottom: 10px;
-  color: var(--text-secondary);
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.filter-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.filter-text .label {
+  font-size: 0.7rem;
+}
+
+.filter-text .file {
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+/* keep button stable */
+.clear-btn {
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .active-filter {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .clear-btn {
+    padding: 0;
+  }
 }
 
 .audit-filter {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 12px;
+
+  /* important */
+  min-width: 0;
+}
+
+.audit-filter select {
+  flex: 1;
+  /* take available space */
+  min-width: 0;
+  /* allow shrinking */
+  max-width: 100%;
+  /* prevent overflow */
+
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.8rem;
+
+  /* critical for long filenames */
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .audit-filter label {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-secondary);
+  flex-shrink: 0;
 }
 
-.audit-filter select {
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  font-size: 0.8rem;
+@media (max-width: 480px) {
+  .audit-filter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .audit-filter select {
+    width: 100%;
+  }
 }
 
 .audit-section {
@@ -182,6 +244,12 @@ body.dark .image-card:hover {
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 0.8rem;
+  border-left: 3px solid transparent;
+}
+
+.audit-row.deleted {
+  border-left-color: #ef4444;
+  background: rgba(239, 68, 68, 0.035);
 }
 
 .audit-left {
@@ -191,9 +259,17 @@ body.dark .image-card:hover {
 }
 
 .audit-file {
+  display: flex;
+  gap: 6px;
   font-weight: 600;
-  white-space: normal; // 🔥 FIX (remove nowrap)
-  word-break: break-word; // ensure long strings wrap
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.file-name {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
 }
 
 .audit-meta {

@@ -24,8 +24,9 @@ import {
   USER_ACTION_REASONS,
   UserActionType
 } from '../../models/user-action-reasons.model';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, take } from 'rxjs';
 import * as pdfjsLib from 'pdfjs-dist';
+import { UserThumbnailService } from '../../services/user/user-thumbnail.service';
 
 @Component({
   selector: 'app-user-details',
@@ -68,7 +69,8 @@ export class UserDetailsComponent implements OnInit {
     private userService: UserService,
     private auth: AuthService,
     private snackbar: MatSnackBar,
-    private entityAction: EntityActionService
+    private entityAction: EntityActionService,
+    private thumbnailService: UserThumbnailService
   ) { }
 
   ngOnInit() {
@@ -85,11 +87,29 @@ export class UserDetailsComponent implements OnInit {
 
     this.imageAdapter = UserImageAdapter(
       this.userService,
-      () => {
-        this.userService.get(this.user.username, null).subscribe(u => {
-          this.user = u;
-          this.loadThumbnail(u);
-        });
+      async () => {
+        this.thumbnailService.invalidate(this.user.id!);
+
+        // 🔥 MUST refresh user to get new thumbnail URL
+        const updated = await firstValueFrom(
+          this.userService.get(this.user.username, null)
+        );
+
+        this.user = updated;
+
+        await this.loadThumbnail(updated);
+      },
+      async () => {
+        this.thumbnailService.invalidate(this.user.id!);
+
+        const updated = await firstValueFrom(
+          this.userService.get(this.user.username, null)
+        );
+
+        this.user = updated;
+
+        this.loadCounts();
+        this.loadThumbnail(updated);
       }
     );
 
@@ -171,16 +191,6 @@ export class UserDetailsComponent implements OnInit {
         // ✅ refresh counts
         this.loadCounts();
 
-        this.imageAdapter = UserImageAdapter(
-          this.userService,
-          () => {
-            this.userService.get(this.user.username, null).subscribe(u => {
-              this.user = u;
-              this.loadThumbnail(u);
-            });
-          }
-        );
-
         this.loading = false;
       },
       error: () => {
@@ -189,66 +199,17 @@ export class UserDetailsComponent implements OnInit {
     });
   }
 
-  private async loadThumbnail(u: User) {
+  private loadThumbnail(u: User) {
+    this.thumbnailObjectUrl = '';
 
-    if (!u.profileThumbnailUrl) {
-      this.thumbnailObjectUrl = '';
-      return;
-    }
+    if (!u.profileThumbnailUrl) return;
 
-    const fileName = u.profileThumbnailUrl.split('/').pop()!;
-    const ext = fileName.split('.').pop()?.toLowerCase();
-
-    const blob = await firstValueFrom(
-      this.userService.getUserImageBlob(u.id!, fileName, null)
-    );
-
-    if (this.thumbnailObjectUrl) {
-      URL.revokeObjectURL(this.thumbnailObjectUrl);
-    }
-
-    // ✅ IMAGE → direct render
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext!)) {
-      this.thumbnailObjectUrl = URL.createObjectURL(blob);
-      return;
-    }
-
-    // ✅ PDF → generate thumbnail (same as manager)
-    if (ext === 'pdf') {
-      this.thumbnailObjectUrl =
-        await this.generatePdfThumbnail(blob);
-    }
-  }
-
-  private async generatePdfThumbnail(blob: Blob): Promise<string> {
-    try {
-      const pdf = await pdfjsLib.getDocument({
-        data: await blob.arrayBuffer()
-      }).promise;
-
-      const page = await pdf.getPage(1);
-
-      const viewport = page.getViewport({ scale: 0.5 });
-
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-
-      if (!context) return '';
-
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-
-      await page.render({
-        canvasContext: context,
-        viewport
-      } as any).promise;
-
-      return canvas.toDataURL();
-
-    } catch (e) {
-      console.error('PDF thumbnail failed:', e);
-      return '';
-    }
+    this.thumbnailService
+      .getThumbnail(u.id!, u.profileThumbnailUrl)
+      .pipe(take(1))
+      .subscribe(url => {
+        this.thumbnailObjectUrl = url;
+      });
   }
 
   /* ================= ROLE GUARDS ================= */
@@ -351,6 +312,10 @@ export class UserDetailsComponent implements OnInit {
   ngOnDestroy() {
     if (this.thumbnailObjectUrl) {
       URL.revokeObjectURL(this.thumbnailObjectUrl);
+    }
+
+    if (this.user?.id) {
+      this.thumbnailService.invalidate(this.user.id); // ✅ cleanup cache
     }
   }
 }

@@ -7,6 +7,7 @@ import { SidebarComponent } from '../../navigation/sidebar/sidebar.component';
 import { SidebarService } from '../../../../core/services/sidebar.service';
 import { BreadcrumbComponent } from '../../../../shared/components/breadcrumb/breadcrumb.component';
 import { TopbarComponent } from '../../navigation/topbar/topbar.component';
+import { NavigationHistoryService } from '../../../../core/services/navigation-history.service';
 
 @Component({
   selector: 'app-main-layout',
@@ -28,14 +29,17 @@ export class MainLayoutComponent implements OnInit {
 
   constructor(
     public sidebar: SidebarService,
-    private router: Router
-  ) {}
+    private router: Router,
+    private navHistory: NavigationHistoryService
+  ) { }
 
   ngOnInit(): void {
-    // Update currentPage when route changes
     this.router.events
-      .pipe(filter(event => event instanceof NavigationEnd))
-      .subscribe(() => this.updateCurrentPage());
+      .pipe(filter(e => e instanceof NavigationEnd))
+      .subscribe((e: NavigationEnd) => {
+        this.navHistory.push(e.urlAfterRedirects);
+        this.updateCurrentPage();
+      });
   }
 
   private updateCurrentPage(): void {

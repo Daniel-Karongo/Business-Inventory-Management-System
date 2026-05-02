@@ -22,7 +22,9 @@ import java.util.UUID;
                         columnList = "user_id"),
 
                 @Index(name = "idx_user_image_deleted",
-                        columnList = "deleted")
+                        columnList = "deleted"),
+
+                @Index(name = "idx_user_thumbnail_lookup", columnList = "user_id, profile_thumbnail, deleted")
         }
 )
 @Getter

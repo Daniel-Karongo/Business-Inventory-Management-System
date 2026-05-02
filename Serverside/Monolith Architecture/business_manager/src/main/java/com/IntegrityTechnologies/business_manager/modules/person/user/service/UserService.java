@@ -1092,35 +1092,6 @@ public class UserService {
         }
     }
 
-    private void enforceSingleProfileThumbnail(
-            User user,
-            String incomingDescription
-    ) {
-
-        if (incomingDescription == null ||
-                !incomingDescription.trim()
-                        .equalsIgnoreCase("profile-thumbnail")) {
-            return;
-        }
-
-        List<UserImage> existing =
-                userImageRepository.findByUser(user);
-
-        existing.stream()
-                .filter(i -> !Boolean.TRUE.equals(i.getDeleted()))
-                .filter(i ->
-                        i.getFileDescription() != null &&
-                                i.getFileDescription()
-                                        .trim()
-                                        .equalsIgnoreCase("profile-thumbnail")
-                )
-                .forEach(i -> {
-                    // demote old thumbnail back to normal image
-                    i.setFileDescription("passport");
-                    userImageRepository.save(i);
-                });
-    }
-
     /* =====================================================
    SOFT DELETE OLD IMAGES
    ===================================================== */
@@ -1171,11 +1142,6 @@ public class UserService {
                             .orElseThrow();
             String description =
                     uploadedUrls.get(url);
-
-            enforceSingleProfileThumbnail(
-                    target,
-                    description
-            );
 
             UserImage img = UserImage.builder()
                     .fileName(Paths.get(url).getFileName().toString())
@@ -1433,11 +1399,6 @@ public class UserService {
                             );
 
             String description = apiUrls.get(apiUrl);
-
-            enforceSingleProfileThumbnail(
-                    user,
-                    description
-            );
 
             UserImage image = UserImage.builder()
                     .fileName(fileName)

@@ -1,96 +1,151 @@
+interface UserVM extends User {
+  thumbnail?: string;
+  thumbnailLoading?: boolean;
+}
+
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Router, RouterModule } from '@angular/router';
 
-import { SelectionModel } from '@angular/cdk/collections';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatPaginator, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatSortModule } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { ActivatedRoute, Router } from '@angular/router';
-import { finalize } from 'rxjs/operators';
+import { BreakpointObserver } from '@angular/cdk/layout';
+
+import {
+  BehaviorSubject,
+  combineLatest,
+  debounceTime,
+  distinctUntilChanged,
+  switchMap,
+  take,
+  tap
+} from 'rxjs';
 
 import { User } from '../../models/user.model';
 import { UserService } from '../../services/user/user.service';
 
 import { BranchService } from '../../../branches/services/branch.service';
 import { DepartmentService } from '../../../departments/services/department.service';
-import { UserBulkImportDialogComponent } from '../../components/user-bulk-import-dialog/user-bulk-import-dialog.component';
-import {
-  USER_ACTION_REASONS,
-  UserActionType
-} from '../../models/user-action-reasons.model';
 import { RoleService } from '../../services/role/role.service';
+
 import { EntityActionConfig, EntityActionService } from '../../../../../../shared/services/entity-action.service';
+import { USER_ACTION_REASONS, UserActionType } from '../../models/user-action-reasons.model';
+
 import { AuthService } from '../../../../../auth/services/auth.service';
-import { canSeeDeleted } from '../../../../../../core/utils/permission.utils';
+
+import { LazyLoadDirective } from '../../../../../../shared/directives/lazy-load.directive';
+import { PageShellComponent } from '../../../../../../shared/layout/page-shell/page-shell.component';
+import { UserThumbnailService } from '../../services/user/user-thumbnail.service';
+import { UserBulkImportDialogComponent } from '../../components/user-bulk-import-dialog/user-bulk-import-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
+import { FileViewerDialog } from '../../../../../../shared/components/file-viewer/file-viewer.component';
 
 @Component({
   selector: 'app-user-list',
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
+    RouterModule,
+    PageShellComponent,
     MatTableModule,
-    MatPaginatorModule,
-    MatIconModule,
-    MatButtonModule,
-    MatSnackBarModule,
-    MatTooltipModule,
-    MatSelectModule,
-    MatDialogModule,
     MatCheckboxModule,
-    MatSortModule
+    MatButtonModule,
+    MatIconModule,
+    MatPaginatorModule,
+    MatTooltipModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    LazyLoadDirective
   ],
   templateUrl: './user-list.component.html',
   styleUrls: ['./user-list.component.scss']
 })
 export class UserListComponent implements OnInit {
 
-  displayedColumns = ['select', 'username', 'emails', 'phones', 'branches_depts', 'role', 'status', 'createdAt', 'actions'];
+  /* =========================
+     SERVER + UI PAGINATION MODEL (MATCH PRODUCT)
+  ========================= */
 
-  /** Holds all users loaded once from backend */
-  // allUsers: User[] = [];
+  private page$ = new BehaviorSubject<number>(0);
+  private serverSize$ = new BehaviorSubject<number>(100);
 
-  /** After applying filters + search + sort */
-  // filteredUsers: User[] = [];
+  private uiPage$ = new BehaviorSubject<number>(0);
+  uiPageSize$ = new BehaviorSubject<number>(20);
 
-  /** Users visible on the current page */
-  users: User[] = [];
+  private loadedServerPages = new Set<number>();
+
+  /* =========================
+     FILTER STREAMS
+  ========================= */
+
+  private search$ = new BehaviorSubject<string>('');
+  private roleFilter$ = new BehaviorSubject<string | null>(null);
+  private branchFilter$ = new BehaviorSubject<string | null>(null);
+  private departmentFilter$ = new BehaviorSubject<string | null>(null);
+
+  private statusFilter$ = new BehaviorSubject<'all' | 'active' | 'deleted'>('all');
+  private showDeleted$ = new BehaviorSubject<boolean>(false);
+
+  private sortField$ = new BehaviorSubject<string | null>(null);
+  private sortDir$ = new BehaviorSubject<'asc' | 'desc'>('asc');
+
+  refresh$ = new BehaviorSubject<void>(undefined);
+
+  /* =========================
+     DATA STATE
+  ========================= */
+
+  allUsers: UserVM[] = [];
+  users: UserVM[] = [];
+
+  totalServerElements = 0;
+  loading = true;
+
+  selectedIds = new Set<string>();
+  skeletons = Array.from({ length: 12 });
+
+  /* =========================
+     UI STATE
+  ========================= */
+
+  displayedColumns = [
+    'select',
+    'username',
+    'emails',
+    'phones',
+    'branches_depts',
+    'role',
+    'status',
+    'created',
+    'actions'
+  ];
 
   branches: any[] = [];
   departments: any[] = [];
   roles: any[] = [];
 
-  total = 0;
-  page = 0;
-  size = 10;
+  viewMode: 'table' | 'grid' = 'table';
+  density: 'compact' | 'comfortable' = 'compact';
 
-  q = '';
-  filterBranch = '';
-  filterDepartment = '';
-  filterRole = '';
-  filterStatus: '' | 'active' | 'deleted' = '';
-  showDeleted = false;
+  isMobile = false;
   allowShowDeleted = false;
 
-  loading = false;
-
-  // selection for bulk actions
-  selection = new SelectionModel<User>(true, []);
-
-  // sorting
-  sortField: string | null = null;
-  sortDir: 'asc' | 'desc' = 'asc';
+  private readonly STORAGE_KEY = 'user_list_prefs';
 
   @ViewChild(MatPaginator) paginator?: MatPaginator;
+
+  /* =========================
+     ACTION CONFIG
+  ========================= */
 
   private userActionConfig: EntityActionConfig<User> = {
     entityName: 'User',
@@ -108,343 +163,379 @@ export class UserListComponent implements OnInit {
     restoreBulk: (ids, reason) => this.userService.restoreBulk(ids, reason),
     hardDeleteBulk: (ids, reason) => this.userService.hardDeleteBulk(ids, reason),
 
-    reload: () => this.loadUsers()
+    reload: () => {
+      this.resetAccumulation();
+      this.page$.next(0);
+      this.refresh$.next();
+      this.clearSelection();
+    }
   };
-
 
   constructor(
     private userService: UserService,
     private branchService: BranchService,
-    private authService: AuthService,
     private departmentService: DepartmentService,
     private roleService: RoleService,
     private entityAction: EntityActionService,
-    private snackbar: MatSnackBar,
-    private dialog: MatDialog,
-    public router: Router,
-    private route: ActivatedRoute,
+    private auth: AuthService,
+    private breakpoint: BreakpointObserver,
+    private router: Router,
+    private thumbnailService: UserThumbnailService,
+    private dialog: MatDialog
   ) { }
 
-  ngOnInit() {
+  /* =========================
+     INIT
+  ========================= */
+
+  ngOnInit(): void {
+
+    const me = this.auth.getSnapshot();
+    this.allowShowDeleted =
+      !!me && ['SUPERUSER', 'ADMIN', 'MANAGER'].includes(me.role);
+
     this.loadFilters();
-    this.loadUsers();
+    this.loadPreferences();
 
-    const me = this.authService.getSnapshot();
-    this.allowShowDeleted = canSeeDeleted(me);
-  }
+    this.breakpoint.observe(['(max-width: 640px)']).subscribe(res => {
+      this.isMobile = res.matches;
 
-  loadFilters() {
-    this.branchService.getAll().subscribe(b => (this.branches = b || []));
-    this.departmentService.getAll().subscribe(d => (this.departments = d || []));
-    this.roleService.list().subscribe(r => (this.roles = r || []));
-  }
-
-  loadUsers() {
-    this.loading = true;
-    const deletedParam =
-      this.filterStatus === 'active' ? false :
-        this.filterStatus === 'deleted' ? true :
-          this.showDeleted ? null : false;
-
-    this.userService.list(this.page, this.size, {
-      branch: this.filterBranch || null,
-      department: this.filterDepartment || null,
-      role: this.filterRole || null,
-      q: this.q || null,
-      deleted: deletedParam
-    }, this.sortField, this.sortDir)
-      .pipe(finalize(() => this.loading = false))
-      .subscribe({
-        next: r => {
-          this.users = [...r.data];
-          this.total = r.total;
-          this.selection.clear();
-        },
-        error: () => {
-          this.snackbar.open('Failed to load users', 'Close', { duration: 3000 });
-        }
-      });
-  }
-
-  applyFilters() {
-    this.page = 0;
-    this.loadUsers();
-  }
-
-  // applyFilters() {
-  //   let data = [...this.allUsers];
-
-  //   // search - matches username, any email, any phone
-  //   const q = (this.q || '').trim().toLowerCase();
-  //   if (q) {
-  //     data = data.filter(u =>
-  //       (u.username || '').toLowerCase().includes(q) ||
-  //       (u.emailAddresses || []).some(e => e.toLowerCase().includes(q)) ||
-  //       (u.phoneNumbers || []).some(p => p.includes(q))
-  //     );
-  //   }
-
-  //   // branch filter (checks branchHierarchy)
-  //   if (this.filterBranch) {
-  //     data = data.filter(u =>
-  //       (u.branchHierarchy || []).some(b => b.branchId === this.filterBranch)
-  //     );
-  //   }
-
-  //   // department filter (checks each branch -> departments entries)
-  //   if (this.filterDepartment) {
-  //     data = data.filter(u =>
-  //       (u.branchHierarchy || []).some(b =>
-  //         (b.departments || []).some(d => d.departmentId === this.filterDepartment)
-  //       )
-  //     );
-  //   }
-
-  //   // role filter
-  //   if (this.filterRole) {
-  //     data = data.filter(u => u.role === this.filterRole);
-  //   }
-
-  //   // STATUS FILTER
-  //   if (this.filterStatus === 'active') {
-  //     data = data.filter(u => u.deleted === false);
-  //   }
-  //   else if (this.filterStatus === 'deleted') {
-  //     data = data.filter(u => u.deleted === true);
-  //   }
-
-  //   // Show Deleted toggle (only hide deleted when no explicit status filter)
-  //   if (!this.showDeleted && this.filterStatus === '') {
-  //     data = data.filter(u => !u.deleted);
-  //   }
-
-  //   // apply sorting (client-side)
-  //   if (this.sortField) {
-  //     data.sort((a, b) => this.compareForField(a, b, this.sortField!, this.sortDir));
-  //   }
-
-  //   this.filteredUsers = data;
-  //   this.total = data.length;
-
-  //   // reset selection (don't keep stale selected items)
-  //   this.selection.clear();
-
-  //   // apply pagination
-  //   this.applyPagination();
-  // }
-
-  compareForField(a: User, b: User, field: string, dir: 'asc' | 'desc') {
-    const multiplier = dir === 'asc' ? 1 : -1;
-    let v1: any = null;
-    let v2: any = null;
-
-    switch (field) {
-      case 'username':
-        v1 = (a.username || '').toLowerCase();
-        v2 = (b.username || '').toLowerCase();
-        break;
-
-      case 'role':
-        v1 = (a.role || '').toLowerCase();
-        v2 = (b.role || '').toLowerCase();
-        break;
-
-      case 'createdAt':
-        v1 = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        v2 = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        break;
-
-      case 'email':
-        v1 = (a.emailAddresses && a.emailAddresses[0]) ? a.emailAddresses[0].toLowerCase() : '';
-        v2 = (b.emailAddresses && b.emailAddresses[0]) ? b.emailAddresses[0].toLowerCase() : '';
-        break;
-
-      case 'phone':
-        v1 = (a.phoneNumbers && a.phoneNumbers[0]) ? a.phoneNumbers[0] : '';
-        v2 = (b.phoneNumbers && b.phoneNumbers[0]) ? b.phoneNumbers[0] : '';
-        break;
-
-      case 'department':
-        // pick first department name (or empty)
-        v1 = this.firstDepartmentName(a).toLowerCase();
-        v2 = this.firstDepartmentName(b).toLowerCase();
-        break;
-
-      case 'branch':
-        // pick first branch name
-        v1 = (a.branchHierarchy && a.branchHierarchy[0]) ? (a.branchHierarchy[0].branchName || '') : '';
-        v2 = (b.branchHierarchy && b.branchHierarchy[0]) ? (b.branchHierarchy[0].branchName || '') : '';
-        v1 = v1.toLowerCase();
-        v2 = v2.toLowerCase();
-        break;
-
-      case 'status':
-        v1 = (a.deleted || '');
-        v2 = (b.deleted || '');
-        break;
-
-      default:
-        v1 = '';
-        v2 = '';
-    }
-
-    if (v1 < v2) return -1 * multiplier;
-    if (v1 > v2) return 1 * multiplier;
-    return 0;
-  }
-
-  firstDepartmentName(u: User): string {
-    if (!u.branchHierarchy || !u.branchHierarchy.length) return '';
-    for (const b of u.branchHierarchy) {
-      if (b.departments && b.departments.length) {
-        const d = b.departments[0];
-        // departmentName may exist according to updated DTO
-        return (d.departmentName || d.departmentId || '') as string;
+      if (this.isMobile) {
+        this.viewMode = 'grid'; // ✅ correct
       }
-    }
-    return '';
+    });
+
+    const data$ = combineLatest([
+      this.page$,
+      this.serverSize$,
+      this.search$.pipe(debounceTime(800), distinctUntilChanged()),
+      this.roleFilter$,
+      this.branchFilter$,
+      this.departmentFilter$,
+      this.statusFilter$,
+      this.showDeleted$,
+      this.sortField$,
+      this.sortDir$,
+      this.refresh$
+    ]).pipe(
+      tap(() => this.loading = true),
+      switchMap(([page, size, search, role, branch, dept, status, showDeleted, sortField, sortDir]) => {
+
+        const filter: any = {};
+
+        if (search) filter.q = search;
+        if (role) filter.role = role;
+        if (branch) filter.branch = branch;
+        if (dept) filter.department = dept;
+
+        // ✅ Correct logic
+        if (showDeleted) {
+          // show both
+          filter.deleted = null;
+        } else {
+          if (status === 'active') filter.deleted = false;
+          else if (status === 'deleted') filter.deleted = true;
+          else filter.deleted = false; // ✅ DEFAULT = active only
+        }
+
+        return this.userService.list(page, size, filter, sortField, sortDir);
+      }),
+      tap(res => {
+
+        const currentPage = this.page$.value;
+
+        if (!this.loadedServerPages.has(currentPage)) {
+
+          const batch: UserVM[] = res.data.map(u => ({
+            ...u,
+            thumbnail: '',
+            thumbnailLoading: false
+          }));
+
+          this.allUsers = [...this.allUsers, ...batch];
+          this.loadedServerPages.add(currentPage);
+        }
+
+        this.totalServerElements = res.total;
+        this.applyClientPagination();
+        this.loading = false;
+      })
+    );
+
+    data$.subscribe();
   }
+
+  getDepartmentCount(u: UserVM): number {
+    return (u.branchHierarchy || [])
+      .reduce((sum, b) => sum + (b.departments?.length || 0), 0);
+  }
+
+  /* =========================
+     PAGINATION
+  ========================= */
+
+  private applyClientPagination() {
+    const start = this.uiPage$.value * this.uiPageSize$.value;
+    const end = start + this.uiPageSize$.value;
+    this.users = this.allUsers.slice(start, end);
+  }
+
+  changePage(e: PageEvent) {
+
+    const requestedIndex = e.pageIndex;
+    const size = e.pageSize;
+
+    this.uiPageSize$.next(size);
+
+    const requiredIndex = requestedIndex * size;
+
+    if (requiredIndex < this.allUsers.length) {
+      this.uiPage$.next(requestedIndex);
+      this.applyClientPagination();
+      return;
+    }
+
+    const serverPage =
+      Math.floor(requiredIndex / this.serverSize$.value);
+
+    if (!this.loadedServerPages.has(serverPage)) {
+      this.page$.next(serverPage);
+    }
+
+    this.uiPage$.next(requestedIndex);
+  }
+
+  private resetAccumulation() {
+    this.allUsers = [];
+    this.loadedServerPages.clear();
+    this.uiPage$.next(0);
+  }
+
+  /* =========================
+     FILTERS
+  ========================= */
+
+  onSearch(v: string) {
+    this.resetAccumulation();
+    this.page$.next(0);
+    this.search$.next(v);
+  }
+
+  onRole(v: string | null) {
+    this.resetAccumulation();
+    this.page$.next(0);
+    this.roleFilter$.next(v);
+  }
+
+  onBranch(v: string | null) {
+    this.resetAccumulation();
+    this.page$.next(0);
+    this.branchFilter$.next(v);
+  }
+
+  onDepartment(v: string | null) {
+    this.resetAccumulation();
+    this.page$.next(0);
+    this.departmentFilter$.next(v);
+  }
+
+  onStatus(v: 'all' | 'active' | 'deleted') {
+    this.resetAccumulation();
+    this.page$.next(0);
+    this.statusFilter$.next(v);
+  }
+
+  onShowDeleted(v: boolean) {
+    this.resetAccumulation();
+    this.page$.next(0);
+    this.showDeleted$.next(v);
+  }
+
+  /* =========================
+     SORT
+  ========================= */
 
   sortBy(field: string) {
 
-    const fieldMap: any = {
-      username: 'username',
-      role: 'role',
-      createdAt: 'createdAt',
-      status: 'deleted'
-    };
-
-    const backendField = fieldMap[field];
-    if (!backendField) return; // ignore unsupported fields
-
-    if (this.sortField === backendField) {
-      this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+    if (this.sortField$.value === field) {
+      this.sortDir$.next(
+        this.sortDir$.value === 'asc' ? 'desc' : 'asc'
+      );
     } else {
-      this.sortField = backendField;
-      this.sortDir = 'asc';
+      this.sortField$.next(field);
+      this.sortDir$.next('asc');
     }
 
-    this.applyFilters();
+    this.resetAccumulation();
+    this.page$.next(0);
   }
 
-  // applyPagination() {
-  //   const start = this.page * this.size;
-  //   const end = start + this.size;
-  //   this.users = this.filteredUsers.slice(start, end);
-  // }
-
-  changePage(event: PageEvent) {
-    this.page = event.pageIndex;
-    this.size = event.pageSize;
-    this.loadUsers();
+  getSortIcon(field: string): string {
+    if (this.sortField$.value !== field) return 'unfold_more';
+    return this.sortDir$.value === 'asc'
+      ? 'arrow_upward'
+      : 'arrow_downward';
   }
 
-  get bulkState(): 'active' | 'deleted' | 'mixed' | null {
-    const selected = this.selection.selected;
-    if (selected.length === 0) return null;
+  /* =========================
+     SELECTION
+  ========================= */
 
-    const statuses = new Set(selected.map(u => u.deleted));
-
-    if (statuses.size > 1) return 'mixed';      // mixture
-    if (statuses.has(false)) return 'active';   // all active
-    return 'deleted';                           // all deleted
+  toggleRowSelection(u: UserVM) {
+    this.selectedIds.has(u.id)
+      ? this.selectedIds.delete(u.id)
+      : this.selectedIds.add(u.id);
   }
 
-  // Selection helpers for bulk
   isAllSelected() {
-    const numSelected = this.selection.selected.length;
-    const numRows = this.users.length;
-    return numSelected === numRows && numRows > 0;
+    return this.users.every(u => this.selectedIds.has(u.id));
   }
 
   masterToggle() {
     if (this.isAllSelected()) {
-      this.selection.clear();
+      this.users.forEach(u => this.selectedIds.delete(u.id));
     } else {
-      this.users.forEach(row => this.selection.select(row));
+      this.users.forEach(u => this.selectedIds.add(u.id));
     }
   }
 
-  checkboxLabel(row?: User): string {
-    if (!row) {
-      return `${this.isAllSelected() ? 'Deselect' : 'Select'} all`;
-    }
-    return `${this.selection.isSelected(row) ? 'Deselect' : 'Select'} row ${row.username}`;
+  clearSelection() {
+    this.selectedIds.clear();
   }
 
-  toggleRowSelection(row: any) {
-    this.selection.toggle(row);
+  get bulkState(): 'active' | 'deleted' | 'mixed' | null {
+    if (!this.selectedIds.size) return null;
+
+    const states = new Set(
+      this.users.filter(u => this.selectedIds.has(u.id)).map(u => u.deleted)
+    );
+
+    if (states.size > 1) return 'mixed';
+    return states.has(true) ? 'deleted' : 'active';
   }
 
-  toggleActive(u: User) {
-    this.entityAction.toggleSingle(u, this.userActionConfig);
-  }
+  /* =========================
+     ACTIONS
+  ========================= */
 
-  // Bulk actions (disable)
-  bulkDisable() {
-    this.entityAction.bulkDisable(this.selection.selected, this.userActionConfig);
-  }
+  openImage(u: UserVM) {
+    if (!u.thumbnail) return;
 
-  bulkRestore() {
-    this.entityAction.bulkRestore(this.selection.selected, this.userActionConfig);
-  }
-
-  bulkDelete() {
-    this.entityAction.bulkHardDelete(this.selection.selected, this.userActionConfig);
-  }
-
-  // navigation helpers
-  goCreate() {
-    this.router.navigate(['create'], {
-      relativeTo: this.route
+    this.dialog.open(FileViewerDialog, {
+      data: {
+        preview: {
+          src: u.thumbnail,
+          name: u.username,
+          type: 'image'
+        }
+      },
+      width: '80%',
+      maxWidth: '1100px'
     });
   }
 
-  edit(u: User) {
-    this.router.navigate(
-      [u.username, 'edit'],
-      { relativeTo: this.route }
-    );
+  toggleUser(u: UserVM) {
+    this.entityAction.toggleSingle(u, this.userActionConfig);
   }
 
-  view(u: User) {
-    this.router.navigate(
-      [u.username],
-      { relativeTo: this.route }
-    );
+  bulkDisable() {
+    this.entityAction.bulkDisable(this.getSelected(), this.userActionConfig);
   }
+
+  bulkRestore() {
+    this.entityAction.bulkRestore(this.getSelected(), this.userActionConfig);
+  }
+
+  bulkDelete() {
+    this.entityAction.bulkHardDelete(this.getSelected(), this.userActionConfig);
+  }
+
+  private getSelected() {
+    return this.allUsers.filter(u => this.selectedIds.has(u.id));
+  }
+
   openBulkImport() {
     this.dialog.open(UserBulkImportDialogComponent, {
       width: '1100px',
       maxWidth: '95vw',
       maxHeight: '90vh',
       autoFocus: false
-    }).afterClosed().subscribe(imported => {
-      if (imported === true) {
-        // 🔄 refresh list after successful import
-        this.loadUsers();
-      }
-    });
+    })
+      .afterClosed()
+      .subscribe(result => {
+        if (result === true) {
+          // ✅ Proper refresh for your reactive pipeline
+          this.resetAccumulation();
+          this.page$.next(0);
+          this.refresh$.next();
+        }
+      });
   }
 
-  // Utility used by template to render branch / dept grid
-  branchDeptRows(u: User) {
-    // returns array of { branchName, departmentName, position }
-    const rows: Array<{ branchName: string; departmentName: string; position?: string }> = [];
-    (u.branchHierarchy || []).forEach(b => {
-      const branchName = b.branchName || '';
-      if (!b.departments || !b.departments.length) {
-        rows.push({ branchName, departmentName: '—', position: '' });
-      } else {
-        (b.departments || []).forEach(d => {
-          rows.push({
-            branchName,
-            departmentName: (d as any).departmentName || d.departmentId || '—',
-            position: (d as any).position
-          });
-        });
-      }
-    });
-    return rows;
+  /* =========================
+     NAVIGATION
+  ========================= */
+
+  view(u: UserVM) {
+    this.router.navigate(['/app/users', u.username]);
+  }
+
+  edit(u: UserVM) {
+    this.router.navigate(['/app/users', u.username, 'edit']);
+  }
+
+  /* =========================
+     THUMBNAIL (PDF SUPPORT)
+  ========================= */
+
+  loadThumbnail(u: UserVM) {
+    if (u.thumbnailLoading || u.thumbnail) return;
+    if (!u.profileThumbnailUrl || !u.id) return;
+
+    u.thumbnailLoading = true;
+
+    this.thumbnailService
+      .getThumbnail(u.id, u.profileThumbnailUrl)
+      .pipe(take(1))
+      .subscribe({
+        next: (url) => {
+          u.thumbnail = url;
+          u.thumbnailLoading = false;
+        },
+        error: () => {
+          u.thumbnailLoading = false;
+        }
+      });
+  }
+
+
+  /* =========================
+     FILTER LOAD
+  ========================= */
+
+  loadFilters() {
+    this.branchService.getAll().subscribe(b => this.branches = b || []);
+    this.departmentService.getAll().subscribe(d => this.departments = d || []);
+    this.roleService.list().subscribe(r => this.roles = r || []);
+  }
+
+  /* =========================
+     PREFS
+  ========================= */
+
+  savePreferences() {
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify({
+      viewMode: this.viewMode,
+      density: this.density
+    }));
+  }
+
+  private loadPreferences() {
+    const raw = localStorage.getItem(this.STORAGE_KEY);
+    if (!raw) return;
+
+    const p = JSON.parse(raw);
+    this.viewMode = p.viewMode ?? this.viewMode;
+    this.density = p.density ?? this.density;
   }
 }

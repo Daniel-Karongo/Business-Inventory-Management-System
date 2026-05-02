@@ -4,7 +4,8 @@ import { UserService } from './user.service';
 
 export const UserImageAdapter = (
   service: UserService,
-  onThumbnailUpdated?: () => void
+  onThumbnailUpdated?: () => void,
+  onChange?: () => void
 ): EntityImageAdapter => ({
 
   listImages: (id: string) =>
@@ -64,5 +65,6 @@ export const UserImageAdapter = (
       reason
     ),
   
-  onThumbnailUpdated
+  onThumbnailUpdated,
+  onChange
 });

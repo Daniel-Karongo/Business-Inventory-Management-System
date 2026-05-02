@@ -13,6 +13,49 @@
    META BUTTON (BRANCH / USER / THEME)
 ====================================================== */
 
+/* ICON BUTTONS ONLY */
+.topbar button[mat-icon-button] {
+  height: 40px;
+  width: 40px;
+  padding: 0;
+}
+
+/* META BUTTONS */
+.topbar .meta-btn {
+  min-width: 40px;
+  height: 40px;
+  padding: 0 10px;
+}
+
+/* Only force square buttons on mobile */
+@media (max-width: 640px) {
+  .topbar .meta-btn {
+    width: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+.meta-btn[disabled] {
+  opacity: 0.55;
+  color: var(--text-secondary);
+
+  .meta-icon {
+    color: var(--text-secondary);
+  }
+
+  /* kill hover */
+  &:hover {
+    background: transparent !important;
+  }
+}
+
+.topbar mat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .meta-btn {
   display: flex;
   align-items: center;
@@ -29,6 +72,21 @@
 
   &:hover {
     background: var(--surface-hover);
+  }
+}
+
+@media (max-width: 640px) {
+  .topbar .meta-btn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .meta-icon {
+    margin: 0;
   }
 }
 
@@ -58,6 +116,22 @@
 .chevron {
   font-size: 20px;
   color: var(--text-secondary);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 20px; // ✅ desktop spacing (like gap-5)
+}
+
+.topbar-right span {
+  display: inline-flex;   // CRITICAL
+}
+
+@media (max-width: 640px) {
+  .topbar-right {
+    gap: 6px; // ✅ compact mobile
+  }
 }
 
 /* ======================================================
@@ -118,4 +192,20 @@
   .meta-text {
     display: none;
   }
+
+  .meta-btn {
+    min-width: 40px;
+    justify-content: center;
+  }
 }
+
+// .show-tooltip-mobile {
+//   @media (min-width: 641px) {
+//     pointer-events: none;
+
+//     // disables tooltip trigger on desktop
+//     &[mattooltip] {
+//       cursor: default;
+//     }
+//   }
+// }

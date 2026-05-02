@@ -1,29 +1,41 @@
 <mat-toolbar class="topbar flex justify-between items-center px-4">
 
   <!-- LEFT -->
-  <div class="flex items-center gap-3">
-    <button mat-icon-button (click)="toggleSidebar()" aria-label="Toggle sidebar">
+  <div class="flex items-center gap-2">
+
+    <!-- SIDEBAR -->
+    <button mat-icon-button (click)="toggleSidebar()" matTooltip="Toggle sidebar" [matTooltipDisabled]="!isSmallScreen">
       <mat-icon>menu</mat-icon>
     </button>
 
+    <!-- BACK BUTTON -->
+    <button mat-icon-button (click)="goBack()" matTooltip="Go back" [matTooltipDisabled]="!isSmallScreen"
+      class="back-btn">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+
+    <!-- PAGE TITLE -->
     <div class="text-lg font-medium hidden sm:block">
       {{ currentPage }}
     </div>
+
   </div>
 
   <!-- RIGHT -->
-  <div class="flex items-center gap-5">
+  <div class="topbar-right flex items-center">
 
     <!-- ================= BRANCH SELECTOR ================= -->
-    <button mat-button class="meta-btn" disabled>
-      <mat-icon class="meta-icon">business</mat-icon>
+    <span [matTooltip]="activeBranchName" [matTooltipDisabled]="!isSmallScreen">
+      <button mat-button class="meta-btn" [disabled]="!isSmallScreen">
+        <mat-icon class="meta-icon">business</mat-icon>
 
-      <div class="meta-text hidden sm:flex">
-        <div class="meta-title">
-          {{ activeBranchName }}
+        <div class="meta-text hidden sm:flex">
+          <div class="meta-title">
+            {{ activeBranchName }}
+          </div>
         </div>
-      </div>
-    </button>
+      </button>
+    </span>
 
     <!-- ================= NOTIFICATIONS ================= -->
     <!-- <app-notification-button
@@ -33,7 +45,8 @@
     ></app-notification-button> -->
 
     <!-- ================= THEME ================= -->
-    <button mat-button [matMenuTriggerFor]="themeMenu" class="meta-btn">
+    <button mat-button [matMenuTriggerFor]="themeMenu" class="meta-btn" matTooltip="Theme settings"
+      [matTooltipDisabled]="!isSmallScreen">
       <mat-icon class="meta-icon">brightness_6</mat-icon>
 
       <div class="meta-text hidden sm:flex">
@@ -58,7 +71,8 @@
     </mat-menu>
 
     <!-- ================= USER MENU ================= -->
-    <button mat-button [matMenuTriggerFor]="userMenu" class="meta-btn">
+    <button mat-button [matMenuTriggerFor]="userMenu" class="meta-btn" [matTooltip]="currentUser?.username"
+      [matTooltipDisabled]="!isSmallScreen">
       <mat-icon class="meta-icon">person</mat-icon>
 
       <div class="meta-text hidden sm:flex">
@@ -85,5 +99,3 @@
 
   </div>
 </mat-toolbar>
-
-

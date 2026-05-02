@@ -1,23 +1,26 @@
-import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, NavigationEnd } from '@angular/router';
+import { Component, HostListener, OnInit } from '@angular/core';
+import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
 
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatMenuModule } from '@angular/material/menu';
+import { MatBadgeModule } from '@angular/material/badge';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatBadgeModule } from '@angular/material/badge';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatToolbarModule } from '@angular/material/toolbar';
 
 import { SidebarService } from '../../../../core/services/sidebar.service';
 import { ThemeService } from '../../../../core/services/theme.service';
 // import { NotificationButtonComponent } from './notification-button/notification-button.component';
-import { AuthService } from '../../../auth/services/auth.service';
-import { IdleLogoutService } from '../../../../core/services/IdleLogoutService';
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { MatDialog } from '@angular/material/dialog';
-import { LogoutChoiceDialogComponent } from './logout-choice-dialog/logout-choice-dialog.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { IdleLogoutService } from '../../../../core/services/IdleLogoutService';
+import { NavigationHistoryService } from '../../../../core/services/navigation-history.service';
+import { AuthService } from '../../../auth/services/auth.service';
 import { BranchDTO } from '../../content/branches/models/branch.model';
 import { BranchService } from '../../content/branches/services/branch.service';
+import { LogoutChoiceDialogComponent } from './logout-choice-dialog/logout-choice-dialog.component';
 
 @Component({
   selector: 'app-topbar',
@@ -28,7 +31,8 @@ import { BranchService } from '../../content/branches/services/branch.service';
     MatMenuModule,
     MatButtonModule,
     MatIconModule,
-    MatBadgeModule
+    MatBadgeModule,
+    MatTooltipModule
     // NotificationButtonComponent
   ],
   templateUrl: './topbar.component.html',
@@ -49,6 +53,7 @@ export class TopbarComponent implements OnInit {
   branches: BranchDTO[] = [];
   selectedBranchId?: string;
   selectedBranchName = 'Select branch';
+  isSmallScreen = false;
 
   constructor(
     public sidebar: SidebarService,
@@ -57,7 +62,9 @@ export class TopbarComponent implements OnInit {
     private router: Router,
     private auth: AuthService,
     private idle: IdleLogoutService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private navHistory: NavigationHistoryService,
+    private breakpoint: BreakpointObserver
   ) { }
 
   ngOnInit(): void {
@@ -69,6 +76,10 @@ export class TopbarComponent implements OnInit {
     this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
       .subscribe(() => this.updatePageTitle());
+
+    this.breakpoint.observe(['(max-width: 640px)']).subscribe(res => {
+      this.isSmallScreen = res.matches;
+    });
   }
 
   private loadBranches() {
@@ -143,6 +154,16 @@ export class TopbarComponent implements OnInit {
 
   toggleSidebar() {
     this.sidebar.toggle();
+  }
+
+  goBack() {
+    const prev = this.navHistory.back();
+
+    if (prev) {
+      this.router.navigateByUrl(prev);
+    } else {
+      this.router.navigate(['/app/dashboard']);
+    }
   }
 
   toggleBranchMenu(event?: MouseEvent) {

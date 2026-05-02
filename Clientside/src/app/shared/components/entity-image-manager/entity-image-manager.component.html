@@ -119,23 +119,30 @@
         </div>
 
         <div class="active-filter" *ngIf="selectedFile !== 'ALL'">
-            Showing logs for:
-            <strong>{{ selectedFile }}</strong>
+            <div class="filter-text">
+                <span class="label">Showing logs for</span>
+                <strong class="file">{{ selectedFile }}</strong>
+            </div>
 
-            <button mat-button (click)="selectedFile = 'ALL'">
+            <button mat-button class="clear-btn" (click)="selectedFile = 'ALL'">
                 Clear
             </button>
         </div>
 
         <!-- LIST -->
         <div class="audit-list">
-            <div class="audit-row" *ngFor="let audit of filteredAudits">
+            <div class="audit-row" *ngFor="let audit of filteredAudits" [class.deleted]="audit.isDeleted">
 
                 <div class="audit-left">
-                    <div class="audit-file">{{ audit.fileName }}</div>
+                    <div class="audit-file">
+                        <span class="file-name">{{ audit.fileName }}</span>
+                    </div>
                     <div class="audit-meta">
                         {{ audit.performedByUsername }} •
                         {{ audit.timestamp | date:'medium' }}
+                    </div>
+                    <div class="audit-reason" *ngIf="audit.reason?.trim()">
+                        {{ audit.reason }}
                     </div>
                 </div>
 

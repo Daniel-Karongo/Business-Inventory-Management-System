@@ -1,309 +1,520 @@
-<div class="page-container p-4">
+<app-page-shell>
 
-  <!-- PAGE HEADER -->
-  <div class="page-header flex items-center mb-6">
+  <!-- ================= HEADER ================= -->
+  <div page-header>
+    <div class="user-header">
 
-    <!-- LEFT: TITLE -->
-    <h2 class="text-xl font-semibold">
-      Users
-    </h2>
+      <!-- LEFT -->
+      <div class="header-left">
 
-    <!-- RIGHT: ACTIONS -->
-    <div class="flex items-center gap-2 ml-auto">
+        <button mat-icon-button matTooltip="Grid View" [class.active]="viewMode === 'grid'"
+          (click)="viewMode = 'grid'; savePreferences()">
+          <mat-icon>grid_view</mat-icon>
+        </button>
 
-      <button mat-stroked-button (click)="openBulkImport()">
-        <mat-icon>cloud_upload</mat-icon>
-        Bulk Import
-      </button>
+        <button mat-icon-button matTooltip="Table View" [class.active]="viewMode === 'table'"
+          (click)="viewMode = 'table'; savePreferences()">
+          <mat-icon>table_rows</mat-icon>
+        </button>
 
-      <button mat-flat-button color="primary" (click)="goCreate()">
-        Create User
-      </button>
+        <button *ngIf="!isMobile" mat-icon-button matTooltip="Toggle Density"
+          (click)="density = density === 'compact' ? 'comfortable' : 'compact'; savePreferences()">
+          <mat-icon>format_line_spacing</mat-icon>
+        </button>
+
+      </div>
+
+      <!-- RIGHT -->
+      <div class="header-right">
+        <button mat-stroked-button (click)="openBulkImport()">
+          <mat-icon>cloud_upload</mat-icon>
+          Bulk Import
+        </button>
+
+        <button mat-flat-button color="primary" routerLink="/app/users/create">
+          + Create User
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= TOOLBAR ================= -->
+  <div page-toolbar class="user-toolbar">
+
+    <!-- SEARCH -->
+    <div class="search">
+      <mat-form-field appearance="fill">
+        <mat-label>Search username, email or phone</mat-label>
+        <input matInput (input)="onSearch($any($event.target).value)">
+        <button matSuffix mat-icon-button (click)="onSearch('')">
+          <mat-icon>close</mat-icon>
+        </button>
+      </mat-form-field>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="filters">
+
+      <mat-form-field appearance="fill">
+        <mat-label>Branch</mat-label>
+        <mat-select (selectionChange)="onBranch($event.value)">
+          <mat-option [value]="null">All</mat-option>
+          <mat-option *ngFor="let b of branches" [value]="b.id">
+            {{ b.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Department</mat-label>
+        <mat-select (selectionChange)="onDepartment($event.value)">
+          <mat-option [value]="null">All</mat-option>
+          <mat-option *ngFor="let d of departments" [value]="d.id">
+            {{ d.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Role</mat-label>
+        <mat-select (selectionChange)="onRole($event.value)">
+          <mat-option [value]="null">All</mat-option>
+          <mat-option *ngFor="let r of roles" [value]="r.name">
+            {{ r.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field *ngIf="allowShowDeleted" appearance="fill">
+        <mat-label>Status</mat-label>
+        <mat-select (selectionChange)="onStatus($event.value)">
+          <mat-option value="all">All</mat-option>
+          <mat-option value="active">Active</mat-option>
+          <mat-option value="deleted">Disabled</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-checkbox *ngIf="allowShowDeleted" (change)="onShowDeleted($event.checked)">
+        Show deleted
+      </mat-checkbox>
 
     </div>
 
   </div>
 
-  <!-- BULK ACTION BAR -->
-  <div class="flex items-center gap-3 mb-4" *ngIf="selection.selected.length > 0">
-    <span class="font-medium text-blue-500">
-      {{ selection.selected.length }} selected
-    </span>
+  <!-- ================= CONTENT ================= -->
+  <div page-content>
 
-    <!-- BULK DISABLE (only when all active) -->
-    <button *ngIf="bulkState === 'active'" mat-stroked-button color="warn" (click)="bulkDisable()">
-      Disable Selected
-    </button>
+    <!-- ================= BULK BAR ================= -->
+    <div *ngIf="selectedIds.size > 0" class="bulk-bar">
 
-    <!-- BULK RESTORE (only when all deleted) -->
-    <button *ngIf="bulkState === 'deleted'" mat-stroked-button color="primary" (click)="bulkRestore()">
-      Restore Selected
-    </button>
+      <span class="bulk-count">
+        {{ selectedIds.size }} selected
+      </span>
 
-    <!-- BULK PERMANENT DELETE (only when all deleted) -->
-    <button *ngIf="bulkState === 'deleted'" mat-flat-button color="warn" (click)="bulkDelete()">
-      Delete Permanently
-    </button>
+      <button *ngIf="bulkState === 'active'" mat-stroked-button color="warn" (click)="bulkDisable()">
+        Disable
+      </button>
 
-    <!-- ERROR DISPLAY (mixed status) -->
-    <span *ngIf="bulkState === 'mixed'" class="text-red-500 font-medium">
-      Cannot perform bulk action — selected users have mixed status
-    </span>
-  </div>
+      <button *ngIf="bulkState === 'deleted'" mat-stroked-button color="primary" (click)="bulkRestore()">
+        Restore
+      </button>
 
-  <!-- SEARCH + SHOW DELETED -->
-  <div class="flex items-center gap-4 mb-4">
+      <button *ngIf="bulkState === 'deleted'" mat-flat-button color="warn" (click)="bulkDelete()">
+        Hard Delete
+      </button>
 
-    <input class="search-input px-3 py-2 rounded border" placeholder="Search username, email or phone number"
-      [(ngModel)]="q" (input)="applyFilters()" [attr.aria-label]="'Search users'" />
+      <span *ngIf="bulkState === 'mixed'" class="bulk-error">
+        Mixed selection — cannot perform bulk action
+      </span>
 
-    <mat-checkbox *ngIf="allowShowDeleted" [(ngModel)]="showDeleted" (change)="applyFilters()"
-      [attr.aria-label]="'Toggle visibility of deleted users'">
-      Show deleted users
-    </mat-checkbox>
-  </div>
+      <button mat-button class="cancel-selection" (click)="clearSelection()">
+        Cancel Selection
+      </button>
 
-  <!-- FILTERS -->
-  <div
-    class="filters grid grid-cols-1 md:grid-cols-auto-fit md:grid-cols-[repeat(auto-fit,minmax(100px,1fr))] gap-4 mb-6">
+    </div>
 
-    <!-- Branch -->
-    <mat-form-field appearance="fill">
-      <mat-label>Branch</mat-label>
-      <mat-select [(ngModel)]="filterBranch" (selectionChange)="applyFilters()"
-        [attr.aria-label]="'Filter users by branch'">
-        <mat-option value="">All</mat-option>
-        <mat-option *ngFor="let b of branches" [value]="b.id">
-          {{ b.name }}
-        </mat-option>
-      </mat-select>
-    </mat-form-field>
+    <!-- ================= EMPTY STATE ================= -->
+    <div *ngIf="!loading && users.length === 0" class="empty-state">
+      <mat-icon>people</mat-icon>
+      <div class="title">No users found</div>
+      <div class="sub">Try adjusting filters or search</div>
+    </div>
 
-    <!-- Department -->
-    <mat-form-field appearance="fill">
-      <mat-label>Department</mat-label>
-      <mat-select [(ngModel)]="filterDepartment" (selectionChange)="applyFilters()"
-        [attr.aria-label]="'Filter users by department'">
-        <mat-option value="">All</mat-option>
-        <mat-option *ngFor="let d of departments" [value]="d.id">
-          {{ d.name }}
-        </mat-option>
-      </mat-select>
-    </mat-form-field>
+    <ng-container *ngIf="!loading && users.length > 0">
+      <!-- ================= GRID VIEW ================= -->
+      <div *ngIf="viewMode === 'grid'" class="user-grid" [class.compact]="density === 'compact'"
+        [class.comfortable]="density === 'comfortable'">
 
-    <!-- Role -->
-    <mat-form-field appearance="fill">
-      <mat-label>Role</mat-label>
-      <mat-select [(ngModel)]="filterRole" (selectionChange)="applyFilters()"
-        [attr.aria-label]="'Filter users by role'">
-        <mat-option value="">All</mat-option>
-        <mat-option *ngFor="let r of roles" [value]="r.name">
-          {{ r.name }}
-        </mat-option>
-      </mat-select>
-    </mat-form-field>
-
-    <!-- Status -->
-    <mat-form-field appearance="fill" *ngIf="allowShowDeleted">
-      <mat-label>Status</mat-label>
-      <mat-select [(ngModel)]="filterStatus" (selectionChange)="applyFilters()">
-        <mat-option value="">All</mat-option>
-        <mat-option value="active">Active</mat-option>
-        <mat-option value="deleted">Disabled</mat-option>
-      </mat-select>
-    </mat-form-field>
-
-  </div>
-
-  <!-- LOADING-->
-  <div *ngIf="loading" class="py-8 text-center text-gray-400">
-    Loading…
-  </div>
-
-  <!-- TABLE -->
-  <div class="table-wrapper">
-    <mat-table *ngIf="!loading" [dataSource]="users" class="mat-elevation-z1 rounded bg-[var(--surface)]">
-
-      <!-- SELECT (checkbox) -->
-      <ng-container matColumnDef="select">
-        <mat-header-cell *matHeaderCellDef>
-          <mat-checkbox [attr.aria-label]="'Select all users'" [checked]="isAllSelected()"
-            [indeterminate]="selection.selected.length > 0 && !isAllSelected()" (change)="masterToggle()">
-          </mat-checkbox>
-        </mat-header-cell>
-
-        <mat-cell *matCellDef="let row">
-          <mat-checkbox [attr.aria-label]="'Select user {{ row.username }}'" (click)="$event.stopPropagation()"
-            (change)="selection.toggle(row)" [checked]="selection.isSelected(row)">
-          </mat-checkbox>
-        </mat-cell>
-      </ng-container>
-
-      <!-- Username -->
-      <ng-container matColumnDef="username">
-        <mat-header-cell *matHeaderCellDef (click)="sortBy('username')" class="sortable"
-          [attr.aria-label]="'Sort by username'" matTooltip="Sort by username" matTooltipPosition="above">
-          Username
-          <mat-icon class="sort-icon">
-            {{ sortField === 'username'
-            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-            : 'unfold_more' }}
-          </mat-icon>
-        </mat-header-cell>
-        <mat-cell *matCellDef="let u">
-          <a (click)="view(u)" class="text-blue-600 hover:underline">
-            {{ u.username }}
-          </a>
-        </mat-cell>
-      </ng-container>
-
-      <!-- Emails -->
-      <ng-container matColumnDef="emails">
-        <mat-header-cell *matHeaderCellDef [attr.aria-label]="'User email addresses'"> Emails </mat-header-cell>
-        <mat-cell *matCellDef="let u">
-          <div class="email-grid">
-            <div *ngFor="let e of u.emailAddresses" class="email-item">{{ e }}</div>
+        <!-- SKELETON -->
+        <ng-container *ngIf="loading">
+          <div *ngFor="let s of skeletons" class="user-card skeleton">
+            <div class="card-thumb skeleton-box"></div>
+            <div class="skeleton-line title"></div>
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
           </div>
-        </mat-cell>
-      </ng-container>
+        </ng-container>
 
-      <!-- Phones -->
-      <ng-container matColumnDef="phones">
-        <mat-header-cell *matHeaderCellDef [attr.aria-label]="'User phone numbers'"> Phones </mat-header-cell>
+        <!-- DATA -->
+        <ng-container *ngIf="!loading">
 
-        <mat-cell *matCellDef="let u">
-          <div class="phone-grid">
-            <div *ngFor="let p of u.phoneNumbers" class="phone-item">
-              {{ p }}
+          <div *ngFor="let u of users" class="user-card" [class.selected]="selectedIds.has(u.id)"
+            [class.deleted]="u.deleted" (click)="toggleRowSelection(u)">
+
+            <!-- CHECKBOX -->
+            <!-- <div class="card-checkbox">
+              <mat-checkbox (click)="$event.stopPropagation()" (change)="toggleRowSelection(u)"
+                [checked]="selectedIds.has(u.id)">
+              </mat-checkbox>
+            </div> -->
+
+            <!-- STATUS BADGE -->
+            <div class="status-overlay" *ngIf="u.deleted">
+              DISABLED
             </div>
+
+            <!-- THUMB -->
+            <div class="card-thumb" [lazyLoad]="loadThumbnail.bind(this, u)">
+
+              <img *ngIf="u.thumbnail" [src]="u.thumbnail" matTooltip="User preview" class="user-thumb clickable-image"
+                (click)="openImage(u); $event.stopPropagation()" />
+
+              <div *ngIf="u.thumbnailLoading" class="thumb-loading">
+                <mat-icon class="spin">autorenew</mat-icon>
+              </div>
+
+              <div *ngIf="!u.thumbnail && !u.thumbnailLoading" class="thumb-fallback">
+                {{ u.username.charAt(0) | uppercase }}
+              </div>
+
+            </div>
+
+            <!-- CONTENT -->
+            <div class="card-content">
+
+              <div class="card-title clickable" (click)="view(u); $event.stopPropagation()">
+                {{ u.username }}
+              </div>
+
+              <div class="card-sub">
+                {{ u.role }}
+              </div>
+
+              <div class="card-meta">
+                <div *ngFor="let e of u.emailAddresses">{{ e }}</div>
+                <div *ngFor="let p of u.phoneNumbers">{{ p }}</div>
+              </div>
+
+              <div class="card-meta muted">
+                {{ u.branchHierarchy?.length || 0 }} branches ·
+                {{ getDepartmentCount(u) }} depts
+              </div>
+
+              <div class="card-meta muted">
+                {{ u.createdAt | date:'mediumDate' }}
+              </div>
+
+              <div class="status-row">
+                <span class="status-pill" [class.disabled]="u.deleted">
+                  {{ u.deleted ? 'Disabled' : 'Active' }}
+                </span>
+              </div>
+
+            </div>
+
+            <!-- ACTIONS -->
+            <div class="card-actions">
+
+              <button mat-icon-button matTooltip="View" (click)="view(u); $event.stopPropagation()">
+                <mat-icon>visibility</mat-icon>
+              </button>
+
+              <button mat-icon-button matTooltip="Edit" (click)="edit(u); $event.stopPropagation()">
+                <mat-icon>edit</mat-icon>
+              </button>
+
+              <button mat-icon-button [matTooltip]="u.deleted ? 'Restore' : 'Disable'"
+                (click)="toggleUser(u); $event.stopPropagation()">
+                <mat-icon>
+                  {{ u.deleted ? 'toggle_off' : 'toggle_on' }}
+                </mat-icon>
+              </button>
+
+            </div>
+
           </div>
-        </mat-cell>
-      </ng-container>
 
-      <!-- Branch + Department Grid -->
-      <ng-container matColumnDef="branches_depts">
-        <mat-header-cell *matHeaderCellDef (click)="sortBy('branch')" [attr.aria-label]="'Sort by branch or department'"
-          class="sortable" matTooltip="Sort by branch or department" matTooltipPosition="above">
-          Branches / Departments
-          <mat-icon class="sort-icon">
-            {{ sortField === 'branch' || sortField === 'department'
-            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-            : 'unfold_more' }}
-          </mat-icon>
-        </mat-header-cell>
+        </ng-container>
 
-        <mat-cell *matCellDef="let u">
-          <div class="branch-dept-table">
-            <!-- <div class="bd-heading">Branch</div>
-              <div class="bd-heading">Department</div>
-              <div class="bd-heading">Position</div> -->
+      </div>
 
-            <ng-container *ngFor="let row of branchDeptRows(u)">
-              <div class="bd-row bd-row-name">{{ row.branchName }}</div>
-              <div class="bd-row bd-row-department">{{ row.departmentName }}</div>
-              <div class="bd-row bd-row-position">{{ row.position || '—' }}</div>
+      <!-- ================= TABLE VIEW ================= -->
+      <div *ngIf="viewMode === 'table'" class="table-wrapper" [class.compact]="density === 'compact'">
+
+        <!-- DESKTOP -->
+        <div class="table-scroll" *ngIf="!isMobile">
+
+          <div *ngIf="loading" class="table-skeleton">
+            <div *ngFor="let s of skeletons" class="skeleton-row"></div>
+          </div>
+
+          <table *ngIf="!loading" mat-table [dataSource]="users">
+
+            <!-- SELECT -->
+            <ng-container matColumnDef="select">
+              <th mat-header-cell *matHeaderCellDef>
+                <mat-checkbox [checked]="isAllSelected()" [indeterminate]="selectedIds.size > 0 && !isAllSelected()"
+                  (change)="masterToggle()">
+                </mat-checkbox>
+              </th>
+
+              <td mat-cell *matCellDef="let u">
+                <mat-checkbox (click)="$event.stopPropagation()" (change)="toggleRowSelection(u)"
+                  [checked]="selectedIds.has(u.id)">
+                </mat-checkbox>
+              </td>
             </ng-container>
+
+            <!-- USER -->
+            <ng-container matColumnDef="username">
+              <th mat-header-cell *matHeaderCellDef (click)="sortBy('username')" class="sortable">
+
+                Username
+                <mat-icon class="sort-icon">
+                  {{ getSortIcon('username') }}
+                </mat-icon>
+
+              </th>
+
+              <td mat-cell *matCellDef="let u">
+
+                <div class="user-cell">
+
+                  <div class="avatar-sm" [lazyLoad]="loadThumbnail.bind(this, u)">
+
+                    <img *ngIf="u.thumbnail" [src]="u.thumbnail" class="clickable-image"
+                      (click)="openImage(u); $event.stopPropagation()" />
+
+                    <div *ngIf="!u.thumbnail" class="avatar-fallback">
+                      {{ u.username.charAt(0) | uppercase }}
+                    </div>
+
+                  </div>
+
+                  <div class="user-info">
+                    <div class="name clickable" (click)="view(u); $event.stopPropagation()">
+                      {{ u.username }}
+                    </div>
+                    <div class="sub">{{ u.role }}</div>
+                  </div>
+
+                </div>
+
+              </td>
+            </ng-container>
+
+            <!-- EMAILS -->
+            <ng-container matColumnDef="emails">
+              <th mat-header-cell *matHeaderCellDef>Emails</th>
+              <td mat-cell *matCellDef="let u">
+                <div *ngFor="let e of u.emailAddresses">{{ e }}</div>
+              </td>
+            </ng-container>
+
+            <!-- PHONES -->
+            <ng-container matColumnDef="phones">
+              <th mat-header-cell *matHeaderCellDef>Phones</th>
+              <td mat-cell *matCellDef="let u">
+                <div *ngFor="let p of u.phoneNumbers">{{ p }}</div>
+              </td>
+            </ng-container>
+
+            <!-- ACCESS -->
+            <ng-container matColumnDef="branches_depts">
+              <th mat-header-cell *matHeaderCellDef>Access</th>
+              <td mat-cell *matCellDef="let u">
+                {{ u.branchHierarchy?.length || 0 }} branches ·
+                {{ getDepartmentCount(u) }} depts
+              </td>
+            </ng-container>
+
+            <!-- ROLE -->
+            <ng-container matColumnDef="role">
+              <th mat-header-cell *matHeaderCellDef (click)="sortBy('role')" class="sortable">
+
+                Role
+                <mat-icon class="sort-icon">
+                  {{ getSortIcon('role') }}
+                </mat-icon>
+
+              </th>
+
+              <td mat-cell *matCellDef="let u">
+                {{ u.role }}
+              </td>
+            </ng-container>
+
+            <!-- STATUS -->
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef (click)="sortBy('deleted')" class="sortable">
+
+                Status
+                <mat-icon class="sort-icon">
+                  {{ getSortIcon('deleted') }}
+                </mat-icon>
+
+              </th>
+
+              <td mat-cell *matCellDef="let u">
+                <span class="status-pill" [class.disabled]="u.deleted">
+                  {{ u.deleted ? 'Disabled' : 'Active' }}
+                </span>
+              </td>
+            </ng-container>
+
+            <!-- CREATED -->
+            <ng-container matColumnDef="created">
+              <th mat-header-cell *matHeaderCellDef (click)="sortBy('createdAt')" class="sortable">
+
+                Created
+                <mat-icon class="sort-icon">
+                  {{ getSortIcon('createdAt') }}
+                </mat-icon>
+
+              </th>
+
+              <td mat-cell *matCellDef="let u">
+                {{ u.createdAt | date:'medium' }}
+              </td>
+            </ng-container>
+
+            <!-- ACTIONS -->
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let u">
+
+                <button mat-icon-button matTooltip="View" (click)="view(u); $event.stopPropagation()">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+
+                <button mat-icon-button matTooltip="Edit" (click)="edit(u); $event.stopPropagation()">
+                  <mat-icon>edit</mat-icon>
+                </button>
+
+                <button mat-icon-button [matTooltip]="u.deleted ? 'Restore' : 'Disable'"
+                  (click)="toggleUser(u); $event.stopPropagation()">
+                  <mat-icon>
+                    {{ u.deleted ? 'toggle_off' : 'toggle_on' }}
+                  </mat-icon>
+                </button>
+
+              </td>
+            </ng-container>
+
+            <!-- ROWS -->
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+
+            <tr mat-row *matRowDef="let row; columns: displayedColumns" (click)="toggleRowSelection(row)"
+              [class.row-selected]="selectedIds.has(row.id)">
+            </tr>
+
+          </table>
+
+        </div>
+
+        <!-- MOBILE -->
+        <div *ngIf="isMobile" class="mobile-list" [class.compact]="density === 'compact'"
+          [class.comfortable]="density === 'comfortable'">
+
+          <div *ngFor="let u of users" class="mobile-row" [class.selected]="selectedIds.has(u.id)"
+            [class.deleted]="u.deleted" (click)="toggleRowSelection(u)">
+
+            <!-- <mat-checkbox (click)="$event.stopPropagation()" (change)="toggleRowSelection(u)"
+              [checked]="selectedIds.has(u.id)">
+            </mat-checkbox> -->
+
+            <div class="avatar" [lazyLoad]="loadThumbnail.bind(this, u)">
+
+              <img *ngIf="u.thumbnail" [src]="u.thumbnail" class="clickable-image"
+                (click)="openImage(u); $event.stopPropagation()" />
+
+              <div *ngIf="!u.thumbnail" class="avatar-fallback">
+                {{ u.username.charAt(0) | uppercase }}
+              </div>
+
+            </div>
+
+            <div class="content">
+
+              <div class="title clickable" (click)="view(u); $event.stopPropagation()">
+                {{ u.username }}
+              </div>
+
+              <div class="meta">
+                {{ u.role }}
+              </div>
+
+              <div class="meta muted">
+                {{ u.branchHierarchy?.length || 0 }} branches ·
+                {{ getDepartmentCount(u) }} depts
+              </div>
+
+              <div class="meta muted">
+                <div *ngFor="let e of u.emailAddresses">{{ e }}</div>
+                <div *ngFor="let p of u.phoneNumbers">{{ p }}</div>
+              </div>
+
+              <div class="status-row">
+                <span class="status-pill" [class.disabled]="u.deleted">
+                  {{ u.deleted ? 'Disabled' : 'Active' }}
+                </span>
+              </div>
+
+            </div>
+
+            <div class="actions">
+
+              <button mat-icon-button (click)="view(u); $event.stopPropagation()">
+                <mat-icon>visibility</mat-icon>
+              </button>
+
+              <button mat-icon-button (click)="edit(u); $event.stopPropagation()">
+                <mat-icon>edit</mat-icon>
+              </button>
+
+              <button mat-icon-button (click)="toggleUser(u); $event.stopPropagation()">
+                <mat-icon>
+                  {{ u.deleted ? 'toggle_off' : 'toggle_on' }}
+                </mat-icon>
+              </button>
+
+            </div>
+
           </div>
-        </mat-cell>
-      </ng-container>
 
-      <!-- Role -->
-      <ng-container matColumnDef="role">
-        <mat-header-cell *matHeaderCellDef (click)="sortBy('role')" class="sortable" [attr.aria-label]="'Sort by role'"
-          matTooltip="Sort by role" matTooltipPosition="above">
-          Role
-          <mat-icon class="sort-icon">
-            {{ sortField === 'role'
-            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-            : 'unfold_more' }}
-          </mat-icon>
-        </mat-header-cell>
+        </div>
 
-        <mat-cell *matCellDef="let u">
-          {{ u.role }}
-        </mat-cell>
-      </ng-container>
+      </div>
+    </ng-container>
 
-      <!-- Status -->
-      <ng-container matColumnDef="status">
-        <mat-header-cell *matHeaderCellDef (click)="sortBy('status')" class="sortable" [attr.aria-label]="'User status'"
-          matTooltip="Sort by status" matTooltipPosition="above">
-          Status
-          <mat-icon *ngIf="allowShowDeleted" class="sort-icon">
-            {{ sortField === 'status'
-            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-            : 'unfold_more' }}
-          </mat-icon>
-        </mat-header-cell>
+    <!-- ================= PAGINATOR ================= -->
+    <div class="shared-paginator" *ngIf="users.length > 0">
 
-        <mat-cell *matCellDef="let u">
-          <span [ngClass]="{ 'text-green-400': !u.deleted, 'text-red-400': u.deleted }">
-            {{ u.deleted ? 'Disabled' : 'Active' }}
-          </span>
-        </mat-cell>
-      </ng-container>
+      <!-- MOBILE -->
+      <mat-paginator *ngIf="isMobile" [length]="totalServerElements" [pageSize]="uiPageSize$.value"
+        [pageSizeOptions]="[10,25,50]" (page)="changePage($event)">
+      </mat-paginator>
 
-      <!-- CreatedAt -->
-      <ng-container matColumnDef="createdAt">
-        <mat-header-cell *matHeaderCellDef (click)="sortBy('createdAt')" class="sortable"
-          [attr.aria-label]="'Sort by date created'" matTooltip="Sort by date created" matTooltipPosition="above">
-          Created
-          <mat-icon class="sort-icon">
-            {{ sortField === 'createdAt'
-            ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
-            : 'unfold_more' }}
-          </mat-icon>
-        </mat-header-cell>
+      <!-- DESKTOP -->
+      <mat-paginator *ngIf="!isMobile" [length]="totalServerElements" [pageSize]="uiPageSize$.value"
+        [pageSizeOptions]="[10,25,50,100]" showFirstLastButtons (page)="changePage($event)">
+      </mat-paginator>
 
-        <mat-cell *matCellDef="let u">
-          {{ u.createdAt | date:'medium' }}
-        </mat-cell>
-      </ng-container>
+    </div>
 
-      <!-- Actions -->
-      <ng-container matColumnDef="actions">
-        <mat-header-cell *matHeaderCellDef [attr.aria-label]="'User actions'"> Actions </mat-header-cell>
-
-        <mat-cell *matCellDef="let u" class="action-cell">
-
-          <!-- View -->
-          <button mat-icon-button matTooltip="View User Details" matTooltipPosition="above"
-            [attr.aria-label]="'View user {{ u.username }}'" (click)="view(u)">
-            <mat-icon>visibility</mat-icon>
-          </button>
-
-          <!-- Edit -->
-          <button mat-icon-button matTooltip="Edit User" matTooltipPosition="above"
-            [attr.aria-label]="'Edit user {{ u.username }}'" (click)="edit(u)">
-            <mat-icon>edit</mat-icon>
-          </button>
-
-          <!-- Toggle -->
-          <button mat-icon-button matTooltip="{{ u.deleted ? 'Restore/Delete user' : 'Disable User' }}"
-            matTooltipPosition="above"
-            [attr.aria-label]="(u.deleted ? 'Restore/Delete user ' : 'Disable user ') + u.username"
-            (click)="toggleActive(u)">
-            <mat-icon>{{ u.deleted ? 'toggle_off' : 'toggle_on' }}</mat-icon>
-          </button>
-
-
-        </mat-cell>
-      </ng-container>
-
-      <!-- Rows -->
-      <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-      <mat-row *matRowDef="let row; columns: displayedColumns;"
-        [ngClass]="{ 'row-selected': selection.isSelected(row) }" (click)="toggleRowSelection(row)"
-        class="clickable-row">
-      </mat-row>
-    </mat-table>
   </div>
 
-  <!-- PAGINATOR ONLY WHEN NEEDED -->
-  <mat-paginator [length]="total" [pageSize]="size" [pageSizeOptions]="[1, 5, 10, 20, 50]"
-    [attr.aria-label]="'Users pagination'" (page)="changePage($event)">
-  </mat-paginator>
-
-</div>
-
-
+</app-page-shell>
