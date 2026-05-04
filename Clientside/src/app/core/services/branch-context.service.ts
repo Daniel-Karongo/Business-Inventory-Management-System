@@ -14,12 +14,22 @@ export class BranchContextService {
 
   constructor() {
     const saved = localStorage.getItem(this.STORAGE_KEY);
+
     const authBranch = this.auth.getSnapshot()?.branchId ?? null;
 
-    // Priority:
-    // 1. Saved override (if admin)
-    // 2. Auth branch
     this.branchSubject.next(saved ?? authBranch);
+
+    // ✅ CRITICAL: react to auth changes (login, refresh)
+    this.auth.getCurrentUser().subscribe(user => {
+      if (!user) return;
+
+      const current = this.branchSubject.value;
+
+      // if nothing selected yet → fallback to auth
+      if (!current) {
+        this.branchSubject.next(user.branchId);
+      }
+    });
   }
 
   get currentBranch(): string | null {

@@ -1,102 +1,168 @@
 <app-page-shell>
 
   <!-- ================= HEADER ================= -->
-  <div page-header>
-    <h2 *ngIf="category; else loadingTitle">
-      {{ category.name }}
-    </h2>
+  <div page-header class="header">
 
-    <ng-template #loadingTitle>
-      <h2 class="skeleton w-40 lg"></h2>
-    </ng-template>
+    <div class="header-left">
+      <button mat-icon-button (click)="back()" matTooltip="Back">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+
+      <div class="title-group">
+
+        <div class="breadcrumb">
+          <span class="clickable" (click)="back()">Categories</span>
+
+          <ng-container *ngFor="let item of breadcrumb; let last = last">
+            <span class="sep">/</span>
+
+            <span [class.current]="last" [class.clickable]="!last" (click)="!last && openSubcategory(item.id)">
+              {{ item.name }}
+            </span>
+          </ng-container>
+        </div>
+
+        <div class="title-row">
+
+          <h1 class="title">
+            {{ category?.name }}
+          </h1>
+
+          <span *ngIf="category" class="status-badge"
+            [ngClass]="category.deleted ? 'status-disabled' : 'status-active'">
+
+            {{ category.deleted ? 'Disabled' : 'Active' }}
+          </span>
+
+        </div>
+
+      </div>
+    </div>
+
+    <div class="header-actions" *ngIf="category">
+
+      <button mat-stroked-button (click)="back()">Back</button>
+
+      <button *ngIf="!category.deleted" mat-flat-button color="primary" (click)="edit()">
+        <mat-icon>edit</mat-icon>
+        Edit
+      </button>
+
+      <!-- TOGGLE -->
+      <button mat-stroked-button (click)="toggleStatus()" [ngClass]="category.deleted ? 'restore-btn' : 'disable-btn'">
+
+        <mat-icon>{{ category.deleted ? 'restore' : 'block' }}</mat-icon>
+        {{ category.deleted ? 'Restore (Recursive)' : 'Disable' }}
+      </button>
+
+      <!-- NON-RECURSIVE RESTORE -->
+      <button *ngIf="category.deleted" mat-stroked-button color="primary" (click)="restoreSingle()">
+        Restore Only This
+      </button>
+
+      <!-- HARD DELETE -->
+      <button *ngIf="category.deleted" mat-flat-button color="warn" (click)="hardDelete()">
+        <mat-icon>delete_forever</mat-icon>
+        Delete Permanently
+      </button>
+
+    </div>
+
   </div>
 
   <!-- ================= CONTENT ================= -->
   <div page-content>
 
-    <!-- Loading -->
-    <div *ngIf="loading" class="loading-container">
-      <mat-spinner diameter="40"></mat-spinner>
+    <!-- ================= LOADING ================= -->
+    <div *ngIf="loading" class="state loading">
+      <mat-spinner diameter="36"></mat-spinner>
+      <span>Loading category...</span>
     </div>
 
-    <!-- Error -->
-    <div *ngIf="error && !loading" class="error-state">
-      {{ error }}
+    <!-- ================= ERROR ================= -->
+    <div *ngIf="error && !loading" class="state error">
+      <mat-icon>error</mat-icon>
+      <span>{{ error }}</span>
     </div>
 
-    <!-- DETAILS -->
-    <div *ngIf="!loading && category" class="details-grid">
+    <!-- ================= MAIN ================= -->
+    <div *ngIf="!loading && category" class="layout">
 
-      <!-- Description -->
-      <div class="field">
-        <label>Description</label>
-        <p>{{ category.description || '—' }}</p>
-      </div>
+      <!-- ================= LEFT ================= -->
+      <div class="main">
 
-      <!-- Status -->
-      <div class="field">
-        <label>Status</label>
-        <span
-          class="status-badge"
-          [ngClass]="category.deleted ? 'status-disabled' : 'status-active'">
-          {{ category.deleted ? 'Disabled' : 'Active' }}
-        </span>
-      </div>
+        <!-- ===== Overview Card ===== -->
+        <div class="card">
+          <div class="card-header">Overview</div>
 
-      <!-- Parent -->
-      <div class="field">
-        <label>Parent</label>
-        <p>{{ category.parentName || '—' }}</p>
-      </div>
+          <div class="card-body grid-2">
 
-      <!-- Suppliers -->
-      <div class="field">
-        <label>Suppliers</label>
+            <div class="field">
+              <label>Description</label>
+              <p>{{ category.description || '—' }}</p>
+            </div>
 
-        <div *ngIf="hasSuppliers; else noSuppliers" class="chip-container">
-          <mat-chip
-            *ngFor="let s of category.suppliers"
-            class="supplier-chip">
-            {{ s.name }}
-          </mat-chip>
+            <div class="field">
+              <label>Parent Category</label>
+              <p>{{ category.parentName || '—' }}</p>
+            </div>
+
+          </div>
         </div>
 
-        <ng-template #noSuppliers>
-          <span>—</span>
-        </ng-template>
+        <!-- ===== Subcategories ===== -->
+        <div class="card">
+          <div class="card-header">
+            Subcategories
+            <span class="count">{{ category.subcategories?.length || 0 }}</span>
+          </div>
+
+          <div class="card-body">
+
+            <ng-container *ngIf="hasSubcategories; else noSubs">
+
+              <app-category-tree [categories]="category.subcategories ?? []" [selectedIds]="emptySelection"
+                [expandedIds]="expandedInline" [activeId]="category.id">
+              </app-category-tree>
+
+            </ng-container>
+
+            <ng-template #noSubs>
+              <div class="empty">No subcategories</div>
+            </ng-template>
+
+          </div>
+        </div>
+
       </div>
 
-      <!-- Subcategories -->
-      <div class="field">
-        <label>Subcategories</label>
+      <!-- ================= RIGHT ================= -->
+      <div class="side">
 
-        <ul *ngIf="hasSubcategories; else noSubs">
-          <li *ngFor="let sub of category.subcategories">
-            {{ sub.name }}
-          </li>
-        </ul>
+        <!-- ===== Suppliers ===== -->
+        <div class="card">
+          <div class="card-header">
+            Suppliers
+            <span class="count">{{ category.suppliers?.length || 0 }}</span>
+          </div>
 
-        <ng-template #noSubs>
-          <span>—</span>
-        </ng-template>
-      </div>
+          <div class="card-body">
 
-      <!-- Actions -->
-      <div class="actions">
-        <button
-          mat-flat-button
-          color="primary"
-          matTooltip="Edit this category"
-          (click)="edit()">
-          Edit
-        </button>
+            <div *ngIf="hasSuppliers; else noSuppliers" class="chips">
+              <mat-chip *ngFor="let s of category.suppliers; trackBy: trackById" class="clickable-chip"
+                (click)="openSupplier(s.id)" matTooltip="Open supplier">
 
-        <button
-          mat-stroked-button
-          matTooltip="Back to category list"
-          (click)="back()">
-          Back
-        </button>
+                {{ s.name }}
+              </mat-chip>
+            </div>
+
+            <ng-template #noSuppliers>
+              <div class="empty">No suppliers</div>
+            </ng-template>
+
+          </div>
+        </div>
+
       </div>
 
     </div>
@@ -104,5 +170,3 @@
   </div>
 
 </app-page-shell>
-
-

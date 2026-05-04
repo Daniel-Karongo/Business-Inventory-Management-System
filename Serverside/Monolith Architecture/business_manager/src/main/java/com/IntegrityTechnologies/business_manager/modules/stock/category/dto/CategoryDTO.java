@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.category.dto;
 
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.dto.SupplierMinimalDTO;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import jakarta.validation.constraints.NotBlank;
@@ -14,6 +15,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class CategoryDTO {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Long id;

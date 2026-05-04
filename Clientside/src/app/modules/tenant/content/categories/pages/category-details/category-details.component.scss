@@ -1,51 +1,224 @@
-/* ================= LAYOUT ================= */
+/* =========================================================
+   LAYOUT
+========================================================= */
 
-.details-grid {
+.layout {
   display: grid;
-  gap: 1.75rem;
-  max-width: 900px;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
 }
 
-/* Responsive 2-column layout for large screens */
-@media (min-width: 768px) {
-  .details-grid {
-    grid-template-columns: repeat(2, 1fr);
+.card+.card {
+  margin-top: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .layout {
+    grid-template-columns: 2fr 1fr;
+    align-items: start;
+  }
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+
+/* MOBILE FIX */
+@media (max-width: 640px) {
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
   }
 
-  .actions {
+  .header-left {
+    width: 100%;
+  }
+
+  .header-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .header-actions button {
+    width: 100%;
+    justify-content: center;
+    white-space: nowrap;
+  }
+
+  /* Force full-width for destructive action */
+  .header-actions button[color="warn"] {
     grid-column: span 2;
   }
 }
 
-/* ================= FIELD ================= */
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-size: 1.45rem;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.2;
+  letter-spacing: -0.2px;
+}
+
+.breadcrumb {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.breadcrumb .sep {
+  margin: 0 6px;
+  opacity: 0.5;
+}
+
+.breadcrumb .clickable {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.breadcrumb .clickable:hover {
+  color: var(--primary);
+}
+
+.breadcrumb .current {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.meta-id {
+  opacity: 0.7;
+}
+
+.disable-btn {
+  border-color: #dc2626 !important;
+  color: #dc2626 !important;
+}
+
+.restore-btn {
+  border-color: #16a34a !important;
+  color: #16a34a !important;
+}
+
+/* =========================================================
+   CARDS (ENTERPRISE SURFACE SYSTEM)
+========================================================= */
+
+.card {
+  background: var(--surface-bg);
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.card-header {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-body {
+  padding: 1rem;
+}
+
+/* =========================================================
+   GRID
+========================================================= */
+
+.grid-2 {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* =========================================================
+   FIELD
+========================================================= */
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 4px;
 }
 
 .field label {
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
   color: var(--text-secondary);
 }
 
-.field p,
-.field ul {
+.field p {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--text-sm);
 }
 
-/* ================= STATUS BADGE ================= */
+/* =========================================================
+   STATUS
+========================================================= */
 
 .status-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  font-size: 0.75rem;
+  padding: 2px 8px;
   border-radius: 999px;
+  font-size: 0.7rem;
   font-weight: 500;
-  width: max-content;
 }
 
 .status-active {
@@ -58,67 +231,51 @@
   color: var(--status-disabled-text);
 }
 
-/* ================= CHIPS ================= */
 
-.chip-container {
+
+/* =========================================================
+   CHIPS
+========================================================= */
+
+.chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
-.supplier-chip {
-  font-size: 0.8rem;
+.clickable-chip {
+  cursor: pointer;
+  transition: transform 0.12s ease;
 }
 
-/* ================= ACTIONS ================= */
+.clickable-chip:hover {
+  transform: translateY(-1px);
+}
 
-.actions {
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+.empty {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  padding: 0.5rem 0;
+}
+
+
+/* =========================================================
+   STATES
+========================================================= */
+
+.state {
   display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-top: 1rem;
-}
-
-/* ================= STATES ================= */
-
-.loading-container {
-  display: flex;
+  align-items: center;
   justify-content: center;
-  padding: 3rem 0;
+  gap: 10px;
+  padding: 2rem;
+  font-size: var(--text-sm);
 }
 
-.error-state {
-  padding: 1.5rem;
-  border-radius: 8px;
-  background: rgba(239, 68, 68, 0.08);
+.state.error {
   color: #dc2626;
-  font-weight: 500;
-}
-
-/* ================= SKELETON ================= */
-
-.skeleton {
-  height: 18px;
-  border-radius: 6px;
-  background: linear-gradient(
-    90deg,
-    var(--surface-hover) 25%,
-    rgba(255,255,255,0.18) 37%,
-    var(--surface-hover) 63%
-  );
-  background-size: 400% 100%;
-  animation: shimmer 1.4s infinite linear;
-}
-
-.skeleton.w-40 {
-  width: 40%;
-}
-
-.skeleton.lg {
-  height: 28px;
-}
-
-@keyframes shimmer {
-  0% { background-position: 100% 0; }
-  100% { background-position: -100% 0; }
 }

@@ -1,24 +1,28 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { Router, RouterModule } from '@angular/router';
 import { Category } from '../../models/category.model';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-category-tree',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     MatIconModule,
     MatCheckboxModule,
-    RouterModule
+    RouterModule,
+    MatTooltipModule
   ],
   templateUrl: './category-tree.component.html',
   styleUrls: ['./category-tree.component.scss']
 })
 export class CategoryTreeComponent {
 
+  @Input() activeId?: number;
   @Input() categories: Category[] = [];
   @Input() expandedIds!: Set<number>;
   @Input() selectedIds!: Set<number>;
@@ -27,18 +31,18 @@ export class CategoryTreeComponent {
 
   constructor(private router: Router) { }
 
+  trackById(_: number, item: Category) {
+    return item.id;
+  }
+
   navigate(id: number) {
     this.router.navigate(['/app/categories', id]);
   }
 
   toggleExpand(id: number) {
-    if (this.expandedIds.has(id)) {
-      this.expandedIds.delete(id);
-    } else {
-      this.expandedIds.add(id);
-    }
-
-    this.expandedIds = new Set(this.expandedIds);
+    const next = new Set(this.expandedIds);
+    next.has(id) ? next.delete(id) : next.add(id);
+    this.expandedIds = next;
   }
 
   toggleSelect(id: number) {

@@ -99,8 +99,11 @@ public final class CacheKeys {
         return tenantId + "::category::flat::" + branchId;
     }
 
-    public static String categorySearch(UUID tenantId, UUID branchId, String query) {
-        return tenantId + "::category::search::" + branchId + "::" + query;
+    public static String categorySearch(UUID tenantId, UUID branchId, String query, Boolean deleted) {
+        return tenantId + "::category::search::"
+                + branchId + "::"
+                + query + "::"
+                + (deleted != null ? deleted : "ALL");
     }
 
     /* =========================

@@ -44,7 +44,7 @@
   <!-- SUPPLIERS -->
   <mat-form-field appearance="fill">
     <mat-label>Suppliers</mat-label>
-    <mat-select formControlName="suppliersIds" multiple>
+    <mat-select formControlName="supplierIds" multiple>
       <mat-option *ngFor="let s of suppliers" [value]="s.id">
         {{ s.name }}
       </mat-option>

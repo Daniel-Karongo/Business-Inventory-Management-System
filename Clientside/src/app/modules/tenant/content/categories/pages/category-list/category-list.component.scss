@@ -40,17 +40,22 @@
 @media (max-width: 640px) {
 
   .category-header {
-    flex-direction: column;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
   }
 
   .header-left {
-    justify-content: space-between;
-    width: 100%;
+    display: flex;
+    gap: 0.4rem;
   }
 
   .header-right {
-    width: 100%;
+    grid-column: span 2;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
   }
 
   .header-right button {
@@ -68,9 +73,24 @@
 }
 
 .toolbar mat-form-field {
-  min-width: 220px;
+  min-width: 160px;
   flex: 1;
-  max-width: 360px;
+  max-width: 280px;
+}
+
+@media (max-width: 640px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar mat-form-field {
+    max-width: 100%;
+  }
+}
+
+button {
+  white-space: nowrap;
 }
 
 /* ================= BULK BAR ================= */

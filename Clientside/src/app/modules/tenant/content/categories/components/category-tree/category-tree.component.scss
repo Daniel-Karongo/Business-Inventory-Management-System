@@ -13,13 +13,60 @@
 }
 
 .node-content:hover {
-  background: rgba(59,130,246,0.08);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.tree-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.tree-name:hover {
+  color: var(--active);
+}
+
+.tree-name.active {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.view-btn {
+  opacity: 0;
+  transition: opacity 0.15s;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 20px;
+  height: 20px;
+  padding: 0;
+}
+
+.view-btn mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+}
+
+.node-content:hover .view-btn {
+  opacity: 1;
+}
+
+/* DELETED */
+.node.deleted .tree-name {
+  opacity: 0.5;
+  text-decoration: line-through;
 }
 
 .children {
   padding-left: 40px;
   margin-left: 8px;
-  border-left: 1px dashed rgba(0,0,0,0.08);
+  border-left: 1px dashed rgba(0, 0, 0, 0.08);
 }
 
 /* Density */

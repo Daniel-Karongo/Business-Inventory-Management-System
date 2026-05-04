@@ -1,25 +1,35 @@
 <div class="tree">
 
-  <ng-container *ngFor="let cat of categories">
+  <ng-container *ngFor="let cat of categories; trackBy: trackById">
 
     <div class="node" [class.deleted]="cat.deleted">
 
-      <div class="node-content clickable-node">
+      <div class="node-content">
 
+        <!-- EXPAND -->
         <button *ngIf="(cat.subcategories?.length ?? 0) > 0" mat-icon-button
-          (click)="$event.stopPropagation(); toggleExpand(cat.id)">
+          (click)="toggleExpand(cat.id); $event.stopPropagation()">
           <mat-icon>
             {{ expandedIds.has(cat.id) ? 'expand_more' : 'chevron_right' }}
           </mat-icon>
         </button>
 
-        <mat-checkbox [checked]="selectedIds.has(cat.id)" [indeterminate]="isIndeterminate(cat)"
-          (change)="toggleSelect(cat.id)">
+        <!-- SELECT -->
+        <mat-checkbox (click)="$event.stopPropagation()" [checked]="selectedIds.has(cat.id)"
+          [indeterminate]="isIndeterminate(cat)" (change)="toggleSelect(cat.id)">
         </mat-checkbox>
 
-        <a [routerLink]="['/app/categories', cat.id]" class="tree-link" (click)="$event.stopPropagation()">
+        <!-- NAME -->
+        <div class="tree-name" [class.active]="cat.id === activeId" (click)="navigate(cat.id)">
+
           {{ cat.name }}
-        </a>
+
+          <button mat-icon-button class="view-btn" matTooltip="View category" matTooltipPosition="above"
+            (click)="navigate(cat.id); $event.stopPropagation()">
+
+            <mat-icon>open_in_new</mat-icon>
+          </button>
+        </div>
 
       </div>
 
@@ -36,5 +46,3 @@
   </ng-container>
 
 </div>
-
-

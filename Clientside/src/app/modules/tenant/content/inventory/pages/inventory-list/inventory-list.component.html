@@ -32,7 +32,7 @@
                     Receive New Product
                 </button>
 
-                <button mat-flat-button color="primary" (click)="openBulkReceive()">
+                <button mat-stroked-button (click)="openBulkReceive()">
                     <mat-icon>cloud_upload</mat-icon>
                     Bulk Receive
                 </button>
@@ -130,7 +130,7 @@
                         {{ r.totalRemainingBatchValue | number:'1.2-2' }}
                     </div>
                 </div>
-                
+
                 <div class="card-sub text-xs text-gray-500">
                     Updated:
                     {{ r.lastUpdatedAt | date:'medium' }}
@@ -413,5 +413,3 @@
     </div>
 
 </app-page-shell>
-
-

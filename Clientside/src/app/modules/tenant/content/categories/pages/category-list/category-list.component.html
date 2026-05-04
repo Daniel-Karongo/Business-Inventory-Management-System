@@ -22,6 +22,11 @@
       </div>
 
       <div class="header-right">
+        <button mat-stroked-button (click)="openBulkImport()">
+          <mat-icon>cloud_upload</mat-icon>
+          Bulk Import
+        </button>
+
         <button mat-flat-button color="primary" routerLink="/app/categories/create">
           + Create Category
         </button>
@@ -33,6 +38,17 @@
 
   <!-- ================= TOOLBAR ================= -->
   <div page-toolbar class="toolbar">
+
+    <mat-form-field *ngIf="canSelectBranch">
+      <mat-select [value]="(pageBranch$ | async) || branchContext.currentBranch"
+        (selectionChange)="setPageBranch($event.value)">
+
+        <mat-option *ngFor="let b of branches" [value]="b.id">
+          {{ b.name }}
+        </mat-option>
+
+      </mat-select>
+    </mat-form-field>
 
     <mat-form-field appearance="fill">
       <mat-label>Search category</mat-label>
@@ -62,17 +78,28 @@
         {{ selectedIds.size }} selected
       </span>
 
-      <button mat-stroked-button color="warn" matTooltip="Soft delete selected categories recursively"
-        (click)="bulkDelete()">
+      <!-- ACTIVE -->
+      <button *ngIf="bulkState === 'active'" mat-stroked-button color="warn" (click)="bulkDelete()">
         Delete
       </button>
 
-      <button mat-stroked-button color="primary" matTooltip="Restore selected categories recursively"
-        (click)="bulkRestore()">
-        Restore
+      <!-- DELETED -->
+      <button *ngIf="bulkState === 'deleted'" mat-stroked-button color="primary"
+        matTooltip="Restore selected (recursive)" (click)="bulkRestoreRecursive()">
+        Restore (Recursive)
       </button>
 
-      <button mat-button class="cancel-selection" (click)="clearSelection()">
+      <button *ngIf="bulkState === 'deleted'" mat-flat-button color="warn" matTooltip="Delete permanently"
+        (click)="bulkHardDelete()">
+        Delete Permanently
+      </button>
+
+      <!-- MIXED -->
+      <span *ngIf="bulkState === 'mixed'" class="bulk-error">
+        Mixed selection — cannot perform bulk action
+      </span>
+
+      <button mat-button (click)="clearSelection()">
         Cancel Selection
       </button>
 
@@ -193,10 +220,62 @@
         <!-- ACTIONS -->
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let row">
-            <button mat-icon-button matTooltip="Edit category" [routerLink]="['/app/categories', row.id, 'edit']">
+
+          <td mat-cell *matCellDef="let row" (click)="$event.stopPropagation()">
+
+            <!-- EDIT (ACTIVE ONLY) -->
+            <button *ngIf="!row.deleted" mat-icon-button matTooltip="Edit category"
+              [routerLink]="['/app/categories', row.id, 'edit']">
+
               <mat-icon>edit</mat-icon>
+
             </button>
+
+            <!-- DISABLE -->
+            <button [disabled]="rowLoading.has(row.id)" *ngIf="!row.deleted" mat-icon-button
+              matTooltip="Disable (recursive)" (click)="rowDisable(row)">
+              <ng-container *ngIf="!rowLoading.has(row.id); else loadingTpl">
+                <mat-icon>block</mat-icon>
+              </ng-container>
+              <ng-template #loadingTpl>
+                <mat-progress-spinner diameter="16" mode="indeterminate"></mat-progress-spinner>
+              </ng-template>
+            </button>
+
+            <!-- RESTORE (RECURSIVE) - ONLY IF HAS CHILDREN -->
+            <button [disabled]="rowLoading.has(row.id)" *ngIf="row.deleted && hasChildren(row)" mat-icon-button
+              matTooltip="Restore subtree" (click)="rowRestoreRecursive(row)">
+              <ng-container *ngIf="!rowLoading.has(row.id); else loadingTpl">
+                <mat-icon>restore</mat-icon>
+              </ng-container>
+              <ng-template #loadingTpl>
+                <mat-progress-spinner diameter="16" mode="indeterminate"></mat-progress-spinner>
+              </ng-template>
+            </button>
+
+            <!-- RESTORE SINGLE -->
+            <button [disabled]="rowLoading.has(row.id)" *ngIf="row.deleted" mat-icon-button
+              matTooltip="Restore only this category" (click)="rowRestoreSingle(row)">
+              <ng-container *ngIf="!rowLoading.has(row.id); else loadingTpl">
+                <mat-icon>settings_backup_restore</mat-icon>
+              </ng-container>
+              <ng-template #loadingTpl>
+                <mat-progress-spinner diameter="16" mode="indeterminate"></mat-progress-spinner>
+              </ng-template>
+            </button>
+
+            <!-- HARD DELETE -->
+            <button [disabled]="rowLoading.has(row.id)" *ngIf="row.deleted" mat-icon-button color="warn"
+              matTooltip="Delete permanently" (click)="rowHardDelete(row)">
+              <ng-container *ngIf="!rowLoading.has(row.id); else loadingTpl">
+                <mat-icon>delete_forever</mat-icon>
+              </ng-container>
+
+              <ng-template #loadingTpl>
+                <mat-progress-spinner diameter="16" mode="indeterminate"></mat-progress-spinner>
+              </ng-template>
+            </button>
+
           </td>
         </ng-container>
 
@@ -209,8 +288,8 @@
 
       </table>
 
-      <mat-paginator [length]="flatCategories.length" [pageSize]="pageSize" [pageSizeOptions]="[10,25,50]"
-        (page)="changePage($event)">
+      <mat-paginator [length]="flatCategories.length" [pageSize]="pageSize"
+        [pageSizeOptions]="[10,25,50,75,100,125,150,175,200]" (page)="changePage($event)">
       </mat-paginator>
 
     </div>
@@ -218,5 +297,3 @@
   </div>
 
 </app-page-shell>
-
-

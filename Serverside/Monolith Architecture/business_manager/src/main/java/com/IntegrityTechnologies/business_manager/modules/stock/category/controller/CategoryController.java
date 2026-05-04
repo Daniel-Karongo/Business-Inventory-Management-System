@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.category.controller;
 
+import com.IntegrityTechnologies.business_manager.config.caffeine.CacheInvalidationService;
 import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
@@ -9,6 +10,7 @@ import com.IntegrityTechnologies.business_manager.modules.stock.category.service
 import com.IntegrityTechnologies.business_manager.modules.stock.category.service.CategoryService;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.dto.SupplierDTO;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.*;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,13 +29,18 @@ public class CategoryController {
 
     private final CategoryService categoryService;
     private final CategoryBulkService bulkService;
+    private final CacheInvalidationService cacheInvalidationService;
+
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
 
     /* ==============================
        IMPORT
        ============================== */
 
     @TenantSupervisorOnly
-    @PostMapping("/import")
+    @PostMapping("/bulk-import")
     public ResponseEntity<BulkResult<CategoryDTO>> importCategories(
             @RequestBody BulkRequest<CategoryBulkRow> request
     ) {
@@ -49,7 +56,9 @@ public class CategoryController {
     @TenantSupervisorOnly
     @PostMapping
     public ResponseEntity<CategoryDTO> save(@Valid @RequestBody CategoryDTO dto) {
-        return ResponseEntity.ok(categoryService.saveCategory(dto));
+        var response = ResponseEntity.ok(categoryService.saveCategory(dto));
+        cacheInvalidationService.evictCategoryCaches(tenantId(), dto.getBranchId());
+        return response;
     }
 
     @TenantSupervisorOnly
@@ -75,7 +84,7 @@ public class CategoryController {
     public ResponseEntity<List<CategoryDTO>> getAllCategories(
             @RequestParam(required = false) UUID branchId,
             @RequestParam(defaultValue = "tree") String mode,
-            @RequestParam(defaultValue = "false") Boolean deleted
+            @RequestParam(required = false) Boolean deleted
     ) {
 
         return ResponseEntity.ok(
@@ -87,7 +96,7 @@ public class CategoryController {
     public ResponseEntity<List<CategoryDTO>> searchByKeyword(
             @RequestParam(required = false) UUID branchId,
             @RequestParam String keyword,
-            @RequestParam(required = true, defaultValue = "false") Boolean deleted
+            @RequestParam(required = false) Boolean deleted
     ) {
 
         List<CategoryDTO> results =
@@ -101,7 +110,7 @@ public class CategoryController {
             @PathVariable Long id,
             @RequestParam(required = false) UUID branchId,
             @RequestParam(defaultValue = "tree") String mode,
-            @RequestParam(defaultValue = "false") Boolean deleted
+            @RequestParam(required = false) Boolean deleted
     ) {
 
         return ResponseEntity.ok(
@@ -119,6 +128,16 @@ public class CategoryController {
 
         return ResponseEntity.ok(
                 categoryService.getCategorySuppliers(branchId, id, deleted, strict)
+        );
+    }
+
+    @GetMapping("/{id}/ancestors")
+    public ResponseEntity<List<CategoryDTO>> getCategoryAncestors(
+            @PathVariable Long id,
+            @RequestParam(required = false) UUID branchId
+    ) {
+        return ResponseEntity.ok(
+                categoryService.getCategoryAncestors(branchId, id)
         );
     }
 

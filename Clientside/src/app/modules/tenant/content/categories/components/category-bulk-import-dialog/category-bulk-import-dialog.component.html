@@ -1,0 +1,55 @@
+<form [formGroup]="form" (keydown.enter)="$event.stopPropagation()">
+
+    <app-bulk-import-shell [title]="config.title" [rowCount]="rowCount" [submitting]="submitting"
+        [formInvalid]="form.invalid" [loading]="submitting || loading" [progress]="progress"
+        (importCsv)="importCsv($event)" (importExcel)="importExcel($event)" (downloadCsv)="downloadCsvTemplate()"
+        (downloadExcel)="downloadExcelTemplate()" (submit)="submit()" (cancel)="close()" (goToLine)="goToLine($event)"
+        (goTop)="scrollToTop()" (goBottom)="scrollToBottom()" (prevError)="goToPreviousError()"
+        (nextError)="goToNextError()" (clearAll)="clearRows()" (exportCsv)="exportCsvCurrentRows()"
+        (exportExcel)="exportExcelCurrentRows()">
+
+        <div class="categories-body">
+
+            <div bulk-options>
+                <mat-checkbox formControlName="dryRun">
+                    Dry run (validate only)
+                </mat-checkbox>
+            </div>
+
+            <div class="rows" formArrayName="rows">
+
+                <div class="row-card" *ngFor="let r of rows.controls; let i = index" [formGroupName]="i">
+
+                    <div class="row-header">
+                        <span>Category {{ i + 1 }}</span>
+                        <button mat-icon-button color="warn" (click)="removeRow(i)">
+                            <mat-icon>delete</mat-icon>
+                        </button>
+                    </div>
+
+                    <div class="grid-2">
+                        <mat-form-field>
+                            <input matInput placeholder="Name" formControlName="name">
+                        </mat-form-field>
+
+                        <mat-form-field>
+                            <input matInput placeholder="Parent Name" formControlName="parentName">
+                        </mat-form-field>
+                    </div>
+
+                    <div class="row-error" *ngIf="r.value._error">
+                        {{ r.value._error }}
+                    </div>
+
+                </div>
+            </div>
+
+            <button mat-stroked-button (click)="addRow()">
+                + Add Category
+            </button>
+
+            <div #bottomAnchor></div>
+
+        </div>
+    </app-bulk-import-shell>
+</form>

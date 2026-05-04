@@ -73,7 +73,7 @@ export class CategoryFormComponent implements OnInit, OnDestroy {
       name: ['', [Validators.required, Validators.maxLength(120)]],
       description: [''],
       parentId: [null],
-      suppliersIds: [[]]
+      supplierIds: [[]]
     });
 
     this.loadDependencies();

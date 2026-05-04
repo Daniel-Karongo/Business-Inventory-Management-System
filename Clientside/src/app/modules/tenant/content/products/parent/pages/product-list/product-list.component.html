@@ -24,6 +24,7 @@
 
       <div class="header-right">
         <button mat-stroked-button (click)="openBulkImport()">
+          <mat-icon>cloud_upload</mat-icon>
           Bulk Import
         </button>
 
@@ -169,7 +170,8 @@
             <mat-icon>visibility</mat-icon>
           </button>
 
-          <button mat-icon-button [disabled]="p.deleted" matTooltip="Edit" [routerLink]="['/app/products', p.id, 'edit']">
+          <button mat-icon-button [disabled]="p.deleted" matTooltip="Edit"
+            [routerLink]="['/app/products', p.id, 'edit']">
             <mat-icon>edit</mat-icon>
           </button>
           <button mat-icon-button matTooltip="{{ p.deleted ? 'Restore/Delete' : 'Disable' }}"
@@ -420,7 +422,8 @@
 
           <div class="stacked-actions">
 
-            <button mat-icon-button [disabled]="p.deleted" matTooltip="Create Sale" (click)="createSale(p); $event.stopPropagation()">
+            <button mat-icon-button [disabled]="p.deleted" matTooltip="Create Sale"
+              (click)="createSale(p); $event.stopPropagation()">
               <mat-icon>point_of_sale</mat-icon>
             </button>
 
@@ -450,5 +453,3 @@
   </div>
 
 </app-page-shell>
-
-

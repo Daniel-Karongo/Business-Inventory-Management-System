@@ -2,15 +2,10 @@ package com.IntegrityTechnologies.business_manager.modules.stock.category.servic
 
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
-import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.supplier.model.Supplier;
-import com.IntegrityTechnologies.business_manager.modules.person.supplier.repository.SupplierRepository;
+import com.IntegrityTechnologies.business_manager.config.caffeine.CacheInvalidationService;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.dto.CategoryBulkRow;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.dto.CategoryDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.category.mapper.CategoryMapper;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
-import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplier;
-import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplierId;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
@@ -20,7 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,10 +25,8 @@ public class CategoryBulkService {
 
     private final CategoryService categoryService;
     private final CategoryRepository categoryRepository;
-    private final SupplierRepository supplierRepository;
-    private final CategoryMapper categoryMapper;
     private final BranchTenantGuard branchTenantGuard;
-    private final BranchRepository branchRepository;
+    private final CacheInvalidationService cacheInvalidationService;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -45,26 +40,30 @@ public class CategoryBulkService {
 
         boolean dryRun = request.getOptions() != null && request.getOptions().isDryRun();
 
-        Map<String, Category> created = new HashMap<>();
+        Map<String, Category> prepared = new HashMap<>();
+        Map<String, CategoryBulkRow> rowMap = new HashMap<>();
 
-        /*
-         * =========================
-         * PASS 1 — VALIDATE + PREPARE
-         * =========================
-         */
+    /* =====================================================
+       PASS 1 — VALIDATION ONLY (NO DB WRITES)
+    ===================================================== */
         for (int i = 0; i < request.getItems().size(); i++) {
-
             int rowNum = i + 1;
             CategoryBulkRow row = request.getItems().get(i);
-            UUID branchId = row.getBranchId();
-            branchTenantGuard.validate(branchId);
 
             try {
+                UUID branchId = row.getBranchId();
+                branchTenantGuard.validate(branchId);
+
                 if (row.getName() == null || row.getName().isBlank()) {
                     throw new IllegalArgumentException("Category name is required");
                 }
 
-                // Build DTO (no DB yet)
+                String key = key(row.getName(), branchId);
+
+                if (prepared.containsKey(key)) {
+                    throw new IllegalArgumentException("Duplicate category in file: " + row.getName());
+                }
+
                 CategoryDTO dto = new CategoryDTO();
                 dto.setName(row.getName());
                 dto.setBranchId(branchId);
@@ -72,23 +71,77 @@ public class CategoryBulkService {
                 dto.setMinimumProfit(row.getMinimumProfit());
                 dto.setMinimumPercentageProfit(row.getMinimumPercentageProfit());
 
-                // ALWAYS validate (even in dry-run)
                 categoryService.validateCategoryForBulk(dto);
 
-                if (!dryRun) {
-                    CategoryDTO saved = categoryService.saveCategory(dto);
+                Category temp = new Category();
+                temp.setName(row.getName());
+                temp.setBranchId(branchId);
 
-                    Category entity = categoryRepository.getReferenceById(saved.getId());
+                prepared.put(key, temp);
+                rowMap.put(key, row);
 
-                    created.put(key(row.getName(), branchId), entity);
+            } catch (Exception ex) {
+                result.addError(rowNum, ex.getMessage());
+            }
+        }
 
-                } else {
-                    Category simulated = new Category();
-                    simulated.setName(row.getName());
-                    simulated.setMinimumProfit(row.getMinimumProfit());
-                    simulated.setMinimumPercentageProfit(row.getMinimumPercentageProfit());
+    /* =====================================================
+       PASS 2 — RESOLVE PARENTS (NO DB WRITES)
+    ===================================================== */
+        for (int i = 0; i < request.getItems().size(); i++) {
+            int rowNum = i + 1;
+            CategoryBulkRow row = request.getItems().get(i);
 
-                    created.put(key(row.getName(), branchId), simulated);
+            try {
+                UUID branchId = row.getBranchId();
+                String key = key(row.getName(), branchId);
+
+                Category category = prepared.get(key);
+                if (category == null) continue;
+
+                /* ================= RESOLVE PARENT FIRST ================= */
+                Category parent = null;
+
+                if (row.getParentName() != null && !row.getParentName().isBlank()) {
+
+                    String parentKey = key(normalize(row.getParentName()), branchId);
+
+                    Category parentFromFile = prepared.get(parentKey);
+
+                    if (parentFromFile != null) {
+                        parent = parentFromFile;
+                    } else {
+                        parent = categoryRepository.findByNameSafe(
+                                row.getParentName(),
+                                false,
+                                tenantId(),
+                                branchId
+                        ).orElse(null);
+                    }
+
+                    if (parent == null) {
+                        throw new IllegalArgumentException("Unknown parent: " + row.getParentName());
+                    }
+
+                    validateNoCycle(row.getName(), parent, prepared, branchId);
+                }
+
+                category.setParent(parent);
+
+                /* ================= NOW DO DB DUP CHECK ================= */
+                Long parentId = parent != null ? parent.getId() : null;
+
+                boolean exists = categoryRepository.existsByNameAndParentSafe(
+                        row.getName(),
+                        parentId,
+                        tenantId(),
+                        branchId
+                );
+
+                if (exists) {
+                    throw new IllegalArgumentException(
+                            "Category already exists under this parent: " + row.getName()
+                    );
                 }
 
             } catch (Exception ex) {
@@ -96,116 +149,115 @@ public class CategoryBulkService {
             }
         }
 
-        /*
-         * =========================
-         * PASS 2 — RELATIONSHIPS
-         * =========================
-         */
-        for (int i = 0; i < request.getItems().size(); i++) {
+    /* =====================================================
+       ❌ IF ANY ERRORS → ABORT (NO DB WRITES)
+    ===================================================== */
+        if (!result.getErrors().isEmpty()) {
+            return result;
+        }
 
-            int rowNum = i + 1;
-            CategoryBulkRow row = request.getItems().get(i);
-            UUID branchId = row.getBranchId();
-            branchTenantGuard.validate(branchId);
+    /* =====================================================
+       PASS 3 — PERSIST (ALL OR NOTHING)
+    ===================================================== */
+        if (!dryRun) {
 
-            try {
-                Category category = created.get(key(row.getName(), branchId));
+            Map<String, CategoryDTO> savedMap = new HashMap<>();
 
-                if (category == null) continue;
+            for (CategoryBulkRow row : request.getItems()) {
+                saveRecursively(row, prepared, savedMap, result, rowMap);
+            }
 
-                /*
-                 * --- Parent resolution ---
-                 */
-                if (row.getParentName() != null && !row.getParentName().isBlank()) {
+        } else {
 
-                    Category parent =
-                            created.getOrDefault(
-                                    key(row.getParentName(), branchId),
-                                    categoryRepository.findByNameSafe(
-                                            row.getParentName(),
-                                            false,
-                                            tenantId(),
-                                            branchId
-                                    ).orElseThrow(() ->
-                                            new IllegalArgumentException("Unknown parent: " + row.getParentName())
-                                    )
-                            );
+            for (CategoryBulkRow row : request.getItems()) {
+                CategoryDTO preview = new CategoryDTO();
+                preview.setName(row.getName());
+                preview.setBranchId(row.getBranchId());
+                result.addSuccess(preview);
+            }
+        }
 
-                    validateNoCycle(row.getName(), parent, created, branchId);
+        if (!dryRun) {
+            Set<UUID> branches = request.getItems().stream()
+                    .map(CategoryBulkRow::getBranchId)
+                    .collect(Collectors.toSet());
 
-                    // ✅ ALWAYS validate (even in dry-run)
-                    if (parent == null) {
-                        throw new IllegalArgumentException("Parent not found: " + row.getParentName());
-                    }
-
-                    if (!dryRun) {
-                        category.setParent(parent);
-                    }
-                }
-
-                /*
-                 * --- Supplier resolution ---
-                 */
-                if (row.getSupplierNames() != null && !row.getSupplierNames().isEmpty()) {
-
-                    if (!dryRun) {
-                        category.getCategorySuppliers().clear();
-                    }
-
-                    for (String name : row.getSupplierNames()) {
-
-                        Supplier supplier = supplierRepository
-                                .findByNameSafe(name, false, tenantId(), branchId)
-                                .orElseThrow(() ->
-                                        new IllegalArgumentException("Unknown supplier: " + name)
-                                );
-
-                        if (!dryRun) {
-                            category.getCategorySuppliers().add(
-                                    CategorySupplier.builder()
-                                            .id(new CategorySupplierId(category.getId(), supplier.getId()))
-                                            .category(category)
-                                            .supplier(supplier)
-                                            .build()
-                            );
-                        }
-                    }
-                }
-
-                /*
-                 * --- Persist ONLY if not dry-run ---
-                 */
-                if (!dryRun) {
-                    categoryRepository.saveAndFlush(category);
-                    result.addSuccess(categoryMapper.toDTO(category));
-                } else {
-                    Category parent = null;
-
-                    if (row.getParentName() != null) {
-                        parent = created.get(key(row.getParentName(), branchId));
-                    }
-
-                    // Dry-run: return simulated DTO
-                    CategoryDTO preview = new CategoryDTO();
-                    preview.setName(row.getName());
-                    preview.setDescription(row.getDescription());
-                    preview.setBranchId(branchId);
-                    if (parent != null) {
-                        preview.setParentId(parent.getId());
-                    }
-                    result.addSuccess(preview);
-                }
-
-            } catch (Exception ex) {
-                result.addError(rowNum, ex.getMessage());
+            for (UUID branchId : branches) {
+                cacheInvalidationService.evictCategoryCaches(tenantId(), branchId);
             }
         }
 
         return result;
     }
 
+    private CategoryDTO saveRecursively(
+            CategoryBulkRow row,
+            Map<String, Category> prepared,
+            Map<String, CategoryDTO> savedMap,
+            BulkResult<CategoryDTO> result,
+            Map<String, CategoryBulkRow> rowMap
+    ) {
+
+        String key = key(row.getName(), row.getBranchId());
+
+        if (savedMap.containsKey(key)) {
+            return savedMap.get(key);
+        }
+
+        Category preparedCategory = prepared.get(key);
+
+        Long parentId = null;
+
+        if (preparedCategory.getParent() != null) {
+
+            Category parent = preparedCategory.getParent();
+            String parentKey = key(parent.getName(), row.getBranchId());
+
+            CategoryDTO savedParent;
+
+            if (savedMap.containsKey(parentKey)) {
+                savedParent = savedMap.get(parentKey);
+            } else {
+
+                CategoryBulkRow parentRow = rowMap.get(parentKey);
+
+                if (parentRow == null) {
+                    throw new IllegalStateException("Parent row missing for: " + parent.getName());
+                }
+
+                savedParent = saveRecursively(
+                        parentRow,
+                        prepared,
+                        savedMap,
+                        result,
+                        rowMap
+                );
+            }
+
+            parentId = savedParent.getId();
+        }
+
+        CategoryDTO dto = new CategoryDTO();
+        dto.setName(row.getName());
+        dto.setBranchId(row.getBranchId());
+        dto.setParentId(parentId);
+
+        CategoryDTO saved = categoryService.saveCategory(dto);
+
+        savedMap.put(key, saved);
+        result.addSuccess(saved);
+
+        return saved;
+    }
+
     private String key(String name, UUID branchId) {
-        return branchId + "::" + name.toLowerCase();
+        return branchId + "::" + normalize(name);
+    }
+
+    private String normalize(String value) {
+        return value == null
+                ? null
+                : value.trim().replaceAll("\\s+", " ").toLowerCase();
     }
 
     private void validateNoCycle(

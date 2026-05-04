@@ -164,7 +164,6 @@ public class CategoryService {
                         : List.of()
         );
 
-        cacheInvalidationService.evictCategoryCaches(tenantId(), branchId);
         return result;
     }
 
@@ -663,14 +662,34 @@ public class CategoryService {
     @Transactional
     public ResponseEntity<ApiResponse> softDeleteInBulk(UUID branchId, List<Long> ids) {
 
-        for (Long id : ids) {
+        // STEP 1 — LOAD ALL VALID ROOTS
+        List<Category> categories = ids.stream()
+                .map(id -> categoryRepository.findByIdSafe(
+                        id,
+                        false,
+                        tenantId(),
+                        branchId
+                ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id)))
+                .toList();
 
-            Category category = categoryRepository.findByIdSafe(
-                    id,
-                    false,
-                    tenantId(),
-                    branchId
-            ).orElseThrow(() -> new CategoryNotFoundException("Category not found: " + id));
+        // STEP 2 — REMOVE CHILDREN IF PARENT IS ALSO SELECTED
+        List<Category> filtered = new ArrayList<>();
+
+        for (Category candidate : categories) {
+
+            boolean isChildOfAnotherSelected = categories.stream()
+                    .anyMatch(parent ->
+                            !parent.getId().equals(candidate.getId()) &&
+                                    candidate.getPath().startsWith(parent.getPath() + "/")
+                    );
+
+            if (!isChildOfAnotherSelected) {
+                filtered.add(candidate);
+            }
+        }
+
+        // STEP 3 — DELETE ONLY ROOTS
+        for (Category category : filtered) {
 
             categoryRepository.softDeleteByPathSafe(
                     category.getPath(),
@@ -680,8 +699,9 @@ public class CategoryService {
         }
 
         cacheInvalidationService.evictCategoryCaches(tenantId(), branchId);
+
         return ResponseEntity.ok(
-                new ApiResponse("success", "Categories and subcategories soft deleted")
+                new ApiResponse("success", "Categories deleted (deduplicated hierarchy)")
         );
     }
 
@@ -856,9 +876,9 @@ public class CategoryService {
             key = "T(com.IntegrityTechnologies.business_manager.config.caffeine.CacheKeys)" +
                     ".categorySearch(" +
                     "T(com.IntegrityTechnologies.business_manager.security.util.TenantContext).getTenantId(), " +
-                    "#branchId, #keyword)"
+                    "#branchId, #keyword.toLowerCase().trim(), #deleted)"
     )
-    public List<CategoryDTO> searchByKeyword(UUID branchId, String keyword, boolean deleted) {
+    public List<CategoryDTO> searchByKeyword(UUID branchId, String keyword, Boolean deleted) {
 
         List<Category> matching = categoryRepository.searchSafe(
                 keyword,
@@ -867,7 +887,20 @@ public class CategoryService {
                 branchId
         );
 
-        List<CategoryDTO> dtos = matching.stream()
+        // 🔥 include ancestors
+        Set<Category> fullSet = new HashSet<>(matching);
+
+        for (Category c : matching) {
+            Category parent = c.getParent();
+            while (parent != null) {
+                if (deleted == null || parent.isDeleted() == deleted) {
+                    fullSet.add(parent);
+                }
+                parent = parent.getParent();
+            }
+        }
+
+        List<CategoryDTO> dtos = fullSet.stream()
                 .map(categoryMapper::toDTO)
                 .toList();
 
@@ -912,6 +945,34 @@ public class CategoryService {
         collectCategoryIds(root, ids);
 
         return ids;
+    }
+
+    public List<CategoryDTO> getCategoryAncestors(UUID branchId, Long id) {
+
+        Category category = categoryRepository.findByIdSafe(
+                id,
+                null,
+                tenantId(),
+                branchId
+        ).orElseThrow(() -> new CategoryNotFoundException("Category not found"));
+
+        String path = category.getPath(); // e.g. /127/128/132/133
+
+        List<Long> ids = Arrays.stream(path.split("/"))
+                .filter(s -> !s.isBlank())
+                .map(Long::valueOf)
+                .toList();
+
+        List<Category> ancestors = categoryRepository.findAllById(ids);
+
+        Map<Long, Category> map = ancestors.stream()
+                .collect(Collectors.toMap(Category::getId, c -> c));
+
+        return ids.stream()
+                .map(map::get)
+                .filter(Objects::nonNull)
+                .map(categoryMapper::toDTO)
+                .toList();
     }
 
     private void collectCategoryIds(Category category, List<Long> ids) {
