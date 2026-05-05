@@ -76,6 +76,7 @@ export class CategoryListComponent implements OnInit {
 
   search$ = new BehaviorSubject<string>('');
   status$ = new BehaviorSubject<'all' | 'active' | 'deleted'>('all');
+  private refresh$ = new BehaviorSubject<void>(undefined);
 
   selectedIds = new Set<number>();
   expandedIds = new Set<number>();
@@ -133,7 +134,8 @@ export class CategoryListComponent implements OnInit {
       this.search$.pipe(debounceTime(400), distinctUntilChanged()),
       this.status$,
       this.branchContext.branch$,
-      this.pageBranch$
+      this.pageBranch$,
+      this.refresh$
     ])
       .pipe(
         tap(() => this.loading = true),
@@ -210,16 +212,21 @@ export class CategoryListComponent implements OnInit {
 
     const result: CategoryFlat[] = [];
 
-    const traverse = (cats: Category[], parentName: string | null = null) => {
+    const traverse = (
+      cats: Category[],
+      parentId: number | null = null,
+      parentName: string | null = null
+    ) => {
       for (const c of cats) {
 
         result.push({
           ...c,
+          parentId,     // 🔥 correct source
           parentName
         });
 
         if (c.subcategories?.length) {
-          traverse(c.subcategories, c.name);
+          traverse(c.subcategories, c.id, c.name);
         }
       }
     };
@@ -419,8 +426,10 @@ export class CategoryListComponent implements OnInit {
       this.categoryService.bulkSoftDelete(ids, branchId)
         .subscribe(() => {
           this.snackbar.open('Deleted', 'Close', { duration: 3000 });
+
           this.clearSelection();
-          this.reload();
+
+          this.reload(); // ✅ CORRECT
         });
     });
   }
@@ -453,8 +462,43 @@ export class CategoryListComponent implements OnInit {
     });
   }
 
+  private normalizeToRootIds(ids: number[]): number[] {
+
+    const selected = new Set(ids);
+
+    // map id -> node
+    const map = new Map<number, CategoryFlat>();
+    this.flatCategories.forEach(c => map.set(c.id, c));
+
+    const roots: number[] = [];
+
+    for (const id of ids) {
+
+      let current = map.get(id);
+      let isChild = false;
+
+      while (current?.parentId) {
+
+        if (selected.has(current.parentId)) {
+          isChild = true;
+          break;
+        }
+
+        current = map.get(current.parentId);
+      }
+
+      if (!isChild) {
+        roots.push(id);
+      }
+    }
+
+    return roots;
+  }
+
   bulkRestoreRecursive() {
-    const ids = Array.from(this.selectedIds);
+    const rawIds = Array.from(this.selectedIds);
+    const ids = this.normalizeToRootIds(rawIds);
+
     if (!ids.length) return;
 
     const ref = this.dialog.open(ConfirmDialogComponent, {
@@ -782,7 +826,7 @@ export class CategoryListComponent implements OnInit {
   }
 
   reload() {
-    this.search$.next(this.search$.value ?? '');
+    this.refresh$.next();
   }
 
   onSearch(value: string) {

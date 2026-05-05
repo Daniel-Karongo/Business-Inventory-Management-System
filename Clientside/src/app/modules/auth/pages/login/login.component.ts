@@ -23,6 +23,7 @@ import { WebAuthnService } from '../../../../core/services/webauthn.service';
 import { resolveTenantLanding } from '../../../../core/utils/role-landing.util';
 import { BiometricPromptDialog } from '../../../../shared/components/biometric-prompt-dialog/biometric-prompt-dialog.component';
 import { BranchService } from '../../../tenant/content/branches/services/branch.service';
+import { EnterNextDirective } from '../../../../shared/directives/enter-next.directive';
 
 @Component({
   selector: 'app-login',
@@ -35,7 +36,8 @@ import { BranchService } from '../../../tenant/content/branches/services/branch.
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    EnterNextDirective 
   ],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
@@ -163,7 +165,7 @@ export class LoginComponent implements OnInit {
 
     this.auth.biometricChallenge(
       deviceId,
-      this.form.value.branchId??null
+      this.form.value.branchId ?? null
     ).subscribe({
       next: async (challenge) => {
 
@@ -231,7 +233,6 @@ export class LoginComponent implements OnInit {
   }
 
   async onSubmit() {
-
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;

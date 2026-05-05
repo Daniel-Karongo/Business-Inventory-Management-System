@@ -839,27 +839,69 @@ public class CategoryService {
 
     /** Bulk recursive restore */
     @Transactional
-    public ResponseEntity<ApiResponse> restoreCategoriesRecursivelyInBulk(UUID branchId, List<Long> ids) {
+    public ResponseEntity<ApiResponse> restoreCategoriesRecursivelyInBulk(
+            UUID branchId,
+            List<Long> ids
+    ) {
 
-        for (Long id : ids) {
-
-            Category category = categoryRepository.findByIdSafe(
-                    id,
-                    true,
-                    tenantId(),
-                    branchId
-            ).orElseThrow(() ->
-                    new CategoryNotFoundException("Category not found: " + id)
+        if (ids == null || ids.isEmpty()) {
+            return ResponseEntity.ok(
+                    new ApiResponse("success", "Nothing to restore")
             );
+        }
 
+        final UUID tenantId = tenantId();
+
+        // 🔥 1. Fetch WITHOUT deleted filter (critical)
+        List<Category> categories = categoryRepository.findAllByIdSafe(
+                ids,
+                tenantId,
+                branchId
+        );
+
+        if (categories.size() != ids.size()) {
+            Set<Long> found = categories.stream()
+                    .map(Category::getId)
+                    .collect(Collectors.toSet());
+
+            List<Long> missing = ids.stream()
+                    .filter(id -> !found.contains(id))
+                    .toList();
+
+            throw new CategoryNotFoundException(
+                    "Categories not found: " + missing
+            );
+        }
+
+        // 🔥 2. Normalize → remove children if parent exists
+        // Sort by path length ASC (parents first)
+        categories.sort(Comparator.comparingInt(c -> c.getPath().length()));
+
+        List<Category> roots = new ArrayList<>();
+
+        for (Category current : categories) {
+
+            boolean isChildOfExisting = roots.stream()
+                    .anyMatch(parent ->
+                            current.getPath().startsWith(parent.getPath() + "/")
+                    );
+
+            if (!isChildOfExisting) {
+                roots.add(current);
+            }
+        }
+
+        // 🔥 3. Restore each root ONCE
+        for (Category root : roots) {
             categoryRepository.restoreByPathSafe(
-                    category.getPath(),
-                    tenantId(),
+                    root.getPath(),
+                    tenantId,
                     branchId
             );
         }
 
-        cacheInvalidationService.evictCategoryCaches(tenantId(), branchId);
+        cacheInvalidationService.evictCategoryCaches(tenantId, branchId);
+
         return ResponseEntity.ok(
                 new ApiResponse("success", "Categories and subcategories restored")
         );

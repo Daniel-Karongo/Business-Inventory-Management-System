@@ -3,7 +3,8 @@ export interface Category {
   name: string;
   description?: string;
   deleted: boolean;
-  parentId?: number;
+
+  parentId?: number | null; // 🔥 canonical source
   parentName?: string | null;
 
   subcategories?: Category[];
@@ -15,6 +16,7 @@ export interface Category {
 
 export interface CategoryFlat extends Category {
   parentName?: string | null;
+  parentId?: number | null; // 🔥 REQUIRED for normalization
 }
 
 export interface CategoryWithDepth extends Category {

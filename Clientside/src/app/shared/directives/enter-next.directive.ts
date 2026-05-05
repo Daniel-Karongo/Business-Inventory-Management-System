@@ -1,38 +1,59 @@
-import { Directive, HostListener } from '@angular/core';
+import { Directive, ElementRef, OnDestroy, OnInit } from '@angular/core';
 
 @Directive({
   selector: '[enterNext]',
   standalone: true
 })
-export class EnterNextDirective {
+export class EnterNextDirective implements OnInit, OnDestroy {
 
-  @HostListener('keydown.enter', ['$event'])
-  onEnter(event: Event) {
-    const e = event as KeyboardEvent;
-    e.preventDefault();
+  private handler!: (e: KeyboardEvent) => void;
 
-    const target = e.target as HTMLElement;
-    if (!target) return;
+  constructor(private el: ElementRef<HTMLFormElement>) { }
 
-    // Limit traversal to the nearest form (important)
-    const form = target.closest('form');
-    if (!form) return;
+  ngOnInit() {
 
-    // Collect focusable fields in order
-    const focusables = Array.from(
-      form.querySelectorAll<HTMLElement>(
-        'input:not([disabled]), textarea:not([disabled]), mat-select:not([disabled])'
-      )
-    );
+    const form = this.el.nativeElement;
 
-    const index = focusables.indexOf(target);
+    this.handler = (e: KeyboardEvent) => {
 
-    if (index > -1) {
-      const next = focusables[index + 1];
+      if (e.key !== 'Enter') return;
 
-      if (next) {
-        next.focus();
+      const target = e.target as HTMLElement;
+
+      if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) {
+        return;
       }
-    }
+
+      e.preventDefault();
+
+      const formEl = this.el.nativeElement;
+
+      const focusables = Array.from(
+        formEl.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+          'input:not([disabled]), textarea:not([disabled])'
+        )
+      );
+
+      const index = focusables.findIndex(el => el === target);
+      if (index === -1) return;
+
+      // 🔥 find next EMPTY field (not just next DOM element)
+      const nextEmpty = focusables.slice(index + 1).find(el => !el.value);
+
+      if (nextEmpty) {
+        setTimeout(() => nextEmpty.focus(), 0);
+        return;
+      }
+
+      // 🔥 no empty fields ahead → submit
+      formEl.requestSubmit();
+    };
+
+    // 🔥 Attach at native level (bypasses Angular + Material interference)
+    form.addEventListener('keydown', this.handler, true); // use capture phase
+  }
+
+  ngOnDestroy() {
+    this.el.nativeElement.removeEventListener('keydown', this.handler, true);
   }
 }

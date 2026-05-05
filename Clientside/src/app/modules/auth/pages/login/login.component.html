@@ -1,5 +1,5 @@
 <div class="auth-root">
-  <div class="auth-card" [formGroup]="form">
+  <form class="auth-card" [formGroup]="form" (ngSubmit)="onSubmit()" enterNext>
 
     <!-- HEADER -->
     <header class="dialog-header">
@@ -25,15 +25,18 @@
     <section class="form-section">
       <div class="form-grid">
 
+        <!-- Username -->
         <mat-form-field appearance="fill">
           <mat-label>Username</mat-label>
           <input matInput formControlName="identifier" autocomplete="username" />
         </mat-form-field>
 
+        <!-- Password -->
         <mat-form-field appearance="fill">
           <mat-label>Password</mat-label>
           <input matInput [type]="hide ? 'password' : 'text'" formControlName="password"
             autocomplete="current-password" />
+
           <button mat-icon-button matSuffix type="button" (click)="hide = !hide">
             <mat-icon>
               {{ hide ? 'visibility' : 'visibility_off' }}
@@ -41,6 +44,7 @@
           </button>
         </mat-form-field>
 
+        <!-- Branch -->
         <mat-form-field appearance="fill" *ngIf="!isPlatform && branches.length > 1">
           <mat-label>Branch</mat-label>
           <mat-select formControlName="branchId">
@@ -62,8 +66,9 @@
     <!-- FOOTER -->
     <footer class="dialog-footer">
 
-      <button mat-flat-button color="primary" class="primary-action"
-        [disabled]="loginLoading || biometricLoading || form.invalid" (click)="onSubmit()">
+      <!-- Submit -->
+      <button type="submit" mat-flat-button color="primary" class="primary-action"
+        [disabled]="loginLoading || biometricLoading || form.invalid">
 
         <ng-container *ngIf="!loginLoading">
           Sign in
@@ -77,7 +82,8 @@
 
       <div class="divider">or</div>
 
-      <button mat-stroked-button color="primary" class="primary-action" (click)="onBiometricLogin()"
+      <!-- Biometrics -->
+      <button mat-stroked-button color="primary" class="primary-action" type="button" (click)="onBiometricLogin()"
         [disabled]="loginLoading || biometricLoading">
 
         <ng-container *ngIf="!biometricLoading">
@@ -97,5 +103,5 @@
       © {{ currentYear }} Integrity Technologies
     </div>
 
-  </div>
+  </form>
 </div>
