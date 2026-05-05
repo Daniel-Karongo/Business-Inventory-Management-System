@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/packaging")
+@RequestMapping("/api/product-variants/packaging")
 @RequiredArgsConstructor
 public class ProductVariantPackagingController {
 
@@ -31,6 +31,11 @@ public class ProductVariantPackagingController {
     @GetMapping("/{variantId}")
     public List<ProductVariantPackaging> get(@PathVariable UUID variantId) {
         return service.getPackagings(variantId);
+    }
+
+    @GetMapping("/{variantId}/base")
+    public ProductVariantPackaging getBase(@PathVariable UUID variantId) {
+        return service.getBasePackaging(variantId);
     }
 
     @PutMapping("/{id}")

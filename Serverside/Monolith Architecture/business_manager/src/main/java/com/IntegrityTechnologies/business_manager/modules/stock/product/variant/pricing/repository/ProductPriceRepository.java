@@ -31,4 +31,10 @@ public interface ProductPriceRepository extends JpaRepository<ProductPrice, UUID
             UUID branchId,
             Long quantity
     );
+
+    List<ProductPrice> findByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
+            UUID variantId,
+            UUID tenantId,
+            UUID branchId
+    );
 }

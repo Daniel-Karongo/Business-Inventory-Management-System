@@ -44,31 +44,6 @@ public class ProductVariantController {
         return ResponseEntity.ok(service.getVariantsForProduct(productId));
     }
 
-    @GetMapping("/barcode/{barcode}")
-    public ResponseEntity<ProductVariantDTO> findByBarcode(@PathVariable String barcode) {
-        return ResponseEntity.ok(barcodeService.getVariantByBarcode(barcode));
-    }
-
-    /* 🔒 REMOVE branchId from API */
-    @PostMapping("/scan")
-    public ResponseEntity<BarcodeScanResponse> scan(@RequestBody BarcodeScanRequest req) {
-        return ResponseEntity.ok(
-                scanService.scan(req.getBarcode()) // branch resolved internally
-        );
-    }
-
-    @TenantManagerOnly
-    @PostMapping("/{id}/barcode")
-    public ResponseEntity<ProductVariantDTO> generateBarcode(@PathVariable UUID id) {
-        return ResponseEntity.ok(barcodeService.generateBarcodeIfMissing(id));
-    }
-
-    /* 🔥 MOVE FILE SERVING TO SERVICE */
-    @GetMapping("/{id}/barcode/image")
-    public ResponseEntity<Resource> downloadBarcodeImage(@PathVariable UUID id) {
-        return barcodeService.getBarcodeImage(id); // new safe method
-    }
-
     @GetMapping("/{id}/images")
     public ResponseEntity<List<String>> getImages(@PathVariable UUID id) {
         return ResponseEntity.ok(imageService.getImageUrls(id));

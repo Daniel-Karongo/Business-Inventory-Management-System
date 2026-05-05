@@ -65,6 +65,16 @@ public class ProductPriceService {
         return prices.get(0);
     }
 
+    @Transactional(readOnly = true)
+    public List<ProductPrice> getPricesForVariant(UUID variantId) {
+
+        return priceRepo.findByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
+                variantId,
+                tenantId(),
+                branchId()
+        );
+    }
+
     @Transactional
     public ProductPrice createPrice(
             UUID variantId,

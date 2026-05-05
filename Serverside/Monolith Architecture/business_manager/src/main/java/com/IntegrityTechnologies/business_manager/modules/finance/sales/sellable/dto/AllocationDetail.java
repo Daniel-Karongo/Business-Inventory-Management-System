@@ -20,5 +20,5 @@ public class AllocationDetail {
     private BigDecimal unitCost;
     private BigDecimal totalCost;
 
-    private LocalDateTime receivedAt; // 🔥 future FEFO ready
+    private LocalDateTime receivedAt;
 }

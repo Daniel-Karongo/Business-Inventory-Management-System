@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/stock-onboarding")
+@RequestMapping("/api/stock/onboarding")
 @RequiredArgsConstructor
 public class StockOnboardingController {
 
@@ -15,11 +15,7 @@ public class StockOnboardingController {
 
     @PostMapping
     public ApiResponse onboard(@RequestBody StockOnboardingRequest request) {
-
-        return new ApiResponse(
-                "success",
-                "Stock onboarded",
-                service.onboard(request)
-        );
+        return new ApiResponse("success", "Onboarded",
+                service.onboard(request));
     }
 }

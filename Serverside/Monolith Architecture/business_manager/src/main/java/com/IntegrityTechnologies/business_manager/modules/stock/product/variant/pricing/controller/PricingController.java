@@ -9,22 +9,29 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/pricing")
+@RequestMapping("/api/product-variants/pricing")
 @RequiredArgsConstructor
 public class PricingController {
 
     private final PricingEngineService pricingEngine;
     private final ProductPriceService service;
 
-    @PostMapping("/resolve")
-    public PricingResult resolve(@RequestBody PricingContext ctx) {
-        if (ctx.getPricingTime() == null) {
-            ctx.setPricingTime(LocalDateTime.now());
-        }
-        return pricingEngine.resolve(ctx);
+//    @PostMapping("/resolve")
+//    public PricingResult resolve(@RequestBody PricingContext ctx) {
+//        if (ctx.getPricingTime() == null) {
+//            ctx.setPricingTime(LocalDateTime.now());
+//        }
+//        return pricingEngine.resolve(ctx);
+//    }
+
+    @GetMapping("/variant/{variantId}")
+    public List<ProductPrice> getVariantPrices(@PathVariable UUID variantId) {
+        // add method in service if missing
+        return service.getPricesForVariant(variantId);
     }
 
     @PostMapping

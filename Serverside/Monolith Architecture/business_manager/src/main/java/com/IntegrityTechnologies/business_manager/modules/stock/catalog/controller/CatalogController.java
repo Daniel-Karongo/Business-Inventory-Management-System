@@ -1,7 +1,7 @@
-package com.IntegrityTechnologies.business_manager.modules.catalog.controller;
+package com.IntegrityTechnologies.business_manager.modules.stock.catalog.controller;
 
 import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
-import com.IntegrityTechnologies.business_manager.modules.catalog.service.CatalogService;
+import com.IntegrityTechnologies.business_manager.modules.stock.catalog.service.CatalogService;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.dto.SellableProductRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
