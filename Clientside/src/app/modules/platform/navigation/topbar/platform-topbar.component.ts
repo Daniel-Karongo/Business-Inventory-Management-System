@@ -117,7 +117,15 @@ export class PlatformTopbarComponent implements OnInit {
     }
 
     toggleSidebar() {
-        this.sidebar.toggle();
+
+        if (this.sidebar.mobileSnapshot) {
+
+            this.sidebar.closeMobile();
+
+            return;
+        }
+
+        this.sidebar.openMobile();
     }
 
     setTheme(v: 'light' | 'dark' | 'system') {

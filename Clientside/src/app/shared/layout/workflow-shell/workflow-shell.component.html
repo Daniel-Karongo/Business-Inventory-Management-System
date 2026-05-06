@@ -1,0 +1,20 @@
+<div
+  class="workflow-shell"
+  [class.fluid]="fluid">
+
+  <!-- HEADER -->
+  <section class="workflow-header">
+    <ng-content select="[workflow-header]"></ng-content>
+  </section>
+
+  <!-- TOOLBAR -->
+  <section class="workflow-toolbar">
+    <ng-content select="[workflow-toolbar]"></ng-content>
+  </section>
+
+  <!-- CONTENT -->
+  <section class="workflow-content">
+    <ng-content select="[workflow-content]"></ng-content>
+  </section>
+
+</div>

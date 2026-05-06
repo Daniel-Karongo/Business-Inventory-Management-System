@@ -1,0 +1,94 @@
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.workflow-card {
+  width: 100%;
+  min-width: 0;
+
+  background: var(--surface-bg);
+
+  border: 1px solid var(--surface-border);
+
+  border-radius: var(--surface-radius);
+
+  box-shadow: var(--surface-shadow);
+
+  overflow: hidden;
+}
+
+/* =========================================
+HEADER
+========================================= */
+
+.workflow-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  flex-wrap: wrap;
+
+  gap: 1rem;
+
+  padding:
+    1rem
+    1rem
+    0.75rem;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.workflow-card-header:empty {
+  display: none;
+}
+
+/* =========================================
+TOOLBAR
+========================================= */
+
+.workflow-card-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+
+  align-items: center;
+
+  gap: 0.75rem;
+
+  padding:
+    0
+    1rem
+    1rem;
+}
+
+.workflow-card-toolbar:empty {
+  display: none;
+}
+
+/* =========================================
+CONTENT
+========================================= */
+
+.workflow-card-content {
+  padding: 1rem;
+
+  min-width: 0;
+}
+
+.workflow-card.no-padding .workflow-card-content {
+  padding: 0;
+}
+
+/* =========================================
+MOBILE
+========================================= */
+
+@media (max-width: 768px) {
+
+  .workflow-card-header,
+  .workflow-card-toolbar {
+    align-items: stretch;
+  }
+
+}

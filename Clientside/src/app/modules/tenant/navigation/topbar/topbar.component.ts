@@ -54,6 +54,7 @@ export class TopbarComponent implements OnInit {
   selectedBranchId?: string;
   selectedBranchName = 'Select branch';
   isSmallScreen = false;
+  isMobileLayout = false;
 
   constructor(
     public sidebar: SidebarService,
@@ -77,9 +78,17 @@ export class TopbarComponent implements OnInit {
       .pipe(filter(e => e instanceof NavigationEnd))
       .subscribe(() => this.updatePageTitle());
 
-    this.breakpoint.observe(['(max-width: 640px)']).subscribe(res => {
-      this.isSmallScreen = res.matches;
-    });
+    this.breakpoint
+      .observe('(max-width: 768px)')
+      .subscribe(res => {
+
+        this.isMobileLayout =
+          res.matches;
+
+        this.isSmallScreen =
+          res.matches;
+
+      });
   }
 
   private loadBranches() {
@@ -153,7 +162,15 @@ export class TopbarComponent implements OnInit {
   }
 
   toggleSidebar() {
-    this.sidebar.toggle();
+
+    if (this.isMobileLayout) {
+
+      this.sidebar.toggleMobile();
+
+      return;
+    }
+
+    this.sidebar.toggleDesktopCollapsed();
   }
 
   goBack() {

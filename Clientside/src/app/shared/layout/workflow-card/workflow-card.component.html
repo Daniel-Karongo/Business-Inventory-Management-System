@@ -1,0 +1,20 @@
+<div
+  class="workflow-card"
+  [class.no-padding]="!padded">
+
+  <!-- HEADER -->
+  <section class="workflow-card-header">
+    <ng-content select="[workflow-card-header]"></ng-content>
+  </section>
+
+  <!-- TOOLBAR -->
+  <section class="workflow-card-toolbar">
+    <ng-content select="[workflow-card-toolbar]"></ng-content>
+  </section>
+
+  <!-- CONTENT -->
+  <section class="workflow-card-content">
+    <ng-content></ng-content>
+  </section>
+
+</div>

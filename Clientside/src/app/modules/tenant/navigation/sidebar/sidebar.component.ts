@@ -1,6 +1,15 @@
-import { Component, inject } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  inject
+} from '@angular/core';
 import { CommonModule, NgFor } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import {
+  NavigationEnd,
+  Router,
+  RouterModule
+} from '@angular/router';
+import { filter } from 'rxjs';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { SidebarService } from '../../../../core/services/sidebar.service';
@@ -14,8 +23,12 @@ interface NavItem {
   route?: string;
   icon: string;
   feature?: string;
+
   children?: NavItem[];
+
   expanded?: boolean;
+
+  collapsedExpanded?: boolean;
 }
 
 @Component({
@@ -32,7 +45,7 @@ interface NavItem {
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.scss']
 })
-export class SidebarComponent {
+export class SidebarComponent implements OnInit {
 
   private branding = inject(TenantBrandingService);
   private perm = inject(PermissionService);
@@ -43,8 +56,29 @@ export class SidebarComponent {
   constructor(
     public sidebar: SidebarService,
     private auth: AuthService,
+    private router: Router
   ) {
     this.buildNav();
+  }
+
+  ngOnInit(): void {
+
+    this.syncSidebarStateToRoute();
+
+    this.router.events
+      .pipe(
+        filter(e => e instanceof NavigationEnd)
+      )
+      .subscribe(() => {
+
+        this.syncSidebarStateToRoute();
+      });
+
+    this.sidebar.isCollapsed$
+      .subscribe(() => {
+
+        this.syncSidebarStateToRoute();
+      });
   }
 
   private buildNav() {
@@ -65,10 +99,6 @@ export class SidebarComponent {
       { title: 'Users', route: '/app/users', icon: 'users', feature: 'users' },
       { title: 'Branches', route: '/app/branches', icon: 'branches', feature: 'branches' },
       { title: 'Departments', route: '/app/departments', icon: 'departments', feature: 'departments' },
-
-      { title: 'Accounts', route: '/app/finance/accounting', icon: 'accounts', feature: 'accounts' },
-      { title: 'Payments', route: '/app/finance/payments', icon: 'payments', feature: 'payments' },
-
       {
         title: 'Finance',
         icon: 'finance',
@@ -98,7 +128,120 @@ export class SidebarComponent {
     return this.auth.getSnapshot()?.role === 'SUPERUSER';
   }
 
-  toggleGroup(item: NavItem) {
-    item.expanded = !item.expanded;
+  private collapseAllGroups() {
+
+    this.nav.forEach(item => {
+      item.expanded = false;
+      item.collapsedExpanded = false;
+    });
+
+    this.sidebar.collapseRail();
   }
+
+  syncSidebarStateToRoute() {
+
+    const url =
+      this.router.url;
+
+    const activeGroup =
+      this.nav.find(item =>
+        item.children?.some(
+          child => child.route === url
+        )
+      );
+
+    /*
+      RESET
+    */
+
+    this.nav.forEach(item => {
+
+      item.expanded = false;
+      item.collapsedExpanded = false;
+    });
+
+    /*
+      NO ACTIVE GROUP
+    */
+
+    if (!activeGroup) {
+
+      this.sidebar.collapseRail();
+
+      return;
+    }
+
+    /*
+      COLLAPSED DESKTOP
+    */
+
+    if (this.sidebar.collapsedSnapshot) {
+
+      activeGroup.collapsedExpanded = true;
+
+      this.sidebar.expandRail();
+
+      return;
+    }
+
+    /*
+      EXPANDED DESKTOP
+    */
+
+    activeGroup.expanded = true;
+
+    this.sidebar.collapseRail();
+  }
+
+  toggleGroup(item: NavItem) {
+
+    const collapsed =
+      this.sidebar.collapsedSnapshot;
+
+    /* =========================================
+       COLLAPSED DESKTOP RAIL
+    ========================================= */
+
+    if (collapsed) {
+
+      const opening =
+        !item.collapsedExpanded;
+
+      this.collapseAllGroups();
+
+      item.collapsedExpanded =
+        opening;
+
+      if (opening) {
+        this.sidebar.expandRail();
+      } else {
+        this.sidebar.collapseRail();
+      }
+
+      return;
+    }
+
+    /* =========================================
+       EXPANDED DESKTOP
+    ========================================= */
+
+    const opening =
+      !item.expanded;
+
+    this.nav.forEach(x => {
+      x.expanded = false;
+    });
+
+    item.expanded =
+      opening;
+  }
+
+  onStandaloneNavigate() {
+    this.collapseAllGroups();
+  }
+
+  onChildNavigate() {
+  }
+
+
 }

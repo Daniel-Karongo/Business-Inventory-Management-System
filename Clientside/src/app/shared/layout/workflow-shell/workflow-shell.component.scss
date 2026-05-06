@@ -1,0 +1,92 @@
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.workflow-shell {
+  width: 100%;
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 1rem;
+}
+
+/* =========================================
+SECTIONS
+========================================= */
+
+.workflow-header,
+.workflow-toolbar,
+.workflow-content {
+  width: 100%;
+  min-width: 0;
+}
+
+/* =========================================
+HEADER
+========================================= */
+
+.workflow-header {
+  display: flex;
+  flex-wrap: wrap;
+
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 1rem;
+}
+
+/* =========================================
+TOOLBAR
+========================================= */
+
+.workflow-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+
+  align-items: center;
+
+  gap: 0.75rem;
+}
+
+/* =========================================
+CONTENT
+========================================= */
+
+.workflow-content {
+  display: flex;
+  flex-direction: column;
+
+  gap: 1rem;
+
+  min-width: 0;
+}
+
+/* =========================================
+FLUID
+========================================= */
+
+.workflow-shell.fluid {
+  max-width: none;
+}
+
+/* =========================================
+MOBILE
+========================================= */
+
+@media (max-width: 768px) {
+
+  .workflow-shell {
+    gap: 0.75rem;
+  }
+
+  .workflow-header,
+  .workflow-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+}

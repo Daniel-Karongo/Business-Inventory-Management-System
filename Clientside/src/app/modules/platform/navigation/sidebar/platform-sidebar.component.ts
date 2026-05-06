@@ -22,18 +22,30 @@ import { TenantBrandingService } from '../../../../core/services/tenant-branding
   styleUrls: ['./platform-sidebar.component.scss']
 })
 export class PlatformSidebarComponent {
-  
-  private branding = inject(TenantBrandingService);
 
-  logo$ = this.branding.logo$;
-  items = PLATFORM_NAV_ITEMS;
+  private branding =
+    inject(TenantBrandingService);
+
+  logo$ =
+    this.branding.logo$;
+
+  items =
+    PLATFORM_NAV_ITEMS;
 
   constructor(
     public sidebar: SidebarService
   ) { }
 
   toggleSidebar() {
-    this.sidebar.toggle();
+
+    if (this.sidebar.mobileSnapshot) {
+
+      this.sidebar.closeMobile();
+
+      return;
+    }
+
+    this.sidebar.toggleDesktopCollapsed();
   }
 
 }
