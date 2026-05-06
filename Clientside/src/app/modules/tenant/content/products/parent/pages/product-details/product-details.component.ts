@@ -7,7 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 
 import { ProductService } from '../../services/product.service';
-import { Product } from '../../models/product.model';
+import { Product } from '../../../../stock/models/product.model';
 import { VariantListComponent } from '../../../variant/components/variant-list/variant-list.component';
 import { ProductAuditsComponent } from '../../components/product-audits/product-audits.component';
 import { VariantSummaryComponent } from '../../components/variant-summary/variant-summary.component';

@@ -1,4 +1,4 @@
-import { Product } from "../../products/parent/models/product.model";
+import { Product } from "../../stock/models/product.model";
 
 export interface Supplier {
   id: string;

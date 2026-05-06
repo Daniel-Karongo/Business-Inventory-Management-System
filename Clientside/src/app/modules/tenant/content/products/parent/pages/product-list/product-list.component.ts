@@ -29,8 +29,8 @@ import { ProductBulkImportDialogComponent } from '../../components/product-bulk-
 import {
   PRODUCT_ACTION_REASONS,
   ProductActionType
-} from '../../models/product-action-reasons.model';
-import { Product } from '../../models/product.model';
+} from '../../../../stock/models/product-action-reasons.model';
+import { Product } from '../../../../stock/models/product.model';
 import { ProductService } from '../../services/product.service';
 import { ProductRestoreOptionsDialog } from '../../components/product-restore-options/product-restore-options.dialog';
 

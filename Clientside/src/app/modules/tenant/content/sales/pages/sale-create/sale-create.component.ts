@@ -20,7 +20,7 @@ import { AuthService } from '../../../../../auth/services/auth.service';
 import { BranchService } from '../../../branches/services/branch.service';
 import { CustomerService } from '../../../customers/services/customer.service';
 import { InventoryService } from '../../../inventory/services/inventory.service';
-import { Product } from '../../../products/parent/models/product.model';
+import { Product } from '../../../stock/models/product.model';
 import { ProductService } from '../../../products/parent/services/product.service';
 import { ProductVariantService } from '../../../products/variant/services/product-variant.service';
 import { BatchAllocationDialogComponent } from '../../dialogs/batch-allocation-dialog/batch-allocation-dialog.component';

@@ -10,7 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ProductService } from '../../../products/parent/services/product.service';
-import { Product } from '../../../products/parent/models/product.model';
+import { Product } from '../../../stock/models/product.model';
 import { EntityImageManagerComponent } from '../../../../../../shared/components/entity-image-manager/entity-image-manager.component';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';

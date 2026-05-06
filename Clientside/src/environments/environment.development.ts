@@ -3,7 +3,6 @@ export const environment = {
 
   idleLogoutMinutes: 60,
 
-  // apiUrl: `http://${window.location.hostname}:8080/api`,
   apiUrl: `/api`,
 
   endpoints: {
@@ -211,6 +210,328 @@ export const environment = {
     },
 
     /* ============================================================
+       PAYMENTS
+    ============================================================ */
+    payments: {
+      base: '/payments',
+
+      create: '/payments',
+      get: (id: string) => `/payments/${id}`,
+      list: '/payments',
+
+      refund: (id: string) => `/payments/${id}/refund`,
+      reverse: (id: string) => `/payments/${id}/reverse`,
+
+      reconcile: '/payments/reconcile',
+
+      mpesa: {
+        initiateStk: '/payments/mpesa/stk/initiate',
+        callback: '/payments/mpesa/stk/callback',
+        c2bConfirm: '/payments/mpesa/c2b/confirm',
+        c2bValidate: '/payments/mpesa/c2b/validate',
+      }
+    },
+    /* =====================================================
+           PRODUCTS
+        ===================================================== */
+    products: {
+      base: '/products',
+      list: '/products',
+      get: (id: string) =>
+        `/products/${id}`,
+      getBySku: (sku: string) =>
+        `/products/sku/${sku}`,
+      byCategory: (categoryId: string | number) =>
+        `/products/category/${categoryId}`,
+      bySupplier: (supplierId: string) =>
+        `/products/supplier/${supplierId}`,
+      create: '/products',
+      update: (id: string) =>
+        `/products/${id}`,
+      softDelete: (id: string) =>
+        `/products/${id}/soft`,
+      hardDelete: (id: string) =>
+        `/products/${id}/hard`,
+      restore: (id: string) =>
+        `/products/${id}/restore`,
+      audits: (id: string) =>
+        `/products/${id}/audits`,
+      thumbnail: (id: string) =>
+        `/products/${id}/thumbnail`,
+      /* =========================================
+         SEARCH
+      ========================================= */
+      search: {
+        base: '/products/search'
+      },
+      /* =========================================
+         BULK
+      ========================================= */
+      bulk: {
+        fullCreate: '/products/bulk/full',
+        softDelete: '/products/bulk',
+        restore: '/products/bulk/restore',
+        hardDelete: '/products/bulk/hard'
+      },
+      /* =========================================
+         IMAGES
+      ========================================= */
+      images: {
+        base: '/products/images',
+        list: (productId: string) =>
+          `/products/images/${productId}`,
+        upload: (productId: string) =>
+          `/products/images/${productId}`,
+        deleteOne: (
+          productId: string,
+          filename: string
+        ) =>
+          `/products/images/${productId}/${filename}`,
+        deleteAll: (productId: string) =>
+          `/products/images/${productId}`,
+        restore: (
+          productId: string,
+          imageId: string
+        ) =>
+          `/products/images/${productId}/${imageId}/restore`,
+        zip: (productId: string) =>
+          `/products/images/${productId}/zip`,
+        all: '/products/images',
+        allZip: '/products/images/zip'
+      },
+      /* =========================================
+         VARIANTS
+      ========================================= */
+      variants: {
+        base: '/product-variants',
+        create: '/product-variants',
+        get: (id: string) =>
+          `/product-variants/${id}`,
+        update: (id: string) =>
+          `/product-variants/${id}`,
+        delete: (id: string) =>
+          `/product-variants/${id}`,
+        forProduct: (productId: string) =>
+          `/product-variants/product/${productId}`,
+        images: {
+          list: (variantId: string) =>
+            `/product-variants/${variantId}/images`,
+          upload: (variantId: string) =>
+            `/product-variants/${variantId}/images`,
+          image: (
+            variantId: string,
+            fileName: string
+          ) =>
+            `/product-variants/${variantId}/images/${fileName}`,
+          zip: (variantId: string) =>
+            `/product-variants/${variantId}/images/zip`
+        },
+        barcodePdf: {
+          bulk: '/product-variants/barcode/pdf/bulk',
+          product: (productId: string) =>
+            `/product-variants/product/${productId}/barcode/pdf`,
+          download: (fileName: string) =>
+            `/product-variants/barcode/pdf/download/${fileName}`
+        },
+        packaging: {
+          base: '/product-variants/packaging',
+          create: '/product-variants/packaging',
+          get: (variantId: string) =>
+            `/product-variants/packaging/${variantId}`,
+          basePackaging: (variantId: string) =>
+            `/product-variants/packaging/${variantId}/base`,
+          update: (id: string) =>
+            `/product-variants/packaging/${id}`,
+          delete: (id: string) =>
+            `/product-variants/packaging/${id}`
+        },
+        pricing: {
+          base: '/product-variants/pricing',
+          forVariant: (variantId: string) =>
+            `/product-variants/pricing/variant/${variantId}`,
+          create: '/product-variants/pricing',
+          update: (id: string) =>
+            `/product-variants/pricing/${id}`,
+          delete: (id: string) =>
+            `/product-variants/pricing/${id}`
+        }
+      }
+    },
+    /* =====================================================
+       BARCODES
+    ===================================================== */
+    barcodes: {
+      base: '/barcodes',
+      scan: '/barcodes/scan',
+      lookup: (barcode: string) =>
+        `/barcodes/${barcode}`,
+      generate: (variantId: string) =>
+        `/barcodes/variant/${variantId}`,
+      image: (variantId: string) =>
+        `/barcodes/variant/${variantId}/image`
+    },
+    /* =====================================================
+       SELLABLE
+    ===================================================== */
+    sellable: {
+      base: '/sellable',
+      resolve: '/sellable/resolve',
+      search: '/sellable/search'
+    },
+    sellableProducts: {
+      base: '/sellable-products',
+      search: '/sellable-products/search'
+    },
+    /* =====================================================
+       SALES
+    ===================================================== */
+    sales: {
+      base: '/sales',
+      create: '/sales',
+      list: '/sales',
+      get: (id: string) =>
+        `/sales/${id}`,
+      update: (id: string) =>
+        `/sales/${id}`,
+      deliver: (id: string) =>
+        `/sales/${id}/deliver`,
+      cancel: (id: string) =>
+        `/sales/${id}/cancel`,
+      refund: (id: string) =>
+        `/sales/${id}/refund`,
+      cancelAndRefund: (id: string) =>
+        `/sales/${id}/cancel-refund`,
+      payments: (id: string) =>
+        `/sales/${id}/payments`,
+      receipt: (id: string) =>
+        `/sales/${id}/receipt`,
+      previewLine: '/sales/preview-line',
+      bulk: {
+        create: '/sales/bulk'
+      }
+    },
+
+    /* =====================================================
+       STOCK / INVENTORY
+    ===================================================== */
+    
+    stock: {
+      /* =========================================
+         INVENTORY QUERY
+      ========================================= */
+      inventory: {
+        base: '/stock/inventory',
+        list: '/stock/inventory',
+        byBranch: (branchId: string) =>
+          `/stock/inventory/branch/${branchId}`,
+        variantAll: (variantId: string) =>
+          `/stock/inventory/variant/${variantId}`,
+        variantBranch: (
+          variantId: string,
+          branchId: string
+        ) =>
+          `/stock/inventory/variant/${variantId}/branch/${branchId}`,
+        productAcrossBranches: (productId: string) =>
+          `/stock/inventory/product/${productId}/branches`,
+        productInBranch: (
+          productId: string,
+          branchId: string
+        ) =>
+          `/stock/inventory/product/${productId}/branch/${branchId}`
+      },
+      /* =========================================
+         OPERATIONS
+      ========================================= */
+      operations: {
+        base: '/stock/operations',
+        receive: '/stock/operations/receive',
+        transfer: '/stock/operations/transfer',
+        adjust: '/stock/operations/adjust',
+        consume: '/stock/operations/consume'
+      },
+      /* =========================================
+         BULK
+      ========================================= */
+      bulk: {
+        receive: '/stock/bulk/receive'
+      },
+      /* =========================================
+         RESERVATIONS
+      ========================================= */
+      reservations: {
+        base: '/stock/reservations',
+        reserve: '/stock/reservations/reserve',
+        release: '/stock/reservations/release',
+        preview: '/stock/reservations/preview'
+      },
+      /* =========================================
+         BATCHES
+      ========================================= */
+      batches: {
+        base: '/stock/batches',
+        variantBranch: (
+          variantId: string,
+          branchId: string
+        ) =>
+          `/stock/batches/variant/${variantId}/branch/${branchId}`,
+        consumptions: (batchId: string) =>
+          `/stock/batches/${batchId}/consumptions`,
+        suggest: '/stock/batches/suggest'
+      },
+      /* =========================================
+         TRANSACTIONS
+      ========================================= */
+      transactions: {
+        base: '/stock/transactions',
+        all: (branchId: string) =>
+          `/stock/transactions/branch/${branchId}`,
+        byVariant: (
+          branchId: string,
+          variantId: string
+        ) =>
+          `/stock/transactions/branch/${branchId}/variant/${variantId}`,
+        byProduct: (
+          branchId: string,
+          productId: string
+        ) =>
+          `/stock/transactions/branch/${branchId}/product/${productId}`
+      },
+      /* =========================================
+         REPORTS
+      ========================================= */
+      reports: {
+        base: '/stock/reports',
+        lowStock: '/stock/reports/low-stock',
+        outOfStock: '/stock/reports/out-of-stock',
+        audit: (productId: string) =>
+          `/stock/reports/audit/${productId}`
+      },
+      /* =========================================
+         VALUATION
+      ========================================= */
+      valuation: {
+        base: '/stock/valuation',
+        total: '/stock/valuation',
+        dashboard: '/stock/valuation/dashboard',
+        product: (productId: string) =>
+          `/stock/valuation/product/${productId}`,
+        branch: (branchId: string) =>
+          `/stock/valuation/branch/${branchId}`,
+        categories: '/stock/valuation/categories',
+        history: '/stock/valuation/history',
+        historyVariant: (variantId: string) =>
+          `/stock/valuation/history/${variantId}`
+      },
+      /* =========================================
+         ONBOARDING
+      ========================================= */
+      onboarding: {
+        base: '/stock/onboarding',
+        create: '/stock/onboarding'
+      }
+    },
+
+    /* ============================================================
        SUPPLIERS
     ============================================================ */
     suppliers: {
@@ -264,111 +585,6 @@ export const environment = {
     },
 
     /* ============================================================
-       PRODUCTS & VARIANTS
-    ============================================================ */
-    products: {
-      base: '/products',
-
-      list: (deleted?: boolean) => `/products?deleted=${deleted}`,
-      advanced: '/products/advanced',
-
-      create: '/products/create',
-      bulkCreate: '/products/create/bulk',
-
-      update: (id: string) => `/products/${id}`,
-
-      softDelete: (id: string) => `/products/soft/${id}`,
-      hardDelete: (id: string) => `/products/hard/${id}`,
-      restore: (id: string) => `/products/restore/${id}`,
-      getById: (id: string) => `/products/${id}`,
-      search: (keyword: string) => `/products/search?keyword=${keyword}`,
-
-      variants: {
-        base: '/product-variants',
-
-        create: '/product-variants',
-        forProduct: (productId: string) =>
-          `/product-variants/product/${productId}`,
-        get: (id: string) => `/product-variants/${id}`,
-        update: (id: string) => `/product-variants/${id}`,
-        delete: (id: string) => `/product-variants/${id}`,
-      },
-
-      images: {
-        list: (id: string) => `/products/${id}/images`,
-        upload: (id: string) => `/products/${id}/images`,
-        deleteOne: (id: string, filename: string) =>
-          `/products/${id}/images/${filename}`,
-        deleteAll: (id: string) => `/products/${id}/images`,
-        zip: (id: string) => `/products/${id}/images/zip`
-      },
-
-      barcode: {
-        generateImage: '/products/barcode/image',
-        generateLabel: '/products/barcode/label',
-        generateSheet: '/products/barcode/sheet'
-      },
-
-      audits: (id: string) => `/products/${id}/audits`
-    },
-
-    /* ============================================================
-       INVENTORY
-    ============================================================ */
-    inventory: {
-      base: '/inventory',
-
-      receive: '/inventory/receive',
-      bulkReceive: '/inventory/receive/bulk',
-
-      adjust: '/inventory/adjust/variant',
-
-      decrement: '/inventory/variant/decrement',
-      reserve: '/inventory/variant/reserve',
-      release: '/inventory/variant/release',
-
-      getVariantAcrossBranches: (variantId: string) =>
-        `/inventory/variant/${variantId}`,
-
-      getVariantForBranch: (variantId: string, branchId: string) =>
-        `/inventory/variant/${variantId}/branch/${branchId}`,
-
-      listForBranch: (branchId: string) =>
-        `/inventory/branch/${branchId}`,
-
-      productStockAcrossBranches: (productId: string) =>
-        `/inventory/product/stock-across-branches/${productId}`,
-
-      productStockInBranch: (productId: string, branchId: string) =>
-        `/inventory/product/${productId}/branch/${branchId}`,
-
-      lowStock: (threshold: number) =>
-        `/inventory/low-stock?threshold=${threshold}`,
-
-      outOfStock: `/inventory/out-of-stock`,
-
-      transactions: '/inventory/transactions',
-      transactionsForProduct: (productId: string) =>
-        `/inventory/transactions/product/${productId}`,
-
-      valuation: {
-        dashboard: '/inventory/valuation/dashboard',
-        base: '/inventory/valuation',
-        product: (productId: string) =>
-          `/inventory/valuation/product/${productId}`,
-        branch: (branchId: string) =>
-          `/inventory/valuation/branch/${branchId}`,
-        history: '/inventory/valuation/history',
-        byCategory: '/inventory/valuation/categories',
-
-        snapshotTake: '/inventory/snapshot/take',
-        snapshotGet: '/inventory/snapshot',
-      },
-
-      audit: (productId: string) => `/inventory/audit/${productId}`
-    },
-
-    /* ============================================================
        CUSTOMERS
     ============================================================ */
     customers: {
@@ -385,49 +601,6 @@ export const environment = {
 
       payments: (id: string) => `/customers/${id}/payments`,
       sales: (id: string) => `/customers/${id}/sales`,
-    },
-
-    /* ============================================================
-       SALES
-    ============================================================ */
-    sales: {
-      base: '/sales',
-
-      create: '/sales',
-      list: '/sales',
-
-      get: (id: string) => `/sales/${id}`,
-      update: (id: string) => `/sales/${id}`,
-
-      cancel: (id: string) => `/sales/${id}/cancel`,
-      refund: (id: string) => `/sales/${id}/refund`,
-      cancelAndRefund: (id: string) => `/sales/${id}/cancel-refund`,
-
-      payments: (id: string) => `/sales/${id}/payments`,
-      receipt: (id: string) => `/sales/${id}/receipt`
-    },
-
-    /* ============================================================
-       PAYMENTS
-    ============================================================ */
-    payments: {
-      base: '/payments',
-
-      create: '/payments',
-      get: (id: string) => `/payments/${id}`,
-      list: '/payments',
-
-      refund: (id: string) => `/payments/${id}/refund`,
-      reverse: (id: string) => `/payments/${id}/reverse`,
-
-      reconcile: '/payments/reconcile',
-
-      mpesa: {
-        initiateStk: '/payments/mpesa/stk/initiate',
-        callback: '/payments/mpesa/stk/callback',
-        c2bConfirm: '/payments/mpesa/c2b/confirm',
-        c2bValidate: '/payments/mpesa/c2b/validate',
-      }
     },
 
     /* ============================================================

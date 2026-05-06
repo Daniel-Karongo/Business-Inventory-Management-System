@@ -8,7 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 
-import { ProductVariant } from '../../models/product-variant.model';
+import { ProductVariant } from '../../../../stock/models/product-variant.model';
 import { ProductVariantService } from '../../services/product-variant.service';
 
 @Component({

@@ -1,5 +1,5 @@
 import { BulkAssignedFile } from
-'../../../../../../shared/bulk-import/files/bulk-file.model';
+'../../../../../shared/bulk-import/files/bulk-file.model';
 
 export interface BulkProductRow {
 

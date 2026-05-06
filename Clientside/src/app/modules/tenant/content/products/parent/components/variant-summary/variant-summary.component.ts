@@ -2,7 +2,7 @@ import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 
-import { Product } from '../../models/product.model';
+import { Product } from '../../../../stock/models/product.model';
 import { VariantListComponent } from '../../../variant/components/variant-list/variant-list.component';
 
 @Component({

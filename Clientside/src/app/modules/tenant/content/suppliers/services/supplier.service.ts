@@ -12,7 +12,7 @@ import {
   SupplierImageAudit
 } from '../models/supplier.model';
 
-import { Product } from '../../products/parent/models/product.model';
+import { Product } from '../../stock/models/product.model';
 import { BulkRequest, BulkResult } from '../../../../../shared/models/bulk-import.model';
 
 @Injectable({ providedIn: 'root' })

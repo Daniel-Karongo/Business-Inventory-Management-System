@@ -16,7 +16,7 @@ import { SupplierImageAdapter } from '../../services/supplier-image.adapter';
 import { EntityImageManagerComponent } from
   '../../../../../../shared/components/entity-image-manager/entity-image-manager.component';
 
-import { Product } from '../../../products/parent/models/product.model';
+import { Product } from '../../../stock/models/product.model';
 import { CategoryService } from '../../../categories/services/category.service';
 import { Category } from '../../../categories/models/category.model';
 

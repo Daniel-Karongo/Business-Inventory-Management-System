@@ -1,14 +1,31 @@
-import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { BulkRequest, BulkResult } from '../../../../../shared/models/bulk-import.model';
+import { Injectable } from '@angular/core';
 import { environment } from '../../../../../../environments/environment';
+import { PageWrapper } from '../../../../../core/models/page-wrapper.model';
 
-@Injectable({ providedIn: 'root' })
+import {
+  BulkRequest,
+  BulkResult
+} from '../../../../../shared/models/bulk-import.model';
+
+import {
+  SaleBulkRow,
+  SaleDTO,
+  SaleRequest
+} from '../../stock/models/sale.model';
+
+@Injectable({
+  providedIn: 'root'
+})
 export class SalesService {
+  private api = environment.apiUrl;
 
-  private base = environment.apiUrl + environment.endpoints.sales.base;
+  private endpoints =
+    environment.endpoints.sales;
 
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient
+  ) { }
 
   list(params: {
     page?: number;
@@ -21,64 +38,111 @@ export class SalesService {
   }) {
     let httpParams = new HttpParams();
 
-    Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null) {
-        httpParams = httpParams.set(k, String(v));
+    Object.entries(params)
+      .forEach(([key, value]) => {
+        if (
+          value !== undefined &&
+          value !== null
+        ) {
+          httpParams = httpParams.set(
+            key,
+            String(value)
+          );
+        }
+      });
+
+    return this.http.get<
+      PageWrapper<SaleDTO>
+    >(
+      this.api +
+      this.endpoints.list,
+      {
+        params: httpParams
       }
-    });
-
-    return this.http.get<any>(this.base, { params: httpParams });
-  }
-
-  get(id: string) {
-    return this.http.get<any>(`${this.base}/${id}`);
-  }
-
-  create(payload: any) {
-    return this.http.post<any>(this.base, payload);
-  }
-
-  import(
-    mode: 'HISTORICAL' | 'OPERATIONAL',
-    payload: BulkRequest<any>
-  ) {
-    const params = new HttpParams().set('mode', mode);
-
-    return this.http.post<BulkResult<any>>(
-      `${this.base}/import`,
-      payload,
-      { params }
     );
   }
 
-  update(id: string, payload: any) {
-    return this.http.put<any>(`${this.base}/${id}`, payload);
+  get(id: string) {
+    return this.http.get<SaleDTO>(
+      this.api +
+      this.endpoints.get(id)
+    );
+  }
+
+  create(payload: SaleRequest) {
+    return this.http.post<SaleDTO>(
+      this.api +
+      this.endpoints.create,
+      payload
+    );
+  }
+
+  update(
+    id: string,
+    payload: SaleRequest
+  ) {
+    return this.http.put<SaleDTO>(
+      this.api +
+      this.endpoints.update(id),
+      payload
+    );
+  }
+
+  deliver(id: string) {
+    return this.http.post<SaleDTO>(
+      this.api +
+      this.endpoints.deliver(id),
+      {}
+    );
   }
 
   cancel(id: string) {
-    return this.http.post<any>(
-      environment.apiUrl + environment.endpoints.sales.cancel(id),
+    return this.http.post<SaleDTO>(
+      this.api +
+      this.endpoints.cancel(id),
       {}
     );
   }
 
   refund(id: string) {
-    return this.http.post<any>(
-      environment.apiUrl + environment.endpoints.sales.refund(id),
+    return this.http.post<SaleDTO>(
+      this.api +
+      this.endpoints.refund(id),
       {}
     );
   }
 
   cancelAndRefund(id: string) {
-    return this.http.post<any>(
-      environment.apiUrl + environment.endpoints.sales.cancelAndRefund(id),
+    return this.http.post<SaleDTO>(
+      this.api +
+      this.endpoints.cancelAndRefund(id),
       {}
     );
   }
 
   payments(id: string) {
-    return this.http.get<any[]>(
-      environment.apiUrl + environment.endpoints.sales.payments(id)
+    return this.http.get(
+      this.api +
+      this.endpoints.payments(id)
+    );
+  }
+
+  receipt(id: string) {
+    return this.http.get<SaleDTO>(
+      this.api +
+      this.endpoints.receipt(id)
+    );
+  }
+
+  bulkCreate(
+    payload: BulkRequest<SaleBulkRow>
+  ) {
+    return this.http.post<
+      BulkResult<SaleDTO>
+    >(
+      this.api +
+      this.endpoints.bulk.create,
+      payload
     );
   }
 }

@@ -7,8 +7,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
-import { Product } from '../../../parent/models/product.model';
-import { ProductVariant } from '../../models/product-variant.model';
+import { Product } from '../../../../stock/models/product.model';
+import { ProductVariant } from '../../../../stock/models/product-variant.model';
 import { ProductVariantService } from '../../services/product-variant.service';
 import { VariantFormComponent } from '../variant-form/variant-form.component';
 import { InventoryService } from '../../../../inventory/services/inventory.service';

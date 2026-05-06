@@ -1,146 +1,537 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../../../../environments/environment';
-import { map, Observable } from 'rxjs';
-import { ApiResponse } from '../../../../../core/models/api-response.model';
-import { InventoryResponse } from '../models/inventory-response.model';
-import { StockTransactionDTO } from '../models/stock-transaction.model';
 
-@Injectable({ providedIn: 'root' })
+import {
+    HttpClient,
+    HttpParams
+} from '@angular/common/http';
+
+import {
+    map,
+    Observable
+} from 'rxjs';
+
+import { environment }
+    from '../../../../../../environments/environment';
+
+import { ApiResponse }
+    from '../../../../../core/models/api-response.model';
+
+import {
+    ReleaseStockRequest,
+    ReserveStockRequest
+} from '../../stock/models/reservation.model';
+
+import {
+    InventoryValuationDashboard
+} from '../../stock/models/valuation.model';
+
+import {
+    StockOnboardingRequest,
+    StockOnboardingResponse
+} from '../../stock/models/stock-onboarding.model';
+
+import {
+    StockTransactionDTO
+} from '../../stock/models/stock-transaction.model';
+import { InventoryResponse } from '../../stock/models/inventory-response.model';
+import { BatchConsumptionDTO, InventoryBatchDTO } from '../../stock/models/inventory-batch.model';
+import { AllocationPreviewDTO } from '../../stock/models/allocation.model';
+import { PreviewAllocationRequest } from '../../stock/models/reservation.model';
+import { AdjustStockRequest, ReceiveStockRequest, TransferStockRequest } from '../../stock/models/stock-operation.model';
+
+@Injectable({
+    providedIn: 'root'
+})
 export class InventoryService {
-  private base = environment.apiUrl + environment.endpoints.inventory.base;
 
-  constructor(private http: HttpClient) { }
+    private api =
+        environment.apiUrl;
 
-  /** ===========================
-   * READ — NORMALIZED
-   * =========================== */
+    private endpoints =
+        environment.endpoints.stock;
 
-  getAll(): Observable<InventoryResponse[]> {
-    return this.http
-      .get<ApiResponse<InventoryResponse[]>>(this.base)
-      .pipe(map(res => res.data ?? []));
-  }
+    constructor(
+        private http: HttpClient
+    ) { }
 
-  getByBranch(branchId: string): Observable<InventoryResponse[]> {
-    return this.http
-      .get<ApiResponse<InventoryResponse[]>>(
-        `${this.base}/branch/${branchId}`
-      )
-      .pipe(map(res => res.data ?? []));
-  }
+    /* =====================================================
+       INVENTORY
+    ===================================================== */
 
-  // ===========================
-  // BATCH ENDPOINTS
-  // ===========================
+    getAll(
+        page = 0,
+        size = 50
+    ): Observable<any> {
 
-  getBatches(variantId: string, branchId: string) {
-    return this.http.get<any>(
-      `${environment.apiUrl}/inventory/variant/${variantId}/branch/${branchId}/batches`
-    );
-  }
+        const params =
+            new HttpParams()
+                .set('page', page)
+                .set('size', size);
 
-  suggestBatches(variantId: string, branchId: string, quantity: number) {
-    return this.http.get<any>(
-      `${environment.apiUrl}/inventory/variant/${variantId}/branch/${branchId}/suggest-batches?quantity=${quantity}`
-    );
-  }
+        return this.http
+            .get<ApiResponse>(
+                this.api +
+                this.endpoints.inventory.list,
+                { params }
+            )
+            .pipe(
+                map(res => res.data)
+            );
+    }
 
-  getBatchConsumptions(batchId: string) {
-    return this.http
-      .get<ApiResponse<any[]>>(
-        `${this.base}/batch/${batchId}/consumptions`
-      )
-      .pipe(map(res => res.data ?? []));
-  }
+    getByBranch(
+        branchId: string,
+        page = 0,
+        size = 50
+    ): Observable<any> {
 
-  getFifoPrice(variantId: string, branchId: string) {
-    return this.http
-      .get<ApiResponse<number>>(
-        `${this.base}/variant/${variantId}/branch/${branchId}/fifo-price`
-      )
-      .pipe(map(res => res.data ?? 0));
-  }
+        const params =
+            new HttpParams()
+                .set('page', page)
+                .set('size', size);
 
-  getAllBatches(variantId: string, branchId: string) {
-    return this.http
-      .get<ApiResponse<any[]>>(
-        `${this.base}/variant/${variantId}/branch/${branchId}/batches`
-      )
-      .pipe(map(res => res.data ?? []));
-  }
-  
-  // ===========================
-  // PREVIEW ALLOCATION
-  // ===========================
+        return this.http
+            .get<ApiResponse>(
+                this.api +
+                this.endpoints.inventory.byBranch(branchId),
+                { params }
+            )
+            .pipe(
+                map(res => res.data)
+            );
+    }
 
-  previewAllocation(payload: {
-    variantId: string;
-    branchId: string;
-    quantity: number;
-    selectedBatchIds?: string[] | null;
-  }) {
-    return this.http.post<ApiResponse<any>>(
-      `${this.base}/preview-allocation`,
-      payload
-    ).pipe(map(res => res.data));
-  }
+    getVariantAcrossBranches(
+        variantId: string
+    ): Observable<InventoryResponse[]> {
 
-  /** Used by Products → Variant List */
-  getVariantAcrossBranches(
-    variantId: string
-  ): Observable<InventoryResponse[]> {
-    return this.http
-      .get<ApiResponse<InventoryResponse[]>>(
-        `${this.base}/variant/${variantId}`
-      )
-      .pipe(map(res => res.data ?? []));
-  }
+        return this.http
+            .get<ApiResponse>(
+                this.api +
+                this.endpoints.inventory.variantAll(variantId)
+            )
+            .pipe(
+                map(res => res.data)
+            );
+    }
 
-  /** Used by Sales → Sale Create */
-  getVariantStock(
-    variantId: string,
-    branchId: string
-  ): Observable<InventoryResponse | null> {
-    return this.http
-      .get<ApiResponse<InventoryResponse>>(
-        `${this.base}/variant/${variantId}/branch/${branchId}`
-      )
-      .pipe(map(res => res.data ?? null));
-  }
+    getVariantStock(
+        variantId: string,
+        branchId: string
+    ): Observable<InventoryResponse | null> {
 
-  /** ===========================
-   * TRANSACTIONS (already raw)
-   * =========================== */
+        return this.http
+            .get<ApiResponse>(
+                this.api +
+                this.endpoints.inventory.variantBranch(
+                    variantId,
+                    branchId
+                )
+            )
+            .pipe(
+                map(res => res.data ?? null)
+            );
+    }
 
-  getTransactionsByVariant(
-    variantId: string
-  ): Observable<StockTransactionDTO[]> {
-    return this.http.get<StockTransactionDTO[]>(
-      `${environment.apiUrl}/stock/transactions/variant/${variantId}`
-    );
-  }
+    getProductAcrossBranches(
+        productId: string
+    ) {
 
-  /** ===========================
-   * MUTATIONS (unchanged)
-   * =========================== */
+        return this.http
+            .get<ApiResponse>(
+                this.api +
+                this.endpoints.inventory
+                    .productAcrossBranches(productId)
+            )
+            .pipe(
+                map(res => res.data)
+            );
+    }
 
-  receiveStock(payload: any): Observable<ApiResponse> {
-    return this.http.post<ApiResponse>(`${this.base}/receive`, payload);
-  }
+    getProductInBranch(
+        productId: string,
+        branchId: string
+    ) {
 
-  adjustVariantStock(payload: any): Observable<ApiResponse> {
-    return this.http.post<ApiResponse>(`${this.base}/adjust/variant`, payload);
-  }
+        return this.http
+            .get<ApiResponse>(
+                this.api +
+                this.endpoints.inventory
+                    .productInBranch(
+                        productId,
+                        branchId
+                    )
+            )
+            .pipe(
+                map(res => res.data)
+            );
+    }
 
-  transferStock(payload: any): Observable<ApiResponse> {
-    return this.http.post<ApiResponse>(`${this.base}/transfer`, payload);
-  }
+    /* =====================================================
+       BATCHES
+    ===================================================== */
 
-  bulkImport(request: any) {
-    return this.http.post<any>(
-      `${this.base}/import`,
-      request
-    );
-  }
+    getBatches(
+        variantId: string,
+        branchId: string
+    ): Observable<InventoryBatchDTO[]> {
+
+        return this.http
+            .get<ApiResponse>(
+                this.api +
+                this.endpoints.batches
+                    .variantBranch(
+                        variantId,
+                        branchId
+                    )
+            )
+            .pipe(
+                map(res => res.data ?? [])
+            );
+    }
+
+    suggestBatches(
+        variantId: string,
+        branchId: string,
+        quantity: number
+    ) {
+
+        const params =
+            new HttpParams()
+                .set('variantId', variantId)
+                .set('branchId', branchId)
+                .set('quantity', quantity);
+
+        return this.http
+            .get<ApiResponse>(
+                this.api +
+                this.endpoints.batches.suggest,
+                { params }
+            )
+            .pipe(
+                map(res => res.data)
+            );
+    }
+
+    getBatchConsumptions(
+        batchId: string
+    ): Observable<BatchConsumptionDTO[]> {
+
+        return this.http
+            .get<ApiResponse>(
+                this.api +
+                this.endpoints.batches
+                    .consumptions(batchId)
+            )
+            .pipe(
+                map(res => res.data ?? [])
+            );
+    }
+
+    /* =====================================================
+       RESERVATION PREVIEW
+    ===================================================== */
+
+    previewAllocation(
+        payload:
+            PreviewAllocationRequest
+    ): Observable<AllocationPreviewDTO> {
+
+        return this.http
+            .post<ApiResponse>(
+                this.api +
+                this.endpoints.reservations.preview,
+                payload
+            )
+            .pipe(
+                map(res => res.data)
+            );
+    }
+
+    reserveStock(
+        payload: ReserveStockRequest
+    ) {
+        return this.http.post(
+            this.api +
+            this.endpoints.reservations.reserve,
+            payload
+        );
+    }
+
+    releaseReservation(
+        payload: ReleaseStockRequest
+    ) {
+        return this.http.post(
+            this.api +
+            this.endpoints.reservations.release,
+            payload
+        );
+    }
+
+    /* =====================================================
+       TRANSACTIONS
+    ===================================================== */
+
+    getTransactionsByVariant(
+        branchId: string,
+        variantId: string
+    ): Observable<StockTransactionDTO[]> {
+
+        return this.http
+            .get<ApiResponse>(
+                this.api +
+                this.endpoints.transactions
+                    .byVariant(
+                        branchId,
+                        variantId
+                    )
+            )
+            .pipe(
+                map(res => res.data ?? [])
+            );
+    }
+
+    /* =====================================================
+       OPERATIONS
+    ===================================================== */
+
+    receiveStock(
+        payload: ReceiveStockRequest
+    ) {
+
+        return this.http.post(
+            this.api +
+            this.endpoints.operations.receive,
+            payload
+        );
+    }
+
+    transferStock(
+        payload: TransferStockRequest
+    ) {
+
+        return this.http.post(
+            this.api +
+            this.endpoints.operations.transfer,
+            payload
+        );
+    }
+
+    adjustVariantStock(
+        payload: AdjustStockRequest
+    ) {
+
+        return this.http.post(
+            this.api +
+            this.endpoints.operations.adjust,
+            payload
+        );
+    }
+
+    consumeStock(payload: {
+        productVariantId: string;
+        branchId: string;
+        quantity: number;
+        reference: string;
+    }) {
+        return this.http.post(
+            this.api +
+            this.endpoints.operations.consume,
+            payload
+        );
+    }
+
+    onboardStock(
+        payload: StockOnboardingRequest
+    ) {
+        return this.http
+            .post<ApiResponse<StockOnboardingResponse>>(
+                this.api +
+                this.endpoints.onboarding.create,
+                payload
+            )
+            .pipe(
+                map(res => res.data)
+            );
+    }
+
+    /* =====================================================
+       REPORTS
+    ===================================================== */
+
+    getLowStock(
+        threshold = 10,
+        page = 0,
+        size = 50
+    ) {
+
+        const params =
+            new HttpParams()
+                .set('threshold', threshold)
+                .set('page', page)
+                .set('size', size);
+
+        return this.http
+            .get<ApiResponse>(
+                this.api +
+                this.endpoints.reports.lowStock,
+                { params }
+            )
+            .pipe(
+                map(res => res.data)
+            );
+    }
+
+    getOutOfStock(
+        page = 0,
+        size = 50
+    ) {
+
+        const params =
+            new HttpParams()
+                .set('page', page)
+                .set('size', size);
+
+        return this.http
+            .get<ApiResponse>(
+                this.api +
+                this.endpoints.reports.outOfStock,
+                { params }
+            )
+            .pipe(
+                map(res => res.data)
+            );
+    }
+
+    getAuditTrail(
+        productId: string
+    ) {
+
+        return this.http
+            .get<ApiResponse>(
+                this.api +
+                this.endpoints.reports.audit(
+                    productId
+                )
+            )
+            .pipe(
+                map(res => res.data)
+            );
+    }
+
+    /* =====================================================
+       VALUATION
+    ===================================================== */
+
+    getValuationDashboard() {
+        return this.http
+            .get<ApiResponse<InventoryValuationDashboard>>(
+                this.api +
+                this.endpoints.valuation.dashboard
+            )
+            .pipe(
+                map(res => res.data as InventoryValuationDashboard)
+            );
+    }
+
+    getBranchValuation(
+        branchId: string
+    ) {
+
+        return this.http
+            .get<ApiResponse>(
+                this.api +
+                this.endpoints.valuation.branch(
+                    branchId
+                )
+            )
+            .pipe(
+                map(res => res.data)
+            );
+    }
+
+    getProductValuation(
+        productId: string
+    ) {
+
+        return this.http
+            .get<ApiResponse>(
+                this.api +
+                this.endpoints.valuation.product(
+                    productId
+                )
+            )
+            .pipe(
+                map(res => res.data)
+            );
+    }
+    getCategoryValuation() {
+        return this.http
+            .get<ApiResponse>(
+                this.api +
+                this.endpoints.valuation.categories
+            )
+            .pipe(
+                map(res => res.data)
+            );
+    }
+
+    getHistoricalValuation(
+        date?: string,
+        method?: string
+    ) {
+        let params = new HttpParams();
+
+        if (date) {
+            params = params.set(
+                'date',
+                date
+            );
+        }
+
+        if (method) {
+            params = params.set(
+                'method',
+                method
+            );
+        }
+
+        return this.http
+            .get<ApiResponse>(
+                this.api +
+                this.endpoints.valuation.history,
+                { params }
+            )
+            .pipe(
+                map(res => res.data)
+            );
+    }
+
+    getHistoricalVariantValuation(
+        variantId: string,
+        branchId: string,
+        date?: string
+    ) {
+        let params = new HttpParams()
+            .set('branchId', branchId);
+
+        if (date) {
+            params = params.set(
+                'date',
+                date
+            );
+        }
+
+        return this.http
+            .get<ApiResponse>(
+                this.api +
+                this.endpoints.valuation.historyVariant(
+                    variantId
+                ),
+                { params }
+            )
+            .pipe(
+                map(res => res.data)
+            );
+    }
 }

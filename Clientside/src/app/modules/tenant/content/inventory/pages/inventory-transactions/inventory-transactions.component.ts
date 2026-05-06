@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { InventoryService } from '../../services/inventory.service';
-import { StockTransactionDTO } from '../../models/stock-transaction.model';
+import { StockTransactionDTO } from '../../../stock/models/stock-transaction.model';
 
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';

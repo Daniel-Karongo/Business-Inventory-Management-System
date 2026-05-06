@@ -1,47 +1,86 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpParams
+} from '@angular/common/http';
+
 import { environment } from '../../../../../../environments/environment';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class PaymentsService {
+  private api = environment.apiUrl;
 
-  private base = environment.apiUrl + environment.endpoints.payments.base;
+  private endpoints =
+    environment.endpoints.payments;
 
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient
+  ) { }
 
-  create(payload: any) {
-    return this.http.post<any>(this.base, payload);
+  create(payload: unknown) {
+    return this.http.post(
+      this.api +
+      this.endpoints.create,
+      payload
+    );
   }
 
   refund(id: string) {
-    return this.http.post<any>(
-      environment.apiUrl + environment.endpoints.payments.refund(id),
+    return this.http.post(
+      this.api +
+      this.endpoints.refund(id),
       {}
     );
   }
 
-  reverse(id: string, note?: string) {
+  reverse(
+    id: string,
+    note?: string
+  ) {
     let params = new HttpParams();
-    if (note) params = params.set('note', note);
 
-    return this.http.post<any>(
-      environment.apiUrl + environment.endpoints.payments.reverse(id),
+    if (note) {
+      params = params.set(
+        'note',
+        note
+      );
+    }
+
+    return this.http.post(
+      this.api +
+      this.endpoints.reverse(id),
       {},
       { params }
     );
   }
 
-  initiateMpesa(saleId: string, phone: string, amount: number) {
-    return this.http.post<any>(
-      environment.apiUrl + environment.endpoints.payments.mpesa.initiateStk,
+  initiateMpesa(
+    saleId: string,
+    phone: string,
+    amount: number
+  ) {
+    return this.http.post(
+      this.api +
+      this.endpoints.mpesa.initiateStk,
       null,
-      { params: { saleId, phone, amount } }
+      {
+        params: {
+          saleId,
+          phone,
+          amount
+        }
+      }
     );
   }
 
   getBySale(saleId: string) {
-    return this.http.get<any[]>(
-      environment.apiUrl + environment.endpoints.sales.payments(saleId)
+    return this.http.get(
+      this.api +
+      environment.endpoints.sales.payments(
+        saleId
+      )
     );
   }
 }

@@ -5,7 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import JSZip from 'jszip';
 
-import { Product } from '../../models/product.model';
+import { Product } from '../../../../stock/models/product.model';
 import { ProductService } from '../../services/product.service';
 import { FileViewerDialog } from '../../../../../../../shared/components/file-viewer/file-viewer.component';
 import { MatDialog } from '@angular/material/dialog';

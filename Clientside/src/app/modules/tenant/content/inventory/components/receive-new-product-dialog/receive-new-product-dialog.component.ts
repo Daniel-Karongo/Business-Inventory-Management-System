@@ -17,7 +17,7 @@ import { BranchService } from '../../../branches/services/branch.service';
 
 import { SupplierMinimalDTO } from '../../../suppliers/models/supplier.model';
 import { BranchMinimalDTO } from '../../../branches/models/branch.model';
-import { Product } from '../../../products/parent/models/product.model';
+import { Product } from '../../../stock/models/product.model';
 
 @Component({
   selector: 'app-receive-new-product-dialog',
