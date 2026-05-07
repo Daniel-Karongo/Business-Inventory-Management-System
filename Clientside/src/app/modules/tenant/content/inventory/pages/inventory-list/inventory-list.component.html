@@ -97,7 +97,7 @@
                 </div>
 
                 <div class="card-sub text-xs text-gray-500">
-                    Branch: {{ r.branchName }}
+                    Branch: {{ branchName(r.branchId) }}
                 </div>
 
                 <div class="card-metrics">
@@ -153,8 +153,7 @@
                         <mat-icon>tune</mat-icon>
                     </button>
 
-                    <button mat-icon-button matTooltip="View transactions"
-                        [routerLink]="['/app/inventory/', r.productVariantId]">
+                    <button mat-icon-button matTooltip="View transactions" (click)="openTransactions(r)">
                         <mat-icon>history</mat-icon>
                     </button>
                 </div>
@@ -219,7 +218,7 @@
                                 </mat-icon>
                             </span>
                         </th>
-                        <td mat-cell *matCellDef="let r">{{ r.branchName }}</td>
+                        <td mat-cell *matCellDef="let r">{{ branchName(r.branchId) }}</td>
                     </ng-container>
 
                     <ng-container matColumnDef="onHand">
@@ -311,8 +310,7 @@
                             <button mat-icon-button matTooltip="Adjust stock" (click)="openAdjustDialog(r)">
                                 <mat-icon>tune</mat-icon>
                             </button>
-                            <button mat-icon-button matTooltip="View transactions"
-                                [routerLink]="['/app/inventory/', r.productVariantId]">
+                            <button mat-icon-button matTooltip="View transactions" (click)="openTransactions(r)">
                                 <mat-icon>history</mat-icon>
                             </button>
                         </td>
@@ -348,7 +346,7 @@
 
                         <div class="stacked-item">
                             <div class="label">Branch</div>
-                            <div class="value">{{ r.branchName }}</div>
+                            <div class="value">{{ branchName(r.branchId) }}</div>
                         </div>
 
                         <div class="stacked-item">
@@ -394,8 +392,7 @@
                             <mat-icon>tune</mat-icon>
                         </button>
 
-                        <button mat-icon-button matTooltip="View transactions"
-                            [routerLink]="['/app/inventory/', r.productVariantId]">
+                        <button mat-icon-button matTooltip="View transactions" (click)="openTransactions(r)">
                             <mat-icon>history</mat-icon>
                         </button>
                     </div>

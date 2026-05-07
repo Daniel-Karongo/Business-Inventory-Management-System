@@ -29,6 +29,7 @@ import {
     StockOnboardingRequest,
     StockOnboardingResponse
 } from '../../stock/models/stock-onboarding.model';
+import { PageWrapper } from '../../../../../core/models/page-wrapper.model';
 
 import {
     StockTransactionDTO
@@ -40,6 +41,7 @@ import { PreviewAllocationRequest } from '../../stock/models/reservation.model';
 import { AdjustStockRequest, ReceiveStockRequest, TransferStockRequest } from '../../stock/models/stock-operation.model';
 import { BulkRequest } from '../../../../../shared/models/bulk-import.model';
 import { InventoryBulkRow } from '../components/inventory-bulk-import-dialog/inventory-bulk-import.config';
+import { InventoryBulkResult } from '../../stock/models/inventory-bulk.model';
 
 @Injectable({
     providedIn: 'root'
@@ -63,7 +65,7 @@ export class InventoryService {
     getAll(
         page = 0,
         size = 50
-    ): Observable<any> {
+    ): Observable<PageWrapper<InventoryResponse>> {
 
         const params =
             new HttpParams()
@@ -77,7 +79,7 @@ export class InventoryService {
                 { params }
             )
             .pipe(
-                map(res => res.data)
+                map(res => res.data as PageWrapper<InventoryResponse>)
             );
     }
 
@@ -85,7 +87,7 @@ export class InventoryService {
         branchId: string,
         page = 0,
         size = 50
-    ): Observable<any> {
+    ): Observable<PageWrapper<InventoryResponse>> {
 
         const params =
             new HttpParams()
@@ -99,7 +101,7 @@ export class InventoryService {
                 { params }
             )
             .pipe(
-                map(res => res.data)
+                map(res => res.data as PageWrapper<InventoryResponse>)
             );
     }
 
@@ -299,14 +301,28 @@ export class InventoryService {
 
     bulkReceive(
         payload: BulkRequest<InventoryBulkRow>
-    ) {
-        return this.http.post(
-            this.api +
-            this.endpoints.bulk.receive,
-            payload
-        );
+    ): Observable<InventoryBulkResult> {
+
+        return this.http
+            .post<ApiResponse<InventoryBulkResult>>(
+                this.api +
+                this.endpoints.bulk.receive,
+                payload
+            )
+            .pipe(
+                map(res => {
+
+                    if (!res.data) {
+                        throw new Error(
+                            'Bulk receive response contained no data'
+                        );
+                    }
+
+                    return res.data;
+                })
+            );
     }
-    
+
     receiveStock(
         payload: ReceiveStockRequest
     ) {
@@ -375,7 +391,7 @@ export class InventoryService {
         threshold = 10,
         page = 0,
         size = 50
-    ) {
+    ): Observable<PageWrapper<InventoryResponse>> {
 
         const params =
             new HttpParams()
@@ -390,14 +406,14 @@ export class InventoryService {
                 { params }
             )
             .pipe(
-                map(res => res.data)
+                map(res => res.data as PageWrapper<InventoryResponse>)
             );
     }
 
     getOutOfStock(
         page = 0,
         size = 50
-    ) {
+    ): Observable<PageWrapper<InventoryResponse>> {
 
         const params =
             new HttpParams()
@@ -411,7 +427,7 @@ export class InventoryService {
                 { params }
             )
             .pipe(
-                map(res => res.data)
+                map(res => res.data as PageWrapper<InventoryResponse>)
             );
     }
 

@@ -37,7 +37,13 @@ export class AdjustStockDialogComponent {
 
   ngOnInit() {
     this.form = this.fb.group({
-      quantityDelta: [0, Validators.required],
+      quantityDelta: [
+        null,
+        [
+          Validators.required,
+          Validators.pattern(/^-?[1-9]\d*$/)
+        ]
+      ],
       unitCost: [null], // 🔹 NEW
       reason: ['', Validators.required],
       reference: ['', Validators.required]

@@ -149,9 +149,10 @@ export class InventoryListComponent implements OnInit {
       : this.inventoryService.getAll();
 
     req.subscribe({
-      next: inventory => {
-        this.inventory = inventory;
+      next: page => {
+        this.inventory = page.content ?? [];
         this.filtered = [...this.inventory];
+        this.total = page.totalElements ?? 0;
 
         this.applySorting();
         this.page = 0;
@@ -164,6 +165,12 @@ export class InventoryListComponent implements OnInit {
         this.snackbar.open('Failed to load inventory', 'Close', { duration: 3000 });
       }
     });
+  }
+
+  branchName(branchId: string): string {
+    return this.branches.find(
+      b => b.id === branchId
+    )?.name ?? 'Unknown Branch';
   }
 
   private savePreferences() {
@@ -193,7 +200,9 @@ export class InventoryListComponent implements OnInit {
     } else {
       this.filtered = this.inventory.filter(r =>
         r.productName.toLowerCase().includes(term) ||
-        r.productVariantSKU.toLowerCase().includes(term)
+        (r.productVariantSKU || '')
+          .toLowerCase()
+          .includes(term)
       );
     }
 
@@ -252,8 +261,6 @@ export class InventoryListComponent implements OnInit {
   }
 
   applyPagination() {
-    this.total = this.filtered.length;
-
     const start = this.page * this.size;
     const end = start + this.size;
 
@@ -307,6 +314,17 @@ export class InventoryListComponent implements OnInit {
     this.applyPagination();
   }
 
+  openTransactions(row: InventoryResponse) {
+    this.router.navigate(
+      ['/app/inventory', row.productVariantId],
+      {
+        state: {
+          branchId: row.branchId
+        }
+      }
+    );
+  }
+
   createSaleFromInventory(row: InventoryResponse) {
     this.router.navigate(['/app/sales/new'], {
       state: {
@@ -330,7 +348,7 @@ export class InventoryListComponent implements OnInit {
         productVariantId: row.productVariantId,
         classification: row.productClassification,
         branchId: row.branchId,
-        branchName: row.branchName
+        branchName: this.branchName(row.branchId)
       }
     });
 
@@ -349,7 +367,7 @@ export class InventoryListComponent implements OnInit {
         productName: row.productName,
         classification: row.productClassification,
         branchId: row.branchId,
-        branchName: row.branchName
+        branchName: this.branchName(row.branchId)
       }
     });
 
@@ -368,7 +386,7 @@ export class InventoryListComponent implements OnInit {
         productName: row.productName,
         classification: row.productClassification,
         fromBranchId: row.branchId,
-        fromBranchName: row.branchName,
+        frombranchName: this.branchName(row.branchId),
         available: this.available(row),
         averageCost: row.averageCost
       }

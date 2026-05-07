@@ -69,7 +69,7 @@ export class BatchAllocationDialogComponent implements OnInit {
     get tableRows(): BatchGroup[] {
         return [...this.allocations.controls];
     }
-    
+
     private createBatchGroup(data: {
         batchId: string;
         receivedAt: string;
@@ -129,7 +129,7 @@ export class BatchAllocationDialogComponent implements OnInit {
 
     loadSuggested() {
         this.inventoryService
-            .getAllBatches(
+            .getBatches(
                 this.data.variantId,
                 this.data.branchId
             )
@@ -142,7 +142,7 @@ export class BatchAllocationDialogComponent implements OnInit {
                 batches.forEach((b: any) => {
 
                     const suggested = Math.min(
-                        b.quantityRemaining,
+                        b.availableQuantity,
                         remaining
                     );
 
@@ -151,8 +151,8 @@ export class BatchAllocationDialogComponent implements OnInit {
                     const group = this.createBatchGroup({
                         batchId: b.batchId,
                         receivedAt: b.receivedAt,
-                        available: Number(b.quantityRemaining),
-                        unitCost: Number(b.unitSellingPrice ?? b.unitCost),
+                        available: Number(b.availableQuantity),
+                        unitCost: Number(b.unitCost),
                         quantity: suggested,
                         isSuggested: suggested > 0
                     });

@@ -38,6 +38,7 @@ export class InventoryTransactionsComponent implements OnInit {
   loading = true;
   transactions: StockTransactionDTO[] = [];
   variantId!: string;
+  branchId!: string;
   variantName!: string | undefined;
   productName!: string | undefined;
 
@@ -76,12 +77,26 @@ export class InventoryTransactionsComponent implements OnInit {
   ) { }
 
   ngOnInit() {
-    this.variantId = this.route.snapshot.paramMap.get('variantId')!;
+    this.variantId =
+      this.route.snapshot.paramMap.get('variantId')!;
+
+    const nav = history.state;
+
+    this.branchId = nav?.branchId;
+
+    if (!this.branchId) {
+      this.loading = false;
+      return;
+    }
+
     this.loadTransactions();
   }
 
   loadTransactions() {
-    this.inventoryService.getTransactionsByVariant(this.variantId).subscribe({
+    this.inventoryService.getTransactionsByVariant(
+      this.branchId,
+      this.variantId
+    ).subscribe({
       next: data => {
         this.transactions = data;
         this.variantName = this.transactions.at(0)?.productVariantName;
