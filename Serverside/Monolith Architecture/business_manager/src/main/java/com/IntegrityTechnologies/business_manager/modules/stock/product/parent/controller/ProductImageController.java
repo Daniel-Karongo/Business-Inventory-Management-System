@@ -32,6 +32,17 @@ public class ProductImageController {
         return productService.getProductImageUrls(branchId, productId, deleted);
     }
 
+    @GetMapping("/{id}/thumbnail")
+    public ResponseEntity<Resource> thumbnail(
+            @RequestParam(required = false) UUID branchId,
+            @PathVariable UUID id
+    ) {
+        return productService.getProductThumbnail(
+                branchId,
+                id
+        );
+    }
+
     @GetMapping("/{productId}/zip")
     public ResponseEntity<Resource> downloadImages(
             @PathVariable UUID productId,

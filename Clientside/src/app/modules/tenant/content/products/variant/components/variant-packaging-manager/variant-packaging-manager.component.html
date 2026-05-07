@@ -1,0 +1,64 @@
+<div class="manager">
+
+    <div class="header">
+
+        <div>
+            <h2>Packaging</h2>
+            <span>{{ packagings.length }} configurations</span>
+        </div>
+
+        <button mat-flat-button color="primary" type="button" (click)="create()">
+            Add Packaging
+        </button>
+
+    </div>
+
+    <div class="loading" *ngIf="loading">
+        Loading packaging...
+    </div>
+
+    <div class="empty" *ngIf="!loading && !packagings.length">
+        No packaging configured.
+    </div>
+
+    <div class="cards">
+
+        <div class="card" *ngFor="let p of packagings">
+
+            <div class="top">
+
+                <div>
+
+                    <div class="title">
+                        {{ p.name }}
+                    </div>
+
+                    <div class="meta">
+                        {{ p.unitsPerPackaging }} units
+                    </div>
+
+                </div>
+
+                <span class="base" *ngIf="p.isBaseUnit">
+                    Base
+                </span>
+
+            </div>
+
+            <div class="actions">
+
+                <button mat-button type="button" (click)="edit(p)">
+                    Edit
+                </button>
+
+                <button mat-button type="button" color="warn" *ngIf="!p.isBaseUnit" (click)="remove(p)">
+                    Delete
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

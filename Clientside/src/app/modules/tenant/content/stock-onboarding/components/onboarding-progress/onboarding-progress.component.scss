@@ -1,0 +1,74 @@
+:host {
+    display: block;
+}
+
+.progress-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.step-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    padding: 14px;
+
+    border-radius: 12px;
+
+    border: 1px solid var(--border);
+
+    background: var(--surface);
+
+    transition:
+        background 120ms ease,
+        border-color 120ms ease;
+}
+
+.step-item.active {
+    border-color: #1976d2;
+
+    background:
+        rgba(25, 118, 210, 0.08);
+}
+
+.step-item.complete {
+    opacity: 0.7;
+}
+
+.step-index {
+    width: 32px;
+    height: 32px;
+
+    border-radius: 50%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-weight: 600;
+
+    background:
+        rgba(25, 118, 210, 0.12);
+
+    color: #1976d2;
+}
+
+.step-label {
+    font-size: 0.92rem;
+    font-weight: 500;
+}
+
+@media (max-width: 1024px) {
+
+    .progress-shell {
+        flex-direction: row;
+        overflow-x: auto;
+    }
+
+    .step-item {
+        min-width: 180px;
+    }
+
+}

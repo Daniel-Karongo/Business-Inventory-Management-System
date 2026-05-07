@@ -1,10 +1,14 @@
 import { Injectable } from '@angular/core';
 import { map } from 'rxjs';
 
-import { BaseApiService } from '../../../../../core/services/api/base-api.service';
-import { ApiResponse } from '../../../../../core/models/api-response.model';
+import { environment }
+    from '../../../../../../environments/environment';
 
-import { environment } from '../../../../../../environments/environment';
+import { ApiResponse }
+    from '../../../../../core/models/api-response.model';
+
+import { BaseApiService }
+    from '../../../../../core/services/api/base-api.service';
 
 import {
     BarcodeScanRequest,
@@ -17,39 +21,73 @@ import {
 export class BarcodeService
     extends BaseApiService {
 
+    private endpoints =
+        environment.endpoints
+            .barcodes;
+
     scan(
         payload: BarcodeScanRequest
     ) {
-        return this.post<
+
+        return super.post<
             ApiResponse<BarcodeScanResponse>
         >(
-            environment.endpoints.barcodes.scan,
+            this.endpoints.scan,
             payload
         ).pipe(
-            map(res => this.unwrap(res))
-        );
-    }
-
-    lookup(barcode: string) {
-        return this.get(
-            environment.endpoints.barcodes.lookup(
-                barcode
+            map(res =>
+                this.unwrap<BarcodeScanResponse>(
+                    res
+                )
             )
         );
     }
 
-    generate(variantId: string) {
-        return this.post(
-            environment.endpoints.barcodes.generate(
-                variantId
-            ),
-            {}
+    lookup(
+        barcode: string
+    ) {
+
+        return super.get<
+            ApiResponse<any>
+        >(
+            this.endpoints.lookup(
+                barcode
+            )
+        ).pipe(
+            map(res =>
+                this.unwrap(res)
+            )
         );
     }
 
-    image(variantId: string) {
+    generate(
+        variantId: string
+    ) {
+
+        return super.post<
+            ApiResponse<string>
+        >(
+            this.endpoints.generate(
+                variantId
+            ),
+            {}
+        ).pipe(
+            map(res =>
+                this.unwrap<string>(
+                    res
+                )
+            )
+        );
+    }
+
+    image(
+        variantId: string
+    ) {
+
         return this.http.get(
-            `${this.api}${environment.endpoints.barcodes.image(variantId)}`,
+            `${this.api}${this.endpoints.image(
+                variantId
+            )}`,
             {
                 responseType: 'blob'
             }

@@ -1,0 +1,56 @@
+<div class="review-shell">
+
+    <div class="review-section">
+
+        <div class="section-title">
+            Product
+        </div>
+
+        <div>
+            {{
+            state.productDraft.name
+            }}
+        </div>
+
+    </div>
+
+    <div class="review-section">
+
+        <div class="section-title">
+            Variant
+        </div>
+
+        <div>
+            {{
+            state.variantDraft
+            .classification
+            }}
+        </div>
+
+    </div>
+
+    <div class="review-section">
+
+        <div class="section-title">
+            Packaging
+        </div>
+
+        <div *ngFor="
+        let packaging
+        of state.packagings
+      ">
+
+            {{
+            packaging.name
+            }}
+            —
+            {{
+            packaging.unitQuantity
+            }}
+            units
+
+        </div>
+
+    </div>
+
+</div>

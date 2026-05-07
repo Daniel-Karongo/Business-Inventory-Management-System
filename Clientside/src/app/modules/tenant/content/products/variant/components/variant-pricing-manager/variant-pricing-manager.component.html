@@ -1,0 +1,67 @@
+<div class="manager">
+
+    <div class="header">
+
+        <div>
+            <h2>Pricing</h2>
+            <span>{{ pricing.length }} pricing rules</span>
+        </div>
+
+        <button mat-flat-button color="primary" type="button" (click)="create()">
+            Add Pricing
+        </button>
+
+    </div>
+
+    <div class="loading" *ngIf="loading">
+        Loading pricing...
+    </div>
+
+    <div class="empty" *ngIf="!loading && !pricing.length">
+        No pricing configured.
+    </div>
+
+    <div class="table-wrapper">
+
+        <table *ngIf="pricing.length">
+
+            <thead>
+                <tr>
+                    <th>Packaging</th>
+                    <th>Min Qty</th>
+                    <th>Price</th>
+                    <th></th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                <tr *ngFor="let p of pricing">
+
+                    <td>{{ packagingName(p.packaging?.id) }}</td>
+
+                    <td>{{ p.minQuantity }}</td>
+
+                    <td>{{ p.price | number:'1.2-2' }}</td>
+
+                    <td class="actions">
+
+                        <button mat-button type="button" (click)="edit(p)">
+                            Edit
+                        </button>
+
+                        <button mat-button color="warn" type="button" (click)="remove(p)">
+                            Delete
+                        </button>
+
+                    </td>
+
+                </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>

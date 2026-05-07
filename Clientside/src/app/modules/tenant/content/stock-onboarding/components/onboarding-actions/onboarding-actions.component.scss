@@ -1,0 +1,31 @@
+:host {
+    display: block;
+}
+
+.actions-shell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    padding-top: 20px;
+}
+
+.spacer {
+    flex: 1;
+}
+
+@media (max-width: 768px) {
+
+    .actions-shell {
+        position: sticky;
+        bottom: 0;
+
+        background: var(--surface);
+
+        padding:
+            16px 0;
+
+        z-index: 20;
+    }
+
+}

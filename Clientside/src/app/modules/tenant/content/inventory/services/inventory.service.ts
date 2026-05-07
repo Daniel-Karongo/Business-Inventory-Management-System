@@ -38,6 +38,8 @@ import { BatchConsumptionDTO, InventoryBatchDTO } from '../../stock/models/inven
 import { AllocationPreviewDTO } from '../../stock/models/allocation.model';
 import { PreviewAllocationRequest } from '../../stock/models/reservation.model';
 import { AdjustStockRequest, ReceiveStockRequest, TransferStockRequest } from '../../stock/models/stock-operation.model';
+import { BulkRequest } from '../../../../../shared/models/bulk-import.model';
+import { InventoryBulkRow } from '../components/inventory-bulk-import-dialog/inventory-bulk-import.config';
 
 @Injectable({
     providedIn: 'root'
@@ -295,6 +297,16 @@ export class InventoryService {
        OPERATIONS
     ===================================================== */
 
+    bulkReceive(
+        payload: BulkRequest<InventoryBulkRow>
+    ) {
+        return this.http.post(
+            this.api +
+            this.endpoints.bulk.receive,
+            payload
+        );
+    }
+    
     receiveStock(
         payload: ReceiveStockRequest
     ) {

@@ -4,15 +4,6 @@
   <div class="section-header">
     <h3>Images</h3>
 
-    <button
-      mat-stroked-button
-      *ngIf="product.barcode"
-      (click)="downloadBarcodePdf()">
-      <mat-icon>qr_code</mat-icon>
-      Barcode PDF
-    </button>
-  </div>
-
   <!-- ================= PRODUCT IMAGES ================= -->
   <div class="subsection">
     <h4 class="sub-title">Product Images</h4>
@@ -32,22 +23,4 @@
       </div>
     </div>
   </div>
-
-  <!-- ================= BARCODE ================= -->
-  <div class="subsection" *ngIf="barcodeImageUrl">
-    <h4 class="sub-title">Barcode</h4>
-
-    <div class="image-grid">
-      <div
-        class="image-card barcode-card"
-        (click)="viewBarcode()"
-      >
-        <img [src]="barcodeImageUrl" />
-        <div class="filename">Barcode</div>
-      </div>
-    </div>
-  </div>
-
 </div>
-
-

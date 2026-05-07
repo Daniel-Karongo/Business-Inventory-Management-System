@@ -10,3 +10,18 @@ export interface ProductVariant {
   barcodeImagePath?: string;
   imageUrls?: string[];
 }
+
+export interface ProductVariantCreateDTO {
+  productId: string;
+  classification: string;
+  minimumPercentageProfit?: number;
+  minimumProfit?: number;
+  sku?: string;
+}
+
+export interface ProductVariantUpdateDTO {
+  classification?: string;
+  minimumPercentageProfit?: number;
+  minimumProfit?: number;
+  sku?: string;
+}

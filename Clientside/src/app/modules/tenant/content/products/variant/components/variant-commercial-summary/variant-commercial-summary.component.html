@@ -1,0 +1,105 @@
+<mat-accordion class="commercial-accordion">
+
+    <mat-expansion-panel (opened)="toggle(true)" (closed)="toggle(false)">
+
+        <mat-expansion-panel-header>
+
+            <mat-panel-title>
+                {{ variant.classification }}
+            </mat-panel-title>
+
+            <mat-panel-description>
+
+                <span class="header-meta">
+
+                    <span>
+                        {{ packagings.length || 0 }}
+                        packaging
+                    </span>
+
+                    <span>
+                        {{ pricing.length || 0 }}
+                        pricing
+                    </span>
+
+                </span>
+
+            </mat-panel-description>
+
+        </mat-expansion-panel-header>
+
+        <div *ngIf="loading && expanded" class="loading">
+            Loading commercial configuration...
+        </div>
+
+        <ng-container *ngIf="!loading && expanded">
+
+            <!-- SUMMARY -->
+            <div class="summary-grid">
+
+                <mat-card class="summary-card">
+
+                    <div class="value">
+                        {{ packagings.length }}
+                    </div>
+
+                    <div class="label">
+                        Packaging Configurations
+                    </div>
+
+                </mat-card>
+
+                <mat-card class="summary-card">
+
+                    <div class="value">
+                        {{ pricing.length }}
+                    </div>
+
+                    <div class="label">
+                        Pricing Rules
+                    </div>
+
+                </mat-card>
+
+            </div>
+
+            <!-- TABS -->
+            <mat-tab-group dynamicHeight>
+
+                <!-- PACKAGING -->
+                <mat-tab label="Packaging">
+
+                    <div class="tab-content">
+
+                        <app-variant-packaging-manager [variantId]="variant.id" [branchId]="branchId">
+                        </app-variant-packaging-manager>
+
+                        <app-packaging-conversion-table [packaging]="packagings">
+                        </app-packaging-conversion-table>
+
+                    </div>
+
+                </mat-tab>
+
+                <!-- PRICING -->
+                <mat-tab label="Pricing">
+
+                    <div class="tab-content">
+
+                        <app-variant-pricing-manager [variantId]="variant.id" [packaging]="packagings">
+                        </app-variant-pricing-manager>
+
+                        <app-pricing-tier-table [pricing]="pricing" [packaging]="packagings">
+                        </app-pricing-tier-table>
+
+                    </div>
+
+                </mat-tab>
+
+            </mat-tab-group>
+
+        </ng-container>
+
+    </mat-expansion-panel>
+
+</mat-accordion>

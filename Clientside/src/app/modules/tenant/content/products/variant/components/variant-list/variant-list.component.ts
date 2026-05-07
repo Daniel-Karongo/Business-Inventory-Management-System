@@ -98,7 +98,7 @@ export class VariantListComponent implements OnInit {
     const ok = confirm(`Delete variant "${v.classification}"?`);
     if (!ok) return;
 
-    this.variantService.delete(v.id).subscribe({
+    this.variantService.remove(v.id).subscribe({
       next: () => {
         this.snackbar.open('Variant deleted', 'Close', { duration: 2000 });
         this.loadVariants();

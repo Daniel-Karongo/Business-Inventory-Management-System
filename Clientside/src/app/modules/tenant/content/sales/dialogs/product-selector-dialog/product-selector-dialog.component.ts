@@ -85,7 +85,7 @@ export class ProductSelectorDialogComponent implements OnInit {
       params.direction = this.sortDir;
     }
 
-    this.productService.getAdvanced(params).subscribe(res => {
+    this.productService.search(params).subscribe(res => {
       this.products = res.content ?? [];
       this.total = res.totalElements ?? 0;
     });

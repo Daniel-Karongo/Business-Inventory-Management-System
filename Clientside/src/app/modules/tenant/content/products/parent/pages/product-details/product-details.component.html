@@ -69,6 +69,14 @@
   <app-variant-summary *ngIf="product" [product]="product">
   </app-variant-summary>
 
+  <section class="commercial-section" *ngIf="product.variants.length">
+
+    <app-variant-commercial-summary *ngFor="let variant of product.variants" [variant]="variant"
+      [branchId]="product.branchId">
+    </app-variant-commercial-summary>
+
+  </section>
+
   <!-- AUDITS -->
   <app-product-audits *ngIf="product" [productId]="product.id">
   </app-product-audits>
@@ -80,5 +88,3 @@
 <div *ngIf="loading" class="text-center py-10 text-gray-500">
   Loading product…
 </div>
-
-

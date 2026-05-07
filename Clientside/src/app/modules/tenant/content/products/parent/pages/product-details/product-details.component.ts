@@ -12,6 +12,7 @@ import { VariantListComponent } from '../../../variant/components/variant-list/v
 import { ProductAuditsComponent } from '../../components/product-audits/product-audits.component';
 import { VariantSummaryComponent } from '../../components/variant-summary/variant-summary.component';
 import { ProductImagesComponent } from '../../components/product-images/product-images.component';
+import { VariantCommercialSummaryComponent } from '../../../variant/components/variant-commercial-summary/variant-commercial-summary.component';
 
 @Component({
   selector: 'app-product-details',
@@ -25,7 +26,8 @@ import { ProductImagesComponent } from '../../components/product-images/product-
     MatChipsModule,
     VariantSummaryComponent,
     ProductAuditsComponent,
-    ProductImagesComponent
+    ProductImagesComponent,
+    VariantCommercialSummaryComponent,
   ],
   templateUrl: './product-details.component.html',
   styleUrls: ['./product-details.component.scss']

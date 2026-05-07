@@ -1,4 +1,11 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnInit,
+  Output,
+  inject
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormBuilder,
@@ -13,6 +20,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { BranchService } from '../../../branches/services/branch.service';
+import { BranchContextService } from '../../../../../../core/services/branch-context.service';
 
 @Component({
   selector: 'app-product-form',
@@ -29,14 +38,27 @@ import { MatIconModule } from '@angular/material/icon';
   templateUrl: './product-form.component.html',
   styleUrls: ['./product-form.component.scss']
 })
-export class ProductFormComponent {
+export class ProductFormComponent implements OnInit {
 
-  @Output() submitForm = new EventEmitter<FormData>();
+  @Output() submitForm = new EventEmitter<any>();
   @Output() cancel = new EventEmitter<void>();
+
+  @Input() initialValue: any = null;
+  @Input() editMode = false;
 
   form: FormGroup;
 
-  files: any[] = [];
+  files: {
+    id: string;
+    file: File;
+    target: string;
+    variantKeys: string[];
+  }[] = [];
+  branches: any[] = [];
+  showBranchField = true;
+
+  private branchService = inject(BranchService);
+  private branchContext = inject(BranchContextService);
 
   constructor(private fb: FormBuilder) {
 
@@ -44,11 +66,56 @@ export class ProductFormComponent {
       name: ['', Validators.required],
       description: [''],
       categoryId: [null, Validators.required],
+      branchId: [null, Validators.required],
       minimumPercentageProfit: [],
       variants: this.fb.array([])
     });
 
     this.addVariant('STANDARD');
+  }
+
+  ngOnInit(): void {
+
+    this.branchService.getAll(false).subscribe(branches => {
+
+      this.branches = branches ?? [];
+
+      this.showBranchField = this.branches.length > 1;
+
+      const defaultBranch =
+        this.initialValue?.branchId ??
+        this.branchContext.currentBranch;
+
+      this.form.patchValue({
+        branchId: defaultBranch
+      });
+
+      if (this.editMode) {
+        this.form.get('branchId')?.disable();
+      }
+    });
+
+    if (this.initialValue) {
+
+      this.form.patchValue({
+        name: this.initialValue.name,
+        description: this.initialValue.description,
+        categoryId: this.initialValue.categoryId,
+        minimumPercentageProfit: this.initialValue.minimumPercentageProfit
+      });
+
+      this.variants.clear();
+
+      (this.initialValue.variants ?? []).forEach((v: any) => {
+        this.variants.push(
+          this.fb.group({
+            tempKey: crypto.randomUUID(),
+            classification: [v.classification, Validators.required],
+            barcode: [v.barcode ?? '']
+          })
+        );
+      });
+    }
   }
 
   get variants(): FormArray {
@@ -94,6 +161,7 @@ export class ProductFormComponent {
 
     const payload = {
       product: {
+        branchId: this.form.value.branchId,
         name: this.form.value.name,
         description: this.form.value.description,
         categoryId: this.form.value.categoryId,

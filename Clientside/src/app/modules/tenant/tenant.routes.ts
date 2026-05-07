@@ -43,6 +43,14 @@ export const TENANT_ROUTES: Routes = [
             .then(m => m.SALES_ROUTES)
       },
 
+      {
+        path: 'stock-onboarding',
+        loadChildren: () =>
+          import(
+            './content/stock-onboarding/stock-onboarding.routes'
+          ).then(m => m.STOCK_ONBOARDING_ROUTES)
+      },
+
       /* ============================================================
          INVENTORY
       ============================================================ */

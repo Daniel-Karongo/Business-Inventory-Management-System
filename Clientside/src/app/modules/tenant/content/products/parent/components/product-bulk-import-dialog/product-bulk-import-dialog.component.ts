@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogRef } from '@angular/material/dialog';
 
 import { ProductService } from '../../services/product.service';
 
@@ -13,18 +13,15 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 
-import { BulkImportFormComponent } from '../../../../../../../shared/bulk-import/base/bulk-import-form.component';
 import { BulkImportSubmitEngineService } from '../../../../../../../shared/bulk-import/engine/bulk-import-submit-engine.service';
 import { BulkImportShellComponent } from '../../../../../../../shared/bulk-import/shell/bulk-import-shell.component';
 
-import { BulkFileAssignmentComponent } from '../../../../../../../shared/bulk-import/files/bulk-file-assignment.component';
-import { BulkAssignedFile } from '../../../../../../../shared/bulk-import/files/bulk-file.model';
 import { BulkImportWithFilesComponent } from '../../../../../../../shared/bulk-import/base/bulk-import-with-files.component';
-import { BulkFileFactoryService } from '../../../../../../../shared/bulk-import/files/bulk-file-factory.service';
-import { BulkFileLifecycleService } from '../../../../../../../shared/bulk-import/files/bulk-file-lifecycle.service';
-import { BulkFileImportEngine } from '../../../../../../../shared/bulk-import/files/bulk-file-import.engine';
-import { BulkImportResultDialogComponent } from '../../../../../../../shared/components/bulk-import-result-dialog/bulk-import-result-dialog.component';
 import { BulkCameraCaptureService } from '../../../../../../../shared/bulk-import/camera/bulk-camera-capture.service';
+import { BulkFileAssignmentComponent } from '../../../../../../../shared/bulk-import/files/bulk-file-assignment.component';
+import { BulkFileFactoryService } from '../../../../../../../shared/bulk-import/files/bulk-file-factory.service';
+import { BulkFileImportEngine } from '../../../../../../../shared/bulk-import/files/bulk-file-import.engine';
+import { BulkFileLifecycleService } from '../../../../../../../shared/bulk-import/files/bulk-file-lifecycle.service';
 
 @Component({
   standalone: true,

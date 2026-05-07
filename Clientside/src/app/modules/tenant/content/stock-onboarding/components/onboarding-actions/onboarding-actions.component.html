@@ -1,0 +1,24 @@
+<div class="actions-shell">
+
+    <button mat-stroked-button type="button" (click)="previous.emit()" [disabled]="disablePrevious">
+
+        Previous
+
+    </button>
+
+    <div class="spacer"></div>
+
+    <button *ngIf="!isLastStep" mat-flat-button color="primary" type="button" (click)="next.emit()"
+        [disabled]="disableNext">
+
+        Continue
+
+    </button>
+
+    <button *ngIf="isLastStep" mat-flat-button color="primary" type="button" (click)="submit.emit()">
+
+        Complete Onboarding
+
+    </button>
+
+</div>

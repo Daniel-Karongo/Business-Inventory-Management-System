@@ -1,0 +1,39 @@
+.supplier-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.supplier-row {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr)) auto;
+
+    gap: 16px;
+
+    align-items: center;
+
+    border:
+        1px solid var(--border);
+
+    border-radius: 12px;
+
+    padding: 16px;
+}
+
+@media (max-width: 1280px) {
+
+    .supplier-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+}
+
+@media (max-width: 768px) {
+
+    .supplier-row {
+        grid-template-columns: 1fr;
+    }
+
+}

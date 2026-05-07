@@ -1,0 +1,151 @@
+:host {
+    display: block;
+}
+
+.header-shell {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 16px;
+}
+
+.page-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.page-subtitle {
+    margin-top: 4px;
+
+    color: var(--text-secondary);
+
+    font-size: 0.92rem;
+}
+
+.workflow-sidebar {
+    position: sticky;
+    top: 16px;
+}
+
+.workflow-main {
+    min-width: 0;
+}
+
+.placeholder {
+    height: 100%;
+
+    min-height: 420px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: var(--text-secondary);
+
+    font-size: 1rem;
+}
+
+.workflow-summary {
+    position: sticky;
+    top: 16px;
+}
+
+.summary-card {
+    background: var(--surface);
+
+    border:
+        1px solid var(--border);
+
+    border-radius: 16px;
+
+    padding: 20px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.summary-title {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.summary-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 16px;
+
+    margin-top: 24px;
+}
+
+.summary-card {
+    border:
+        1px solid var(--border);
+
+    border-radius: 16px;
+
+    padding: 20px;
+
+    background:
+        var(--surface);
+}
+
+.summary-label {
+    font-size: 12px;
+
+    opacity: 0.7;
+
+    margin-bottom: 8px;
+}
+
+.summary-value {
+    font-size: 24px;
+
+    font-weight: 700;
+}
+
+@media (max-width: 1024px) {
+
+    .summary-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+}
+
+@media (max-width: 640px) {
+
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+@media (max-width: 1280px) {
+
+    .workflow-summary {
+        grid-column: span 2;
+
+        position: static;
+    }
+
+}
+
+@media (max-width: 1024px) {
+
+    .workflow-sidebar,
+    .workflow-summary {
+        position: static;
+    }
+
+}

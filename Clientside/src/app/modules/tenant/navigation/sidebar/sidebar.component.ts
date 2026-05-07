@@ -91,6 +91,13 @@ export class SidebarComponent implements OnInit {
       { title: 'Categories', route: '/app/categories', icon: 'categories', feature: 'categories' },
       { title: 'Products', route: '/app/products', icon: 'products', feature: 'products' },
       { title: 'Inventory', route: '/app/inventory', icon: 'inventory', feature: 'inventory' },
+      {
+        title: 'Stock Onboarding',
+        route: '/app/stock-onboarding',
+        icon: 'onboarding',
+        feature: 'stock-onboarding'
+      },
+
       { title: 'Sales', route: '/app/sales', icon: 'sales', feature: 'sales' },
 
       { title: 'Suppliers', route: '/app/suppliers', icon: 'suppliers', feature: 'suppliers' },
@@ -99,6 +106,7 @@ export class SidebarComponent implements OnInit {
       { title: 'Users', route: '/app/users', icon: 'users', feature: 'users' },
       { title: 'Branches', route: '/app/branches', icon: 'branches', feature: 'branches' },
       { title: 'Departments', route: '/app/departments', icon: 'departments', feature: 'departments' },
+
       {
         title: 'Finance',
         icon: 'finance',

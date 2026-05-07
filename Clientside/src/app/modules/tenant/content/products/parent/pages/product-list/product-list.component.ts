@@ -130,34 +130,34 @@ export class ProductListComponent implements OnInit {
     /* ================= SINGLE ================= */
 
     disable: (id, reason) =>
-      this.productService.softDelete(id, reason),
+      this.productService.softDelete(id, reason ?? undefined),
 
     restore: (id, reason) =>
       this.openRestoreOptionsDialog().pipe(
         switchMap(options => {
           if (!options) return of(null);
-          return this.productService.restore(id, reason, options);
+          return this.productService.restore(id, reason ?? undefined, options);
         })
       ),
 
     hardDelete: (id, reason) =>
-      this.productService.hardDelete(id, reason),
+      this.productService.hardDelete(id, reason ?? undefined),
 
     /* ================= BULK ================= */
 
     disableBulk: (ids, reason) =>
-      this.productService.bulkSoftDelete(ids, reason),
+      this.productService.bulkSoftDelete(ids, reason ?? undefined),
 
     restoreBulk: (ids, reason) =>
       this.openRestoreOptionsDialog().pipe(
         switchMap(options => {
           if (!options) return of(null);
-          return this.productService.bulkRestore(ids, reason, options);
+          return this.productService.bulkRestore(ids, reason ?? undefined, options);
         })
       ),
 
     hardDeleteBulk: (ids, reason) =>
-      this.productService.bulkHardDelete(ids, reason),
+      this.productService.bulkHardDelete(ids, reason ?? undefined),
 
     /* ================= RELOAD ================= */
 
@@ -264,7 +264,7 @@ export class ProductListComponent implements OnInit {
           params.supplierId = supplierId;
         }
 
-        return this.productService.getAdvanced(params);
+        return this.productService.search(params);
       }),
       tap(res => {
 

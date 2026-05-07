@@ -1,0 +1,42 @@
+<div class="conversion-table">
+
+    <div class="header">
+        Packaging Conversion Matrix
+    </div>
+
+    <table *ngIf="packaging.length">
+
+        <thead>
+            <tr>
+                <th>Packaging</th>
+                <th>Units</th>
+                <th>Base Unit Equivalent</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            <tr *ngFor="let p of packaging">
+
+                <td>
+                    {{ p.name }}
+                </td>
+
+                <td>
+                    {{ p.unitsPerPackaging }}
+                </td>
+
+                <td>
+                    1 {{ p.name }}
+                    =
+                    {{ p.unitsPerPackaging }}
+                    base units
+                </td>
+
+            </tr>
+
+        </tbody>
+
+    </table>
+
+</div>

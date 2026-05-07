@@ -25,7 +25,7 @@ export class ProductCreateComponent {
     private productService: ProductService,
     private snackbar: MatSnackBar,
     private router: Router
-  ) {}
+  ) { }
 
   handleSubmit(formData: FormData) {
 
@@ -33,8 +33,9 @@ export class ProductCreateComponent {
 
     this.saving = true;
 
-    this.productService.fullCreate(formData).subscribe({
+    this.productService.create(formData).subscribe({
       next: product => {
+        this.saving = false;
         this.snackbar.open('Product created successfully', 'Close', { duration: 3000 });
         this.router.navigate(['/app/products', product.id]);
       },

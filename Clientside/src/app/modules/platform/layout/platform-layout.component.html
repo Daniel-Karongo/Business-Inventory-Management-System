@@ -8,7 +8,7 @@
 
   </aside>
 
-  <div *ngIf="!(sidebar.isCollapsed$ | async)" class="sidebar-backdrop" (click)="sidebar.toggle()">
+  <div *ngIf="!(sidebar.isCollapsed$ | async)" class="sidebar-backdrop" (click)="sidebar.closeMobile()">
   </div>
 
   <div class="flex flex-col flex-1 min-w-0">

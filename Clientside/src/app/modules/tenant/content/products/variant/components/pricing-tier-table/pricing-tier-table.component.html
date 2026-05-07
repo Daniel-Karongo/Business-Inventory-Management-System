@@ -1,0 +1,52 @@
+<div class="tier-table">
+
+    <div class="packaging-block" *ngFor="let p of packaging">
+
+        <div class="packaging-header">
+
+            <div>
+                <div class="title">
+                    {{ p.name }}
+                </div>
+
+                <div class="meta">
+                    {{ p.unitsPerPackaging }} units
+                </div>
+            </div>
+
+        </div>
+
+        <div class="empty" *ngIf="!rows(p.packagingId).length">
+            No pricing tiers configured
+        </div>
+
+        <table *ngIf="rows(p.packagingId).length">
+
+            <thead>
+                <tr>
+                    <th>Min Qty</th>
+                    <th>Price</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                <tr *ngFor="let row of rows(p.packagingId)">
+
+                    <td>
+                        {{ row.minQuantity }}
+                    </td>
+
+                    <td>
+                        {{ row.price | number:'1.2-2' }}
+                    </td>
+
+                </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>

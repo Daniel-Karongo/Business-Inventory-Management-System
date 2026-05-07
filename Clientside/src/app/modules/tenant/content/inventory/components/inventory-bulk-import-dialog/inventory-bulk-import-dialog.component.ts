@@ -67,7 +67,7 @@ export class InventoryBulkImportDialogComponent
     };
 
     this.submitEngine.execute({
-      submitFn: req => this.inventoryService.bulkImport(req),
+      submitFn: req => this.inventoryService.bulkReceive(req),
       payload,
       rows: this.rows.controls,
       dryRun: this.form.value.dryRun,

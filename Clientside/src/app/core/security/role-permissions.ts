@@ -4,6 +4,7 @@ export type Feature =
   | 'categories'
   | 'products'
   | 'inventory'
+  | 'stock-onboarding'
   | 'sales'
   | 'suppliers'
   | 'customers'
@@ -22,6 +23,7 @@ export const ROLE_PERMISSIONS: Record<string, Feature[]> = {
     'categories',
     'products',
     'inventory',
+    'stock-onboarding',
     'sales'
   ],
 
@@ -29,6 +31,7 @@ export const ROLE_PERMISSIONS: Record<string, Feature[]> = {
     'categories',
     'products',
     'inventory',
+    'stock-onboarding',
     'sales',
     'suppliers',
     'users',
@@ -41,6 +44,7 @@ export const ROLE_PERMISSIONS: Record<string, Feature[]> = {
     'categories',
     'products',
     'inventory',
+    'stock-onboarding',
     'sales',
     'suppliers',
     'customers',
@@ -57,6 +61,7 @@ export const ROLE_PERMISSIONS: Record<string, Feature[]> = {
     'categories',
     'products',
     'inventory',
+    'stock-onboarding',
     'sales',
     'suppliers',
     'customers',

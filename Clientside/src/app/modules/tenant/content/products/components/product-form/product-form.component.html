@@ -7,7 +7,16 @@
     <!-- ========================= -->
     <mat-tab label="Basics">
       <div class="section">
+        <mat-form-field *ngIf="showBranchField" appearance="fill" class="w-full">
+          <mat-label>Branch</mat-label>
 
+          <select matNativeControl formControlName="branchId">
+            <option *ngFor="let b of branches" [value]="b.id">
+              {{ b.name }}
+            </option>
+          </select>
+        </mat-form-field>
+        
         <mat-form-field appearance="fill" class="w-full">
           <mat-label>Name</mat-label>
           <input matInput formControlName="name" />
@@ -20,11 +29,7 @@
 
         <mat-form-field appearance="fill" class="w-full">
           <mat-label>Minimum % Profit</mat-label>
-          <input
-            matInput
-            type="number"
-            formControlName="minimumPercentageProfit"
-          />
+          <input matInput type="number" formControlName="minimumPercentageProfit" />
         </mat-form-field>
 
       </div>
@@ -38,11 +43,7 @@
 
         <div formArrayName="variants">
 
-          <div
-            *ngFor="let v of variantGroups; let i = index"
-            [formGroupName]="i"
-            class="variant-row"
-          >
+          <div *ngFor="let v of variantGroups; let i = index" [formGroupName]="i" class="variant-row">
 
             <mat-form-field appearance="fill">
               <mat-label>Classification</mat-label>
@@ -54,12 +55,7 @@
               <input matInput formControlName="barcode" />
             </mat-form-field>
 
-            <button
-              mat-stroked-button
-              color="warn"
-              type="button"
-              (click)="removeVariant(i)"
-            >
+            <button mat-stroked-button color="warn" type="button" (click)="removeVariant(i)">
               Remove
             </button>
 
@@ -67,11 +63,7 @@
 
         </div>
 
-        <button
-          mat-stroked-button
-          type="button"
-          (click)="addVariant()"
-        >
+        <button mat-stroked-button type="button" (click)="addVariant()">
           + Add Variant
         </button>
 
@@ -89,12 +81,7 @@
         <div *ngFor="let f of files; let i = index" class="file-card">
           <span class="file-name">{{ f.file.name }}</span>
 
-          <button
-            mat-icon-button
-            color="warn"
-            type="button"
-            (click)="removeFile(i)"
-          >
+          <button mat-icon-button color="warn" type="button" (click)="removeFile(i)">
             <mat-icon>delete</mat-icon>
           </button>
         </div>
@@ -112,17 +99,9 @@
       Cancel
     </button>
 
-    <button
-      mat-flat-button
-      color="primary"
-      type="button"
-      (click)="save()"
-      [disabled]="form.invalid"
-    >
+    <button mat-flat-button color="primary" type="button" (click)="save()" [disabled]="form.invalid">
       Create Product
     </button>
   </div>
 
 </form>
-
-

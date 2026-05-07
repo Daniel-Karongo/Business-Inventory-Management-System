@@ -1,402 +1,419 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { map } from 'rxjs';
 import { environment } from '../../../../../../../environments/environment';
 import { ApiResponse } from '../../../../../../core/models/api-response.model';
 import { PageWrapper } from '../../../../../../core/models/page-wrapper.model';
+import { BaseApiService } from '../../../../../../core/services/api/base-api.service';
+import { BranchContextService } from '../../../../../../core/services/branch-context.service';
 import { BulkResult } from '../../../../../../shared/models/bulk-import.model';
-import { Product, ProductCreateDTO, ProductUpdateDTO } from '../../../stock/models/product.model';
+import {
+  Product,
+  ProductCreateDTO,
+  ProductUpdateDTO
+} from '../../../stock/models/product.model';
 
-@Injectable({
-    providedIn: 'root'
-})
-export class ProductService {
-    private api = environment.apiUrl;
+@Injectable({ providedIn: 'root' })
+export class ProductService extends BaseApiService {
 
-    private endpoints =
-        environment.endpoints.products;
+  private branchContext = inject(BranchContextService);
+  private endpoints = environment.endpoints.products;
 
-    constructor(
-        private http: HttpClient
-    ) { }
+  private resolveBranch(override?: string): string {
+    const branchId = override ?? this.branchContext.currentBranch;
 
-    getAll(
-        branchId: string,
-        deleted?: boolean
-    ) {
-        let params = new HttpParams()
-            .set('branchId', branchId);
-
-        if (deleted !== undefined) {
-            params = params.set(
-                'deleted',
-                deleted
-            );
-        }
-
-        return this.http
-            .get<ApiResponse<Product[]>>(
-                this.api + this.endpoints.list,
-                { params }
-            )
-            .pipe(
-                map(res => res.data ?? [])
-            );
+    if (!branchId) {
+      throw new Error('Branch not selected');
     }
 
-    search(params: {
-        branchId?: string;
-        categoryIds?: number[];
-        categoryId?: number;
-        name?: string;
-        description?: string;
-        keyword?: string;
-        minPrice?: number;
-        maxPrice?: number;
-        deleted?: boolean;
-        page?: number;
-        size?: number;
-        sortBy?: string;
-        direction?: 'asc' | 'desc';
-        includeDeleted?: boolean;
-        minSuppliers?: number;
-        maxSuppliers?: number;
-        supplierId?: string;
-    }) {
-        let httpParams = new HttpParams();
+    return branchId;
+  }
 
-        Object.entries(params)
-            .forEach(([key, value]) => {
-                if (
-                    value !== undefined &&
-                    value !== null
-                ) {
-                    if (Array.isArray(value)) {
-                        value.forEach(v => {
-                            httpParams = httpParams.append(key, v);
-                        });
-                    } else {
-                        httpParams = httpParams.set(
-                            key,
-                            String(value)
-                        );
-                    }
-                }
-            });
+  /* ================= GET ================= */
 
-        return this.http.get<
-            PageWrapper<Product>
-        >(
-            this.api +
-            this.endpoints.search.base,
-            {
-                params: httpParams
-            }
-        );
+  getAll(
+    deleted?: boolean,
+    overrideBranchId?: string
+  ) {
+    return this.get<ApiResponse<Product[]>>(
+      this.endpoints.list,
+      {
+        branchId: this.resolveBranch(overrideBranchId),
+        deleted
+      }
+    ).pipe(
+      map(res => this.unwrap<Product[]>(res) ?? [])
+    );
+  }
+
+  search(params: {
+    branchId?: string;
+    categoryIds?: number[];
+    categoryId?: number;
+    name?: string;
+    description?: string;
+    keyword?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    deleted?: boolean;
+    includeDeleted?: boolean;
+    page?: number;
+    size?: number;
+    sortBy?: string;
+    direction?: 'asc' | 'desc';
+    minSuppliers?: number;
+    maxSuppliers?: number;
+    supplierId?: string;
+  }) {
+    return this.get<PageWrapper<Product>>(
+      this.endpoints.search.base,
+      {
+        ...params,
+        branchId: this.resolveBranch(params.branchId)
+      }
+    );
+  }
+
+  getById(
+    id: string,
+    deleted?: boolean,
+    overrideBranchId?: string
+  ) {
+    return this.get<ApiResponse<Product>>(
+      this.endpoints.get(id),
+      {
+        branchId: this.resolveBranch(overrideBranchId),
+        deleted
+      }
+    ).pipe(
+      map(res => this.unwrap<Product>(res))
+    );
+  }
+
+  getBySku(
+    sku: string,
+    deleted?: boolean,
+    overrideBranchId?: string
+  ) {
+    return this.get<ApiResponse<Product>>(
+      this.endpoints.getBySku(sku),
+      {
+        branchId: this.resolveBranch(overrideBranchId),
+        deleted
+      }
+    ).pipe(
+      map(res => this.unwrap<Product>(res))
+    );
+  }
+
+  getByCategory(
+    categoryId: number,
+    deleted?: boolean,
+    strict = false,
+    overrideBranchId?: string
+  ) {
+    return this.get<ApiResponse<Product[]>>(
+      this.endpoints.byCategory(categoryId),
+      {
+        branchId: this.resolveBranch(overrideBranchId),
+        deleted,
+        strict
+      }
+    ).pipe(
+      map(res => this.unwrap<Product[]>(res) ?? [])
+    );
+  }
+
+  getBySupplier(
+    supplierId: string,
+    deleted?: boolean,
+    overrideBranchId?: string
+  ) {
+    return this.get<ApiResponse<Product[]>>(
+      this.endpoints.bySupplier(supplierId),
+      {
+        branchId: this.resolveBranch(overrideBranchId),
+        deleted
+      }
+    ).pipe(
+      map(res => this.unwrap<Product[]>(res) ?? [])
+    );
+  }
+
+  getAudits(
+    productId: string,
+    overrideBranchId?: string
+  ) {
+    return this.get<ApiResponse<any[]>>(
+      this.endpoints.audits(productId),
+      {
+        branchId: this.resolveBranch(overrideBranchId)
+      }
+    ).pipe(
+      map(res => this.unwrap<any[]>(res) ?? [])
+    );
+  }
+
+  /* ================= CREATE ================= */
+
+  create(
+    payload: ProductCreateDTO,
+    overrideBranchId?: string
+  ) {
+    return this.post<ApiResponse<Product>>(
+      this.endpoints.create,
+      payload,
+      {
+        branchId: this.resolveBranch(overrideBranchId)
+      }
+    ).pipe(
+      map(res => this.unwrap<Product>(res))
+    );
+  }
+
+  bulkFullCreate(
+    formData: FormData,
+    overrideBranchId?: string
+  ) {
+    return this.post<BulkResult<Product>>(
+      this.endpoints.bulk.fullCreate,
+      formData,
+      {
+        branchId: this.resolveBranch(overrideBranchId)
+      }
+    );
+  }
+
+  /* ================= UPDATE ================= */
+
+  update(
+    id: string,
+    payload: ProductUpdateDTO,
+    overrideBranchId?: string
+  ) {
+    return this.put<ApiResponse<Product>>(
+      this.endpoints.update(id),
+      payload,
+      {
+        branchId: this.resolveBranch(overrideBranchId)
+      }
+    ).pipe(
+      map(res => this.unwrap<Product>(res))
+    );
+  }
+
+  /* ================= DELETE ================= */
+
+  softDelete(
+    id: string,
+    reason?: string
+  ) {
+    return this.delete<void>(
+      this.endpoints.softDelete(id),
+      { reason }
+    );
+  }
+
+  restore(
+    id: string,
+    reason?: string,
+    restoreOptions?: {
+      restoreInventory?: boolean;
+      restoreStockTransactions?: boolean;
     }
+  ) {
+    return this.post<void>(
+      this.endpoints.restore(id),
+      restoreOptions ?? {},
+      { reason }
+    );
+  }
 
-    getById(
-        id: string,
-        branchId: string,
-        deleted?: boolean
-    ) {
-        let params = new HttpParams()
-            .set('branchId', branchId);
+  hardDelete(
+    id: string,
+    reason?: string,
+    overrideBranchId?: string
+  ) {
+    return this.delete<void>(
+      this.endpoints.hardDelete(id),
+      {
+        branchId: this.resolveBranch(overrideBranchId),
+        reason
+      }
+    );
+  }
 
-        if (deleted !== undefined) {
-            params = params.set(
-                'deleted',
-                deleted
-            );
-        }
+  bulkSoftDelete(
+    ids: string[],
+    reason?: string
+  ) {
+    return this.http.delete<void>(
+      `${this.api}${this.endpoints.bulk.softDelete}`,
+      {
+        body: { ids, reason }
+      }
+    );
+  }
 
-        return this.http
-            .get<ApiResponse<Product>>(
-                this.api +
-                this.endpoints.get(id),
-                { params }
-            )
-            .pipe(
-                map(res => res.data as Product)
-            );
+  bulkRestore(
+    ids: string[],
+    reason?: string,
+    restoreOptions?: {
+      restoreInventory?: boolean;
+      restoreStockTransactions?: boolean;
     }
+  ) {
+    return this.put<void>(
+      this.endpoints.bulk.restore,
+      {
+        ids,
+        reason,
+        restoreOptions
+      }
+    );
+  }
 
-    create(
-        branchId: string,
-        payload: ProductCreateDTO
-    ) {
-        return this.http.post<ApiResponse<Product>>(
-            this.api +
-            this.endpoints.create,
-            payload,
-            {
-                params: new HttpParams()
-                    .set('branchId', branchId)
-            }
-        );
-    }
+  bulkHardDelete(
+    ids: string[],
+    reason?: string,
+    overrideBranchId?: string
+  ) {
+    return this.http.delete<void>(
+      `${this.api}${this.endpoints.bulk.hardDelete}`,
+      {
+        body: { ids, reason },
+        params: this.buildParams({
+          branchId: this.resolveBranch(overrideBranchId)
+        })
+      }
+    );
+  }
 
-    update(
-        id: string,
-        payload: ProductUpdateDTO
-    ) {
-        return this.http.put<ApiResponse<Product>>(
-            this.api +
-            this.endpoints.update(id),
-            payload
-        );
-    }
+  /* ================= IMAGES ================= */
 
-    softDelete(
-        id: string,
-        reason?: string
-    ) {
-        let params = new HttpParams();
+  getImages(
+    productId: string,
+    deleted?: boolean,
+    overrideBranchId?: string
+  ) {
+    return this.get<string[]>(
+      this.endpoints.images.list(productId),
+      {
+        branchId: this.resolveBranch(overrideBranchId),
+        deleted
+      }
+    );
+  }
 
-        if (reason) {
-            params = params.set(
-                'reason',
-                reason
-            );
-        }
+  uploadImages(
+    productId: string,
+    files: File[],
+    overrideBranchId?: string
+  ) {
+    const formData = new FormData();
 
-        return this.http.delete<void>(
-            this.api +
-            this.endpoints.softDelete(id),
-            { params }
-        );
-    }
+    files.forEach(file => formData.append('files', file));
 
-    restore(
-        id: string,
-        restoreOptions?: {
-            restoreInventory?: boolean;
-            restoreStockTransactions?: boolean;
-        },
-        reason?: string
-    ) {
-        let params = new HttpParams();
+    return this.patch<void>(
+      this.endpoints.images.upload(productId),
+      formData,
+      {
+        branchId: this.resolveBranch(overrideBranchId)
+      }
+    );
+  }
 
-        if (reason) {
-            params = params.set(
-                'reason',
-                reason
-            );
-        }
+  deleteImage(
+    productId: string,
+    filename: string,
+    soft = true,
+    overrideBranchId?: string
+  ) {
+    return this.delete<void>(
+      this.endpoints.images.deleteOne(productId, filename),
+      {
+        branchId: this.resolveBranch(overrideBranchId),
+        soft
+      }
+    );
+  }
 
-        return this.http.post<void>(
-            this.api +
-            this.endpoints.restore(id),
-            restoreOptions ?? {},
-            { params }
-        );
-    }
+  deleteAllImages(
+    productId: string,
+    soft = true,
+    reason?: string,
+    overrideBranchId?: string
+  ) {
+    return this.delete<void>(
+      this.endpoints.images.deleteAll(productId),
+      {
+        branchId: this.resolveBranch(overrideBranchId),
+        soft,
+        reason
+      }
+    );
+  }
 
-    hardDelete(
-        id: string,
-        branchId: string,
-        reason?: string
-    ) {
-        let params = new HttpParams()
-            .set('branchId', branchId);
+  restoreImage(
+    productId: string,
+    imageId: string,
+    reason?: string,
+    overrideBranchId?: string
+  ) {
+    return this.put<void>(
+      this.endpoints.images.restore(productId, imageId),
+      {},
+      {
+        branchId: this.resolveBranch(overrideBranchId),
+        reason
+      }
+    );
+  }
 
-        if (reason) {
-            params = params.set(
-                'reason',
-                reason
-            );
-        }
+  getImageBlob(
+    productId: string,
+    fileName: string,
+    overrideBranchId?: string
+  ) {
+    return this.http.get(
+      `${this.api}${this.endpoints.images.list(productId)}/${fileName}`,
+      {
+        params: this.buildParams({
+          branchId: this.resolveBranch(overrideBranchId)
+        }),
+        responseType: 'blob'
+      }
+    );
+  }
 
-        return this.http.delete<void>(
-            this.api +
-            this.endpoints.hardDelete(id),
-            { params }
-        );
-    }
+  downloadImagesZip(
+    productId: string,
+    deleted?: boolean,
+    overrideBranchId?: string
+  ) {
+    return this.http.get(
+      `${this.api}${this.endpoints.images.zip(productId)}`,
+      {
+        params: this.buildParams({
+          branchId: this.resolveBranch(overrideBranchId),
+          deleted
+        }),
+        responseType: 'blob'
+      }
+    );
+  }
 
-    bulkFullCreate(
-        formData: FormData
-    ) {
-        return this.http.post<
-            BulkResult<Product>
-        >(
-            this.api +
-            this.endpoints.bulk.fullCreate,
-            formData
-        );
-    }
-
-    bulkSoftDelete(
-        ids: string[],
-        reason?: string
-    ) {
-        return this.http.delete<void>(
-            this.api +
-            this.endpoints.bulk.softDelete,
-            {
-                body: {
-                    ids,
-                    reason
-                }
-            }
-        );
-    }
-
-    bulkRestore(
-        ids: string[],
-        reason?: string,
-        restoreOptions?: {
-            restoreInventory?: boolean;
-            restoreStockTransactions?: boolean;
-        }
-    ) {
-        return this.http.put<void>(
-            this.api +
-            this.endpoints.bulk.restore,
-            {
-                ids,
-                reason,
-                restoreOptions
-            }
-        );
-    }
-
-    bulkHardDelete(
-        ids: string[],
-        branchId: string,
-        reason?: string
-    ) {
-        return this.http.delete<void>(
-            this.api +
-            this.endpoints.bulk.hardDelete,
-            {
-                params: new HttpParams()
-                    .set('branchId', branchId),
-                body: {
-                    ids,
-                    reason
-                }
-            }
-        );
-    }
-
-    getImages(
-        productId: string,
-        branchId?: string,
-        deleted?: boolean
-    ) {
-        let params = new HttpParams();
-
-        if (branchId) {
-            params = params.set(
-                'branchId',
-                branchId
-            );
-        }
-
-        if (deleted !== undefined) {
-            params = params.set(
-                'deleted',
-                deleted
-            );
-        }
-
-        return this.http.get<string[]>(
-            this.api +
-            this.endpoints.images.list(productId),
-            { params }
-        );
-    }
-
-    uploadImages(
-        productId: string,
-        files: File[],
-        branchId?: string
-    ) {
-        const formData = new FormData();
-
-        files.forEach(file => {
-            formData.append('files', file);
-        });
-
-        let params = new HttpParams();
-
-        if (branchId) {
-            params = params.set(
-                'branchId',
-                branchId
-            );
-        }
-
-        return this.http.patch<void>(
-            this.api +
-            this.endpoints.images.upload(productId),
-            formData,
-            { params }
-        );
-    }
-
-    getImageBlob(
-        productId: string,
-        fileName: string
-    ) {
-        return this.http.get(
-            this.api +
-            this.endpoints.images.list(productId) +
-            '/' +
-            fileName,
-            {
-                responseType: 'blob'
-            }
-        );
-    }
-
-    downloadImagesZip(
-        productId: string,
-        branchId?: string,
-        deleted?: boolean
-    ) {
-        let params = new HttpParams();
-
-        if (branchId) {
-            params = params.set(
-                'branchId',
-                branchId
-            );
-        }
-
-        if (deleted !== undefined) {
-            params = params.set(
-                'deleted',
-                deleted
-            );
-        }
-
-        return this.http.get(
-            this.api +
-            this.endpoints.images.zip(productId),
-            {
-                params,
-                responseType: 'blob'
-            }
-        );
-    }
-
-    getAudits(
-        productId: string,
-        branchId: string
-    ) {
-        return this.http
-            .get<ApiResponse>(
-                this.api +
-                this.endpoints.audits(productId),
-                {
-                    params: new HttpParams()
-                        .set('branchId', branchId)
-                }
-            )
-            .pipe(
-                map(res => res.data ?? [])
-            );
-    }
+  getThumbnail(
+    productId: string,
+    overrideBranchId?: string
+  ) {
+    return this.http.get(
+      `${this.api}${this.endpoints.thumbnail(productId)}`,
+      {
+        params: this.buildParams({
+          branchId: this.resolveBranch(overrideBranchId)
+        }),
+        responseType: 'blob'
+      }
+    );
+  }
 }

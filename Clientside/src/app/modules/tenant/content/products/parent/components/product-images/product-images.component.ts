@@ -23,7 +23,6 @@ export class ProductImagesComponent implements OnInit {
 
   loading = true;
   images: { name: string; url: string }[] = [];
-  barcodeImageUrl?: string;
 
   constructor(
     private productService: ProductService,
@@ -33,14 +32,17 @@ export class ProductImagesComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadImages();
-    this.loadBarcode();
   }
 
   /* ================= LOAD ================= */
 
   loadImages() {
     this.productService
-      .downloadImagesZip(this.product.id, false)
+      .downloadImagesZip(
+        this.product.id,
+        false,
+        this.product.branchId
+      )
       .subscribe({
         next: async blob => {
           const zip = await JSZip.loadAsync(blob);
@@ -64,14 +66,6 @@ export class ProductImagesComponent implements OnInit {
       });
   }
 
-  loadBarcode() {
-    if (!this.product.barcode) return;
-
-    this.productService.getBarcodeImage(this.product.barcode).subscribe(blob => {
-      this.barcodeImageUrl = URL.createObjectURL(blob);
-    });
-  }
-
   /* ================= ACTIONS ================= */
 
   viewImage(img: { name: string; url: string }) {
@@ -85,31 +79,6 @@ export class ProductImagesComponent implements OnInit {
           type: 'image'
         }
       }
-    });
-  }
-
-  viewBarcode() {
-    if (!this.barcodeImageUrl) return;
-
-    this.dialog.open(FileViewerDialog, {
-      width: '80%',
-      maxWidth: '1100px',
-      data: {
-        preview: {
-          src: this.barcodeImageUrl,
-          name: 'Product Barcode',
-          type: 'image'
-        }
-      }
-    });
-  }
-
-  downloadBarcodePdf() {
-    if (!this.product.barcode) return;
-
-    this.productService.getBarcodePdf(this.product.barcode).subscribe(blob => {
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
     });
   }
 }

@@ -29,7 +29,8 @@ export class IconLoader {
       'budget',
       'tax',
       'payments',
-      'devices'
+      'devices',
+      'onboarding'
     ];
 
     icons.forEach(name =>

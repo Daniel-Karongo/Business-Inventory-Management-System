@@ -1,0 +1,42 @@
+.manager {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+th,
+td {
+    padding: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+}
+
+.actions {
+    white-space: nowrap;
+    text-align: right;
+}
+
+.loading,
+.empty {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: #6b7280;
+}

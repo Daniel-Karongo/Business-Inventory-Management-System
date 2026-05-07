@@ -1,0 +1,61 @@
+.commercial-accordion {
+    width: 100%;
+}
+
+.header-meta {
+    display: flex;
+    gap: 1rem;
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.summary-card {
+    padding: 1.25rem;
+    border-radius: 18px;
+}
+
+.value {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.label {
+    color: #6b7280;
+    margin-top: 0.25rem;
+}
+
+.tab-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    padding-top: 1.5rem;
+}
+
+.loading {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: #6b7280;
+}
+
+::ng-deep .mat-mdc-tab-body-content {
+    overflow: hidden !important;
+}
+
+@media (max-width: 768px) {
+
+    .header-meta {
+        display: none;
+    }
+
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+}
