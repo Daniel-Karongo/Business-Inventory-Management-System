@@ -17,8 +17,8 @@ import { EntityImageManagerComponent } from
   '../../../../../../shared/components/entity-image-manager/entity-image-manager.component';
 
 import { Product } from '../../../stock/models/product.model';
-import { CategoryService } from '../../../categories/services/category.service';
-import { Category } from '../../../categories/models/category.model';
+import { CategoryService } from '../../../stock/categories/services/category.service';
+import { Category } from '../../../stock/categories/models/category.model';
 
 import {
   EntityActionService,

@@ -19,8 +19,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { finalize } from 'rxjs/operators';
 
 import { SupplierService } from '../../services/supplier.service';
-import { CategoryService } from '../../../categories/services/category.service';
-import { Category } from '../../../categories/models/category.model';
+import { CategoryService } from '../../../stock/categories/services/category.service';
+import { Category } from '../../../stock/categories/models/category.model';
 import { FileViewerDialog } from '../../../../../../shared/components/file-viewer/file-viewer.component';
 import { MatDialog } from '@angular/material/dialog';
 

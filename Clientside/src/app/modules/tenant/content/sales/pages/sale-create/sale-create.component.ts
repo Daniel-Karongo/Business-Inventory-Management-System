@@ -121,7 +121,7 @@ import {
 
 import {
   ProductService
-} from '../../../products/parent/services/product.service';
+} from '../../../stock/products/parent/services/product.service';
 
 import {
   BatchAllocationDialogComponent

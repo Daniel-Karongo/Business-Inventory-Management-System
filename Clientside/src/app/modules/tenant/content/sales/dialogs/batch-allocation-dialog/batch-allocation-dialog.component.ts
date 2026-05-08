@@ -7,7 +7,7 @@ import { MAT_DIALOG_DATA, MatDialogRef } from "@angular/material/dialog";
 import { MatInputModule } from "@angular/material/input";
 import { MatSnackBar } from "@angular/material/snack-bar";
 import { MatTableModule } from "@angular/material/table";
-import { InventoryService } from "../../../inventory/services/inventory.service";
+import { InventoryService } from "../../../stock/inventory/services/inventory.service";
 
 type BatchGroup = FormGroup<{
     batchId: FormControl<string>;

@@ -1,0 +1,22 @@
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round">
+
+    <!-- top box -->
+    <path d="M3 7l9-4 9 4-9 4-9-4z"/>
+
+    <!-- left stack -->
+    <path d="M3 7v10l9 4"/>
+
+    <!-- right stack -->
+    <path d="M21 7v10l-9 4"/>
+
+    <!-- middle divider -->
+    <path d="M12 11v10"/>
+
+</svg>

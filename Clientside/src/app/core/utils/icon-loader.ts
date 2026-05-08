@@ -15,6 +15,7 @@ export class IconLoader {
       'inventory',
       'products',
       'categories',
+      'stock',
       'suppliers',
       'sales',
       'reports',

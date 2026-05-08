@@ -9,12 +9,12 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { ProductService } from '../../../products/parent/services/product.service';
+import { ProductService } from '../../../stock/products/parent/services/product.service';
 import { Product } from '../../../stock/models/product.model';
 import { EntityImageManagerComponent } from '../../../../../../shared/components/entity-image-manager/entity-image-manager.component';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { ProductImageAdapter } from '../../../products/parent/services/product-image.adapter';
+import { ProductImageAdapter } from '../../../stock/products/parent/services/product-image.adapter';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 
 @Component({

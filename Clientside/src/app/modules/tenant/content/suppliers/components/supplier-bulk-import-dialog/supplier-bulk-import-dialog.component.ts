@@ -4,7 +4,7 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { MatDialogRef } from '@angular/material/dialog';
 
 import { SupplierService } from '../../services/supplier.service';
-import { CategoryService } from '../../../categories/services/category.service';
+import { CategoryService } from '../../../stock/categories/services/category.service';
 
 import { BulkImportFormComponent } from
   '../../../../../../shared/bulk-import/base/bulk-import-form.component';

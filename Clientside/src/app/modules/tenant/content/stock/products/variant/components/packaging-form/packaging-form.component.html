@@ -1,0 +1,39 @@
+<h2 mat-dialog-title>
+    {{ data.editMode ? 'Edit Packaging' : 'Create Packaging' }}
+</h2>
+
+<mat-dialog-content>
+
+    <form [formGroup]="form" class="form">
+
+        <mat-form-field appearance="fill">
+            <mat-label>Packaging Name</mat-label>
+
+            <input matInput formControlName="name" placeholder="Box, Carton, Crate...">
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+            <mat-label>Units Per Packaging</mat-label>
+
+            <input matInput type="number" formControlName="unitsPerPackaging">
+        </mat-form-field>
+
+        <div class="base-warning" *ngIf="data?.packaging?.isBaseUnit">
+            Base packaging must always remain 1 unit.
+        </div>
+
+    </form>
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+
+    <button mat-stroked-button type="button" (click)="close()">
+        Cancel
+    </button>
+
+    <button mat-flat-button color="primary" type="button" (click)="submit()">
+        Save
+    </button>
+
+</mat-dialog-actions>

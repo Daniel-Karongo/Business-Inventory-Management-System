@@ -1,0 +1,64 @@
+<div class="packaging-shell">
+
+    <div *ngFor="
+      let row of rows.controls;
+      let i = index
+    " class="packaging-row">
+
+        <div [formGroup]="
+        $any(row)
+      " class="row-grid">
+
+            <mat-form-field appearance="fill">
+
+                <mat-label>
+                    Packaging
+                </mat-label>
+
+                <input matInput formControlName="name" />
+
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+
+                <mat-label>
+                    Units
+                </mat-label>
+
+                <input matInput type="number" formControlName="unitQuantity" />
+
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+
+                <mat-label>
+                    Barcode
+                </mat-label>
+
+                <input matInput formControlName="barcode" />
+
+            </mat-form-field>
+
+            <div class="row-actions">
+
+                <button mat-stroked-button color="warn" type="button" (click)="
+            removeRow(i)
+          " [disabled]="i === 0">
+
+                    Remove
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <button mat-flat-button color="primary" type="button" (click)="addRow()">
+
+        Add Packaging
+
+    </button>
+
+</div>

@@ -1,0 +1,23 @@
+<div class="progress-shell">
+
+    <div 
+        *ngFor="let step of steps; let i = index" 
+        class="step-item" 
+        [class.active]="i === currentStep" 
+        [class.complete]="i < currentStep"
+        [class.clickable]="i <= currentStep"
+        [class.locked]="i > currentStep"
+        (click)="stepClick.emit(i)"
+    >
+
+        <div class="step-index">
+            {{ i + 1 }}
+        </div>
+
+        <div class="step-label">
+            {{ step }}
+        </div>
+
+    </div>
+
+</div>

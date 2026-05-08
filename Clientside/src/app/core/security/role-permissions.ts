@@ -1,6 +1,7 @@
 export type Feature =
   | 'dashboard'
   | 'reports'
+  | 'stock'
   | 'categories'
   | 'products'
   | 'inventory'
@@ -20,6 +21,7 @@ export type Feature =
 export const ROLE_PERMISSIONS: Record<string, Feature[]> = {
 
   EMPLOYEE: [
+    'stock',
     'categories',
     'products',
     'inventory',
@@ -28,6 +30,7 @@ export const ROLE_PERMISSIONS: Record<string, Feature[]> = {
   ],
 
   SUPERVISOR: [
+    'stock',
     'categories',
     'products',
     'inventory',
@@ -41,6 +44,7 @@ export const ROLE_PERMISSIONS: Record<string, Feature[]> = {
   MANAGER: [
     'dashboard',
     'reports',
+    'stock',
     'categories',
     'products',
     'inventory',
@@ -58,6 +62,7 @@ export const ROLE_PERMISSIONS: Record<string, Feature[]> = {
   ADMIN: [
     'dashboard',
     'reports',
+    'stock',
     'categories',
     'products',
     'inventory',

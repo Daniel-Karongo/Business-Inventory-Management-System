@@ -47,7 +47,7 @@ export const TENANT_ROUTES: Routes = [
         path: 'stock-onboarding',
         loadChildren: () =>
           import(
-            './content/stock-onboarding/stock-onboarding.routes'
+            './content/stock/stock-onboarding/stock-onboarding.routes'
           ).then(m => m.STOCK_ONBOARDING_ROUTES)
       },
 
@@ -58,7 +58,7 @@ export const TENANT_ROUTES: Routes = [
       {
         path: 'inventory',
         loadChildren: () =>
-          import('./content/inventory/inventory.routes')
+          import('./content/stock/inventory/inventory.routes')
             .then(m => m.INVENTORY_ROUTES)
       },
 
@@ -69,7 +69,7 @@ export const TENANT_ROUTES: Routes = [
       {
         path: 'products',
         loadChildren: () =>
-          import('./content/products/products.routes')
+          import('./content/stock/products/products.routes')
             .then(m => m.PRODUCT_ROUTES)
       },
 
@@ -80,7 +80,7 @@ export const TENANT_ROUTES: Routes = [
       {
         path: 'categories',
         loadChildren: () =>
-          import('./content/categories/categories.routes')
+          import('./content/stock/categories/categories.routes')
             .then(m => m.CATEGORY_ROUTES)
       },
 

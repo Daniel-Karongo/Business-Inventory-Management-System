@@ -9,7 +9,8 @@ export interface PricingInput {
 }
 
 export interface SupplierInput {
-    supplierId: string;
+    supplierId?: string;
+    newSupplierName?: string;
     unitsSupplied: number;
     unitCost: number;
     packagingName: string;
@@ -20,6 +21,7 @@ export interface StockOnboardingRequest {
     productId?: string;
 
     categoryId?: number;
+    newCategoryName?: string;
     supplierIds?: string[];
 
     minimumPercentageProfit?: number;

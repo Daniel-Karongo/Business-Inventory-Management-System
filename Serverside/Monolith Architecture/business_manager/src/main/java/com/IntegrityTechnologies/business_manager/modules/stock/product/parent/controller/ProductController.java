@@ -91,7 +91,7 @@ public class ProductController {
 
     /* ===================== CREATE ===================== */
     @PostMapping(
-            value = "/bulk/full",
+            value = "",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     public ApiResponse createFull(

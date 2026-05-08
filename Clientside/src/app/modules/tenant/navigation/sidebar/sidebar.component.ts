@@ -88,14 +88,32 @@ export class SidebarComponent implements OnInit {
       { title: 'Dashboard', route: '/app/dashboard', icon: 'dashboard', feature: 'dashboard' },
       { title: 'Reports', route: '/app/reports', icon: 'reports', feature: 'reports' },
 
-      { title: 'Categories', route: '/app/categories', icon: 'categories', feature: 'categories' },
-      { title: 'Products', route: '/app/products', icon: 'products', feature: 'products' },
-      { title: 'Inventory', route: '/app/inventory', icon: 'inventory', feature: 'inventory' },
       {
-        title: 'Stock Onboarding',
-        route: '/app/stock-onboarding',
-        icon: 'onboarding',
-        feature: 'stock-onboarding'
+        title: 'Stock',
+        icon: 'stock',
+        feature: 'stock',
+        children: [
+          {
+            title: 'Categories',
+            route: '/app/categories',
+            icon: 'categories'
+          },
+          {
+            title: 'Products',
+            route: '/app/products',
+            icon: 'products'
+          },
+          {
+            title: 'Inventory',
+            route: '/app/inventory',
+            icon: 'inventory'
+          },
+          {
+            title: 'Stock Onboarding',
+            route: '/app/stock-onboarding',
+            icon: 'onboarding'
+          }
+        ]
       },
 
       { title: 'Sales', route: '/app/sales', icon: 'sales', feature: 'sales' },
