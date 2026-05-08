@@ -1,19 +1,88 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import {
+  CommonModule,
+  CurrencyPipe,
+  DatePipe
+} from '@angular/common';
 
-import { MatTableModule } from '@angular/material/table';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
+import {
+  Component,
+  DestroyRef,
+  OnInit,
+  inject
+} from '@angular/core';
+
+import {
+  FormsModule
+} from '@angular/forms';
+
+import {
+  takeUntilDestroyed
+} from '@angular/core/rxjs-interop';
+
+import {
+  ActivatedRoute,
+  Router
+} from '@angular/router';
+
+import {
+  MatButtonModule
+} from '@angular/material/button';
+
+import {
+  MatChipsModule
+} from '@angular/material/chips';
+
+import {
+  MatDialog
+} from '@angular/material/dialog';
+
+import {
+  MatFormFieldModule
+} from '@angular/material/form-field';
+
+import {
+  MatIconModule
+} from '@angular/material/icon';
+
+import {
+  MatInputModule
+} from '@angular/material/input';
+
+import {
+  MatPaginatorModule,
+  PageEvent
+} from '@angular/material/paginator';
+
+import {
+  MatProgressSpinnerModule
+} from '@angular/material/progress-spinner';
+
+import {
+  MatSelectModule
+} from '@angular/material/select';
+
+import {
+  MatSnackBar
+} from '@angular/material/snack-bar';
+
+import {
+  MatTableModule
+} from '@angular/material/table';
+
+import {
+  debounceTime,
+  distinctUntilChanged,
+  Subject
+} from 'rxjs';
+
+import {
+  SaleBulkImportDialogComponent
+} from '../../components/sale-bulk-import-dialog/sale-bulk-import-dialog.component';
+
+import {
+  SalesService
+} from '../../services/sales.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSelectModule } from '@angular/material/select';
-
-import { SalesService } from '../../services/sales.service';
-import { MatDialog } from '@angular/material/dialog';
-import { SaleBulkImportDialogComponent } from '../../components/sale-bulk-import-dialog/sale-bulk-import-dialog.component';
 
 @Component({
   standalone: true,
@@ -21,22 +90,47 @@ import { SaleBulkImportDialogComponent } from '../../components/sale-bulk-import
   imports: [
     CommonModule,
     FormsModule,
+    CurrencyPipe,
+    DatePipe,
     MatTableModule,
     MatPaginatorModule,
     MatChipsModule,
     MatIconModule,
     MatButtonModule,
-    MatTooltipModule,
     MatSelectModule,
-    CurrencyPipe,
-    DatePipe
+    MatTooltipModule,
+    MatInputModule,
+    MatFormFieldModule,
+    MatProgressSpinnerModule
   ],
   templateUrl: './sales-list.component.html',
   styleUrls: ['./sales-list.component.scss']
 })
-export class SalesListComponent implements OnInit {
+export class SalesListComponent
+  implements OnInit {
 
-  displayedColumns = [
+  private readonly destroyRef =
+    inject(DestroyRef);
+
+  private readonly router =
+    inject(Router);
+
+  private readonly route =
+    inject(ActivatedRoute);
+
+  private readonly dialog =
+    inject(MatDialog);
+
+  private readonly snackBar =
+    inject(MatSnackBar);
+
+  private readonly salesService =
+    inject(SalesService);
+
+  private readonly search$ =
+    new Subject<void>();
+
+  readonly displayedColumns = [
     'createdAt',
     'receiptNo',
     'status',
@@ -46,197 +140,430 @@ export class SalesListComponent implements OnInit {
     'actions'
   ];
 
-  /** Load once */
-  allSales: any[] = [];
-
-  /** After filters + search + sort */
-  filteredSales: any[] = [];
-
-  /** Current page */
   sales: any[] = [];
 
   total = 0;
+
   page = 0;
+
   size = 20;
+
   loading = false;
 
-  /** Search & filters */
   q = '';
+
   filterStatus = '';
-  filterPayment: '' | 'paid' | 'partial' | 'unpaid' = '';
 
-  /** Sorting */
-  sortField: string | null = null;
-  sortDir: 'asc' | 'desc' = 'asc';
+  filterPayment:
+    '' |
+    'paid' |
+    'partial' |
+    'unpaid' = '';
 
-  constructor(
-    private salesService: SalesService,
-    private router: Router,
-    private route: ActivatedRoute,
-    private dialog: MatDialog
-  ) { }
+  sortField = 'createdAt';
+
+  sortDirection:
+    'asc' |
+    'desc' = 'desc';
 
   ngOnInit(): void {
-    this.loadAll();
+
+    this.setupSearch();
+
+    this.load();
   }
 
-  /** 🔥 LOAD EVERYTHING ONCE */
-  loadAll() {
+  private setupSearch(): void {
+
+    this.search$
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+
+        this.page = 0;
+
+        this.load();
+      });
+  }
+
+  triggerSearch(): void {
+
+    this.search$.next();
+  }
+
+  load(): void {
+
     this.loading = true;
 
-    this.salesService.list({ page: 0, size: 999999 }).subscribe({
-      next: res => {
-        this.allSales = res.content ?? [];
-        this.applyFilters();
-        this.loading = false;
-      },
-      error: () => this.loading = false
-    });
+    this.salesService.list({
+      page: this.page,
+      size: this.size,
+      status:
+        this.filterStatus || undefined
+    })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: result => {
+
+          let content =
+            result.content ?? [];
+
+          if (this.q.trim()) {
+
+            const query =
+              this.q
+                .trim()
+                .toLowerCase();
+
+            content =
+              content.filter((sale: any) => {
+
+                return (
+                  sale.receiptNo
+                    ?.toLowerCase()
+                    .includes(query) ||
+
+                  sale.status
+                    ?.toLowerCase()
+                    .includes(query) ||
+
+                  String(
+                    sale.totalAmount
+                  ).includes(query)
+                );
+              });
+          }
+
+          if (this.filterPayment) {
+
+            content =
+              content.filter((sale: any) => {
+
+                const paid =
+                  this.paidAmount(sale);
+
+                const total =
+                  Number(
+                    sale.totalAmount ?? 0
+                  );
+
+                switch (
+                this.filterPayment
+                ) {
+
+                  case 'paid':
+                    return (
+                      paid >= total &&
+                      total > 0
+                    );
+
+                  case 'partial':
+                    return (
+                      paid > 0 &&
+                      paid < total
+                    );
+
+                  case 'unpaid':
+                    return paid <= 0;
+
+                  default:
+                    return true;
+                }
+              });
+          }
+
+          content =
+            this.sortData(content);
+
+          this.sales = content;
+
+          this.total =
+            result.totalElements ??
+            content.length;
+
+          this.loading = false;
+        },
+        error: error => {
+
+          this.loading = false;
+
+          this.snackBar.open(
+            error?.error?.message ??
+            'Failed to load sales.',
+            'Close',
+            {
+              duration: 4000
+            }
+          );
+        }
+      });
   }
 
-  /* ======================================================
-     FILTER / SEARCH / SORT
-     ====================================================== */
+  sortBy(
+    field: string
+  ): void {
 
-  applyFilters() {
-    let data = [...this.allSales];
+    if (
+      this.sortField === field
+    ) {
 
-    /** SEARCH (includes DATE) */
-    const q = (this.q || '').trim().toLowerCase();
-    if (q) {
-      data = data.filter(s => {
-        const date = s.createdAt
-          ? new Date(s.createdAt)
-          : null;
+      this.sortDirection =
+        this.sortDirection === 'asc'
+          ? 'desc'
+          : 'asc';
 
-        const dateStr = date
-          ? `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`
-          : '';
+    } else {
 
-        return (
-          (s.receiptNo || '').toLowerCase().includes(q) ||
-          (s.status || '').toLowerCase().includes(q) ||
-          String(s.totalAmount || '').includes(q) ||
-          dateStr.toLowerCase().includes(q)
-        );
-      });
+      this.sortField = field;
+      this.sortDirection = 'asc';
     }
 
-    /** STATUS */
-    if (this.filterStatus) {
-      data = data.filter(s => s.status === this.filterStatus);
-    }
+    this.load();
+  }
 
-    /** PAYMENT STATE */
-    if (this.filterPayment) {
-      data = data.filter(s => {
-        const paid = this.paidAmount(s);
-        const total = Number(s.totalAmount);
+  private sortData(
+    data: any[]
+  ): any[] {
 
-        if (this.filterPayment === 'paid') {
-          return paid >= total && total > 0;
+    const direction =
+      this.sortDirection === 'asc'
+        ? 1
+        : -1;
+
+    return [...data]
+      .sort((a, b) => {
+
+        const av =
+          this.sortValue(a);
+
+        const bv =
+          this.sortValue(b);
+
+        if (av < bv) {
+          return -1 * direction;
         }
 
-        if (this.filterPayment === 'partial') {
-          return paid > 0 && paid < total;
+        if (av > bv) {
+          return 1 * direction;
         }
 
-        if (this.filterPayment === 'unpaid') {
-          return paid === 0;
-        }
-
-        return true;
-      });
-    }
-
-    /** SORT */
-    if (this.sortField) {
-      const dir = this.sortDir === 'asc' ? 1 : -1;
-      data.sort((a, b) => {
-        const av = this.sortValue(a);
-        const bv = this.sortValue(b);
-        if (av < bv) return -1 * dir;
-        if (av > bv) return 1 * dir;
         return 0;
       });
-    }
-
-    this.filteredSales = data;
-    this.total = data.length;
-    this.page = 0; // reset page on filter
-    this.applyPagination();
   }
 
-  applyPagination() {
-    const start = this.page * this.size;
-    const end = start + this.size;
-    this.sales = this.filteredSales.slice(start, end);
-  }
+  private sortValue(
+    sale: any
+  ): any {
 
-  changePage(e: PageEvent) {
-    this.page = e.pageIndex;
-    this.size = e.pageSize;
-    this.applyPagination();
-  }
+    switch (
+    this.sortField
+    ) {
 
-  sortBy(field: string) {
-    if (this.sortField === field) {
-      this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
-    } else {
-      this.sortField = field;
-      this.sortDir = 'asc';
-    }
-    this.applyFilters();
-  }
+      case 'createdAt':
+        return new Date(
+          sale.createdAt
+        ).getTime();
 
-  sortValue(s: any) {
-    switch (this.sortField) {
-      case 'createdAt': return new Date(s.createdAt).getTime();
-      case 'receiptNo': return s.receiptNo;
-      case 'status': return s.status;
-      case 'total': return Number(s.totalAmount);
-      case 'paid': return this.paidAmount(s);
-      case 'balance': return this.balance(s);
-      default: return '';
+      case 'receiptNo':
+        return sale.receiptNo;
+
+      case 'status':
+        return sale.status;
+
+      case 'total':
+        return Number(
+          sale.totalAmount ?? 0
+        );
+
+      case 'paid':
+        return this.paidAmount(sale);
+
+      case 'balance':
+        return this.balance(sale);
+
+      default:
+        return '';
     }
   }
 
-  /* ======================================================
-     HELPERS
-     ====================================================== */
+  changePage(
+    event: PageEvent
+  ): void {
 
-  paidAmount(sale: any): number {
-    return (sale.payments || [])
-      .filter((p: any) => p.status === 'SUCCESS')
-      .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+    this.page =
+      event.pageIndex;
+
+    this.size =
+      event.pageSize;
+
+    this.load();
   }
 
-  balance(sale: any): number {
-    return Number(sale.totalAmount) - this.paidAmount(sale);
+  paidAmount(
+    sale: any
+  ): number {
+
+    return (
+      sale.payments ?? []
+    )
+      .filter((payment: any) =>
+        payment.status === 'SUCCESS'
+      )
+      .reduce(
+        (
+          sum: number,
+          payment: any
+        ) =>
+          sum +
+          Number(
+            payment.amount ?? 0
+          ),
+        0
+      );
   }
 
-  view(sale: any) {
-    this.router.navigate([sale.id], {
-      relativeTo: this.route
-    });
+  refundedAmount(
+    sale: any
+  ): number {
+
+    return (
+      sale.payments ?? []
+    )
+      .filter((payment: any) =>
+        payment.status === 'REFUNDED'
+      )
+      .reduce(
+        (
+          sum: number,
+          payment: any
+        ) =>
+          sum +
+          Number(
+            payment.amount ?? 0
+          ),
+        0
+      );
   }
 
-  create() {
-    this.router.navigate(['new'], {
-      relativeTo: this.route
-    });
+  balance(
+    sale: any
+  ): number {
+
+    return Number(
+      sale.totalAmount ?? 0
+    ) - this.paidAmount(sale);
   }
 
-  openBulkImport() {
-    this.dialog.open(SaleBulkImportDialogComponent, {
-      width: '1100px',
-      maxWidth: '95vw',
-      maxHeight: '90vh',
-      autoFocus: false
-    }).afterClosed().subscribe(done => {
-      if (done === true) {
-        this.loadAll();
+  paymentState(
+    sale: any
+  ): string {
+
+    const total =
+      Number(
+        sale.totalAmount ?? 0
+      );
+
+    const paid =
+      this.paidAmount(sale);
+
+    if (
+      paid <= 0
+    ) {
+      return 'UNPAID';
+    }
+
+    if (
+      paid < total
+    ) {
+      return 'PARTIAL';
+    }
+
+    return 'PAID';
+  }
+
+  paymentStateClass(
+    sale: any
+  ): string {
+
+    switch (
+    this.paymentState(sale)
+    ) {
+
+      case 'PAID':
+        return 'payment-paid';
+
+      case 'PARTIAL':
+        return 'payment-partial';
+
+      default:
+        return 'payment-unpaid';
+    }
+  }
+
+  saleStatusClass(
+    status: string
+  ): string {
+
+    switch (status) {
+
+      case 'COMPLETED':
+        return 'status-completed';
+
+      case 'REFUNDED':
+        return 'status-refunded';
+
+      case 'CANCELLED':
+        return 'status-cancelled';
+
+      default:
+        return 'status-created';
+    }
+  }
+
+  view(
+    sale: any
+  ): void {
+
+    this.router.navigate(
+      [sale.id],
+      {
+        relativeTo: this.route
       }
-    });
+    );
+  }
+
+  create(): void {
+
+    this.router.navigate(
+      ['new'],
+      {
+        relativeTo: this.route
+      }
+    );
+  }
+
+  openBulkImport(): void {
+
+    this.dialog.open(
+      SaleBulkImportDialogComponent,
+      {
+        width: '1200px',
+        maxWidth: '95vw',
+        maxHeight: '90vh',
+        autoFocus: false
+      }
+    )
+      .afterClosed()
+      .subscribe(done => {
+
+        if (done === true) {
+          this.load();
+        }
+      });
   }
 }

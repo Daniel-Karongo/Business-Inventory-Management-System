@@ -18,7 +18,6 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableContext;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableSnapshot;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.service.SellableResolutionService;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
 import com.IntegrityTechnologies.business_manager.modules.person.customer.model.Customer;
 import com.IntegrityTechnologies.business_manager.modules.person.customer.repository.CustomerRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.customer.service.CustomerService;
@@ -62,7 +61,6 @@ public class SalesService {
     private final PaymentService paymentService;
     private final CustomerRepository customerRepository;
     private final ReceiptNumberService receiptNumberService;
-    private final TaxSystemStateService taxSystemStateService;
     private final JournalEntryRepository journalEntryRepository;
     private final BatchConsumptionRepository batchConsumptionRepository;
     private final RevenueRecognitionService revenueRecognitionService;

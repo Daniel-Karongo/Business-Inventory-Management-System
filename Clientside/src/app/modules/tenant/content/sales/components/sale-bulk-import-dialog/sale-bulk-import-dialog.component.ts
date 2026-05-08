@@ -1,35 +1,85 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
-import { MatDialogRef } from '@angular/material/dialog';
+import {
+  CommonModule
+} from '@angular/common';
 
-import { SalesService } from '../../services/sales.service';
-import { BulkImportFormComponent } from
-  '../../../../../../shared/bulk-import/base/bulk-import-form.component';
-import { BulkImportSubmitEngineService } from
-  '../../../../../../shared/bulk-import/engine/bulk-import-submit-engine.service';
-import { BulkImportShellComponent } from
-  '../../../../../../shared/bulk-import/shell/bulk-import-shell.component';
-import { SALE_BULK_IMPORT_CONFIG } from './sale-bulk-import.config';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatButtonModule } from '@angular/material/button';
-import { MatNativeDateModule } from '@angular/material/core';
-import { MatIconModule } from '@angular/material/icon';
+import {
+  Component,
+  OnInit,
+  inject
+} from '@angular/core';
+
+import {
+  ReactiveFormsModule
+} from '@angular/forms';
+
+import {
+  MatButtonModule
+} from '@angular/material/button';
+
+import {
+  MatCheckboxModule
+} from '@angular/material/checkbox';
+
+import {
+  MatNativeDateModule
+} from '@angular/material/core';
+
+import {
+  MatDatepickerModule
+} from '@angular/material/datepicker';
+
+import {
+  MatDialogRef
+} from '@angular/material/dialog';
+
+import {
+  MatFormFieldModule
+} from '@angular/material/form-field';
+
+import {
+  MatIconModule
+} from '@angular/material/icon';
+
+import {
+  MatInputModule
+} from '@angular/material/input';
+
+import {
+  MatSelectModule
+} from '@angular/material/select';
+
+import {
+  BulkImportFormComponent
+} from '../../../../../../shared/bulk-import/base/bulk-import-form.component';
+
+import {
+  BulkImportSubmitEngineService
+} from '../../../../../../shared/bulk-import/engine/bulk-import-submit-engine.service';
+
+import {
+  BulkImportShellComponent
+} from '../../../../../../shared/bulk-import/shell/bulk-import-shell.component';
+
+import {
+  SALE_BULK_IMPORT_CONFIG
+} from './sale-bulk-import.config';
+
+import {
+  SalesService
+} from '../../services/sales.service';
 
 @Component({
   standalone: true,
   selector: 'app-sale-bulk-import-dialog',
-  templateUrl: './sale-bulk-import-dialog.component.html',
-  styleUrls: ['./sale-bulk-import-dialog.component.scss'],
+  templateUrl:
+    './sale-bulk-import-dialog.component.html',
+  styleUrls: [
+    './sale-bulk-import-dialog.component.scss'
+  ],
   imports: [
     CommonModule,
     ReactiveFormsModule,
     BulkImportShellComponent,
-
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
@@ -41,77 +91,163 @@ import { MatIconModule } from '@angular/material/icon';
   ]
 })
 export class SaleBulkImportDialogComponent
-  extends BulkImportFormComponent<any, any, any>
+  extends BulkImportFormComponent<
+    any,
+    any,
+    any
+  >
   implements OnInit {
 
-  config = SALE_BULK_IMPORT_CONFIG;
+  private readonly salesService =
+    inject(SalesService);
 
-  constructor(
-    private salesService: SalesService,
-    private submitEngine: BulkImportSubmitEngineService,
-    private dialogRef: MatDialogRef<SaleBulkImportDialogComponent>
-  ) {
-    super();
+  private readonly submitEngine =
+    inject(
+      BulkImportSubmitEngineService
+    );
+
+  private readonly dialogRef =
+    inject(
+      MatDialogRef<
+        SaleBulkImportDialogComponent
+      >
+    );
+
+  readonly config =
+    SALE_BULK_IMPORT_CONFIG;
+
+  ngOnInit(): void {
+
+    this.initForm({
+      mode: 'OPERATIONAL',
+      dryRun: true
+    });
   }
 
-  ngOnInit() {
-    this.initForm({ mode: 'OPERATIONAL' });
-  }
+  submit(): void {
 
-  submit() {
-    if (this.form.invalid) return;
+    if (
+      this.form.invalid ||
+      this.submitting
+    ) {
+      return;
+    }
 
     const payload = {
-      items: this.rows.controls.map(r =>
-        this.config.mapRowToItem(r.value)
-      ),
-      options: { dryRun: this.form.value.dryRun }
+      items:
+        this.rows.controls.map(
+          row =>
+            this.config
+              .mapRowToItem(
+                row.getRawValue()
+              )
+        ),
+      options: {
+        dryRun:
+          this.form.value.dryRun
+      }
     };
 
     this.submitEngine.execute({
-      submitFn: req =>
-        this.salesService.import(this.form.value.mode, req),
+
+      submitFn: request =>
+        this.salesService.import(
+          this.form.value.mode,
+          request
+        ),
+
       payload,
-      rows: this.rows.controls,
-      dryRun: this.form.value.dryRun,
-      title: this.config.title,
-      confirmLabel: this.config.confirmLabel,
-      columns: this.config.previewColumns,
-      onErrorsApplied: r => this.cacheErrors(r),
-      onFinalSuccess: () => this.dialogRef.close(true),
+
+      rows:
+        this.rows.controls,
+
+      dryRun:
+        this.form.value.dryRun,
+
+      title:
+        this.config.title,
+
+      confirmLabel:
+        this.config.confirmLabel,
+
+      columns:
+        this.config.previewColumns,
+
+      onErrorsApplied:
+        result =>
+          this.cacheErrors(result),
+
+      onFinalSuccess: () => {
+
+        this.dialogRef.close(true);
+      },
+
       onConfirmRetry: () => {
-        this.form.patchValue({ dryRun: false });
+
+        this.form.patchValue({
+          dryRun: false
+        });
+
         this.submit();
       }
     });
   }
 
-  async importExcel(file: File | undefined) {
-    if (!file) return;
+  async importExcel(
+    file:
+      File |
+      undefined
+  ): Promise<void> {
 
-    const mode = await this.confirmMerge();
-    if (!mode) return; // ⬅ cancelled
+    if (!file) {
+      return;
+    }
+
+    const mode =
+      await this.confirmMerge();
+
+    if (!mode) {
+      return;
+    }
 
     super.importExcelFile(
       file,
       row => ({
         ...row,
-        saleDate: this.engine.parseExcelDate(row.saleDate)
+        saleDate:
+          this.engine.parseExcelDate(
+            row.saleDate
+          )
       }),
       mode
     );
   }
 
-  async importCsv(file: File | undefined) {
-    if (!file) return;
+  async importCsv(
+    file:
+      File |
+      undefined
+  ): Promise<void> {
 
-    const mode = await this.confirmMerge();
-    if (!mode) return; // ⬅ cancelled
+    if (!file) {
+      return;
+    }
 
-    super.importCsvFile(file, mode);
+    const mode =
+      await this.confirmMerge();
+
+    if (!mode) {
+      return;
+    }
+
+    super.importCsvFile(
+      file,
+      mode
+    );
   }
 
-  close() {
+  close(): void {
+
     this.dialogRef.close();
   }
 }

@@ -156,11 +156,11 @@ export class ProductService extends BaseApiService {
   /* ================= CREATE ================= */
 
   create(
-    payload: ProductCreateDTO,
+    payload: FormData,
     overrideBranchId?: string
   ) {
     return this.post<ApiResponse<Product>>(
-      this.endpoints.create,
+      this.endpoints.bulk.fullCreate,
       payload,
       {
         branchId: this.resolveBranch(overrideBranchId)

@@ -1,43 +1,59 @@
 import { Injectable } from '@angular/core';
-import { map } from 'rxjs';
+import { map, Observable } from 'rxjs';
+
+import { environment } from '../../../../../../environments/environment';
+
+import { ApiResponse } from '../../../../../core/models/api-response.model';
+import { BaseApiService } from '../../../../../core/services/api/base-api.service';
 
 import {
     SellableProductRequest,
-    SellableProductResponse
+    SellableProductResponse,
+    SellableResolveRequest,
+    SellableResolveResponse
 } from '../../stock/models/sellable.model';
-
-import { BaseApiService } from '../../../../../core/services/api/base-api.service';
-import { ApiResponse } from '../../../../../core/models/api-response.model';
-
-import { environment } from '../../../../../../environments/environment';
 
 @Injectable({
     providedIn: 'root'
 })
-export class SellableService
-    extends BaseApiService {
+export class SellableService extends BaseApiService {
+
+    private readonly endpoints =
+        environment.endpoints.sellable;
 
     search(
         request: SellableProductRequest
-    ) {
+    ): Observable<SellableProductResponse> {
+
         return this.post<
             ApiResponse<SellableProductResponse>
         >(
-            environment.endpoints.sellable.search,
+            this.endpoints.search,
             request
         ).pipe(
-            map(res => this.unwrap(res))
+            map(response =>
+                this.unwrap<SellableProductResponse>(
+                    response
+                )
+            )
         );
     }
 
-    resolve<T>(request: T) {
+    resolve(
+        request: SellableResolveRequest
+    ): Observable<SellableResolveResponse> {
+
         return this.post<
-            ApiResponse<unknown>
+            ApiResponse<SellableResolveResponse>
         >(
-            environment.endpoints.sellable.resolve,
+            this.endpoints.resolve,
             request
         ).pipe(
-            map(res => this.unwrap(res))
+            map(response =>
+                this.unwrap<SellableResolveResponse>(
+                    response
+                )
+            )
         );
     }
 }

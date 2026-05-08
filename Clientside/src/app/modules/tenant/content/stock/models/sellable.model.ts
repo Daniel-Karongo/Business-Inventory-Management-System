@@ -1,7 +1,7 @@
 import { PageWrapper } from '../../../../../core/models/page-wrapper.model';
+import { AllocationDetail, AllocationPreviewDTO } from './allocation.model';
 import { PackagingDTO } from './packaging.model';
-import { PricingPreviewDTO } from './pricing.model';
-import { AllocationPreviewDTO } from './allocation.model';
+import { PricingAdjustment, PricingPreviewDTO } from './pricing.model';
 
 export interface WarningDTO {
   type: string;
@@ -22,7 +22,6 @@ export interface SellableVariantDTO {
 
   variantId: string;
   variantSku: string;
-
   classification: string;
 
   quantityOnHand: number;
@@ -31,14 +30,45 @@ export interface SellableVariantDTO {
 
   packagings: PackagingDTO[];
 
-  pricingByPackaging:
-  Record<string, PricingPreviewDTO>;
+  pricingByPackaging: Record<string, PricingPreviewDTO>;
 
   batches?: BatchPreviewDTO[];
 
   allocation?: AllocationPreviewDTO;
 
   warnings: WarningDTO[];
+}
+
+export interface SellableResolveRequest {
+  branchId: string;
+  productVariantId: string;
+  packagingId?: string;
+
+  quantity?: number;
+
+  customerId?: string;
+  customerGroupId?: string;
+
+  batchIds?: string[];
+}
+
+export interface SellableResolveResponse {
+  productVariantId: string;
+  packagingId: string;
+
+  requestedQuantity: number;
+  baseUnits: number;
+
+  unitPrice: number;
+  totalPrice: number;
+
+  availableStock: number;
+
+  totalCost: number;
+
+  batchAllocations?: AllocationDetail[];
+
+  adjustments: PricingAdjustment[];
 }
 
 export interface SellableProductRequest {
@@ -60,6 +90,5 @@ export interface SellableProductRequest {
 }
 
 export interface SellableProductResponse {
-  variants:
-  PageWrapper<SellableVariantDTO>;
+  variants: PageWrapper<SellableVariantDTO>;
 }

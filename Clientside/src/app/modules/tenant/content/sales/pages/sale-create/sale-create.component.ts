@@ -1,43 +1,189 @@
-import { CommonModule, CurrencyPipe } from '@angular/common';
-import { Component, HostListener, OnInit } from '@angular/core';
-import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import {
+  CommonModule,
+  CurrencyPipe
+} from '@angular/common';
 
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatTableModule } from '@angular/material/table';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  HostListener,
+  OnInit,
+  ViewChild,
+  inject
+} from '@angular/core';
 
-import { HttpClient } from '@angular/common/http';
-import { ElementRef, ViewChild } from '@angular/core';
-import { MatDialog } from '@angular/material/dialog';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { catchError, debounceTime, distinctUntilChanged, filter, of, switchMap } from 'rxjs';
-import { environment } from '../../../../../../../environments/environment';
-import { AuthService } from '../../../../../auth/services/auth.service';
-import { BranchService } from '../../../branches/services/branch.service';
-import { CustomerService } from '../../../customers/services/customer.service';
-import { InventoryService } from '../../../inventory/services/inventory.service';
-import { Product } from '../../../stock/models/product.model';
-import { ProductService } from '../../../products/parent/services/product.service';
-import { ProductVariantService } from '../../../products/variant/services/product-variant.service';
-import { BatchAllocationDialogComponent } from '../../dialogs/batch-allocation-dialog/batch-allocation-dialog.component';
-import { ProductSelectorDialogComponent } from '../../dialogs/product-selector-dialog/product-selector-dialog.component';
-import { SalesService } from '../../services/sales.service';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import {
+  FormArray,
+  FormBuilder,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators
+} from '@angular/forms';
+
+import {
+  debounceTime,
+  distinctUntilChanged,
+  filter,
+  forkJoin,
+  of,
+  switchMap
+} from 'rxjs';
+
+import {
+  takeUntilDestroyed
+} from '@angular/core/rxjs-interop';
+
+import {
+  Router
+} from '@angular/router';
+
+import {
+  HttpClient
+} from '@angular/common/http';
+
+import {
+  MatButtonModule
+} from '@angular/material/button';
+
+import {
+  MatDialog
+} from '@angular/material/dialog';
+
+import {
+  MatFormFieldModule
+} from '@angular/material/form-field';
+
+import {
+  MatIconModule
+} from '@angular/material/icon';
+
+import {
+  MatInputModule
+} from '@angular/material/input';
+
+import {
+  MatSnackBar
+} from '@angular/material/snack-bar';
+
+import {
+  MatSelectModule
+} from '@angular/material/select';
+
+import {
+  MatTooltipModule
+} from '@angular/material/tooltip';
+
+import {
+  environment
+} from '../../../../../../../environments/environment';
+
+import {
+  AuthService
+} from '../../../../../auth/services/auth.service';
+
+import {
+  Product
+} from '../../../stock/models/product.model';
+
+import {
+  AllocationDetail
+} from '../../../stock/models/allocation.model';
+
+import {
+  PackagingDTO
+} from '../../../stock/models/packaging.model';
+
+import {
+  PricingAdjustment
+} from '../../../stock/models/pricing.model';
+
+import {
+  SaleLinePreviewResponse
+} from '../../../stock/models/sale-preview.model';
+
+import {
+  SaleRequest
+} from '../../../stock/models/sale.model';
+
+import {
+  SellableVariantDTO
+} from '../../../stock/models/sellable.model';
+
+import {
+  BranchService
+} from '../../../branches/services/branch.service';
+
+import {
+  CustomerService
+} from '../../../customers/services/customer.service';
+
+import {
+  ProductService
+} from '../../../products/parent/services/product.service';
+
+import {
+  BatchAllocationDialogComponent
+} from '../../dialogs/batch-allocation-dialog/batch-allocation-dialog.component';
+
+import {
+  ProductSelectorDialogComponent
+} from '../../dialogs/product-selector-dialog/product-selector-dialog.component';
+
+import {
+  BarcodeService
+} from '../../services/barcode.service';
+
+import {
+  PosBarcodeService
+} from '../../services/pos-barcode.service';
+
+import {
+  SalePreviewService
+} from '../../services/sale-preview.service';
+
+import {
+  SalesService
+} from '../../services/sales.service';
+
+import {
+  SellableService
+} from '../../services/sellable.service';
+
+interface SaleLinePreviewState {
+  loading: boolean;
+  resolved: boolean;
+  preview?: SaleLinePreviewResponse;
+  warnings: string[];
+  adjustments: PricingAdjustment[];
+  allocations: AllocationDetail[];
+}
+
+interface SaleLineFormValue {
+  productId: string | null;
+  productName: string | null;
+  productVariantId: string | null;
+  packagingId: string | null;
+  branchId: string | null;
+  quantity: number;
+  batchSelections: {
+    batchId: string;
+    quantity: number;
+  }[] | null;
+}
 
 type SaleItemForm = FormGroup<{
   productId: FormControl<string | null>;
   productName: FormControl<string | null>;
   productVariantId: FormControl<string | null>;
+  packagingId: FormControl<string | null>;
   branchId: FormControl<string | null>;
   quantity: FormControl<number>;
-  unitPrice: FormControl<number | null>;
-  batchSelections: FormControl<
-    { batchId: string; quantity: number }[] | null
-  >;
+  batchSelections: FormControl<{
+    batchId: string;
+    quantity: number;
+  }[] | null>;
 }>;
 
 @Component({
@@ -52,215 +198,113 @@ type SaleItemForm = FormGroup<{
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
-    MatTableModule,
     MatTooltipModule
   ],
   templateUrl: './sale-create.component.html',
   styleUrls: ['./sale-create.component.scss']
 })
 export class SaleCreateComponent implements OnInit {
-  @ViewChild('barcodeInput') barcodeInput!: ElementRef<HTMLInputElement>;
+
+  @ViewChild('barcodeInput')
+  barcodeInput!: ElementRef<HTMLInputElement>;
+
+  private readonly destroyRef =
+    inject(DestroyRef);
+
+  private readonly fb =
+    inject(FormBuilder);
+
+  private readonly router =
+    inject(Router);
+
+  private readonly dialog =
+    inject(MatDialog);
+
+  private readonly snackBar =
+    inject(MatSnackBar);
+
+  private readonly http =
+    inject(HttpClient);
+
+  private readonly authService =
+    inject(AuthService);
+
+  private readonly branchService =
+    inject(BranchService);
+
+  private readonly productService =
+    inject(ProductService);
+
+  private readonly customerService =
+    inject(CustomerService);
+
+  private readonly salesService =
+    inject(SalesService);
+
+  private readonly sellableService =
+    inject(SellableService);
+
+  private readonly previewService =
+    inject(SalePreviewService);
+
+  private readonly barcodeService =
+    inject(BarcodeService);
+
+  private readonly posBarcodeService =
+    inject(PosBarcodeService);
+
+  barcodeCtrl =
+    new FormControl('');
 
   scanning = false;
-  barcodeValue = '';
-  barcodeCtrl = new FormControl('');
 
-  form!: FormGroup<{
-    customer: FormGroup<{
-      name: FormControl<string | null>;
-      phone: FormControl<string | null>;
-      email: FormControl<string | null>;
-    }>;
-    items: FormArray<SaleItemForm>;
-  }>;
+  submitting = false;
 
-  products: any[] = [];
-  variants: any[] = [];
+  products: Product[] = [];
+
   branches: any[] = [];
 
-  displayedColumns = ['product', 'branch', 'qty', 'price', 'total', 'remove'];
-  variantsMap: Record<number, any[] | undefined> = {};
-  stockMap: Record<number, {
-    available: number;
-    batchCount?: number;
-    oldestBatchDate?: string | null;
-  } | undefined> = {};
+  packagingMap: Record<number, PackagingDTO[]> = {};
+
+  variantMap: Record<number, SellableVariantDTO[]> = {};
+
+  previewStateMap: Record<number, SaleLinePreviewState> = {};
+
+  displayedColumns = [
+    'product',
+    'variant',
+    'packaging',
+    'branch',
+    'quantity'
+  ];
+
+  readonly form = this.fb.group({
+    customer: this.fb.group({
+      name: this.fb.control<string | null>(null),
+      phone: this.fb.control<string | null>(null),
+      email: this.fb.control<string | null>(null)
+    }),
+    items: this.fb.array<SaleItemForm>([])
+  });
 
   defaultBranchId: string | null = null;
-  costPreviewMap: Record<number, number> = {};
-
-  constructor(
-    private fb: FormBuilder,
-    private productService: ProductService,
-    private variantService: ProductVariantService,
-    private inventoryService: InventoryService,
-    private branchService: BranchService,
-    private salesService: SalesService,
-    private customerService: CustomerService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private authService: AuthService,
-    private http: HttpClient,
-    private dialog: MatDialog,
-    private snackBar: MatSnackBar,
-  ) { }
 
   ngOnInit(): void {
-    this.form = this.fb.group({
-      customer: this.fb.group({
-        name: this.fb.control<string | null>(null),
-        phone: this.fb.control<string | null>(null),
-        email: this.fb.control<string | null>(null),
-      }),
-      items: this.fb.array<FormGroup>([], Validators.required),
-    });
 
-    const seed = history.state?.inventorySeed;
+    const me =
+      this.authService.getSnapshot();
 
-    if (seed?.productId) {
+    this.defaultBranchId =
+      me?.branchId ?? null;
 
-      // Case 1: full inventory seed
-      if (seed.variantId) {
-        this.prefillFromInventory(seed);
-      }
+    this.loadInitialDependencies();
 
-      // Case 2: product only seed
-      else {
-        this.prefillProductOnly(seed);
-      }
-    }
-
-    const me = this.authService.getSnapshot();
-    this.defaultBranchId = me?.branchId ?? null;
-
-    this.form.controls.customer.controls.phone.valueChanges
-      .pipe(
-        debounceTime(500),
-        distinctUntilChanged(),
-        filter((phone): phone is string => !!phone && phone.length >= 9),
-        switchMap(phone =>
-          this.customerService.lookupByPhone(phone).pipe(
-            catchError(() => of(null))
-          )
-        )
-      )
-      .subscribe(customer => {
-        if (!customer) {
-          this.unlockCustomerFields();
-          return;
-        }
-
-        this.form.controls.customer.patchValue({
-          name: customer.name,
-          email: customer.emailAddresses?.[0] ?? null
-        });
-
-        this.lockCustomerFields();
-      });
-
-    this.productService.getAll().subscribe(p => this.products = p);
-    this.branchService.getAll(false).subscribe(b => this.branches = b);
+    this.setupCustomerLookup();
 
     this.addLine();
-    this.variantsMap[0] = [];
   }
 
-  private prefillFromInventory(seed: {
-    productId: string;
-    productName: string;
-    variantId: string;
-    branchId: string;
-  }) {
-    const row = this.createSaleItemForm({
-      productId: seed.productId,
-      productName: seed.productName,
-      productVariantId: seed.variantId,
-      branchId: seed.branchId,
-      quantity: 1
-    });
-
-    this.items.clear();
-    this.items.push(row);
-
-    const index = 0;
-
-    this.variantService.forProduct(seed.productId)
-      .subscribe(v => {
-        this.variantsMap[index] = v;
-
-        const variant = v.find(x => x.id === seed.variantId);
-        if (variant) {
-          row.patchValue({
-            unitPrice: variant.minimumSellingPrice
-          });
-        }
-      });
-
-    this.loadStock(index, seed.variantId, seed.branchId);
-  }
-
-  private prefillProductOnly(seed: {
-    productId: string;
-    productName: string;
-  }) {
-
-    const row = this.createSaleItemForm({
-      productId: seed.productId,
-      productName: seed.productName,
-      quantity: 1
-    });
-
-    this.items.clear();
-    this.items.push(row);
-
-    const index = 0;
-
-    // Load variants
-    this.variantService.forProduct(seed.productId)
-      .subscribe(v => {
-        this.variantsMap[index] = v;
-
-        // Auto select if only one variant
-        if (v.length === 1) {
-          row.patchValue({
-            productVariantId: v[0].id,
-            unitPrice: v[0].minimumSellingPrice
-          });
-        }
-      });
-  }
-
-  private createSaleItemForm(
-    init?: Partial<{
-      productId: string;
-      productName: string;
-      productVariantId: string;
-      branchId: string;
-      quantity: number;
-      unitPrice: number;
-      batchSelections: { batchId: string; quantity: number }[] | null;
-    }>
-  ): SaleItemForm {
-    return this.fb.group({
-      productId: this.fb.control<string | null>(init?.productId ?? null, Validators.required),
-      productName: this.fb.control<string | null>(init?.productName ?? null),
-      productVariantId: this.fb.control<string | null>(init?.productVariantId ?? null, Validators.required),
-      branchId: this.fb.control<string | null>(init?.branchId ?? this.defaultBranchId, Validators.required),
-      quantity: this.fb.control<number>(init?.quantity ?? 1, {
-        nonNullable: true,
-        validators: [
-          Validators.required,
-          Validators.min(1)
-        ]
-      }),
-      unitPrice: this.fb.control<number | null>(init?.unitPrice ?? null),
-      batchSelections: this.fb.control<
-        { batchId: string; quantity: number }[] | null
-      >(null)
-    });
-  }
-
-  get customerGroup(): FormGroup {
+  get customerGroup() {
     return this.form.controls.customer;
   }
 
@@ -268,585 +312,676 @@ export class SaleCreateComponent implements OnInit {
     return this.form.controls.items;
   }
 
-  lockCustomerFields() {
-    this.form.controls.customer.controls.name.disable();
-    this.form.controls.customer.controls.email.disable();
-  }
+  private loadInitialDependencies(): void {
 
-  unlockCustomerFields() {
-    this.form.controls.customer.controls.name.enable();
-    this.form.controls.customer.controls.email.enable();
-  }
-
-  addLine() {
-    this.items.push(this.createSaleItemForm());
-
-    const index = this.items.length - 1;
-    this.variantsMap[index] = [];   // ✅ GUARANTEE
-  }
-
-  removeLine(i: number) {
-    this.items.removeAt(i);
-
-    delete this.variantsMap[i];
-    delete this.stockMap[i];
-
-    // 🔁 reindex variantsMap
-    this.variantsMap = Object.values(this.variantsMap).reduce(
-      (acc, v, idx) => {
-        acc[idx] = v;
-        return acc;
-      },
-      {} as Record<number, any[] | undefined>
-    );
-
-    // 🔁 reindex stockMap
-    this.stockMap = Object.values(this.stockMap).reduce(
-      (acc, v, idx) => {
-        acc[idx] = v;
-        return acc;
-      },
-      {} as Record<number, {
-        available: number;
-        batchCount?: number;
-        oldestBatchDate?: string | null;
-      } | undefined>
-    );
-  }
-
-
-  scanBarcode(value?: string) {
-    const code = (value ?? this.barcodeCtrl.value)?.trim();
-    if (!code) return;
-
-    const payload = {
-      barcode: code,
-      branchId: this.defaultBranchId
-    };
-
-    this.http.post<any>(
-      `${environment.apiUrl}/product-variants/scan`,
-      payload
-    ).subscribe({
-      next: res => this.applyScannedVariant(res),
-      error: () => this.snackBar.open(
-        'Invalid barcode or SKU.',
-        'Close',
-        { duration: 3000 }
+    forkJoin({
+      products: this.productService.getAll(),
+      branches: this.branchService.getAll(false)
+    })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef)
       )
-    });
-
-    this.barcodeCtrl.setValue('');
-    // setTimeout(() => this.barcodeInput?.nativeElement.focus());
+      .subscribe({
+        next: result => {
+          this.products = result.products;
+          this.branches = result.branches;
+        }
+      });
   }
 
-  private applyScannedVariant(res: any) {
-    const branchId = res.branchId ?? this.defaultBranchId;
+  private setupCustomerLookup(): void {
 
-    /* 1️⃣ Exact match: same variant + branch → increment qty */
-    const exactIndex = this.items.controls.findIndex(ctrl =>
-      ctrl.value.productVariantId === res.variantId &&
-      ctrl.value.branchId === branchId
-    );
+    this.customerGroup.controls.phone.valueChanges
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged(),
+        filter(
+          (phone): phone is string =>
+            !!phone &&
+            phone.length >= 9
+        ),
+        switchMap(phone =>
+          this.customerService
+            .lookupByPhone(phone)
+        ),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: customer => {
 
-    if (exactIndex !== -1) {
-      const qtyCtrl = this.items.at(exactIndex).get('quantity')!;
-      qtyCtrl.setValue(qtyCtrl.value + 1);
-      return;
-    }
+          if (!customer) {
+            this.unlockCustomerFields();
+            return;
+          }
 
-    /* 2️⃣ Same product exists but variant not yet selected */
-    const productOnlyIndex = this.items.controls.findIndex(ctrl =>
-      ctrl.value.productId === res.productId &&
-      !ctrl.value.productVariantId
-    );
+          this.customerGroup.patchValue({
+            name: customer.name,
+            email: customer.emailAddresses?.[0] ?? null
+          });
 
-    if (productOnlyIndex !== -1) {
-      const row = this.items.at(productOnlyIndex);
-
-      row.patchValue({
-        productVariantId: res.variantId,
-        unitPrice: res.sellingPrice
+          this.lockCustomerFields();
+        },
+        error: () => {
+          this.unlockCustomerFields();
+        }
       });
+  }
 
-      this.ensureVariantsLoaded(
-        productOnlyIndex,
-        res.productId,
-        res.variantId
-      );
+  addLine(): void {
 
-      const qtyCtrl = row.get('quantity')!;
-      qtyCtrl.setValue(qtyCtrl.value + 1);
-      return;
-    }
-
-    /* 3️⃣ Empty row (no product yet) */
-    const emptyIndex = this.items.controls.findIndex(ctrl =>
-      !ctrl.value.productId
-    );
-
-    if (emptyIndex !== -1) {
-      const row = this.items.at(emptyIndex);
-
-      row.patchValue({
-        productId: res.productId,
-        productName: res.productName,
-        productVariantId: res.variantId,
-        branchId,
-        quantity: 1,
-        unitPrice: res.sellingPrice
-      });
-
-      this.ensureVariantsLoaded(
-        emptyIndex,
-        res.productId,
-        res.variantId
-      );
-
-      if (branchId) {
-        this.stockMap[emptyIndex] = {
-          available: (res.quantityOnHand ?? 0) - (res.quantityReserved ?? 0),
-          batchCount: res.batchCount,
-          oldestBatchDate: res.oldestBatchDate
-        };
-      }
-
-      return;
-    }
-
-    /* 4️⃣ Otherwise → create new row */
-    const row = this.createSaleItemForm({
-      productId: res.productId,
-      productName: res.productName,
-      productVariantId: res.variantId,
-      branchId,
-      quantity: 1,
-      unitPrice: res.sellingPrice
-    });
+    const row =
+      this.createLineForm();
 
     this.items.push(row);
-    const i = this.items.length - 1;
 
-    this.ensureVariantsLoaded(
-      i,
-      res.productId,
-      res.variantId
-    );
+    const index =
+      this.items.length - 1;
 
-    if (branchId) {
-      this.stockMap[i] = {
-        available: (res.quantityOnHand ?? 0) - (res.quantityReserved ?? 0),
-        batchCount: res.batchCount,
-        oldestBatchDate: res.oldestBatchDate
-      };
-    }
+    this.variantMap[index] = [];
+    this.packagingMap[index] = [];
+
+    this.setupPreviewPipeline(index);
   }
 
-  private clearVariantSelection(index: number) {
-    const row = this.items.at(index);
+  removeLine(index: number): void {
 
-    row.patchValue({
-      productVariantId: null,
-      unitPrice: null
+    this.items.removeAt(index);
+
+    delete this.variantMap[index];
+    delete this.packagingMap[index];
+    delete this.previewStateMap[index];
+
+    this.reindexStateMaps();
+  }
+
+  private reindexStateMaps(): void {
+
+    this.variantMap =
+      Object.values(this.variantMap)
+        .reduce((acc, value, index) => {
+          acc[index] = value;
+          return acc;
+        }, {} as Record<number, SellableVariantDTO[]>);
+
+    this.packagingMap =
+      Object.values(this.packagingMap)
+        .reduce((acc, value, index) => {
+          acc[index] = value;
+          return acc;
+        }, {} as Record<number, PackagingDTO[]>);
+
+    this.previewStateMap =
+      Object.values(this.previewStateMap)
+        .reduce((acc, value, index) => {
+          acc[index] = value;
+          return acc;
+        }, {} as Record<number, SaleLinePreviewState>);
+  }
+
+  private createLineForm(): SaleItemForm {
+
+    return this.fb.group({
+      productId: this.fb.control<string | null>(
+        null,
+        Validators.required
+      ),
+      productName: this.fb.control<string | null>(null),
+      productVariantId: this.fb.control<string | null>(
+        null,
+        Validators.required
+      ),
+      packagingId: this.fb.control<string | null>(
+        null,
+        Validators.required
+      ),
+      branchId: this.fb.control<string | null>(
+        this.defaultBranchId,
+        Validators.required
+      ),
+      quantity: this.fb.control<number>(1, {
+        nonNullable: true,
+        validators: [
+          Validators.required,
+          Validators.min(1)
+        ]
+      }),
+      batchSelections: this.fb.control<{
+        batchId: string;
+        quantity: number;
+      }[] | null>(null)
     });
-
-    delete this.stockMap[index];
   }
 
-  private clearProductVariants(index: number) {
-    this.variantsMap[index] = [];
-  }
+  private setupPreviewPipeline(
+    index: number
+  ): void {
 
-  private resetProductDependentState(index: number) {
-    const row = this.items.at(index);
+    const row =
+      this.items.at(index);
 
-    row.patchValue({
-      productVariantId: null,
-      unitPrice: null
-    });
+    row.valueChanges
+      .pipe(
+        debounceTime(250),
+        distinctUntilChanged(),
+        switchMap(() => {
 
-    delete this.stockMap[index];
-    this.variantsMap[index] = [];
-  }
+          const value =
+            row.getRawValue();
 
+          if (
+            !value.productVariantId ||
+            !value.packagingId ||
+            !value.branchId ||
+            !value.quantity
+          ) {
+            return of(null);
+          }
 
-  canUseCameraScan(): boolean {
-    return (
-      'BarcodeDetector' in window &&
-      navigator.mediaDevices &&
-      typeof navigator.mediaDevices.getUserMedia === 'function'
-    );
-  }
+          this.previewStateMap[index] = {
+            loading: true,
+            resolved: false,
+            warnings: [],
+            adjustments: [],
+            allocations: []
+          };
 
-  async startCameraScan() {
-    if (!('BarcodeDetector' in window)) {
-      alert('Camera scanning not supported on this device');
-      return;
-    }
+          return this.previewService.previewLine({
+            productVariantId:
+              value.productVariantId,
+            packagingId:
+              value.packagingId,
+            quantity:
+              value.quantity,
+            branchId:
+              value.branchId,
+            batchSelections:
+              value.batchSelections ?? undefined
+          });
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: preview => {
 
-    const detector = new (window as any).BarcodeDetector({
-      formats: ['code_128', 'ean_13', 'ean_8']
-    });
+          if (!preview) {
+            return;
+          }
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' }
-    });
+          this.previewStateMap[index] = {
+            loading: false,
+            resolved: true,
+            preview,
+            warnings: [],
+            adjustments:
+              preview.adjustments,
+            allocations:
+              preview.batchAllocations
+          };
+        },
+        error: error => {
 
-    const video = document.createElement('video');
-    video.srcObject = stream;
-    video.play();
-
-    this.scanning = true;
-
-    const scanLoop = async () => {
-      if (!this.scanning) return;
-
-      const barcodes = await detector.detect(video);
-      if (barcodes.length) {
-        this.scanning = false;
-        stream.getTracks().forEach(t => t.stop());
-        this.scanBarcode(barcodes[0].rawValue);
-        return;
-      }
-
-      requestAnimationFrame(scanLoop);
-    };
-
-    scanLoop();
-  }
-
-  openBatchAllocation(i: number) {
-    const row = this.items.at(i).value;
-
-    if (!row.quantity || row.quantity <= 0) {
-      this.snackBar.open(
-        'Enter quantity before allocating batches.',
-        'Close',
-        { duration: 3000 }
-      );
-      return;
-    }
-
-    if (!row.productVariantId || !row.branchId) return;
-
-    this.dialog.open(BatchAllocationDialogComponent, {
-      width: '800px',
-      data: {
-        variantId: row.productVariantId,
-        branchId: row.branchId,
-        quantity: row.quantity,
-        existing: row.batchSelections
-      }
-    }).afterClosed().subscribe(result => {
-      if (!result) return;
-
-      this.items.at(i).patchValue({
-        batchSelections: result
+          this.previewStateMap[index] = {
+            loading: false,
+            resolved: false,
+            warnings: [
+              error?.error?.message ??
+              'Failed to resolve pricing and allocation.'
+            ],
+            adjustments: [],
+            allocations: []
+          };
+        }
       });
-
-      const totalCost = result
-        .map((r: any) => r.quantity * r.unitCost)
-        .reduce((a: number, b: number) => a + b, 0);
-
-      const totalQty = result
-        .map((r: any) => r.quantity)
-        .reduce((a: number, b: number) => a + b, 0);
-
-      if (totalQty > 0) {
-        const weightedSellingPrice = totalCost / totalQty;
-
-        this.items.at(i).get('unitPrice')
-          ?.setValue(weightedSellingPrice);
-      }
-
-      this.costPreviewMap[i] = totalCost;
-    });
   }
 
-  openProductSelector(rowIndex: number) {
-    this.dialog.open(ProductSelectorDialogComponent, {
-      width: '90vw',
-      maxWidth: '1000px',
-      height: '85vh',
-      panelClass: 'responsive-dialog'
-    }).afterClosed().subscribe((products: Product[]) => {
-      if (!products?.length) return;
+  lockCustomerFields(): void {
 
-      products.forEach(p => {
+    this.customerGroup.controls.name.disable();
+    this.customerGroup.controls.email.disable();
+  }
 
-        /* 1️⃣ Check if product already exists in any row */
-        const existingIndex = this.items.controls.findIndex(ctrl =>
-          ctrl.value.productId === p.id
+  unlockCustomerFields(): void {
+
+    this.customerGroup.controls.name.enable();
+    this.customerGroup.controls.email.enable();
+  }
+
+  openProductSelector(
+    rowIndex: number
+  ): void {
+
+    this.dialog.open(
+      ProductSelectorDialogComponent,
+      {
+        width: '90vw',
+        maxWidth: '1200px',
+        height: '90vh',
+        panelClass: 'responsive-dialog'
+      }
+    )
+      .afterClosed()
+      .subscribe((products: Product[]) => {
+
+        if (!products?.length) {
+          return;
+        }
+
+        products.forEach(product => {
+          this.patchProductIntoRow(
+            rowIndex,
+            product
+          );
+        });
+      });
+  }
+
+  private patchProductIntoRow(
+    index: number,
+    product: Product
+  ): void {
+
+    const row =
+      this.items.at(index);
+
+    row.patchValue({
+      productId: product.id,
+      productName: product.name,
+      productVariantId: null,
+      packagingId: null
+    });
+
+    this.resolveSellables(index);
+  }
+
+  private resolveSellables(
+    index: number
+  ): void {
+
+    const row =
+      this.items.at(index);
+
+    const value =
+      row.getRawValue();
+
+    if (!value.branchId) {
+      return;
+    }
+
+    this.sellableService.search({
+      branchId: value.branchId,
+      search: value.productName ?? undefined,
+      includePricing: true,
+      includeAllocation: true,
+      includeBatches: true,
+      quantity: value.quantity
+    })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: response => {
+
+          const variants =
+            response.variants.content
+              .filter(v =>
+                v.productId === value.productId
+              );
+
+          this.variantMap[index] = variants;
+
+          if (variants.length === 1) {
+
+            const variant =
+              variants[0];
+
+            row.patchValue({
+              productVariantId:
+                variant.variantId
+            });
+
+            this.packagingMap[index] =
+              variant.packagings;
+
+            if (
+              variant.packagings.length === 1
+            ) {
+              row.patchValue({
+                packagingId:
+                  variant.packagings[0]
+                    .packagingId
+              });
+            }
+          }
+        }
+      });
+  }
+
+  onVariantChange(
+    index: number,
+    variantId: string
+  ): void {
+
+    const variant =
+      this.variantMap[index]
+        ?.find(v =>
+          v.variantId === variantId
         );
 
-        if (existingIndex !== -1) {
-          // ✅ Increment quantity instead of adding row
-          const qtyCtrl = this.items.at(existingIndex).get('quantity')!;
-          qtyCtrl.setValue(qtyCtrl.value + 1);
-          return;
-        }
+    this.packagingMap[index] =
+      variant?.packagings ?? [];
 
-        /* 2️⃣ Use current row if empty */
-        const targetRow =
-          !this.items.at(rowIndex).value.productId
-            ? rowIndex
-            : this.items.controls.findIndex(ctrl => !ctrl.value.productId);
+    this.items.at(index).patchValue({
+      packagingId: null
+    });
 
-        if (targetRow !== -1) {
-          this.patchProductIntoRow(targetRow, p);
-          return;
-        }
-
-        /* 3️⃣ Otherwise create new row */
-        this.addProductAsNewLine(p);
+    if (
+      variant?.packagings?.length === 1
+    ) {
+      this.items.at(index).patchValue({
+        packagingId:
+          variant.packagings[0]
+            .packagingId
       });
-    });
+    }
   }
 
-  private patchProductIntoRow(i: number, p: Product) {
-    const row = this.items.at(i);
+  linePreview(
+    index: number
+  ): SaleLinePreviewResponse | undefined {
 
-    row.patchValue({
-      productId: p.id,
-      productName: p.name
-    });
-
-    this.clearVariantSelection(i);
-    this.clearProductVariants(i); // ✅ OK here
-
-    this.variantService.forProduct(p.id).subscribe(v => {
-      this.variantsMap[i] = v;
-      if (v.length === 1) {
-        row.patchValue({
-          productVariantId: v[0].id,
-          unitPrice: v[0].minimumSellingPrice
-        });
-      }
-    });
+    return this.previewStateMap[index]
+      ?.preview;
   }
 
-  private addProductAsNewLine(p: Product) {
-    const row = this.createSaleItemForm({
-      productId: p.id,
-      productName: p.name
-    });
+  lineTotal(
+    index: number
+  ): number {
 
-    this.items.push(row);
-    const i = this.items.length - 1;
-
-    this.variantService.forProduct(p.id).subscribe(v => {
-      this.variantsMap[i] = v;
-      if (v.length === 1) {
-        row.patchValue({
-          productVariantId: v[0].id,
-          unitPrice: v[0].minimumSellingPrice
-        });
-      }
-    });
-  }
-
-  private ensureVariantsLoaded(
-    index: number,
-    productId: string,
-    selectedVariantId?: string
-  ) {
-    // Prevent duplicate loads
-    if (this.variantsMap[index]?.length) return;
-
-    this.variantService.forProduct(productId).subscribe(variants => {
-      this.variantsMap[index] = variants;
-
-      // Keep scanned variant selected
-      if (selectedVariantId && variants.some(v => v.id === selectedVariantId)) {
-        this.items.at(index).patchValue({
-          productVariantId: selectedVariantId
-        });
-      }
-
-      // Auto-select if only one variant
-      if (variants.length === 1) {
-        this.items.at(index).patchValue({
-          productVariantId: variants[0].id,
-          unitPrice: variants[0].minimumSellingPrice
-        });
-      }
-    });
-  }
-
-  onProductChange(i: number) {
-    const row = this.items.at(i);
-    if (!row) return;
-
-    const productId = row.get('productId')?.value;
-    if (!productId) return;
-
-    // 🔥 RESET dependent fields
-    row.patchValue({
-      productVariantId: null,
-      unitPrice: null
-    });
-
-    delete this.stockMap[i];
-    this.variantsMap[i] = [];
-
-    // Load variants for selected product
-    this.variantService.forProduct(productId)
-      .subscribe(v => {
-        this.variantsMap[i] = v;
-
-        // ✅ Auto-select variant if only one
-        if (v.length === 1) {
-          row.get('productVariantId')?.setValue(v[0].id);
-          this.onVariantChange(i, v[0].id);
-        }
-      });
-  }
-
-  onVariantChange(i: number, variantId: string) {
-    const row = this.items.at(i);
-    if (!row) return;
-
-    const branchId = row.get('branchId')?.value;
-    if (!branchId) return;
-
-    const variant = this.variantsMap[i]?.find(v => v.id === variantId);
-    if (!variant) return;
-
-    // 🔥 Always use FIFO selling price
-    this.inventoryService
-      .getFifoPrice(variantId, branchId)
-      .subscribe(price => {
-        row.get('unitPrice')?.setValue(price);
-      });
-
-    this.loadStock(i, variantId, branchId);
-  }
-
-  loadStock(i: number, variantId: string, branchId: string) {
-    this.inventoryService.getVariantStock(variantId, branchId)
-      .subscribe(stock => {
-
-        if (!stock) return;
-
-        const available =
-          stock.quantityOnHand - stock.quantityReserved;
-
-        this.stockMap[i] = {
-          available,
-          batchCount: stock.batchCount,
-          oldestBatchDate: stock.oldestBatchDate
-        };
-
-        const row = this.items.at(i);
-        const qtyCtrl = row.get('quantity');
-
-        if (!qtyCtrl) return;
-
-        if (qtyCtrl.value > (this.stockMap[i]?.available ?? 0)) {
-          qtyCtrl.setErrors({ stockExceeded: true });
-        } else {
-          if (qtyCtrl.hasError('stockExceeded')) {
-            const errors = { ...qtyCtrl.errors };
-            delete errors['stockExceeded'];
-            qtyCtrl.setErrors(Object.keys(errors).length ? errors : null);
-          }
-        }
-
-        qtyCtrl.valueChanges.subscribe(value => {
-          if (value > available) {
-            qtyCtrl.setErrors({ stockExceeded: true });
-          } else {
-            qtyCtrl.setErrors(null);
-          }
-        });
-      });
-  }
-
-  lineTotal(i: number): number {
-    const row = this.items.at(i).value;
-    const qty = Number(row.quantity || 0);
-    const price = Number(row.unitPrice || 0);
-    return qty * price;
+    return this.linePreview(index)
+      ?.totalPrice ?? 0;
   }
 
   grandTotal(): number {
-    return this.items.controls
-      .map((_, i) => this.lineTotal(i))
+
+    return Object.values(this.previewStateMap)
+      .map(state =>
+        state.preview?.totalPrice ?? 0
+      )
       .reduce((a, b) => a + b, 0);
   }
 
-  controlAt(index: number, name: string): FormControl {
-    return this.items.at(index).get(name) as FormControl;
+  previewWarnings(
+    index: number
+  ): string[] {
+
+    return this.previewStateMap[index]
+      ?.warnings ?? [];
   }
 
-  @HostListener('document:keydown.control.enter')
-  submitShortcut() {
-    if (this.form.valid) this.submit();
+  adjustments(
+    index: number
+  ): PricingAdjustment[] {
+
+    return this.previewStateMap[index]
+      ?.adjustments ?? [];
   }
 
-  previewAllocation(i: number) {
-    const form = this.items.at(i);
+  allocationPreview(
+    index: number
+  ): AllocationDetail[] {
 
-    const variantId = form.get('productVariantId')?.value;
-    const branchId = form.get('branchId')?.value;
-    const quantity = form.get('quantity')?.value ?? 0;
-    const selections = form.get('batchSelections')?.value ?? null;
+    return this.previewStateMap[index]
+      ?.allocations ?? [];
+  }
 
-    if (!variantId || !branchId || quantity <= 0) {
+  async startCameraScan(): Promise<void> {
+
+    const code =
+      await this.posBarcodeService
+        .scanViaCamera();
+
+    if (!code) {
       return;
     }
 
-    this.inventoryService.previewAllocation({
-      variantId,
-      branchId,
-      quantity,
-      selectedBatchIds: selections?.map(s => s.batchId) ?? null
-    }).subscribe(result => {
-      console.log(result);
-    });
+    this.scanBarcode(code);
   }
 
-  submit() {
-    if (this.form.invalid) return;
+  scanBarcode(
+    rawValue?: string
+  ): void {
 
-    for (let i = 0; i < this.items.length; i++) {
-      const stock = this.stockMap[i];
-      const qty = this.items.at(i).value.quantity ?? 0;
+    const barcode =
+      (rawValue ?? this.barcodeCtrl.value)
+        ?.trim();
 
-      if (!stock || qty > stock.available) {
-        this.snackBar.open(
-          'Cannot sell more than available stock.',
-          'Close',
-          { duration: 3000 }
-        );
-        return;
-      }
+    if (!barcode) {
+      return;
     }
 
-    const customer = this.form.controls.customer.value;
-    const items = this.items.controls.map(ctrl => ctrl.value);
+    this.barcodeService.scan({
+      barcode
+    })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: result => {
 
-    const payload: any = {
-      items: items.map(r => ({
-        productVariantId: r.productVariantId!,
-        branchId: r.branchId!,
-        quantity: r.quantity!,
-        unitPrice: r.unitPrice!,
-        batchSelections: r.batchSelections ?? []
-      }))
+          const targetIndex =
+            this.findReusableRow();
+
+          const row =
+            this.items.at(targetIndex);
+
+          row.patchValue({
+            productVariantId:
+              result.variantId,
+            packagingId:
+              result.packagingId,
+            branchId:
+              result.branchId,
+            quantity:
+              result.requestedQuantity
+          });
+
+          this.barcodeCtrl.setValue('');
+        },
+        error: () => {
+          this.snackBar.open(
+            'Unable to resolve barcode.',
+            'Close',
+            {
+              duration: 3000
+            }
+          );
+        }
+      });
+  }
+
+  private findReusableRow(): number {
+
+    const emptyIndex =
+      this.items.controls.findIndex(control =>
+        !control.value.productId
+      );
+
+    if (emptyIndex !== -1) {
+      return emptyIndex;
+    }
+
+    this.addLine();
+
+    return this.items.length - 1;
+  }
+
+  openBatchAllocation(
+    index: number
+  ): void {
+
+    const row =
+      this.items.at(index)
+        .getRawValue();
+
+    if (
+      !row.productVariantId ||
+      !row.branchId ||
+      !row.quantity
+    ) {
+      return;
+    }
+
+    this.dialog.open(
+      BatchAllocationDialogComponent,
+      {
+        width: '1000px',
+        maxWidth: '95vw',
+        data: {
+          variantId:
+            row.productVariantId,
+          branchId:
+            row.branchId,
+          quantity:
+            row.quantity,
+          existing:
+            row.batchSelections
+        }
+      }
+    )
+      .afterClosed()
+      .subscribe(result => {
+
+        if (!result) {
+          return;
+        }
+
+        this.items.at(index)
+          .patchValue({
+            batchSelections: result
+          });
+      });
+  }
+
+  controlAt(
+    index: number,
+    name: string
+  ): FormControl {
+
+    return this.items.at(index)
+      .get(name) as FormControl;
+  }
+
+  canUseCameraScan(): boolean {
+
+    return (
+      'BarcodeDetector' in window &&
+      navigator.mediaDevices &&
+      typeof navigator.mediaDevices
+        .getUserMedia === 'function'
+    );
+  }
+
+  @HostListener(
+    'document:keydown.control.enter'
+  )
+  submitShortcut(): void {
+
+    if (this.form.valid) {
+      this.submit();
+    }
+  }
+
+  submit(): void {
+
+    if (
+      this.form.invalid ||
+      this.submitting
+    ) {
+      return;
+    }
+
+    const unresolved =
+      Object.values(this.previewStateMap)
+        .some(state => !state.resolved);
+
+    if (unresolved) {
+
+      this.snackBar.open(
+        'Wait for all pricing and allocation previews to resolve.',
+        'Close',
+        {
+          duration: 4000
+        }
+      );
+
+      return;
+    }
+
+    this.submitting = true;
+
+    const customer =
+      this.customerGroup.getRawValue();
+
+    const payload: SaleRequest = {
+      items: this.items.controls
+        .map(control => {
+
+          const value =
+            control.getRawValue();
+
+          return {
+            productVariantId:
+              value.productVariantId!,
+            packagingId:
+              value.packagingId!,
+            branchId:
+              value.branchId!,
+            quantity:
+              value.quantity,
+            batchSelections:
+              value.batchSelections ?? []
+          };
+        }),
+      payments: [],
+      totalAmount:
+        this.grandTotal(),
+      customerIdentifiers: {
+        customerName:
+          customer.name ?? undefined,
+        phoneNumber:
+          customer.phone ?? undefined,
+        email:
+          customer.email ?? undefined
+      }
     };
 
-    // ✅ Attach customer only if at least one identifier exists
-    if (customer.name || customer.phone || customer.email) {
-      payload.customerIdentifiers = {
-        name: customer.name ?? null,
-        phone: customer.phone ?? null,
-        email: customer.email ?? null
-      };
-    }
+    this.salesService.create(payload)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: sale => {
 
-    this.salesService.create(payload).subscribe({
-      next: sale => this.router.navigate(['/app/sales', sale.id])
-    });
+          this.submitting = false;
+
+          this.router.navigate([
+            '/app/sales',
+            sale.id
+          ]);
+        },
+        error: error => {
+
+          this.submitting = false;
+
+          this.snackBar.open(
+            error?.error?.message ??
+            'Failed to create sale.',
+            'Close',
+            {
+              duration: 4000
+            }
+          );
+        }
+      });
   }
 }

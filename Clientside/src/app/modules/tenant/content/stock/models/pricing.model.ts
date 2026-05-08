@@ -11,6 +11,12 @@ export interface PricingPreviewDTO {
     adjustments: PricingAdjustment[];
 }
 
+export interface PricingBreakdownDTO {
+    basePrice?: number;
+    finalPrice?: number;
+    adjustments: PricingAdjustment[];
+}
+
 export interface ProductPrice {
     id?: string;
     productVariant?: {

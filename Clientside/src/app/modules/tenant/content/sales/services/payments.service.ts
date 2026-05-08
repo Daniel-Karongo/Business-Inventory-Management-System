@@ -1,25 +1,37 @@
-import { Injectable } from '@angular/core';
 import {
   HttpClient,
   HttpParams
 } from '@angular/common/http';
 
+import { Injectable } from '@angular/core';
+
+import { Observable } from 'rxjs';
+
 import { environment } from '../../../../../../environments/environment';
+
+import {
+  PaymentDTO
+} from '../../stock/models/sale.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class PaymentsService {
-  private api = environment.apiUrl;
 
-  private endpoints =
+  private readonly api =
+    environment.apiUrl;
+
+  private readonly endpoints =
     environment.endpoints.payments;
 
   constructor(
-    private http: HttpClient
+    private readonly http: HttpClient
   ) { }
 
-  create(payload: unknown) {
+  create(
+    payload: unknown
+  ): Observable<unknown> {
+
     return this.http.post(
       this.api +
       this.endpoints.create,
@@ -27,7 +39,10 @@ export class PaymentsService {
     );
   }
 
-  refund(id: string) {
+  refund(
+    id: string
+  ): Observable<unknown> {
+
     return this.http.post(
       this.api +
       this.endpoints.refund(id),
@@ -38,14 +53,17 @@ export class PaymentsService {
   reverse(
     id: string,
     note?: string
-  ) {
-    let params = new HttpParams();
+  ): Observable<unknown> {
+
+    let params =
+      new HttpParams();
 
     if (note) {
-      params = params.set(
-        'note',
-        note
-      );
+      params =
+        params.set(
+          'note',
+          note
+        );
     }
 
     return this.http.post(
@@ -60,7 +78,8 @@ export class PaymentsService {
     saleId: string,
     phone: string,
     amount: number
-  ) {
+  ): Observable<unknown> {
+
     return this.http.post(
       this.api +
       this.endpoints.mpesa.initiateStk,
@@ -75,8 +94,11 @@ export class PaymentsService {
     );
   }
 
-  getBySale(saleId: string) {
-    return this.http.get(
+  getBySale(
+    saleId: string
+  ): Observable<PaymentDTO[]> {
+
+    return this.http.get<PaymentDTO[]>(
       this.api +
       environment.endpoints.sales.payments(
         saleId

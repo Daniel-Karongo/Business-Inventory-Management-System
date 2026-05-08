@@ -1,10 +1,37 @@
-import { Component, Input, OnInit } from '@angular/core';
-import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import {
+  CommonModule,
+  CurrencyPipe,
+  DatePipe
+} from '@angular/common';
 
-import { MatButtonModule } from '@angular/material/button';
+import {
+  Component,
+  DestroyRef,
+  Input,
+  OnInit,
+  inject
+} from '@angular/core';
 
-import { SalesService } from '../../services/sales.service';
+import {
+  takeUntilDestroyed
+} from '@angular/core/rxjs-interop';
+
+import {
+  ActivatedRoute,
+  RouterModule
+} from '@angular/router';
+
+import {
+  MatButtonModule
+} from '@angular/material/button';
+
+import {
+  finalize
+} from 'rxjs';
+
+import {
+  SalesService
+} from '../../services/sales.service';
 
 @Component({
   standalone: true,
@@ -13,36 +40,168 @@ import { SalesService } from '../../services/sales.service';
     CommonModule,
     CurrencyPipe,
     DatePipe,
-    MatButtonModule,
-    RouterModule
+    RouterModule,
+    MatButtonModule
   ],
   templateUrl: './sale-receipt.component.html',
   styleUrls: ['./sale-receipt.component.scss']
 })
-export class SaleReceiptComponent implements OnInit {
+export class SaleReceiptComponent
+  implements OnInit {
 
-  @Input() sale: any;
+  private readonly route =
+    inject(ActivatedRoute);
+
+  private readonly destroyRef =
+    inject(DestroyRef);
+
+  private readonly salesService =
+    inject(SalesService);
+
+  @Input()
+  sale: any = null;
+
   loading = true;
 
-  constructor(
-    private route: ActivatedRoute,
-    private salesService: SalesService
-  ) { }
+  autoPrintTriggered = false;
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (!id) return;
 
-    this.salesService.get(id).subscribe(sale => {
-      this.sale = sale;
-      this.loading = false;
+    const id =
+      this.route.snapshot
+        .paramMap
+        .get('id');
 
-      // 🔥 Auto-print once data is ready
-      setTimeout(() => window.print(), 300);
-    });
+    if (!id) {
+      return;
+    }
+
+    this.load(id);
   }
 
-  print() {
+  load(
+    id: string
+  ): void {
+
+    this.loading = true;
+
+    this.salesService.get(id)
+      .pipe(
+        finalize(() => {
+          this.loading = false;
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: sale => {
+
+          this.sale = sale;
+
+          if (
+            !this.autoPrintTriggered
+          ) {
+
+            this.autoPrintTriggered = true;
+
+            setTimeout(() => {
+              window.print();
+            }, 350);
+          }
+        }
+      });
+  }
+
+  print(): void {
+
     window.print();
+  }
+
+  paidAmount(): number {
+
+    return (
+      this.sale?.payments ?? []
+    )
+      .filter((payment: any) =>
+        payment.status === 'SUCCESS'
+      )
+      .reduce(
+        (
+          sum: number,
+          payment: any
+        ) =>
+          sum +
+          Number(
+            payment.amount ?? 0
+          ),
+        0
+      );
+  }
+
+  refundedAmount(): number {
+
+    return (
+      this.sale?.payments ?? []
+    )
+      .filter((payment: any) =>
+        payment.status === 'REFUNDED'
+      )
+      .reduce(
+        (
+          sum: number,
+          payment: any
+        ) =>
+          sum +
+          Number(
+            payment.amount ?? 0
+          ),
+        0
+      );
+  }
+
+  balance(): number {
+
+    return Number(
+      this.sale?.totalAmount ?? 0
+    ) - this.paidAmount();
+  }
+
+  paymentStatusClass(
+    status: string
+  ): string {
+
+    switch (status) {
+
+      case 'SUCCESS':
+        return 'payment-success';
+
+      case 'REFUNDED':
+        return 'payment-refunded';
+
+      case 'FAILED':
+        return 'payment-failed';
+
+      default:
+        return 'payment-pending';
+    }
+  }
+
+  saleStatusClass(): string {
+
+    switch (
+    this.sale?.status
+    ) {
+
+      case 'COMPLETED':
+        return 'status-completed';
+
+      case 'REFUNDED':
+        return 'status-refunded';
+
+      case 'CANCELLED':
+        return 'status-cancelled';
+
+      default:
+        return 'status-created';
+    }
   }
 }

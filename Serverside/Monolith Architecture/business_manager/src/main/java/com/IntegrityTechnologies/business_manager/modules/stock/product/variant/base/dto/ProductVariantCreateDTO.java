@@ -9,6 +9,7 @@ import java.util.UUID;
 public class ProductVariantCreateDTO {
     private UUID productId;
     private String classification;
+    private String barcode;
     private Double minimumPercentageProfit;
     private BigDecimal minimumProfit;
     private String sku;

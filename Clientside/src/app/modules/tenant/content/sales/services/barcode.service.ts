@@ -1,14 +1,11 @@
 import { Injectable } from '@angular/core';
-import { map } from 'rxjs';
 
-import { environment }
-    from '../../../../../../environments/environment';
+import { map, Observable } from 'rxjs';
 
-import { ApiResponse }
-    from '../../../../../core/models/api-response.model';
+import { environment } from '../../../../../../environments/environment';
 
-import { BaseApiService }
-    from '../../../../../core/services/api/base-api.service';
+import { ApiResponse } from '../../../../../core/models/api-response.model';
+import { BaseApiService } from '../../../../../core/services/api/base-api.service';
 
 import {
     BarcodeScanRequest,
@@ -18,26 +15,24 @@ import {
 @Injectable({
     providedIn: 'root'
 })
-export class BarcodeService
-    extends BaseApiService {
+export class BarcodeService extends BaseApiService {
 
-    private endpoints =
-        environment.endpoints
-            .barcodes;
+    private readonly endpoints =
+        environment.endpoints.barcodes;
 
     scan(
         payload: BarcodeScanRequest
-    ) {
+    ): Observable<BarcodeScanResponse> {
 
-        return super.post<
+        return this.post<
             ApiResponse<BarcodeScanResponse>
         >(
             this.endpoints.scan,
             payload
         ).pipe(
-            map(res =>
+            map(response =>
                 this.unwrap<BarcodeScanResponse>(
-                    res
+                    response
                 )
             )
         );
@@ -45,26 +40,24 @@ export class BarcodeService
 
     lookup(
         barcode: string
-    ) {
+    ): Observable<unknown> {
 
-        return super.get<
-            ApiResponse<any>
+        return this.get<
+            ApiResponse<unknown>
         >(
-            this.endpoints.lookup(
-                barcode
-            )
+            this.endpoints.lookup(barcode)
         ).pipe(
-            map(res =>
-                this.unwrap(res)
+            map(response =>
+                this.unwrap(response)
             )
         );
     }
 
     generate(
         variantId: string
-    ) {
+    ): Observable<string> {
 
-        return super.post<
+        return this.post<
             ApiResponse<string>
         >(
             this.endpoints.generate(
@@ -72,9 +65,9 @@ export class BarcodeService
             ),
             {}
         ).pipe(
-            map(res =>
+            map(response =>
                 this.unwrap<string>(
-                    res
+                    response
                 )
             )
         );

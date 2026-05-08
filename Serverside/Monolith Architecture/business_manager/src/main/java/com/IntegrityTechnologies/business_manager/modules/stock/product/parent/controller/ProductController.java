@@ -6,8 +6,10 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.d
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
@@ -88,16 +90,21 @@ public class ProductController {
     }
 
     /* ===================== CREATE ===================== */
-
-    @PostMapping
-    public ApiResponse create(
+    @PostMapping(
+            value = "/bulk/full",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ApiResponse createFull(
             @RequestParam UUID branchId,
-            @RequestBody ProductCreateDTO dto
+            @RequestPart("payload") ProductFullCreateDTO dto,
+            @RequestPart(value = "files", required = false)
+            List<MultipartFile> files
     ) throws IOException {
+
         return new ApiResponse(
                 "success",
                 "Product created",
-                productService.createProduct(branchId, dto)
+                productService.fullCreate(branchId, dto, files)
         );
     }
 

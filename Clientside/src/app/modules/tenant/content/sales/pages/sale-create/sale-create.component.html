@@ -1,183 +1,462 @@
-<div class="flex flex-col gap-6">
+<div class="sale-create-page">
 
-  <!-- PAGE HEADER -->
-  <div>
-    <h2 class="text-xl font-semibold">New Sale</h2>
-    <p class="text-sm text-[var(--text-secondary)]">
-      Add items and confirm
-    </p>
+  <!-- ====================================================== -->
+  <!-- HEADER -->
+  <!-- ====================================================== -->
+
+  <div class="page-header">
+
+    <div>
+      <h1 class="page-title">
+        Create Sale
+      </h1>
+
+      <p class="page-subtitle">
+        Backend-authoritative pricing, allocation and reservation workflow
+      </p>
+    </div>
+
+    <div class="header-actions">
+
+      <button mat-stroked-button type="button" (click)="addLine()">
+
+        <mat-icon>add</mat-icon>
+        Add Line
+
+      </button>
+
+    </div>
+
   </div>
 
+  <!-- ====================================================== -->
   <!-- CUSTOMER -->
-  <div class="surface-card" [formGroup]="customerGroup">
+  <!-- ====================================================== -->
 
-    <div class="section-title">
-      Customer (Optional)
-      <span class="section-sub">
-        Leave blank for walk-in customers
-      </span>
+  <section class="surface-card" [formGroup]="customerGroup">
+
+    <div class="section-header">
+
+      <div>
+        <div class="section-title">
+          Customer
+        </div>
+
+        <div class="section-subtitle">
+          Optional customer association
+        </div>
+      </div>
+
     </div>
 
-    <div class="grid-3">
-      <mat-form-field>
-        <mat-label>Name</mat-label>
+    <div class="responsive-grid">
+
+      <mat-form-field appearance="outline">
+
+        <mat-label>
+          Customer Name
+        </mat-label>
+
         <input matInput formControlName="name" />
+
       </mat-form-field>
 
-      <mat-form-field>
-        <mat-label>Phone</mat-label>
+      <mat-form-field appearance="outline">
+
+        <mat-label>
+          Phone Number
+        </mat-label>
+
         <input matInput formControlName="phone" />
+
       </mat-form-field>
 
-      <mat-form-field>
-        <mat-label>Email</mat-label>
+      <mat-form-field appearance="outline">
+
+        <mat-label>
+          Email Address
+        </mat-label>
+
         <input matInput formControlName="email" />
+
       </mat-form-field>
-    </div>
-  </div>
 
+    </div>
+
+  </section>
+
+  <!-- ====================================================== -->
   <!-- BARCODE -->
-  <div class="flex items-center gap-3">
+  <!-- ====================================================== -->
 
-    <mat-form-field class="flex-1">
-      <mat-label>Scan / Enter Barcode or SKU</mat-label>
-      <input matInput
-             #barcodeInput
-             [formControl]="barcodeCtrl"
-             (keydown.enter)="scanBarcode()" />
-    </mat-form-field>
+  <section class="surface-card">
 
-    <button mat-stroked-button
-            matTooltip="Scan using camera"
-            *ngIf="canUseCameraScan()"
-            (click)="startCameraScan()">
-      <mat-icon>qr_code_scanner</mat-icon>
-    </button>
+    <div class="section-header">
 
-  </div>
+      <div>
+        <div class="section-title">
+          Barcode Scanner
+        </div>
 
+        <div class="section-subtitle">
+          Scan barcode or SKU
+        </div>
+      </div>
+
+    </div>
+
+    <div class="barcode-row">
+
+      <mat-form-field appearance="outline" class="barcode-field">
+
+        <mat-label>
+          Barcode / SKU
+        </mat-label>
+
+        <input #barcodeInput matInput [formControl]="barcodeCtrl" (keydown.enter)="scanBarcode()" />
+
+      </mat-form-field>
+
+      <button mat-stroked-button type="button" *ngIf="canUseCameraScan()" (click)="startCameraScan()">
+
+        <mat-icon>
+          qr_code_scanner
+        </mat-icon>
+
+        Scan
+
+      </button>
+
+    </div>
+
+  </section>
+
+  <!-- ====================================================== -->
   <!-- SALE LINES -->
-  <div class="rows">
+  <!-- ====================================================== -->
 
-    <div class="row-card"
-         *ngFor="let row of items.controls; let i = index">
+  <div class="sale-lines">
 
-      <!-- HEADER -->
-      <div class="row-header">
-        <span>Line {{ i + 1 }}</span>
+    <section class="line-card" *ngFor="let row of items.controls; let i = index">
 
-        <div class="flex items-center gap-2">
+      <!-- =============================================== -->
+      <!-- LINE HEADER -->
+      <!-- =============================================== -->
 
-          <button mat-icon-button
-                  matTooltip="Allocate inventory batches"
-                  *ngIf="stockMap[i]?.batchCount"
-                  (click)="openBatchAllocation(i)">
-            <mat-icon>layers</mat-icon>
+      <div class="line-header">
+
+        <div class="line-title">
+          Line {{ i + 1 }}
+        </div>
+
+        <div class="line-actions">
+
+          <button mat-icon-button type="button" matTooltip="Manual Batch Allocation" (click)="openBatchAllocation(i)">
+
+            <mat-icon>
+              layers
+            </mat-icon>
+
           </button>
 
-          <button mat-icon-button
-                  matTooltip="Remove this line"
-                  (click)="removeLine(i)">
-            <mat-icon>delete</mat-icon>
+          <button mat-icon-button type="button" matTooltip="Remove Line" (click)="removeLine(i)">
+
+            <mat-icon>
+              delete
+            </mat-icon>
+
           </button>
 
         </div>
+
       </div>
 
-      <!-- FIRST GRID -->
-      <div class="grid-3">
+      <!-- =============================================== -->
+      <!-- LINE FORM -->
+      <!-- =============================================== -->
 
-        <mat-form-field class="cursor-pointer"
-                        (click)="openProductSelector(i)">
-          <mat-label>Product</mat-label>
-          <input matInput readonly
-                 [value]="items.at(i).value.productName || ''" />
-          <button matSuffix mat-icon-button
-                  matTooltip="Change product"
-                  tabindex="-1">
-            <mat-icon>edit</mat-icon>
+      <div class="line-grid">
+
+        <!-- PRODUCT -->
+
+        <mat-form-field appearance="outline">
+
+          <mat-label>
+            Product
+          </mat-label>
+
+          <input matInput readonly [value]="items.at(i).value.productName || ''" (click)="openProductSelector(i)" />
+
+          <button mat-icon-button matSuffix type="button" (click)="openProductSelector(i)">
+
+            <mat-icon>
+              search
+            </mat-icon>
+
           </button>
+
         </mat-form-field>
 
-        <mat-form-field>
-          <mat-label>Variant</mat-label>
+        <!-- VARIANT -->
+
+        <mat-form-field appearance="outline">
+
+          <mat-label>
+            Variant
+          </mat-label>
+
           <mat-select [formControl]="controlAt(i,'productVariantId')"
-                      (selectionChange)="onVariantChange(i, $event.value)">
-            <mat-option *ngFor="let v of (variantsMap[i] || [])"
-                        [value]="v.id">
-              {{ v.classification || 'STANDARD' }}
+            (selectionChange)="onVariantChange(i, $event.value)">
+
+            <mat-option *ngFor="let variant of variantMap[i]" [value]="variant.variantId">
+
+              {{ variant.classification }}
+
             </mat-option>
+
           </mat-select>
+
         </mat-form-field>
 
-        <mat-form-field>
-          <mat-label>Branch</mat-label>
-          <mat-select [formControl]="controlAt(i,'branchId')">
-            <mat-option *ngFor="let b of branches"
-                        [value]="b.id">
-              {{ b.name }}
+        <!-- PACKAGING -->
+
+        <mat-form-field appearance="outline">
+
+          <mat-label>
+            Packaging
+          </mat-label>
+
+          <mat-select [formControl]="controlAt(i,'packagingId')">
+
+            <mat-option *ngFor="let packaging of packagingMap[i]" [value]="packaging.packagingId">
+
+              {{ packaging.name }}
+              ·
+              {{ packaging.unitsPerPackaging }} units
+
             </mat-option>
+
           </mat-select>
+
+        </mat-form-field>
+
+        <!-- BRANCH -->
+
+        <mat-form-field appearance="outline">
+
+          <mat-label>
+            Branch
+          </mat-label>
+
+          <mat-select [formControl]="controlAt(i,'branchId')">
+
+            <mat-option *ngFor="let branch of branches" [value]="branch.id">
+
+              {{ branch.name }}
+
+            </mat-option>
+
+          </mat-select>
+
+        </mat-form-field>
+
+        <!-- QUANTITY -->
+
+        <mat-form-field appearance="outline">
+
+          <mat-label>
+            Quantity
+          </mat-label>
+
+          <input matInput type="number" min="1" [formControl]="controlAt(i,'quantity')" />
+
         </mat-form-field>
 
       </div>
 
-      <!-- SECOND GRID -->
-      <div class="grid-3">
+      <!-- =============================================== -->
+      <!-- PREVIEW -->
+      <!-- =============================================== -->
 
-        <mat-form-field>
-          <mat-label>Quantity</mat-label>
-          <input matInput type="number"
-                 min="1"
-                 [formControl]="controlAt(i,'quantity')">
-        </mat-form-field>
+      <div class="preview-loading" *ngIf="previewStateMap[i]?.loading">
 
-        <mat-form-field>
-          <mat-label>Unit Price</mat-label>
-          <input matInput type="number"
-                 min="0"
-                 [formControl]="controlAt(i,'unitPrice')">
-        </mat-form-field>
+        <mat-icon>
+          sync
+        </mat-icon>
 
-        <div class="line-total">
-          {{ lineTotal(i) | currency:'KES ' }}
+        Resolving pricing and allocation...
+
+      </div>
+
+      <div class="preview-panel" *ngIf="linePreview(i) as preview">
+
+        <!-- =========================================== -->
+        <!-- PREVIEW SUMMARY -->
+        <!-- =========================================== -->
+
+        <div class="preview-summary">
+
+          <div class="summary-card">
+
+            <div class="summary-label">
+              Unit Price
+            </div>
+
+            <div class="summary-value">
+              {{ preview.unitPrice | currency:'KES ' }}
+            </div>
+
+          </div>
+
+          <div class="summary-card">
+
+            <div class="summary-label">
+              Total
+            </div>
+
+            <div class="summary-value">
+              {{ preview.totalPrice | currency:'KES ' }}
+            </div>
+
+          </div>
+
+          <div class="summary-card">
+
+            <div class="summary-label">
+              Base Units
+            </div>
+
+            <div class="summary-value">
+              {{ preview.baseUnits }}
+            </div>
+
+          </div>
+
+          <div class="summary-card">
+
+            <div class="summary-label">
+              Available Stock
+            </div>
+
+            <div class="summary-value">
+              {{ preview.availableStock }}
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- =========================================== -->
+        <!-- ADJUSTMENTS -->
+        <!-- =========================================== -->
+
+        <div class="adjustments-section" *ngIf="adjustments(i).length">
+
+          <div class="subsection-title">
+            Pricing Adjustments
+          </div>
+
+          <div class="adjustment-row" *ngFor="let adjustment of adjustments(i)">
+
+            <div class="adjustment-type">
+              {{ adjustment.type }}
+            </div>
+
+            <div class="adjustment-description">
+              {{ adjustment.description }}
+            </div>
+
+            <div class="adjustment-amount">
+              {{ adjustment.amount | currency:'KES ' }}
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- =========================================== -->
+        <!-- ALLOCATIONS -->
+        <!-- =========================================== -->
+
+        <div class="allocation-section" *ngIf="allocationPreview(i).length">
+
+          <div class="subsection-title">
+            Inventory Allocation
+          </div>
+
+          <div class="allocation-row" *ngFor="let allocation of allocationPreview(i)">
+
+            <div>
+              Batch:
+              {{ allocation.batchId }}
+            </div>
+
+            <div>
+              Qty:
+              {{ allocation.allocatedQuantity }}
+            </div>
+
+            <div>
+              Cost:
+              {{ allocation.totalCost | currency:'KES ' }}
+            </div>
+
+          </div>
+
         </div>
 
       </div>
 
-      <!-- STOCK INFO -->
-      <div class="stock-info" *ngIf="stockMap[i]">
-        {{ stockMap[i]?.available }} available ·
-        {{ stockMap[i]?.batchCount || 0 }} batches
+      <!-- =============================================== -->
+      <!-- WARNINGS -->
+      <!-- =============================================== -->
+
+      <div class="warning-panel" *ngIf="previewWarnings(i).length">
+
+        <div class="warning-row" *ngFor="let warning of previewWarnings(i)">
+
+          <mat-icon>
+            warning
+          </mat-icon>
+
+          {{ warning }}
+
+        </div>
+
       </div>
 
-      <!-- COST PREVIEW -->
-      <div class="cost-preview"
-           *ngIf="costPreviewMap[i]">
-        Cost: {{ costPreviewMap[i] | currency:'KES ' }}
-      </div>
-
-    </div>
+    </section>
 
   </div>
 
-  <!-- ADD LINE -->
-  <button mat-stroked-button (click)="addLine()">
-    <mat-icon>add</mat-icon>
-    Add Line
-  </button>
-
+  <!-- ====================================================== -->
   <!-- FOOTER -->
-  <div class="sale-footer">
-    <div class="sale-total">
-      Total: {{ grandTotal() | currency:'KES ' }}
+  <!-- ====================================================== -->
+
+  <section class="sale-footer">
+
+    <div class="sale-total-panel">
+
+      <div class="sale-total-label">
+        Grand Total
+      </div>
+
+      <div class="sale-total-value">
+        {{ grandTotal() | currency:'KES ' }}
+      </div>
+
     </div>
 
-    <button mat-flat-button (click)="submit()">
+    <button mat-flat-button type="button" [disabled]="form.invalid || submitting" (click)="submit()">
+
+      <mat-icon>
+        point_of_sale
+      </mat-icon>
+
       Create Sale
+
     </button>
-  </div>
+
+  </section>
 
 </div>
-
-

@@ -1,217 +1,482 @@
-<div *ngIf="sale" class="flex flex-col gap-4">
+<div class="sale-details-page" *ngIf="sale as s">
 
+    <!-- ===================================================== -->
     <!-- HEADER -->
-    <div class="bg-[var(--surface)] p-4 rounded shadow flex justify-between items-center">
-        <div>
-            <h2 class="text-xl font-semibold">
-                Sale {{ sale.receiptNo | slice:0:8 }}
-            </h2>
-            <p class="text-sm text-[var(--text-secondary)]">
-                {{ sale.createdAt | date:'dd/MM/yyyy HH:mm' }} · {{ sale.createdBy }}
-            </p>
-        </div>
+    <!-- ===================================================== -->
 
-        <mat-chip [color]="sale.status === 'COMPLETED' ? 'primary' : 'default'" class="uppercase tracking-wide text-xs"
-            selected>
-            {{ sale.status }}
-        </mat-chip>
-    </div>
+    <section class="page-header">
 
-    <!-- CUSTOMER -->
-    <div *ngIf="sale.customer" class="bg-[var(--surface)] rounded-lg p-4 shadow-sm relative">
+        <div class="header-main">
 
-        <div class="absolute left-0 top-0 h-full w-1 bg-primary rounded-l"></div>
+            <div class="header-top">
 
-        <div class="flex items-center justify-between mb-3 pl-2">
-            <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
-                Customer
-            </h3>
-            <mat-icon class="text-[var(--text-secondary)]">person</mat-icon>
-        </div>
+                <button mat-icon-button routerLink="/app/sales">
 
-        <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm pl-2">
-            <div class="col-span-2">
-                <div class="label">Name</div>
-                <div class="value font-semibold">{{ sale.customer.name }}</div>
-            </div>
+                    <mat-icon>
+                        arrow_back
+                    </mat-icon>
 
-            <div *ngIf="sale.customer.phoneNumbers?.length">
-                <div class="label">Phone</div>
-                <div class="value tabular-nums">
-                    {{ sale.customer.phoneNumbers[0] }}
-                </div>
-            </div>
+                </button>
 
-            <div *ngIf="sale.customer.emailAddresses?.length">
-                <div class="label">Email</div>
-                <div class="value truncate">
-                    {{ sale.customer.emailAddresses[0] }}
-                </div>
-            </div>
-        </div>
-    </div>
+                <div>
 
-    <!-- SUMMARY -->
-    <div class="grid grid-cols-3 gap-4">
-        <div class="stat-card">
-            <div class="label">Total</div>
-            <div class="value text-lg font-semibold">
-                {{ sale.totalAmount | currency:'KES ' }}
-            </div>
-        </div>
+                    <div class="receipt-no">
+                        {{ s.receiptNo }}
+                    </div>
 
-        <div class="stat-card">
-            <div class="label">Paid</div>
-            <div class="value text-lg font-semibold text-success">
-                {{ paid() | currency:'KES ' }}
-            </div>
-        </div>
+                    <div class="sale-meta">
 
-        <div class="stat-card">
-            <div class="label">Balance</div>
-            <div class="value text-lg font-semibold" [class.text-warn]="balance() > 0">
-                {{ balance() | currency:'KES ' }}
-            </div>
-        </div>
-    </div>
+                        <span>
+                            {{ s.createdAt | date:'medium' }}
+                        </span>
 
-    <!-- ITEMS -->
-    <div class="bg-[var(--surface)] rounded shadow">
-        <table mat-table [dataSource]="sale.items" multiTemplateDataRows>
+                        <span>
+                            •
+                        </span>
 
-            <!-- PRODUCT -->
-            <ng-container matColumnDef="product">
-                <th mat-header-cell *matHeaderCellDef>Product</th>
-                <td mat-cell *matCellDef="let i">
-                    <div class="flex flex-col">
-                        <span>{{ i.productName }}</span>
-
-                        <!-- 🔥 Batch Breakdown -->
-                        <div *ngIf="i.batchConsumptions?.length" class="text-xs text-[var(--text-secondary)] mt-1">
-                            <div *ngFor="let bc of i.batchConsumptions">
-                                Batch {{ bc.batchId | slice:0:6 }}
-                                — {{ bc.quantity }}
-                                &#64; {{ bc.unitCost | currency:'KES ' }}
-                            </div>
-                        </div>
+                        <span>
+                            {{ s.createdBy }}
+                        </span>
 
                     </div>
-                </td>
-            </ng-container>
 
-            <!-- BRANCH -->
-            <ng-container matColumnDef="branch">
-                <th mat-header-cell *matHeaderCellDef>Branch</th>
-                <td mat-cell *matCellDef="let i">
-                    {{ i.branchId | slice:0:8 }}
-                </td>
-            </ng-container>
+                </div>
 
-            <!-- QTY -->
-            <ng-container matColumnDef="qty">
-                <th mat-header-cell *matHeaderCellDef>Qty</th>
-                <td mat-cell *matCellDef="let i">
-                    {{ i.quantity }}
-                </td>
-            </ng-container>
-
-            <!-- PRICE -->
-            <ng-container matColumnDef="price">
-                <th mat-header-cell *matHeaderCellDef>Unit</th>
-                <td mat-cell *matCellDef="let i">
-                    {{ i.unitPrice | currency:'KES ' }}
-                </td>
-            </ng-container>
-
-            <!-- TOTAL -->
-            <ng-container matColumnDef="total">
-                <th mat-header-cell *matHeaderCellDef>Total</th>
-                <td mat-cell *matCellDef="let i">
-                    {{ i.lineTotal | currency:'KES ' }}
-                </td>
-            </ng-container>
-
-            <tr mat-header-row *matHeaderRowDef="lineColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: lineColumns;"></tr>
-
-        </table>
-    </div>
-
-
-
-    <!-- PAYMENTS -->
-    <div class="bg-[var(--surface)] rounded shadow p-4">
-        <div class="flex justify-between mb-2">
-            <h3 class="font-semibold">Payments</h3>
-
-            <div class="flex gap-2" *ngIf="canPay()">
-                <button mat-stroked-button (click)="addCashPayment()">Cash</button>
-                <button mat-stroked-button (click)="addMpesaPayment()">Mpesa</button>
             </div>
+
+            <div class="sale-status" [ngClass]="saleStatusClass()">
+
+                {{ s.status }}
+
+            </div>
+
         </div>
 
-        <table mat-table [dataSource]="sale.payments">
+        <!-- =================================================== -->
+        <!-- ACTIONS -->
+        <!-- =================================================== -->
 
-            <ng-container matColumnDef="date">
-                <th mat-header-cell *matHeaderCellDef>Date</th>
-                <td mat-cell *matCellDef="let p">{{ p.timestamp | date:'dd/MM/yyyy hh:mm a' }}</td>
-            </ng-container>
+        <div class="header-actions">
 
-            <ng-container matColumnDef="method">
-                <th mat-header-cell *matHeaderCellDef>Method</th>
-                <td mat-cell *matCellDef="let p">{{ p.method }}</td>
-            </ng-container>
+            <button mat-stroked-button type="button" routerLink="/app/sales/receipt/{{ s.id }}">
 
-            <ng-container matColumnDef="amount">
-                <th mat-header-cell *matHeaderCellDef>Amount</th>
-                <td mat-cell *matCellDef="let p">{{ p.amount | currency:'KES ' }}</td>
-            </ng-container>
+                <mat-icon>
+                    receipt_long
+                </mat-icon>
 
-            <ng-container matColumnDef="status">
-                <th mat-header-cell *matHeaderCellDef>Status</th>
-                <td mat-cell *matCellDef="let p">{{ p.status }}</td>
-            </ng-container>
-
-            <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef></th>
-                <td mat-cell *matCellDef="let p">
-                    <button mat-icon-button matTooltip="Refund" *ngIf="p.status === 'SUCCESS'"
-                        (click)="refundPayment(p.paymentId)">
-                        <mat-icon>undo</mat-icon>
-                    </button>
-                </td>
-            </ng-container>
-
-            <tr mat-header-row *matHeaderRowDef="paymentColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: paymentColumns;"></tr>
-        </table>
-    </div>
-
-    <!-- ACTIONS -->
-    <div class="flex justify-between items-center mt-4">
-
-        <div class="flex gap-2">
-            <button mat-stroked-button *ngIf="sale.status === 'COMPLETED'"
-                [routerLink]="['/app/sales', sale.id, 'receipt']">
                 Receipt
+
             </button>
 
-            <button mat-flat-button color="primary" *ngIf="sale.status === 'COMPLETED'" routerLink="/app/sales/new">
-                New Sale
-            </button>
-        </div>
+            <button mat-stroked-button type="button" *ngIf="canPay()" (click)="addCashPayment()">
 
-        <div class="flex gap-2">
-            <button mat-stroked-button color="warn" *ngIf="sale.status === 'CREATED'" (click)="cancelSale()">
+                <mat-icon>
+                    payments
+                </mat-icon>
+
+                Cash Payment
+
+            </button>
+
+            <button mat-stroked-button type="button" *ngIf="canPay()" (click)="addMpesaPayment()">
+
+                <mat-icon>
+                    phone_android
+                </mat-icon>
+
+                M-Pesa
+
+            </button>
+
+            <button mat-flat-button type="button" *ngIf="canDeliver()" [disabled]="actionLoading"
+                (click)="deliverSale()">
+
+                <mat-icon>
+                    local_shipping
+                </mat-icon>
+
+                Deliver
+
+            </button>
+
+            <button mat-stroked-button type="button" *ngIf="canCancel()" [disabled]="actionLoading"
+                (click)="cancelSale()">
+
+                <mat-icon>
+                    close
+                </mat-icon>
+
                 Cancel
+
             </button>
 
-            <button mat-flat-button color="warn" *ngIf="sale.status === 'COMPLETED'" (click)="refundSale()">
+            <button mat-stroked-button type="button" *ngIf="canRefund()" [disabled]="actionLoading"
+                (click)="refundSale()">
+
+                <mat-icon>
+                    undo
+                </mat-icon>
+
                 Refund
+
             </button>
+
+            <button mat-stroked-button type="button" *ngIf="canCancelAndRefund()" [disabled]="actionLoading"
+                (click)="cancelAndRefund()">
+
+                <mat-icon>
+                    currency_exchange
+                </mat-icon>
+
+                Cancel + Refund
+
+            </button>
+
         </div>
 
-    </div>
+    </section>
+
+    <!-- ===================================================== -->
+    <!-- SUMMARY -->
+    <!-- ===================================================== -->
+
+    <section class="summary-grid">
+
+        <div class="summary-card">
+
+            <div class="summary-label">
+                Total Amount
+            </div>
+
+            <div class="summary-value">
+                {{ s.totalAmount | currency:'KES ' }}
+            </div>
+
+        </div>
+
+        <div class="summary-card">
+
+            <div class="summary-label">
+                Paid
+            </div>
+
+            <div class="summary-value success">
+                {{ paid() | currency:'KES ' }}
+            </div>
+
+        </div>
+
+        <div class="summary-card">
+
+            <div class="summary-label">
+                Refunded
+            </div>
+
+            <div class="summary-value refunded">
+                {{ refunded() | currency:'KES ' }}
+            </div>
+
+        </div>
+
+        <div class="summary-card">
+
+            <div class="summary-label">
+                Balance
+            </div>
+
+            <div class="summary-value warning">
+                {{ balance() | currency:'KES ' }}
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ===================================================== -->
+    <!-- CUSTOMER -->
+    <!-- ===================================================== -->
+
+    <section class="surface-card" *ngIf="s.customer">
+
+        <div class="section-title">
+            Customer
+        </div>
+
+        <div class="customer-grid">
+
+            <div class="info-block">
+
+                <div class="info-label">
+                    Name
+                </div>
+
+                <div class="info-value">
+                    {{ s.customer.name }}
+                </div>
+
+            </div>
+
+            <div class="info-block">
+
+                <div class="info-label">
+                    Phone
+                </div>
+
+                <div class="info-value">
+                    {{ s.customer.phoneNumbers?.[0] || '-' }}
+                </div>
+
+            </div>
+
+            <div class="info-block">
+
+                <div class="info-label">
+                    Email
+                </div>
+
+                <div class="info-value">
+                    {{ s.customer.emailAddresses?.[0] || '-' }}
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ===================================================== -->
+    <!-- ITEMS -->
+    <!-- ===================================================== -->
+
+    <section class="surface-card">
+
+        <div class="section-title">
+            Sale Items
+        </div>
+
+        <div class="table-wrapper">
+
+            <table mat-table [dataSource]="s.items">
+
+                <!-- PRODUCT -->
+
+                <ng-container matColumnDef="product">
+
+                    <th mat-header-cell *matHeaderCellDef>
+                        Product
+                    </th>
+
+                    <td mat-cell *matCellDef="let item">
+                        {{ item.productName }}
+                    </td>
+
+                </ng-container>
+
+                <!-- VARIANT -->
+
+                <ng-container matColumnDef="variant">
+
+                    <th mat-header-cell *matHeaderCellDef>
+                        Variant
+                    </th>
+
+                    <td mat-cell *matCellDef="let item">
+                        {{ item.classification || '-' }}
+                    </td>
+
+                </ng-container>
+
+                <!-- PACKAGING -->
+
+                <ng-container matColumnDef="packaging">
+
+                    <th mat-header-cell *matHeaderCellDef>
+                        Packaging
+                    </th>
+
+                    <td mat-cell *matCellDef="let item">
+                        {{ item.packagingName || '-' }}
+                    </td>
+
+                </ng-container>
+
+                <!-- BRANCH -->
+
+                <ng-container matColumnDef="branch">
+
+                    <th mat-header-cell *matHeaderCellDef>
+                        Branch
+                    </th>
+
+                    <td mat-cell *matCellDef="let item">
+                        {{ item.branchName || '-' }}
+                    </td>
+
+                </ng-container>
+
+                <!-- QTY -->
+
+                <ng-container matColumnDef="qty">
+
+                    <th mat-header-cell *matHeaderCellDef>
+                        Qty
+                    </th>
+
+                    <td mat-cell *matCellDef="let item">
+                        {{ item.quantity }}
+                    </td>
+
+                </ng-container>
+
+                <!-- PRICE -->
+
+                <ng-container matColumnDef="price">
+
+                    <th mat-header-cell *matHeaderCellDef>
+                        Unit Price
+                    </th>
+
+                    <td mat-cell *matCellDef="let item">
+                        {{ item.unitPrice | currency:'KES ' }}
+                    </td>
+
+                </ng-container>
+
+                <!-- TOTAL -->
+
+                <ng-container matColumnDef="total">
+
+                    <th mat-header-cell *matHeaderCellDef>
+                        Total
+                    </th>
+
+                    <td mat-cell *matCellDef="let item">
+                        {{ item.lineTotal | currency:'KES ' }}
+                    </td>
+
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="lineColumns">
+                </tr>
+
+                <tr mat-row *matRowDef="let row; columns: lineColumns;">
+                </tr>
+
+            </table>
+
+        </div>
+
+    </section>
+
+    <!-- ===================================================== -->
+    <!-- PAYMENTS -->
+    <!-- ===================================================== -->
+
+    <section class="surface-card">
+
+        <div class="section-title">
+            Payments
+        </div>
+
+        <div class="table-wrapper">
+
+            <table mat-table [dataSource]="s.payments || []">
+
+                <!-- DATE -->
+
+                <ng-container matColumnDef="date">
+
+                    <th mat-header-cell *matHeaderCellDef>
+                        Date
+                    </th>
+
+                    <td mat-cell *matCellDef="let payment">
+                        {{ payment.paidAt | date:'medium' }}
+                    </td>
+
+                </ng-container>
+
+                <!-- METHOD -->
+
+                <ng-container matColumnDef="method">
+
+                    <th mat-header-cell *matHeaderCellDef>
+                        Method
+                    </th>
+
+                    <td mat-cell *matCellDef="let payment">
+                        {{ payment.paymentMethod || '-' }}
+                    </td>
+
+                </ng-container>
+
+                <!-- AMOUNT -->
+
+                <ng-container matColumnDef="amount">
+
+                    <th mat-header-cell *matHeaderCellDef>
+                        Amount
+                    </th>
+
+                    <td mat-cell *matCellDef="let payment">
+                        {{ payment.amount | currency:'KES ' }}
+                    </td>
+
+                </ng-container>
+
+                <!-- STATUS -->
+
+                <ng-container matColumnDef="status">
+
+                    <th mat-header-cell *matHeaderCellDef>
+                        Status
+                    </th>
+
+                    <td mat-cell *matCellDef="let payment">
+
+                        <span class="payment-status" [ngClass]="paymentStatusClass(payment.status)">
+
+                            {{ payment.status }}
+
+                        </span>
+
+                    </td>
+
+                </ng-container>
+
+                <!-- ACTIONS -->
+
+                <ng-container matColumnDef="actions">
+
+                    <th mat-header-cell *matHeaderCellDef>
+                        Actions
+                    </th>
+
+                    <td mat-cell *matCellDef="let payment">
+
+                        <button mat-icon-button type="button" matTooltip="Refund Payment"
+                            *ngIf="payment.status === 'SUCCESS'" (click)="refundPayment(payment.id)">
+
+                            <mat-icon>
+                                undo
+                            </mat-icon>
+
+                        </button>
+
+                    </td>
+
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="paymentColumns">
+                </tr>
+
+                <tr mat-row *matRowDef="let row; columns: paymentColumns;">
+                </tr>
+
+            </table>
+
+        </div>
+
+    </section>
+
 </div>
-
-

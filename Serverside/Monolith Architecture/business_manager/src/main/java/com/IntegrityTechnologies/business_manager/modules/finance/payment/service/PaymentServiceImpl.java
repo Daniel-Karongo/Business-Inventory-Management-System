@@ -4,7 +4,6 @@ import com.IntegrityTechnologies.business_manager.config.util.TxnCodeGenerator;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.config.AccountingProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
@@ -20,7 +19,6 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.mod
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.repository.SaleRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.customer.service.CustomerService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
@@ -43,9 +41,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final AccountingFacade accountingFacade;
     private final AccountingAccounts accountingAccounts;
     private final CustomerService customerService;
-    private final InventoryService inventoryService;
     private final JournalEntryRepository journalEntryRepository;
-    private final AccountingProperties accountingProperties;
     private final RevenueRecognitionService revenueRecognitionService;
 
     private UUID tenantId() {

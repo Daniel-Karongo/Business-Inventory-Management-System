@@ -1,135 +1,289 @@
 :host {
   display: block;
-  padding: 12px;
+  padding: 24px;
+  background: #f5f5f5;
 }
 
-/* ---------- BASE ---------- */
-
-.receipt {
-  max-width: 300px;
-  margin: 0 auto;
-  font-family: monospace;
-  font-size: 0.85rem;
-  color: #000;
-}
+/* =========================================================
+   LOADING
+   ========================================================= */
 
 .receipt-loading {
-  padding: 24px;
+  padding: 48px;
   text-align: center;
 }
 
-/* ---------- HEADER ---------- */
+/* =========================================================
+   PAGE
+   ========================================================= */
+
+.receipt-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* =========================================================
+   ACTIONS
+   ========================================================= */
+
+.receipt-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+/* =========================================================
+   RECEIPT
+   ========================================================= */
+
+.receipt {
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  background: #fff;
+  color: #000;
+  border-radius: 10px;
+  padding: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  font-family: monospace;
+  font-size: 0.85rem;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
 
 .receipt-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   text-align: center;
-  margin-bottom: 8px;
+}
+
+.business-name {
+  font-size: 1.2rem;
+  font-weight: 700;
 }
 
 .receipt-title {
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+}
+
+.sale-status {
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.7rem;
   font-weight: 700;
-  font-size: 1rem;
+  text-transform: uppercase;
 }
 
-.receipt-subtitle {
-  font-size: 0.8rem;
+/* =========================================================
+   STATUS
+   ========================================================= */
+
+.status-created {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
 }
 
-/* ---------- META ---------- */
+.status-completed {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.status-refunded {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.status-cancelled {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+
+/* =========================================================
+   META
+   ========================================================= */
 
 .receipt-meta {
-  font-size: 0.8rem;
-  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 18px;
 }
 
-/* ---------- DIVIDER ---------- */
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
 
-hr {
-  border: none;
+/* =========================================================
+   DIVIDER
+   ========================================================= */
+
+.divider {
   border-top: 1px dashed #000;
-  margin: 6px 0;
+  margin: 16px 0;
 }
 
-/* ---------- ITEMS ---------- */
+/* =========================================================
+   SECTION TITLE
+   ========================================================= */
+
+.receipt-section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+/* =========================================================
+   ITEMS
+   ========================================================= */
 
 .receipt-items {
-  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .receipt-item {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 2px;
+  gap: 12px;
 }
 
-.item-left {
+.item-main {
   flex: 1;
 }
 
-.item-right {
-  text-align: right;
-  white-space: nowrap;
+.item-name {
+  font-weight: 700;
 }
 
-/* ---------- TOTAL ---------- */
+.item-meta {
+  margin-top: 2px;
+  font-size: 0.78rem;
+  opacity: 0.75;
+}
 
-.receipt-total {
+.item-total {
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+/* =========================================================
+   TOTALS
+   ========================================================= */
+
+.totals-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.total-row {
   display: flex;
   justify-content: space-between;
+}
+
+.total-row.balance {
   font-weight: 700;
+}
+
+/* =========================================================
+   PAYMENTS
+   ========================================================= */
+
+.payments-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.payment-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.payment-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.payment-status {
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.payment-success {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.payment-refunded {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.payment-failed {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+
+.payment-pending {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+}
+
+/* =========================================================
+   CUSTOMER
+   ========================================================= */
+
+.customer-section {
   margin-top: 4px;
 }
 
-/* ---------- PAYMENTS ---------- */
-
-.receipt-payments {
-  margin-top: 6px;
+.customer-line {
+  margin-bottom: 4px;
 }
 
-.receipt-payment {
-  display: flex;
-  justify-content: space-between;
+.customer-line.muted {
+  opacity: 0.75;
 }
 
-/* ---------- CUSTOMER ---------- */
-
-.receipt-customer {
-  margin-top: 6px;
-}
-
-.receipt-section-title {
-  font-weight: 700;
-  text-transform: uppercase;
-  font-size: 0.7rem;
-  margin-bottom: 2px;
-}
-
-.receipt-line {
-  font-size: 0.85rem;
-}
-
-.muted {
-  opacity: 0.8;
-}
-
-/* ---------- FOOTER ---------- */
+/* =========================================================
+   FOOTER
+   ========================================================= */
 
 .receipt-footer {
-  text-align: center;
-  margin-top: 8px;
-  font-size: 0.8rem;
-}
-
-/* ---------- ACTIONS ---------- */
-
-.receipt-actions {
   display: flex;
-  justify-content: center;
-  margin-top: 16px;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
 }
 
-/* ---------- PRINT ---------- */
+.footer-meta {
+  opacity: 0.65;
+  font-size: 0.72rem;
+}
+
+/* =========================================================
+   PRINT
+   ========================================================= */
 
 @media print {
+
   body * {
     visibility: hidden;
   }
@@ -144,9 +298,17 @@ hr {
     left: 0;
     top: 0;
     width: 100%;
+    box-shadow: none;
+    border-radius: 0;
+    margin: 0;
   }
 
   .no-print {
     display: none !important;
+  }
+
+  :host {
+    padding: 0;
+    background: white;
   }
 }

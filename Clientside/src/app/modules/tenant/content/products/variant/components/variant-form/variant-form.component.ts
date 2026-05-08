@@ -1,15 +1,48 @@
-import { Component, Inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import {
+  Component,
+  Inject,
+  OnInit
+} from '@angular/core';
 
-import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
-import { MatInputModule } from '@angular/material/input';
-import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
+import {
+  CommonModule
+} from '@angular/common';
 
-import { ProductVariant } from '../../../../stock/models/product-variant.model';
-import { ProductVariantService } from '../../services/product-variant.service';
+import {
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule
+} from '@angular/forms';
+
+import {
+  MAT_DIALOG_DATA,
+  MatDialogModule,
+  MatDialogRef
+} from '@angular/material/dialog';
+
+import {
+  MatButtonModule
+} from '@angular/material/button';
+
+import {
+  MatFormFieldModule
+} from '@angular/material/form-field';
+
+import {
+  MatIconModule
+} from '@angular/material/icon';
+
+import {
+  MatInputModule
+} from '@angular/material/input';
+
+import {
+  ProductVariant
+} from '../../../../stock/models/product-variant.model';
+
+import {
+  ProductVariantService
+} from '../../services/product-variant.service';
 
 @Component({
   selector: 'app-variant-form',
@@ -23,51 +56,94 @@ import { ProductVariantService } from '../../services/product-variant.service';
     MatIconModule,
     MatFormFieldModule
   ],
-  templateUrl: './variant-form.component.html',
-  styleUrls: ['./variant-form.component.scss']
+  templateUrl:
+    './variant-form.component.html',
+  styleUrls: [
+    './variant-form.component.scss'
+  ]
 })
-export class VariantFormComponent implements OnInit {
+export class VariantFormComponent
+  implements OnInit {
 
   saving = false;
+
   form!: FormGroup;
 
   constructor(
-    private fb: FormBuilder,
-    private dialogRef: MatDialogRef<VariantFormComponent>,
-    private variantService: ProductVariantService,
-    @Inject(MAT_DIALOG_DATA) public variant: ProductVariant
-  ) {}
+    private readonly fb: FormBuilder,
+    private readonly dialogRef:
+      MatDialogRef<VariantFormComponent>,
+    private readonly variantService:
+      ProductVariantService,
+    @Inject(MAT_DIALOG_DATA)
+    public readonly variant:
+      ProductVariant
+  ) { }
 
   ngOnInit(): void {
-    // ✅ form MUST be built here
+
     this.form = this.fb.group({
-      classification: [{ value: this.variant.classification, disabled: true }],
-      sku: [this.variant.sku ?? null],
-      minimumSellingPrice: [this.variant.minimumSellingPrice ?? null],
-      averageBuyingPrice: [this.variant.averageBuyingPrice ?? null]
+      classification: [
+        {
+          value:
+            this.variant.classification,
+          disabled: true
+        }
+      ],
+
+      sku: [
+        this.variant.sku ?? null
+      ],
+
+      minimumPercentageProfit: [
+        this.variant.minimumPercentageProfit ?? null
+      ],
+
+      minimumProfit: [
+        this.variant.minimumProfit ?? null
+      ]
     });
   }
 
-  save() {
-    if (this.form.invalid || this.saving) return;
+  save(): void {
+
+    if (
+      this.form.invalid ||
+      this.saving
+    ) {
+      return;
+    }
 
     this.saving = true;
 
-    const raw = this.form.getRawValue();
+    const raw =
+      this.form.getRawValue();
 
-    const payload: Partial<ProductVariant> = {
-      sku: raw.sku ?? undefined,
-      minimumSellingPrice: raw.minimumSellingPrice ?? undefined,
-      averageBuyingPrice: raw.averageBuyingPrice ?? undefined
-    };
+    this.variantService.update(
+      this.variant.id,
+      {
+        sku:
+          raw.sku ?? undefined,
 
-    this.variantService.update(this.variant.id, payload).subscribe({
-      next: updated => this.dialogRef.close(updated),
-      error: () => this.saving = false
-    });
+        minimumPercentageProfit:
+          raw.minimumPercentageProfit ?? undefined,
+
+        minimumProfit:
+          raw.minimumProfit ?? undefined
+      }
+    )
+      .subscribe({
+        next: updated =>
+          this.dialogRef.close(updated),
+
+        error: () => {
+          this.saving = false;
+        }
+      });
   }
 
-  cancel() {
+  cancel(): void {
+
     this.dialogRef.close();
   }
 }

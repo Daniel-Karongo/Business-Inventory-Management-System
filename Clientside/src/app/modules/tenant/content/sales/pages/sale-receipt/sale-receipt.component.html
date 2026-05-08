@@ -1,81 +1,324 @@
-<div *ngIf="loading" class="receipt-loading">
-  Loading receipt…
+<div class="receipt-loading" *ngIf="loading">
+
+  Loading receipt...
+
 </div>
 
-<div *ngIf="!loading" id="print-area" class="receipt">
+<div *ngIf="!loading && sale" class="receipt-page">
 
-  <!-- HEADER -->
-  <div class="receipt-header">
-    <div class="receipt-title">Business Manager</div>
-    <div class="receipt-subtitle">Official Receipt</div>
+  <!-- =================================================== -->
+  <!-- ACTIONS -->
+  <!-- =================================================== -->
+
+  <div class="receipt-actions no-print">
+
+    <button mat-stroked-button type="button" routerLink="/app/sales/{{ sale.id }}">
+
+      Back to Sale
+
+    </button>
+
+    <button mat-flat-button type="button" (click)="print()">
+
+      Print Receipt
+
+    </button>
+
   </div>
 
-  <!-- META -->
-  <div class="receipt-meta">
-    <div>Sale #: <strong>{{ sale.id }}</strong></div>
-    <div>Date: {{ sale.createdAt | date:'short' }}</div>
-    <div>Served by: {{ sale.createdBy }}</div>
-  </div>
+  <!-- =================================================== -->
+  <!-- RECEIPT -->
+  <!-- =================================================== -->
 
-  <hr />
+  <div id="print-area" class="receipt">
 
-  <!-- ITEMS -->
-  <div class="receipt-items">
-    <div *ngFor="let i of sale.items" class="receipt-item">
-      <div class="item-left">
-        {{ i.productName }} × {{ i.quantity }}
+    <!-- =============================================== -->
+    <!-- HEADER -->
+    <!-- =============================================== -->
+
+    <div class="receipt-header">
+
+      <div class="business-name">
+        Business Manager
       </div>
-      <div class="item-right">
-        {{ i.lineTotal | currency:'KES' }}
+
+      <div class="receipt-title">
+        SALES RECEIPT
       </div>
-    </div>
-  </div>
 
-  <hr />
+      <div class="sale-status" [ngClass]="saleStatusClass()">
 
-  <!-- TOTAL -->
-  <div class="receipt-total">
-    <div>Total</div>
-    <div>{{ sale.totalAmount | currency:'KES' }}</div>
-  </div>
+        {{ sale.status }}
 
-  <!-- PAYMENTS -->
-  <div class="receipt-payments">
-    <div class="receipt-section-title">Payments</div>
+      </div>
 
-    <div *ngFor="let p of sale.payments" class="receipt-payment">
-      <div>{{ p.method }}</div>
-      <div>{{ p.amount | currency:'KES' }}</div>
-    </div>
-  </div>
-
-  <!-- CUSTOMER -->
-  <div *ngIf="sale.customer" class="receipt-customer">
-    <div class="receipt-section-title">Customer</div>
-
-    <div class="receipt-line">
-      {{ sale.customer.name }}
     </div>
 
-    <div *ngIf="sale.customer.phoneNumbers?.length"
-         class="receipt-line muted">
-      {{ sale.customer.phoneNumbers[0] }}
+    <!-- =============================================== -->
+    <!-- META -->
+    <!-- =============================================== -->
+
+    <div class="receipt-meta">
+
+      <div class="meta-row">
+
+        <span>
+          Receipt No
+        </span>
+
+        <strong>
+          {{ sale.receiptNo }}
+        </strong>
+
+      </div>
+
+      <div class="meta-row">
+
+        <span>
+          Date
+        </span>
+
+        <strong>
+          {{
+          sale.createdAt
+          | date:'dd/MM/yyyy HH:mm'
+          }}
+        </strong>
+
+      </div>
+
+      <div class="meta-row">
+
+        <span>
+          Served By
+        </span>
+
+        <strong>
+          {{ sale.createdBy }}
+        </strong>
+
+      </div>
+
     </div>
+
+    <div class="divider"></div>
+
+    <!-- =============================================== -->
+    <!-- ITEMS -->
+    <!-- =============================================== -->
+
+    <div class="receipt-section-title">
+      ITEMS
+    </div>
+
+    <div class="receipt-items">
+
+      <div class="receipt-item" *ngFor="let item of sale.items">
+
+        <div class="item-main">
+
+          <div class="item-name">
+
+            {{ item.productName }}
+
+          </div>
+
+          <div class="item-meta">
+
+            {{ item.quantity }}
+            ×
+            {{
+            item.unitPrice
+            | currency:'KES '
+            }}
+
+          </div>
+
+        </div>
+
+        <div class="item-total">
+
+          {{
+          item.lineTotal
+          | currency:'KES '
+          }}
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- =============================================== -->
+    <!-- TOTALS -->
+    <!-- =============================================== -->
+
+    <div class="totals-section">
+
+      <div class="total-row">
+
+        <span>
+          Total
+        </span>
+
+        <strong>
+          {{
+          sale.totalAmount
+          | currency:'KES '
+          }}
+        </strong>
+
+      </div>
+
+      <div class="total-row">
+
+        <span>
+          Paid
+        </span>
+
+        <strong>
+          {{
+          paidAmount()
+          | currency:'KES '
+          }}
+        </strong>
+
+      </div>
+
+      <div class="total-row" *ngIf="refundedAmount() > 0">
+
+        <span>
+          Refunded
+        </span>
+
+        <strong>
+          {{
+          refundedAmount()
+          | currency:'KES '
+          }}
+        </strong>
+
+      </div>
+
+      <div class="total-row balance">
+
+        <span>
+          Balance
+        </span>
+
+        <strong>
+          {{
+          balance()
+          | currency:'KES '
+          }}
+        </strong>
+
+      </div>
+
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- =============================================== -->
+    <!-- PAYMENTS -->
+    <!-- =============================================== -->
+
+    <div class="receipt-section-title" *ngIf="sale.payments?.length">
+
+      PAYMENTS
+
+    </div>
+
+    <div class="payments-section" *ngIf="sale.payments?.length">
+
+      <div class="payment-row" *ngFor="let payment of sale.payments">
+
+        <div class="payment-main">
+
+          <div>
+
+            {{
+            payment.paymentMethod ||
+            'PAYMENT'
+            }}
+
+          </div>
+
+          <div class="payment-status" [ngClass]="paymentStatusClass(payment.status)">
+
+            {{ payment.status }}
+
+          </div>
+
+        </div>
+
+        <div class="payment-amount">
+
+          {{
+          payment.amount
+          | currency:'KES '
+          }}
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- =============================================== -->
+    <!-- CUSTOMER -->
+    <!-- =============================================== -->
+
+    <div *ngIf="sale.customer" class="customer-section">
+
+      <div class="divider"></div>
+
+      <div class="receipt-section-title">
+        CUSTOMER
+      </div>
+
+      <div class="customer-line">
+        {{ sale.customer.name }}
+      </div>
+
+      <div class="customer-line muted" *ngIf="sale.customer.phoneNumbers?.length">
+
+        {{
+        sale.customer.phoneNumbers[0]
+        }}
+
+      </div>
+
+      <div class="customer-line muted" *ngIf="sale.customer.emailAddresses?.length">
+
+        {{
+        sale.customer.emailAddresses[0]
+        }}
+
+      </div>
+
+    </div>
+
+    <!-- =============================================== -->
+    <!-- FOOTER -->
+    <!-- =============================================== -->
+
+    <div class="divider"></div>
+
+    <div class="receipt-footer">
+
+      <div>
+        Thank you for your business
+      </div>
+
+      <div class="footer-meta">
+        Generated by Business Manager
+      </div>
+
+    </div>
+
   </div>
 
-  <hr />
-
-  <!-- FOOTER -->
-  <div class="receipt-footer">
-    Thank you for your business
-  </div>
 </div>
-
-<!-- ACTION (NOT PRINTED) -->
-<div class="receipt-actions no-print">
-  <button mat-flat-button color="primary" (click)="print()">
-    Print Receipt
-  </button>
-</div>
-
-

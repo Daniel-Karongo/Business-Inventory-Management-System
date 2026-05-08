@@ -1,41 +1,236 @@
-:host {
-  display: block;
+/* =========================================================
+   PAGE
+   ========================================================= */
+
+.sales-list-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-bottom: 32px;
 }
 
-mat-chip {
-  font-size: 12px;
-  height: 24px;
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
-/* ================= SORTABLE HEADERS ================= */
+.page-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.page-subtitle {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* =========================================================
+   SURFACE
+   ========================================================= */
+
+.surface-card {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* =========================================================
+   FILTERS
+   ========================================================= */
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 18px;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+/* =========================================================
+   TABLE
+   ========================================================= */
+
+.table-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+}
+
+.table-row {
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.table-row:hover {
+  background: var(--surface-hover);
+}
+
+th.mat-mdc-header-cell {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+td.mat-mdc-cell {
+  vertical-align: middle;
+}
+
+/* =========================================================
+   SORTING
+   ========================================================= */
 
 .sortable {
   cursor: pointer;
   user-select: none;
 }
 
-/* Inline layout: text + icon sit next to each other */
-.header-inner {
+.header-cell {
   display: inline-flex;
-  /* 🔑 inline, not full-width */
   align-items: center;
   gap: 6px;
-  /* adjust to taste: 4–8px */
 }
 
-/* Sort icon styling */
-.sort-icon {
-  font-size: 18px !important;
-  line-height: 1 !important;
-  opacity: 0.6;
-  transition: opacity 0.15s ease;
+.header-cell mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  opacity: 0.65;
 }
 
-/* Hover */
 .sortable:hover {
-  background-color: var(--surface-hover) !important;
+  background: var(--surface-hover);
 }
 
-.sortable:hover .sort-icon {
-  opacity: 1;
+/* =========================================================
+   STATUS
+   ========================================================= */
+
+.sale-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.status-created {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+}
+
+.status-completed {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.status-refunded {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.status-cancelled {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+
+/* =========================================================
+   MONEY
+   ========================================================= */
+
+.money-success {
+  color: #059669;
+  font-weight: 600;
+}
+
+.money-danger {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+/* =========================================================
+   RECEIPT
+   ========================================================= */
+
+.receipt-cell {
+  font-weight: 600;
+}
+
+/* =========================================================
+   LOADING
+   ========================================================= */
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px;
+}
+
+/* =========================================================
+   PAGINATOR
+   ========================================================= */
+
+mat-paginator {
+  border-top: 1px solid var(--border);
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1024px) {
+
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+
+  .surface-card {
+    padding: 18px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-actions button {
+    width: 100%;
+  }
 }

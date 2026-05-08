@@ -52,12 +52,10 @@ public class SaleBulkService {
 
     private final SaleRepository saleRepository;
     private final ProductVariantRepository productVariantRepository;
-    private final InventoryService inventoryService;
     private final PaymentService paymentService;
     private final BranchRepository branchRepository;
     private final ReceiptNumberService receiptNumberService;
     private final ProductVariantPackagingService packagingService;
-    private final PricingEngineService pricingEngine;
     private final ObjectMapper objectMapper;
     private final TaxSystemStateService taxSystemStateService;
     private final SellableResolutionService sellableResolutionService;

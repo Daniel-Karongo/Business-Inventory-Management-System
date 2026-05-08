@@ -1,18 +1,24 @@
 import { Injectable } from '@angular/core';
+
 import { map, Observable } from 'rxjs';
+
+import { environment } from '../../../../../../environments/environment';
+
+import { ApiResponse } from '../../../../../core/models/api-response.model';
+import { BaseApiService } from '../../../../../core/services/api/base-api.service';
+
 import {
     SaleLinePreviewRequest,
     SaleLinePreviewResponse
 } from '../../stock/models/sale-preview.model';
-import { BaseApiService } from '../../../../../core/services/api/base-api.service';
-import { ApiResponse } from '../../../../../core/models/api-response.model';
-import { environment } from '../../../../../../environments/environment';
 
 @Injectable({
     providedIn: 'root'
 })
-export class SalePreviewService
-    extends BaseApiService {
+export class SalePreviewService extends BaseApiService {
+
+    private readonly endpoints =
+        environment.endpoints.sales;
 
     previewLine(
         request: SaleLinePreviewRequest
@@ -21,10 +27,14 @@ export class SalePreviewService
         return this.post<
             ApiResponse<SaleLinePreviewResponse>
         >(
-            environment.endpoints.sales.previewLine,
+            this.endpoints.previewLine,
             request
         ).pipe(
-            map(res => this.unwrap(res))
+            map(response =>
+                this.unwrap<SaleLinePreviewResponse>(
+                    response
+                )
+            )
         );
     }
 }

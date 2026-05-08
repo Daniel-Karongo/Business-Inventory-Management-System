@@ -1,9 +1,6 @@
 /* =========================================================
-   SALES BULK IMPORT — RESTORED LEGACY LOOK
-   Shell handles title, import zone, footer
+   BODY
    ========================================================= */
-
-/* ===== BODY RHYTHM (RESTORED) ===== */
 
 .sales-body {
   display: flex;
@@ -11,7 +8,9 @@
   gap: 24px;
 }
 
-/* ===== ROWS ===== */
+/* =========================================================
+   ROWS
+   ========================================================= */
 
 .rows {
   display: flex;
@@ -19,57 +18,93 @@
   gap: 20px;
 }
 
-/* ===== ROW CARD ===== */
+/* =========================================================
+   ROW CARD
+   ========================================================= */
 
 .row-card {
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 20px;
+  border-radius: 18px;
+  padding: 22px;
   background: var(--surface);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
 }
+
+.row-card:hover {
+  background: var(--surface-hover);
+}
+
+/* =========================================================
+   ROW HEADER
+   ========================================================= */
 
 .row-header {
   display: flex;
   justify-content: space-between;
-  font-weight: 600;
+  align-items: center;
+  padding-bottom: 10px;
   border-bottom: 1px dashed var(--border);
-  padding-bottom: 6px;
 }
 
-/* ===== GRIDS ===== */
+.row-title {
+  font-weight: 700;
+}
 
-.grid-2 {
+/* =========================================================
+   OPTIONS
+   ========================================================= */
+
+.options-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 18px;
+  align-items: center;
 }
+
+/* =========================================================
+   GRID
+   ========================================================= */
 
 .grid-3 {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
 }
 
-/* ===== FORM FIELD NORMALIZATION ===== */
+/* =========================================================
+   FORM FIELDS
+   ========================================================= */
 
-.mat-form-field {
+mat-form-field {
   width: 100%;
 }
 
-/* ===== ERROR ===== */
+/* =========================================================
+   ERROR
+   ========================================================= */
 
 .row-error {
-  color: #c62828;
-  font-size: 0.8rem;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+  font-size: 0.82rem;
+  font-weight: 500;
 }
 
-/* ===== LINE HIGHLIGHT ===== */
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
 
-.highlight-line {
-  outline: 2px solid #1976d2;
-  outline-offset: 4px;
-  transition: outline 0.3s ease;
+@media (max-width: 1024px) {
+
+  .grid-3,
+  .options-grid {
+    grid-template-columns: 1fr;
+  }
 }
