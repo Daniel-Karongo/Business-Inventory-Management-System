@@ -4,28 +4,36 @@ import com.IntegrityTechnologies.business_manager.config.files.FileStorageServic
 import com.IntegrityTechnologies.business_manager.config.files.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.config.kafka.OutboxEventWriter;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.events.VariantImageUploadRequestedEvent;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariantImage;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.events.VariantImageUploadRequestedEvent;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.*;
-import java.nio.file.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -40,14 +48,13 @@ public class ProductVariantImageService {
     private final OutboxEventWriter outboxEventWriter;
 
     private UUID tenantId() { return TenantContext.getTenantId(); }
-    private UUID branchId() { return BranchContext.get(); }
 
-    private ProductVariant getVariant(UUID variantId) {
+    private ProductVariant getVariant(UUID branchId, UUID variantId) {
         return variantRepo.findByIdSafe(
                 variantId,
                 false,
                 tenantId(),
-                branchId()
+                branchId
         ).orElseThrow(() -> new EntityNotFoundException("Variant not found"));
     }
 
@@ -62,9 +69,9 @@ public class ProductVariantImageService {
        ============================================================ */
 
     @Transactional
-    public void uploadVariantImages(UUID variantId, List<MultipartFile> files) throws IOException {
+    public void uploadVariantImages(UUID branchId, UUID variantId, List<MultipartFile> files) throws IOException {
 
-        ProductVariant variant = getVariant(variantId);
+        ProductVariant variant = getVariant(branchId, variantId);
 
         if (files == null || files.isEmpty()) return;
 
@@ -86,11 +93,11 @@ public class ProductVariantImageService {
 
             outboxEventWriter.write(
                     "VARIANT_IMAGE_UPLOAD_REQUESTED",
-                    branchId(),
+                    branchId,
                     VariantImageUploadRequestedEvent.builder()
                             .variantId(variantId)
                             .tenantId(tenantId())
-                            .branchId(branchId())
+                            .branchId(branchId)
                             .fileName(file.getOriginalFilename())
                             .tempFilePath(tempFile.toString())
                             .build()
@@ -99,7 +106,7 @@ public class ProductVariantImageService {
     }
 
     @Transactional
-    public void saveVariantImage(ProductVariant variant, MultipartFile file) throws IOException {
+    public void saveVariantImage(UUID branchId, ProductVariant variant, MultipartFile file) throws IOException {
 
         if (file == null || file.isEmpty()) return;
 
@@ -110,7 +117,7 @@ public class ProductVariantImageService {
         Optional<ProductVariantImage> existing =
                 imageRepo.findFirstByTenantIdAndBranchIdAndContentHash(
                         tenantId(),
-                        branchId(),
+                        branchId,
                         hash
                 );
 
@@ -153,7 +160,7 @@ public class ProductVariantImageService {
                         .filePath("/api/product-variants/" + variant.getId() + "/images/" + fileName)
                         .contentHash(hash)
                         .tenantId(tenantId())
-                        .branchId(branchId())
+                        .branchId(branchId)
                         .deleted(false)
                         .uploadedAt(LocalDateTime.now())
                         .build()
@@ -165,13 +172,13 @@ public class ProductVariantImageService {
        ============================================================ */
 
     @Transactional(readOnly = true)
-    public List<String> getImageUrls(UUID variantId) {
+    public List<String> getImageUrls(UUID branchId, UUID variantId) {
 
-        getVariant(variantId);
+        getVariant(branchId, variantId);
 
         return imageRepo.findByTenantIdAndBranchIdAndVariant_IdAndDeletedFalse(
                         tenantId(),
-                        branchId(),
+                        branchId,
                         variantId
                 )
                 .stream()
@@ -179,14 +186,14 @@ public class ProductVariantImageService {
                 .toList();
     }
 
-    public ResponseEntity<Resource> getProductVariantImage(UUID variantId, String fileName) {
+    public ResponseEntity<Resource> getProductVariantImage(UUID branchId, UUID variantId, String fileName) {
 
-        getVariant(variantId);
+        getVariant(branchId, variantId);
 
         ProductVariantImage img = imageRepo
                 .findByTenantIdAndBranchIdAndVariant_IdAndFileNameAndDeletedFalse(
                         tenantId(),
-                        branchId(),
+                        branchId,
                         variantId,
                         fileName
                 )
@@ -201,14 +208,14 @@ public class ProductVariantImageService {
         return ResponseEntity.ok(new FileSystemResource(path));
     }
 
-    public ResponseEntity<Resource> downloadZipResponse(UUID variantId) throws IOException {
+    public ResponseEntity<Resource> downloadZipResponse(UUID branchId, UUID variantId) throws IOException {
 
-        getVariant(variantId);
+        getVariant(branchId, variantId);
 
         List<ProductVariantImage> images =
                 imageRepo.findByTenantIdAndBranchIdAndVariant_IdAndDeletedFalse(
                         tenantId(),
-                        branchId(),
+                        branchId,
                         variantId
                 );
 

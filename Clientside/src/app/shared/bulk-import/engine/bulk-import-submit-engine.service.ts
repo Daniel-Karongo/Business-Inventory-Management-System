@@ -39,115 +39,193 @@ export class BulkImportSubmitEngineService {
     title,
     confirmLabel = 'Import Now',
     columns,
+    onPreviewTransform,
     onFinalSuccess,
     onConfirmRetry,
-    onErrorsApplied
+    onErrorsApplied,
+    setLoading,
   }: {
-    submitFn: (req: BulkRequest<any>) => Observable<BulkResult<T>>;
+    submitFn:
+    (
+      req: BulkRequest<any>
+    ) => Observable<BulkResult<T>>;
+
     payload: BulkRequest<any>;
+
     rows: any[];
+
     dryRun: boolean;
+
     title: string;
+
     confirmLabel?: string;
-    columns?: { key: string; label: string }[];
-    onFinalSuccess: (res: BulkResult<T>) => void;
+
+    columns?: {
+      key: string;
+      label: string;
+    }[];
+
+    setLoading?: (
+      loading: boolean
+    ) => void;
+
+    onPreviewTransform?:
+    (
+      res: BulkResult<T>
+    ) => void;
+
+    onFinalSuccess:
+    (
+      res: BulkResult<T>
+    ) => void;
+
     onConfirmRetry: () => void;
-    onErrorsApplied?: (res: BulkResult<T>) => void;
+
+    onErrorsApplied?:
+    (
+      res: BulkResult<T>
+    ) => void;
   }) {
+    setLoading?.(true);
 
-    submitFn(payload).subscribe({
-      next: res => {
+    submitFn(payload)
+      .subscribe({
 
-        /* ======================================================
-           INVENTORY BACKEND NORMALIZATION
-           ------------------------------------------------------
-           Inventory returns preview rows inside:
-             result.data[n].rows
+        next: res => {
 
-           BulkImportResultDialogComponent renders from:
-             result.data
+          setLoading?.(false);
 
-           So we normalize ONCE here.
-           ====================================================== */
+          const dataAsUnknown =
+            res.data as unknown[];
 
-        const dataAsUnknown = res.data as unknown[];
+          if (
+            Array.isArray(
+              dataAsUnknown
+            )
+          ) {
 
-        if (Array.isArray(dataAsUnknown)) {
-          const previewContainer = dataAsUnknown.find(hasRowsContainer);
+            const previewContainer =
+              dataAsUnknown.find(
+                hasRowsContainer
+              );
 
-          if (previewContainer) {
-            res = {
-              ...res,
-              data: previewContainer.rows
-            };
+            if (
+              previewContainer
+            ) {
+
+              res = {
+                ...res,
+                data:
+                  previewContainer.rows
+              };
+            }
           }
-        }
 
-        /* ======================================================
-           APPLY FIELD-LEVEL ERRORS
-           ====================================================== */
-
-        rows.forEach(r =>
-          r.patchValue({ _error: '' }, { emitEvent: false })
-        );
-
-        res.errors?.forEach(e => {
-          const row = rows[e.row - 1];
-          if (row) {
-            row.patchValue({ _error: e.message });
-          }
-        });
-
-        onErrorsApplied?.(res);
-
-        /* ======================================================
-           FINAL (NON-DRY-RUN) SUCCESS
-           ====================================================== */
-
-        if (!dryRun && res.failed === 0) {
-          this.snackbar.open(
-            `${res.success} records imported successfully`,
-            'Close',
-            { duration: 3000 }
+          onPreviewTransform?.(
+            res
           );
-          onFinalSuccess(res);
-          return;
+
+          rows.forEach(
+            r =>
+              r.patchValue(
+                {
+                  _error: ''
+                },
+                {
+                  emitEvent: false
+                }
+              )
+          );
+
+          res.errors?.forEach(
+            e => {
+
+              const row =
+                rows[
+                e.row - 1
+                ];
+
+              if (row) {
+
+                row.patchValue({
+                  _error:
+                    e.message
+                });
+              }
+            }
+          );
+
+          onErrorsApplied?.(
+            res
+          );
+
+          if (
+            !dryRun &&
+            res.failed === 0
+          ) {
+
+            this.snackbar.open(
+              `${res.success} records imported successfully`,
+              'Close',
+              {
+                duration: 3000
+              }
+            );
+
+            onFinalSuccess(
+              res
+            );
+
+            return;
+          }
+
+          const ref =
+            this.dialog.open(
+              BulkImportResultDialogComponent,
+              {
+                width: '1100px',
+                maxWidth: '95vw',
+                data: {
+                  title,
+                  dryRun,
+                  result: res,
+                  confirmLabel,
+                  columns
+                }
+              }
+            );
+
+          ref.afterClosed()
+            .subscribe(
+              confirm => {
+
+                onErrorsApplied?.(
+                  res
+                );
+
+                if (
+                  confirm
+                ) {
+
+                  onConfirmRetry();
+                }
+              }
+            );
+        },
+
+        error: err => {
+
+          setLoading?.(false);
+
+          this.snackbar.open(
+            'Bulk import failed',
+            'Close',
+            {
+              duration: 3000
+            }
+          );
         }
-
-        /* ======================================================
-           PREVIEW DIALOG
-           ====================================================== */
-
-        const ref = this.dialog.open(BulkImportResultDialogComponent, {
-          width: '1100px',
-          maxWidth: '95vw',
-          data: {
-            title,
-            dryRun,
-            result: res,
-            confirmLabel,
-            columns
-          }
-        });
-
-        ref.afterClosed().subscribe(confirm => {
-          // restore error navigation after dialog close
-          onErrorsApplied?.(res);
-
-          if (confirm) {
-            onConfirmRetry();
-          }
-        });
-      },
-
-      error: () => {
-        this.snackbar.open(
-          'Bulk import failed',
-          'Close',
-          { duration: 3000 }
-        );
-      }
-    });
+      });
   }
 
   executeMultipart<T>({

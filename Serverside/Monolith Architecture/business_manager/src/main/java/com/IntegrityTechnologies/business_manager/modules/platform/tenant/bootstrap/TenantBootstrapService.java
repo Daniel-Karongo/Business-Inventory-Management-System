@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.platform.tenant.boots
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.BranchAccountingSettings;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.BranchAccountingSettingsRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.seed.AccountingPeriodBootstrapService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.seed.BranchChartOfAccountsService;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.TaxSystemState;
@@ -50,6 +51,7 @@ public class TenantBootstrapService {
     private final TaxProperties taxProperties;
 
     private final PasswordEncoder passwordEncoder;
+    private final AccountingPeriodBootstrapService accountingPeriodBootstrapService;
 
     public boolean bootstrapTenant(UUID tenantId, String adminUsername, String adminPassword) {
 
@@ -110,6 +112,11 @@ public class TenantBootstrapService {
             );
         }
 
+        accountingPeriodBootstrapService.ensureCurrentPeriod(
+                tenantId,
+                branch.getId()
+        );
+        
         /* =====================================
            2️⃣B ENSURE TAX CONFIGURATION
         ===================================== */

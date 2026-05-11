@@ -23,7 +23,7 @@ public class WacValuationStrategy implements ValuationStrategy {
                 variantId,
                 TenantContext.getTenantId(),
                 branchId
-        );
+        ).get(0);
 
         BigDecimal totalValue = (BigDecimal) result[0];
 

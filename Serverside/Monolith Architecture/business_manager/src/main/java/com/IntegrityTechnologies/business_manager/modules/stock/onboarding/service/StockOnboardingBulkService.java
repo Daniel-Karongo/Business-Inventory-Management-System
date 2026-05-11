@@ -1,0 +1,172 @@
+package com.IntegrityTechnologies.business_manager.modules.stock.onboarding.service;
+
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkOptions;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
+import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
+import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingBulkPreviewResult;
+import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingBulkPreviewRow;
+import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingRequest;
+import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+@Service
+@RequiredArgsConstructor
+public class StockOnboardingBulkService {
+
+    private final StockOnboardingService onboardingService;
+
+    @Transactional(
+            propagation = Propagation.REQUIRES_NEW
+    )
+    public StockOnboardingResponse executeRow(
+            StockOnboardingRequest row
+    ) {
+        return onboardingService.onboard(row);
+    }
+
+    private String dedupeKey(
+            StockOnboardingRequest row
+    ) {
+
+        String product =
+                row.getProductName() != null
+                        ? row.getProductName().trim().toLowerCase()
+                        : String.valueOf(row.getProductId());
+
+        String classification =
+                row.getClassification() != null
+                        ? row.getClassification().trim().toLowerCase()
+                        : "standard";
+
+        String packaging =
+                row.getPackagings() != null
+                        && !row.getPackagings().isEmpty()
+                        && row.getPackagings().get(0).getName() != null
+                        ? row.getPackagings()
+                        .get(0)
+                        .getName()
+                        .trim()
+                        .toLowerCase()
+                        : "piece";
+
+        String supplier =
+                row.getSuppliers() != null
+                        && !row.getSuppliers().isEmpty()
+                        && row.getSuppliers().get(0).getSupplierName() != null
+                        ? row.getSuppliers()
+                        .get(0)
+                        .getSupplierName()
+                        .trim()
+                        .toLowerCase()
+                        : "unknown";
+
+        return row.getBranchId()
+                + "::"
+                + product
+                + "::"
+                + classification
+                + "::"
+                + packaging
+                + "::"
+                + supplier;
+    }
+
+    public BulkResult<StockOnboardingBulkPreviewResult> bulkOnboard(
+            BulkRequest<StockOnboardingRequest> request
+    ) {
+
+        BulkResult<StockOnboardingBulkPreviewResult> result =
+                new BulkResult<>();
+
+        if (request == null
+                || request.getItems() == null) {
+
+            return result;
+        }
+
+        BulkOptions options =
+                request.getOptions() != null
+                        ? request.getOptions()
+                        : new BulkOptions();
+
+        result.setTotal(request.getItems().size());
+
+        List<StockOnboardingBulkPreviewRow> previewRows =
+                new ArrayList<>();
+
+        long totalUnits = 0;
+
+        BigDecimal totalCost = BigDecimal.ZERO;
+
+        Set<String> seenRows = new HashSet<>();
+
+        for (int i = 0; i < request.getItems().size(); i++) {
+
+            int rowNumber = i + 1;
+
+            StockOnboardingRequest row =
+                    request.getItems().get(i);
+
+            if (options.isSkipDuplicates()) {
+
+                String dedupeKey = dedupeKey(row);
+
+                if (!seenRows.add(dedupeKey)) {
+
+                    result.addError(
+                            rowNumber,
+                            "Duplicate onboarding row detected"
+                    );
+
+                    continue;
+                }
+            }
+
+            try {
+
+                StockOnboardingBulkPreviewRow preview =
+                        onboardingService.preview(row);
+
+                previewRows.add(preview);
+
+                totalUnits += preview.getTotalUnits();
+
+                totalCost =
+                        totalCost.add(preview.getTotalCost());
+
+                if (!options.isDryRun()) {
+
+                    executeRow(row);
+                }
+
+                result.setSuccess(result.getSuccess() + 1);
+
+            } catch (Exception ex) {
+
+                result.addError(
+                        rowNumber,
+                        ex.getMessage()
+                );
+            }
+        }
+
+        result.getData().add(
+                StockOnboardingBulkPreviewResult.builder()
+                        .rows(previewRows)
+                        .totalUnits(totalUnits)
+                        .totalCost(totalCost)
+                        .build()
+        );
+
+        return result;
+    }
+}

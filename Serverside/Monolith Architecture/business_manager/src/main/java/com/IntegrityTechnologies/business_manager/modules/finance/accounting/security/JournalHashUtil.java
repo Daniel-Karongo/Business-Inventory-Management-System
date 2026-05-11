@@ -53,7 +53,7 @@ public class JournalHashUtil {
         ===================================================== */
 
         data.append(journal.getTenantId()).append(SEP);
-        data.append(journal.getBranch().getId()).append(SEP);
+        data.append(journal.getBranchId()).append(SEP);
         data.append(journal.getSourceModule()).append(SEP);
         data.append(journal.getSourceId()).append(SEP);
         data.append(journal.getReference()).append(SEP);

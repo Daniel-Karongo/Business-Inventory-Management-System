@@ -23,29 +23,43 @@ public class ProductVariantImageController {
 
     @GetMapping("/{variantId}/images/{fileName:.+}")
     public ResponseEntity<Resource> getVariantImage(
+            @RequestParam UUID branchId,
             @PathVariable UUID variantId,
             @PathVariable String fileName
     ) {
-        return service.getProductVariantImage(variantId, fileName);
+        return service.getProductVariantImage(
+                branchId,
+                variantId,
+                fileName
+        );
     }
 
     @TenantManagerOnly
     @PostMapping("/{variantId}/images")
     public ResponseEntity<Void> upload(
+            @RequestParam UUID branchId,
             @PathVariable UUID variantId,
             @RequestParam("files") List<MultipartFile> files
     ) throws IOException {
 
-        service.uploadVariantImages(variantId, files);
+        service.uploadVariantImages(
+                branchId,
+                variantId,
+                files
+        );
 
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{variantId}/images/zip")
     public ResponseEntity<Resource> downloadVariantImagesZip(
+            @RequestParam UUID branchId,
             @PathVariable UUID variantId
     ) throws IOException {
 
-        return service.downloadZipResponse(variantId); // move logic to service
+        return service.downloadZipResponse(
+                branchId,
+                variantId
+        );
     }
 }

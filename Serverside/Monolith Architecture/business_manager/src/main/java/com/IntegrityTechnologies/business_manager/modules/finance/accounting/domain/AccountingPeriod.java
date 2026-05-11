@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.do
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -13,12 +14,12 @@ import java.util.UUID;
         name = "accounting_periods",
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_period_tenant_branch_range",
-                columnNames = {"tenant_id","branch_id","startDate","endDate"}
+                columnNames = {"tenant_id","branch_id","start_date","end_date"}
         ),
         indexes = {
                 @Index(
                         name = "idx_period_tenant_branch_range",
-                        columnList = "tenant_id,branch_id,startDate,endDate"
+                        columnList = "tenant_id,branch_id,start_date,end_date"
                 )
         }
 )
@@ -26,7 +27,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class AccountingPeriod extends BranchAwareEntity {
 
     @Id

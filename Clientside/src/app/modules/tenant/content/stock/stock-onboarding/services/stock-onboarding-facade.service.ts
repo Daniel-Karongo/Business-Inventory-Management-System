@@ -33,6 +33,14 @@ import {
     StockOnboardingValidatorService
 } from './stock-onboarding-validator.service';
 
+import {
+    BulkResult
+} from '../../../../../../shared/models/bulk-import.model';
+
+import {
+    StockOnboardingBulkPreviewResult
+} from '../../models/stock-onboarding.model';
+
 @Injectable()
 export class StockOnboardingFacadeService {
 
@@ -55,6 +63,16 @@ export class StockOnboardingFacadeService {
 
     readonly submitting =
         signal(false);
+
+    readonly bulkSubmitting =
+        signal(false);
+
+    readonly bulkPreviewResult =
+        signal<
+            BulkResult<
+                StockOnboardingBulkPreviewResult
+            > | null
+        >(null);
 
     readonly state =
         this.onboardingState.state;
@@ -201,8 +219,8 @@ export class StockOnboardingFacadeService {
                     supplierId:
                         row.supplierId ?? null,
 
-                    newSupplierName:
-                        row.newSupplierName?.trim()
+                    supplierName:
+                        row.supplierName?.trim()
                         || null,
 
                     packagingTempId:
@@ -517,6 +535,143 @@ export class StockOnboardingFacadeService {
 
             });
 
+    }
+
+    buildCurrentState() {
+
+        return this.builder.build(
+            this.state()
+        );
+    }
+
+    previewBulk(
+        states: any[]
+    ) {
+
+        if (this.bulkSubmitting()) {
+            return;
+        }
+
+        this.bulkSubmitting.set(true);
+
+        const payload =
+            this.builder.buildBulk(
+                states,
+                true
+            );
+
+        this.onboardingService
+            .previewBulk(payload)
+            .pipe(
+                finalize(() =>
+                    this.bulkSubmitting.set(false)
+                )
+            )
+            .subscribe({
+                next: result => {
+
+                    this.bulkPreviewResult.set(
+                        result
+                    );
+
+                    this.snackbar.open(
+                        'Bulk preview generated',
+                        'Close',
+                        { duration: 4000 }
+                    );
+                },
+
+                error: err => {
+
+                    this.snackbar.open(
+                        err?.error?.message
+                        || 'Bulk preview failed',
+                        'Close',
+                        { duration: 5000 }
+                    );
+
+                    console.error(
+                        'Bulk preview failed',
+                        err
+                    );
+                }
+            });
+    }
+
+    submitBulk(
+        states: any[]
+    ) {
+
+        if (this.bulkSubmitting()) {
+            return;
+        }
+
+        this.bulkSubmitting.set(true);
+
+        const payload =
+            this.builder.buildBulk(
+                states,
+                false
+            );
+
+        this.onboardingService
+            .bulkCreate(payload)
+            .pipe(
+                finalize(() =>
+                    this.bulkSubmitting.set(false)
+                )
+            )
+            .subscribe({
+
+                next: result => {
+
+                    this.bulkPreviewResult.set(
+                        result
+                    );
+
+                    const failed =
+                        result.failed || 0;
+
+                    const success =
+                        result.success || 0;
+
+                    if (failed > 0) {
+
+                        this.snackbar.open(
+                            `${success} rows processed, ${failed} failed`,
+                            'Close',
+                            { duration: 6000 }
+                        );
+
+                    } else {
+
+                        this.snackbar.open(
+                            'Bulk onboarding completed',
+                            'Close',
+                            { duration: 4000 }
+                        );
+                    }
+
+                    this.router.navigate([
+                        '/app/inventory'
+                    ]);
+                },
+
+                error: err => {
+
+                    this.snackbar.open(
+                        err?.error?.message
+                        || 'Bulk onboarding failed',
+                        'Close',
+                        { duration: 5000 }
+                    );
+
+                    console.error(
+                        'Bulk onboarding failed',
+                        err
+                    );
+                }
+            });
     }
 
     private patch(

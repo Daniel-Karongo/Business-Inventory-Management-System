@@ -91,7 +91,7 @@ public class VariantAsyncProcessor {
                                 Files.readAllBytes(tempFile)
                         );
 
-                imageService.saveVariantImage(variant, file);
+                imageService.saveVariantImage(variant.getBranchId(), variant, file);
 
             } finally {
 

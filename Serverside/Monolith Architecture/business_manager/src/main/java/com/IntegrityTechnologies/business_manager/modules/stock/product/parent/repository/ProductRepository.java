@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,6 +13,18 @@ import java.util.*;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpecificationExecutor<Product> {
 
+    @Override
+    @EntityGraph(attributePaths = {
+            "category",
+            "suppliers",
+            "suppliers.supplier",
+            "variants",
+            "images"
+    })
+    Page<Product> findAll(
+            Specification<Product> spec,
+            Pageable pageable
+    );
     @EntityGraph(attributePaths = {
             "images",
             "variants",
@@ -53,12 +66,12 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
     List<Product> findAllByTenantIdAndBranchIdAndCategory_IdIn(UUID tenantId, UUID branchId, List<Long> categoryIds);
 
     @Query("""
-        SELECT p FROM Product p
-        JOIN p.suppliers ps
-        WHERE ps.supplier.id = :supplierId
-          AND p.tenantId = :tenantId
-          AND p.branchId = :branchId
-    """)
+                SELECT p FROM Product p
+                JOIN p.suppliers ps
+                WHERE ps.supplier.id = :supplierId
+                  AND p.tenantId = :tenantId
+                  AND p.branchId = :branchId
+            """)
     List<Product> findAllBySupplierIdAndTenantIdAndBranchId(
             UUID supplierId,
             UUID tenantId,
@@ -69,12 +82,12 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-        select p
-        from Product p
-        where p.id = :id
-          and p.tenantId = :tenantId
-          and p.branchId = :branchId
-    """)
+                select p
+                from Product p
+                where p.id = :id
+                  and p.tenantId = :tenantId
+                  and p.branchId = :branchId
+            """)
     Optional<Product> findForUpdate(
             @Param("id") UUID id,
             @Param("tenantId") UUID tenantId,
@@ -83,8 +96,22 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
 
     @Modifying
     @Query(value = """
-        DELETE FROM products_suppliers
-        WHERE product_id = :productId
-    """, nativeQuery = true)
+                DELETE FROM products_suppliers
+                WHERE product_id = :productId
+            """, nativeQuery = true)
     void detachSuppliers(@Param("productId") UUID productId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+                select p
+                from Product p
+                where lower(p.name) = lower(:name)
+                  and p.tenantId = :tenantId
+                  and p.branchId = :branchId
+            """)
+    Optional<Product> findByNameForUpdate(
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId,
+            @Param("name") String name
+    );
 }

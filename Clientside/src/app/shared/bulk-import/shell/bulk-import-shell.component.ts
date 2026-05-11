@@ -1,16 +1,16 @@
+import { CommonModule } from '@angular/common';
 import {
   Component,
+  ElementRef,
+  EventEmitter,
   Input,
   Output,
-  EventEmitter,
-  ViewChild,
-  ElementRef
+  ViewChild
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
+import { MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BulkImportScrollService } from '../base/bulk-import-scroll.service';
@@ -41,7 +41,6 @@ export class BulkImportShellComponent {
   @Input() loading = false;              // hard block
   @Input() loadingLabel?: string;        // “Importing sales…”
   @Input() progress?: number | null;     // optional %
-
 
   constructor(private scroll: BulkImportScrollService) { }
 

@@ -30,48 +30,88 @@ public class ProductVariantController {
 
     @TenantManagerOnly
     @PostMapping
-    public ResponseEntity<ProductVariantDTO> create(@RequestBody ProductVariantCreateDTO dto) {
-        return ResponseEntity.ok(service.createVariant(dto));
+    public ResponseEntity<ProductVariantDTO> create(
+            @RequestParam UUID branchId,
+            @RequestBody ProductVariantCreateDTO dto
+    ) {
+        return ResponseEntity.ok(
+                service.createVariant(branchId, dto)
+        );
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ProductVariantDTO> find(@PathVariable UUID id) {
-        return ResponseEntity.ok(service.getVariant(id)); // must be SAFE inside service
+    public ResponseEntity<ProductVariantDTO> find(
+            @RequestParam UUID branchId,
+            @PathVariable UUID id
+    ) {
+        return ResponseEntity.ok(
+                service.getVariant(branchId, id)
+        );
     }
 
     @GetMapping("/product/{productId}")
-    public ResponseEntity<List<ProductVariantDTO>> findForProduct(@PathVariable UUID productId) {
-        return ResponseEntity.ok(service.getVariantsForProduct(productId));
+    public ResponseEntity<List<ProductVariantDTO>> findForProduct(
+            @RequestParam UUID branchId,
+            @PathVariable UUID productId
+    ) {
+        return ResponseEntity.ok(
+                service.getVariantsForProduct(branchId, productId)
+        );
     }
 
     @GetMapping("/{id}/images")
-    public ResponseEntity<List<String>> getImages(@PathVariable UUID id) {
-        return ResponseEntity.ok(imageService.getImageUrls(id));
+    public ResponseEntity<List<String>> getImages(
+            @RequestParam UUID branchId,
+            @PathVariable UUID id
+    ) {
+        return ResponseEntity.ok(
+                imageService.getImageUrls(branchId, id)
+        );
     }
 
     @PostMapping("/barcode/pdf/bulk")
-    public ResponseEntity<String> bulkPdf(@RequestBody List<UUID> variantIds) {
-
-        String fileName = pdfOrchestrationService.requestBulkPdf(variantIds);
+    public ResponseEntity<String> bulkPdf(
+            @RequestParam UUID branchId,
+            @RequestBody List<UUID> variantIds
+    ) {
+        String fileName =
+                pdfOrchestrationService.requestBulkPdf(
+                        branchId,
+                        variantIds
+                );
 
         return ResponseEntity.accepted().body(fileName);
     }
 
     @GetMapping("/barcode/pdf/download/{fileName}")
-    public ResponseEntity<Resource> downloadPdf(@PathVariable String fileName) {
+    public ResponseEntity<Resource> downloadPdf(
+            @PathVariable String fileName
+    ) {
 
-        Resource resource = pdfOrchestrationService.getPdfResource(fileName);
+        Resource resource =
+                pdfOrchestrationService.getPdfResource(
+                        fileName
+                );
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=" + fileName)
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=" + fileName
+                )
                 .body(resource);
     }
 
     @GetMapping("/product/{productId}/barcode/pdf")
-    public ResponseEntity<String> productPdf(@PathVariable UUID productId) {
+    public ResponseEntity<String> productPdf(
+            @RequestParam UUID branchId,
+            @PathVariable UUID productId
+    ) {
 
-        String fileName = pdfOrchestrationService.requestProductPdf(productId);
+        String fileName =
+                pdfOrchestrationService.requestProductPdf(
+                        branchId,
+                        productId
+                );
 
         return ResponseEntity.accepted().body(fileName);
     }
@@ -79,16 +119,22 @@ public class ProductVariantController {
     @TenantManagerOnly
     @PutMapping("/{id}")
     public ResponseEntity<ProductVariantDTO> update(
+            @RequestParam UUID branchId,
             @PathVariable UUID id,
             @RequestBody ProductVariantUpdateDTO dto
     ) {
-        return ResponseEntity.ok(service.updateVariant(id, dto));
+        return ResponseEntity.ok(
+                service.updateVariant(branchId, id, dto)
+        );
     }
 
     @TenantAdminOnly
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        service.deleteVariant(id);
+    public ResponseEntity<Void> delete(
+            @RequestParam UUID branchId,
+            @PathVariable UUID id
+    ) {
+        service.deleteVariant(branchId, id);
         return ResponseEntity.noContent().build();
     }
 }

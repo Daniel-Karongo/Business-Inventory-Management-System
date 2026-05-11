@@ -4,18 +4,34 @@
 
         <div class="header-shell">
 
-            <div>
-                <div class="page-title">
-                    Stock Onboarding
+            <div class="header-content">
+
+                <div>
+                    <div class="page-title">
+                        Stock Onboarding
+                    </div>
+
+                    <div class="page-subtitle">
+                        Create products, variants,
+                        packaging, pricing,
+                        and opening inventory.
+                    </div>
                 </div>
 
-                <div class="page-subtitle">
-                    Create products, variants,
-                    packaging, pricing,
-                    and opening inventory.
-                </div>
             </div>
 
+            <div class="header-actions">
+
+                <button mat-stroked-button color="primary" (click)="openBulkImport()">
+
+                    <mat-icon>
+                        upload_file
+                    </mat-icon>
+
+                    Bulk Import
+                </button>
+
+            </div>
         </div>
 
     </div>
@@ -48,38 +64,41 @@
 
                         <!-- PRODUCT -->
 
-                        <app-onboarding-product-step 
-                            [style.display]="state().currentStep === 0 ? 'block' : 'none'" [mode]="state().mode" [draft]="state().productDraft" [branchId]="state().branchId"
+                        <app-onboarding-product-step [style.display]="state().currentStep === 0 ? 'block' : 'none'"
+                            [mode]="state().mode" [draft]="state().productDraft" [branchId]="state().branchId"
                             (modeChange)="facade.setMode($event)" (draftChange)="facade.setProductDraft($event)">
                         </app-onboarding-product-step>
 
                         <!-- VARIANT -->
 
-                        <app-onboarding-variant-step [style.display]="state().currentStep === 1 ? 'block' : 'none'" [draft]="state().variantDraft"
-                            (valueChange)="facade.setVariantDraft($event)">
+                        <app-onboarding-variant-step [style.display]="state().currentStep === 1 ? 'block' : 'none'"
+                            [draft]="state().variantDraft" (valueChange)="facade.setVariantDraft($event)">
                         </app-onboarding-variant-step>
 
                         <!-- PACKAGING -->
 
-                        <app-onboarding-packaging-step [style.display]="state().currentStep === 2 ? 'block' : 'none'" [value]="state().packagings"
-                            (valueChange)="facade.setPackagings($event)">
+                        <app-onboarding-packaging-step [style.display]="state().currentStep === 2 ? 'block' : 'none'"
+                            [value]="state().packagings" (valueChange)="facade.setPackagings($event)">
                         </app-onboarding-packaging-step>
 
                         <!-- PRICING -->
 
-                        <app-onboarding-pricing-step [style.display]="state().currentStep === 3 ? 'block' : 'none'" [value]="state().pricing"
-                            [packagings]="state().packagings" (valueChange)="facade.setPricing($event)">
+                        <app-onboarding-pricing-step [style.display]="state().currentStep === 3 ? 'block' : 'none'"
+                            [value]="state().pricing" [packagings]="state().packagings"
+                            (valueChange)="facade.setPricing($event)">
                         </app-onboarding-pricing-step>
 
                         <!-- SUPPLIERS -->
 
-                        <app-onboarding-supplier-step [style.display]="state().currentStep === 4 ? 'block' : 'none'" [value]="state().suppliers"
-                            [packagings]="state().packagings" (valueChange)="facade.setSuppliers($event)">
+                        <app-onboarding-supplier-step [style.display]="state().currentStep === 4 ? 'block' : 'none'"
+                            [value]="state().suppliers" [packagings]="state().packagings"
+                            (valueChange)="facade.setSuppliers($event)">
                         </app-onboarding-supplier-step>
 
                         <!-- REVIEW -->
 
-                        <app-onboarding-review-step [style.display]="state().currentStep === 5 ? 'block' : 'none'" [state]="state()">
+                        <app-onboarding-review-step [style.display]="state().currentStep === 5 ? 'block' : 'none'"
+                            [state]="state()">
                         </app-onboarding-review-step>
 
                     </app-workflow-card>

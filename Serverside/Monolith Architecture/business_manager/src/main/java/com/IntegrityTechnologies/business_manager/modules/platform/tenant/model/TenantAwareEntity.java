@@ -2,22 +2,25 @@ package com.IntegrityTechnologies.business_manager.modules.platform.tenant.model
 
 import com.IntegrityTechnologies.business_manager.security.util.TenantEntityListener;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.*;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @MappedSuperclass
 @EntityListeners(TenantEntityListener.class)
-
 @FilterDef(
         name = "tenantFilter",
-        parameters = @ParamDef(name = "tenantId", type = UUID.class)
+        parameters = @ParamDef(
+                name = "tenantId",
+                type = UUID.class
+        )
 )
 
 @Filter(
@@ -36,10 +39,36 @@ public abstract class TenantAwareEntity {
     private UUID tenantId;
 
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false, nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean deleted = false;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @PrePersist
+    protected void prePersist() {
+
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+
+        updatedAt = LocalDateTime.now();
+
+        if (!deleted) {
+            deleted = false;
+        }
+    }
+
+    @PreUpdate
+    protected void preUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }

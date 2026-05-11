@@ -38,7 +38,7 @@ export interface OnboardingPricingDraft {
 
 export interface OnboardingSupplierEntry {
     supplierId?: string | null;
-    newSupplierName?: string | null;
+    supplierName?: string | null;
     packagingTempId: string;
     quantity: number;
     unitCost: number;

@@ -27,7 +27,7 @@ public class BarcodeController {
         return new ApiResponse(
                 "success",
                 "Barcode scanned",
-                scanService.scan(request.getBarcode())
+                scanService.scan(request.getBranchId(), request.getBarcode())
         );
     }
 

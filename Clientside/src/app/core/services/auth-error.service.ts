@@ -8,7 +8,11 @@ export class AuthErrorService {
     private snack = inject(MatSnackBar);
     private router = inject(Router);
 
-    handle(err: any, context: 'login' | 'biometric' = 'login') {
+    handle(
+        err: any,
+        context: 'login' | 'biometric' = 'login',
+        identifier?: string
+    ) {
 
         const code: string | null = err?.error?.code ?? null;
         const msg: string = err?.error?.message ?? '';
@@ -104,7 +108,10 @@ export class AuthErrorService {
             case 'PASSWORD_CHANGE_REQUIRED':
                 this.toast('You must change your password before continuing.');
                 this.router.navigate(['/auth/reset-password'], {
-                    state: { forced: true }
+                    state: {
+                        forced: true,
+                        identifier
+                    }
                 });
                 return;
 

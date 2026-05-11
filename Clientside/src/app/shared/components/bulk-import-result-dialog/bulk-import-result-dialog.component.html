@@ -21,9 +21,7 @@
 
         <table mat-table [dataSource]="successDS">
 
-          <ng-container
-            *ngFor="let col of data.columns"
-            [matColumnDef]="col.key">
+          <ng-container *ngFor="let col of data.columns" [matColumnDef]="col.key">
 
             <th mat-header-cell *matHeaderCellDef>
               {{ col.label }}
@@ -40,11 +38,7 @@
 
         </table>
 
-        <mat-paginator
-          #successPaginator
-          [pageSize]="10"
-          [pageSizeOptions]="[5, 10, 25, 50]"
-          showFirstLastButtons>
+        <mat-paginator #successPaginator [pageSize]="10" [pageSizeOptions]="[5, 10, 25, 50]" showFirstLastButtons>
         </mat-paginator>
 
       </div>
@@ -73,11 +67,7 @@
 
         </table>
 
-        <mat-paginator
-          #failedPaginator
-          [pageSize]="10"
-          [pageSizeOptions]="[5, 10, 25, 50]"
-          showFirstLastButtons>
+        <mat-paginator #failedPaginator [pageSize]="10" [pageSizeOptions]="[5, 10, 25, 50]" showFirstLastButtons>
         </mat-paginator>
 
       </div>
@@ -94,14 +84,18 @@
     {{ data.closeLabel || 'Close' }}
   </button>
 
-  <button
-    *ngIf="data.dryRun && data.result.failed === 0"
-    mat-flat-button
-    color="primary"
+  <button *ngIf="data.dryRun && data.result.failed === 0" mat-flat-button color="primary" [disabled]="confirming"
     (click)="confirm()">
-    {{ data.confirmLabel || 'Confirm Import' }}
+
+    <ng-container *ngIf="!confirming">
+      {{ data.confirmLabel || 'Confirm Import' }}
+    </ng-container>
+
+    <mat-icon *ngIf="confirming" class="spin">
+
+      autorenew
+    </mat-icon>
+
   </button>
 
 </mat-dialog-actions>
-
-

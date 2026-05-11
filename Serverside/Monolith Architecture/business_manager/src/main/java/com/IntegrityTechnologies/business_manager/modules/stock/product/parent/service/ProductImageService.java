@@ -91,7 +91,7 @@ public class ProductImageService {
                                     .orElse(null);
 
                     if (variant != null) {
-                        productVariantImageService.saveVariantImage(variant, file);
+                        productVariantImageService.saveVariantImage(variant.getBranchId(), variant, file);
                     }
                 }
             }
@@ -189,7 +189,7 @@ public class ProductImageService {
             productImageRepository.saveAll(newImages);
 
             if (product.getImages() == null) {
-                product.setImages(new ArrayList<>());
+                product.setImages(new HashSet<>());
             }
 
             product.getImages().addAll(newImages);

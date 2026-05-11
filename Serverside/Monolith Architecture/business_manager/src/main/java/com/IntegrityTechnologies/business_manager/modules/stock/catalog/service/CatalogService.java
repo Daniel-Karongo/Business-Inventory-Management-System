@@ -37,7 +37,7 @@ public class CatalogService {
                 productService.getProductById(branchId, productId, false);
 
         List<ProductVariantDTO> variants =
-                variantService.getVariantsForProduct(productId);
+                variantService.getVariantsForProduct(branchId, productId);
 
         product.setVariants(variants);
 

@@ -55,14 +55,30 @@ public class OutboxEventExecutor {
 
             } else {
 
-                log.warn("Retry {} for event {}", e.getRetryCount(), e.getId());
+                if (e.getRetryCount() <= 3 || e.getRetryCount() % 10 == 0) {
+
+                    log.warn(
+                            "Retry {} for event {} type={}",
+                            e.getRetryCount(),
+                            e.getId(),
+                            e.getEventType()
+                    );
+                }
             }
 
             outboxRepo.save(e);
 
-            log.error("Failed to publish event {}", e.getId(), ex);
+            if (e.getRetryCount() == 1 || e.getRetryCount() % 10 == 0) {
 
-            throw ex;
+                log.error(
+                        "Event {} failed type={} reason={}",
+                        e.getId(),
+                        e.getEventType(),
+                        ex.getMessage()
+                );
+            }
+
+            return;
 
         } finally {
             TenantContext.clear();
@@ -75,11 +91,9 @@ public class OutboxEventExecutor {
 
             return switch (e.getEventType()) {
 
-                case "JOURNAL_POSTED" ->
-                        mapper.readValue(e.getPayload(), JournalPostedEvent.class);
+                case "JOURNAL_POSTED" -> mapper.readValue(e.getPayload(), JournalPostedEvent.class);
 
-                case "ACCOUNTING_PERIOD_CLOSED" ->
-                        mapper.readValue(e.getPayload(), AccountingPeriodClosedEvent.class);
+                case "ACCOUNTING_PERIOD_CLOSED" -> mapper.readValue(e.getPayload(), AccountingPeriodClosedEvent.class);
 
                 case "VARIANT_BARCODE_REQUESTED" ->
                         mapper.readValue(e.getPayload(), VariantBarcodeRequestedEvent.class);
@@ -90,8 +104,7 @@ public class OutboxEventExecutor {
                 case "VARIANT_BARCODE_PDF_REQUESTED" ->
                         mapper.readValue(e.getPayload(), VariantBarcodePdfRequestedEvent.class);
 
-                default ->
-                        mapper.readTree(e.getPayload());
+                default -> mapper.readTree(e.getPayload());
             };
 
         } catch (Exception ex) {

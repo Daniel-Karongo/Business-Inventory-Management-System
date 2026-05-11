@@ -37,7 +37,7 @@ import { EnterNextDirective } from '../../../../shared/directives/enter-next.dir
     MatButtonModule,
     MatIconModule,
     MatSnackBarModule,
-    EnterNextDirective 
+    EnterNextDirective
   ],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
@@ -314,7 +314,11 @@ export class LoginComponent implements OnInit {
       },
 
       error: (err) => {
-        this.errorHandler.handle(err, 'login');
+        this.errorHandler.handle(
+          err,
+          'login',
+          this.form.value.identifier!
+        );
         this.loginLoading = false;
       }
     });

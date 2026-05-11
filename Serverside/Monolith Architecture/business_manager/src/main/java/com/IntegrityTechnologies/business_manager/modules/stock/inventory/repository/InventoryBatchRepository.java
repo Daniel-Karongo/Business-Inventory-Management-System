@@ -26,14 +26,14 @@ public interface InventoryBatchRepository
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(value = """
-        SELECT * FROM inventory_batches b
-        WHERE b.product_variant_id = :variantId
-          AND b.tenant_id = :tenantId
-          AND b.branch_id = :branchId
-          AND b.quantity_remaining > 0
-        ORDER BY b.received_at ASC
-        FOR UPDATE SKIP LOCKED
-    """, nativeQuery = true)
+                SELECT * FROM inventory_batches b
+                WHERE b.product_variant_id = :variantId
+                  AND b.tenant_id = :tenantId
+                  AND b.branch_id = :branchId
+                  AND b.quantity_remaining > 0
+                ORDER BY b.received_at ASC
+                FOR UPDATE SKIP LOCKED
+            """, nativeQuery = true)
     List<InventoryBatch> lockAvailableBatchesFIFO(
             UUID variantId,
             UUID tenantId,
@@ -42,13 +42,13 @@ public interface InventoryBatchRepository
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-    SELECT b FROM InventoryBatch b
-    WHERE b.productVariantId = :variantId
-      AND b.branchId = :branchId
-      AND b.tenantId = :tenantId
-      AND b.quantityRemaining > 0
-    ORDER BY b.receivedAt ASC
-""")
+                SELECT b FROM InventoryBatch b
+                WHERE b.productVariantId = :variantId
+                  AND b.branchId = :branchId
+                  AND b.tenantId = :tenantId
+                  AND b.quantityRemaining > 0
+                ORDER BY b.receivedAt ASC
+            """)
     List<InventoryBatch> lockBatchesByBranch(
             UUID variantId,
             UUID tenantId,
@@ -60,11 +60,11 @@ public interface InventoryBatchRepository
     ===================================================== */
 
     @Query("""
-        SELECT b FROM InventoryBatch b
-        WHERE b.tenantId = :tenantId
-          AND b.branchId = :branchId
-          AND b.productVariantId = :variantId
-    """)
+                SELECT b FROM InventoryBatch b
+                WHERE b.tenantId = :tenantId
+                  AND b.branchId = :branchId
+                  AND b.productVariantId = :variantId
+            """)
     Page<InventoryBatch> findAllByVariant(
             @Param("tenantId") UUID tenantId,
             @Param("branchId") UUID branchId,
@@ -73,13 +73,13 @@ public interface InventoryBatchRepository
     );
 
     @Query("""
-        SELECT b FROM InventoryBatch b
-        WHERE b.productVariantId = :variantId
-          AND b.tenantId = :tenantId
-          AND b.branchId = :branchId
-          AND b.quantityRemaining > 0
-        ORDER BY b.receivedAt ASC
-    """)
+                SELECT b FROM InventoryBatch b
+                WHERE b.productVariantId = :variantId
+                  AND b.tenantId = :tenantId
+                  AND b.branchId = :branchId
+                  AND b.quantityRemaining > 0
+                ORDER BY b.receivedAt ASC
+            """)
     List<InventoryBatch> findAvailableBatches(
             @Param("variantId") UUID variantId,
             @Param("tenantId") UUID tenantId,
@@ -93,12 +93,12 @@ public interface InventoryBatchRepository
     );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-        @Query("""
-        SELECT b FROM InventoryBatch b
-        WHERE b.id = :batchId
-        AND b.tenantId = :tenantId
-        AND b.branchId = :branchId
-    """)
+    @Query("""
+                SELECT b FROM InventoryBatch b
+                WHERE b.id = :batchId
+                AND b.tenantId = :tenantId
+                AND b.branchId = :branchId
+            """)
     Optional<InventoryBatch> findByIdForUpdate(
             UUID batchId,
             UUID tenantId,
@@ -106,12 +106,12 @@ public interface InventoryBatchRepository
     );
 
     @Query("""
-        SELECT COALESCE(SUM(b.quantityRemaining), 0)
-        FROM InventoryBatch b
-        WHERE b.productVariantId = :variantId
-          AND b.tenantId = :tenantId
-          AND b.branchId = :branchId
-    """)
+                SELECT COALESCE(SUM(b.quantityRemaining), 0)
+                FROM InventoryBatch b
+                WHERE b.productVariantId = :variantId
+                  AND b.tenantId = :tenantId
+                  AND b.branchId = :branchId
+            """)
     long sumRemainingByVariant(
             @Param("variantId") UUID variantId,
             @Param("tenantId") UUID tenantId,
@@ -119,33 +119,33 @@ public interface InventoryBatchRepository
     );
 
     @Query("""
-        SELECT 
-            COUNT(b),
-            COALESCE(SUM(b.quantityRemaining * b.unitCost), 0),
-            MIN(b.receivedAt)
-        FROM InventoryBatch b
-        WHERE b.productVariantId = :variantId
-          AND b.tenantId = :tenantId
-          AND b.branchId = :branchId
-          AND b.quantityRemaining > 0
-    """)
-    Object[] aggregateBatchStats(
+                SELECT 
+                    COUNT(b),
+                    COALESCE(SUM(b.quantityRemaining * b.unitCost), 0),
+                    MIN(b.receivedAt)
+                FROM InventoryBatch b
+                WHERE b.productVariantId = :variantId
+                  AND b.tenantId = :tenantId
+                  AND b.branchId = :branchId
+                  AND b.quantityRemaining > 0
+            """)
+    List<Object[]> aggregateBatchStats(
             UUID variantId,
             UUID tenantId,
             UUID branchId
     );
 
     @Query("""
-        SELECT 
-            COALESCE(SUM(b.quantityRemaining * b.unitCost), 0),
-            COALESCE(SUM(b.quantityRemaining), 0)
-        FROM InventoryBatch b
-        WHERE b.productVariantId = :variantId
-          AND b.tenantId = :tenantId
-          AND b.branchId = :branchId
-          AND b.quantityRemaining > 0
-    """)
-    Object[] computeWeightedAverageRaw(
+                SELECT 
+                    COALESCE(SUM(b.quantityRemaining * b.unitCost), 0),
+                    COALESCE(SUM(b.quantityRemaining), 0)
+                FROM InventoryBatch b
+                WHERE b.productVariantId = :variantId
+                  AND b.tenantId = :tenantId
+                  AND b.branchId = :branchId
+                  AND b.quantityRemaining > 0
+            """)
+    List<Object[]> computeWeightedAverageRaw(
             UUID variantId,
             UUID tenantId,
             UUID branchId

@@ -145,7 +145,15 @@
   <button mat-button (click)="cancel.emit()">Cancel</button>
 
   <button mat-flat-button color="primary" [disabled]="submitting || formInvalid" (click)="submit.emit()">
-    Import
+
+    <ng-container *ngIf="!loading">
+      Import
+    </ng-container>
+
+    <mat-icon *ngIf="loading" class="spin">
+
+      autorenew
+    </mat-icon>
   </button>
 
 </mat-dialog-actions>

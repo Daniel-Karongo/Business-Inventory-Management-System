@@ -1,0 +1,254 @@
+<form [formGroup]="form" (keydown.enter)="
+        $event.stopPropagation()
+    ">
+
+    <app-bulk-import-shell [title]="config.title" [rowCount]="rowCount" [submitting]="submitting"
+        [formInvalid]="form.invalid" [loading]="
+            submitting || loading
+        " [progress]="progress" (importCsv)="
+            importCsv($event)
+        " (importExcel)="
+            importExcel($event)
+        " (downloadCsv)="
+            downloadCsvTemplate()
+        " (downloadExcel)="
+            downloadExcelTemplate()
+        " (submit)="submit()" (cancel)="close()" (goToLine)="
+            goToLine($event)
+        " (goTop)="
+            scrollToTop()
+        " (goBottom)="
+            scrollToBottom()
+        " (prevError)="
+            goToPreviousError()
+        " (nextError)="
+            goToNextError()
+        " (clearAll)="
+            clearRows()
+        " (exportCsv)="
+            exportCsvCurrentRows()
+        " (exportExcel)="
+            exportExcelCurrentRows()
+        ">
+
+        <div class="bulk-body">
+
+            <div bulk-options>
+
+                <mat-checkbox formControlName="dryRun">
+                    Dry run
+                    (preview only —
+                    no inventory changes)
+                </mat-checkbox>
+
+            </div>
+
+            <mat-paginator [length]="rowCount" [pageIndex]="currentPage" [pageSize]="pageSize"
+                [pageSizeOptions]="pageSizeOptions" [showFirstLastButtons]="true" (page)="onPageChange($event)">
+            </mat-paginator>
+
+            <div class="row-card" [attr.data-line]="rowIndex + 1" tabindex="-1" *ngFor="
+                    let rowIndex of pagedIndexes;
+                    trackBy: trackByRowIndex" [formGroup]="rows.at(rowIndex)">
+
+                <div class="row-header">
+
+                    <span>
+                        Row {{ rowIndex + 1 }}
+                    </span>
+
+                    <button mat-icon-button color="warn" type="button" (click)="removeRow(rowIndex)" matTooltip="Remove onboarding row">
+
+                        <mat-icon>
+                            delete
+                        </mat-icon>
+
+                    </button>
+
+                </div>
+
+                <div class="grid-2">
+
+                    <mat-form-field>
+
+                        <mat-label>
+                            Group Code
+                        </mat-label>
+
+                        <input matInput formControlName="groupCode">
+
+                    </mat-form-field>
+
+                    <div class="grouping-hint">
+
+                        Rows sharing the same
+                        group code are merged
+                        into one product onboarding.
+
+                    </div>
+
+                </div>
+
+                <div class="grid-3">
+
+                    <mat-form-field>
+
+                        <mat-label>
+                            Product
+                        </mat-label>
+
+                        <input matInput formControlName="productName">
+
+                    </mat-form-field>
+
+                    <mat-form-field>
+
+                        <mat-label>
+                            Variant
+                        </mat-label>
+
+                        <input matInput formControlName="classification">
+
+                    </mat-form-field>
+
+                    <mat-form-field>
+
+                        <mat-label>
+                            Category
+                        </mat-label>
+
+                        <input matInput formControlName="categoryName">
+
+                    </mat-form-field>
+
+                </div>
+
+                <div class="grid-3">
+
+                    <mat-form-field>
+
+                        <mat-label>
+                            Branch Code
+                        </mat-label>
+
+                        <input matInput formControlName="branchCode">
+
+                    </mat-form-field>
+
+                    <mat-form-field>
+
+                        <mat-label>
+                            Packaging
+                        </mat-label>
+
+                        <input matInput formControlName="packagingName">
+
+                    </mat-form-field>
+
+                    <mat-form-field>
+
+                        <mat-label>
+                            Packaging Units
+                        </mat-label>
+
+                        <input matInput type="number" formControlName="packagingUnits">
+
+                    </mat-form-field>
+
+                </div>
+
+                <div class="grid-3">
+
+                    <mat-form-field>
+
+                        <mat-label>
+                            Supplier
+                        </mat-label>
+
+                        <input matInput formControlName="supplierName">
+
+                    </mat-form-field>
+
+                    <mat-form-field>
+
+                        <mat-label>
+                            Units Supplied
+                        </mat-label>
+
+                        <input matInput type="number" formControlName="unitsSupplied">
+
+                    </mat-form-field>
+
+                    <mat-form-field>
+
+                        <mat-label>
+                            Unit Cost
+                        </mat-label>
+
+                        <input matInput type="number" formControlName="unitCost">
+
+                    </mat-form-field>
+
+                </div>
+
+                <div class="grid-2">
+
+                    <mat-form-field>
+
+                        <mat-label>
+                            Selling Price
+                        </mat-label>
+
+                        <input matInput type="number" formControlName="sellingPrice">
+
+                    </mat-form-field>
+
+                    <mat-form-field>
+
+                        <mat-label>
+                            Reference
+                        </mat-label>
+
+                        <input matInput formControlName="reference">
+
+                    </mat-form-field>
+
+                </div>
+
+                <mat-form-field>
+
+                    <mat-label>
+                        Note
+                    </mat-label>
+
+                    <textarea matInput rows="2" formControlName="note">
+                        </textarea>
+
+                </mat-form-field>
+
+                <div class="row-error" matTooltip="Validation error" 
+                    *ngIf="rows.at(rowIndex).value._error"
+                >
+
+                    {{
+                    rows.at(rowIndex).value._error
+                    }}
+
+                </div>
+
+            </div>
+
+            <mat-paginator [length]="rowCount" [pageIndex]="currentPage" [pageSize]="pageSize"
+                [pageSizeOptions]="pageSizeOptions" [showFirstLastButtons]="true" (page)="onPageChange($event)">
+            </mat-paginator>
+
+            <button mat-stroked-button type="button" matTooltip="Add a new onboarding row" (click)="addRow()">
+
+                + Add Row
+            </button>
+
+        </div>
+
+    </app-bulk-import-shell>
+
+</form>

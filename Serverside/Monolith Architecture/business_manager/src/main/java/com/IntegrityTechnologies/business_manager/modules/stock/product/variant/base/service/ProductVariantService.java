@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.service;
 
+import com.IntegrityTechnologies.business_manager.config.kafka.OutboxEventWriter;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.config.caffeine.CacheInvalidationService;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.BatchConsumptionRepository;
@@ -8,6 +9,7 @@ import com.IntegrityTechnologies.business_manager.modules.stock.inventory.reposi
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantCreateDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantUpdateDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.events.VariantBarcodeRequestedEvent;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.mapper.ProductVariantMapper;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
@@ -15,7 +17,6 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.r
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.repository.ProductVariantPackagingRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -48,22 +49,25 @@ public class ProductVariantService {
     private final CacheInvalidationService cacheInvalidationService;
     private final BatchReservationRepository batchReservationRepository;
     private final BatchConsumptionRepository batchConsumptionRepository;
+    private final OutboxEventWriter outboxEventWriter;
 
     private UUID tenantId() { return TenantContext.getTenantId(); }
-    private UUID branchId() { return BranchContext.get(); }
 
     @Transactional
-    public ProductVariantDTO createVariant(ProductVariantCreateDTO dto) {
+    public ProductVariantDTO createVariant(
+            UUID branchId,
+            ProductVariantCreateDTO dto
+    ) {
 
         Product product = productRepo.findByIdAndTenantIdAndBranchIdAndDeletedFalse(
                 dto.getProductId(),
                 tenantId(),
-                branchId()
+                branchId
         ).orElseThrow(() -> new EntityNotFoundException("Product not found"));
 
         if (variantRepo.existsByTenantIdAndBranchIdAndProduct_IdAndClassification(
                 tenantId(),
-                branchId(),
+                branchId,
                 dto.getProductId(),
                 dto.getClassification()
         )) {
@@ -77,75 +81,114 @@ public class ProductVariantService {
 
         if (variantRepo.existsByTenantIdAndBranchIdAndSku(
                 tenantId(),
-                branchId(),
+                branchId,
                 sku
         )) {
             throw new IllegalArgumentException("SKU already exists: " + sku);
         }
 
         ProductVariant v = new ProductVariant();
+
         v.setProduct(product);
         v.setClassification(dto.getClassification());
         v.setSku(sku);
+
+        String barcode = barcodeService.autoGenerateBarcode();
+
+        v.setBarcode(barcode);
+
         v.setTenantId(tenantId());
-        v.setBranchId(branchId());
+        v.setBranchId(branchId);
+
         v.setMinimumPercentageProfit(dto.getMinimumPercentageProfit());
         v.setMinimumProfit(dto.getMinimumProfit());
 
+        v = variantRepo.saveAndFlush(v);
+
+        v.setBarcodeImagePath(
+                "/api/product-variants/" +
+                        v.getId() +
+                        "/barcode/image"
+        );
+
         v = variantRepo.save(v);
 
-        // ✅ CRITICAL: ensure base packaging exists
-        createBasePackaging(v);
 
-        cacheInvalidationService.evictVariantSearch(tenantId(), branchId());
+        boolean autoCreateBasePackaging =
+                dto.getAutoCreateBasePackaging() == null
+                        || dto.getAutoCreateBasePackaging();
+
+        if (autoCreateBasePackaging) {
+            createBasePackaging(branchId, v);
+        }
+
+        outboxEventWriter.write(
+                "VARIANT_BARCODE_REQUESTED",
+                branchId,
+                VariantBarcodeRequestedEvent.builder()
+                        .variantId(v.getId())
+                        .tenantId(tenantId())
+                        .branchId(branchId)
+                        .build()
+        );
+
+        cacheInvalidationService.evictVariantSearch(tenantId(), branchId);
         cacheInvalidationService.evictPricingByVariant(tenantId(), v.getId());
 
-        return barcodeService.generateBarcodeIfMissing(v.getId());
+        return mapper.toDTO(v);
     }
 
-    private void createBasePackaging(ProductVariant variant) {
+    private void createBasePackaging(
+            UUID branchId,
+            ProductVariant variant
+    ) {
 
-        var existing = packagingRepo
-                .findByProductVariantIdAndIsBaseUnitTrueAndDeletedFalse(variant.getId());
+        ProductVariantPackaging existing =
+                packagingRepo.lockBasePackaging(
+                        variant.getId()
+                );
 
-        if (existing != null) return;
+        if (existing != null) {
+            return;
+        }
 
-        ProductVariantPackaging packaging = ProductVariantPackaging.builder()
-                .productVariant(variant)
-                .name("Piece")
-                .unitsPerPackaging(1L)
-                .isBaseUnit(true)
-                .tenantId(tenantId())
-                .branchId(branchId())
-                .build();
+        ProductVariantPackaging packaging =
+                ProductVariantPackaging.builder()
+                        .productVariant(variant)
+                        .name("Piece")
+                        .unitsPerPackaging(1L)
+                        .isBaseUnit(true)
+                        .tenantId(tenantId())
+                        .branchId(branchId)
+                        .build();
 
-        packagingRepo.save(packaging);
+        packagingRepo.saveAndFlush(packaging);
     }
 
-    public ProductVariant getEntity(UUID id) {
+    public ProductVariant getEntity(UUID branchId, UUID id) {
         return variantRepo.findByIdSafe(
                 id,
                 false,
                 tenantId(),
-                branchId()
+                branchId
         ).orElseThrow(() -> new EntityNotFoundException("Variant not found"));
     }
 
-    public List<ProductVariant> getEntitiesForProduct(UUID productId) {
+    public List<ProductVariant> getEntitiesForProduct(UUID branchId, UUID productId) {
         return variantRepo.findByProduct_IdSafe(
                 productId,
                 false,
                 tenantId(),
-                branchId()
+                branchId
         );
     }
 
-    public ProductVariantDTO getVariant(UUID id) {
-        return mapper.toDTO(getEntity(id));
+    public ProductVariantDTO getVariant(UUID branchId, UUID id) {
+        return mapper.toDTO(getEntity(branchId, id));
     }
 
-    public List<ProductVariantDTO> getVariantsForProduct(UUID productId) {
-        return getEntitiesForProduct(productId)
+    public List<ProductVariantDTO> getVariantsForProduct(UUID branchId, UUID productId) {
+        return getEntitiesForProduct(branchId, productId)
                 .stream()
                 .map(mapper::toDTO)
                 .toList();
@@ -156,16 +199,16 @@ public class ProductVariantService {
     // PricingEngine is the source of truth for actual selling price.
     @Transactional
     @CacheEvict(value = "pricing-preview", allEntries = true)
-    public ProductVariantDTO updateVariant(UUID id, ProductVariantUpdateDTO dto) {
+    public ProductVariantDTO updateVariant(UUID branchId, UUID id, ProductVariantUpdateDTO dto) {
 
-        ProductVariant v = getEntity(id);
+        ProductVariant v = getEntity(branchId, id);
 
         if (dto.getClassification() != null &&
                 !dto.getClassification().equals(v.getClassification())) {
 
             if (variantRepo.existsByTenantIdAndBranchIdAndProduct_IdAndClassification(
                     tenantId(),
-                    branchId(),
+                    branchId,
                     v.getProduct().getId(),
                     dto.getClassification()
             )) {
@@ -179,7 +222,7 @@ public class ProductVariantService {
 
             if (variantRepo.existsByTenantIdAndBranchIdAndSku(
                     tenantId(),
-                    branchId(),
+                    branchId,
                     dto.getSku()
             )) {
                 throw new IllegalArgumentException("SKU already exists: " + dto.getSku());
@@ -191,20 +234,20 @@ public class ProductVariantService {
         v.setMinimumPercentageProfit(dto.getMinimumPercentageProfit());
         v.setMinimumProfit(dto.getMinimumProfit());
 
-        cacheInvalidationService.evictVariantSearch(tenantId(), branchId());
+        cacheInvalidationService.evictVariantSearch(tenantId(), branchId);
         cacheInvalidationService.evictPricingByVariant(
                 tenantId(),
                 v.getId()
         );
-        cacheInvalidationService.evictBarcode(tenantId(), branchId());
+        cacheInvalidationService.evictBarcode(tenantId(), branchId);
 
         return mapper.toDTO(variantRepo.save(v));
     }
 
     @Transactional
-    public void deleteVariant(UUID variantId) {
+    public void deleteVariant(UUID branchId, UUID variantId) {
 
-        ProductVariant variant = getEntity(variantId);
+        ProductVariant variant = getEntity(branchId, variantId);
 
         UUID productId = variant.getProduct().getId();
 
@@ -219,14 +262,14 @@ public class ProductVariantService {
                 batchReservationRepository.existsByProductVariantIdAndTenantIdAndBranchId(
                         variantId,
                         tenantId(),
-                        branchId()
+                        branchId
                 );
 
         boolean hasConsumptions =
                 batchConsumptionRepository.existsByProductVariantIdAndTenantIdAndBranchId(
                         variantId,
                         tenantId(),
-                        branchId()
+                        branchId
                 );
 
         if (hasReservations || hasConsumptions) {
@@ -237,7 +280,7 @@ public class ProductVariantService {
                 inventoryItemRepository.existsByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
                         variantId,
                         tenantId(),
-                        branchId()
+                        branchId
                 );
 
         if (hasInventory) {
@@ -251,7 +294,7 @@ public class ProductVariantService {
         long activeVariants =
                 variantRepo.countByTenantIdAndBranchIdAndProduct_IdAndDeletedFalse(
                         tenantId(),
-                        branchId(),
+                        branchId,
                         productId
                 );
 
@@ -266,7 +309,7 @@ public class ProductVariantService {
 
         cacheInvalidationService.evictVariantSearch(
                 tenantId(),
-                branchId()
+                branchId
         );
         cacheInvalidationService.evictPricingByVariant(
                 tenantId(),

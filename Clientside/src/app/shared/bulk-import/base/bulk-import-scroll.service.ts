@@ -1,6 +1,11 @@
-import { Injectable, ElementRef } from '@angular/core';
+import {
+  Injectable,
+  ElementRef
+} from '@angular/core';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class BulkImportScrollService {
 
   private container?: HTMLElement;
@@ -15,26 +20,42 @@ export class BulkImportScrollService {
   }
 
   scrollTop() {
-    this.container?.scrollTo({ top: 0, behavior: 'smooth' });
+    this.container?.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   }
 
   scrollBottom() {
-    this.bottom?.scrollIntoView({ behavior: 'smooth' });
+    this.bottom?.scrollIntoView({
+      behavior: 'smooth'
+    });
   }
 
   getCurrentLine(): number {
-    if (!this.container) return 1;
+
+    if (!this.container) {
+      return 1;
+    }
 
     const cards = Array.from(
-      this.container.querySelectorAll<HTMLElement>('.row-card')
+      this.container.querySelectorAll<HTMLElement>(
+        '.row-card'
+      )
     );
 
-    const containerTop = this.container.getBoundingClientRect().top;
+    const containerTop =
+      this.container.getBoundingClientRect().top;
 
     for (let i = 0; i < cards.length; i++) {
-      const rect = cards[i].getBoundingClientRect();
+
+      const rect =
+        cards[i].getBoundingClientRect();
+
       if (rect.bottom > containerTop + 10) {
-        return i + 1;
+        return Number(
+          cards[i].dataset['line']
+        ) || i + 1;
       }
     }
 
@@ -42,15 +63,69 @@ export class BulkImportScrollService {
   }
 
   goToLine(line: number) {
-    if (!this.container || line < 1) return;
 
-    const cards = this.container.querySelectorAll('.row-card');
-    const target = cards[line - 1] as HTMLElement;
-    if (!target) return;
+    if (!this.container || line < 1) {
+      return;
+    }
 
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    target.classList.add('highlight-line');
+    const maxAttempts = 20;
 
-    setTimeout(() => target.classList.remove('highlight-line'), 1500);
+    let attempts = 0;
+
+    const tryFocus = () => {
+
+      const target =
+        this.container?.querySelector<HTMLElement>(
+          `.row-card[data-line="${line}"]`
+        );
+
+      if (target) {
+
+        target.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+
+        target.classList.remove(
+          'highlight-line'
+        );
+
+        void target.offsetWidth;
+
+        target.classList.add(
+          'highlight-line'
+        );
+
+        setTimeout(() => {
+
+          target.classList.remove(
+            'highlight-line'
+          );
+
+        }, 2000);
+
+        target.focus?.();
+
+        return;
+      }
+
+      attempts++;
+
+      /*
+        force viewport movement so
+        virtual scroll renders row
+      */
+      this.container!.scrollTop =
+        (line - 1) * 72;
+
+      if (attempts < maxAttempts) {
+
+        requestAnimationFrame(
+          tryFocus
+        );
+      }
+    };
+
+    tryFocus();
   }
 }

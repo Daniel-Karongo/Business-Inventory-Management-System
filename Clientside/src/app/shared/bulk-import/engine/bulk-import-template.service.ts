@@ -16,10 +16,15 @@ export class BulkImportTemplateService {
 
     const csv = `${header}\n${example}`;
 
-    saveAs(
-      new Blob([csv], { type: 'text/csv' }),
-      config.csvFileName
+    const file = new File(
+      [csv],
+      config.csvFileName,
+      {
+        type: 'text/csv;charset=utf-8'
+      }
     );
+
+    saveAs(file);
   }
 
   /* ================= EXCEL ================= */
@@ -70,13 +75,16 @@ export class BulkImportTemplateService {
     /* ===== Save ===== */
     const buffer = await workbook.xlsx.writeBuffer();
 
-    saveAs(
-      new Blob([buffer], {
+    const file = new File(
+      [buffer],
+      config.excelFileName,
+      {
         type:
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      }),
-      config.excelFileName
+      }
     );
+
+    saveAs(file);
   }
 
   /* ================= CSV EXPORT ================= */
@@ -96,10 +104,15 @@ export class BulkImportTemplateService {
       )
     ].join('\n');
 
-    saveAs(
-      new Blob([csv], { type: 'text/csv' }),
-      config.csvFileName || 'export.csv'
+    const file = new File(
+      [csv],
+      config.csvFileName || 'export.csv',
+      {
+        type: 'text/csv;charset=utf-8'
+      }
     );
+
+    saveAs(file);
   }
 
   /* ================= EXCEL EXPORT ================= */
@@ -140,13 +153,16 @@ export class BulkImportTemplateService {
 
     const buffer = await workbook.xlsx.writeBuffer();
 
-    saveAs(
-      new Blob([buffer], {
+    const file = new File(
+      [buffer],
+      config.excelFileName || 'export.xlsx',
+      {
         type:
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      }),
-      config.excelFileName || 'export.xlsx'
+      }
     );
+
+    saveAs(file);
   }
 
   /* ================= Helpers ================= */

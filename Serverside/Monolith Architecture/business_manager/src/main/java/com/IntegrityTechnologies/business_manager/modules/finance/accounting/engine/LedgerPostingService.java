@@ -39,7 +39,7 @@ public class LedgerPostingService {
         if (!journal.getLedgerEntries().isEmpty())
             throw new IllegalStateException("Entries already attached");
 
-        UUID branchId = journal.getBranch().getId();
+        UUID branchId = journal.getBranchId();
 
         for (LedgerEntry e : entries) {
 
@@ -55,30 +55,39 @@ public class LedgerPostingService {
         journal.getLedgerEntries().addAll(entries);
 
         journal.markPosted(performedBy);
+        for (LedgerEntry entry : entries) {
+            entry.markPosted(journal.getPostedAt());
+        }
 
         systemStateService.lockIfNecessary(branchId);
 
-        JournalEntry saved = journalRepo.save(journal);
-        UUID tenantId = saved.getBranch().getTenantId();
-        branchId = saved.getBranch().getId();
+        UUID tenantId = journal.getTenantId();
 
         String previousHash =
-                journalRepo
-                        .findTopByTenantIdAndBranchIdAndPostedTrueAndIdNotOrderByPostedAtDescIdDesc(
+                journalRepo.findTopByTenantIdAndBranchIdAndPostedTrueAndIdNotOrderByPostedAtDescIdDesc(
                                 tenantId,
                                 branchId,
-                                saved.getId()
+                                journal.getId()
                         )
                         .map(JournalEntry::getHash)
                         .orElse("GENESIS");
 
+        journal.setPreviousHash(previousHash);
+
+        /*
+         * Temporary hash placeholder so deterministic hash can include fields.
+         */
+        journal.setHash("PENDING");
+
         String newHash =
-                JournalHashUtil.computeJournalHash(saved, previousHash);
+                JournalHashUtil.computeJournalHash(
+                        journal,
+                        previousHash
+                );
 
-        saved.setPreviousHash(previousHash);
-        saved.setHash(newHash);
+        journal.setHash(newHash);
 
-        journalRepo.save(saved);
+        JournalEntry saved = journalRepo.save(journal);
 
         List<LedgerEntryDTO> payloadEntries =
                 entries.stream()
@@ -92,14 +101,14 @@ public class LedgerPostingService {
         JournalPostedEvent event =
                 new JournalPostedEvent(
                         tenantId,
-                        saved.getBranch().getId(),
+                        saved.getBranchId(),
                         saved.getId(),
                         payloadEntries
                 );
 
         outboxWriter.write(
                 "JOURNAL_POSTED",
-                saved.getBranch().getId(),
+                saved.getBranchId(),
                 event
         );
 

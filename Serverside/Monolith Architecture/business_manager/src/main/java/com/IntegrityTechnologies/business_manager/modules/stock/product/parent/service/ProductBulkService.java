@@ -176,7 +176,8 @@ public class ProductBulkService {
 
                             return supplierService.createMinimalSupplier(
                                     supplierName,
-                                    category
+                                    category,
+                                    branchId
                             );
                         });
 

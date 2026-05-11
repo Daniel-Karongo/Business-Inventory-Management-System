@@ -132,7 +132,7 @@ public class AccountingFacade {
         if (original.isReversed())
             throw new IllegalStateException("Journal already reversed");
 
-        UUID branchId = original.getBranch().getId();
+        UUID branchId = original.getBranchId();
 
         periodGuardService.validateOpenPeriod(
                 original.getAccountingDate(),

@@ -35,15 +35,33 @@ public interface AccountBalanceRepository
 
     @Modifying
     @Query(value = """
-        INSERT INTO account_balances
-           (tenant_id, account_id, branch_id, balance, updated_at, version)
-        VALUES
-           (:tenantId, :accountId, :branchId, :delta, NOW(), 0)
-        ON DUPLICATE KEY UPDATE
-           balance = balance + :delta,
-           updated_at = NOW(),
-           version = version + 1
-    """, nativeQuery = true)
+                INSERT INTO account_balances
+                (
+                    tenant_id,
+                    account_id,
+                    branch_id,
+                    balance,
+                    deleted,
+                    created_at,
+                    updated_at,
+                    version
+                )
+                VALUES
+                (
+                    :tenantId,
+                    :accountId,
+                    :branchId,
+                    :delta,
+                    false,
+                    NOW(),
+                    NOW(),
+                    0
+                )
+                ON DUPLICATE KEY UPDATE
+                    balance = balance + VALUES(balance),
+                    updated_at = NOW(),
+                    version = version + 1
+            """, nativeQuery = true)
     void applyDelta(
             @Param("tenantId") UUID tenantId,
             @Param("accountId") UUID accountId,
@@ -53,10 +71,10 @@ public interface AccountBalanceRepository
 
     @Modifying
     @Query(value = """
-        DELETE FROM account_balances
-        WHERE tenant_id = :tenantId
-          AND branch_id = :branchId
-    """, nativeQuery = true)
+                DELETE FROM account_balances
+                WHERE tenant_id = :tenantId
+                  AND branch_id = :branchId
+            """, nativeQuery = true)
     void deleteBranchBalances(
             @Param("tenantId") UUID tenantId,
             @Param("branchId") UUID branchId

@@ -36,7 +36,7 @@ export class ForgotPasswordComponent implements OnInit {
   channels: ResetChannel[] = [];
 
   form = this.fb.nonNullable.group({
-    identifier: ['', Validators.required], // username only
+    identifier: ['', Validators.required],
     channel: ['IDENTITY' as ResetChannel, Validators.required]
   });
 

@@ -119,7 +119,7 @@ export class StockOnboardingValidatorService {
 
             if (
                 !row.supplierId &&
-                !row.newSupplierName?.trim()
+                !row.supplierName?.trim()
             ) {
 
                 errors.push(

@@ -16,9 +16,30 @@ export abstract class BulkImportBaseComponent<T>
   protected scroll = inject(BulkImportScrollService);
 
   submitting = false;
+  private currentErrorIndex = -1;
 
   /* 🔴 DECLARE CONTRACT */
   protected abstract get errorRows(): number[];
+
+  protected navigateToErrorRow(
+    line: number
+  ): void {
+
+    this.scroll.goToLine(line);
+
+  }
+
+  protected notifyNoMoreErrors(): void {
+
+    this.snackbar.open(
+      'No more errors',
+      'Close',
+      {
+        duration: 3000
+      }
+    );
+
+  }
 
   /* ================= LIFECYCLE ================= */
 
@@ -53,29 +74,75 @@ export abstract class BulkImportBaseComponent<T>
   /* ================= ERRORS ================= */
 
   goToNextError() {
-    const errors = this.errorRows;
-    if (!errors.length) return;
 
-    const current = this.scroll.getCurrentLine();
+    const errors =
+      this.errorRows;
 
-    const next =
-      errors.find(r => r > current) ??
-      errors[0];
+    if (!errors.length) {
 
-    this.scroll.goToLine(next);
+      this.notifyNoMoreErrors();
+
+      return;
+
+    }
+
+    // move forward
+    this.currentErrorIndex++;
+
+    // reached end
+    if (
+      this.currentErrorIndex >=
+      errors.length
+    ) {
+
+      this.currentErrorIndex =
+        errors.length - 1;
+
+      this.notifyNoMoreErrors();
+
+      return;
+
+    }
+
+    this.navigateToErrorRow(
+      errors[this.currentErrorIndex]
+    );
+
   }
 
   goToPreviousError() {
-    const errors = this.errorRows;
-    if (!errors.length) return;
 
-    const current = this.scroll.getCurrentLine();
+    const errors =
+      this.errorRows;
 
-    const prev =
-      [...errors].reverse().find(r => r < current) ??
-      errors[errors.length - 1];
+    if (!errors.length) {
 
-    this.scroll.goToLine(prev);
+      this.notifyNoMoreErrors();
+
+      return;
+
+    }
+
+    // move backward
+    this.currentErrorIndex--;
+
+    // reached start
+    if (
+      this.currentErrorIndex < 0
+    ) {
+
+      this.currentErrorIndex = 0;
+
+      this.notifyNoMoreErrors();
+
+      return;
+
+    }
+
+    this.navigateToErrorRow(
+      errors[this.currentErrorIndex]
+    );
+
   }
 
   /* ================= SCROLL ================= */
@@ -95,10 +162,28 @@ export abstract class BulkImportBaseComponent<T>
   /* ================= NOTIFY ================= */
 
   protected notifySuccess(msg: string) {
-    this.snackbar.open(msg, 'Close', { duration: 3000 });
+
+    this.snackbar.open(
+      msg,
+      'Close',
+      {
+        duration: 7000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      }
+    );
+
   }
 
   protected notifyError(msg: string) {
-    this.snackbar.open(msg, 'Close', { duration: 3000 });
+    this.snackbar.open(
+      msg,
+      'Close',
+      {
+        duration: 7000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      }
+    );
   }
 }

@@ -283,10 +283,10 @@ public class SupplierService {
         );
     }
 
-    @Transactional
     public Supplier createMinimalSupplier(
             String supplierName,
-            Category category
+            Category category,
+            UUID branchId
     ) {
 
         Optional<Supplier> existing =
@@ -294,7 +294,7 @@ public class SupplierService {
                         supplierName,
                         null,
                         tenantId(),
-                        branchId()
+                        branchId
                 );
 
     /* =======================================================
@@ -345,8 +345,11 @@ public class SupplierService {
         Supplier supplier = Supplier.builder()
                 .name(supplierName)
                 .uploadFolder(UUID.randomUUID() + "_" + System.currentTimeMillis())
+                .tenantId(tenantId())
+                .branchId(branchId)
                 .deleted(false)
                 .build();
+
 
         supplier.setCreatedAt(LocalDateTime.now());
 

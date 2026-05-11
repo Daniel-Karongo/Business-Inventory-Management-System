@@ -3,6 +3,8 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.variant
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
@@ -15,13 +17,25 @@ public interface ProductVariantPackagingRepository extends JpaRepository<Product
     ProductVariantPackaging findByProductVariantIdAndIsBaseUnitTrueAndDeletedFalse(UUID productVariantId);
 
     @Query("""
-        SELECT p FROM ProductVariantPackaging p
-        WHERE p.productVariant.id IN :variantIds
-          AND p.deleted = false
-    """)
+                SELECT p FROM ProductVariantPackaging p
+                WHERE p.productVariant.id IN :variantIds
+                  AND p.deleted = false
+            """)
     List<ProductVariantPackaging> findAllByVariantIds(List<UUID> variantIds);
 
     boolean existsByProductVariantIdAndIsBaseUnitFalseAndDeletedFalse(UUID variantId);
 
     boolean existsByProductVariantIdAndDeletedFalse(UUID variantId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+                select p
+                from ProductVariantPackaging p
+                where p.productVariant.id = :variantId
+                  and p.isBaseUnit = true
+                  and p.deleted = false
+            """)
+    ProductVariantPackaging lockBasePackaging(
+            @Param("variantId") UUID variantId
+    );
 }

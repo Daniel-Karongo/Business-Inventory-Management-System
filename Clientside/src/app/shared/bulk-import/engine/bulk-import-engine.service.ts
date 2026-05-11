@@ -7,28 +7,40 @@ export class BulkImportEngineService {
   private processInChunks<T>(
     rows: T[],
     chunkSize: number,
-    onRow: (row: T) => void,
+    onRow: (row: T, index: number) => void,
     onProgress?: (percent: number) => void,
     onDone?: (count: number) => void
   ) {
     const total = rows.length;
+
     let index = 0;
 
     const next = () => {
-      const end = Math.min(index + chunkSize, total);
+
+      const end =
+        Math.min(
+          index + chunkSize,
+          total
+        );
 
       for (; index < end; index++) {
-        onRow(rows[index]);
+        onRow(rows[index], index);
       }
 
-      if (onProgress) {
-        onProgress(Math.round((index / total) * 100));
-      }
+      onProgress?.(
+        Math.round(
+          (index / total) * 100
+        )
+      );
 
       if (index < total) {
-        requestAnimationFrame(next);
+
+        setTimeout(next, 0);
+
       } else {
+
         onDone?.(total);
+
       }
     };
 
@@ -40,7 +52,7 @@ export class BulkImportEngineService {
   importCsv(
     file: File,
     headers: string[],
-    onRow: (row: any) => void,
+    onRow: (row: any, index: number) => void,
     onDone: (count: number) => void,
     onProgress?: (percent: number) => void
   ) {
@@ -62,7 +74,7 @@ export class BulkImportEngineService {
           row[h] = values[i]?.trim();
         });
 
-        onRow(row);
+        onRow(row, processed);
 
         processed++;
         if (onProgress) {
@@ -82,7 +94,7 @@ export class BulkImportEngineService {
     file: File,
     headers: string[],
     adapt: ((row: any) => any) | null,
-    onRow: (row: any) => void,
+    onRow: (row: any, index: number) => void,
     onDone: (count: number) => void,
     onProgress?: (percent: number) => void
   ) {
@@ -95,7 +107,7 @@ export class BulkImportEngineService {
 
       this.processInChunks(
         rows.map(r => (adapt ? adapt(r) : r)),
-        25,
+        100,
         onRow,
         onProgress,
         onDone

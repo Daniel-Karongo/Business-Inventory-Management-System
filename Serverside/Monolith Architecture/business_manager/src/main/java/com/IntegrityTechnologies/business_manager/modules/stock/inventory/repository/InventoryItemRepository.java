@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository;
 
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryItem;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryViewProjection;
 import jakarta.persistence.LockModeType;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.data.domain.Page;
@@ -30,6 +31,7 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
     List<InventoryItem> findByTenantIdAndBranchIdAndDeletedFalse(UUID tenantId, UUID branchId);
 
     Optional<InventoryItem> findFirstByProductVariantIdAndTenantId(UUID variantId, UUID tenantId);
+
     Optional<InventoryItem> findByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
             UUID variantId,
             UUID tenantId,
@@ -41,6 +43,7 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
             UUID uuid,
             UUID branchId
     );
+
     boolean existsByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
             UUID variantId,
             UUID tenantId,
@@ -59,12 +62,12 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-        SELECT i FROM InventoryItem i
-        WHERE i.productVariantId = :variantId
-          AND i.tenantId = :tenantId
-          AND i.branchId = :branchId
-          AND i.deleted = false
-    """)
+                SELECT i FROM InventoryItem i
+                WHERE i.productVariantId = :variantId
+                  AND i.tenantId = :tenantId
+                  AND i.branchId = :branchId
+                  AND i.deleted = false
+            """)
     Optional<InventoryItem> lockByVariant(
             @Param("variantId") UUID variantId,
             @Param("tenantId") UUID tenantId,
@@ -76,28 +79,28 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
     ===================================================== */
 
     @Query("""
-    SELECT i FROM InventoryItem i
-    WHERE i.tenantId = :tenantId
-      AND i.deleted = false
-""")
+                SELECT i FROM InventoryItem i
+                WHERE i.tenantId = :tenantId
+                  AND i.deleted = false
+            """)
     Page<InventoryItem> findAllActive(UUID tenantId, Pageable pageable);
 
 
     @Query("""
-    SELECT i FROM InventoryItem i
-    WHERE i.tenantId = :tenantId
-      AND i.branchId = :branchId
-      AND i.deleted = false
-""")
+                SELECT i FROM InventoryItem i
+                WHERE i.tenantId = :tenantId
+                  AND i.branchId = :branchId
+                  AND i.deleted = false
+            """)
     Page<InventoryItem> findByBranchScoped(UUID tenantId, UUID branchId, Pageable pageable);
 
 
     @Query("""
-    SELECT i FROM InventoryItem i
-    WHERE i.tenantId = :tenantId
-      AND i.productId = :productId
-      AND i.deleted = false
-""")
+                SELECT i FROM InventoryItem i
+                WHERE i.tenantId = :tenantId
+                  AND i.productId = :productId
+                  AND i.deleted = false
+            """)
     List<InventoryItem> findByProductScoped(UUID tenantId, UUID productId);
 
     /* =====================================================
@@ -107,11 +110,11 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
     @Transactional
     @Modifying
     @Query("""
-        update InventoryItem i
-        set i.deleted = true
-        where i.productVariantId in :variantIds
-          AND i.tenantId = :tenantId
-    """)
+                update InventoryItem i
+                set i.deleted = true
+                where i.productVariantId in :variantIds
+                  AND i.tenantId = :tenantId
+            """)
     void softDeleteByVariantIds(
             @Param("variantIds") List<UUID> variantIds,
             @Param("tenantId") UUID tenantId
@@ -120,12 +123,12 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
     @Transactional
     @Modifying
     @Query("""
-        update InventoryItem i
-        set i.deleted = false
-        where i.productVariantId in :variantIds
-          AND i.tenantId = :tenantId
-          AND i.branchId = :branchId
-    """)
+                update InventoryItem i
+                set i.deleted = false
+                where i.productVariantId in :variantIds
+                  AND i.tenantId = :tenantId
+                  AND i.branchId = :branchId
+            """)
     void restoreByVariantIds(
             @Param("variantIds") List<UUID> variantIds,
             @Param("tenantId") UUID tenantId,
@@ -137,19 +140,19 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
     ===================================================== */
 
     @Query("""
-        SELECT i FROM InventoryItem i
-        WHERE i.tenantId = :tenantId
-          AND i.branchId = :branchId
-          AND i.quantityOnHand > 0
-          AND i.deleted = false
-          AND NOT EXISTS (
-              SELECT t FROM StockTransaction t
-              WHERE t.productVariantId = i.productVariantId
-                AND t.branchId = :branchId
-                AND t.type = 'SALE'
-                AND t.timestamp >= :cutoff
-          )
-    """)
+                SELECT i FROM InventoryItem i
+                WHERE i.tenantId = :tenantId
+                  AND i.branchId = :branchId
+                  AND i.quantityOnHand > 0
+                  AND i.deleted = false
+                  AND NOT EXISTS (
+                      SELECT t FROM StockTransaction t
+                      WHERE t.productVariantId = i.productVariantId
+                        AND t.branchId = :branchId
+                        AND t.type = 'SALE'
+                        AND t.timestamp >= :cutoff
+                  )
+            """)
     List<InventoryItem> findDeadStock(
             @Param("tenantId") UUID tenantId,
             @Param("branchId") UUID branchId,
@@ -157,11 +160,11 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
     );
 
     @Query("""
-        SELECT i FROM InventoryItem i
-        WHERE i.tenantId = :tenantId
-          AND i.deleted = false
-          AND i.quantityOnHand <= :threshold
-    """)
+                SELECT i FROM InventoryItem i
+                WHERE i.tenantId = :tenantId
+                  AND i.deleted = false
+                  AND i.quantityOnHand <= :threshold
+            """)
     Page<InventoryItem> findLowStock(
             UUID tenantId,
             long threshold,
@@ -169,26 +172,96 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
     );
 
     @Query("""
-        SELECT i FROM InventoryItem i
-        WHERE i.tenantId = :tenantId
-          AND i.deleted = false
-          AND i.quantityOnHand <= 0
-    """)
+                SELECT i FROM InventoryItem i
+                WHERE i.tenantId = :tenantId
+                  AND i.deleted = false
+                  AND i.quantityOnHand <= 0
+            """)
     Page<InventoryItem> findOutOfStock(
             UUID tenantId,
             Pageable pageable
     );
 
     @Query("""
-        SELECT i FROM InventoryItem i
-        WHERE i.productVariantId IN :variantIds
-          AND i.tenantId = :tenantId
-          AND i.branchId = :branchId
-          AND i.deleted = false
-    """)
+                SELECT i FROM InventoryItem i
+                WHERE i.productVariantId IN :variantIds
+                  AND i.tenantId = :tenantId
+                  AND i.branchId = :branchId
+                  AND i.deleted = false
+            """)
     List<InventoryItem> findAllByVariants(
             @Param("variantIds") List<UUID> variantIds,
             @Param("tenantId") UUID tenantId,
             @Param("branchId") UUID branchId
+    );
+
+    @Query("""
+                SELECT
+                    i.productId as productId,
+                    p.name as productName,
+                    p.sku as productSku,
+
+                    v.id as productVariantId,
+                    v.classification as productClassification,
+                    v.sku as productVariantSku,
+
+                    i.branchId as branchId,
+                    i.quantityOnHand as quantityOnHand,
+                    i.averageCost as averageCost,
+                    i.lastUpdatedAt as lastUpdatedAt
+
+                FROM InventoryItem i
+                JOIN ProductVariant v
+                    ON v.id = i.productVariantId
+                JOIN Product p
+                    ON p.id = v.product.id
+
+                WHERE i.id = :inventoryId
+            """)
+    Optional<InventoryViewProjection> findViewById(
+            @Param("inventoryId") UUID inventoryId
+    );
+
+    @Query("""
+                SELECT
+                    i.id as inventoryId,
+
+                    i.productId as productId,
+                    p.name as productName,
+                    p.sku as productSku,
+
+                    v.id as productVariantId,
+                    v.classification as productClassification,
+                    v.sku as productVariantSku,
+
+                    i.branchId as branchId,
+                    i.quantityOnHand as quantityOnHand,
+                    i.averageCost as averageCost,
+                    i.lastUpdatedAt as lastUpdatedAt
+
+                FROM InventoryItem i
+                JOIN ProductVariant v
+                    ON v.id = i.productVariantId
+                JOIN Product p
+                    ON p.id = v.product.id
+
+                WHERE i.tenantId = :tenantId
+                  AND i.deleted = false
+            """)
+    Page<InventoryViewProjection> findAllView(
+            @Param("tenantId") UUID tenantId,
+            Pageable pageable
+    );
+
+    @Query("""
+                SELECT i
+                FROM InventoryItem i
+                WHERE i.tenantId = :tenantId
+                  AND i.productId = :productId
+                  AND i.deleted = false
+            """)
+    List<InventoryItem> findByTenantIdAndProductId(
+            @Param("tenantId") UUID tenantId,
+            @Param("productId") UUID productId
     );
 }

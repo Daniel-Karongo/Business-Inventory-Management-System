@@ -214,6 +214,53 @@ public class CategoryService {
         return category;
     }
 
+    @Transactional
+    public Category createMinimal(
+            String name,
+            UUID branchId
+    ) {
+
+        branchTenantGuard.validate(branchId);
+
+        Category category = categoryRepository
+                .findByNameSafe(
+                        name,
+                        false,
+                        tenantId(),
+                        branchId
+                )
+                .orElseGet(() -> {
+
+                    Category newCategory = Category.builder()
+                            .name(name)
+                            .tenantId(tenantId())
+                            .branchId(branchId)
+                            .path("/TEMP")
+                            .build();
+
+                    newCategory = categoryRepository.save(newCategory);
+
+                    if (newCategory.getParent() == null) {
+                        newCategory.setPath("/" + newCategory.getId());
+                    } else {
+                        newCategory.setPath(
+                                newCategory.getParent().getPath()
+                                        + "/"
+                                        + newCategory.getId()
+                        );
+                    }
+
+                    return categoryRepository.save(newCategory);
+                });
+
+        cacheInvalidationService.evictCategoryCaches(
+                tenantId(),
+                branchId
+        );
+
+        return category;
+    }
+
     @Cacheable(
             value = "branch-lookup",
             key = "T(java.util.Objects).hash(T(com.IntegrityTechnologies.business_manager.security.util.TenantContext).getTenantId(), #branchName)"

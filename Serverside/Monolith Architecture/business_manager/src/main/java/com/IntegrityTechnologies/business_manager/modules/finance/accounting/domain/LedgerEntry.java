@@ -82,8 +82,17 @@ public class LedgerEntry extends BranchAwareEntity {
         this.journalEntry = journalEntry;
         this.direction = direction;
         this.amount = amount;
+    }
 
-        this.postedAt = journalEntry.getPostedAt();
+    public void markPosted(LocalDateTime postedAt) {
+
+        if (this.postedAt != null) {
+            throw new IllegalStateException(
+                    "Ledger entry already posted"
+            );
+        }
+
+        this.postedAt = postedAt;
     }
 
     @PreUpdate

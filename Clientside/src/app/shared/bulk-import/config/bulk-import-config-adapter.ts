@@ -46,6 +46,15 @@ export class BulkImportConfigAdapter {
     data?: any
   ) {
     (form.get('rows') as FormArray)
-      .push(this.createRow(fb, config, data));
+      .push(
+        this.createRow(
+          fb,
+          config,
+          data
+        ),
+        {
+          emitEvent: false
+        }
+      );
   }
 }

@@ -3,22 +3,27 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.do
 import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Objects;
+import java.util.UUID;
 
 @Entity
 @Table(
         name = "account_balances",
         indexes = {
-                @Index(name = "idx_balance_tenant_branch_account",
-                        columnList = "tenant_id, branch_id, account_id"),
-
-                @Index(name = "idx_balance_updated",
-                        columnList = "updatedAt")
+                @Index(
+                        name = "idx_balance_tenant_branch_account",
+                        columnList = "tenant_id, branch_id, account_id"
+                ),
+                @Index(
+                        name = "idx_balance_updated",
+                        columnList = "updated_at"
+                )
         }
 )
 @Getter
@@ -40,36 +45,35 @@ public class AccountBalance extends BranchAwareEntity {
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal balance = BigDecimal.ZERO;
 
-    @Column(nullable = false)
-    private LocalDateTime updatedAt;
-
     @Version
     @Column(nullable = false)
     private Long version = 0L;
-
-    @PrePersist
-    public void prePersist() {
-        if (version == null) {
-            version = 0L;
-        }
-    }
 
     public static class AccountBalanceId implements Serializable {
 
         private UUID account;
         private UUID branch;
 
-        public AccountBalanceId(){}
+        public AccountBalanceId() {}
 
-        public AccountBalanceId(UUID account, UUID branch) {
+        public AccountBalanceId(
+                UUID account,
+                UUID branch
+        ) {
             this.account = account;
             this.branch = branch;
         }
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof AccountBalanceId that)) return false;
+
+            if (this == o) {
+                return true;
+            }
+
+            if (!(o instanceof AccountBalanceId that)) {
+                return false;
+            }
 
             return Objects.equals(account, that.account)
                     && Objects.equals(branch, that.branch);

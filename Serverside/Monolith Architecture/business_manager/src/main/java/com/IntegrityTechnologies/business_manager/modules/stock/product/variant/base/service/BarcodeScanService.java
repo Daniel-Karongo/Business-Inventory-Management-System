@@ -26,18 +26,19 @@ public class BarcodeScanService {
     private final SellableResolutionService resolutionService;
     private final ProductVariantPackagingService packagingService;
 
-    private UUID tenantId() { return TenantContext.getTenantId(); }
-    private UUID branchId() { return BranchContext.get(); }
+    public UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
 
     @Cacheable(
             value = "barcode-scan",
             key = "T(com.IntegrityTechnologies.business_manager.config.caffeine.CacheKeys)" +
-                    ".barcode(#root.target.tenantId(), #root.target.branchId(), #barcode)"
+                    ".barcode(#root.target.tenantId(), #branchId, #barcode)"
     )
-    public BarcodeScanResponse scan(String barcode) {
+    public BarcodeScanResponse scan(UUID branchId, String barcode) {
 
         VariantScanProjection p = variantRepo
-                .scanProjection(tenantId(), branchId(), barcode)
+                .scanProjection(tenantId(), branchId, barcode)
                 .orElseThrow(() ->
                         new EntityNotFoundException("Invalid barcode or SKU")
                 );
@@ -56,7 +57,7 @@ public class BarcodeScanService {
         SellableSnapshot snap = resolutionService.resolve(
                 SellableContext.builder()
                         .tenantId(tenantId())
-                        .branchId(branchId())
+                        .branchId(branchId)
                         .productVariantId(p.getVariantId())
                         .packagingId(packaging.getId())
                         .quantity(quantity)

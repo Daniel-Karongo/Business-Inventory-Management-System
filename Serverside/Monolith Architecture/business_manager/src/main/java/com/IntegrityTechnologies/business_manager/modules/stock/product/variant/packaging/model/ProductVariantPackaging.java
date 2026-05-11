@@ -16,10 +16,6 @@ import java.util.UUID;
                 @UniqueConstraint(
                         name = "uk_packaging_variant_name",
                         columnNames = {"tenant_id", "branch_id", "product_variant_id", "name"}
-                ),
-                @UniqueConstraint(
-                        name = "uk_single_base_unit",
-                        columnNames = {"tenant_id", "branch_id", "product_variant_id", "is_base_unit"}
                 )
         },
         indexes = {

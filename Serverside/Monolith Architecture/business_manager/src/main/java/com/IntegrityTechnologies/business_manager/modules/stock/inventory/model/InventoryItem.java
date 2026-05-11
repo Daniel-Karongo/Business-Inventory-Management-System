@@ -43,9 +43,9 @@ public class InventoryItem extends BranchAwareEntity {
     @Column(name = "product_variant_id", nullable = false)
     private UUID productVariantId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_variant_id", insertable = false, updatable = false)
-    private ProductVariant productVariant;
+//    @ManyToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "product_variant_id", insertable = false, updatable = false)
+//    private ProductVariant productVariant;
 
     @Column(nullable = false)
     private Long quantityOnHand;

@@ -24,7 +24,7 @@ public class VariantPdfOrchestrationService {
     private final FileStorageService fileStorageService;
     private final OutboxEventWriter outboxEventWriter;
 
-    public String requestBulkPdf(List<UUID> variantIds) {
+    public String requestBulkPdf(UUID branchId, List<UUID> variantIds) {
 
         if (variantIds.size() > 200) {
             throw new IllegalArgumentException("Maximum 200 variants allowed per request");
@@ -40,10 +40,10 @@ public class VariantPdfOrchestrationService {
 
         outboxEventWriter.write(
                 "VARIANT_BARCODE_PDF_REQUESTED",
-                BranchContext.get(),
+                branchId,
                 VariantBarcodePdfRequestedEvent.builder()
                         .tenantId(TenantContext.getTenantId())
-                        .branchId(BranchContext.get())
+                        .branchId(branchId)
                         .variantIds(variantIds)
                         .outputPath(output.toString())
                         .build()
@@ -52,7 +52,7 @@ public class VariantPdfOrchestrationService {
         return fileName;
     }
 
-    public String requestProductPdf(UUID productId) {
+    public String requestProductPdf(UUID branchId, UUID productId) {
 
         String fileName = "barcode-product-" + UUID.randomUUID() + ".pdf";
 
@@ -64,10 +64,10 @@ public class VariantPdfOrchestrationService {
 
         outboxEventWriter.write(
                 "VARIANT_BARCODE_PDF_REQUESTED",
-                BranchContext.get(),
+                branchId,
                 VariantBarcodePdfRequestedEvent.builder()
                         .tenantId(TenantContext.getTenantId())
-                        .branchId(BranchContext.get())
+                        .branchId(branchId)
                         .productId(productId)
                         .outputPath(output.toString())
                         .build()

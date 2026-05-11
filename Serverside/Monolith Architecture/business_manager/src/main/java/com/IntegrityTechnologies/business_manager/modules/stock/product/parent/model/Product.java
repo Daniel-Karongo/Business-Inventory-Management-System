@@ -49,13 +49,11 @@ public class Product extends BranchAwareEntity {
     @Column(precision = 19, scale = 6)
     private BigDecimal minimumProfit;
 
-    @Builder.Default
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ProductVariant> variants = new ArrayList<>();
+    private Set<ProductVariant> variants = new HashSet<>();
 
-    @Builder.Default
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ProductImage> images = new ArrayList<>();
+    private Set<ProductImage> images = new HashSet<>();
 
     @Builder.Default
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -378,10 +378,7 @@ export const environment = {
       resolve: '/sellable/resolve',
       search: '/sellable/search'
     },
-    sellableProducts: {
-      base: '/sellable-products',
-      search: '/sellable-products/search'
-    },
+
     /* =====================================================
        SALES
     ===================================================== */
@@ -414,7 +411,7 @@ export const environment = {
     /* =====================================================
        STOCK / INVENTORY
     ===================================================== */
-    
+
     stock: {
       /* =========================================
          INVENTORY QUERY
@@ -527,7 +524,8 @@ export const environment = {
       ========================================= */
       onboarding: {
         base: '/stock/onboarding',
-        create: '/stock/onboarding'
+        create: '/stock/onboarding',
+        bulk: '/stock/onboarding/bulk'
       }
     },
 

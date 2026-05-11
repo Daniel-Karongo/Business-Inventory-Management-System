@@ -46,6 +46,8 @@ export class BulkImportResultDialogComponent implements AfterViewInit {
   @ViewChild('successPaginator') successPaginator!: MatPaginator;
   @ViewChild('failedPaginator') failedPaginator!: MatPaginator;
 
+  confirming = false;
+
   constructor(
     @Inject(MAT_DIALOG_DATA)
     public data: BulkImportResultDialogData,
@@ -71,6 +73,9 @@ export class BulkImportResultDialogComponent implements AfterViewInit {
   }
 
   confirm() {
+
+    this.confirming = true;
+
     this.dialogRef.close(true);
   }
 }

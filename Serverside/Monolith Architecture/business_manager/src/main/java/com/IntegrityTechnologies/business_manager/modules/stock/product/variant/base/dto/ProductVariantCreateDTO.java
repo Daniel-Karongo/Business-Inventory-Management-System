@@ -13,4 +13,5 @@ public class ProductVariantCreateDTO {
     private Double minimumPercentageProfit;
     private BigDecimal minimumProfit;
     private String sku;
+    private Boolean autoCreateBasePackaging = true;
 }

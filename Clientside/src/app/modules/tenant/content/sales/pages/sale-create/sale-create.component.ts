@@ -150,6 +150,7 @@ import {
 import {
   SellableService
 } from '../../services/sellable.service';
+import { BranchContextService } from '../../../../../../core/services/branch-context.service';
 
 interface SaleLinePreviewState {
   loading: boolean;
@@ -252,7 +253,11 @@ export class SaleCreateComponent implements OnInit {
 
   private readonly posBarcodeService =
     inject(PosBarcodeService);
+  
+  private readonly branchContext = 
+    inject(BranchContextService);
 
+    
   barcodeCtrl =
     new FormControl('');
 
@@ -759,7 +764,10 @@ export class SaleCreateComponent implements OnInit {
       return;
     }
 
+    const branchId = this.branchContext.currentBranch ?? '';
+
     this.barcodeService.scan({
+      branchId,
       barcode
     })
       .pipe(

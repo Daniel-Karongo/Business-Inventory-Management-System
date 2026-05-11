@@ -145,6 +145,9 @@ public class JournalEntry extends BranchAwareEntity {
     public boolean isReversed() { return reversed; }
     public UUID getReversalJournalId() { return reversalJournalId; }
     public Branch getBranch() { return branch; }
+    public UUID getBranchId() {
+        return super.getBranchId();
+    }
     public List<LedgerEntry> getLedgerEntries() { return ledgerEntries; }
     public String getHash() { return hash; }
     public String getPreviousHash() { return previousHash; }

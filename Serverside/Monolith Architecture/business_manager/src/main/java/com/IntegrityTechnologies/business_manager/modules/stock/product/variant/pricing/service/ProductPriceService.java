@@ -9,6 +9,8 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.repository.ProductPriceRepository;
 import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,9 @@ public class ProductPriceService {
     private final ProductPriceRepository priceRepo;
     private final CacheInvalidationService cacheInvalidationService;
     private final InventoryService inventoryService;
+
+    @PersistenceContext
+    private EntityManager em;
 
     private UUID tenantId() { return TenantContext.getTenantId(); }
     private UUID branchId() { return BranchContext.get(); }
@@ -95,8 +100,8 @@ public class ProductPriceService {
         }
 
         ProductPrice p = ProductPrice.builder()
-                .productVariant(ProductVariant.builder().id(variantId).build())
-                .packaging(ProductVariantPackaging.builder().id(packagingId).build())
+                .productVariant(em.getReference(ProductVariant.class, variantId))
+                .packaging(em.getReference(ProductVariantPackaging.class, packagingId))
                 .price(price)
                 .minQuantity(minQty)
                 .tenantId(tenantId())

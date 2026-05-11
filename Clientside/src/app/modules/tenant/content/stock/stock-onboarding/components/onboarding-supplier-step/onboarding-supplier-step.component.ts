@@ -152,8 +152,8 @@ export class OnboardingSupplierStepComponent implements OnInit, OnChanges {
                     this.NEW_SUPPLIER
                 ],
 
-                newSupplierName: [
-                    row?.newSupplierName ?? ''
+                supplierName: [
+                    row?.supplierName ?? ''
                 ],
 
                 packagingTempId: [
@@ -185,13 +185,13 @@ export class OnboardingSupplierStepComponent implements OnInit, OnChanges {
                 const supplierId =
                     value.supplierId;
 
-                const newSupplierName =
-                    value.newSupplierName;
+                const supplierName =
+                    value.supplierName;
 
                 if (
                     supplierId ===
                     this.NEW_SUPPLIER &&
-                    !newSupplierName?.trim()
+                    !supplierName?.trim()
                 ) {
 
                     group

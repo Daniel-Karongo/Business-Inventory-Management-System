@@ -62,7 +62,7 @@ public interface ProductMapper {
        IMAGE MAPPING
        ========================================================= */
 
-    default List<String> mapImagesToUrls(List<ProductImage> images) {
+    default List<String> mapImagesToUrls(Set<ProductImage> images) {
         if (images == null || images.isEmpty()) return List.of();
 
         List<String> urls = new ArrayList<>();
@@ -95,10 +95,10 @@ public interface ProductMapper {
        VARIANT MAPPING (SAFE)
        ========================================================= */
 
-    default List<ProductVariantDTO> mapVariants(List<ProductVariant> variants) {
+    default List<ProductVariantDTO> mapVariants(Set<ProductVariant> variants) {
         if (variants == null || variants.isEmpty()) return List.of();
 
-        List<ProductVariantDTO> result = new ArrayList<>();
+        List<ProductVariantDTO> result = new ArrayList<>(variants.size());
 
         for (ProductVariant v : variants) {
 

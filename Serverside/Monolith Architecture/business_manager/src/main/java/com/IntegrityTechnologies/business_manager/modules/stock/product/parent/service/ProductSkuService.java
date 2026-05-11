@@ -6,7 +6,9 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.r
 import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
@@ -22,56 +24,78 @@ public class ProductSkuService {
         return TenantContext.getTenantId();
     }
 
-    private UUID branchId() {
-        return BranchContext.get();
-    }
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Long nextSequenceForCategory(
+            Long categoryId,
+            UUID branchId
+    ) {
 
-    @Transactional
-    public Long nextSequenceForCategory(Long categoryId) {
-
-        Optional<ProductSequence> maybe =
+        ProductSequence seq =
                 productSequenceRepository.findForUpdate(
                         categoryId,
                         tenantId(),
-                        branchId()
+                        branchId
+                ).orElse(null);
+
+        if (seq == null) {
+
+            try {
+
+                seq = productSequenceRepository.saveAndFlush(
+                        ProductSequence.builder()
+                                .categoryId(categoryId)
+                                .lastValue(0L)
+                                .tenantId(tenantId())
+                                .branchId(branchId)
+                                .build()
                 );
 
-        ProductSequence seq;
+            } catch (DataIntegrityViolationException ex) {
 
-        if (maybe.isPresent()) {
-
-            seq = maybe.get();
-            seq.setLastValue(seq.getLastValue() + 1);
-
-        } else {
-
-            seq = ProductSequence.builder()
-                    .categoryId(categoryId)
-                    .lastValue(1L)
-                    .tenantId(tenantId())
-                    .branchId(branchId())
-                    .build();
+                seq =
+                        productSequenceRepository.findForUpdate(
+                                categoryId,
+                                tenantId(),
+                                branchId
+                        ).orElseThrow();
+            }
         }
 
-        productSequenceRepository.save(seq);
+        seq.setLastValue(seq.getLastValue() + 1);
+
+        productSequenceRepository.saveAndFlush(seq);
 
         return seq.getLastValue();
     }
 
     @Transactional
-    public String generateSkuForCategory(Category category) {
+    public String generateSkuForCategory(
+            Category category,
+            UUID branchId
+    ) {
 
-        String raw = (category.getName() == null) ? "GEN" : category.getName();
+        String raw =
+                (category.getName() == null)
+                        ? "GEN"
+                        : category.getName();
 
-        String alpha = raw.replaceAll("[^A-Za-z]", "");
+        String alpha =
+                raw.replaceAll("[^A-Za-z]", "");
 
-        alpha = (alpha.length() >= 3)
-                ? alpha.substring(0, 3).toUpperCase()
-                : (alpha.toUpperCase() + "XXX").substring(0, 3);
+        alpha =
+                (alpha.length() >= 3)
+                        ? alpha.substring(0, 3).toUpperCase()
+                        : (alpha.toUpperCase() + "XXX")
+                        .substring(0, 3);
 
-        Long nextSeq = nextSequenceForCategory(category.getId());
+        Long nextSeq =
+                nextSequenceForCategory(
+                        category.getId(),
+                        branchId
+                );
 
-        String seqStr = String.format("%06d", nextSeq);
+        String seqStr =
+                String.format("%06d", nextSeq);
 
         return alpha + "-" + seqStr;
     }

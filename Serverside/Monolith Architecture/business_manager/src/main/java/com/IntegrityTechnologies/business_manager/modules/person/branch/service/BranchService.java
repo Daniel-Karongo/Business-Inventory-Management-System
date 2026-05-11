@@ -5,15 +5,16 @@ import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundExcept
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.BranchAccountingSettings;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.BranchAccountingSettingsRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.seed.AccountingPeriodBootstrapService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.seed.BranchChartOfAccountsService;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.TaxSystemState;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.TaxSystemStateRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
-import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.dto.BranchDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.model.BranchAudit;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.department.dto.DepartmentMinimalDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentRepository;
@@ -26,7 +27,6 @@ import com.IntegrityTechnologies.business_manager.modules.person.user.repository
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.service.SubscriptionGuard;
 import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
-import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.util.PrivilegesChecker;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
@@ -56,9 +56,9 @@ public class BranchService {
     private final PrivilegesChecker privilegesChecker;
     private final SubscriptionGuard subscriptionGuard;
     private final TenantMetadataCache tenantMetadataCache;
-    private final BranchTenantGuard branchTenantGuard;
     private final TaxSystemStateRepository taxSystemStateRepository;
     private final TaxProperties taxProperties;
+    private final AccountingPeriodBootstrapService accountingPeriodBootstrapService;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -99,7 +99,7 @@ public class BranchService {
         recordAudit(branch, "CREATE", null, null, null, authentication, "Branch created");
 
         tenantMetadataCache.invalidateTenant(TenantContext.getTenantId());
-        
+
         return toDTO(branch);
     }
 
@@ -263,6 +263,11 @@ public class BranchService {
                 branch.getId()
         );
 
+        accountingPeriodBootstrapService.ensureCurrentPeriod(
+                TenantContext.getTenantId(),
+                branch.getId()
+        );
+        
     /* ===============================
        TAX CONFIGURATION
     =============================== */

@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.en
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.projection.BalanceProjectionConsumer;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
@@ -12,6 +13,7 @@ import java.util.concurrent.*;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BranchLedgerWorkerService {
 
     private final BalanceProjectionConsumer projectionConsumer;
@@ -31,7 +33,22 @@ public class BranchLedgerWorkerService {
     public void onJournalPosted(JournalPostedEvent event) {
 
         worker(event.branchId())
-                .submit(() -> projectionConsumer.handleSpring(event));
+                .submit(() -> {
+
+                    try {
+
+                        projectionConsumer.handleSpring(event);
+
+                    } catch (Exception ex) {
+
+                        log.error(
+                                "Ledger worker failed for branch {} journal {}",
+                                event.branchId(),
+                                event.journalId(),
+                                ex
+                        );
+                    }
+                });
     }
 
     @PreDestroy

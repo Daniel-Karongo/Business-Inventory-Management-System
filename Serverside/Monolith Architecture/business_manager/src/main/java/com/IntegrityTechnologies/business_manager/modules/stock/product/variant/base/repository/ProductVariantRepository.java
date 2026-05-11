@@ -14,12 +14,12 @@ import java.util.*;
 public interface ProductVariantRepository extends JpaRepository<ProductVariant, UUID> {
 
     @Query("""
-    SELECT v FROM ProductVariant v
-    WHERE v.id = :id
-      AND v.deleted = :deleted
-      AND v.tenantId = :tenantId
-      AND v.branchId = :branchId
-""")
+                SELECT v FROM ProductVariant v
+                WHERE v.id = :id
+                  AND v.deleted = :deleted
+                  AND v.tenantId = :tenantId
+                  AND v.branchId = :branchId
+            """)
     Optional<ProductVariant> findByIdSafe(
             @Param("id") UUID id,
             @Param("deleted") boolean deleted,
@@ -28,12 +28,12 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     );
 
     @Query("""
-    SELECT v FROM ProductVariant v
-    WHERE v.product.id = :productId
-      AND v.deleted = :deleted
-      AND v.tenantId = :tenantId
-      AND v.branchId = :branchId
-""")
+                SELECT v FROM ProductVariant v
+                WHERE v.product.id = :productId
+                  AND v.deleted = :deleted
+                  AND v.tenantId = :tenantId
+                  AND v.branchId = :branchId
+            """)
     List<ProductVariant> findByProduct_IdSafe(
             @Param("productId") UUID productId,
             @Param("deleted") boolean deleted,
@@ -43,13 +43,13 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     // ✅ SAFE SCAN QUERY (fetch join for performance)
     @Query("""
-        SELECT v FROM ProductVariant v
-        JOIN FETCH v.product p
-        WHERE v.tenantId = :tenantId
-          AND v.branchId = :branchId
-          AND v.deleted = false
-          AND (v.barcode = :value OR v.sku = :value)
-    """)
+                SELECT v FROM ProductVariant v
+                JOIN FETCH v.product p
+                WHERE v.tenantId = :tenantId
+                  AND v.branchId = :branchId
+                  AND v.deleted = false
+                  AND (v.barcode = :value OR v.sku = :value)
+            """)
     Optional<ProductVariant> findForScan(
             @Param("tenantId") UUID tenantId,
             @Param("branchId") UUID branchId,
@@ -96,12 +96,12 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     @Modifying
     @Query("""
-        update ProductVariant v
-        set v.deleted = true
-        where v.product.id = :productId
-          and v.tenantId = :tenantId
-          and v.branchId = :branchId
-    """)
+                update ProductVariant v
+                set v.deleted = true
+                where v.product.id = :productId
+                  and v.tenantId = :tenantId
+                  and v.branchId = :branchId
+            """)
     void softDeleteByProductId(
             @Param("productId") UUID productId,
             @Param("tenantId") UUID tenantId,
@@ -110,12 +110,12 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     @Modifying
     @Query("""
-        update ProductVariant v
-        set v.deleted = false
-        where v.product.id = :productId
-          and v.tenantId = :tenantId
-          and v.branchId = :branchId
-    """)
+                update ProductVariant v
+                set v.deleted = false
+                where v.product.id = :productId
+                  and v.tenantId = :tenantId
+                  and v.branchId = :branchId
+            """)
     void restoreByProductId(
             @Param("productId") UUID productId,
             @Param("tenantId") UUID tenantId,
@@ -124,11 +124,11 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     @Modifying
     @Query("""
-        delete from ProductVariant v
-        where v.product.id = :productId
-          and v.tenantId = :tenantId
-          and v.branchId = :branchId
-    """)
+                delete from ProductVariant v
+                where v.product.id = :productId
+                  and v.tenantId = :tenantId
+                  and v.branchId = :branchId
+            """)
     void deleteByProductId(
             @Param("productId") UUID productId,
             @Param("tenantId") UUID tenantId,
@@ -136,30 +136,34 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     );
 
     @Query("""
-    SELECT 
-        p.id as productId,
-        p.name as productName,
-    
-        v.id as variantId,
-        v.classification as classification,
-        v.sku as sku,
-        v.barcode as barcode,
-    
-        v.branchId as branchId,
-        COALESCE(i.quantityOnHand, 0) as quantityOnHand
-    
-    FROM ProductVariant v
-    JOIN v.product p
-    LEFT JOIN InventoryItem i 
-        ON i.productVariant.id = v.id
-        AND i.tenantId = :tenantId
-        AND i.branchId = :branchId
-    
-    WHERE v.tenantId = :tenantId
-      AND v.branchId = :branchId
-      AND v.deleted = false
-      AND (v.barcode = :value OR v.sku = :value)
-    """)
+            SELECT
+                p.id as productId,
+                p.name as productName,
+
+                v.id as variantId,
+                v.classification as classification,
+                v.sku as sku,
+                v.barcode as barcode,
+
+                v.branchId as branchId,
+                COALESCE(i.quantityOnHand, 0) as quantityOnHand
+
+            FROM ProductVariant v
+            JOIN v.product p
+
+            LEFT JOIN InventoryItem i
+                ON i.productVariantId = v.id
+                AND i.tenantId = :tenantId
+                AND i.branchId = :branchId
+
+            WHERE v.tenantId = :tenantId
+              AND v.branchId = :branchId
+              AND v.deleted = false
+              AND (
+                    v.barcode = :value
+                    OR v.sku = :value
+                  )
+            """)
     Optional<VariantScanProjection> scanProjection(
             @Param("tenantId") UUID tenantId,
             @Param("branchId") UUID branchId,
@@ -173,13 +177,13 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     );
 
     @Query("""
-    SELECT v FROM ProductVariant v
-    JOIN v.product p
-    WHERE LOWER(p.name) = LOWER(:name)
-      AND v.classification = :classification
-      AND v.deleted = false
-      AND v.tenantId = :tenantId
-""")
+                SELECT v FROM ProductVariant v
+                JOIN v.product p
+                WHERE LOWER(p.name) = LOWER(:name)
+                  AND v.classification = :classification
+                  AND v.deleted = false
+                  AND v.tenantId = :tenantId
+            """)
     List<ProductVariant> findByProductNameAndClassificationSafe(
             @Param("name") String name,
             @Param("classification") String classification,
@@ -187,16 +191,16 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     );
 
     @Query("""
-        SELECT v FROM ProductVariant v
-        JOIN FETCH v.product p
-        WHERE v.tenantId = :tenantId
-          AND v.branchId = :branchId
-          AND v.deleted = false
-          AND (
-                LOWER(v.sku) LIKE LOWER(CONCAT('%', :search, '%'))
-             OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))
-          )
-    """)
+                SELECT v FROM ProductVariant v
+                JOIN FETCH v.product p
+                WHERE v.tenantId = :tenantId
+                  AND v.branchId = :branchId
+                  AND v.deleted = false
+                  AND (
+                        LOWER(v.sku) LIKE LOWER(CONCAT('%', :search, '%'))
+                     OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))
+                  )
+            """)
     List<ProductVariant> searchSellable(
             @Param("tenantId") UUID tenantId,
             @Param("branchId") UUID branchId,
@@ -204,17 +208,17 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     );
 
     @Query("""
-        SELECT v FROM ProductVariant v
-        JOIN FETCH v.product p
-        WHERE v.tenantId = :tenantId
-          AND v.branchId = :branchId
-          AND v.deleted = false
-          AND (
-                :search IS NULL OR
-                LOWER(v.sku) LIKE LOWER(CONCAT('%', :search, '%')) OR
-                LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))
-          )
-    """)
+                SELECT v FROM ProductVariant v
+                JOIN FETCH v.product p
+                WHERE v.tenantId = :tenantId
+                  AND v.branchId = :branchId
+                  AND v.deleted = false
+                  AND (
+                        :search IS NULL OR
+                        LOWER(v.sku) LIKE LOWER(CONCAT('%', :search, '%')) OR
+                        LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))
+                  )
+            """)
     Page<ProductVariant> searchSellablePaged(
             @Param("tenantId") UUID tenantId,
             @Param("branchId") UUID branchId,

@@ -48,6 +48,22 @@ import {
 import { WorkflowShellComponent } from '../../../../../../../shared/layout/workflow-shell/workflow-shell.component';
 import { WorkflowCardComponent } from '../../../../../../../shared/layout/workflow-card/workflow-card.component';
 
+import {
+    MatButtonModule
+} from '@angular/material/button';
+
+import {
+    MatIconModule
+} from '@angular/material/icon';
+
+import {
+    MatDialog
+} from '@angular/material/dialog';
+
+import {
+    StockOnboardingBulkImportDialogComponent
+} from '../../components/stock-onboarding-bulk-import-dialog/stock-onboarding-bulk-import-dialog.component';
+
 @Component({
     selector:
         'app-onboarding-create-page',
@@ -56,6 +72,8 @@ import { WorkflowCardComponent } from '../../../../../../../shared/layout/workfl
 
     imports: [
         CommonModule,
+        MatButtonModule,
+        MatIconModule,
         PageShellComponent,
         OnboardingProgressComponent,
         OnboardingActionsComponent,
@@ -94,4 +112,20 @@ export class OnboardingCreatePageComponent {
     readonly state =
         this.facade.state;
 
+    private readonly dialog =
+        inject(MatDialog);
+
+    openBulkImport() {
+
+        this.dialog.open(
+            StockOnboardingBulkImportDialogComponent,
+            {
+                width: '1200px',
+                maxWidth: '96vw',
+                maxHeight: '92vh',
+                autoFocus: false,
+                panelClass: 'bulk-import-dialog'
+            }
+        );
+    }
 }

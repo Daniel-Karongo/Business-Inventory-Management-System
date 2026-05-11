@@ -2,6 +2,7 @@ import { AllocationDetail } from './allocation.model';
 import { PricingAdjustment } from './pricing.model';
 
 export interface BarcodeScanRequest {
+    branchId: string;
     barcode: string;
 }
 

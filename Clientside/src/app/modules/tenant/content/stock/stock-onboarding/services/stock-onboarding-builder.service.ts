@@ -8,6 +8,10 @@ import {
     StockOnboardingState
 } from '../models/onboarding.models';
 
+import {
+    BulkRequest
+} from '../../../../../../shared/models/bulk-import.model';
+
 @Injectable({
     providedIn: 'root'
 })
@@ -67,8 +71,9 @@ export class StockOnboardingBuilderService {
                 ?? undefined,
 
             reference:
-                state.reference
-                ?? undefined,
+                this.normalizeReference(
+                    state.reference
+                ),
 
             packagings:
                 state.packagings
@@ -132,9 +137,12 @@ export class StockOnboardingBuilderService {
                                 supplier.supplierId
                                 ?? undefined,
 
-                            newSupplierName:
-                                supplier.newSupplierName
+                            supplierName:
+                                supplier.supplierName
                                 || undefined,
+
+                            createSupplierIfMissing:
+                                !!supplier.supplierName,
 
                             packagingName:
                                 packaging.name,
@@ -151,6 +159,43 @@ export class StockOnboardingBuilderService {
 
         };
 
+    }
+
+    private normalizeReference(
+        reference?: string | null,
+        type = 'RECEIPT'
+    ): string {
+
+        const value = reference?.trim();
+
+        if (!value) {
+            return `${type}:${crypto.randomUUID()}`;
+        }
+
+        // already valid TYPE:UUID
+        if (
+            value.includes(':') &&
+            value.split(':').length === 2
+        ) {
+            return value;
+        }
+
+        return `${type}:${crypto.randomUUID()}`;
+    }
+
+    buildBulk(
+        states: StockOnboardingState[],
+        dryRun = false
+    ): BulkRequest<StockOnboardingRequest> {
+
+        return {
+            items: states.map(
+                state => this.build(state)
+            ),
+            options: {
+                dryRun
+            }
+        };
     }
 
 }

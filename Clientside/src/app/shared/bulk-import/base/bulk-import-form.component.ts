@@ -1,16 +1,15 @@
 import { Directive, inject } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup } from '@angular/forms';
 
-import { BulkImportBaseComponent } from './bulk-import-base.component';
-import { BulkImportConfig } from '../models/bulk-import-config.model';
+import { MatDialog } from '@angular/material/dialog';
+import { BulkImportClearDialogComponent } from '../component/bulk-import-clear-dialog.component';
+import { BulkImportMergeDialogComponent } from '../component/bulk-import-merge-dialog.component';
 import { BulkImportConfigAdapter } from '../config/bulk-import-config-adapter';
 import { BulkImportEngineService } from '../engine/bulk-import-engine.service';
 import { BulkImportTemplateService } from '../engine/bulk-import-template.service';
+import { BulkImportConfig } from '../models/bulk-import-config.model';
 import { BulkImportMergeMode } from '../models/bulk-import-parsed-file.model';
-import { MatDialog } from '@angular/material/dialog';
-import { BulkImportMergeDialogComponent } from '../component/bulk-import-merge-dialog.component';
-import { BulkImportClearDialogComponent } from '../component/bulk-import-clear-dialog.component';
-
+import { BulkImportBaseComponent } from './bulk-import-base.component';
 
 @Directive()
 export abstract class BulkImportFormComponent<
@@ -111,9 +110,13 @@ export abstract class BulkImportFormComponent<
     const errors = this.errorRows;
 
     if (errors.length) {
-      queueMicrotask(() =>
-        this.scroll.goToLine(errors[0])
-      );
+      setTimeout(() => {
+
+        this.scroll.goToLine(
+          errors[0]
+        );
+
+      }, 100);
     }
   }
 
@@ -147,11 +150,45 @@ export abstract class BulkImportFormComponent<
     this.engine.importCsv(
       file,
       this.config.headers,
-      row => this.addRow(row),
+      (row, index?: number) => {
+        this.addRow(row);
+
+      },
       count => {
+
         this.loading = false;
+
         this.progress = null;
-        this.notifySuccess(`✅ ${count} lines loaded from CSV`);
+
+        const self =
+          this as any;
+
+        const hasErrors =
+          typeof self.errorRows !== 'undefined'
+          && Array.isArray(self.errorRows)
+          && self.errorRows.length > 0;
+
+        if (!hasErrors) {
+
+          this.notifySuccess(
+            `✅ ${count} lines loaded from CSV`
+          );
+
+        }
+
+        queueMicrotask(() => {
+
+          const self =
+            this as any;
+
+          if (typeof self.afterRowsImported === 'function') {
+
+            self.afterRowsImported();
+
+          }
+
+        });
+
       },
       p => (this.progress = p)
     );
@@ -180,13 +217,49 @@ export abstract class BulkImportFormComponent<
       file,
       this.config.headers,
       adapt ?? null,
-      row => this.addRow(row),
-      count => {
-        this.loading = false;
-        this.progress = null;
-        this.notifySuccess(`✅ ${count} lines loaded from Excel`);
+      (row, index?: number) => {
+        this.addRow(row);
+
       },
-      p => (this.progress = p)
+      count => {
+
+        this.loading = false;
+
+        this.progress = null;
+
+        const self =
+          this as any;
+
+        const hasErrors =
+          typeof self.errorRows !== 'undefined'
+          && Array.isArray(self.errorRows)
+          && self.errorRows.length > 0;
+
+        if (!hasErrors) {
+
+          this.notifySuccess(
+            `✅ ${count} lines loaded from Excel`
+          );
+
+        }
+
+        queueMicrotask(() => {
+
+          const self =
+            this as any;
+
+          if (typeof self.afterRowsImported === 'function') {
+
+            self.afterRowsImported();
+
+          }
+
+        });
+
+      },
+      p => {
+        this.progress = p;
+      }
     );
   }
 

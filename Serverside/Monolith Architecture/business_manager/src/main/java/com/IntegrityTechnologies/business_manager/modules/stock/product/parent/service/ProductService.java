@@ -45,6 +45,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -309,7 +310,7 @@ public class ProductService {
             v.setProductId(product.getId());
 
             ProductVariantDTO created =
-                    productVariantService.createVariant(v);
+                    productVariantService.createVariant(branchId, v);
 
             ProductVariant entity =
                     productVariantRepository.findById(created.getId())
@@ -399,7 +400,11 @@ public class ProductService {
     ============================= */
 
         Product product = productMapper.toEntity(dto);
+
         product.setCategory(category);
+
+        product.setTenantId(tenantId());
+        product.setBranchId(branchId);
 
     /* =============================
        SUPPLIERS (FIXED 🔥)
@@ -440,9 +445,23 @@ public class ProductService {
 
         if (product.getSku() == null || product.getSku().isBlank()) {
 
-            product.setSku(
-                    skuService.generateSkuForCategory(category)
+            String generatedSku;
+
+            do {
+                generatedSku = skuService.generateSkuForCategory(
+                        category,
+                        branchId
+                );
+
+            } while (
+                    productRepository.existsByTenantIdAndBranchIdAndSku(
+                            tenantId(),
+                            branchId,
+                            generatedSku
+                    )
             );
+
+            product.setSku(generatedSku);
 
         } else {
 
@@ -457,7 +476,7 @@ public class ProductService {
        SAVE
     ============================= */
 
-        product = productRepository.save(product);
+        product = productRepository.saveAndFlush(product);
 
     /* =============================
        AUDIT
@@ -870,7 +889,7 @@ public class ProductService {
 
         if (Boolean.FALSE.equals(soft)) {
 
-            product.setImages(new ArrayList<>());
+            product.setImages(new HashSet<>());;
             productRepository.save(product);
 
             productImageAuditRepository.save(
@@ -1643,8 +1662,8 @@ public class ProductService {
                     if (!deletedProducts && Boolean.TRUE.equals(product.getDeleted())) continue;
                 }
 
-                List<ProductImage> images = product.getImages() == null
-                        ? List.of()
+                Set<ProductImage> images = product.getImages() == null
+                        ? Set.of()
                         : product.getImages();
 
                 for (ProductImage image : images) {
