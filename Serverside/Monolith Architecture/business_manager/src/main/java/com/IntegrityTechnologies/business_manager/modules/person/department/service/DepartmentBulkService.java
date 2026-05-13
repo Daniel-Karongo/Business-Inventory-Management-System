@@ -317,7 +317,7 @@ public class DepartmentBulkService {
                 .map(String::trim)
                 .map(username -> userRepository
                         .findByUsernameAndTenantId(username, tenantId)
-                        .filter(u -> !u.getDeleted())
+                        .filter(u -> !u.isDeleted())
                         .orElseThrow(() ->
                                 new IllegalArgumentException(
                                         "Unknown username: " + username

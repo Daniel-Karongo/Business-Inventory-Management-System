@@ -52,7 +52,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                 user.getRole() != null
                         ? user.getRole()
                         : Role.EMPLOYEE,
-                !Boolean.TRUE.equals(user.getDeleted())
+                !Boolean.TRUE.equals(user.isDeleted())
         );
     }
 }

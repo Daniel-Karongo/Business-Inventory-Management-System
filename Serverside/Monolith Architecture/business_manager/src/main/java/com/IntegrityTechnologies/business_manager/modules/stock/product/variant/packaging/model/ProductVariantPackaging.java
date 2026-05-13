@@ -56,10 +56,6 @@ public class ProductVariantPackaging extends BranchAwareEntity {
 
     private LocalDateTime deletedAt;
 
-    @Version
-    @Column(nullable = false)
-    private Long version = 0L;
-
     @Override
     public void beforePersist() {
 

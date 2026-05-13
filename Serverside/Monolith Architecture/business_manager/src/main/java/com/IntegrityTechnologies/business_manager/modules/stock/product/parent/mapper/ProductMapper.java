@@ -68,7 +68,7 @@ public interface ProductMapper {
         List<String> urls = new ArrayList<>();
 
         for (ProductImage img : images) {
-            if (!Boolean.TRUE.equals(img.getDeleted())) {
+            if (!Boolean.TRUE.equals(img.isDeleted())) {
                 urls.add(img.getFilePath());
             }
         }

@@ -87,17 +87,4 @@ public class Branch extends TenantAwareEntity {
 
     @Column(name = "logout_time")
     private LocalTime logoutTime;
-
-    /* ========================================
-       SYSTEM
-    ======================================== */
-
-    @Column(nullable = false)
-    @Builder.Default
-    private Boolean deleted = false;
-
-    @PrePersist
-    protected void onCreate() {
-        if (this.deleted == null) this.deleted = false;
-    }
 }

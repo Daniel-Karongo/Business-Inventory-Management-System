@@ -39,14 +39,4 @@ public class AccountingSystemState extends BranchAwareEntity {
     private boolean locked = false;
 
     private LocalDateTime lockedAt;
-
-    @Column(nullable = false)
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    public void prePersist() {
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
-        }
-    }
 }

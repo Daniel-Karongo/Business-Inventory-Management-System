@@ -2,7 +2,9 @@ package com.IntegrityTechnologies.business_manager.modules.person.branch.model;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 
@@ -52,8 +54,8 @@ public class BranchAudit extends BranchAwareEntity {
 
     private LocalDateTime timestamp;
 
-    @PrePersist
-    public void onCreate() {
+    @Override
+    public void beforePersist() {
         if (timestamp == null) {
             timestamp = LocalDateTime.now();
         }

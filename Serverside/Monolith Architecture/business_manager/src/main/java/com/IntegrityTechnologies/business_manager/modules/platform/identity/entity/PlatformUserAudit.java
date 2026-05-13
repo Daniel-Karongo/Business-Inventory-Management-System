@@ -33,8 +33,16 @@ public class PlatformUserAudit {
 
     private LocalDateTime timestamp;
 
+    @Version
+    @Column(nullable = false)
+    private Long version = 0L;
+
     @PrePersist
     public void prePersist() {
+        if (version == null) {
+            version = 0L;
+        }
+
         timestamp = LocalDateTime.now();
     }
 

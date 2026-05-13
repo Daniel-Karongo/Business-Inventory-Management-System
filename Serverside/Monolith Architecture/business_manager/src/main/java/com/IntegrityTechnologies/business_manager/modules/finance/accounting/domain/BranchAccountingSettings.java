@@ -37,23 +37,10 @@ public class BranchAccountingSettings extends BranchAwareEntity {
     @Column(nullable = false)
     private RevenueRecognitionMode revenueRecognitionMode;
 
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    private LocalDateTime updatedAt;
-
-    @PrePersist
-    protected void onCreate() {
-
-        createdAt = LocalDateTime.now();
-
+    @Override
+    public void beforePersist() {
         if (revenueRecognitionMode == null) {
             revenueRecognitionMode = RevenueRecognitionMode.DELIVERY;
         }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
     }
 }

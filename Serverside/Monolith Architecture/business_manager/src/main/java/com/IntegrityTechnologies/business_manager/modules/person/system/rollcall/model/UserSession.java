@@ -50,10 +50,6 @@ public class UserSession extends BranchAwareEntity {
     @Column(name = "token_id", columnDefinition = "BINARY(16)", nullable = false, unique = true)
     private UUID tokenId;
 
-    @Version
-    @Column(nullable = false)
-    private Long version = 0L;
-
     /* ===================== HELPERS ===================== */
 
     @Transient

@@ -78,10 +78,6 @@ public class ProductPrice extends BranchAwareEntity {
 
     private LocalDateTime deletedAt;
 
-    @Version
-    @Column(nullable = false)
-    private Long version = 0L;
-
     @Override
     public void beforePersist() {
         if (minQuantity == null || minQuantity <= 0) {

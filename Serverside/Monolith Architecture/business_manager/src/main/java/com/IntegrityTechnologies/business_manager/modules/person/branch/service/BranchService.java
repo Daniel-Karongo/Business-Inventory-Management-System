@@ -392,7 +392,7 @@ public class BranchService {
                 .phone(branch.getPhone())
                 .email(branch.getEmail())
                 .createdAt(branch.getCreatedAt())
-                .deleted(branch.getDeleted())
+                .deleted(branch.isDeleted())
                 .users(users)
                 .departments(departments)
                 .build();

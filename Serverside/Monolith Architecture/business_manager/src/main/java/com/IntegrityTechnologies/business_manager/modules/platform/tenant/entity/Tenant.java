@@ -47,6 +47,10 @@ public class Tenant {
 
     private LocalDateTime updatedAt;
 
+    @Version
+    @Column(nullable = false)
+    private Long version = 0L;
+
     @PrePersist
     public void onCreate() {
 
@@ -54,6 +58,10 @@ public class Tenant {
 
         if (status == null) {
             status = TenantStatus.ACTIVE;
+        }
+
+        if (version == null) {
+            version = 0L;
         }
 
     }

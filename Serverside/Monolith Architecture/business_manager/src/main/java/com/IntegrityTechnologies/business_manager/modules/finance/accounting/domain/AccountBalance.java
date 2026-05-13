@@ -45,10 +45,6 @@ public class AccountBalance extends BranchAwareEntity {
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal balance = BigDecimal.ZERO;
 
-    @Version
-    @Column(nullable = false)
-    private Long version = 0L;
-
     public static class AccountBalanceId implements Serializable {
 
         private UUID account;

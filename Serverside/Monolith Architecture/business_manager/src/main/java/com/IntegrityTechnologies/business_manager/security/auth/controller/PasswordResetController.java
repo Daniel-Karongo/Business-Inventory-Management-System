@@ -65,6 +65,7 @@ public class PasswordResetController {
                 .ifPresent(platformUser -> {
 
                     var token = service.createToken(
+                            branchId,
                             platformUser.getId(),
                             UserType.PLATFORM,
                             PasswordResetToken.Channel.EMAIL,
@@ -82,6 +83,7 @@ public class PasswordResetController {
                     if (!props.getEmail().isEnabled()) return;
 
                     var token = service.createToken(
+                            branchId,
                             user.getId(),
                             UserType.TENANT,
                             PasswordResetToken.Channel.EMAIL,
@@ -94,6 +96,7 @@ public class PasswordResetController {
                     if (!props.getSms().isEnabled()) return;
 
                     var token = service.createToken(
+                            branchId,
                             user.getId(),
                             UserType.TENANT,
                             PasswordResetToken.Channel.SMS,

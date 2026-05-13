@@ -1,7 +1,9 @@
 package com.IntegrityTechnologies.business_manager.security.auth.model;
 
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.TenantAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -10,6 +12,7 @@ import java.util.UUID;
 @Table(
         name = "password_reset_tokens",
         indexes = {
+                @Index(name = "idx_prt_tenant_branch_user", columnList = "tenant_id, branch_id, user_id"),
                 @Index(name = "idx_prt_user", columnList = "user_id"),
                 @Index(name = "idx_prt_token", columnList = "token_hash")
         }
@@ -17,8 +20,8 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class PasswordResetToken {
+@SuperBuilder
+public class PasswordResetToken extends TenantAwareEntity {
 
     @Id
     @GeneratedValue
@@ -27,6 +30,8 @@ public class PasswordResetToken {
 
     @Column(columnDefinition = "BINARY(16)", nullable = false)
     private UUID userId;
+
+    private UUID branchId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -58,8 +63,8 @@ public class PasswordResetToken {
         EMAIL, SMS
     }
 
-    @PrePersist
-    void onCreate() {
+    @Override
+    public void beforePersist() {
         createdAt = LocalDateTime.now();
         used = false;
         attempts = 0;

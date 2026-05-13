@@ -158,6 +158,7 @@ public class PlatformTrustedDeviceManagementService {
         repository.save(d);
 
         auditService.log(
+                null,
                 d.getId(),
                 "APPROVED",
                 reason
@@ -189,6 +190,7 @@ public class PlatformTrustedDeviceManagementService {
         repository.save(d);
 
         auditService.log(
+                null,
                 d.getId(),
                 "REJECTED",
                 reason
@@ -223,6 +225,7 @@ public class PlatformTrustedDeviceManagementService {
         repository.save(d);
 
         auditService.log(
+                null,
                 d.getId(),
                 "RENAMED",
                 "Platform device renamed"

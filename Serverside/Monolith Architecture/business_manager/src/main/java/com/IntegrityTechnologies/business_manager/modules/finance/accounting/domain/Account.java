@@ -48,10 +48,6 @@ public class Account extends BranchAwareEntity {
     @Column(nullable = false)
     private boolean active = true;
 
-    @Version
-    @Column(nullable = false)
-    private Long version = 0L;
-
     public Account(
             UUID tenantId,
             UUID branchId,
@@ -66,12 +62,5 @@ public class Account extends BranchAwareEntity {
         this.name = name;
         this.type = type;
         this.role = role;
-    }
-
-    @PrePersist
-    public void prePersist() {
-        if (version == null) {
-            version = 0L;
-        }
     }
 }

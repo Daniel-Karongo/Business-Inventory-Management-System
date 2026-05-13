@@ -2,6 +2,8 @@ package com.IntegrityTechnologies.business_manager.config.kafka;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
@@ -26,7 +28,9 @@ public class OutboxProcessor {
     private final ExecutorService executor =
             Executors.newFixedThreadPool(WORKERS);
 
-    @PostConstruct
+    @EventListener(
+            ApplicationReadyEvent.class
+    )
     public void startWorkers() {
 
         for (int i = 0; i < WORKERS; i++) {

@@ -7,6 +7,7 @@ import java.util.UUID;
 
 @Data
 public class CreatePriceRequest {
+    private UUID branchId;
     private UUID variantId;
     private UUID packagingId;
     private BigDecimal price;

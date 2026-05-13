@@ -39,6 +39,10 @@ public class PasswordResetService {
     private final AuthService authService;
     private final PlatformUserRepository platformUserRepository;
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+
     /* =====================================================
        RESET USING IDENTITY (NO TOKEN)
        ===================================================== */
@@ -230,6 +234,7 @@ public class PasswordResetService {
        ===================================================== */
 
     public PasswordResetToken createToken(
+            UUID branchId,
             UUID userId,
             UserType userType,
             PasswordResetToken.Channel channel,
@@ -244,6 +249,8 @@ public class PasswordResetService {
                 .userId(userId)
                 .userType(userType)
                 .tokenHash(hash)
+                .tenantId(tenantId())
+                .branchId(branchId)
                 .channel(channel)
                 .attempts(0)
                 .expiresAt(LocalDateTime.now().plusMinutes(expiryMinutes))

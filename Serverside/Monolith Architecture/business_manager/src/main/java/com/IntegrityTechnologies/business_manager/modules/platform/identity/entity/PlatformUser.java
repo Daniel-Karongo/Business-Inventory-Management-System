@@ -109,6 +109,10 @@ public class PlatformUser {
 
     private LocalDateTime updatedAt;
 
+    @Version
+    @Column(nullable = false)
+    private Long version = 0L;
+
     @PrePersist
     public void prePersist() {
 
@@ -124,6 +128,10 @@ public class PlatformUser {
 
         if (deleted == false) {
             deleted = false;
+        }
+
+        if (version == null) {
+            version = 0L;
         }
     }
 

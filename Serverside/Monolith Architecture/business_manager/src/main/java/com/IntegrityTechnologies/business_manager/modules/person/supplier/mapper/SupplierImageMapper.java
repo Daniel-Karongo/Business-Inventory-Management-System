@@ -13,7 +13,7 @@ public class SupplierImageMapper {
                 .fileName(image.getFileName())
                 .filePath(image.getFilePath()) // optional; UI won’t render
                 .description(image.getFileDescription())
-                .deleted(image.getDeleted())
+                .deleted(image.isDeleted())
                 .uploadedAt(image.getUploadedAt())
                 .build();
     }

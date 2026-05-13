@@ -738,6 +738,7 @@ public class StockOnboardingService {
                 priceRepo.saveAndFlush(base);
             } else {
                 priceService.createPrice(
+                        req.getBranchId(),
                         variantId,
                         pkg.getId(),
                         price.getSellingPrice(),

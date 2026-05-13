@@ -64,21 +64,10 @@ public class Sale extends BranchAwareEntity {
     @Enumerated(EnumType.STRING)
     private SaleStatus status;
 
-    @Version
-    @Column(nullable = false)
-    private Long version = 0L;
-
     @Column(precision = 19, scale = 2)
     private BigDecimal costOfGoodsSold;
 
     public enum SaleStatus {
         CREATED, COMPLETED, CANCELLED, REFUNDED
-    }
-
-    @PrePersist
-    public void prePersist() {
-        if (version == null) {
-            version = 0L;
-        }
     }
 }

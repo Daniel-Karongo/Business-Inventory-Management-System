@@ -33,10 +33,6 @@ public class TrustedDevice extends TenantAwareEntity {
     @GeneratedValue
     private UUID id;
 
-    @Version
-    @Column(nullable = false)
-    private Long version = 0L;
-
     @Column(name="branch_id")
     private UUID branchId;
 
@@ -59,16 +55,12 @@ public class TrustedDevice extends TenantAwareEntity {
     private LocalDateTime firstSeenAt;
     private LocalDateTime lastSeenAt;
 
-    @PrePersist
-    void onCreate() {
+    @Override
+    public void beforePersist() {
         if (status == null) {
             status = DeviceApprovalStatus.PENDING;
         }
         if (firstSeenAt == null) firstSeenAt = LocalDateTime.now();
         lastSeenAt = LocalDateTime.now();
-
-        if (version == null) {
-            version = 0L;
-        }
     }
 }

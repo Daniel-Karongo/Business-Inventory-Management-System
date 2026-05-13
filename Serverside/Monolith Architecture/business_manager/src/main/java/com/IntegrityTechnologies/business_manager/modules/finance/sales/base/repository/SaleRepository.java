@@ -101,7 +101,7 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
                     (SELECT SUM(p.amount)
                      FROM Payment p
                      WHERE p.sale = s
-                       AND p.status = com.IntegrityTechnologies.business_manager.modules.finance.payment.model.PaymentStatus.SUCCESS),
+                       AND p.status = com.IntegrityTechnologies.business_manager.modules.finance.payment.base.model.PaymentStatus.SUCCESS),
                 0)
             ),
         0)

@@ -48,8 +48,9 @@ public class BranchSmsSettings extends BranchAwareEntity {
     @Column(nullable = false)
     private String username;
 
-    @Column(nullable = false, length = 4000)
+    @Lob
     @Convert(converter = EncryptedStringConverter.class)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String apiKey;
 
     @Column(nullable = false)

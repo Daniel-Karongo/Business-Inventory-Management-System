@@ -201,7 +201,20 @@ public class LegacyCredentialMigrationRunner implements ApplicationRunner {
         settings.setConsumerKey(mpesaConsumerKey);
         settings.setConsumerSecret(mpesaConsumerSecret);
         settings.setPasskey(mpesaPasskey);
-        settings.setStkCallbackUrl(mpesaCallbackUrl);
+
+        if (!mpesaCallbackUrl.contains("{branchId}")) {
+
+            throw new IllegalStateException(
+                    "M-Pesa callback URL must contain {branchId}"
+            );
+        }
+
+        settings.setStkCallbackUrl(
+                mpesaCallbackUrl.replace(
+                        "{branchId}",
+                        branchId.toString()
+                )
+        );
         settings.setActive(true);
 
         settings.setCredentialsMigrated(true);

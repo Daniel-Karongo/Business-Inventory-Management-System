@@ -29,14 +29,18 @@ public class PricingController {
 //    }
 
     @GetMapping("/variant/{variantId}")
-    public List<ProductPrice> getVariantPrices(@PathVariable UUID variantId) {
+    public List<ProductPrice> getVariantPrices(
+            @PathVariable UUID variantId,
+            @RequestParam UUID branchId
+    ) {
         // add method in service if missing
-        return service.getPricesForVariant(variantId);
+        return service.getPricesForVariant(branchId, variantId);
     }
 
     @PostMapping
     public ProductPrice create(@RequestBody CreatePriceRequest req) {
         return service.createPrice(
+                req.getBranchId(),
                 req.getVariantId(),
                 req.getPackagingId(),
                 req.getPrice(),
@@ -49,11 +53,14 @@ public class PricingController {
             @PathVariable UUID id,
             @RequestBody UpdatePriceRequest req
     ) {
-        return service.updatePrice(id, req.getPrice());
+        return service.updatePrice(req.getBranchId(), id, req.getPrice());
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable UUID id) {
-        service.deletePrice(id);
+    public void delete(
+            @PathVariable UUID id,
+            @RequestParam UUID branchId
+    ) {
+        service.deletePrice(branchId, id);
     }
 }

@@ -58,6 +58,4 @@ public class BudgetMonthlySnapshot extends BranchAwareEntity {
 
     @Column(precision = 19, scale = 2)
     private BigDecimal variance;
-
-    private LocalDateTime updatedAt;
 }

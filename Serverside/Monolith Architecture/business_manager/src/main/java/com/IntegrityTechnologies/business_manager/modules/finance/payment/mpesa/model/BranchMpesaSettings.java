@@ -48,20 +48,24 @@ public class BranchMpesaSettings extends BranchAwareEntity {
     @Column(nullable = false)
     private String shortcode;
 
-    @Column(nullable = false, length = 4000)
+    @Lob
     @Convert(converter = EncryptedStringConverter.class)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String consumerKey;
 
-    @Column(nullable = false, length = 4000)
+    @Lob
     @Convert(converter = EncryptedStringConverter.class)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String consumerSecret;
 
-    @Column(nullable = false, length = 4000)
+    @Lob
     @Convert(converter = EncryptedStringConverter.class)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String passkey;
 
-    @Column(nullable = false, length = 4000)
+    @Lob
     @Convert(converter = EncryptedStringConverter.class)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String securityCredential;
 
     @Column(nullable = false)

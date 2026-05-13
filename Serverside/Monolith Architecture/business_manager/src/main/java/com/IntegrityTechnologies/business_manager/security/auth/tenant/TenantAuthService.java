@@ -324,7 +324,7 @@ public class TenantAuthService {
             );
         }
 
-        if (Boolean.TRUE.equals(user.getDeleted())) {
+        if (Boolean.TRUE.equals(user.isDeleted())) {
             throw new AppSecurityException(
                     SecurityErrorCode.ACCOUNT_DELETED,
                     "Account deleted"

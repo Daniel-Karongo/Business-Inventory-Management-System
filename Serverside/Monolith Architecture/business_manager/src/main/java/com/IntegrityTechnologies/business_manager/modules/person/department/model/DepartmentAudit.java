@@ -91,8 +91,8 @@ public class DepartmentAudit extends BranchAwareEntity {
 
     private LocalDateTime timestamp;
 
-    @PrePersist
-    public void onCreate() {
+    @Override
+    public void beforePersist() {
         timestamp = LocalDateTime.now();
     }
 }
