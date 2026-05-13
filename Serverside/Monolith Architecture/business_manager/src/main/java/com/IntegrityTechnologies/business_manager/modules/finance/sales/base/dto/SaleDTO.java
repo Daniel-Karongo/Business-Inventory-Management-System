@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.dto.PaymentDTO;
 import lombok.Builder;
 import lombok.Data;
 import java.util.List;

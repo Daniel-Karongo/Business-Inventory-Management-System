@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.en
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.projection.BalanceProjectionConsumer;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -37,6 +38,10 @@ public class BranchLedgerWorkerService {
 
                     try {
 
+                        TenantContext.setTenantId(
+                                event.tenantId()
+                        );
+
                         projectionConsumer.handleSpring(event);
 
                     } catch (Exception ex) {
@@ -47,6 +52,10 @@ public class BranchLedgerWorkerService {
                                 event.journalId(),
                                 ex
                         );
+
+                    } finally {
+
+                        TenantContext.clear();
                     }
                 });
     }

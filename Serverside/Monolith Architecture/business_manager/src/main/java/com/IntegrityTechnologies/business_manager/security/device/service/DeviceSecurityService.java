@@ -230,6 +230,7 @@ public class DeviceSecurityService {
     ) {
         deviceUsageService.lockUserDevices(
                 tenantId,
+                branchId,
                 userId
         );
 

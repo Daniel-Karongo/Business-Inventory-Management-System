@@ -14,24 +14,22 @@ public class TenantAwareExecutor implements Executor {
     @Override
     public void execute(Runnable command) {
 
-        UUID tenantId = TenantContext.getOrNull();
-        UUID branchId = BranchContext.getOrNull();
+        UUID tenantId =
+                TenantContext.getOrNull();
 
         delegate.execute(() -> {
+
             try {
+
                 if (tenantId != null) {
                     TenantContext.setTenantId(tenantId);
-                }
-
-                if (branchId != null) {
-                    BranchContext.set(branchId);
                 }
 
                 command.run();
 
             } finally {
+
                 TenantContext.clear();
-                BranchContext.clear();
             }
         });
     }

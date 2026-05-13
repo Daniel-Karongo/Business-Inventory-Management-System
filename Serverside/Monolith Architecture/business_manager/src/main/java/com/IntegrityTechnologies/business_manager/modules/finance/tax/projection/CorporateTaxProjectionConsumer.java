@@ -14,6 +14,7 @@ import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 
 import lombok.RequiredArgsConstructor;
 
+import org.checkerframework.checker.units.qual.C;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.EventListener;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -33,6 +34,8 @@ public class CorporateTaxProjectionConsumer {
     private final TaxProperties taxProperties;
     private final ProcessedKafkaEventRepository processedRepo;
 
+    private static final String CONSUMER = "CORPORATE_TAX";
+
     @KafkaListener(
             topics = "journal-posted",
             groupId = "corporate-tax-projection"
@@ -49,15 +52,21 @@ public class CorporateTaxProjectionConsumer {
 
     @EventListener
     @Transactional
+    @ConditionalOnProperty(
+            name = "spring.kafka.enabled",
+            havingValue = "false",
+            matchIfMissing = true
+    )
     public void handleSpring(JournalPostedEvent event) {
         process(event);
     }
 
     private void process(JournalPostedEvent event) {
 
-        if (processedRepo.existsByTenantIdAndEventId(
+        if (processedRepo.existsByTenantIdAndEventIdAndConsumer(
                 event.tenantId(),
-                event.journalId()
+                event.journalId(),
+                CONSUMER
         )) return;
         
         try {
@@ -142,6 +151,7 @@ public class CorporateTaxProjectionConsumer {
 
             ProcessedKafkaEvent processed = new ProcessedKafkaEvent();
             processed.setEventId(event.journalId());
+            processed.setConsumer(CONSUMER);
             processedRepo.save(processed);
 
         } finally {

@@ -60,9 +60,8 @@ public class ProductVariantPackaging extends BranchAwareEntity {
     @Column(nullable = false)
     private Long version = 0L;
 
-    @PrePersist
-    @PreUpdate
-    public void validate() {
+    @Override
+    public void beforePersist() {
 
         if (unitsPerPackaging == null || unitsPerPackaging <= 0) {
             throw new IllegalStateException("unitsPerPackaging must be > 0");
@@ -71,9 +70,17 @@ public class ProductVariantPackaging extends BranchAwareEntity {
         if (Boolean.TRUE.equals(isBaseUnit) && unitsPerPackaging != 1) {
             throw new IllegalStateException("Base unit must have unitsPerPackaging = 1");
         }
+    }
 
-        if (version == null) {
-            version = 0L;
+    @Override
+    public void beforeUpdate() {
+
+        if (unitsPerPackaging == null || unitsPerPackaging <= 0) {
+            throw new IllegalStateException("unitsPerPackaging must be > 0");
+        }
+
+        if (Boolean.TRUE.equals(isBaseUnit) && unitsPerPackaging != 1) {
+            throw new IllegalStateException("Base unit must have unitsPerPackaging = 1");
         }
     }
 }

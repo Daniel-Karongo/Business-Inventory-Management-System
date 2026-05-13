@@ -64,8 +64,4 @@ public class ProductVariant extends BranchAwareEntity {
     @Builder.Default
     @OneToMany(mappedBy = "variant", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<ProductVariantImage> images = new HashSet<>();
-
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean deleted = false;
 }

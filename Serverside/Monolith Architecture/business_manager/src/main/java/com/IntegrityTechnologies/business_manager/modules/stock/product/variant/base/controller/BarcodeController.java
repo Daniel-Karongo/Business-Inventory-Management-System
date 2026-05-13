@@ -35,11 +35,14 @@ public class BarcodeController {
        DIRECT LOOKUP (RAW VARIANT)
        ========================= */
     @GetMapping("/{barcode}")
-    public ApiResponse find(@PathVariable String barcode) {
+    public ApiResponse find(
+            @PathVariable String barcode,
+            @RequestParam UUID branchId
+    ) {
         return new ApiResponse(
                 "success",
                 "Variant fetched",
-                barcodeService.getVariantByBarcode(barcode)
+                barcodeService.getVariantByBarcode(branchId, barcode)
         );
     }
 
@@ -47,19 +50,25 @@ public class BarcodeController {
        BARCODE IMAGE
        ========================= */
     @GetMapping("/variant/{variantId}/image")
-    public ResponseEntity<Resource> image(@PathVariable UUID variantId) {
-        return barcodeService.getBarcodeImage(variantId);
+    public ResponseEntity<Resource> image(
+            @PathVariable UUID variantId,
+            @RequestParam UUID branchId
+    ) {
+        return barcodeService.getBarcodeImage(branchId, variantId);
     }
 
     /* =========================
        GENERATE BARCODE
        ========================= */
     @PostMapping("/variant/{variantId}")
-    public ApiResponse generate(@PathVariable UUID variantId) {
+    public ApiResponse generate(
+            @PathVariable UUID variantId,
+            @RequestParam UUID branchId
+    ) {
         return new ApiResponse(
                 "success",
                 "Barcode generated",
-                barcodeService.generateBarcodeIfMissing(variantId)
+                barcodeService.generateBarcodeIfMissing(branchId, variantId)
         );
     }
 }

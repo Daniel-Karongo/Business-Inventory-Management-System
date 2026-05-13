@@ -33,15 +33,4 @@ public class ProductSequence extends BranchAwareEntity {
 
     @Column(name = "last_seq_value", nullable = false)
     private Long lastValue = 0L;
-
-    @Version
-    @Column(nullable = false)
-    private Long version = 0L;
-
-    @PrePersist
-    public void prePersist() {
-        if (version == null) {
-            version = 0L;
-        }
-    }
 }

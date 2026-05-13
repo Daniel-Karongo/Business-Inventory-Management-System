@@ -31,6 +31,8 @@ public class VatLedgerProjectionConsumer {
     private final AccountingAccounts accounts;
     private final ProcessedKafkaEventRepository processedRepo;
 
+    private static final String CONSUMER = "VAT_LEDGER";
+
     @KafkaListener(
             topics = "journal-posted",
             groupId = "vat-ledger"
@@ -47,14 +49,20 @@ public class VatLedgerProjectionConsumer {
 
     @EventListener
     @Transactional
+    @ConditionalOnProperty(
+            name = "spring.kafka.enabled",
+            havingValue = "false",
+            matchIfMissing = true
+    )
     public void handleSpring(JournalPostedEvent event) {
         process(event);
     }
 
     private void process(JournalPostedEvent event) {
-        if (processedRepo.existsByTenantIdAndEventId(
+        if (processedRepo.existsByTenantIdAndEventIdAndConsumer(
                 event.tenantId(),
-                event.journalId()
+                event.journalId(),
+                CONSUMER
         )) return;
         try {
 
@@ -118,6 +126,7 @@ public class VatLedgerProjectionConsumer {
 
             ProcessedKafkaEvent processed = new ProcessedKafkaEvent();
             processed.setEventId(event.journalId());
+            processed.setConsumer(CONSUMER);
             processedRepo.save(processed);
 
         } finally {

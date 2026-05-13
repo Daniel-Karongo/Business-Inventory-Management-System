@@ -3,7 +3,17 @@ package com.IntegrityTechnologies.business_manager.modules.communication.notific
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.dto.EmailRequest;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.model.EmailMessage;
 
+import java.util.UUID;
+
 public interface EmailService {
 
-    EmailMessage send(EmailRequest request);
+    EmailMessage send(
+            UUID branchId,
+            EmailRequest request
+    );
+
+    EmailMessage get(
+            UUID branchId,
+            UUID messageId
+    );
 }

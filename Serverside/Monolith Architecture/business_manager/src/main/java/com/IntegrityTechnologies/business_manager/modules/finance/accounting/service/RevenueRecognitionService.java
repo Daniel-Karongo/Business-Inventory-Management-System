@@ -6,7 +6,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.PaymentStatus;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.model.PaymentStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineItem;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;

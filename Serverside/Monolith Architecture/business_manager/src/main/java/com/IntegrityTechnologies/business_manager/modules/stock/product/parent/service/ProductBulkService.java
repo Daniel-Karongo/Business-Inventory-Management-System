@@ -330,7 +330,7 @@ public class ProductBulkService {
             throw new IllegalArgumentException("Category is required");
         }
 
-        if (productService.existsByName(normalize(row.getName()))) {
+        if (productService.existsByName(findBranch(row.getBranchName()), normalize(row.getName()))) {
             throw new IllegalArgumentException(
                     "Product already exists: " + row.getName()
             );

@@ -59,10 +59,12 @@ public class DeviceUsageService {
     @Transactional
     public void lockUserDevices(
             UUID tenantId,
+            UUID branchId,
             UUID userId
     ) {
         repository.lockUserDevices(
                 tenantId,
+                branchId,
                 userId
         );
     }

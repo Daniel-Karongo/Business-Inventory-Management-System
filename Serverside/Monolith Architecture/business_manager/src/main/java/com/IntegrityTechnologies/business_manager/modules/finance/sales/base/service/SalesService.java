@@ -5,10 +5,10 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.RevenueRecognitionService;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.Payment;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.PaymentStatus;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.service.PaymentService;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.dto.PaymentDTO;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.model.Payment;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.model.PaymentStatus;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.service.PaymentService;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineBatchSelection;
@@ -82,13 +82,16 @@ public class SalesService {
         UUID saleId = UUID.randomUUID();
         String currentUser = SecurityUtils.currentUsername();
 
+        List<SaleLineItem> lines = new ArrayList<>();
+        UUID branchId = extractSingleBranch(lines);
+
         UUID customerId = Optional.ofNullable(req.getCustomerIdentifiers())
-                .map(ci -> customerService.findOrCreateCustomer(List.of(ci)))
+                .map(ci -> customerService.findOrCreateCustomer(branchId, List.of(ci)))
                 .orElse(null);
 
         UUID customerGroupId = resolveCustomerGroupId(customerId);
 
-        List<SaleLineItem> lines = new ArrayList<>();
+
 
         for (var li : req.getItems()) {
 
@@ -96,7 +99,7 @@ public class SalesService {
                             li.getProductVariantId(),
                             false,
                             tenantId(),
-                            li.getBranchId()
+                            branchId
                     )
                     .orElseThrow(() ->
                             new IllegalArgumentException("ProductVariant not found: " + li.getProductVariantId()));
@@ -128,7 +131,7 @@ public class SalesService {
 
             SellableContext ctx = SellableContext.builder()
                     .tenantId(tenantId())
-                    .branchId(li.getBranchId())
+                    .branchId(branchId)
                     .productVariantId(li.getProductVariantId())
                     .packagingId(li.getPackagingId())
                     .quantity(li.getQuantity())
@@ -164,6 +167,7 @@ public class SalesService {
                             SaleLineBatchSelection.builder()
                                     .batchId(bs.getBatchId())
                                     .tenantId(tenantId())
+                                    .branchId(branchId)
                                     .quantity(qty)
                                     .build()
                     );
@@ -184,7 +188,8 @@ public class SalesService {
                     .productVariantId(snap.getProductVariantId())
                     .productName(product.getName() + " (" +
                             (variant.getClassification() != null ? variant.getClassification() : "UNCLASSIFIED") + ")")
-                    .branchId(li.getBranchId())
+                    .branchId(branchId)
+                    .tenantId(tenantId())
 
                     .resolutionMode(ctx.getMode().name())
 
@@ -233,8 +238,6 @@ public class SalesService {
                 .map(SaleLineItem::getLineTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        UUID branchId = extractSingleBranch(lines);
-
         String receiptNo = receiptNumberService.nextSaleReceipt();
 
         Sale sale = Sale.builder()
@@ -263,7 +266,7 @@ public class SalesService {
                     saleId,
                     li.getProductVariantId(),
                     li.getPackagingId(),      // ✅ CRITICAL
-                    li.getBranchId(),
+                    branchId,
                     li.getBaseUnits(),        // base units
                     li.getQuantity(),         // sell units
                     li.getBatchSelections()
@@ -379,8 +382,10 @@ public class SalesService {
             );
         }
 
+        UUID branchId = extractSingleBranchSimple(req.getItems());
+
         UUID customerId = Optional.ofNullable(req.getCustomerIdentifiers())
-                .map(ci -> customerService.findOrCreateCustomer(List.of(ci)))
+                .map(ci -> customerService.findOrCreateCustomer(branchId, List.of(ci)))
                 .orElse(null);
 
         UUID customerGroupId = resolveCustomerGroupId(customerId);
@@ -421,6 +426,7 @@ public class SalesService {
                     .productName(product.getName() + " (" +
                             (variant.getClassification() != null ? variant.getClassification() : "UNCLASSIFIED") + ")")
                     .branchId(li.getBranchId())
+                    .tenantId(tenantId())
 
                     .resolutionMode(ctx.getMode().name())
 
@@ -614,6 +620,7 @@ public class SalesService {
                 && totalPaid.compareTo(BigDecimal.ZERO) > 0) {
 
             customerService.recordRefund(
+                    sale.getBranchId(),
                     sale.getCustomerId(),
                     sale.getId(),
                     totalPaid,
@@ -672,7 +679,7 @@ public class SalesService {
                 .orElseThrow(() -> new EntityNotFoundException("Sale not found: " + id));
 
         return sale.getPayments().stream()
-                .map(p -> paymentService.getPayment(p.getId())) // ✅ FIXED
+                .map(p -> paymentService.getPayment(sale.getBranchId(), p.getId())) // ✅ FIXED
                 .toList();
     }
 
@@ -771,6 +778,21 @@ public class SalesService {
 
         Set<UUID> branches = lines.stream()
                 .map(SaleLineItem::getBranchId)
+                .collect(Collectors.toSet());
+
+        if (branches.size() != 1) {
+            throw new IllegalStateException(
+                    "A sale must belong to a single branch. Multiple branches detected."
+            );
+        }
+
+        return branches.iterator().next();
+    }
+
+    private UUID extractSingleBranchSimple(List<SaleLineDto> lines) {
+
+        Set<UUID> branches = lines.stream()
+                .map(SaleLineDto::getBranchId)
                 .collect(Collectors.toSet());
 
         if (branches.size() != 1) {

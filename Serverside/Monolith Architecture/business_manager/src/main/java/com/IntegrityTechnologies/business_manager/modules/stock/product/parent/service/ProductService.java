@@ -36,7 +36,6 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.service.ProductVariantService;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.persistence.EntityManager;
@@ -45,7 +44,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -118,7 +116,7 @@ public class ProductService {
         return productRepository
                 .findAllWithRelationsByTenantIdAndBranchId(tenantId(), branchId)
                 .stream()
-                .filter(product -> matchesDeleted(deleted, product.getDeleted()))
+                .filter(product -> matchesDeleted(deleted, product.isDeleted()))
                 .map(productMapper::toDTO)
                 .toList();
     }
@@ -190,10 +188,10 @@ public class ProductService {
                 .orElseThrow(() -> new ProductNotFoundException("Product not found: " + id));
 
         if (deleted != null) {
-            if (deleted && !Boolean.TRUE.equals(product.getDeleted())) {
+            if (deleted && !Boolean.TRUE.equals(product.isDeleted())) {
                 throw new ProductNotFoundException("Product not found: " + id);
             }
-            if (!deleted && Boolean.TRUE.equals(product.getDeleted())) {
+            if (!deleted && Boolean.TRUE.equals(product.isDeleted())) {
                 throw new ProductNotFoundException("Product not found: " + id);
             }
         }
@@ -210,10 +208,10 @@ public class ProductService {
                 );
 
         if (deleted != null) {
-            if (deleted && !Boolean.TRUE.equals(product.getDeleted())) {
+            if (deleted && !Boolean.TRUE.equals(product.isDeleted())) {
                 throw new ProductNotFoundException("Product not found");
             }
-            if (!deleted && Boolean.TRUE.equals(product.getDeleted())) {
+            if (!deleted && Boolean.TRUE.equals(product.isDeleted())) {
                 throw new ProductNotFoundException("Product not found");
             }
         }
@@ -235,7 +233,7 @@ public class ProductService {
         }
 
         return products.stream()
-                .filter(product -> matchesDeleted(deleted, product.getDeleted()))
+                .filter(product -> matchesDeleted(deleted, product.isDeleted()))
                 .map(productMapper::toDTO)
                 .toList();
     }
@@ -269,7 +267,7 @@ public class ProductService {
         }
 
         return products.stream()
-                .filter(product -> matchesDeleted(deleted, product.getDeleted()))
+                .filter(product -> matchesDeleted(deleted, product.isDeleted()))
                 .map(productMapper::toDTO)
                 .toList();
     }
@@ -326,6 +324,7 @@ public class ProductService {
         if (files != null && !files.isEmpty()) {
 
             productImageService.attachFilesWithAssignments(
+                    branchId,
                     product,
                     createdVariants,
                     dto.getFileAssignments(),
@@ -429,6 +428,8 @@ public class ProductService {
                     .map(supplier -> ProductSupplier.builder()
                             .product(finalProduct)
                             .supplier(supplier)
+                            .tenantId(tenantId())
+                            .branchId(branchId)
                             .build()
                     )
                     .collect(Collectors.toSet());
@@ -436,7 +437,7 @@ public class ProductService {
             product.setSuppliers(productSuppliers);
 
             // keep category sync
-            syncCategorySuppliers(category, new HashSet<>(suppliers));
+            syncCategorySuppliers(branchId, category, new HashSet<>(suppliers));
         }
 
     /* =============================
@@ -485,6 +486,8 @@ public class ProductService {
         productAuditRepository.save(
                 ProductAudit.builder()
                         .action("CREATE")
+                        .tenantId(tenantId())
+                        .branchId(branchId)
                         .productId(product.getId())
                         .productName(product.getName())
                         .timestamp(LocalDateTime.now())
@@ -535,11 +538,11 @@ public class ProductService {
         return product.getSku() + "-" + classification.replaceAll(" ", "-");
     }
 
-    public boolean existsByName(String name) {
+    public boolean existsByName(UUID branchId, String name) {
 
         return productRepository.existsByTenantIdAndBranchIdAndNameIgnoreCase(
                 TenantContext.getTenantId(),
-                BranchContext.get(),
+                branchId,
                 name
         );
     }
@@ -667,16 +670,20 @@ public class ProductService {
 
         product.getSuppliers().clear();
 
+        UUID branchId = product.getBranchId();
+
         for (Supplier supplier : suppliers) {
             product.getSuppliers().add(
                     ProductSupplier.builder()
                             .product(product)
                             .supplier(supplier)
+                            .tenantId(tenantId())
+                            .branchId(branchId)
                             .build()
             );
         }
 
-        syncCategorySuppliers(product.getCategory(), new HashSet<>(suppliers));
+        syncCategorySuppliers(branchId, product.getCategory(), new HashSet<>(suppliers));
     }
 
     private void updateVariants(Product product, ProductUpdateDTO dto) {
@@ -752,7 +759,7 @@ public class ProductService {
         }
     }
 
-    private void syncCategorySuppliers(Category category, Set<Supplier> productSuppliers) {
+    private void syncCategorySuppliers(UUID branchId, Category category, Set<Supplier> productSuppliers) {
 
         if (category == null || productSuppliers == null || productSuppliers.isEmpty())
             return;
@@ -776,6 +783,8 @@ public class ProductService {
                         ))
                         .category(category)
                         .supplier(supplier)
+                        .tenantId(tenantId())
+                        .branchId(branchId)
                         .build();
 
                 category.getCategorySuppliers().add(relation);
@@ -799,7 +808,7 @@ public class ProductService {
                 .findByIdAndTenantIdAndBranchId(productId, tenantId(), branchId)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
 
-        productImageService.saveProductImages(product, files);
+        productImageService.saveProductImages(branchId, product, files);
 
         productRepository.save(product);
     }
@@ -854,7 +863,7 @@ public class ProductService {
 
                 if (filename.equals(img.getFileName())) {
 
-                    Path physical = resolveProductFile(product.getId(), img.getFileName());
+                    Path physical = resolveProductFile(branchId, img.getFileName());
 
                     boolean usedElsewhere = isFileUsedElsewhere(branchId, img, productId);
 
@@ -910,6 +919,8 @@ public class ProductService {
                 try {
                     ProductImageAudit audit = ProductImageAudit.builder()
                             .action("IMAGE_DELETED_PERMANENTLY")
+                            .tenantId(tenantId())
+                            .branchId(branchId)
                             .fileName(img.getFileName())
                             .filePath(img.getFilePath())
                             .reason(reason)
@@ -920,7 +931,7 @@ public class ProductService {
                             .build();
                     productImageAuditRepository.save(audit);
 
-                    Path physical = resolveProductFile(product.getId(), img.getFileName());
+                    Path physical = resolveProductFile(branchId, img.getFileName());
 
                     boolean usedElsewhere = isFileUsedElsewhere(branchId, img, product.getId());
 
@@ -944,7 +955,7 @@ public class ProductService {
         Product product = getProductOrThrow(productId, null);
         UUID branchId = product.getBranchId();
 
-        if (Boolean.TRUE.equals(product.getDeleted())) {
+        if (Boolean.TRUE.equals(product.isDeleted())) {
             return;
         }
 
@@ -999,6 +1010,8 @@ public class ProductService {
         productAuditRepository.save(
                 ProductAudit.builder()
                         .action("SOFT_DELETE")
+                        .tenantId(tenantId())
+                        .branchId(branchId)
                         .productId(product.getId())
                         .productName(product.getName())
                         .timestamp(now)
@@ -1064,7 +1077,7 @@ public class ProductService {
         Product product = getProductOrThrow(productId, null);
         UUID branchId = product.getBranchId();
 
-        if (!Boolean.TRUE.equals(product.getDeleted())) {
+        if (!Boolean.TRUE.equals(product.isDeleted())) {
             return;
         }
 
@@ -1082,6 +1095,8 @@ public class ProductService {
         productAuditRepository.save(
                 ProductAudit.builder()
                         .action("RESTORE")
+                        .tenantId(tenantId())
+                        .branchId(branchId)
                         .productId(product.getId())
                         .productName(product.getName())
                         .branchId(branchId)
@@ -1145,7 +1160,7 @@ public class ProductService {
 
             List<ProductVariantImage> deletedVariantImages =
                     variantImages.stream()
-                            .filter(img -> Boolean.TRUE.equals(img.getDeleted()))
+                            .filter(img -> Boolean.TRUE.equals(img.isDeleted()))
                             .toList();
 
             productVariantImageRepository.restoreByVariantIds(variantIds, tenantId(), branchId);
@@ -1250,6 +1265,8 @@ public class ProductService {
                 images.stream()
                         .map(img -> ProductImageAudit.builder()
                                 .action(action)
+                                .tenantId(tenantId())
+                                .branchId(img.getBranchId())
                                 .fileName(img.getFileName())
                                 .filePath(img.getFilePath())
                                 .productId(product.getId())
@@ -1275,6 +1292,8 @@ public class ProductService {
                 variants.stream()
                         .map(v -> ProductVariantAudit.builder()
                                 .action(action)
+                                .tenantId(tenantId())
+                                .branchId(v.getBranchId())
                                 .productId(product.getId())
                                 .productName(product.getName())
                                 .productVariantId(v.getId())
@@ -1301,6 +1320,8 @@ public class ProductService {
                         .map(img -> ProductVariantImageAudit.builder()
                                 .productVariantId(img.getVariant().getId())
                                 .productName(product.getName())
+                                .tenantId(tenantId())
+                                .branchId(img.getBranchId())
                                 .classification(img.getVariant().getClassification())
                                 .fileName(img.getFileName())
                                 .filePath(img.getFilePath())
@@ -1483,7 +1504,7 @@ public class ProductService {
             UUID productId
     ) {
 
-        Path sharedDir = fileStorageService.productSharedRoot();
+        Path sharedDir = fileStorageService.productSharedRoot(branchId);
 
         List<Path> files = new ArrayList<>();
 
@@ -1600,7 +1621,7 @@ public class ProductService {
 
         return product.getImages()
                 .stream()
-                .filter(image -> matchesDeleted(deleted, image.getDeleted()))
+                .filter(image -> matchesDeleted(deleted, image.isDeleted()))
                 .map(ProductImage::getFilePath)
                 .toList();
     }
@@ -1612,7 +1633,7 @@ public class ProductService {
         List<ProductImage> imagesToZip = product.getImages() == null
                 ? List.of()
                 : product.getImages().stream()
-                .filter(image -> matchesDeleted(deleted, image.getDeleted()))
+                .filter(image -> matchesDeleted(deleted, image.isDeleted()))
                 .toList();
 
         File zipFile = File.createTempFile("product-" + productId + "-images", ".zip");
@@ -1622,7 +1643,7 @@ public class ProductService {
             for (ProductImage image : imagesToZip) {
 
                 Path physicalPath = resolveProductFile(
-                        product.getId(),
+                        branchId,
                         Paths.get(image.getFilePath()).getFileName().toString()
                 );
 
@@ -1658,8 +1679,8 @@ public class ProductService {
             for (Product product : products) {
 
                 if (deletedProducts != null) {
-                    if (deletedProducts && !Boolean.TRUE.equals(product.getDeleted())) continue;
-                    if (!deletedProducts && Boolean.TRUE.equals(product.getDeleted())) continue;
+                    if (deletedProducts && !Boolean.TRUE.equals(product.isDeleted())) continue;
+                    if (!deletedProducts && Boolean.TRUE.equals(product.isDeleted())) continue;
                 }
 
                 Set<ProductImage> images = product.getImages() == null
@@ -1668,10 +1689,10 @@ public class ProductService {
 
                 for (ProductImage image : images) {
 
-                    if (!matchesDeleted(deletedImages, image.getDeleted())) continue;
+                    if (!matchesDeleted(deletedImages, image.isDeleted())) continue;
 
                     Path physicalPath = resolveProductFile(
-                            product.getId(),
+                            branchId,
                             Paths.get(image.getFilePath()).getFileName().toString()
                     );
 
@@ -1700,12 +1721,12 @@ public class ProductService {
         }
 
         ProductImage primary = product.getImages().stream()
-                .filter(img -> !Boolean.TRUE.equals(img.getDeleted()))
+                .filter(img -> !Boolean.TRUE.equals(img.isDeleted()))
                 .filter(img -> Boolean.TRUE.equals(img.getPrimaryImage()))
                 .findFirst()
                 .orElseGet(() ->
                         product.getImages().stream()
-                                .filter(img -> !Boolean.TRUE.equals(img.getDeleted()))
+                                .filter(img -> !Boolean.TRUE.equals(img.isDeleted()))
                                 .findFirst()
                                 .orElse(null)
                 );
@@ -1714,7 +1735,7 @@ public class ProductService {
             return ResponseEntity.notFound().build();
         }
 
-        Path path = fileStorageService.productSharedRoot()
+        Path path = fileStorageService.productSharedRoot(branchId)
                 .resolve(primary.getThumbnailFileName());
 
         if (!Files.exists(path)) {
@@ -1796,8 +1817,8 @@ public class ProductService {
                 .orElseThrow(() -> new ProductNotFoundException("Product not found: " + id));
     }
 
-    private Path resolveProductFile(UUID productId, String filename) {
-        return fileStorageService.productSharedRoot()
+    private Path resolveProductFile(UUID branchId, String filename) {
+        return fileStorageService.productSharedRoot(branchId)
                 .resolve(filename);
     }
 

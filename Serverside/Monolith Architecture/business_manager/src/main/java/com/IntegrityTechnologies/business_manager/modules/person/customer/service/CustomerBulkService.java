@@ -8,6 +8,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.customer.dto.Cu
 import com.IntegrityTechnologies.business_manager.modules.person.customer.dto.CustomerResponse;
 import com.IntegrityTechnologies.business_manager.modules.person.customer.model.CustomerType;
 import com.IntegrityTechnologies.business_manager.modules.person.customer.repository.CustomerRepository;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +24,12 @@ public class CustomerBulkService {
     private final CustomerService customerService;
     private final CustomerRepository customerRepository;
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+
     public BulkResult<CustomerResponse> importCustomers(
+            UUID branchId,
             BulkRequest<CustomerBulkRow> request
     ) {
 
@@ -92,7 +98,9 @@ public class CustomerBulkService {
                 if (options.isSkipDuplicates()) {
 
                     for (String p : phones) {
-                        if (customerRepository.existsByPhoneNumbersContains(p)) {
+                        if (customerRepository.existsByTenantIdAndBranchIdAndPhoneNumbersContains(
+                                tenantId(), branchId, p)
+                        ) {
                             throw new IllegalArgumentException(
                                     "Phone number already exists: " + p
                             );
@@ -100,7 +108,9 @@ public class CustomerBulkService {
                     }
 
                     for (String e : emails) {
-                        if (customerRepository.existsByEmailAddressesContains(e)) {
+                        if (customerRepository.existsByTenantIdAndBranchIdAndEmailAddressesContains(
+                                tenantId(), branchId, e)
+                        ) {
                             throw new IllegalArgumentException(
                                     "Email already exists: " + e
                             );
@@ -138,7 +148,7 @@ public class CustomerBulkService {
                     );
                 } else {
                     CustomerResponse saved =
-                            customerService.createCustomer(req);
+                            customerService.createCustomer(branchId, req);
                     result.addSuccess(saved);
                 }
 

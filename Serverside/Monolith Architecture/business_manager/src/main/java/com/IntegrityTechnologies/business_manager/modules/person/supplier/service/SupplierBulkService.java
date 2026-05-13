@@ -27,10 +27,6 @@ public class SupplierBulkService {
         return com.IntegrityTechnologies.business_manager.security.util.TenantContext.getTenantId();
     }
 
-    private UUID branchId() {
-        return com.IntegrityTechnologies.business_manager.security.util.BranchContext.get();
-    }
-
     public BulkResult<SupplierDTO> importSuppliers(
             BulkRequest<SupplierBulkRow> request,
             String creatorUsername
@@ -95,7 +91,7 @@ public class SupplierBulkService {
                    DB DUPLICATES
                    ========================= */
                 if (options.isSkipDuplicates()
-                        && supplierService.existsByNameIgnoreCase(name)) {
+                        && supplierService.existsByNameIgnoreCase(row.getBranchId(), name)) {
                     throw new IllegalArgumentException(
                             "Supplier already exists: " + name
                     );
@@ -115,7 +111,7 @@ public class SupplierBulkService {
                                                     catName,
                                                     false,
                                                     tenantId(),
-                                                    branchId()
+                                                    row.getBranchId()
                                             )
                                             .orElseThrow(() ->
                                                     new IllegalArgumentException(

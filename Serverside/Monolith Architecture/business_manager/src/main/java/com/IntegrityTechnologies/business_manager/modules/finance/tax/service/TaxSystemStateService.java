@@ -19,17 +19,21 @@ public class TaxSystemStateService {
     private final TaxProperties defaults;
     private final BranchTenantGuard branchTenantGuard;
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+
     @Transactional
     public TaxSystemState getOrCreate(UUID branchId) {
         branchTenantGuard.validate(branchId);
         return repository.findByTenantIdAndBranchId(
-                        TenantContext.getTenantId(),
+                        tenantId(),
                         branchId
                 )
                 .orElseGet(() -> {
 
                     TaxSystemState state = TaxSystemState.builder()
-                            .tenantId(TenantContext.getTenantId())
+                            .tenantId(tenantId())
                             .branchId(branchId)
                             .build();
 
@@ -48,7 +52,7 @@ public class TaxSystemStateService {
     public TaxSystemState get(UUID branchId) {
         branchTenantGuard.validate(branchId);
         return repository.findByTenantIdAndBranchId(
-                        TenantContext.getTenantId(),
+                        tenantId(),
                         branchId
                 )
                 .orElseThrow(() ->

@@ -4,6 +4,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.util.*;
 
@@ -28,7 +29,7 @@ import java.util.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class BudgetLine extends BranchAwareEntity {
 
     @Id
@@ -50,14 +51,4 @@ public class BudgetLine extends BranchAwareEntity {
     )
     @Builder.Default
     private List<BudgetMonth> months = new ArrayList<>();
-
-    @PrePersist
-    @PreUpdate
-    private void inheritScope() {
-
-        if (budget != null) {
-            setTenantId(budget.getTenantId());
-            setBranchId(budget.getBranchId());
-        }
-    }
 }

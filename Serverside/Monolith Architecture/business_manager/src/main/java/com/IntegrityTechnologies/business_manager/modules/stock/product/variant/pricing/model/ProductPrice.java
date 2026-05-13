@@ -82,9 +82,8 @@ public class ProductPrice extends BranchAwareEntity {
     @Column(nullable = false)
     private Long version = 0L;
 
-    @PrePersist
-    @PreUpdate
-    public void validate() {
+    @Override
+    public void beforePersist() {
         if (minQuantity == null || minQuantity <= 0) {
             throw new IllegalStateException("minQuantity must be > 0");
         }
@@ -96,9 +95,20 @@ public class ProductPrice extends BranchAwareEntity {
         if (minQuantity == 1 && price.compareTo(BigDecimal.ZERO) == 0) {
             throw new IllegalStateException("Base price cannot be zero");
         }
+    }
 
-        if (version == null) {
-            version = 0L;
+    @Override
+    public void beforeUpdate() {
+        if (minQuantity == null || minQuantity <= 0) {
+            throw new IllegalStateException("minQuantity must be > 0");
+        }
+        if (price == null || price.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalStateException("price must be >= 0");
+        }
+
+        // 🔥 HARD RULE
+        if (minQuantity == 1 && price.compareTo(BigDecimal.ZERO) == 0) {
+            throw new IllegalStateException("Base price cannot be zero");
         }
     }
 }

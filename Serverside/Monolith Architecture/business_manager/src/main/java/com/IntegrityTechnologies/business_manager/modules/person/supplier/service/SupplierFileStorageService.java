@@ -5,7 +5,6 @@ import com.IntegrityTechnologies.business_manager.config.files.FileStorageServic
 import com.IntegrityTechnologies.business_manager.config.files.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.model.SupplierImage;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,8 +13,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.*;
-import java.util.*;
+import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * SupplierFileStorageService
@@ -35,20 +37,24 @@ public class SupplierFileStorageService {
     private final FileStorageService fileStorageService;
     private final TransactionalFileManager transactionalFileManager;
 
-    private Path root() {
-        return fileStorageService.supplierRoot();
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+
+    private Path root(UUID branchId) {
+        return fileStorageService.supplierRoot(branchId);
     }
 
     /**
      * Ensure supplier directory exists and return it.
      */
-    public Path getSupplierDirectory(String uploadFolder) throws IOException {
+    public Path getSupplierDirectory(UUID branchId, String uploadFolder) throws IOException {
 
         String safeFolder = uploadFolder.replaceAll("[^A-Za-z0-9._-]", "_");
 
-        Path dir = root().resolve(safeFolder).normalize();
+        Path dir = root(branchId).resolve(safeFolder).normalize();
 
-        if (!dir.startsWith(root())) {
+        if (!dir.startsWith(root(branchId))) {
             throw new SecurityException("Invalid upload folder");
         }
 
@@ -62,10 +68,10 @@ public class SupplierFileStorageService {
      * Public URL format set in SupplierImage.filePath:
      *   /api/suppliers/images/{uploadFolder}/{fileName}
      */
-    public Set<SupplierImage> storeImages(Supplier supplier, List<FIleUploadDTO> files) throws IOException {
+    public Set<SupplierImage> storeImages(UUID branchId, Supplier supplier, List<FIleUploadDTO> files) throws IOException {
         if (files == null || files.isEmpty()) return Set.of();
 
-        Path dir = getSupplierDirectory(supplier.getUploadFolder());
+        Path dir = getSupplierDirectory(branchId, supplier.getUploadFolder());
         Set<SupplierImage> result = new HashSet<>();
 
         for (FIleUploadDTO fileDTO : files) {
@@ -82,7 +88,7 @@ public class SupplierFileStorageService {
 
                 String publicUrl = "/api/suppliers/images/"
                         + TenantContext.getTenantId() + "/"
-                        + BranchContext.get() + "/"
+                        + supplier.getBranchId() + "/"
                         + supplier.getUploadFolder() + "/"
                         + fileName;
 
@@ -91,6 +97,8 @@ public class SupplierFileStorageService {
                         .filePath(publicUrl)
                         .fileDescription(fileDTO.getDescription())
                         .supplier(supplier)
+                        .tenantId(tenantId())
+                        .branchId(branchId)
                         .build());
             }
         }
@@ -100,11 +108,11 @@ public class SupplierFileStorageService {
     /**
      * Resolve actual disk Path for an image given uploadFolder and filename.
      */
-    public Path resolveImagePath(String uploadFolder, String filename) throws IOException {
+    public Path resolveImagePath(UUID branchId, String uploadFolder, String filename) throws IOException {
 
         String safeFile = filename.replaceAll("[^A-Za-z0-9._-]", "_");
 
-        Path dir = getSupplierDirectory(uploadFolder);
+        Path dir = getSupplierDirectory(branchId, uploadFolder);
         Path resolved = dir.resolve(safeFile).normalize();
 
         if (!resolved.startsWith(dir)) {
@@ -117,8 +125,8 @@ public class SupplierFileStorageService {
     /**
      * Delete a single file immediately (no transactional deferral).
      */
-    public void deleteFile(String uploadFolder, String filename) throws IOException {
-        Path pathToDelete = resolveImagePath(uploadFolder, filename);
+    public void deleteFile(UUID branchId, String uploadFolder, String filename) throws IOException {
+        Path pathToDelete = resolveImagePath(branchId, uploadFolder, filename);
         fileStorageService.deleteFile(pathToDelete);
     }
 

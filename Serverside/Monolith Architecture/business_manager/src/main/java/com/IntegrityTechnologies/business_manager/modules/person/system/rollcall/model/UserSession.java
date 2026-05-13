@@ -67,11 +67,4 @@ public class UserSession extends BranchAwareEntity {
             this.autoLoggedOut = auto;
         }
     }
-
-    @PrePersist
-    public void prePersist() {
-        if (version == null) {
-            version = 0L;
-        }
-    }
 }

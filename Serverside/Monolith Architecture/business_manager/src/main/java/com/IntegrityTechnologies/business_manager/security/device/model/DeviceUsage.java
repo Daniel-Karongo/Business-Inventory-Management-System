@@ -40,6 +40,9 @@ public class DeviceUsage extends TenantAwareEntity {
     @Column(name = "device_id", nullable = false)
     private UUID deviceId;
 
+    @Column(name="branch_id")
+    private UUID branchId;
+
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 

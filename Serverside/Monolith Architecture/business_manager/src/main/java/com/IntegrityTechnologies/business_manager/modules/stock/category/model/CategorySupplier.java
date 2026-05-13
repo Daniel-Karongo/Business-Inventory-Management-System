@@ -37,11 +37,4 @@ public class CategorySupplier extends BranchAwareEntity {
     @MapsId("supplierId")
     @JoinColumn(name = "supplier_id")
     private Supplier supplier;
-
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    public void onCreate() {
-        createdAt = LocalDateTime.now();
-    }
 }

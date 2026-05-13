@@ -124,12 +124,6 @@ public class User extends TenantAwareEntity {
     @Column(nullable = false)
     private String uploadFolder;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private Boolean deleted = false;
-
-    private LocalDateTime deletedAt;
-
     /* =====================================
        RELATIONSHIPS
     ===================================== */

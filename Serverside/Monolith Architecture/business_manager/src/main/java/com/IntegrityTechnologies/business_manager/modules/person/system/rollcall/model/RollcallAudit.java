@@ -35,11 +35,4 @@ public class RollcallAudit extends BranchAwareEntity {
     private LocalDateTime timestamp;
 
     private String performedBy;
-
-    @PrePersist
-    void onCreate() {
-        if (timestamp == null) {
-            timestamp = LocalDateTime.now();
-        }
-    }
 }

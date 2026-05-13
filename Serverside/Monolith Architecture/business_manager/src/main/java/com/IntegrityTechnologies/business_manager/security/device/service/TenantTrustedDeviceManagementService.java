@@ -189,6 +189,7 @@ public class TenantTrustedDeviceManagementService {
         repository.save(d);
 
         approvalAuditService.log(
+                d.getBranchId(),
                 d.getId(),
                 "APPROVED",
                 reason
@@ -220,6 +221,7 @@ public class TenantTrustedDeviceManagementService {
         repository.save(d);
 
         approvalAuditService.log(
+                d.getBranchId(),
                 d.getId(),
                 "REJECTED",
                 reason
@@ -247,6 +249,7 @@ public class TenantTrustedDeviceManagementService {
         repository.save(d);
 
         approvalAuditService.log(
+                d.getBranchId(),
                 d.getId(),
                 "RENAMED",
                 "Tenant device renamed"

@@ -2,7 +2,6 @@ package com.IntegrityTechnologies.business_manager.modules.communication.notific
 
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.dto.EmailRequest;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.model.EmailMessage;
-import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.repository.EmailMessageRepository;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.service.EmailService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
@@ -20,20 +19,27 @@ import java.util.UUID;
 public class EmailController {
 
     private final EmailService service;
-    private final EmailMessageRepository repo;
 
     @TenantManagerOnly
-    @PostMapping("/send")
+    @PostMapping("/branch/{branchId}/send")
     public ResponseEntity<EmailMessage> send(
+            @PathVariable UUID branchId,
             @Valid @RequestBody EmailRequest request
     ) {
-        return ResponseEntity.ok(service.send(request));
+
+        return ResponseEntity.ok(
+                service.send(branchId, request)
+        );
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<EmailMessage> get(@PathVariable UUID id) {
-        return repo.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @GetMapping("/branch/{branchId}/{id}")
+    public ResponseEntity<EmailMessage> get(
+            @PathVariable UUID branchId,
+            @PathVariable UUID id
+    ) {
+
+        return ResponseEntity.ok(
+                service.get(branchId, id)
+        );
     }
 }

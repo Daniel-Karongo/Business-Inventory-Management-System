@@ -9,6 +9,7 @@ import lombok.*;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -18,6 +19,8 @@ public class SupplierCreateDTO {
 
     @NotBlank(message = "Supplier name is required.")
     private String name;
+
+    private UUID branchId;
 
     @Schema(description = "List of supplier email addresses")
     @NotEmpty(message = "At least one email address is required.")

@@ -126,31 +126,35 @@ public class DepartmentController {
     @TenantManagerOnly
     @GetMapping("/{id}/audits")
     public ResponseEntity<List<DepartmentAudit>> getDepartmentAudits(
-            @PathVariable UUID id
+            @PathVariable UUID id,
+            @RequestParam UUID branchId
     ) {
 
         return ResponseEntity.ok(
-                departmentService.getDepartmentAudits(id)
+                departmentService.getDepartmentAudits(branchId, id)
         );
     }
 
     @TenantManagerOnly
     @GetMapping("/all/audits")
-    public ResponseEntity<List<DepartmentAudit>> getAllDepartmentsAudits() {
+    public ResponseEntity<List<DepartmentAudit>> getAllDepartmentsAudits(
+        @RequestParam UUID branchId
+    ) {
 
         return ResponseEntity.ok(
-                departmentService.getAllDepartmentsAudits()
+                departmentService.getAllDepartmentsAudits(branchId)
         );
     }
 
     @TenantManagerOnly
     @GetMapping("/audits/performer/{id}")
     public ResponseEntity<List<DepartmentAudit>> getDepartmentAuditsByPerformer(
-            @PathVariable UUID id
+            @PathVariable UUID id,
+            @RequestParam UUID branchId
     ) {
 
         return ResponseEntity.ok(
-                departmentService.getDepartmentAuditsByPerformer(id)
+                departmentService.getDepartmentAuditsByPerformer(branchId, id)
         );
     }
 

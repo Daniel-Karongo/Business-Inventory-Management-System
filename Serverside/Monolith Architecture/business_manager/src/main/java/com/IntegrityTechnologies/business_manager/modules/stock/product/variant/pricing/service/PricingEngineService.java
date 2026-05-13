@@ -22,6 +22,7 @@ public class PricingEngineService {
     public PricingResult resolve(PricingContext ctx) {
 
         ProductPrice base = basePriceService.resolvePrice(
+                ctx.getBranchId(),
                 ctx.getProductVariantId(),
                 ctx.getPackagingId(),
                 ctx.getQuantity()

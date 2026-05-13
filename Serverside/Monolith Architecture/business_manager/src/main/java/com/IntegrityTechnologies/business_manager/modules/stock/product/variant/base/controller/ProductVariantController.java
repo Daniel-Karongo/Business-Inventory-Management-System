@@ -85,11 +85,13 @@ public class ProductVariantController {
 
     @GetMapping("/barcode/pdf/download/{fileName}")
     public ResponseEntity<Resource> downloadPdf(
-            @PathVariable String fileName
+            @PathVariable String fileName,
+            @RequestParam UUID branchId
     ) {
 
         Resource resource =
                 pdfOrchestrationService.getPdfResource(
+                        branchId,
                         fileName
                 );
 

@@ -37,10 +37,6 @@ public class Category extends BranchAwareEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Version
-    @Column(nullable = false)
-    private Long version = 0L;
-
     @Column(nullable = false)
     private String name;
 
@@ -66,16 +62,4 @@ public class Category extends BranchAwareEntity {
 
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<CategorySupplier> categorySuppliers = new HashSet<>();
-
-    @Column(nullable = false)
-    private boolean deleted = false;
-
-    private LocalDateTime deletedAt;
-
-    @PrePersist
-    public void prePersist() {
-        if (version == null) {
-            version = 0L;
-        }
-    }
 }

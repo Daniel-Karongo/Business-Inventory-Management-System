@@ -53,6 +53,10 @@ public abstract class TenantAwareEntity {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    @Version
+    @Column(nullable = false)
+    private Long version = 0L;
+
     @PrePersist
     protected void prePersist() {
 
@@ -65,10 +69,25 @@ public abstract class TenantAwareEntity {
         if (!deleted) {
             deleted = false;
         }
+
+        if (version == null) {
+            version = 0L;
+        }
+
+        beforePersist();
+    }
+
+    protected void beforePersist() {
+        // default no-op
+    }
+
+    protected void beforeUpdate() {
+        // default no-op
     }
 
     @PreUpdate
     protected void preUpdate() {
         updatedAt = LocalDateTime.now();
+        beforeUpdate();
     }
 }

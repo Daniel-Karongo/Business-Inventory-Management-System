@@ -51,10 +51,12 @@ public interface DeviceUsageRepository extends JpaRepository<DeviceUsage, UUID> 
                 select du
                 from DeviceUsage du
                 where du.tenantId=:tenantId
+                and du.branchId=:branchId
                 and du.userId=:userId
             """)
     List<DeviceUsage> lockUserDevices(
             UUID tenantId,
+            UUID branchId,
             UUID userId
     );
 

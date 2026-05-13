@@ -1,40 +1,40 @@
 # M-Pesa + SMS placeholders — replace with real values before using in production
 
-mpesa:
-  env: sandbox
-  payment-type: PAYBILL   # PAYBILL | TILL
-  consumer-key: gLKj2u28W7o6EncnK97GyyWtQ2S0HfyMGFfdDJlaMutu4sbl
-  consumer-secret: bGP6Fqjn8v8cNQEILhwYGhuWqRSrqiBswNwcXS3A0Kc0zBSxGfONt6JDp7JnQzTH
-  shortcode: 174379
-  passkey: bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919
-  stk:
-    callback-url: https://thumbless-melva-tinselly.ngrok-free.dev/api/payments/mpesa/stk/callback
+# =========================================================
+# LEGACY CREDENTIAL MIGRATION
+# Used ONLY for initial/idempotent DB seeding
+# Runtime payment/sms/email operations are DB-backed
+# =========================================================
 
+migration:
+  legacy-credentials:
+#    enabled: false
+    enabled: true
 
-#mpesa:
-#  env: production
-#  consumer-key: xxxxxxxxx
-#  consumer-secret: xxxxxxxxx
-#  shortcode: 123456
-#  passkey: xxxxxxxxx
-#  stk:
-#    callback-url: https://client-domain.com/api/payments/mpesa/stk/callback
-#  c2b:
-#    confirm-url: https://client-domain.com/api/payments/mpesa/c2b/confirm
-#    validate-url: https://client-domain.com/api/payments/mpesa/c2b/validate
-#  payment-type: PAYBILL # PAYBILL | TILL
+legacy:
 
-sms:
-  provider: AFRICAS_TALKING
-  env: sandbox        # sandbox | production
-  default-country-code: "+254"
+  mpesa:
+    consumer-key: gLKj2u28W7o6EncnK97GyyWtQ2S0HfyMGFfdDJlaMutu4sbl
+    consumer-secret: bGP6Fqjn8v8cNQEILhwYGhuWqRSrqiBswNwcXS3A0Kc0zBSxGfONt6JDp7JnQzTH
+    shortcode: "174379"
+    passkey: bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919
+    callback-url: https://thumbless-melva-tinselly.ngrok-free.dev/api/payments/mpesa/branch/{branchId}/stk/callback
+    payment-type: PAYBILL
+    sandbox: true
 
-  africa:
+  sms:
     username: sandbox
     api-key: atsk_6e7b7b0177840603612d6edd85fcbe00a5fed3bbd7cce8868c01dcac77f6d83a3b9a110b
     sender-id: sandbox
-    base-url-sandbox: https://api.sandbox.africastalking.com/version1/messaging
-    base-url-production: https://api.africastalking.com/version1/messaging
+    sandbox: true
+    default-country-code: "+254"
+
+  email:
+    host: smtp.gmail.com
+    port: 587
+    username: karongodaniel022@gmail.com
+    password: ugpe rbez thxd avwf
+    from: "Business Manager <karongodaniel022@gmail.com>"
 
 spring:
   mail:

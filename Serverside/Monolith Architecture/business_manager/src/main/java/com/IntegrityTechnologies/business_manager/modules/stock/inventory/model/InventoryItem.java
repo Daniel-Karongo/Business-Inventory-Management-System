@@ -43,10 +43,6 @@ public class InventoryItem extends BranchAwareEntity {
     @Column(name = "product_variant_id", nullable = false)
     private UUID productVariantId;
 
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "product_variant_id", insertable = false, updatable = false)
-//    private ProductVariant productVariant;
-
     @Column(nullable = false)
     private Long quantityOnHand;
 
@@ -59,15 +55,4 @@ public class InventoryItem extends BranchAwareEntity {
     @Builder.Default
     @Column(nullable = false)
     private Boolean deleted = false;
-
-    @Version
-    @Column(nullable = false)
-    private Long version = 0L;
-
-    @PrePersist
-    public void prePersist() {
-        if (version == null) {
-            version = 0L;
-        }
-    }
 }

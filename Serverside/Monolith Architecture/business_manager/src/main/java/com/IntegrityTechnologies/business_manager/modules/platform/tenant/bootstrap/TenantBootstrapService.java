@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.platform.tenant.bootstrap;
 
+import com.IntegrityTechnologies.business_manager.modules.communication.notification.base.BranchNotificationSettingsSeeder;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.BranchAccountingSettings;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.BranchAccountingSettingsRepository;
@@ -52,6 +53,7 @@ public class TenantBootstrapService {
 
     private final PasswordEncoder passwordEncoder;
     private final AccountingPeriodBootstrapService accountingPeriodBootstrapService;
+    private final BranchNotificationSettingsSeeder notificationSettingsSeeder;
 
     public boolean bootstrapTenant(UUID tenantId, String adminUsername, String adminPassword) {
 
@@ -106,11 +108,16 @@ public class TenantBootstrapService {
 
             accountingSettingsRepository.save(
                     BranchAccountingSettings.builder()
+                            .tenantId(tenantId)
                             .branchId(branch.getId())
                             .revenueRecognitionMode(RevenueRecognitionMode.DELIVERY)
                             .build()
             );
         }
+        notificationSettingsSeeder.seed(
+                tenantId,
+                branch.getId()
+        );
 
         accountingPeriodBootstrapService.ensureCurrentPeriod(
                 tenantId,
@@ -165,6 +172,8 @@ public class TenantBootstrapService {
 
                     departmentAuditRepository.save(
                             DepartmentAudit.builder()
+                                    .tenantId(tenantId)
+                                    .branchId(branch.getId())
                                     .departmentId(d.getId())
                                     .departmentName(d.getName())
                                     .action("CREATE")
@@ -182,11 +191,18 @@ public class TenantBootstrapService {
 
         boolean adminCreated = false;
 
+        /* =====================================
+           ONLY AUTO-CREATE ADMIN FOR EMPTY TENANTS
+        ===================================== */
+
+        boolean tenantHasUsers =
+                userRepository.existsByTenantIdAndDeletedFalse(tenantId);
+
         User admin = userRepository
-                .findByUsernameAndTenantId(adminUsername, tenantId)
+                .findByUsernameIgnoreCaseAndTenantId(adminUsername, tenantId)
                 .orElse(null);
 
-        if (admin == null) {
+        if (!tenantHasUsers && admin == null) {
 
             adminCreated = true;
 
@@ -204,6 +220,7 @@ public class TenantBootstrapService {
 
             userAuditRepository.save(
                     UserAudit.builder()
+                            .tenantId(tenantId)
                             .userId(admin.getId())
                             .username(admin.getUsername())
                             .action("CREATE")

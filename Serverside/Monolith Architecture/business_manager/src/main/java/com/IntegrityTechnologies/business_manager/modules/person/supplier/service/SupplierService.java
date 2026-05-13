@@ -1,9 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.person.supplier.service;
 
-import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
 import com.IntegrityTechnologies.business_manager.config.files.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.config.files.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.files.TransactionalFileManager;
+import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
 import com.IntegrityTechnologies.business_manager.exception.CategoryNotFoundException;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.dto.SupplierCreateDTO;
@@ -19,13 +19,12 @@ import com.IntegrityTechnologies.business_manager.modules.person.supplier.reposi
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.repository.SupplierImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserRepository;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplier;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplierId;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
@@ -63,22 +62,19 @@ public class SupplierService {
     private UUID tenantId() {
         return TenantContext.getTenantId();
     }
-    private UUID branchId() {
-        return BranchContext.get();
-    }
     /* ===================== read operations ===================== */
 
-    public Supplier getSupplier(UUID id) {
-        return supplierRepository.findByIdSafe(id, false, tenantId(), branchId())
+    public Supplier getSupplier(UUID branchId, UUID id) {
+        return supplierRepository.findByIdSafe(id, false, tenantId(), branchId)
                 .orElseThrow(() -> new EntityNotFoundException("Supplier not found"));
     }
 
-    public List<SupplierDTO> getSuppliers(Boolean deleted) {
+    public List<SupplierDTO> getSuppliers(UUID branchId, Boolean deleted) {
 
         List<Supplier> suppliers = supplierRepository.findAllSafe(
                 deleted,
                 tenantId(),
-                branchId()
+                branchId
         );
 
         return suppliers.stream()
@@ -86,29 +82,29 @@ public class SupplierService {
                 .toList();
     }
 
-    public SupplierDTO getByIdentifier(String identifier, Boolean deleted) {
+    public SupplierDTO getByIdentifier(UUID branchId, String identifier, Boolean deleted) {
         Optional<Supplier> maybe = Optional.empty();
 
         // 1️⃣ Try UUID
         try {
             UUID id = UUID.fromString(identifier);
-            maybe = fetchSupplierById(id, deleted);
+            maybe = fetchSupplierById(branchId, id, deleted);
         } catch (IllegalArgumentException ignored) { }
 
         // 2️⃣ Try Email
         if (maybe.isEmpty()) {
-            maybe = fetchSupplierByEmail(identifier, deleted);
+            maybe = fetchSupplierByEmail(branchId, identifier, deleted);
         }
 
         // 3️⃣ Try Phone
         if (maybe.isEmpty()) {
             String phoneNormalized = normalizePhone(identifier);
-            maybe = fetchSupplierByPhone(phoneNormalized, deleted);
+            maybe = fetchSupplierByPhone(branchId, phoneNormalized, deleted);
         }
 
         // 4️⃣ Try Name
         if (maybe.isEmpty()) {
-            maybe = fetchSupplierByName(identifier, deleted);
+            maybe = fetchSupplierByName(branchId, identifier, deleted);
         }
 
         return maybe.map(supplierMapper::toDTO)
@@ -118,23 +114,24 @@ public class SupplierService {
     }
 
     // Helper methods for clarity
-    private Optional<Supplier> fetchSupplierById(UUID id, Boolean deleted) {
-        return supplierRepository.findByIdSafe(id, deleted, tenantId(), branchId());
+    private Optional<Supplier> fetchSupplierById(UUID branchId, UUID id, Boolean deleted) {
+        return supplierRepository.findByIdSafe(id, deleted, tenantId(), branchId);
     }
 
-    private Optional<Supplier> fetchSupplierByEmail(String email, Boolean deleted) {
-        return supplierRepository.findByEmailSafe(email, deleted, tenantId(), branchId());
+    private Optional<Supplier> fetchSupplierByEmail(UUID branchId, String email, Boolean deleted) {
+        return supplierRepository.findByEmailSafe(email, deleted, tenantId(), branchId);
     }
 
-    private Optional<Supplier> fetchSupplierByPhone(String phone, Boolean deleted) {
-        return supplierRepository.findByPhoneSafe(phone, deleted, tenantId(), branchId());
+    private Optional<Supplier> fetchSupplierByPhone(UUID branchId, String phone, Boolean deleted) {
+        return supplierRepository.findByPhoneSafe(phone, deleted, tenantId(), branchId);
     }
 
-    private Optional<Supplier> fetchSupplierByName(String name, Boolean deleted) {
-        return supplierRepository.findByNameSafe(name, deleted, tenantId(), branchId());
+    private Optional<Supplier> fetchSupplierByName(UUID branchId, String name, Boolean deleted) {
+        return supplierRepository.findByNameSafe(name, deleted, tenantId(), branchId);
     }
 
     public Page<SupplierDTO> advancedSearch(
+            UUID branchId,
             List<Long> categoryIds,
             String name,
             String email,
@@ -150,7 +147,7 @@ public class SupplierService {
             Boolean deleted) {
 
         var spec = Specification.allOf(
-                SupplierSpecification.scoped(tenantId(), branchId()),
+                SupplierSpecification.scoped(tenantId(), branchId),
                 SupplierSpecification.inCategories(categoryIds),
                 SupplierSpecification.hasNameLike(name),
                 SupplierSpecification.hasEmail(email),
@@ -167,8 +164,8 @@ public class SupplierService {
         return supplierRepository.findAll(spec, pageable).map(supplierMapper::toDTO);
     }
 
-    public boolean existsByNameIgnoreCase(String name) {
-        return supplierRepository.existsByNameSafe(name, tenantId(), branchId());
+    public boolean existsByNameIgnoreCase(UUID branchId, String name) {
+        return supplierRepository.existsByNameSafe(name, tenantId(), branchId);
     }
 
 
@@ -186,7 +183,7 @@ public class SupplierService {
     @Transactional
     public SupplierDTO createSupplier(SupplierCreateDTO dto, String creatorUsername) throws IOException {
         // 1️⃣ Check if supplier name exists
-        if (supplierRepository.existsByNameSafe(dto.getName(), tenantId(), branchId())) {
+        if (supplierRepository.existsByNameSafe(dto.getName(), tenantId(), dto.getBranchId())) {
             throw new IllegalArgumentException("Supplier name already exists");
         }
 
@@ -219,7 +216,7 @@ public class SupplierService {
             List<Category> categories = categoryRepository.findAllByIdSafe(
                     dto.getCategoryIds(),
                     tenantId(),
-                    branchId()
+                    dto.getBranchId()
             );
 
             // Verify all categories exist
@@ -251,7 +248,7 @@ public class SupplierService {
         // 8️⃣ Handle images
         List<FIleUploadDTO> images = dto.getSupplierFiles();
         if (images != null && !images.isEmpty()) {
-            Set<SupplierImage> imagesToSave = supplierFileStorageService.storeImages(supplier, images);
+            Set<SupplierImage> imagesToSave = supplierFileStorageService.storeImages(dto.getBranchId(), supplier, images);
             supplierImageRepository.saveAll(imagesToSave);
             supplier.getImages().addAll(imagesToSave);
 
@@ -263,6 +260,8 @@ public class SupplierService {
                         SupplierImageAudit.builder()
                                 .fileName(im.getFileName())
                                 .filePath(im.getFilePath())
+                                .tenantId(tenantId())
+                                .branchId(im.getBranchId())
                                 .action("UPLOADED")
                                 .timestamp(LocalDateTime.now())
                                 .supplierId(supplier.getId())
@@ -274,11 +273,11 @@ public class SupplierService {
         }
 
         // 9️⃣ Log supplier audit
-        logSupplierAuditAsync(supplier, "CREATED_BULK", null, null, null, "New supplier added");
+        logSupplierAuditAsync(supplier.getBranchId(), supplier, "CREATED_BULK", null, null, null, "New supplier added");
 
         // 10️⃣ Return DTO
         return supplierMapper.toDTO(
-                supplierRepository.findByIdSafe(supplier.getId(), null, tenantId(), branchId())
+                supplierRepository.findByIdSafe(supplier.getId(), null, tenantId(), dto.getBranchId())
                         .orElseThrow(() -> new IllegalStateException("Supplier not found after save"))
         );
     }
@@ -326,6 +325,7 @@ public class SupplierService {
                 categoryRepository.save(category);
 
                 logSupplierAuditAsync(
+                        supplier.getBranchId(),
                         supplier,
                         "UPDATED",
                         "categories",
@@ -360,6 +360,7 @@ public class SupplierService {
     ======================================================= */
 
         logSupplierAuditAsync(
+                supplier.getBranchId(),
                 supplier,
                 "CREATED",
                 null,
@@ -389,6 +390,7 @@ public class SupplierService {
     ======================================================= */
 
         logSupplierAuditAsync(
+                supplier.getBranchId(),
                 supplier,
                 "UPDATED",
                 "categories",
@@ -401,9 +403,9 @@ public class SupplierService {
     }
 
     @Transactional
-    public SupplierDTO updateSupplier(UUID id, SupplierUpdateDTO dto, String updaterUsername) throws IOException {
+    public SupplierDTO updateSupplier(UUID branchId, UUID id, SupplierUpdateDTO dto, String updaterUsername) throws IOException {
         // 1️⃣ Fetch existing supplier
-        Supplier existing = getSupplier(id);
+        Supplier existing = getSupplier(branchId, id);
 
         // 2️⃣ Apply basic updates via mapper
         supplierMapper.applyUpdate(existing, dto);
@@ -426,7 +428,7 @@ public class SupplierService {
             List<Category> newCategories = categoryRepository.findAllByIdSafe(
                     dto.getCategoryIds(),
                     tenantId(),
-                    branchId()
+                    branchId
             );
 
             if (newCategories.size() != dto.getCategoryIds().size()) {
@@ -451,6 +453,7 @@ public class SupplierService {
             }
 
             logSupplierAuditAsync(
+                    existing.getBranchId(),
                     existing,
                     "UPDATED",
                     "categories",
@@ -473,8 +476,8 @@ public class SupplierService {
     }
 
     @Transactional
-    public Map<String, Object> softDeleteSupplierInternal(UUID id) {
-        Supplier supplier = getSupplier(id);
+    public Map<String, Object> softDeleteSupplierInternal(UUID branchId, UUID id) {
+        Supplier supplier = getSupplier(branchId, id);
         supplier.setDeleted(true);
         supplier.setDeletedAt(LocalDateTime.now());
         supplierRepository.save(supplier);
@@ -482,12 +485,12 @@ public class SupplierService {
         if (supplier.getImages() != null) {
             supplier.getImages().forEach(img -> {
                 img.setDeleted(true);
-                logSupplierImageAuditAsync("SOFT DELETED", supplier, SecurityUtils.currentUsername(), img, "Supplier soft deleted");
+                logSupplierImageAuditAsync(img.getBranchId(), "SOFT DELETED", supplier, SecurityUtils.currentUsername(), img, "Supplier soft deleted");
                 supplierImageRepository.save(img);
             });
         }
 
-        logSupplierAuditAsync(supplier, "DELETED", null, null, null, "Soft deleted supplier");
+        logSupplierAuditAsync(supplier.getBranchId(), supplier, "DELETED", null, null, null, "Soft deleted supplier");
 
         // Only return the required fields
         return Map.of(
@@ -498,23 +501,23 @@ public class SupplierService {
     }
 
     @Transactional
-    public ResponseEntity<ApiResponse> softDeleteSupplier(UUID id) {
-        Map<String, Object> deleted = softDeleteSupplierInternal(id);
+    public ResponseEntity<ApiResponse> softDeleteSupplier(UUID branchId, UUID id) {
+        Map<String, Object> deleted = softDeleteSupplierInternal(branchId, id);
         return ResponseEntity.ok(new ApiResponse("success", "Supplier soft deleted successfully", deleted));
     }
 
     @Transactional
-    public ResponseEntity<ApiResponse> softDeleteSuppliersInBulk(List<UUID> supplierIds) {
+    public ResponseEntity<ApiResponse> softDeleteSuppliersInBulk(UUID branchId, List<UUID> supplierIds) {
         List<Map<String, Object>> deleted = supplierIds.stream()
-                .map(this::softDeleteSupplierInternal)
+                .map(id -> softDeleteSupplierInternal(branchId, id))
                 .toList();
 
         return ResponseEntity.ok(new ApiResponse("success", "Suppliers soft deleted successfully", deleted));
     }
 
     @Transactional
-    public Map<String, Object> restoreSupplierInternal(UUID id) {
-        Supplier supplier = supplierRepository.findByIdSafe(id, null, tenantId(), branchId())
+    public Map<String, Object> restoreSupplierInternal(UUID branchId, UUID id) {
+        Supplier supplier = supplierRepository.findByIdSafe(id, null, tenantId(), branchId)
                 .orElseThrow(() -> new EntityNotFoundException("Supplier not found"));
 
         supplier.setDeleted(false);
@@ -525,12 +528,12 @@ public class SupplierService {
             supplier.getImages().forEach(img -> {
                 img.setDeleted(false);
 
-                logSupplierImageAuditAsync("RESTORED", supplier, SecurityUtils.currentUsername(), img, "Soft deleted supplier restored");
+                logSupplierImageAuditAsync(img.getBranchId(), "RESTORED", supplier, SecurityUtils.currentUsername(), img, "Soft deleted supplier restored");
                 supplierImageRepository.save(img);
             });
         }
 
-        logSupplierAuditAsync(supplier, "RESTORED", null, null, null, "Supplier restored");
+        logSupplierAuditAsync(supplier.getBranchId(), supplier, "RESTORED", null, null, null, "Supplier restored");
 
         return Map.of(
                 "name", supplier.getName(),
@@ -540,15 +543,15 @@ public class SupplierService {
     }
 
     @Transactional
-    public ResponseEntity<ApiResponse> restoreSupplier(UUID id) {
-        Map<String, Object> restored = restoreSupplierInternal(id);
+    public ResponseEntity<ApiResponse> restoreSupplier(UUID branchId, UUID id) {
+        Map<String, Object> restored = restoreSupplierInternal(branchId, id);
         return ResponseEntity.ok(new ApiResponse("success", "Supplier restored successfully", restored));
     }
 
     @Transactional
-    public ResponseEntity<ApiResponse> restoreSuppliersInBulk(List<UUID> supplierIds) {
+    public ResponseEntity<ApiResponse> restoreSuppliersInBulk(UUID branchId, List<UUID> supplierIds) {
         List<Map<String, Object>> restored = supplierIds.stream()
-                .map(this::restoreSupplierInternal)
+                .map(id -> restoreSupplierInternal(branchId, id))
                 .toList();
 
         return ResponseEntity.ok(new ApiResponse("success", "Suppliers restored successfully", restored));
@@ -561,22 +564,22 @@ public class SupplierService {
      * If file cleanup fails, the transaction is rolled back and no DB changes are committed.
      */
     @Transactional
-    public ResponseEntity<ApiResponse> hardDeleteSupplier(UUID supplierId) {
+    public ResponseEntity<ApiResponse> hardDeleteSupplier(UUID branchId,  UUID supplierId) {
 
         Supplier supplier = supplierRepository.findByIdSafe(
                 supplierId,
                 null,
                 tenantId(),
-                branchId()
+                branchId
         ).orElseThrow(() -> new EntityNotFoundException(
                 "Supplier with id %s not found".formatted(supplierId)
         ));
 
-        return hardDeleteSuppliersInBulk(List.of(supplier.getId()));
+        return hardDeleteSuppliersInBulk(branchId, List.of(supplier.getId()));
     }
 
     @Transactional
-    public ResponseEntity<ApiResponse> hardDeleteSuppliersInBulk(List<UUID> supplierIds) {
+    public ResponseEntity<ApiResponse> hardDeleteSuppliersInBulk(UUID branchId, List<UUID> supplierIds) {
 
         if (supplierIds.isEmpty()) {
             return ResponseEntity.badRequest()
@@ -587,16 +590,16 @@ public class SupplierService {
         List<Supplier> suppliers = supplierRepository.findAllByIdsSafe(
                 supplierIds,
                 tenantId(),
-                branchId()
+                branchId
         );
         suppliers.forEach(s -> Hibernate.initialize(s.getImages()));
 
         // 👇 LOG BEFORE DATA IS DELETED — and in new transactions
         for (Supplier s : suppliers) {
-            logSupplierAuditAsync(s, "HARD DELETED", null, null, null, "Supplier permanently deleted");
+            logSupplierAuditAsync(s.getBranchId(), s, "HARD DELETED", null, null, null, "Supplier permanently deleted");
 
             for (SupplierImage img : s.getImages()) {
-                logSupplierImageAuditAsync("HARD DELETED", s, SecurityUtils.currentUsername(), img, "Supplier hard deleted");
+                logSupplierImageAuditAsync(img.getBranchId(), "HARD DELETED", s, SecurityUtils.currentUsername(), img, "Supplier hard deleted");
             }
         }
 
@@ -604,30 +607,30 @@ public class SupplierService {
         supplierRepository.detachFromCategories(
                 supplierIds,
                 tenantId(),
-                branchId()
+                branchId
         );
 
         supplierRepository.detachFromProducts(
                 supplierIds,
                 tenantId(),
-                branchId()
+                branchId
         );
         supplierImageRepository.deleteAllBySupplierIds(
                 supplierIds,
                 tenantId(),
-                branchId()
+                branchId
         );
 
         supplierRepository.deleteSuppliersByIds(
                 supplierIds,
                 tenantId(),
-                branchId()
+                branchId
         );
 
         // 👇 DELETE FILES *after* transaction commits
         suppliers.forEach(s -> transactionalFileManager.runAfterCommit(() -> {
             try {
-                Path dir = fileStorageService.supplierRoot()
+                Path dir = fileStorageService.supplierRoot(branchId)
                         .resolve(s.getUploadFolder())
                         .normalize();
 
@@ -646,6 +649,7 @@ public class SupplierService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logSupplierAuditAsync(
+            UUID branchId,
             Supplier supplier,
             String action,
             String field,
@@ -659,6 +663,8 @@ public class SupplierService {
                 .oldValue(oldVal)
                 .newValue(newVal)
                 .reason(reason)
+                .branchId(branchId)
+                .tenantId(tenantId())
                 .timestamp(LocalDateTime.now())
                 .supplierId(supplier.getId())
                 .supplierName(supplier.getName())
@@ -671,6 +677,7 @@ public class SupplierService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logSupplierImageAuditAsync(
+            UUID branchId,
             String action,
             Supplier supplier,
             String updaterUsername,
@@ -682,6 +689,8 @@ public class SupplierService {
                 .filePath(image.getFilePath())
                 .action(action)
                 .reason(reason)
+                .branchId(branchId)
+                .tenantId(tenantId())
                 .timestamp(LocalDateTime.now())
                 .supplierId(supplier.getId())
                 .supplierName(supplier.getName())
@@ -709,23 +718,23 @@ public class SupplierService {
     }
 
     @Transactional
-    public ResponseEntity<List<SupplierAudit>> getIndividualSupplierAudit(String identifier, Boolean deleted) {
-        SupplierDTO supplier = getByIdentifier(identifier, deleted);
+    public ResponseEntity<List<SupplierAudit>> getIndividualSupplierAudit(UUID branchId, String identifier, Boolean deleted) {
+        SupplierDTO supplier = getByIdentifier(branchId, identifier, deleted);
         return ResponseEntity.ok(
                 supplierAuditRepository.findBySupplierIdAndTenantIdAndBranchIdOrderByTimestampDesc(
                         supplier.getId(),
                         tenantId(),
-                        branchId()
+                        branchId
                 )
         );
     }
 
     @Transactional
-    public ResponseEntity<List<SupplierAudit>> getAllSuppliersAudits() {
+    public ResponseEntity<List<SupplierAudit>> getAllSuppliersAudits(UUID branchId) {
         return ResponseEntity.ok(
                 supplierAuditRepository.findAllByTenantIdAndBranchIdOrderByTimestampDesc(
                         tenantId(),
-                        branchId()
+                        branchId
                 )
         );
     }

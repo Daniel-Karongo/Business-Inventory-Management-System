@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.model.Payment;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.model.Payment;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;

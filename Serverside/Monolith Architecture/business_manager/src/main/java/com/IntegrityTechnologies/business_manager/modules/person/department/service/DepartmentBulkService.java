@@ -201,6 +201,7 @@ public class DepartmentBulkService {
 
                 saved = departmentMapper.toDTO(
                         departmentService.updateExisting(
+                                pr.dto.getBranchId(),
                                 existing.get(),
                                 dto,
                                 authentication

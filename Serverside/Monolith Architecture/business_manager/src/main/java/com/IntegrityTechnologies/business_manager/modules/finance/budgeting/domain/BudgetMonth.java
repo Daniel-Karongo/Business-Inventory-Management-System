@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.budgeting.dom
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -28,7 +29,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class BudgetMonth extends BranchAwareEntity {
 
     @Id
@@ -44,16 +45,4 @@ public class BudgetMonth extends BranchAwareEntity {
 
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal plannedAmount;
-
-    @PrePersist
-    @PreUpdate
-    private void inheritScope() {
-
-        if (budgetLine != null) {
-
-            setTenantId(budgetLine.getTenantId());
-            setBranchId(budgetLine.getBranchId());
-
-        }
-    }
 }

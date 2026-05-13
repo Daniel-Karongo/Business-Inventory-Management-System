@@ -27,14 +27,20 @@ public class DeviceApprovalAuditService {
     private final PlatformUserRepository platformUserRepository;
     private final LoginAuditRepository loginAuditRepository;
 
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
+
     public void log(
-            java.util.UUID deviceId,
+            UUID branchId,
+            UUID deviceId,
             String action,
             String reason
     ) {
         repo.save(
                 DeviceApprovalAudit.builder()
-                        .tenantId(TenantContext.getTenantId())
+                        .tenantId(tenantId())
+                        .branchId(branchId)
                         .deviceId(deviceId)
                         .actedByUserId(SecurityUtils.currentUserId())
                         .action(action)
@@ -49,13 +55,13 @@ public class DeviceApprovalAuditService {
         deviceRepository
                 .findByIdAndTenantId(
                         deviceId,
-                        TenantContext.getTenantId()
+                        tenantId()
                 )
                 .orElseThrow();
 
         return repo
                 .findByTenantIdAndDeviceIdOrderByActedAtDesc(
-                        TenantContext.getTenantId(),
+                        tenantId(),
                         deviceId
                 )
                 .stream()
@@ -91,13 +97,13 @@ public class DeviceApprovalAuditService {
                 deviceRepository
                         .findByIdAndTenantId(
                                 deviceId,
-                                TenantContext.getTenantId()
+                                tenantId()
                         )
                         .orElseThrow();
 
         return loginAuditRepository
                 .findPendingAttempts(
-                        TenantContext.getTenantId(),
+                        tenantId(),
                         device.getDeviceId()
                 )
                 .stream()

@@ -39,7 +39,6 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.repository.ProductVariantPackagingRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.repository.ProductPriceRepository;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
@@ -93,10 +92,6 @@ public class InventoryService {
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
-    }
-
-    private UUID branchId() {
-        return BranchContext.get();
     }
 
     // ------------------------
@@ -232,6 +227,7 @@ public class InventoryService {
                             InventoryItem.builder()
                                     .productId(product.getId())
                                     .productVariantId(variant.getId())
+                                    .tenantId(tenantId())
                                     .branchId(branch.getId())
                                     .quantityOnHand(0L)
                                     .averageCost(BigDecimal.ZERO)
@@ -308,6 +304,8 @@ public class InventoryService {
                 if (!alreadyLinked) {
                     ProductSupplier ps = ProductSupplier.builder()
                             .product(product)
+                            .tenantId(tenantId())
+                            .branchId(product.getBranchId())
                             .supplier(s)
                             .build();
 
@@ -326,6 +324,8 @@ public class InventoryService {
                         CategorySupplier relation = CategorySupplier.builder()
                                 .id(new CategorySupplierId(category.getId(), s.getId()))
                                 .category(category)
+                                .tenantId(tenantId())
+                                .branchId(category.getBranchId())
                                 .supplier(s)
                                 .build();
 
@@ -360,6 +360,7 @@ public class InventoryService {
                                 .eventId(UUID.randomUUID())
                                 .sourceModule("INVENTORY_RECEIPT")
                                 .branchId(branch.getId())
+                                .tenantId(tenantId())
                                 .sourceId(receiptId)
                                 .reference(req.getReference())
                                 .description("Inventory receipt with VAT")
@@ -565,6 +566,7 @@ public class InventoryService {
                                 .productId(sourceItem.getProductId())
                                 .productVariantId(variantId)
                                 .branchId(toBranch)
+                                .tenantId(tenantId())
                                 .quantityOnHand(0L)
                                 .averageCost(BigDecimal.ZERO)
                                 .deleted(false)
@@ -733,6 +735,7 @@ public class InventoryService {
                             )
                             .productVariantId(variant.getId())
                             .branchId(branch.getId())
+                            .tenantId(tenantId())
                             .type(StockTransaction.TransactionType.ADJUSTMENT)
                             .quantityDelta(delta)
                             .reference(req.getReference())
@@ -988,8 +991,8 @@ public class InventoryService {
         );
     }
 
-    public List<ProductAudit> getAuditTrail(UUID productId) {
-        return productAuditRepository.findByTenantIdAndBranchIdAndProductIdOrderByTimestampDesc(tenantId(), branchId(), productId);
+    public List<ProductAudit> getAuditTrail(UUID branchId, UUID productId) {
+        return productAuditRepository.findByTenantIdAndBranchIdAndProductIdOrderByTimestampDesc(tenantId(), branchId, productId);
     }
 
     // Snapshot and historical snapshot handling (kept similar to your previous logic)
@@ -1227,13 +1230,13 @@ public class InventoryService {
     }
 
     @Transactional(readOnly = true)
-    public List<BatchConsumptionDTO> getBatchConsumptions(UUID batchId) {
+    public List<BatchConsumptionDTO> getBatchConsumptions(UUID branchId, UUID batchId) {
 
         List<BatchConsumption> consumptions =
                 batchConsumptionRepository.findByBatch_IdAndTenantIdAndBranchId(
                         batchId,
                         tenantId(),
-                        branchId()
+                        branchId
                 );
 
         List<BatchConsumptionDTO> result = new ArrayList<>();

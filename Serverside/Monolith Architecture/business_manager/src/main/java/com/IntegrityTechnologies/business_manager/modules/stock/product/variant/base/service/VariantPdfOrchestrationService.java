@@ -3,7 +3,6 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.variant
 import com.IntegrityTechnologies.business_manager.config.files.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.kafka.OutboxEventWriter;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.events.VariantBarcodePdfRequestedEvent;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.FileSystemResource;
@@ -33,7 +32,7 @@ public class VariantPdfOrchestrationService {
         String fileName = "barcode-" + UUID.randomUUID() + ".pdf";
 
         Path dir = fileStorageService.initDirectory(
-                fileStorageService.productSharedRoot().resolve("_pdf")
+                fileStorageService.productSharedRoot(branchId).resolve("_pdf")
         );
 
         Path output = dir.resolve(fileName);
@@ -57,7 +56,7 @@ public class VariantPdfOrchestrationService {
         String fileName = "barcode-product-" + UUID.randomUUID() + ".pdf";
 
         Path dir = fileStorageService.initDirectory(
-                fileStorageService.productSharedRoot().resolve("_pdf")
+                fileStorageService.productSharedRoot(branchId).resolve("_pdf")
         );
 
         Path output = dir.resolve(fileName);
@@ -76,9 +75,9 @@ public class VariantPdfOrchestrationService {
         return fileName;
     }
 
-    public Resource getPdfResource(String fileName) {
+    public Resource getPdfResource(UUID branchId, String fileName) {
 
-        Path path = fileStorageService.productSharedRoot()
+        Path path = fileStorageService.productSharedRoot(branchId)
                 .resolve("_pdf")
                 .resolve(fileName);
 

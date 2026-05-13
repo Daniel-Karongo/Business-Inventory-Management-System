@@ -27,7 +27,7 @@ public class TenantInventorySettings extends TenantAwareEntity {
 
     @Id
     @GeneratedValue
-    private UUID id; // ✅ NEW PRIMARY KEY
+    private UUID id;
 
     @Enumerated(EnumType.STRING)
     private InventoryValuationService.ValuationMethod valuationMethod;

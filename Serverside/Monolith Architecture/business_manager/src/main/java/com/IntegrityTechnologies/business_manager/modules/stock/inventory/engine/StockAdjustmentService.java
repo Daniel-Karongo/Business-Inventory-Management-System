@@ -56,6 +56,7 @@ public class StockAdjustmentService {
                 com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryBatch.builder()
                         .productVariantId(variantId)
                         .branchId(branchId)
+                        .tenantId(tenantId())
                         .unitCost(unitCost != null ? unitCost : BigDecimal.ZERO)
                         .quantityReceived(qty)
                         .quantityRemaining(qty)

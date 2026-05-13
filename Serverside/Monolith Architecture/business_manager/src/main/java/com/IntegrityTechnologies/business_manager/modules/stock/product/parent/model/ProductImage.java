@@ -49,16 +49,12 @@ public class ProductImage extends BranchAwareEntity {
 
     @Builder.Default
     @Column(nullable = false)
-    private Boolean deleted = false;
-
-    @Builder.Default
-    @Column(nullable = false)
     private Boolean deletedIndependently = false;
 
     private LocalDateTime uploadedAt;
 
-    @PrePersist
-    public void onCreate() {
+    @Override
+    public void beforePersist() {
         if (uploadedAt == null) uploadedAt = LocalDateTime.now();
     }
 }

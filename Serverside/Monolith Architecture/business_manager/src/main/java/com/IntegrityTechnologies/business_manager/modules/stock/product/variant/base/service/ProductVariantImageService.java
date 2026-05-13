@@ -58,9 +58,9 @@ public class ProductVariantImageService {
         ).orElseThrow(() -> new EntityNotFoundException("Variant not found"));
     }
 
-    private Path sharedDir() {
+    private Path sharedDir(UUID branchId) {
         return fileStorageService.initDirectory(
-                fileStorageService.productSharedRoot().resolve("_variant")
+                fileStorageService.productSharedRoot(branchId).resolve("_variant")
         );
     }
 
@@ -71,8 +71,6 @@ public class ProductVariantImageService {
     @Transactional
     public void uploadVariantImages(UUID branchId, UUID variantId, List<MultipartFile> files) throws IOException {
 
-        ProductVariant variant = getVariant(branchId, variantId);
-
         if (files == null || files.isEmpty()) return;
 
         for (MultipartFile file : files) {
@@ -80,7 +78,7 @@ public class ProductVariantImageService {
             validateFile(file);
 
             Path tempDir = fileStorageService.initDirectory(
-                    fileStorageService.productSharedRoot().resolve("_tmp")
+                    fileStorageService.productSharedRoot(branchId).resolve("_tmp")
             );
 
             String tempName = UUID.randomUUID() + "_" + file.getOriginalFilename();
@@ -135,7 +133,7 @@ public class ProductVariantImageService {
             fileName = hash + extension;
             thumbnailName = "thumb_" + hash + ".jpg";
 
-            Path shared = sharedDir();
+            Path shared = sharedDir(branchId);
 
             Path saved = shared.resolve(fileName);
 
@@ -199,7 +197,7 @@ public class ProductVariantImageService {
                 )
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        Path path = sharedDir().resolve(img.getFileName());
+        Path path = sharedDir(branchId).resolve(img.getFileName());
 
         if (!Files.exists(path)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
@@ -225,7 +223,7 @@ public class ProductVariantImageService {
 
             for (ProductVariantImage img : images) {
 
-                Path p = sharedDir().resolve(img.getFileName());
+                Path p = sharedDir(branchId).resolve(img.getFileName());
 
                 if (!Files.exists(p)) continue;
 

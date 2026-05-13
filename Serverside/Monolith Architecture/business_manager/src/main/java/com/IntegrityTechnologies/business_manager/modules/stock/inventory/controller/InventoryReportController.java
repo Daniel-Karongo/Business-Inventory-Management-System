@@ -27,8 +27,11 @@ public class InventoryReportController {
     }
 
     @GetMapping("/audit/{productId}")
-    public ApiResponse audit(@PathVariable UUID productId) {
+    public ApiResponse audit(
+            @PathVariable UUID productId,
+            @RequestParam UUID branchId
+    ) {
         return new ApiResponse("success", "Audit",
-                inventoryService.getAuditTrail(productId));
+                inventoryService.getAuditTrail(branchId, productId));
     }
 }

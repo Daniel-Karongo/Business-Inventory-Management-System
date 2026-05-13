@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.user.model;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.TenantAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -15,8 +15,8 @@ import java.util.UUID;
         name = "user_images",
         indexes = {
 
-                @Index(name = "idx_user_image_tenant_branch",
-                        columnList = "tenant_id, branch_id"),
+                @Index(name = "idx_user_image_tenant",
+                        columnList = "tenant_id"),
 
                 @Index(name = "idx_user_image_user",
                         columnList = "user_id"),
@@ -32,7 +32,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-public class UserImage extends BranchAwareEntity {
+public class UserImage extends TenantAwareEntity {
 
     @Id
     @GeneratedValue
@@ -67,25 +67,12 @@ public class UserImage extends BranchAwareEntity {
 
     private LocalDateTime uploadedAt;
 
-    @PrePersist
-    public void onCreate() {
+    @Override
+    protected void beforePersist() {
 
         if (profileThumbnail == null) {
             profileThumbnail = false;
         }
 
-        if (uploadedAt == null) {
-            uploadedAt = LocalDateTime.now();
-        }
-
-        if (deleted == null) {
-            deleted = false;
-        }
-
-        if (getBranchId() == null) {
-            throw new IllegalStateException(
-                    "branchId must be assigned before persisting UserImage"
-            );
-        }
     }
 }

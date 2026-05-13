@@ -6,6 +6,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.EventListener;
@@ -22,6 +23,8 @@ public class BalanceProjectionConsumer {
     private final AccountBalanceRepository balanceRepo;
     private final ProcessedKafkaEventRepository processedRepo;
 
+    private static final String CONSUMER = "BALANCE_PROJECTION";
+
     @KafkaListener(
             topics = "journal-posted",
             groupId = "balance-projection"
@@ -29,20 +32,50 @@ public class BalanceProjectionConsumer {
     @Transactional
     @ConditionalOnProperty(name = "spring.kafka.enabled", havingValue = "true")
     public void handleKafka(JournalPostedEvent event) {
-        process(event);
+
+        TenantContext.setTenantId(
+                event.tenantId()
+        );
+
+        try {
+
+            process(event);
+
+        } finally {
+
+            TenantContext.clear();
+        }
     }
 
     @EventListener
     @Transactional
+    @ConditionalOnProperty(
+            name = "spring.kafka.enabled",
+            havingValue = "false",
+            matchIfMissing = true
+    )
     public void handleSpring(JournalPostedEvent event) {
-        process(event);
+
+        TenantContext.setTenantId(
+                event.tenantId()
+        );
+
+        try {
+
+            process(event);
+
+        } finally {
+
+            TenantContext.clear();
+        }
     }
 
     private void process(JournalPostedEvent event) {
 
-        if (processedRepo.existsByTenantIdAndEventId(
+        if (processedRepo.existsByTenantIdAndEventIdAndConsumer(
                 event.tenantId(),
-                event.journalId()
+                event.journalId(),
+                CONSUMER
         )) return;
 
         for (LedgerEntryDTO entry : event.entries()) {
@@ -62,6 +95,7 @@ public class BalanceProjectionConsumer {
 
         ProcessedKafkaEvent processed = new ProcessedKafkaEvent();
         processed.setEventId(event.journalId());
+        processed.setConsumer(CONSUMER);
 
         processedRepo.save(processed);
     }

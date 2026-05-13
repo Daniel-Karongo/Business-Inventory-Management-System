@@ -67,13 +67,6 @@ public class StockTransaction extends BranchAwareEntity {
 
     private String performedBy;
 
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean deleted = false;
-
-    @Version
-    private Long version;
-
     public enum TransactionType {
         RECEIPT,
         SALE,
@@ -85,8 +78,8 @@ public class StockTransaction extends BranchAwareEntity {
         RETURN
     }
 
-    @PrePersist
-    public void onCreate() {
+    @Override
+    public void beforePersist() {
         if (timestamp == null) {
             timestamp = LocalDateTime.now();
         }

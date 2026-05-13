@@ -1,15 +1,14 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.service;
 
-import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.config.caffeine.CacheInvalidationService;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.ProductPrice;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.repository.ProductPriceRepository;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -32,34 +31,42 @@ public class ProductPriceService {
     @PersistenceContext
     private EntityManager em;
 
-    private UUID tenantId() { return TenantContext.getTenantId(); }
-    private UUID branchId() { return BranchContext.get(); }
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
 
     /* =====================================================
-       RESOLVE PRICE (CRITICAL METHOD)
+       RESOLVE PRICE
     ===================================================== */
 
     @Cacheable(
             value = "pricing-preview",
-            key = "T(com.IntegrityTechnologies.business_manager.config.caffeine.CacheKeys).pricing(" +
-                    "T(com.IntegrityTechnologies.business_manager.security.util.TenantContext).getTenantId()," +
-                    "#variantId, #packagingId, " +
-                    "T(com.IntegrityTechnologies.business_manager.security.util.BranchContext).get()," +
-                    "null, null, #quantity)"
+            key = "T(com.IntegrityTechnologies.business_manager.config.caffeine.CacheKeys)" +
+                    ".pricing(" +
+                    "T(com.IntegrityTechnologies.business_manager.security.util.TenantContext)" +
+                    ".getTenantId()," +
+                    "#variantId," +
+                    "#packagingId," +
+                    "#branchId," +
+                    "null," +
+                    "null," +
+                    "#quantity)"
     )
     public ProductPrice resolvePrice(
+            UUID branchId,
             UUID variantId,
             UUID packagingId,
             Long quantity
     ) {
 
-        List<ProductPrice> prices = priceRepo.findApplicablePrices(
-                variantId,
-                packagingId,
-                tenantId(),
-                branchId(),
-                quantity
-        );
+        List<ProductPrice> prices =
+                priceRepo.findApplicablePrices(
+                        variantId,
+                        packagingId,
+                        tenantId(),
+                        branchId,
+                        quantity
+                );
 
         if (prices.isEmpty()) {
             throw new EntityNotFoundException(
@@ -71,28 +78,39 @@ public class ProductPriceService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProductPrice> getPricesForVariant(UUID variantId) {
+    public List<ProductPrice> getPricesForVariant(
+            UUID branchId,
+            UUID variantId
+    ) {
 
-        return priceRepo.findByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
-                variantId,
-                tenantId(),
-                branchId()
-        );
+        return priceRepo
+                .findByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
+                        variantId,
+                        tenantId(),
+                        branchId
+                );
     }
 
     @Transactional
     public ProductPrice createPrice(
+            UUID branchId,
             UUID variantId,
             UUID packagingId,
             BigDecimal price,
             Long minQty
     ) {
 
-        // 🔥 COST CHECK
-        BigDecimal avgCost = inventoryService.getAverageCost(variantId, branchId());
+        BigDecimal avgCost =
+                inventoryService.getAverageCost(
+                        variantId,
+                        branchId
+                );
 
-        if (avgCost != null && avgCost.compareTo(BigDecimal.ZERO) > 0) {
+        if (avgCost != null
+                && avgCost.compareTo(BigDecimal.ZERO) > 0) {
+
             if (price.compareTo(avgCost) < 0) {
+
                 throw new IllegalStateException(
                         "Selling price cannot be below cost"
                 );
@@ -100,12 +118,16 @@ public class ProductPriceService {
         }
 
         ProductPrice p = ProductPrice.builder()
-                .productVariant(em.getReference(ProductVariant.class, variantId))
-                .packaging(em.getReference(ProductVariantPackaging.class, packagingId))
+                .productVariant(
+                        em.getReference(ProductVariant.class, variantId)
+                )
+                .packaging(
+                        em.getReference(ProductVariantPackaging.class, packagingId)
+                )
                 .price(price)
                 .minQuantity(minQty)
                 .tenantId(tenantId())
-                .branchId(branchId())
+                .branchId(branchId)
                 .build();
 
         cacheInvalidationService.evictPricingByVariant(
@@ -117,10 +139,23 @@ public class ProductPriceService {
     }
 
     @Transactional
-    public ProductPrice updatePrice(UUID id, BigDecimal price) {
+    public ProductPrice updatePrice(
+            UUID branchId,
+            UUID id,
+            BigDecimal price
+    ) {
 
-        ProductPrice p = priceRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Price not found"));
+        ProductPrice p =
+                priceRepo.findById(id)
+                        .orElseThrow(() ->
+                                new EntityNotFoundException("Price not found")
+                        );
+
+        if (!branchId.equals(p.getBranchId())) {
+            throw new SecurityException(
+                    "Cross-branch pricing modification denied"
+            );
+        }
 
         p.setPrice(price);
 
@@ -133,9 +168,22 @@ public class ProductPriceService {
     }
 
     @Transactional
-    public void deletePrice(UUID id) {
-        ProductPrice p = priceRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Price not found"));
+    public void deletePrice(
+            UUID branchId,
+            UUID id
+    ) {
+
+        ProductPrice p =
+                priceRepo.findById(id)
+                        .orElseThrow(() ->
+                                new EntityNotFoundException("Price not found")
+                        );
+
+        if (!branchId.equals(p.getBranchId())) {
+            throw new SecurityException(
+                    "Cross-branch pricing deletion denied"
+            );
+        }
 
         p.setDeleted(true);
         p.setDeletedAt(LocalDateTime.now());

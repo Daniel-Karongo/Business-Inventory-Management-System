@@ -7,10 +7,28 @@ import java.util.Map;
 import java.util.UUID;
 
 public interface MpesaService {
-    MpesaTransaction initiateStk(UUID saleId, String phone, BigDecimal amount);
 
-    void handleStkCallback(Map<String, Object> callback);
+    MpesaTransaction initiateStk(
+            UUID branchId,
+            UUID saleId,
+            String phone,
+            BigDecimal amount
+    );
 
-    default void handleC2BConfirm(Map<String, Object> payload) {}
-    default void handleC2BValidate(Map<String, Object> payload) {}
+    void handleStkCallback(
+            UUID branchId,
+            Map<String, Object> callback
+    );
+
+    default void handleC2BConfirm(
+            UUID branchId,
+            Map<String, Object> payload
+    ) {
+    }
+
+    default void handleC2BValidate(
+            UUID branchId,
+            Map<String, Object> payload
+    ) {
+    }
 }

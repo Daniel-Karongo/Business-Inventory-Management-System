@@ -11,7 +11,11 @@ import java.util.UUID;
 @Table(
         name = "processed_kafka_events",
         uniqueConstraints = @UniqueConstraint(
-                columnNames = {"tenant_id","eventId"}
+                columnNames = {
+                        "tenant_id",
+                        "eventId",
+                        "consumer"
+                }
         )
 )
 @Getter
@@ -24,4 +28,7 @@ public class ProcessedKafkaEvent extends TenantAwareEntity {
 
     @Column(nullable = false)
     private UUID eventId;
+
+    @Column(nullable = false)
+    private String consumer;
 }

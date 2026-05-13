@@ -1,22 +1,23 @@
 package com.IntegrityTechnologies.business_manager.security.auth.controller;
 
+import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.auth.config.PasswordResetProperties;
 import com.IntegrityTechnologies.business_manager.security.auth.dto.ForceResetRequest;
+import com.IntegrityTechnologies.business_manager.security.auth.dto.PasswordResetRequest;
 import com.IntegrityTechnologies.business_manager.security.auth.model.PasswordResetToken;
 import com.IntegrityTechnologies.business_manager.security.auth.model.UserType;
 import com.IntegrityTechnologies.business_manager.security.auth.service.PasswordResetEmailService;
 import com.IntegrityTechnologies.business_manager.security.auth.service.PasswordResetService;
-import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.service.SmsService;
-import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.security.auth.service.PasswordResetSmsService;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auth/password-reset")
@@ -29,7 +30,6 @@ public class PasswordResetController {
     private final UserRepository userRepository;
     private final PasswordResetEmailService emailService;
     private final PasswordResetSmsService smsResetService;
-    private final SmsService smsService;
     private final PlatformUserRepository platformUserRepository;
 
     @GetMapping("/options")
@@ -41,10 +41,13 @@ public class PasswordResetController {
     }
 
     @PostMapping("/initiate")
-    public ResponseEntity<?> initiate(@RequestBody Map<String, String> req) {
+    public ResponseEntity<?> initiate(
+            @RequestBody PasswordResetRequest req
+    ) {
 
-        String identifier = req.get("identifier");
-        String channel = req.get("channel");
+        String identifier = req.getIdentifier();
+        String channel = req.getChannel();
+        UUID branchId = req.getBranchId();
 
         // Validate channel is allowed by configuration
         PasswordResetProperties.Channel selectedChannel;
@@ -84,7 +87,7 @@ public class PasswordResetController {
                             PasswordResetToken.Channel.EMAIL,
                             props.getEmail().getTokenExpiryMinutes()
                     );
-                    emailService.sendResetEmail(user, token.getTokenHash());
+                    emailService.sendResetEmail(branchId, user, token.getTokenHash());
                 }
 
                 case SMS -> {
@@ -97,7 +100,7 @@ public class PasswordResetController {
                             props.getSms().getTokenExpiryMinutes()
                     );
 
-                    smsResetService.sendResetSms(user, token.getTokenHash());
+                    smsResetService.sendResetSms(branchId, user, token.getTokenHash());
                 }
 
                 case IDENTITY -> {

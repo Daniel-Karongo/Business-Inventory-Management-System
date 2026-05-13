@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.dashboard.scheduler;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.config.DashboardSnapshotProperties;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.service.DashboardSnapshotService;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.service.TenantExecutionService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class DashboardSnapshotScheduler {
     private final DashboardSnapshotProperties properties;
     private final TaskScheduler taskScheduler;
     private final BranchRepository branchRepository;
+    private final TenantExecutionService tenantExecutionService;
 
     @PostConstruct
     public void scheduleDailySnapshot() {
@@ -36,23 +38,35 @@ public class DashboardSnapshotScheduler {
 
             LocalDate yesterday = LocalDate.now().minusDays(1);
 
-            branchRepository.findByTenantIdAndDeletedFalse(
-                    TenantContext.getTenantId()
-            ).forEach(branch -> {
+            tenantExecutionService.forEachTenant(tenantId -> {
 
-                try {
+                branchRepository.findByTenantIdAndDeletedFalse(
+                        tenantId
+                ).forEach(branch -> {
 
-                    snapshotService.compute(
-                            branch.getId(),
-                            yesterday
-                    );
+                    try {
 
-                    log.info("Dashboard snapshot computed for branch={}", branch.getId());
+                        snapshotService.compute(
+                                branch.getId(),
+                                yesterday
+                        );
 
-                } catch (Exception ex) {
-                    log.error("Snapshot failed for branch={}", branch.getId(), ex);
-                }
+                        log.info(
+                                "Dashboard snapshot computed for tenant={} branch={}",
+                                tenantId,
+                                branch.getId()
+                        );
 
+                    } catch (Exception ex) {
+
+                        log.error(
+                                "Snapshot failed for tenant={} branch={}",
+                                tenantId,
+                                branch.getId(),
+                                ex
+                        );
+                    }
+                });
             });
         };
 

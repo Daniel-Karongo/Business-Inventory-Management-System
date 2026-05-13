@@ -162,6 +162,7 @@ public class UserImageService {
                 UserImageAudit.builder()
                         .userId(target.getId())
                         .username(target.getUsername())
+                        .tenantId(tenantId())
                         .fileName(selected.getFileName())
                         .filePath(selected.getFilePath())
                         .action("SET_PROFILE_THUMBNAIL")
@@ -223,6 +224,7 @@ public class UserImageService {
                 UserImageAudit.builder()
                         .userId(target.getId())
                         .username(target.getUsername())
+                        .tenantId(tenantId())
                         .fileName(img.getFileName())
                         .filePath(img.getFilePath())
                         .action("UPDATE_DESCRIPTION")
@@ -287,7 +289,7 @@ public class UserImageService {
 
                         boolean userDeletedMatch =
                                 deletedUsers == null ||
-                                        Boolean.TRUE.equals(img.getUser().getDeleted()) == deletedUsers;
+                                        Boolean.TRUE.equals(img.getUser().isDeleted()) == deletedUsers;
 
                         boolean imageDeletedMatch =
                                 deletedImages == null ||
@@ -312,6 +314,7 @@ public class UserImageService {
 //        userImageAuditRepository.save(UserImageAudit.builder()
 //                .userId(null)
 //                .username("all users")
+//                .tenantId(tenantId())
 //                .fileName("all images")
 //                .filePath("all images")
 //                .action("RETRIEVE")
@@ -350,7 +353,7 @@ public class UserImageService {
 
                         boolean userDeletedMatch =
                                 deletedUsers == null ||
-                                        Boolean.TRUE.equals(img.getUser().getDeleted()) == deletedUsers;
+                                        Boolean.TRUE.equals(img.getUser().isDeleted()) == deletedUsers;
 
                         boolean imageDeletedMatch =
                                 deletedImages == null ||
@@ -403,6 +406,7 @@ public class UserImageService {
                 userImageAuditRepository.save(UserImageAudit.builder()
                         .userId(image.getUser().getId())
                         .username(image.getUser().getUsername())
+                        .tenantId(tenantId())
                         .fileName(image.getFileName())
                         .filePath(image.getFilePath())
                         .action("DOWNLOAD")
@@ -462,6 +466,7 @@ public class UserImageService {
 //                UserImageAudit.builder()
 //                        .userId(target.getId())
 //                        .username(target.getUsername())
+//                        .tenantId(tenantId())
 //                        .fileName("ALL")
 //                        .filePath("ALL")
 //                        .action("RETRIEVE")
@@ -539,6 +544,7 @@ public class UserImageService {
                     userImageAuditRepository.save(UserImageAudit.builder()
                             .userId(target.getId())
                             .username(target.getUsername())
+                            .tenantId(tenantId())
                             .fileName(image.getFileName())
                             .filePath(image.getFilePath())
                             .action("RETRIEVE")
@@ -608,6 +614,7 @@ public class UserImageService {
         userImageAuditRepository.save(UserImageAudit.builder()
                 .userId(target.getId())
                 .username(target.getUsername())
+                .tenantId(tenantId())
                 .fileName(image.getFileName())
                 .filePath(image.getFilePath())
                 .action("RETRIEVE")
@@ -644,6 +651,7 @@ public class UserImageService {
             userImageAuditRepository.save(UserImageAudit.builder()
                     .userId(target.getId())
                     .username(target.getUsername())
+                    .tenantId(tenantId())
                     .fileName(image.getFileName())
                     .filePath(image.getFilePath())
                     .action("SOFT_DELETE")
@@ -678,6 +686,7 @@ public class UserImageService {
             userImageAuditRepository.save(UserImageAudit.builder()
                     .userId(target.getId())
                     .username(target.getUsername())
+                    .tenantId(tenantId())
                     .fileName(image.getFileName())
                     .filePath(image.getFilePath())
                     .action("SOFT_DELETE_ALL")
@@ -707,7 +716,7 @@ public class UserImageService {
 
         UserImage image = imageOpt.get();
 
-        if(Boolean.TRUE.equals(image.getUser().getDeleted())) {
+        if(Boolean.TRUE.equals(image.getUser().isDeleted())) {
             throw new ImageAccessDeniedException("You cannot restore the images of the deleted user: " + image.getUser().getUsername());
         }
 
@@ -720,6 +729,7 @@ public class UserImageService {
         userImageAuditRepository.save(UserImageAudit.builder()
                 .userId(target.getId())
                 .username(target.getUsername())
+                .tenantId(tenantId())
                 .fileName(image.getFileName())
                 .filePath(image.getFilePath())
                 .action("RESTORE")
@@ -753,6 +763,7 @@ public class UserImageService {
                     userImageAuditRepository.save(UserImageAudit.builder()
                             .userId(target.getId())
                             .username(target.getUsername())
+                            .tenantId(tenantId())
                             .fileName(image.getFileName())
                             .filePath(image.getFilePath())
                             .action("RESTORE_ALL")
@@ -810,6 +821,7 @@ public class UserImageService {
             userImageAuditRepository.save(UserImageAudit.builder()
                     .userId(target.getId())
                     .username(target.getUsername())
+                    .tenantId(tenantId())
                     .fileName(image.getFileName())
                     .filePath(image.getFilePath())
                     .action("DELETE")
@@ -854,6 +866,7 @@ public class UserImageService {
             userImageAuditRepository.save(UserImageAudit.builder()
                     .userId(target.getId())
                     .username(target.getUsername())
+                    .tenantId(tenantId())
                     .fileName(image.getFileName())
                     .filePath(image.getFilePath())
                     .action("DELETE_ALL")

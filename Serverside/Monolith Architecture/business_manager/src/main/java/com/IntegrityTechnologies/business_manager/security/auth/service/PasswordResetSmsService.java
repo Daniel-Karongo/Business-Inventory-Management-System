@@ -6,13 +6,15 @@ import com.IntegrityTechnologies.business_manager.modules.person.user.model.User
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 public class PasswordResetSmsService {
 
     private final SmsService smsService;
 
-    public void sendResetSms(User user, String otp) {
+    public void sendResetSms(UUID branchId, User user, String otp) {
 
         if (user.getPhoneNumbers() == null || user.getPhoneNumbers().isEmpty()) {
             return; // silent fail
@@ -26,6 +28,9 @@ public class PasswordResetSmsService {
         );
         req.setCreatedBy("SYSTEM");
 
-        smsService.sendSms(req);
+        smsService.sendSms(
+                branchId,
+                req
+        );
     }
 }

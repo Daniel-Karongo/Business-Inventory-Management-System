@@ -44,16 +44,5 @@ public class SupplierImage extends BranchAwareEntity {
     @EqualsAndHashCode.Exclude
     private Supplier supplier;
 
-    private LocalDateTime deletedAt;
-
-    @Column(nullable = false)
-    private Boolean deleted;
-
     private LocalDateTime uploadedAt;
-
-    @PrePersist
-    public void onCreate() {
-        uploadedAt = LocalDateTime.now();
-        deleted = false;
-    }
 }

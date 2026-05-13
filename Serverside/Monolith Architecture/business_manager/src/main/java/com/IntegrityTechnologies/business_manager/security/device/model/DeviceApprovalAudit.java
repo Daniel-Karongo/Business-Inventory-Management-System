@@ -23,6 +23,8 @@ public class DeviceApprovalAudit extends TenantAwareEntity {
 
     private UUID deviceId;
 
+    private UUID branchId;
+
     private UUID actedByUserId;
 
     private String action;
@@ -31,8 +33,8 @@ public class DeviceApprovalAudit extends TenantAwareEntity {
 
     private LocalDateTime actedAt;
 
-    @PrePersist
-    void init(){
+    @Override
+    public void beforePersist(){
         actedAt=LocalDateTime.now();
     }
 }

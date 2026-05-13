@@ -47,14 +47,10 @@ public class ProductVariantImage extends BranchAwareEntity {
     @Column(name = "content_hash", length = 64, nullable = false)
     private String contentHash;
 
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean deleted = false;
-
     private LocalDateTime uploadedAt;
 
-    @PrePersist
-    public void onCreate() {
+    @Override
+    public void beforePersist() {
         if (uploadedAt == null) uploadedAt = LocalDateTime.now();
     }
 }

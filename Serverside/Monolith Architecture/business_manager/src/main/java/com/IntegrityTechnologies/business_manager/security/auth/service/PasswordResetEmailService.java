@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -14,7 +15,7 @@ public class PasswordResetEmailService {
 
     private final EmailService emailService;
 
-    public void sendResetEmail(User user, String otp) {
+    public void sendResetEmail(UUID branchId, User user, String otp) {
 
         if (user.getEmailAddresses() == null || user.getEmailAddresses().isEmpty()) {
             return; // silent fail (anti-account enumeration)
@@ -50,6 +51,9 @@ public class PasswordResetEmailService {
 
         request.setCreatedBy("SYSTEM");
 
-        emailService.send(request);
+        emailService.send(
+                branchId,
+                request
+        );
     }
 }

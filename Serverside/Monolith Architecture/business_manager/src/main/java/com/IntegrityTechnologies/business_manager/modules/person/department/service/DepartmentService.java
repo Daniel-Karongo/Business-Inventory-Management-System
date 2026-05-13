@@ -1,8 +1,13 @@
 package com.IntegrityTechnologies.business_manager.modules.person.department.service;
 
+import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.department.dto.DepartmentDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.department.dto.DepartmentMinimalDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.department.mapper.DepartmentMapper;
+import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
+import com.IntegrityTechnologies.business_manager.modules.person.department.model.DepartmentAudit;
 import com.IntegrityTechnologies.business_manager.modules.person.department.model.DepartmentMembershipRole;
 import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentRepository;
@@ -12,15 +17,9 @@ import com.IntegrityTechnologies.business_manager.modules.person.user.model.User
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.UserDepartmentId;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserDepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserRepository;
-import com.IntegrityTechnologies.business_manager.security.util.PrivilegesChecker;
-import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
-import com.IntegrityTechnologies.business_manager.modules.person.department.dto.DepartmentDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.department.dto.DepartmentMinimalDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
-import com.IntegrityTechnologies.business_manager.modules.person.department.model.DepartmentAudit;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.PrivilegesChecker;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -70,6 +69,7 @@ public class DepartmentService {
                 .name(dto.getName())
                 .description(dto.getDescription())
                 .branch(branch)
+                .tenantId(tenantId())
                 .rollcallStartTime(dto.getRollcallStartTime())
                 .gracePeriodMinutes(dto.getGracePeriodMinutes())
                 .deleted(false)
@@ -77,8 +77,8 @@ public class DepartmentService {
 
         department = departmentRepository.save(department);
 
-        assignUsersToDepartment(dto.getHeadIds(), department, DepartmentMembershipRole.HEAD, authentication);
-        assignUsersToDepartment(dto.getMemberIds(), department, DepartmentMembershipRole.MEMBER, authentication);
+        assignUsersToDepartment(branch.getId(), dto.getHeadIds(), department, DepartmentMembershipRole.HEAD, authentication);
+        assignUsersToDepartment(branch.getId(), dto.getMemberIds(), department, DepartmentMembershipRole.MEMBER, authentication);
 
         logAudit(department, "CREATE", null, dto.toString(), authentication, null);
 
@@ -86,6 +86,7 @@ public class DepartmentService {
     }
 
     private void assignUsersToDepartment(
+            UUID branchId,
             Set<UUID> userIds,
             Department department,
             DepartmentMembershipRole role,
@@ -125,6 +126,8 @@ public class DepartmentService {
                         DepartmentAudit.builder()
                                 .departmentId(department.getId())
                                 .departmentName(department.getName())
+                                .branchId(branchId)
+                                .tenantId(tenantId())
                                 .action("AUTO_PROMOTE")
                                 .oldValue(oldRole.name())
                                 .newValue(Role.SUPERVISOR.name())
@@ -180,8 +183,8 @@ public class DepartmentService {
         userDepartmentRepository.deleteByDepartmentId(tenantId(), department.getId());
 
         // 🔹 Reassign users
-        assignUsersToDepartment(dto.getHeadIds(), department, DepartmentMembershipRole.HEAD, authentication);
-        assignUsersToDepartment(dto.getMemberIds(), department, DepartmentMembershipRole.MEMBER, authentication);
+        assignUsersToDepartment(dto.getBranchId(), dto.getHeadIds(), department, DepartmentMembershipRole.HEAD, authentication);
+        assignUsersToDepartment(dto.getBranchId(), dto.getMemberIds(), department, DepartmentMembershipRole.MEMBER, authentication);
 
         Map<String, String> newValues = mapDepartment(department);
 
@@ -199,6 +202,7 @@ public class DepartmentService {
 
     @Transactional
     public Department updateExisting(
+            UUID branchId,
             Department existing,
             DepartmentDTO dto,
             Authentication authentication
@@ -214,8 +218,8 @@ public class DepartmentService {
 
         userDepartmentRepository.deleteByDepartmentId(tenantId(), existing.getId());
 
-        assignUsersToDepartment(dto.getHeadIds(), existing, DepartmentMembershipRole.HEAD, authentication);
-        assignUsersToDepartment(dto.getMemberIds(), existing, DepartmentMembershipRole.MEMBER, authentication);
+        assignUsersToDepartment(branchId, dto.getHeadIds(), existing, DepartmentMembershipRole.HEAD, authentication);
+        assignUsersToDepartment(branchId, dto.getMemberIds(), existing, DepartmentMembershipRole.MEMBER, authentication);
 
         logAudit(
                 existing,
@@ -272,10 +276,7 @@ public class DepartmentService {
                 .toList();
     }
 
-    public List<DepartmentAudit> getAllDepartmentsAudits() {
-
-        
-        UUID branchId = BranchContext.getOrNull();
+    public List<DepartmentAudit> getAllDepartmentsAudits(UUID branchId) {
 
         if (branchId != null) {
             return departmentAuditRepository
@@ -289,10 +290,7 @@ public class DepartmentService {
                 .findByTenantIdOrderByTimestampDesc(tenantId());
     }
 
-    public List<DepartmentAudit> getDepartmentAudits(UUID departmentId) {
-
-        
-        UUID branchId = BranchContext.getOrNull();
+    public List<DepartmentAudit> getDepartmentAudits(UUID branchId, UUID departmentId) {
 
         if (branchId != null) {
             return departmentAuditRepository
@@ -310,10 +308,7 @@ public class DepartmentService {
                 );
     }
 
-    public List<DepartmentAudit> getDepartmentAuditsByPerformer(UUID userId) {
-
-        
-        UUID branchId = BranchContext.getOrNull();
+    public List<DepartmentAudit> getDepartmentAuditsByPerformer(UUID branchId, UUID userId) {
 
         if (branchId != null) {
             return departmentAuditRepository
@@ -424,6 +419,8 @@ public class DepartmentService {
         DepartmentAudit audit = DepartmentAudit.builder()
                 .departmentId(department.getId())
                 .departmentName(department.getName())
+                .tenantId(tenantId())
+                .branchId(department.getBranchId())
                 .action(action)
                 .fieldChanged(null) // optional: can be detailed per field
                 .oldValue(oldValue)

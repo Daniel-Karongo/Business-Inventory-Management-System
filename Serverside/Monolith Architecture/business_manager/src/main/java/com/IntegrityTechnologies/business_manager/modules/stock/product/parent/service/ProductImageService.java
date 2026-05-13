@@ -10,7 +10,6 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.r
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.service.ProductVariantImageService;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
@@ -42,19 +41,16 @@ public class ProductImageService {
         return TenantContext.getTenantId();
     }
 
-    private UUID branchId() {
-        return BranchContext.get();
-    }
-
-    private void assertOwnership(Product product) {
+    private void assertOwnership(UUID branchId, Product product) {
         if (!tenantId().equals(product.getTenantId())
-                || !branchId().equals(product.getBranchId())) {
+                || !branchId.equals(product.getBranchId())) {
             throw new IllegalStateException("Cross-tenant/branch access detected");
         }
     }
 
     @Transactional
     public void attachFilesWithAssignments(
+            UUID branchId,
             Product product,
             List<ProductVariant> variants,
             List<FileAssignmentDTO> assignments,
@@ -63,7 +59,7 @@ public class ProductImageService {
 
         if (files == null || files.isEmpty()) return;
 
-        assertOwnership(product);
+        assertOwnership(branchId, product);
 
         Map<String, MultipartFile> fileMap =
                 files.stream().collect(Collectors.toMap(
@@ -77,7 +73,7 @@ public class ProductImageService {
             if (file == null) continue;
 
             if (Boolean.TRUE.equals(assignment.getAssignToProduct())) {
-                saveProductImages(product, List.of(file));
+                saveProductImages(branchId, product, List.of(file));
             }
 
             if (assignment.getVariantClassifications() != null) {
@@ -99,17 +95,16 @@ public class ProductImageService {
     }
 
     @Transactional
-    public void saveProductImages(Product product, List<MultipartFile> files) throws IOException {
+    public void saveProductImages(UUID branchId, Product product, List<MultipartFile> files) throws IOException {
 
         if (files == null || files.isEmpty()) return;
 
-        assertOwnership(product);
+        assertOwnership(branchId, product);
 
         UUID tenantId = tenantId();
-        UUID branchId = branchId();
 
         Path sharedDir = fileStorageService.initDirectory(
-                fileStorageService.productSharedRoot()
+                fileStorageService.productSharedRoot(branchId)
         );
 
         List<ProductImage> newImages = new ArrayList<>();
@@ -118,7 +113,7 @@ public class ProductImageService {
                 product.getImages() != null &&
                         product.getImages().stream()
                                 .anyMatch(img -> Boolean.TRUE.equals(img.getPrimaryImage())
-                                        && !Boolean.TRUE.equals(img.getDeleted()));
+                                        && !Boolean.TRUE.equals(img.isDeleted()));
 
         for (MultipartFile file : files) {
 
@@ -130,7 +125,7 @@ public class ProductImageService {
                     productImageRepository
                             .findFirstByTenantIdAndBranchIdAndContentHash(
                                     tenantId,
-                                    branchId,
+                                    product.getBranchId(),
                                     hash
                             );
 
@@ -178,7 +173,7 @@ public class ProductImageService {
                     .deleted(false)
                     .deletedIndependently(false)
                     .tenantId(tenantId)
-                    .branchId(branchId)
+                    .branchId(product.getBranchId())
                     .build();
 
             newImages.add(pi);

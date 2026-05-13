@@ -8,6 +8,13 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface CustomerPaymentHistoryRepository extends JpaRepository<CustomerPaymentHistory, UUID> {
-    List<CustomerPaymentHistory> findByCustomerId(UUID customerId);
+public interface CustomerPaymentHistoryRepository
+        extends JpaRepository<CustomerPaymentHistory, UUID> {
+
+    List<CustomerPaymentHistory>
+    findByTenantIdAndBranchIdAndCustomerId(
+            UUID tenantId,
+            UUID branchId,
+            UUID customerId
+    );
 }

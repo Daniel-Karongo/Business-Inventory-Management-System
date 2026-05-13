@@ -62,10 +62,4 @@ public class Product extends BranchAwareEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
-
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean deleted = false;
-
-    private LocalDateTime deletedAt;
 }

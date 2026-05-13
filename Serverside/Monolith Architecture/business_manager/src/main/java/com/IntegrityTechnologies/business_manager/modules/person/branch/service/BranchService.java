@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.person.branch.service
 
 import com.IntegrityTechnologies.business_manager.config.util.PhoneAndEmailNormalizer;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
+import com.IntegrityTechnologies.business_manager.modules.communication.notification.base.BranchNotificationSettingsSeeder;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.BranchAccountingSettings;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.RevenueRecognitionMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.BranchAccountingSettingsRepository;
@@ -44,7 +45,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BranchService {
 
-
     private final BranchRepository branchRepository;
     private final BranchAuditRepository branchAuditRepository;
     private final UserRepository userRepository;
@@ -59,6 +59,7 @@ public class BranchService {
     private final TaxSystemStateRepository taxSystemStateRepository;
     private final TaxProperties taxProperties;
     private final AccountingPeriodBootstrapService accountingPeriodBootstrapService;
+    private final BranchNotificationSettingsSeeder notificationSettingsSeeder;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -83,6 +84,7 @@ public class BranchService {
 
         Branch branch = Branch.builder()
                 .branchCode(request.getBranchCode())
+                .tenantId(tenantId())
                 .name(request.getName())
                 .location(request.getLocation())
                 .phone(PhoneAndEmailNormalizer.normalizePhone(request.getPhone()))
@@ -93,6 +95,11 @@ public class BranchService {
         branch = branchRepository.save(branch);
 
         bootstrapAccounting(branch);
+
+        notificationSettingsSeeder.seed(
+                tenantId(),
+                branch.getId()
+        );
 
         assignUsers(branch, request.getUserIds());
 
@@ -252,6 +259,7 @@ public class BranchService {
         branchAccountingSettingsRepository.save(
                 BranchAccountingSettings.builder()
                         .branchId(branch.getId())
+                        .tenantId(tenantId())
                         .revenueRecognitionMode(
                                 RevenueRecognitionMode.DELIVERY
                         )
@@ -279,7 +287,7 @@ public class BranchService {
 
             taxSystemStateRepository.save(
                     TaxSystemState.builder()
-                            .tenantId(TenantContext.getTenantId())
+                            .tenantId(tenantId())
                             .branchId(branch.getId())
                             .taxMode(taxProperties.getBusinessTaxMode())
                             .vatEnabled(taxProperties.isVatEnabled())

@@ -1,8 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.person.user.model;
 
 import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.TenantAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 
@@ -10,15 +12,15 @@ import java.time.LocalDateTime;
 @Table(
         name = "user_branches",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"user_id", "branch_id"})
+                @UniqueConstraint(columnNames = {"user_id", "branch_id", "tenant_id"})
         }
 )
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class UserBranch {
+@SuperBuilder
+public class UserBranch extends TenantAwareEntity {
 
     @EmbeddedId
     @Builder.Default
@@ -40,8 +42,8 @@ public class UserBranch {
     @Column(nullable = false, updatable = false)
     private LocalDateTime assignedAt;
 
-    @PrePersist
-    public void onCreate() {
+    @Override
+    public void beforePersist() {
         assignedAt = LocalDateTime.now();
     }
 

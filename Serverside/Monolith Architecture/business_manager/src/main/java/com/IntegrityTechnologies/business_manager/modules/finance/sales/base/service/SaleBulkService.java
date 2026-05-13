@@ -4,8 +4,8 @@ import com.IntegrityTechnologies.business_manager.config.bulk.BulkError;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkOptions;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentRequest;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.service.PaymentService;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.dto.PaymentRequest;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.service.PaymentService;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto.SaleBulkPreviewRow;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto.SaleBulkRow;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto.SaleImportMode;
@@ -20,7 +20,6 @@ import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.Ta
 import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.engine.StockEngine;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
@@ -28,9 +27,7 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingAdjustment;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingPolicy;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingResult;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.service.PricingEngineService;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -61,6 +58,10 @@ public class SaleBulkService {
     private final SellableResolutionService sellableResolutionService;
     private final StockEngine stockEngine;
 
+    private UUID tenantId() {
+        return tenantId();
+    }
+    
     /* ============================================================
        ENTRY POINT
        ============================================================ */
@@ -302,7 +303,7 @@ public class SaleBulkService {
             // =========================
             SellableSnapshot snap = sellableResolutionService.resolve(
                     SellableContext.builder()
-                            .tenantId(TenantContext.getTenantId())
+                            .tenantId(tenantId())
                             .branchId(branch.getId())
                             .productVariantId(variant.getId())
                             .packagingId(packaging.getId())
@@ -364,7 +365,7 @@ public class SaleBulkService {
                 if (parts.length >= 3) {
                     PaymentRequest pr = new PaymentRequest();
                     pr.setProviderReference(parts[2].trim());
-                    paymentService.validatePaymentRequest(pr);
+                    paymentService.validatePaymentRequest(branch.getId(), pr);
                 }
             }
         }
@@ -396,7 +397,7 @@ public class SaleBulkService {
 
             Sale sale = Sale.builder()
                     .id(UUID.randomUUID())
-                    .tenantId(TenantContext.getTenantId())
+                    .tenantId(tenantId())
                     .branchId(plan.items().get(0).branch().getId())
                     .createdAt(plan.saleDate())
                     .createdBy(currentUser)
@@ -417,6 +418,7 @@ public class SaleBulkService {
                                                 " (" + li.variant().getClassification() + ")"
                                 )
                                 .branchId(li.branch().getId())
+                                .tenantId(tenantId())
 
                                 // PACKAGING
                                 .packagingId(li.packaging().getId())
@@ -494,7 +496,7 @@ public class SaleBulkService {
             );
             pr.setNote("Bulk import payment");
 
-            paymentService.processPayment(pr);
+            paymentService.processPayment(sale.getBranchId(), pr);
         }
     }
 
@@ -536,7 +538,7 @@ public class SaleBulkService {
                         .map(v -> v.trim().toUpperCase())
                         .orElse("STANDARD");
 
-        UUID tenantId = TenantContext.getTenantId();
+        UUID tenantId = tenantId();
         UUID branchId = resolveBranch(row).getId();
 
         if (row.getSku() != null && !row.getSku().isBlank()) {
@@ -592,7 +594,7 @@ public class SaleBulkService {
                         .orElse("MAIN");
 
         return branchRepository.findByTenantIdAndBranchCodeIgnoreCaseAndDeletedFalse(
-                        TenantContext.getTenantId(),
+                        tenantId(),
                         code
                 )
                 .orElseThrow(() ->

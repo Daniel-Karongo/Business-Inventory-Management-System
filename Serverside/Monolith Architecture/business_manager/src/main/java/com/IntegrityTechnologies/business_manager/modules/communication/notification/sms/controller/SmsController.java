@@ -2,9 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.communication.notific
 
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.dto.BulkSmsRequest;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.dto.SmsRequest;
-import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.model.SmsAccount;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.model.SmsMessage;
-import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.service.SmsAccountService;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.service.SmsService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
@@ -20,39 +18,53 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/notification/sms")
 @RequiredArgsConstructor
-@Tag(name = "Smss")
+@Tag(name = "SMS")
 @TenantUserOnly
 public class SmsController {
 
     private final SmsService service;
-    private final SmsAccountService smsAccountService;
 
     @TenantManagerOnly
-    @PostMapping("/send")
-    public ResponseEntity<SmsMessage> send(@Valid @RequestBody SmsRequest req) {
-        return ResponseEntity.ok(service.sendSms(req));
-    }
-
-    @TenantManagerOnly
-    @PostMapping("/send-bulk")
-    public ResponseEntity<List<SmsMessage>> sendBulk(@RequestBody BulkSmsRequest req) {
-        return ResponseEntity.ok(service.sendBulk(req.getMessages()));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<SmsMessage> get(@PathVariable UUID id) {
-        SmsMessage msg = service.getMessage(id);
-        if (msg == null) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(msg);
-    }
-
-    @TenantManagerOnly
-    @PostMapping("/admin/sms/account")
-    public ResponseEntity<SmsAccount> updateSmsAccount(
-            @RequestBody SmsAccount req) {
+    @PostMapping("/branch/{branchId}/send")
+    public ResponseEntity<SmsMessage> send(
+            @PathVariable UUID branchId,
+            @Valid @RequestBody SmsRequest req
+    ) {
 
         return ResponseEntity.ok(
-                smsAccountService.saveAndActivate(req)
+                service.sendSms(
+                        branchId,
+                        req
+                )
+        );
+    }
+
+    @TenantManagerOnly
+    @PostMapping("/branch/{branchId}/send-bulk")
+    public ResponseEntity<List<SmsMessage>> sendBulk(
+            @PathVariable UUID branchId,
+            @RequestBody BulkSmsRequest req
+    ) {
+
+        return ResponseEntity.ok(
+                service.sendBulk(
+                        branchId,
+                        req.getMessages()
+                )
+        );
+    }
+
+    @GetMapping("/branch/{branchId}/{id}")
+    public ResponseEntity<SmsMessage> get(
+            @PathVariable UUID branchId,
+            @PathVariable UUID id
+    ) {
+
+        return ResponseEntity.ok(
+                service.getMessage(
+                        branchId,
+                        id
+                )
         );
     }
 }

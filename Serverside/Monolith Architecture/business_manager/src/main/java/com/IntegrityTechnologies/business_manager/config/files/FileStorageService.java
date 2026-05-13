@@ -1,6 +1,5 @@
 package com.IntegrityTechnologies.business_manager.config.files;
 
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +10,10 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.DosFileAttributeView;
 import java.util.Comparator;
 import java.util.UUID;
@@ -22,7 +24,6 @@ import java.util.UUID;
 public class FileStorageService {
 
     private final FileStorageProperties props;
-    private final TransactionalFileManager transactionalFileManager;
 
     private Path storageRoot;
     private Path uploadsRoot;
@@ -70,9 +71,7 @@ public class FileStorageService {
         return dir;
     }
 
-    public Path branchRoot() {
-
-        UUID branchId = BranchContext.get();
+    public Path branchRoot(UUID branchId) {
 
         if (branchId == null) {
             throw new IllegalStateException("BranchContext is required for branchRoot()");
@@ -87,12 +86,12 @@ public class FileStorageService {
         return dir;
     }
 
-    public Path productRoot() {
-        return moduleRoot(".products");
+    public Path productRoot(UUID branchId) {
+        return moduleRoot(branchId, ".products");
     }
 
-    public Path productSharedRoot() {
-        return productRoot().resolve("_shared");
+    public Path productSharedRoot(UUID branchId) {
+        return productRoot(branchId).resolve("_shared");
     }
 
     public Path userRoot() {
@@ -108,13 +107,16 @@ public class FileStorageService {
         return dir;
     }
 
-    public Path supplierRoot() {
-        return moduleRoot(".suppliers");
+    public Path supplierRoot(UUID branchId) {
+        return moduleRoot(branchId, ".suppliers");
     }
 
-    private Path moduleRoot(String name) {
+    private Path moduleRoot(
+            UUID branchId,
+            String name
+    ) {
 
-        Path dir = branchRoot().resolve(name).normalize();
+        Path dir = branchRoot(branchId).resolve(name).normalize();
 
         createAndSecure(dir);
 

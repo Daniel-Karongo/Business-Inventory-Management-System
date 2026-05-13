@@ -104,6 +104,7 @@ public class CorporateTaxService {
                             .description("Corporate tax accrual")
                             .performedBy(user)
                             .branchId(branchId)
+                            .tenantId(tenantId())
                             .entries(
                                     List.of(
                                             AccountingEvent.Entry.builder()
@@ -179,7 +180,8 @@ public class CorporateTaxService {
                         .reference("CTAX-PAY-" + filingId)
                         .description("Corporate tax payment")
                         .performedBy(user)
-                        .branchId(branchId)   // ✅ CRITICAL FIX
+                        .branchId(branchId)
+                        .tenantId(tenantId())
                         .entries(
                                 List.of(
                                         AccountingEvent.Entry.builder()

@@ -143,6 +143,8 @@ public class CategoryService {
 
                 CategorySupplier relation = CategorySupplier.builder()
                         .id(new CategorySupplierId(category.getId(), supplierId))
+                        .branchId(branchId)
+                        .tenantId(tenantId())
                         .category(category)
                         .supplier(supplier)
                         .build();
@@ -375,6 +377,8 @@ public class CategoryService {
 
                 CategorySupplier relation = CategorySupplier.builder()
                         .id(new CategorySupplierId(category.getId(), supplierId))
+                        .branchId(branchId)
+                        .tenantId(tenantId())
                         .category(category)
                         .supplier(supplier)
                         .build();
@@ -559,7 +563,7 @@ public class CategoryService {
         List<Supplier> filtered = suppliers.stream()
                 .filter(s ->
                         deleted == null
-                                || deleted.equals(s.getDeleted())
+                                || deleted.equals(s.isDeleted())
                 )
                 .toList();
 

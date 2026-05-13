@@ -140,6 +140,7 @@ public class UserService {
                 .emailAddresses(new ArrayList<>(emails))
                 .phoneNumbers(new ArrayList<>(phones))
                 .idNumber(dto.getIdNumber())
+                .tenantId(tenantId())
                 .role(Role.valueOf(dto.getRole().trim().toUpperCase()))
                 .deleted(false)
                 .uploadFolder(uploadFolder)
@@ -185,6 +186,7 @@ public class UserService {
                 .userId(user.getId())
                 .username(user.getUsername())
                 .action("CREATE")
+                .tenantId(tenantId())
                 .performedById(creator != null ? creator.getId() : null)
                 .performedByUsername(creatorUsername)
                 .timestamp(LocalDateTime.now())
@@ -292,6 +294,7 @@ public class UserService {
                         UserAudit.builder()
                                 .userId(user.getId())
                                 .username(user.getUsername())
+                                .tenantId(tenantId())
                                 .action("PASSWORD_CHANGE_BLOCKED")
                                 .reason("Attempted password change for another user denied")
                                 .performedById(updater.getId())
@@ -366,6 +369,7 @@ public class UserService {
                     UserAudit.builder()
                             .userId(user.getId())
                             .username(user.getUsername())
+                            .tenantId(tenantId())
                             .action("FORCED_LOGOUT_ALL")
                             .reason("All sessions revoked due to credential change")
                             .performedById(updater.getId())
@@ -581,7 +585,7 @@ public class UserService {
             case "createdAt" ->
                     Comparator.comparing(User::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()));
 
-            case "deleted" -> Comparator.comparing(u -> Optional.ofNullable(u.getDeleted()).orElse(false));
+            case "deleted" -> Comparator.comparing(u -> Optional.ofNullable(u.isDeleted()).orElse(false));
 
             default -> null;
         };
@@ -755,6 +759,7 @@ public class UserService {
         userAuditRepository.save(UserAudit.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
+                .tenantId(tenantId())
                 .role(user.getRole() != null ? user.getRole().name() : null)
                 .action("SOFT_DELETE")
                 .reason(reason == null || reason.isBlank() ? "Administration decision" : reason)
@@ -770,6 +775,7 @@ public class UserService {
                 userImageAuditRepository.save(UserImageAudit.builder()
                         .userId(user.getId())
                         .username(user.getUsername())
+                        .tenantId(tenantId())
                         .fileName(image.getFileName())
                         .filePath(image.getFilePath())
                         .action("SOFT_DELETE")
@@ -887,6 +893,7 @@ public class UserService {
         userAuditRepository.save(UserAudit.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
+                .tenantId(tenantId())
                 .role(user.getRole() != null ? user.getRole().name() : null)
                 .action("RESTORE")
                 .reason(reason == null ? "Administration decision" : reason)
@@ -906,6 +913,7 @@ public class UserService {
                 userImageAuditRepository.save(UserImageAudit.builder()
                         .userId(user.getId())
                         .username(user.getUsername())
+                        .tenantId(tenantId())
                         .fileName(image.getFileName())
                         .filePath(image.getFilePath())
                         .action("RESTORE")
@@ -1016,6 +1024,7 @@ public class UserService {
         userAuditRepository.save(UserAudit.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
+                .tenantId(tenantId())
                 .role(user.getRole() != null ? user.getRole().name() : null)
                 .action("HARD_DELETE")
                 .reason("Permanent deletion of user")
@@ -1030,6 +1039,7 @@ public class UserService {
                 userImageAuditRepository.save(UserImageAudit.builder()
                         .userId(user.getId())
                         .username(user.getUsername())
+                        .tenantId(tenantId())
                         .fileName(image.getFileName())
                         .filePath(image.getFilePath())
                         .action("HARD_DELETE")
@@ -1110,6 +1120,7 @@ public class UserService {
         userImageAuditRepository.save(UserImageAudit.builder()
                 .userId(target.getId())
                 .username(target.getUsername())
+                .tenantId(tenantId())
                 .fileName("ALL")
                 .filePath(userDir.toString())
                 .action("SOFT_DELETED_ALL")
@@ -1150,7 +1161,7 @@ public class UserService {
                     .user(target)
                     .uploadedAt(LocalDateTime.now())
                     .deleted(false)
-                    .branchId(imageBranchId)
+                    .tenantId(tenantId())
                     .build();
 
             userImageRepository.save(img);
@@ -1159,6 +1170,7 @@ public class UserService {
             userImageAuditRepository.save(UserImageAudit.builder()
                     .userId(target.getId())
                     .username(target.getUsername())
+                    .tenantId(tenantId())
                     .fileName(img.getFileName())
                     .filePath(img.getFilePath())
                     .action("UPLOAD")
@@ -1268,6 +1280,7 @@ public class UserService {
                             .id(new UserBranchId(user.getId(), main.getId()))
                             .user(user)
                             .branch(main)
+                            .tenantId(tenantId())
                             .primaryBranch(true)
                             .build()
             );
@@ -1287,6 +1300,8 @@ public class UserService {
                     UserDepartment.builder()
                             .id(new UserDepartmentId(user.getId(), general.getId()))
                             .user(user)
+                            .tenantId(tenantId())
+                            .branchId(main.getId())
                             .department(general)
                             .role(DepartmentMembershipRole.MEMBER)
                             .primaryDepartment(true)
@@ -1346,6 +1361,8 @@ public class UserService {
                         UserDepartment.builder()
                                 .id(new UserDepartmentId(user.getId(), departmentId))
                                 .user(user)
+                                .tenantId(tenantId())
+                                .branchId(branchId)
                                 .department(department)
                                 .role(role)
                                 .primaryDepartment(false)
@@ -1362,6 +1379,7 @@ public class UserService {
                         UserBranch.builder()
                                 .id(new UserBranchId(user.getId(), branchId))
                                 .user(user)
+                                .tenantId(tenantId())
                                 .branch(department.getBranch())
                                 .primaryBranch(false)
                                 .build()
@@ -1407,7 +1425,7 @@ public class UserService {
                     .user(user)
                     .uploadedAt(LocalDateTime.now())
                     .deleted(false)
-                    .branchId(imageBranchId)
+                    .tenantId(tenantId())
                     .build();
             userImageRepository.save(image);
 
@@ -1415,6 +1433,7 @@ public class UserService {
             userImageAuditRepository.save(UserImageAudit.builder()
                     .userId(user.getId())
                     .username(user.getUsername())
+                    .tenantId(tenantId())
                     .fileName(fileName)
                     .filePath(apiUrl)
                     .action("UPLOAD")
@@ -1435,6 +1454,7 @@ public class UserService {
             userAuditRepository.save(UserAudit.builder()
                     .userId(user.getId())
                     .username(user.getUsername())
+                    .tenantId(tenantId())
                     .fieldChanged(entry.getKey())
                     .oldValue(entry.getValue()[0])
                     .newValue(entry.getValue()[1])
@@ -1521,7 +1541,7 @@ public class UserService {
                 )
                 .idNumber(user.getIdNumber())
                 .role(user.getRole() != null ? user.getRole().name() : null)
-                .deleted(Boolean.TRUE.equals(user.getDeleted()))
+                .deleted(Boolean.TRUE.equals(user.isDeleted()))
                 .createdAt(user.getCreatedAt())
                 .profileThumbnailUrl(
                         UserImageMapper.resolveProfileThumbnail(

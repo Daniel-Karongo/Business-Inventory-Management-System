@@ -22,9 +22,12 @@ public class BatchController {
     }
 
     @GetMapping("/{batchId}/consumptions")
-    public ApiResponse consumptions(@PathVariable UUID batchId) {
+    public ApiResponse consumptions(
+            @PathVariable UUID batchId,
+            @RequestParam UUID branchId
+    ) {
         return new ApiResponse("success", "Consumptions",
-                inventoryService.getBatchConsumptions(batchId));
+                inventoryService.getBatchConsumptions(branchId, batchId));
     }
 
     @GetMapping("/suggest")

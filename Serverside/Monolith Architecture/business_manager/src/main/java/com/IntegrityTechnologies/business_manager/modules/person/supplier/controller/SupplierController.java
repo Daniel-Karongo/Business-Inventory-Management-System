@@ -105,6 +105,7 @@ public class SupplierController {
     public ResponseEntity<SupplierDTO> updateSupplier(
             @PathVariable UUID id,
             @RequestBody @Valid SupplierUpdateDTO updated,
+            @RequestParam UUID branchId,
             Authentication authentication
     ) throws IOException {
 
@@ -114,7 +115,7 @@ public class SupplierController {
                         : null;
 
         SupplierDTO updatedSupplier =
-                supplierService.updateSupplier(id, updated, updaterUsername);
+                supplierService.updateSupplier(branchId, id, updated, updaterUsername);
 
         return ResponseEntity.ok(updatedSupplier);
     }
@@ -125,6 +126,7 @@ public class SupplierController {
             @PathVariable UUID id,
             @RequestPart("files") List<MultipartFile> files,
             @RequestPart(value = "descriptions", required = false) List<String> descriptions,
+            @RequestParam UUID branchId,
             Authentication authentication
     ) throws IOException {
 
@@ -143,7 +145,7 @@ public class SupplierController {
         }
 
         SupplierDTO updatedSupplier =
-                supplierImageService.updateSupplierImages(id, dtos, updaterUsername);
+                supplierImageService.updateSupplierImages(branchId, id, dtos, updaterUsername);
 
         return ResponseEntity.ok(updatedSupplier);
     }
@@ -156,11 +158,12 @@ public class SupplierController {
     @GetMapping(value = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get suppliers (active, deleted, or any)")
     public ResponseEntity<List<SupplierDTO>> getSuppliers(
-            @RequestParam(required = false) Boolean deleted
+            @RequestParam(required = false) Boolean deleted,
+            @RequestParam UUID branchId
     ) {
 
         return ResponseEntity.ok(
-                supplierService.getSuppliers(deleted)
+                supplierService.getSuppliers(branchId, deleted)
         );
     }
 
@@ -169,11 +172,12 @@ public class SupplierController {
     @Operation(summary = "Find supplier by UUID, name, email, or phone")
     public ResponseEntity<SupplierDTO> getSupplierByIdentifier(
             @PathVariable String identifier,
-            @RequestParam(required = false) Boolean deleted
+            @RequestParam(required = false) Boolean deleted,
+            @RequestParam UUID branchId
     ) {
 
         return ResponseEntity.ok(
-                supplierService.getByIdentifier(identifier, deleted)
+                supplierService.getByIdentifier(branchId, identifier, deleted)
         );
     }
 
@@ -181,6 +185,7 @@ public class SupplierController {
     @GetMapping(value = "/advanced", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Advanced supplier search and filtering")
     public ResponseEntity<PageWrapper<SupplierDTO>> advancedSearch(
+            @RequestParam UUID branchId,
             @RequestParam(required = false) List<Long> categoryIds,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
@@ -198,6 +203,7 @@ public class SupplierController {
 
         var result =
                 supplierService.advancedSearch(
+                        branchId,
                         categoryIds,
                         name,
                         email,
@@ -226,11 +232,12 @@ public class SupplierController {
     @GetMapping("/{id}/images")
     public ResponseEntity<List<SupplierImageDTO>> listSupplierImages(
             @PathVariable UUID id,
-            @RequestParam(required = false) Boolean deleted
+            @RequestParam(required = false) Boolean deleted,
+            @RequestParam UUID branchId
     ) {
 
         return ResponseEntity.ok(
-                supplierImageService.listImages(id, deleted)
+                supplierImageService.listImages(branchId, id, deleted)
         );
     }
 
@@ -238,11 +245,12 @@ public class SupplierController {
     @GetMapping("/images/all")
     public ResponseEntity<List<String>> getAllImages(
             @RequestParam(required = false) Boolean deletedSupplier,
-            @RequestParam(required = false) Boolean deletedImage
+            @RequestParam(required = false) Boolean deletedImage,
+            @RequestParam UUID branchId
     ) {
 
         return ResponseEntity.ok(
-                supplierImageService.getAllSuppliersImages(deletedSupplier, deletedImage)
+                supplierImageService.getAllSuppliersImages(branchId, deletedSupplier, deletedImage)
         );
     }
 
@@ -254,13 +262,14 @@ public class SupplierController {
     public ResponseEntity<Resource> downloadSupplierImage(
             @PathVariable UUID id,
             @PathVariable String filename,
-            @RequestParam(required = false) Boolean deleted
+            @RequestParam(required = false) Boolean deleted,
+            @RequestParam UUID branchId
     ) throws IOException {
 
         filename = FileSecurityUtil.sanitizeFilename(filename);
 
         Resource file =
-                supplierImageService.downloadImage(id, filename, deleted);
+                supplierImageService.downloadImage(branchId, id, filename, deleted);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
@@ -274,14 +283,15 @@ public class SupplierController {
     public void downloadSupplierImagesZip(
             @PathVariable UUID id,
             @RequestParam(required = false) Boolean deleted,
+            @RequestParam UUID branchId,
             HttpServletResponse response
     ) throws IOException {
 
         List<SupplierImage> images =
-                supplierImageService.getImages(id, deleted);
+                supplierImageService.getImages(branchId, id, deleted);
 
         Supplier supplier =
-                supplierImageService.getSupplier(id);
+                supplierImageService.getSupplier(branchId, id);
 
         response.setContentType("application/zip");
 
@@ -298,6 +308,7 @@ public class SupplierController {
         );
 
         supplierImageService.writeImagesToZip(
+                branchId,
                 images,
                 supplier,
                 response.getOutputStream()
@@ -308,10 +319,12 @@ public class SupplierController {
     @GetMapping("/images/all/download")
     public ResponseEntity<Resource> downloadAllImages(
             @RequestParam(required = false) Boolean deletedSupplier,
-            @RequestParam(required = false) Boolean deletedImage
+            @RequestParam(required = false) Boolean deletedImage,
+            @RequestParam UUID branchId
     ) throws IOException {
 
         return supplierImageService.downloadAllSuppliersImages(
+                branchId,
                 deletedSupplier,
                 deletedImage
         );
@@ -325,66 +338,72 @@ public class SupplierController {
     @DeleteMapping("/{id}/images/{filename}/soft")
     public ResponseEntity<?> softDeleteSupplierImage(
             @PathVariable UUID id,
-            @PathVariable String filename
+            @PathVariable String filename,
+            @RequestParam UUID branchId
     ) throws IOException {
 
         filename = FileSecurityUtil.sanitizeFilename(filename);
 
-        return supplierImageService.softDeleteSupplierImage(id, filename);
+        return supplierImageService.softDeleteSupplierImage(branchId, id, filename);
     }
 
     @TenantManagerOnly
     @DeleteMapping("/{id}/images/soft")
     public ResponseEntity<?> softDeleteSupplierImagesBulk(
             @PathVariable UUID id,
-            @RequestParam List<String> filenames
+            @RequestParam List<String> filenames,
+            @RequestParam UUID branchId
     ) throws IOException {
 
-        return supplierImageService.softDeleteSupplierImagesBulk(id, filenames);
+        return supplierImageService.softDeleteSupplierImagesBulk(branchId, id, filenames);
     }
 
     @PlatformAdminOnly
     @DeleteMapping("/{id}/images/{filename}/hard")
     public ResponseEntity<?> deleteSupplierImage(
             @PathVariable UUID id,
-            @PathVariable String filename
+            @PathVariable String filename,
+            @RequestParam UUID branchId
     ) throws IOException {
 
         filename = FileSecurityUtil.sanitizeFilename(filename);
 
-        return supplierImageService.deleteSupplierImage(id, filename);
+        return supplierImageService.deleteSupplierImage(branchId, id, filename);
     }
 
     @PlatformAdminOnly
     @DeleteMapping("/{id}/images/hard")
     public ResponseEntity<?> deleteSupplierImagesBulk(
             @PathVariable UUID id,
-            @RequestParam List<String> filenames
+            @RequestParam List<String> filenames,
+            @RequestParam UUID branchId
     ) throws IOException {
 
-        return supplierImageService.deleteSupplierImagesBulk(id, filenames);
+        return supplierImageService.deleteSupplierImagesBulk(branchId, id, filenames);
     }
 
     @TenantManagerOnly
     @PatchMapping("/{id}/images/{filename}/restore")
     public ResponseEntity<?> restoreSupplierImage(
             @PathVariable UUID id,
-            @PathVariable String filename
+            @PathVariable String filename,
+            @RequestParam UUID branchId
     ) {
 
         filename = FileSecurityUtil.sanitizeFilename(filename);
 
-        return supplierImageService.restoreSupplierImage(id, filename);
+        return supplierImageService.restoreSupplierImage(branchId, id, filename);
     }
 
     @TenantManagerOnly
     @PatchMapping("/{id}/images/restore")
     public ResponseEntity<?> restoreSupplierImagesBulk(
             @PathVariable UUID id,
-            @RequestParam List<String> filenames
+            @RequestParam List<String> filenames,
+            @RequestParam UUID branchId
     ) {
 
-        return supplierImageService.restoreSupplierImagesBulk(id, filenames);
+        return supplierImageService.restoreSupplierImagesBulk(branchId, id, filenames);
     }
 
     /* ====================================
@@ -394,55 +413,61 @@ public class SupplierController {
     @TenantManagerOnly
     @DeleteMapping("/{id}/soft")
     public ResponseEntity<?> softDelete(
-            @PathVariable UUID id
+            @PathVariable UUID id,
+            @RequestParam UUID branchId
     ) {
 
-        return supplierService.softDeleteSupplier(id);
+        return supplierService.softDeleteSupplier(branchId, id);
     }
 
     @TenantManagerOnly
     @DeleteMapping("/bulk/soft")
     public ResponseEntity<?> softDeleteInBulk(
-            @RequestBody List<UUID> supplierIds
+            @RequestBody List<UUID> supplierIds,
+            @RequestParam UUID branchId
     ) {
 
-        return supplierService.softDeleteSuppliersInBulk(supplierIds);
+        return supplierService.softDeleteSuppliersInBulk(branchId, supplierIds);
     }
 
     @TenantManagerOnly
     @PatchMapping("/restore/{id}")
     public ResponseEntity<?> restore(
-            @PathVariable UUID id
+            @PathVariable UUID id,
+            @RequestParam UUID branchId
     ) {
 
-        return supplierService.restoreSupplier(id);
+        return supplierService.restoreSupplier(branchId, id);
     }
 
     @TenantManagerOnly
     @PatchMapping("/restore/bulk")
     public ResponseEntity<?> restoreInBulk(
-            @RequestBody List<UUID> supplierIds
+            @RequestBody List<UUID> supplierIds,
+            @RequestParam UUID branchId
     ) {
 
-        return supplierService.restoreSuppliersInBulk(supplierIds);
+        return supplierService.restoreSuppliersInBulk(branchId, supplierIds);
     }
 
     @PlatformAdminOnly
     @DeleteMapping("/{id}/hard")
     public ResponseEntity<?> hardDelete(
-            @PathVariable UUID id
+            @PathVariable UUID id,
+            @RequestParam UUID branchId
     ) {
 
-        return supplierService.hardDeleteSupplier(id);
+        return supplierService.hardDeleteSupplier(branchId, id);
     }
 
     @PlatformAdminOnly
     @DeleteMapping("/bulk/hard")
     public ResponseEntity<?> hardDeleteInBulk(
-            @RequestBody List<UUID> supplierIds
+            @RequestBody List<UUID> supplierIds,
+            @RequestParam UUID branchId
     ) {
 
-        return supplierService.hardDeleteSuppliersInBulk(supplierIds);
+        return supplierService.hardDeleteSuppliersInBulk(branchId, supplierIds);
     }
 
     /* ====================================
@@ -452,32 +477,38 @@ public class SupplierController {
     @TenantManagerOnly
     @GetMapping("/{identifier}/images/audit")
     public ResponseEntity<List<SupplierImageAudit>> getIndividualSupplierImageAudit(
-            @PathVariable String identifier
+            @PathVariable String identifier,
+            @RequestParam UUID branchId
     ) {
 
-        return supplierImageService.getIndividualSupplierImageAudit(identifier, null);
+        return supplierImageService.getIndividualSupplierImageAudit(branchId, identifier, null);
     }
 
     @TenantManagerOnly
     @GetMapping("/all/images/audit")
-    public ResponseEntity<List<SupplierImageAudit>> getAllSuppliersImagesAudits() {
+    public ResponseEntity<List<SupplierImageAudit>> getAllSuppliersImagesAudits(
+            @RequestParam UUID branchId
+    ) {
 
-        return supplierImageService.getAllSuppliersImagesAudits();
+        return supplierImageService.getAllSuppliersImagesAudits(branchId);
     }
 
     @TenantManagerOnly
     @GetMapping("/{identifier}/audit")
     public ResponseEntity<List<SupplierAudit>> getIndividualSupplierAudit(
-            @PathVariable String identifier
+            @PathVariable String identifier,
+            @RequestParam UUID branchId
     ) {
 
-        return supplierService.getIndividualSupplierAudit(identifier, null);
+        return supplierService.getIndividualSupplierAudit(branchId, identifier, null);
     }
 
     @TenantManagerOnly
     @GetMapping("/all/audit")
-    public ResponseEntity<List<SupplierAudit>> getAllSuppliersAudits() {
+    public ResponseEntity<List<SupplierAudit>> getAllSuppliersAudits(
+            @RequestParam UUID branchId
+    ) {
 
-        return supplierService.getAllSuppliersAudits();
+        return supplierService.getAllSuppliersAudits(branchId);
     }
 }

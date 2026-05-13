@@ -11,20 +11,20 @@ public interface SupplierImageRepository extends JpaRepository<SupplierImage, UU
        ✅ SAFE METHODS (STRICT TENANT + BRANCH)
     ===================================================== */
     @Query("""
-        SELECT i FROM SupplierImage i
-        WHERE i.tenantId = :tenantId
-          AND i.branchId = :branchId
-    """)
+                SELECT i FROM SupplierImage i
+                WHERE i.tenantId = :tenantId
+                  AND i.branchId = :branchId
+            """)
     List<SupplierImage> findAllSafe(UUID tenantId, UUID branchId);
 
     @Query("""
-        SELECT si FROM SupplierImage si
-        JOIN si.supplier s
-        WHERE si.tenantId = :tenantId
-          AND si.branchId = :branchId
-          AND (:deletedImage IS NULL OR si.deleted = :deletedImage)
-          AND (:deletedSupplier IS NULL OR s.deleted = :deletedSupplier)
-    """)
+                SELECT si FROM SupplierImage si
+                JOIN si.supplier s
+                WHERE si.tenantId = :tenantId
+                  AND si.branchId = :branchId
+                  AND (:deletedImage IS NULL OR si.deleted = :deletedImage)
+                  AND (:deletedSupplier IS NULL OR s.deleted = :deletedSupplier)
+            """)
     List<SupplierImage> findAllWithSupplierFilter(
             UUID tenantId,
             UUID branchId,
@@ -33,11 +33,11 @@ public interface SupplierImageRepository extends JpaRepository<SupplierImage, UU
     );
 
     @Query("""
-        SELECT si FROM SupplierImage si
-        WHERE si.supplier.id = :supplierId
-          AND si.tenantId = :tenantId
-          AND si.branchId = :branchId
-    """)
+                SELECT si FROM SupplierImage si
+                WHERE si.supplier.id = :supplierId
+                  AND si.tenantId = :tenantId
+                  AND si.branchId = :branchId
+            """)
     List<SupplierImage> findSafeBySupplier(
             UUID supplierId,
             UUID tenantId,
@@ -45,12 +45,12 @@ public interface SupplierImageRepository extends JpaRepository<SupplierImage, UU
     );
 
     @Query("""
-        SELECT si FROM SupplierImage si
-        WHERE si.supplier.id = :supplierId
-          AND si.tenantId = :tenantId
-          AND si.branchId = :branchId
-          AND si.deleted = false
-    """)
+                SELECT si FROM SupplierImage si
+                WHERE si.supplier.id = :supplierId
+                  AND si.tenantId = :tenantId
+                  AND si.branchId = :branchId
+                  AND si.deleted = false
+            """)
     List<SupplierImage> findSafeActiveBySupplier(
             UUID supplierId,
             UUID tenantId,
@@ -58,12 +58,12 @@ public interface SupplierImageRepository extends JpaRepository<SupplierImage, UU
     );
 
     @Query("""
-        SELECT si FROM SupplierImage si
-        WHERE si.supplier.id = :supplierId
-          AND si.tenantId = :tenantId
-          AND si.branchId = :branchId
-          AND si.fileName = :fileName
-    """)
+                SELECT si FROM SupplierImage si
+                WHERE si.supplier.id = :supplierId
+                  AND si.tenantId = :tenantId
+                  AND si.branchId = :branchId
+                  AND si.fileName = :fileName
+            """)
     Optional<SupplierImage> findSafeByFileName(
             UUID supplierId,
             String fileName,
@@ -72,12 +72,12 @@ public interface SupplierImageRepository extends JpaRepository<SupplierImage, UU
     );
 
     @Modifying
-        @Query("""
-        DELETE FROM SupplierImage si
-        WHERE si.supplier.id IN :supplierIds
-          AND si.tenantId = :tenantId
-          AND si.branchId = :branchId
-    """)
+    @Query("""
+                DELETE FROM SupplierImage si
+                WHERE si.supplier.id IN :supplierIds
+                  AND si.tenantId = :tenantId
+                  AND si.branchId = :branchId
+            """)
     void deleteAllBySupplierIds(
             List<UUID> supplierIds,
             UUID tenantId,

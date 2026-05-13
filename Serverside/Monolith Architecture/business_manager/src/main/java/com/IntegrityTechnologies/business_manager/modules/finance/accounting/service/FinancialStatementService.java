@@ -9,9 +9,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.rep
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.snapshots.DailyAccountBalanceSnapshot;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.snapshots.DailyAccountBalanceSnapshotRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountRoleResolver;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.util.BranchFilterDisabler;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;

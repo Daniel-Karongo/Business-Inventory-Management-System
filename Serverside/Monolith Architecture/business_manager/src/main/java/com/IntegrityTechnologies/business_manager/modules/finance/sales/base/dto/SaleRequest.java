@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.dto.PaymentDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.customer.dto.CustomerRequest;
 import lombok.Data;
 

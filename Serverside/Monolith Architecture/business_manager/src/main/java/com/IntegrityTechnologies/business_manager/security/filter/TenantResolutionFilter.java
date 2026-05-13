@@ -67,27 +67,49 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
 
     private String resolveTenant(HttpServletRequest request) {
 
-        // 1️⃣ Header override
+        // 1️⃣ Explicit header override
         String header = request.getHeader(TENANT_HEADER);
+
         if (header != null && !header.isBlank()) {
-            return header;
+            return header.trim().toLowerCase();
         }
 
         // 2️⃣ Subdomain resolution
         String host = request.getServerName();
 
-        if (host != null && host.contains(".")) {
+        if (host != null && !host.isBlank()) {
 
-            String subdomain = host.split("\\.")[0];
+            host = host.toLowerCase().trim();
 
-            if (
-                subdomain.equalsIgnoreCase("www")
-//                        ||  subdomain.equalsIgnoreCase("localhost")
-            ) {
+            // ✅ Ignore localhost
+            if (host.equals("localhost")) {
                 return null;
             }
 
-            return subdomain;
+            // ✅ Ignore IPv4 addresses
+            if (host.matches("^\\d+\\.\\d+\\.\\d+\\.\\d+$")) {
+                return null;
+            }
+
+            // ✅ Ignore IPv6
+            if (host.contains(":")) {
+                return null;
+            }
+
+            // ✅ Only allow real subdomains
+            String[] parts = host.split("\\.");
+
+            if (parts.length >= 3) {
+
+                String subdomain = parts[0];
+
+                if (
+                        !subdomain.equals("www")
+                                && !subdomain.isBlank()
+                ) {
+                    return subdomain;
+                }
+            }
         }
 
         // 3️⃣ Path fallback
@@ -98,7 +120,7 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
             String[] parts = path.split("/");
 
             if (parts.length > 2) {
-                return parts[2];
+                return parts[2].trim().toLowerCase();
             }
         }
 

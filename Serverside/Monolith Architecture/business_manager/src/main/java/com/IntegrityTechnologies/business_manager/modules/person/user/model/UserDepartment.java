@@ -2,8 +2,11 @@ package com.IntegrityTechnologies.business_manager.modules.person.user.model;
 
 import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.department.model.DepartmentMembershipRole;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.TenantAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 
@@ -23,8 +26,8 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class UserDepartment {
+@SuperBuilder
+public class UserDepartment extends BranchAwareEntity {
 
     @EmbeddedId
     @Builder.Default
@@ -50,8 +53,8 @@ public class UserDepartment {
     @Column(nullable = false, updatable = false)
     private LocalDateTime assignedAt;
 
-    @PrePersist
-    public void onCreate() {
+    @Override
+    public void beforePersist() {
 
         assignedAt = LocalDateTime.now();
 

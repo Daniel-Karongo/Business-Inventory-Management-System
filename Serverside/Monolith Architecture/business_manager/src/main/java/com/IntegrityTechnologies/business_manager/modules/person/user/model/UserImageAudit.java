@@ -1,8 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.person.user.model;
 
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.TenantAwareEntity;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 
 import java.sql.Types;
@@ -12,20 +15,20 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 @Entity
 @Table(
         name = "user_image_audits",
         indexes = {
 
-                @Index(name = "idx_user_image_audit_tenant_branch",
-                        columnList = "tenant_id, branch_id"),
+                @Index(name = "idx_user_image_audit_tenant",
+                        columnList = "tenant_id"),
 
                 @Index(name = "idx_user_image_audit_user",
                         columnList = "user_id")
         }
 )
-public class UserImageAudit extends BranchAwareEntity {
+public class UserImageAudit extends TenantAwareEntity {
 
     @Id
     @GeneratedValue

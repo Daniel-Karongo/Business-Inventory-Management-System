@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/notification/sms/dlr")
@@ -16,9 +17,17 @@ public class SmsDlrController {
 
     private final SmsDeliveryReportService service;
 
-    @PostMapping
-    public ResponseEntity<Void> receive(@RequestParam Map<String, String> payload) {
-        service.handleDeliveryReport(payload);
+    @PostMapping("/branch/{branchId}")
+    public ResponseEntity<Void> receive(
+            @PathVariable UUID branchId,
+            @RequestParam Map<String, String> payload
+    ) {
+
+        service.handleDeliveryReport(
+                branchId,
+                payload
+        );
+
         return ResponseEntity.ok().build();
     }
 }

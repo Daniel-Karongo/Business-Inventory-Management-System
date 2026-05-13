@@ -6,7 +6,6 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.events.VariantImageUploadRequestedEvent;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +32,6 @@ public class VariantAsyncProcessor {
         try {
 
             TenantContext.setTenantId(event.getTenantId());
-            BranchContext.set(event.getBranchId());
 
             ProductVariant variant =
                     variantRepo.findByIdSafe(
@@ -44,6 +42,7 @@ public class VariantAsyncProcessor {
                     ).orElseThrow();
 
             barcodeService.generateBarcodeImage(
+                    event.getBranchId(),
                     variant.getBarcode(),
                     variant
             );
@@ -51,6 +50,7 @@ public class VariantAsyncProcessor {
             log.info("Async barcode generated {}", variant.getId());
 
         } catch (Exception e) {
+
             log.error(
                     "Async barcode generation failed. tenant={}, branch={}, variant={}",
                     event.getTenantId(),
@@ -59,10 +59,11 @@ public class VariantAsyncProcessor {
                     e
             );
 
-            throw new RuntimeException(e); // ✅ let outbox retry
+            throw new RuntimeException(e);
+
         } finally {
+
             TenantContext.clear();
-            BranchContext.clear();
         }
     }
 
@@ -71,7 +72,6 @@ public class VariantAsyncProcessor {
         try {
 
             TenantContext.setTenantId(event.getTenantId());
-            BranchContext.set(event.getBranchId());
 
             ProductVariant variant =
                     variantRepo.findByIdSafe(
@@ -91,13 +91,18 @@ public class VariantAsyncProcessor {
                                 Files.readAllBytes(tempFile)
                         );
 
-                imageService.saveVariantImage(variant.getBranchId(), variant, file);
+                imageService.saveVariantImage(
+                        event.getBranchId(),
+                        variant,
+                        file
+                );
 
             } finally {
 
                 try {
                     Files.deleteIfExists(tempFile);
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             }
 
             log.info("Async image processed {}", variant.getId());
@@ -111,11 +116,12 @@ public class VariantAsyncProcessor {
                     event.getVariantId(),
                     e
             );
-            throw new RuntimeException(e); // ✅ let outbox retry
+
+            throw new RuntimeException(e);
 
         } finally {
+
             TenantContext.clear();
-            BranchContext.clear();
         }
     }
 
@@ -124,25 +130,32 @@ public class VariantAsyncProcessor {
         try {
 
             TenantContext.setTenantId(event.getTenantId());
-            BranchContext.set(event.getBranchId());
 
             if (event.getVariantIds() != null) {
 
                 pdfService.generateSheetToFile(
+                        event.getBranchId(),
                         event.getVariantIds(),
                         event.getOutputPath()
                 );
 
             } else {
 
-                List<UUID> ids = variantRepo.findByProduct_IdSafe(
-                        event.getProductId(),
-                        false,
-                        event.getTenantId(),
-                        event.getBranchId()
-                ).stream().map(ProductVariant::getId).toList();
+                List<UUID> ids =
+                        variantRepo.findByProduct_IdSafe(
+                                        event.getProductId(),
+                                        false,
+                                        event.getTenantId(),
+                                        event.getBranchId()
+                                ).stream()
+                                .map(ProductVariant::getId)
+                                .toList();
 
-                pdfService.generateSheetToFile(ids, event.getOutputPath());
+                pdfService.generateSheetToFile(
+                        event.getBranchId(),
+                        ids,
+                        event.getOutputPath()
+                );
             }
 
             log.info("PDF generated at {}", event.getOutputPath());
@@ -157,11 +170,12 @@ public class VariantAsyncProcessor {
                     event.getProductId(),
                     e
             );
+
             throw new RuntimeException(e);
 
         } finally {
+
             TenantContext.clear();
-            BranchContext.clear();
         }
     }
 }

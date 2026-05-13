@@ -7,7 +7,25 @@ import java.util.List;
 import java.util.UUID;
 
 public interface SmsService {
-    SmsMessage sendSms(SmsRequest req);
-    List<SmsMessage> sendBulk(List<SmsRequest> requests);
-    SmsMessage getMessage(UUID id);
+
+    SmsMessage sendSms(
+            UUID branchId,
+            SmsRequest req
+    );
+
+    List<SmsMessage> sendBulk(
+            UUID branchId,
+            List<SmsRequest> requests
+    );
+
+    SmsMessage getMessage(
+            UUID branchId,
+            UUID id
+    );
+
+    void dispatchSms(
+            UUID tenantId,
+            UUID branchId,
+            UUID messageId
+    );
 }

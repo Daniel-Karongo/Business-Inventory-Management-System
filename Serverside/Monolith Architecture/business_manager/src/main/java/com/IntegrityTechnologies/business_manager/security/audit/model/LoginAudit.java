@@ -37,8 +37,8 @@ public class LoginAudit extends TenantAwareEntity {
 
     private LocalDateTime timestamp;
 
-    @PrePersist
-    void onCreate() {
+    @Override
+    public void beforePersist() {
         timestamp = LocalDateTime.now();
     }
 }

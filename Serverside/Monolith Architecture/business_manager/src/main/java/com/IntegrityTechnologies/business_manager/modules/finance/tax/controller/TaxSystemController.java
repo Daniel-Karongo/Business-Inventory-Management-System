@@ -4,11 +4,13 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.gov
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.TaxSystemState;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.TaxSystemStateRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -27,11 +29,11 @@ public class TaxSystemController {
     public TaxSystemState configure(
             @RequestParam boolean vatEnabled,
             @RequestParam BigDecimal vatRate,
-            @RequestParam BigDecimal corporateTaxRate
+            @RequestParam BigDecimal corporateTaxRate,
+            @RequestParam UUID branchId
     ) {
 
         UUID tenantId = TenantContext.getTenantId();
-        UUID branchId = BranchContext.get();
 
         TaxSystemState state =
                 repository.findByTenantIdAndBranchId(tenantId, branchId)
@@ -64,10 +66,11 @@ public class TaxSystemController {
     }
 
     @PostMapping("/lock")
-    public void lock() {
+    public void lock(
+        @RequestParam UUID branchId
+    ) {
 
         UUID tenantId = TenantContext.getTenantId();
-        UUID branchId = BranchContext.get();
 
         TaxSystemState state =
                 repository.findByTenantIdAndBranchId(tenantId, branchId)

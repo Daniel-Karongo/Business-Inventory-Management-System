@@ -110,7 +110,7 @@ public class RollcallService {
                 .timestamp(now)
                 .rollcallDate(today)
                 .status(status)
-                .method(method) // 🔥 key change
+                .method(method)
                 .performedBy("SYSTEM")
                 .build();
 
@@ -273,7 +273,6 @@ public class RollcallService {
         absent.setStatus(RollcallStatus.LATE);
         absent.setTimestamp(now);
         absent.setPerformedBy("SYSTEM");
-        // ❌ DO NOT touch method here
 
         Rollcall saved = rollcallRepository.save(absent);
 

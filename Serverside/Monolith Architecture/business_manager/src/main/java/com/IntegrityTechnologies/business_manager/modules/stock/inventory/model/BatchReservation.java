@@ -50,9 +50,6 @@ public class BatchReservation extends BranchAwareEntity {
     @Column(nullable = false)
     private Long quantity;
 
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
     @Column(name = "sale_id")
     private UUID saleId;
 
@@ -71,14 +68,4 @@ public class BatchReservation extends BranchAwareEntity {
 
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
-
-    @Version
-    private Long version;
-
-    @PrePersist
-    public void onCreate() {
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
-        }
-    }
 }

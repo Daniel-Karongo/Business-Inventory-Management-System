@@ -48,7 +48,4 @@ public class CustomerPrice extends BranchAwareEntity {
 
     private LocalDateTime validFrom;
     private LocalDateTime validTo;
-
-    @Builder.Default
-    private Boolean deleted = false;
 }

@@ -73,14 +73,15 @@ public class VatFilingService {
                         .description("VAT clearing for period")
                         .performedBy(user)
                         .branchId(branchId)
+                        .tenantId(tenantId())
                         .entries(buildVatClearingEntries(branchId, outputVat, inputVat, payable))
                         .build()
         );
 
         VatFiling filing = VatFiling.builder()
-                .tenantId(tenantId())
                 .period(period)
                 .branchId(branchId)
+                .tenantId(tenantId())
                 .outputVat(outputVat)
                 .inputVat(inputVat)
                 .vatPayable(payable)
@@ -153,6 +154,7 @@ public class VatFilingService {
                         .description("VAT payment for period")
                         .performedBy(user)
                         .branchId(branchId)
+                        .tenantId(tenantId())
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
                                         .accountId(accounts.get(tenantId(), branchId, AccountRole.VAT_PAYABLE))

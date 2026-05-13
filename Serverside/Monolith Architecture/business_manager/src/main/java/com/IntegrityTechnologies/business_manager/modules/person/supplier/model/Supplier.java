@@ -83,20 +83,10 @@ public class Supplier extends BranchAwareEntity {
     @JoinColumn(name = "updated_by_id")
     private User updatedBy;
 
-    private LocalDateTime deletedAt;
-
-    @Column(nullable = false)
-    private Boolean deleted;
-
     @OneToMany(
             mappedBy = "supplier",
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
     private Set<CategorySupplier> categorySuppliers = new HashSet<>();
-
-    @PrePersist
-    public void onCreate() {
-        deleted = false;
-    }
 }

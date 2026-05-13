@@ -3,7 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.sales.base.co
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.config.spring.OptimisticRetryRunner;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.dto.PaymentDTO;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.dto.PaymentDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.service.SaleBulkService;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.service.SalesService;

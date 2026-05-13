@@ -67,6 +67,7 @@ public class StockTransferService {
                     InventoryBatch.builder()
                             .productVariantId(variantId)
                             .branchId(toBranch)
+                            .tenantId(tenantId())
                             .unitCost(overrideCost != null ? overrideCost : batch.getUnitCost())
                             .quantityReceived(move)
                             .quantityRemaining(move)

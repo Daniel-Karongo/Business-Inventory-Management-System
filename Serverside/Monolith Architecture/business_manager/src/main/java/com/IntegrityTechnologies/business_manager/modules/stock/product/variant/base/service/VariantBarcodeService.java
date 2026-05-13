@@ -3,12 +3,11 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.variant
 import com.IntegrityTechnologies.business_manager.config.files.FileStorageService;
 import com.IntegrityTechnologies.business_manager.config.kafka.OutboxEventWriter;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.mapper.ProductVariantMapper;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.events.VariantBarcodeRequestedEvent;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.mapper.ProductVariantMapper;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
-import com.IntegrityTechnologies.business_manager.security.util.BranchContext;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
@@ -36,19 +35,18 @@ public class VariantBarcodeService {
     private final OutboxEventWriter outboxEventWriter;
 
     private UUID tenantId() { return TenantContext.getTenantId(); }
-    private UUID branchId() { return BranchContext.get(); }
 
     /* =============================
        PUBLIC API
        ============================= */
 
-    public ProductVariantDTO getVariantByBarcode(String barcode) {
+    public ProductVariantDTO getVariantByBarcode(UUID branchId, String barcode) {
 
         if (!isValidBarcode(barcode))
             throw new IllegalArgumentException("Invalid barcode format");
 
         ProductVariant variant = variantRepository
-                .findForScan(tenantId(), branchId(), barcode)
+                .findForScan(tenantId(), branchId, barcode)
                 .orElseThrow(() ->
                         new EntityNotFoundException("No active variant for barcode: " + barcode)
                 );
@@ -57,13 +55,16 @@ public class VariantBarcodeService {
     }
 
     @Transactional
-    public ProductVariantDTO generateBarcodeIfMissing(UUID variantId) {
+    public ProductVariantDTO generateBarcodeIfMissing(
+            UUID branchId,
+            UUID variantId
+    ) {
 
         ProductVariant variant = variantRepository.findByIdSafe(
                 variantId,
                 false,
                 tenantId(),
-                branchId()
+                branchId
         ).orElseThrow(() -> new EntityNotFoundException("Variant not found"));
 
         if (variant.getBarcode() == null || variant.getBarcode().isBlank()) {
@@ -85,11 +86,11 @@ public class VariantBarcodeService {
 
             outboxEventWriter.write(
                     "VARIANT_BARCODE_REQUESTED",
-                    branchId(),
+                    branchId,
                     VariantBarcodeRequestedEvent.builder()
                             .variantId(variant.getId())
                             .tenantId(tenantId())
-                            .branchId(branchId())
+                            .branchId(branchId)
                             .build()
             );
 
@@ -109,13 +110,13 @@ public class VariantBarcodeService {
        SAFE FILE SERVING
        ============================= */
 
-    public ResponseEntity<Resource> getBarcodeImage(UUID variantId) {
+    public ResponseEntity<Resource> getBarcodeImage(UUID branchId, UUID variantId) {
 
         ProductVariant variant = variantRepository.findByIdSafe(
                 variantId,
                 false,
                 tenantId(),
-                branchId()
+                branchId
         ).orElseThrow(() -> new EntityNotFoundException("Variant not found"));
 
         if (variant.getBarcode() == null) {
@@ -124,7 +125,7 @@ public class VariantBarcodeService {
 
         try {
 
-            Path path = resolveBarcodePath(variant);
+            Path path = resolveBarcodePath(branchId, variant);
 
             if (!Files.exists(path)) {
                 throw new EntityNotFoundException("Barcode image not found");
@@ -159,11 +160,11 @@ public class VariantBarcodeService {
        IMAGE GENERATION
        ============================= */
 
-    public Path generateBarcodeImage(String barcode, ProductVariant variant) {
+    public Path generateBarcodeImage(UUID branchId, String barcode, ProductVariant variant) {
 
         try {
 
-            Path barcodeDir = resolveBarcodeDir(variant);
+            Path barcodeDir = resolveBarcodeDir(branchId, variant);
 
             Path output = barcodeDir.resolve(barcode + ".png");
 
@@ -210,10 +211,10 @@ public class VariantBarcodeService {
        INTERNAL PATH HELPERS (SAFE)
        ============================= */
 
-    private Path resolveBarcodeDir(ProductVariant variant) {
+    private Path resolveBarcodeDir(UUID branchId, ProductVariant variant) {
 
         return fileStorageService.initDirectory(
-                fileStorageService.productRoot()
+                fileStorageService.productRoot(branchId)
                         .resolve(variant.getProduct().getId().toString())
                         .resolve("variants")
                         .resolve(variant.getId().toString())
@@ -221,9 +222,9 @@ public class VariantBarcodeService {
         );
     }
 
-    private Path resolveBarcodePath(ProductVariant variant) {
+    private Path resolveBarcodePath(UUID branchId, ProductVariant variant) {
 
-        return fileStorageService.productRoot()
+        return fileStorageService.productRoot(branchId)
                 .resolve(variant.getProduct().getId().toString())
                 .resolve("variants")
                 .resolve(variant.getId().toString())

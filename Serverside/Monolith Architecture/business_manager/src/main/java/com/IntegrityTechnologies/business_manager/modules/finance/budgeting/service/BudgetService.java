@@ -62,6 +62,7 @@ public class BudgetService {
                 .scenario(BudgetScenario.BASELINE)
                 .status(BudgetStatus.DRAFT)
                 .createdBy(username)
+                .createdAt(LocalDateTime.now())
                 .build();
 
         budget.setBranchId(branchId);
@@ -121,6 +122,8 @@ public class BudgetService {
                     BudgetLine newLine = BudgetLine.builder()
                             .budget(budget)
                             .account(account)
+                            .tenantId(budget.getTenantId())
+                            .branchId(budget.getBranchId())
                             .build();
 
                     budget.getLines().add(newLine);
@@ -145,6 +148,8 @@ public class BudgetService {
                             .budgetLine(line)
                             .monthNumber(monthNumber)
                             .plannedAmount(amount)
+                            .tenantId(budget.getTenantId())
+                            .branchId(budget.getBranchId())
                             .build()
             );
         }
