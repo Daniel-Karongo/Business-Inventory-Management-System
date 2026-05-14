@@ -44,6 +44,10 @@ public class TenantExecutionService {
 
                 UUID tenantId = tenant.getId();
 
+                if (tenant.getStatus() != TenantStatus.ACTIVE) {
+                    continue;
+                }
+
                 try {
 
                     TenantContext.setTenantId(tenantId);

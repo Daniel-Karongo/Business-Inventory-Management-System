@@ -45,9 +45,13 @@ public class UserController {
     public ResponseEntity<BulkResult<UserDTO>> importUsers(
             @RequestBody BulkRequest<UserBulkRow> request,
             Authentication authentication
-    ) {
+    ) throws IOException {
+
         return ResponseEntity.ok(
-                bulkService.importUsers(request, authentication)
+                bulkService.importUsers(
+                        request,
+                        authentication
+                )
         );
     }
 

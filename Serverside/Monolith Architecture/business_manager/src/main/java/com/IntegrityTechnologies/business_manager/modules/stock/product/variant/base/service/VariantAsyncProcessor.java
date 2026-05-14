@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.service;
 
 import com.IntegrityTechnologies.business_manager.config.files.InMemoryMultipartFile;
+import com.IntegrityTechnologies.business_manager.config.kafka.ProcessedKafkaEventRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.events.VariantBarcodePdfRequestedEvent;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.events.VariantBarcodeRequestedEvent;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.events.VariantImageUploadRequestedEvent;
@@ -9,6 +10,7 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,12 +28,30 @@ public class VariantAsyncProcessor {
     private final VariantBarcodeService barcodeService;
     private final ProductVariantImageService imageService;
     private final VariantBarcodePdfService pdfService;
-
+    private final ProcessedKafkaEventRepository processedRepo;
     public void processBarcode(VariantBarcodeRequestedEvent event) {
 
         try {
 
             TenantContext.setTenantId(event.getTenantId());
+
+            int claimed =
+                    processedRepo.tryClaim(
+                            UUID.randomUUID(),
+                            event.getTenantId(),
+                            event.getVariantId(),
+                            "VARIANT_BARCODE"
+                    );
+
+            if (claimed == 0) {
+
+                log.debug(
+                        "Duplicate barcode replay suppressed for variant {}",
+                        event.getVariantId()
+                );
+
+                return;
+            }
 
             ProductVariant variant =
                     variantRepo.findByIdSafe(
@@ -47,7 +67,10 @@ public class VariantAsyncProcessor {
                     variant
             );
 
-            log.info("Async barcode generated {}", variant.getId());
+            log.info(
+                    "Async barcode generated {}",
+                    variant.getId()
+            );
 
         } catch (Exception e) {
 
@@ -72,6 +95,24 @@ public class VariantAsyncProcessor {
         try {
 
             TenantContext.setTenantId(event.getTenantId());
+
+            int claimed =
+                    processedRepo.tryClaim(
+                            UUID.randomUUID(),
+                            event.getTenantId(),
+                            event.getVariantId(),
+                            "VARIANT_IMAGE"
+                    );
+
+            if (claimed == 0) {
+
+                log.debug(
+                        "Duplicate image replay suppressed for variant {}",
+                        event.getVariantId()
+                );
+
+                return;
+            }
 
             ProductVariant variant =
                     variantRepo.findByIdSafe(
@@ -105,7 +146,10 @@ public class VariantAsyncProcessor {
                 }
             }
 
-            log.info("Async image processed {}", variant.getId());
+            log.info(
+                    "Async image processed {}",
+                    variant.getId()
+            );
 
         } catch (Exception e) {
 
@@ -130,6 +174,31 @@ public class VariantAsyncProcessor {
         try {
 
             TenantContext.setTenantId(event.getTenantId());
+
+            UUID replayKey =
+                    event.getProductId() != null
+                            ? event.getProductId()
+                            : UUID.nameUUIDFromBytes(
+                            event.getOutputPath().getBytes()
+                    );
+
+            int claimed =
+                    processedRepo.tryClaim(
+                            UUID.randomUUID(),
+                            event.getTenantId(),
+                            replayKey,
+                            "VARIANT_PDF"
+                    );
+
+            if (claimed == 0) {
+
+                log.debug(
+                        "Duplicate PDF replay suppressed for output {}",
+                        event.getOutputPath()
+                );
+
+                return;
+            }
 
             if (event.getVariantIds() != null) {
 
@@ -158,7 +227,10 @@ public class VariantAsyncProcessor {
                 );
             }
 
-            log.info("PDF generated at {}", event.getOutputPath());
+            log.info(
+                    "PDF generated at {}",
+                    event.getOutputPath()
+            );
 
         } catch (Exception e) {
 

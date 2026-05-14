@@ -1,5 +1,5 @@
-import { BulkImportConfig } from "../../../../../../shared/bulk-import/models/bulk-import-config.model";
-import { BulkRequest } from "../../../../../../shared/models/bulk-import.model";
+import { BulkImportConfig } from "../../../../../../../shared/bulk-import/models/bulk-import-config.model";
+import { BulkRequest } from "../../../../../../../shared/models/bulk-import.model";
 
 
 export interface CategoryBulkRow {

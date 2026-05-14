@@ -17,8 +17,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { CATEGORY_BULK_IMPORT_CONFIG } from '../../services/category-bulk-import.config';
+import { CATEGORY_BULK_IMPORT_CONFIG } from './category-bulk-import.config';
 import { AuthService } from '../../../../../../auth/services/auth.service';
+import { Router } from '@angular/router';
 
 @Component({
     standalone: true,
@@ -47,11 +48,11 @@ export class CategoryBulkImportDialogComponent
         private categoryService: CategoryService,
         private submitEngine: BulkImportSubmitEngineService,
         private dialogRef: MatDialogRef<CategoryBulkImportDialogComponent>,
-        private auth: AuthService
+        private auth: AuthService,
+        private router: Router
     ) {
         super();
     }
-
     ngOnInit() {
         this.initForm();
     }
@@ -84,7 +85,14 @@ export class CategoryBulkImportDialogComponent
             onErrorsApplied: res => {
                 this.cacheErrors(res);
             },
-            onFinalSuccess: () => this.dialogRef.close(true),
+            onFinalSuccess: async () => {
+
+                this.dialogRef.close(true);
+
+                await this.router.navigate([
+                    'app/categories'
+                ]);
+            },
             onConfirmRetry: () => {
                 this.form.patchValue({ dryRun: false });
                 this.submit();

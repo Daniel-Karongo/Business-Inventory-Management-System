@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.platform.tenant.servi
 
 import com.IntegrityTechnologies.business_manager.modules.platform.audit.entity.AuditEntityType;
 import com.IntegrityTechnologies.business_manager.modules.platform.audit.service.AuditService;
+import com.IntegrityTechnologies.business_manager.modules.platform.settings.service.TenantSettingsService;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.entity.Plan;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.entity.SubscriptionStatus;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.entity.TenantSubscription;
@@ -25,6 +26,7 @@ public class TenantProvisioningService {
     private final TenantSubscriptionRepository subscriptionRepository;
     private final AuditService auditService;
     private final TenantInventorySettingsService tenantInventorySettingsService;
+    private final TenantSettingsService tenantSettingsService;
 
     public Tenant provisionTenant(String name, String code) {
 
@@ -65,6 +67,9 @@ public class TenantProvisioningService {
         subscriptionRepository.save(subscription);
 
         tenantInventorySettingsService.initialize(tenant.getId());
+        tenantSettingsService.initializeIfMissing(
+                tenant.getId()
+        );
 
         return tenant;
     }

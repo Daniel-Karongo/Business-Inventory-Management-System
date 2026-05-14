@@ -9,9 +9,12 @@ import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.NestedExceptionUtils;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.LocalDateTime;
 
 @Slf4j
@@ -41,48 +44,69 @@ public class OutboxEventExecutor {
 
             outboxRepo.save(e);
 
+        } catch (DataIntegrityViolationException ex) {
+
+            Throwable root =
+                    NestedExceptionUtils.getMostSpecificCause(ex);
+
+            if (root instanceof SQLIntegrityConstraintViolationException
+                    && root.getMessage() != null
+                    && root.getMessage().contains("processed_kafka_events")) {
+
+                log.debug(
+                        "Duplicate consumer execution suppressed for event {}",
+                        e.getId()
+                );
+
+                e.setProcessed(true);
+                e.setProcessedAt(LocalDateTime.now());
+
+                outboxRepo.save(e);
+
+                return;
+            }
+
+            handleFailure(e, ex);
+
         } catch (Exception ex) {
 
-            e.setRetryCount(e.getRetryCount() + 1);
-
-            if (e.getRetryCount() > 10) {
-
-                e.setFailed(true);
-                e.setFailureReason(ex.getMessage());
-                e.setProcessed(true);
-
-                log.error("DLQ: Event {} moved to failed state", e.getId());
-
-            } else {
-
-                if (e.getRetryCount() <= 3 || e.getRetryCount() % 10 == 0) {
-
-                    log.warn(
-                            "Retry {} for event {} type={}",
-                            e.getRetryCount(),
-                            e.getId(),
-                            e.getEventType()
-                    );
-                }
-            }
-
-            outboxRepo.save(e);
-
-            if (e.getRetryCount() == 1 || e.getRetryCount() % 10 == 0) {
-
-                log.error(
-                        "Event {} failed type={} reason={}",
-                        e.getId(),
-                        e.getEventType(),
-                        ex.getMessage()
-                );
-            }
-
-            return;
-
+            handleFailure(e, ex);
         } finally {
             TenantContext.clear();
         }
+    }
+
+    private void handleFailure(EventOutbox e, Exception ex) {
+
+        e.setRetryCount(e.getRetryCount() + 1);
+
+        if (e.getRetryCount() > 10) {
+
+            e.setFailed(true);
+            e.setFailureReason(ex.getMessage());
+            e.setProcessed(true);
+
+            log.error(
+                    "DLQ: Event {} moved to failed state",
+                    e.getId(),
+                    ex
+            );
+
+        } else {
+
+            if (e.getRetryCount() <= 3
+                    || e.getRetryCount() % 10 == 0) {
+
+                log.warn(
+                        "Retry {} for event {} type={}",
+                        e.getRetryCount(),
+                        e.getId(),
+                        e.getEventType()
+                );
+            }
+        }
+
+        outboxRepo.save(e);
     }
 
     private Object deserialize(EventOutbox e) {

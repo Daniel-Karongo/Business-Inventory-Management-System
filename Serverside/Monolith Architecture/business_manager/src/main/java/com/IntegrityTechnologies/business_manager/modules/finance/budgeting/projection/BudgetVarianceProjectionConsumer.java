@@ -47,15 +47,21 @@ public class BudgetVarianceProjectionConsumer {
 
     private void process(JournalPostedEvent event) {
 
-        if (processedRepo.existsByTenantIdAndEventIdAndConsumer(
-                event.tenantId(),
-                event.journalId(),
-                CONSUMER
-        )) return;
+        TenantContext.setTenantId(event.tenantId());
+
+        int claimed =
+                processedRepo.tryClaim(
+                        UUID.randomUUID(),
+                        event.tenantId(),
+                        event.journalId(),
+                        CONSUMER
+                );
+
+        if (claimed == 0) {
+            return;
+        }
 
         try {
-
-            TenantContext.setTenantId(event.tenantId());
 
             UUID tenantId = event.tenantId();
             UUID branchId = event.branchId();
@@ -80,11 +86,6 @@ public class BudgetVarianceProjectionConsumer {
                         LocalDateTime.now()
                 );
             }
-
-            ProcessedKafkaEvent processed = new ProcessedKafkaEvent();
-            processed.setEventId(event.journalId());
-            processed.setConsumer(CONSUMER);
-            processedRepo.save(processed);
 
         } finally {
             TenantContext.clear();

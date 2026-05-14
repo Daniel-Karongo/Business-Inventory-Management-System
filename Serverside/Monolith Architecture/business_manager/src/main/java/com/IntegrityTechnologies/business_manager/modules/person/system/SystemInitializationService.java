@@ -5,6 +5,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.branch.reposito
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformRole;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.entity.PlatformUser;
 import com.IntegrityTechnologies.business_manager.modules.platform.identity.repository.PlatformUserRepository;
+import com.IntegrityTechnologies.business_manager.modules.platform.settings.service.TenantSettingsService;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.entity.TenantSubscription;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.repository.PlanRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.repository.TenantSubscriptionRepository;
@@ -34,6 +35,7 @@ public class SystemInitializationService {
     private final BranchRepository branchRepository;
     private final PlanRepository planRepository;
     private final TenantSubscriptionRepository tenantSubscriptionRepository;
+    private final TenantSettingsService tenantSettingsService;
 
     @Transactional
     public void initialize() {
@@ -94,6 +96,10 @@ public class SystemInitializationService {
 
                     return tenantRepository.save(t);
                 });
+
+        tenantSettingsService.initializeIfMissing(
+                platformTenant.getId()
+        );
 
         Tenant tenant = tenantRepository
                 .findByCodeIgnoreCase("default")

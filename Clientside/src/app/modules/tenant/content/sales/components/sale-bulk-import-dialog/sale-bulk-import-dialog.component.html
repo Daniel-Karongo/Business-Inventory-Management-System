@@ -84,10 +84,8 @@
 
       <div class="rows" formArrayName="rows">
 
-        <div class="row-card" *ngFor="
-            let row of rows.controls;
-            let i = index
-          " [formGroupName]="i">
+        <div class="row-card" [attr.data-line]="i + 1" tabindex="-1" *ngFor="let r of rows.controls; let i = index"
+          [formGroupName]="i">
 
           <!-- ===================================== -->
           <!-- HEADER -->
@@ -238,10 +236,10 @@
           <!-- ===================================== -->
 
           <div class="row-error" *ngIf="
-              row.value._error
+              r.value._error
             ">
 
-            {{ row.value._error }}
+            {{ r.value._error }}
 
           </div>
 

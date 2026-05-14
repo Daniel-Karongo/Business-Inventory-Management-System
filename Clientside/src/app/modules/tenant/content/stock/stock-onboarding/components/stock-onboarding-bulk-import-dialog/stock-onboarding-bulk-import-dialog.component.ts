@@ -63,6 +63,7 @@ import {
     BranchService
 } from '../../../../branches/services/branch.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { Router } from '@angular/router';
 
 @Component({
     standalone: true,
@@ -125,20 +126,18 @@ export class
     constructor(
         private onboardingService:
             StockOnboardingService,
-
         private submitEngine:
             BulkImportSubmitEngineService,
-
         private dialogRef:
             MatDialogRef<
                 StockOnboardingBulkImportDialogComponent
             >,
-
         private branchService:
             BranchService,
-
         private cdr:
-            ChangeDetectorRef
+            ChangeDetectorRef,
+        private router:
+            Router
     ) {
         super();
     }
@@ -923,9 +922,14 @@ export class
                     ),
 
             onFinalSuccess:
-                () =>
-                    this.dialogRef
-                        .close(true),
+                async () => {
+
+                    this.dialogRef.close(true);
+
+                    await this.router.navigate([
+                        'app/inventory'
+                    ]);
+                },
 
             onConfirmRetry: () => {
 

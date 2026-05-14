@@ -95,9 +95,14 @@ public class PasswordResetService {
 
         UUID tenantId = TenantContext.getOrNull();
 
-        /* PLATFORM CONTEXT */
+        /* PLATFORM USER */
 
-        if (tenantId == null) {
+        boolean platformUser =
+                platformUserRepository
+                        .findByUsernameAndDeletedFalse(identifier)
+                        .isPresent();
+
+        if (platformUser) {
 
             PlatformUser user =
                     platformUserRepository

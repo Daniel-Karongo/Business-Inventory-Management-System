@@ -72,10 +72,37 @@ export class UserBulkImportDialogComponent
     ]).then(([b, d]) => {
       this.branches = b || [];
       this.departments = d || [];
+
       this.hideOrgFields =
         this.branches.length === 1 &&
         this.departments.length === 1;
+
+      // AUTO-DEFAULT SINGLE VALUES
+      if (this.hideOrgFields) {
+        const branchCode = this.branches[0]?.branchCode ?? null;
+        const departmentName = this.departments[0]?.name ?? null;
+
+        this.rows.controls.forEach(row => {
+          row.patchValue({
+            branchCode,
+            departmentName
+          });
+        });
+      }
     });
+  }
+
+  override addRow(data?: Partial<any>) {
+    super.addRow(data);
+
+    if (this.hideOrgFields) {
+      const row = this.rows.at(this.rows.length - 1);
+
+      row.patchValue({
+        branchCode: this.branches[0]?.branchCode ?? null,
+        departmentName: this.departments[0]?.name ?? null
+      });
+    }
   }
 
   submit() {

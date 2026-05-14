@@ -100,7 +100,7 @@
             "sslKey": "certs/_wildcard.local.test-key.pem",
             "proxyConfig": "proxy.conf.js",
             "allowedHosts": [
-              "default.local.test"
+              ".local.test"
             ]
           },
           "configurations": {

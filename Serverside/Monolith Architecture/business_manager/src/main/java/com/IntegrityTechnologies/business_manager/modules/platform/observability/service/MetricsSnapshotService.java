@@ -3,7 +3,6 @@ package com.IntegrityTechnologies.business_manager.modules.platform.observabilit
 import com.IntegrityTechnologies.business_manager.modules.platform.observability.entity.TenantUsageMetric;
 import com.IntegrityTechnologies.business_manager.modules.platform.observability.repository.TenantUsageMetricRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.service.TenantExecutionService;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -20,26 +19,32 @@ public class MetricsSnapshotService {
     private final TenantUsageMetricRepository repository;
     private final TenantExecutionService tenantExecutionService;
 
-    @Scheduled(fixedRate = 300000)
+    @Scheduled(fixedDelay = 300000)
     public void snapshotMetrics() {
 
         Map<UUID, Long> requests =
-                metricsService.snapshotTenantRequests();
+                metricsService.snapshotAndResetTenantRequests();
 
         Map<UUID, Long> errors =
-                metricsService.snapshotTenantErrors();
+                metricsService.snapshotAndResetTenantErrors();
+
+        LocalDateTime snapshotTime =
+                LocalDateTime.now();
 
         tenantExecutionService.forEachTenant(tenantId -> {
 
-            long reqCount = requests.getOrDefault(tenantId, 0L);
-            long errCount = errors.getOrDefault(tenantId, 0L);
+            long reqCount =
+                    requests.getOrDefault(tenantId, 0L);
+
+            long errCount =
+                    errors.getOrDefault(tenantId, 0L);
 
             TenantUsageMetric metric =
                     TenantUsageMetric.builder()
                             .tenantId(tenantId)
                             .requests(reqCount)
                             .errors(errCount)
-                            .snapshotTime(LocalDateTime.now())
+                            .snapshotTime(snapshotTime)
                             .build();
 
             repository.save(metric);

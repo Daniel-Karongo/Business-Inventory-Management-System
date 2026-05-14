@@ -44,3 +44,9 @@
     color: #c62828;
     font-size: 0.8rem;
 }
+
+.highlight-line {
+    outline: 2px solid #c62828;
+    outline-offset: 4px;
+    transition: outline 0.3s ease;
+}

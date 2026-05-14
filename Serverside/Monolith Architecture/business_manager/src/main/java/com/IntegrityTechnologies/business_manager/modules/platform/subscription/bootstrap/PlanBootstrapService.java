@@ -4,6 +4,7 @@ import com.IntegrityTechnologies.business_manager.modules.platform.subscription.
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.repository.PlanRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
@@ -11,43 +12,67 @@ public class PlanBootstrapService {
 
     private final PlanRepository repository;
 
+    @Transactional
     public void bootstrap() {
 
-        createIfMissing("FREE", Plan.builder()
-                .code("FREE")
-                .name("Free Plan")
-                .maxUsers(5)
-                .maxBranches(1)
-                .inventoryEnabled(true)
-                .accountingEnabled(false)
-                .reportingEnabled(false)
-                .requestsPerMinute(300)
-                .build());
+        upsert(
+                "FREE",
+                "Free Plan",
+                15,
+                2,
+                true,
+                false,
+                false,
+                300
+        );
 
-        createIfMissing("PRO", Plan.builder()
-                .code("PRO")
-                .name("Professional")
-                .maxUsers(50)
-                .maxBranches(5)
-                .inventoryEnabled(true)
-                .accountingEnabled(true)
-                .reportingEnabled(true)
-                .requestsPerMinute(1500)
-                .build());
+        upsert(
+                "PRO",
+                "Professional",
+                75,
+                10,
+                true,
+                true,
+                true,
+                1500
+        );
 
-        createIfMissing("ENTERPRISE", Plan.builder()
-                .code("ENTERPRISE")
-                .name("Enterprise")
-                .maxUsers(1000)
-                .maxBranches(100)
-                .inventoryEnabled(true)
-                .accountingEnabled(true)
-                .reportingEnabled(true)
-                .requestsPerMinute(10000)
-                .build());
+        upsert(
+                "ENTERPRISE",
+                "Enterprise",
+                1000,
+                100,
+                true,
+                true,
+                true,
+                10000
+        );
     }
 
-    private void createIfMissing(String code, Plan plan) {
-        repository.findByCode(code).orElseGet(() -> repository.save(plan));
+    private void upsert(
+            String code,
+            String name,
+            int maxUsers,
+            int maxBranches,
+            boolean inventory,
+            boolean accounting,
+            boolean reporting,
+            int rpm
+    ) {
+
+        Plan plan =
+                repository.findByCode(code)
+                        .orElseGet(Plan::new);
+
+        plan.setCode(code);
+        plan.setName(name);
+        plan.setMaxUsers(maxUsers);
+        plan.setMaxBranches(maxBranches);
+        plan.setInventoryEnabled(inventory);
+        plan.setAccountingEnabled(accounting);
+        plan.setReportingEnabled(reporting);
+        plan.setRequestsPerMinute(rpm);
+
+        repository.save(plan);
     }
 }

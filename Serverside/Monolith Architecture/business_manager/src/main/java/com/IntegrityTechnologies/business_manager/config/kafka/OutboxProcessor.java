@@ -1,15 +1,17 @@
 package com.IntegrityTechnologies.business_manager.config.kafka;
 
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.PostConstruct;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -24,9 +26,23 @@ public class OutboxProcessor {
     // 🔥 BACKOFF CONFIG
     private static final long MIN_DELAY_MS = 100;
     private static final long MAX_DELAY_MS = 5000;
+    private volatile boolean running = true;
 
     private final ExecutorService executor =
-            Executors.newFixedThreadPool(WORKERS);
+            new ThreadPoolExecutor(
+                    WORKERS,
+                    WORKERS,
+                    60L,
+                    TimeUnit.SECONDS,
+                    new LinkedBlockingQueue<>(5000),
+                    r -> {
+                        Thread t = new Thread(r);
+                        t.setName("outbox-worker");
+                        t.setDaemon(true);
+                        return t;
+                    },
+                    new ThreadPoolExecutor.CallerRunsPolicy()
+            );
 
     @EventListener(
             ApplicationReadyEvent.class
@@ -44,7 +60,7 @@ public class OutboxProcessor {
 
         long delay = MIN_DELAY_MS;
 
-        while (true) {
+        while (running) {
 
             try {
 
@@ -64,7 +80,10 @@ public class OutboxProcessor {
 
                 try {
                     Thread.sleep(MAX_DELAY_MS);
-                } catch (InterruptedException ignored) {}
+                } catch (InterruptedException ignored) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
             }
         }
     }
@@ -91,5 +110,26 @@ public class OutboxProcessor {
         }
 
         return true;
+    }
+
+    @PreDestroy
+    public void shutdown() {
+
+        running = false;
+
+        executor.shutdown();
+
+        try {
+
+            if (!executor.awaitTermination(30, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+
+        } catch (InterruptedException ignored) {
+
+            executor.shutdownNow();
+
+            Thread.currentThread().interrupt();
+        }
     }
 }

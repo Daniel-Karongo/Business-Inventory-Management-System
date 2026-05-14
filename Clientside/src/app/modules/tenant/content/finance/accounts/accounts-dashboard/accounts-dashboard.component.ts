@@ -23,18 +23,18 @@ export class AccountsDashboardComponent {
   constructor(private router: Router) {}
 
   goChart() {
-    this.router.navigate(['/app/accounts/chart']);
+    this.router.navigate(['/app/finance/accounting/chart']);
   }
 
   goNewJournal() {
-    this.router.navigate(['/app/accounts/journals/new']);
+    this.router.navigate(['/app/finance/accounting/journals/new']);
   }
 
   goJournals() {
-    this.router.navigate(['/app/accounts/journals']);
+    this.router.navigate(['/app/finance/accounting/journals']);
   }
 
   goLedger() {
-    this.router.navigate(['/app/accounts/ledger']);
+    this.router.navigate(['/app/finance/accounting/ledger']);
   }
 }

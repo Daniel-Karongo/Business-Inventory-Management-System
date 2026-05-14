@@ -14,8 +14,25 @@ export class AuthErrorService {
         identifier?: string
     ) {
 
-        const code: string | null = err?.error?.code ?? null;
-        const msg: string = err?.error?.message ?? '';
+        const payload = err?.error;
+
+        const code: string | null =
+            typeof payload === 'object'
+                ? payload?.code ?? null
+                : null;
+
+        const msg: string =
+
+            typeof payload === 'string'
+                ? payload
+
+                : Array.isArray(payload?.errors)
+                    ? payload.errors.join(', ')
+
+                    : payload?.message
+                    ?? payload?.error
+                    ?? err?.message
+                    ?? '';
 
         /* ======================
            🔥 FALLBACK (NO CODE)
@@ -40,6 +57,12 @@ export class AuthErrorService {
 
             if (err.status === 403) {
                 return this.toast('Access denied.');
+            }
+
+            if (msg.includes('Tenant settings missing')) {
+                return this.toast(
+                    'Tenant setup is incomplete. Contact administrator.'
+                );
             }
 
             return this.toast(msg || 'Something went wrong.');

@@ -230,6 +230,10 @@ public class TenantBootstrapService {
             );
         }
 
+        if (admin == null) {
+            return false;
+        }
+
         /* =====================================
            5️⃣ ENSURE USER ↔ BRANCH
         ===================================== */

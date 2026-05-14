@@ -63,15 +63,21 @@ public class CorporateTaxProjectionConsumer {
 
     private void process(JournalPostedEvent event) {
 
-        if (processedRepo.existsByTenantIdAndEventIdAndConsumer(
-                event.tenantId(),
-                event.journalId(),
-                CONSUMER
-        )) return;
-        
-        try {
+        TenantContext.setTenantId(event.tenantId());
 
-            TenantContext.setTenantId(event.tenantId());
+        int claimed =
+                processedRepo.tryClaim(
+                        UUID.randomUUID(),
+                        event.tenantId(),
+                        event.journalId(),
+                        CONSUMER
+                );
+
+        if (claimed == 0) {
+            return;
+        }
+
+        try {
 
             UUID tenantId = event.tenantId();
             UUID branchId = event.branchId();
@@ -109,7 +115,9 @@ public class CorporateTaxProjectionConsumer {
                                 )
                                 .orElse(null);
 
-                if (account == null) continue;
+                if (account == null) {
+                    continue;
+                }
 
                 BigDecimal delta =
                         entry.direction() == EntryDirection.DEBIT
@@ -139,7 +147,9 @@ public class CorporateTaxProjectionConsumer {
             if (profit.compareTo(BigDecimal.ZERO) > 0) {
 
                 projection.setEstimatedTax(
-                        profit.multiply(taxProperties.getCorporateTaxRate())
+                        profit.multiply(
+                                taxProperties.getCorporateTaxRate()
+                        )
                 );
 
             } else {
@@ -149,13 +159,7 @@ public class CorporateTaxProjectionConsumer {
 
             repo.save(projection);
 
-            ProcessedKafkaEvent processed = new ProcessedKafkaEvent();
-            processed.setEventId(event.journalId());
-            processed.setConsumer(CONSUMER);
-            processedRepo.save(processed);
-
         } finally {
-
             TenantContext.clear();
         }
     }

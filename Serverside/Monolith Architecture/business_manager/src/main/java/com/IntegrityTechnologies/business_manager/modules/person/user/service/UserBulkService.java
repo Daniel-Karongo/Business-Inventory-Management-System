@@ -13,6 +13,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.user.dto.UserBu
 import com.IntegrityTechnologies.business_manager.modules.person.user.dto.UserDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.Role;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserRepository;
+import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
@@ -21,14 +22,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.io.IOException;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class UserBulkService {
 
     private final UserService userService;
@@ -37,13 +35,16 @@ public class UserBulkService {
     private final DepartmentRepository departmentRepository;
 
     private static final String DEFAULT_PASSWORD = "1234";
+    private final TenantMetadataCache tenantMetadataCache;
 
+    @Transactional
     public BulkResult<UserDTO> importUsers(
             BulkRequest<UserBulkRow> request,
             Authentication authentication
-    ) {
+    ) throws IOException {
 
         BulkResult<UserDTO> result = new BulkResult<>();
+
         result.setTotal(request.getItems().size());
 
         BulkOptions options =
@@ -57,40 +58,83 @@ public class UserBulkService {
 
         Role currentUserRole = SecurityUtils.currentRole();
 
+        /*
+         * PREPARED DTOS
+         * (validated + normalized, not yet persisted)
+         */
+        List<UserDTO> prepared = new ArrayList<>();
+
+        UUID tenantId = TenantContext.getTenantId();
+
+        int existingUsers =
+                userRepository.countByTenantId(tenantId);
+
+        int incomingUsers =
+                request.getItems().size();
+
+        int maxUsers =
+                tenantMetadataCache
+                        .getSubscriptionPlan(tenantId)
+                        .getMaxUsers();
+
+        if ((existingUsers + incomingUsers) > maxUsers) {
+
+            throw new IllegalArgumentException(
+                    "Import exceeds subscription user limit. "
+                            + "Current users: " + existingUsers
+                            + ", incoming users: " + incomingUsers
+                            + ", max allowed: " + maxUsers
+            );
+        }
+        
+    /* =====================================================
+       PASS 1 — VALIDATION ONLY (NO DB WRITES)
+    ===================================================== */
+
         for (int i = 0; i < request.getItems().size(); i++) {
+
             int rowNum = i + 1;
+
             UserBulkRow row = request.getItems().get(i);
 
             try {
+
                 validate(row);
 
-                /* =========================
-                   NORMALIZATION
-                   ========================= */
+            /* =========================
+               NORMALIZATION
+            ========================= */
 
-                String username = PhoneAndEmailNormalizer.toTitleCase(row.getUsername());
+                String username =
+                        PhoneAndEmailNormalizer.toTitleCase(
+                                row.getUsername()
+                        );
+
                 String roleName =
                         (row.getRole() == null || row.getRole().isBlank())
                                 ? Role.EMPLOYEE.name()
                                 : row.getRole().trim().toUpperCase();
 
-                List<String> emails = normalizeCommaList(row.getEmailAddresses());
-                List<String> phones = normalizeCommaList(row.getPhoneNumbers());
+                List<String> emails =
+                        normalizeCommaList(row.getEmailAddresses());
 
-                /* =========================
-                   IN-FILE DUPLICATES
-                   ========================= */
+                List<String> phones =
+                        normalizeCommaList(row.getPhoneNumbers());
+
+            /* =========================
+               IN-FILE DUPLICATES
+            ========================= */
 
                 if (!seenUsernames.add(username)) {
                     throw new IllegalArgumentException(
-                            "Duplicate username in import: " + username
+                            "Duplicate username in file: " + username
                     );
                 }
 
                 for (String e : emails) {
                     if (!seenEmails.add(e)) {
                         throw new IllegalArgumentException(
-                                "Duplicate email in import: " + e
+                                "Duplicate email in file: " + e
                         );
                     }
                 }
@@ -98,127 +142,214 @@ public class UserBulkService {
                 for (String p : phones) {
                     if (!seenPhones.add(p)) {
                         throw new IllegalArgumentException(
-                                "Duplicate phone in import: " + p
+                                "Duplicate phone in file: " + p
                         );
                     }
                 }
 
-                /* =========================
-                   DB DUPLICATES
-                   ========================= */
+            /* =========================
+               DB DUPLICATES
+            ========================= */
 
-                if (options.isSkipDuplicates()
-                        && userRepository.existsByUsernameAndTenantId(username, TenantContext.getTenantId())) {
+                if (
+                        options.isSkipDuplicates()
+                                && userRepository.existsByUsernameAndTenantId(
+                                username,
+                                TenantContext.getTenantId()
+                        )
+                ) {
                     throw new IllegalArgumentException(
                             "Username already exists: " + username
                     );
                 }
 
-                /* =========================
-                   ROLE RESOLUTION
-                   ========================= */
+                for (String email : emails) {
+
+                    if (
+                            userRepository.existsByEmailAddressAndTenantId(
+                                    email,
+                                    TenantContext.getTenantId()
+                            )
+                    ) {
+                        throw new IllegalArgumentException(
+                                "Email already exists: " + email
+                        );
+                    }
+                }
+
+                for (String phone : phones) {
+
+                    if (
+                            userRepository.existsByPhoneNumberAndTenantId(
+                                    phone,
+                                    TenantContext.getTenantId()
+                            )
+                    ) {
+                        throw new IllegalArgumentException(
+                                "Phone number already exists: " + phone
+                        );
+                    }
+                }
+
+            /* =========================
+               ROLE RESOLUTION
+            ========================= */
 
                 Role targetRole;
 
                 try {
-                    targetRole = Role.valueOf(roleName);
+
+                    targetRole =
+                            Role.valueOf(roleName);
+
                 } catch (Exception ex) {
+
                     throw new IllegalArgumentException(
                             "Invalid role: " + roleName
                     );
                 }
 
                 if (!currentUserRole.canManage(targetRole)) {
+
                     throw new IllegalArgumentException(
-                            "Insufficient privilege to assign role: " + targetRole
+                            "Insufficient privilege to assign role: "
+                                    + targetRole
                     );
                 }
 
-                /* =========================
-                   ORG RESOLUTION (OPTIONAL)
-                   ========================= */
+            /* =========================
+               ORG VALIDATION
+               (NO PERSISTENCE)
+            ========================= */
 
-                List<DepartmentAssignmentDTO> assignments = null;
+                String branchCode =
+                        row.getBranchCode() != null
+                                ? row.getBranchCode().trim()
+                                : "MAIN";
 
-                if (row.getBranchCode() != null && row.getDepartmentName() != null) {
+                String departmentName =
+                        row.getDepartmentName() != null
+                                ? row.getDepartmentName().trim()
+                                : "GENERAL";
 
-                    Branch branch = branchRepository.findByTenantIdAndBranchCodeIgnoreCaseAndDeletedFalse(
-                        TenantContext.getTenantId(),
-                        row.getBranchCode()
-                    )
-                            .orElseThrow(() ->
-                                    new IllegalArgumentException(
-                                            "Unknown branchCode: " + row.getBranchCode()
-                                    )
-                            );
+                Branch branch =
+                        branchRepository
+                                .findByTenantIdAndBranchCodeIgnoreCaseAndDeletedFalse(
+                                        TenantContext.getTenantId(),
+                                        branchCode
+                                )
+                                .orElseThrow(() ->
+                                        new IllegalArgumentException(
+                                                "Unknown branchCode: " + branchCode
+                                        )
+                                );
 
-                    Department department = departmentRepository.findByTenantIdAndNameIgnoreCaseAndBranch_Id(
-                            TenantContext.getTenantId(),
-                            row.getDepartmentName(),
-                            branch.getId()
-                    ).orElseThrow(() ->
-                                    new IllegalArgumentException(
-                                            "Unknown department: " + row.getDepartmentName()
-                                    )
-                            );
+                Department department =
+                        departmentRepository
+                                .findByTenantIdAndNameIgnoreCaseAndBranch_Id(
+                                        TenantContext.getTenantId(),
+                                        departmentName,
+                                        branch.getId()
+                                )
+                                .orElseThrow(() ->
+                                        new IllegalArgumentException(
+                                                "Unknown department: "
+                                                        + departmentName
+                                        )
+                                );
 
-                    assignments = List.of(
-                            new DepartmentAssignmentDTO(
-                                    branch.getId(),
-                                    department.getId(),
-                                    normalizePosition(row.getPosition())
-                            )
-                    );
-                }
+            /* =========================
+               BUILD DTO
+            ========================= */
 
-                /* =========================
-                   BUILD DTO
-                   ========================= */
+                String normalizedPosition =
+                        row.getPosition() != null
+                                ? normalizePosition(row.getPosition())
+                                : "member";
 
-                UserDTO dto = UserDTO.builder()
-                        .username(username)
-                        .password(DEFAULT_PASSWORD)
-                        .role(targetRole.name())
-                        .emailAddresses(emails)
-                        .phoneNumbers(phones)
-                        .branchCode(
-                                row.getBranchCode() != null
-                                        ? row.getBranchCode()
-                                        : "MAIN"
-                        )
-                        .departmentName(
-                                row.getDepartmentName() != null
-                                        ? row.getDepartmentName()
-                                        : "GENERAL"
-                        )
-                        .position(
-                                row.getPosition() != null
-                                        ? normalizePosition(row.getPosition())
-                                        : "member"
-                        )
-                        .departmentsAndPositions(assignments) // still used on real import
-                        .build();
+                DepartmentAssignmentDTO assignment =
+                        DepartmentAssignmentDTO.builder()
+                                .branchId(branch.getId())
+                                .departmentId(department.getId())
+                                .position(normalizedPosition)
+                                .build();
 
-                if (options.isDryRun()) {
-                    // 🧪 Dry run → simulate success
-                    result.addSuccess(dto);
-                } else {
-                    // 💾 Actual import
-                    UserDTO saved =
-                            userService.registerUser(dto, authentication);
-                    result.addSuccess(saved);
-                }
+                UserDTO dto =
+                        UserDTO.builder()
+                                .username(username)
+                                .password(
+                                        row.getPassword() != null
+                                                ? String.valueOf(row.getPassword())
+                                                : DEFAULT_PASSWORD
+                                )
+                                .role(targetRole.name())
+                                .emailAddresses(emails)
+                                .phoneNumbers(phones)
+                                .branchCode(branchCode)
+                                .departmentName(departmentName)
+                                .position(normalizedPosition)
+                                .departmentsAndPositions(
+                                        List.of(assignment)
+                                )
+                                .build();
+
+                prepared.add(dto);
+
+                /*
+                 * PREVIEW SUCCESS
+                 * (validation success only)
+                 */
+                result.addSuccess(dto);
 
             } catch (Exception ex) {
-                result.addError(rowNum, ex.getMessage());
+
+                result.addError(
+                        rowNum,
+                        ex.getMessage()
+                );
             }
         }
 
-        // 🔥 HARD GUARANTEE — NO PERSISTENCE ON DRY RUN
+    /* =====================================================
+       ❌ VALIDATION FAILED → ABORT BEFORE PERSISTENCE
+    ===================================================== */
+
+        if (!result.getErrors().isEmpty()) {
+
+            /*
+             * Preview should not appear as persisted success
+             */
+            result.setSuccess(0);
+
+            return result;
+        }
+
+    /* =====================================================
+       🧪 DRY RUN → RETURN PREVIEW ONLY
+    ===================================================== */
+
         if (options.isDryRun()) {
-            TransactionAspectSupport
-                    .currentTransactionStatus()
-                    .setRollbackOnly();
+            return result;
+        }
+
+    /* =====================================================
+       PASS 2 — PERSIST (ALL OR NOTHING)
+       NO TRY/CATCH
+    ===================================================== */
+
+        result.getData().clear();
+
+        result.setSuccess(0);
+
+        for (UserDTO dto : prepared) {
+
+            UserDTO saved =
+                    userService.registerUser(
+                            dto,
+                            authentication
+                    );
+
+            result.addSuccess(saved);
         }
 
         return result;

@@ -152,13 +152,11 @@ export class LoginComponent implements OnInit {
     try {
       location = await this.locationService.getLocation();
     } catch {
-      this.biometricLoading = false;
-      this.snack.open(
-        'Location access is required for biometric login.',
-        'Close',
-        { duration: 5000 }
-      );
-      return;
+      location = {
+        latitude: 0,
+        longitude: 0,
+        accuracy: 0
+      };
     }
 
     const deviceId = this.deviceService.getDeviceId();
@@ -245,15 +243,11 @@ export class LoginComponent implements OnInit {
     try {
       location = await this.locationService.getLocation();
     } catch {
-      this.loginLoading = false;
-
-      this.snack.open(
-        'Location access is required to log in. Please enable it in your browser settings.',
-        'Close',
-        { duration: 6000 }
-      );
-
-      return;
+      location = {
+        latitude: 0,
+        longitude: 0,
+        accuracy: 0
+      };
     }
 
     const ua = navigator.userAgent;

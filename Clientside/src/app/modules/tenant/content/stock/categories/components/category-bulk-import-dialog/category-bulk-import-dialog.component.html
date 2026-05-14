@@ -18,10 +18,12 @@
 
             <div class="rows" formArrayName="rows">
 
-                <div class="row-card" *ngFor="let r of rows.controls; let i = index" [formGroupName]="i">
+                <div class="row-card" [attr.data-line]="i + 1" tabindex="-1"
+                    *ngFor="let r of rows.controls; let i = index" [formGroupName]="i">
 
                     <div class="row-header">
                         <span>Category {{ i + 1 }}</span>
+
                         <button mat-icon-button color="warn" (click)="removeRow(i)">
                             <mat-icon>delete</mat-icon>
                         </button>

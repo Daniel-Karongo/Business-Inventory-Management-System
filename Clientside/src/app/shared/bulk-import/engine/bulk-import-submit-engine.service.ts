@@ -6,6 +6,7 @@ import { Observable } from 'rxjs';
 import { BulkRequest, BulkResult } from '../../models/bulk-import.model';
 import { BulkImportResultDialogComponent } from
   '../../components/bulk-import-result-dialog/bulk-import-result-dialog.component';
+import { BulkImportErrorService } from './bulk-import-error.service';
 
 /* ============================================================
    Inventory backend preview adapter helpers
@@ -28,7 +29,8 @@ export class BulkImportSubmitEngineService {
 
   constructor(
     private dialog: MatDialog,
-    private snackbar: MatSnackBar
+    private snackbar: MatSnackBar,
+    private bulkImportErrorService: BulkImportErrorService
   ) { }
 
   execute<T>({
@@ -217,13 +219,8 @@ export class BulkImportSubmitEngineService {
 
           setLoading?.(false);
 
-          this.snackbar.open(
-            'Bulk import failed',
-            'Close',
-            {
-              duration: 3000
-            }
-          );
+          this.bulkImportErrorService
+            .handle(err);
         }
       });
   }

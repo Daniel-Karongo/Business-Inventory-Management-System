@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -72,11 +73,19 @@ public class BalanceProjectionConsumer {
 
     private void process(JournalPostedEvent event) {
 
-        if (processedRepo.existsByTenantIdAndEventIdAndConsumer(
-                event.tenantId(),
-                event.journalId(),
-                CONSUMER
-        )) return;
+        TenantContext.setTenantId(event.tenantId());
+
+        int claimed =
+                processedRepo.tryClaim(
+                        UUID.randomUUID(),
+                        event.tenantId(),
+                        event.journalId(),
+                        CONSUMER
+                );
+
+        if (claimed == 0) {
+            return;
+        }
 
         for (LedgerEntryDTO entry : event.entries()) {
 
@@ -92,11 +101,5 @@ public class BalanceProjectionConsumer {
                     delta
             );
         }
-
-        ProcessedKafkaEvent processed = new ProcessedKafkaEvent();
-        processed.setEventId(event.journalId());
-        processed.setConsumer(CONSUMER);
-
-        processedRepo.save(processed);
     }
 }

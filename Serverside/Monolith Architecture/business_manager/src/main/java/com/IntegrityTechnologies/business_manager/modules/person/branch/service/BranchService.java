@@ -34,6 +34,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 import java.util.Objects;
@@ -105,7 +107,7 @@ public class BranchService {
 
         recordAudit(branch, "CREATE", null, null, null, authentication, "Branch created");
 
-        tenantMetadataCache.invalidateTenant(TenantContext.getTenantId());
+        invalidateBranchCacheAfterCommit();
 
         return toDTO(branch);
     }
@@ -181,7 +183,7 @@ public class BranchService {
 
         branchRepository.save(branch);
 
-        tenantMetadataCache.invalidateTenant(TenantContext.getTenantId());
+        invalidateBranchCacheAfterCommit();
         return toDTO(branch);
     }
 
@@ -224,7 +226,7 @@ public class BranchService {
             recordAudit(branch, "HARD_DELETE", null,
                     branch.toString(), null, authentication, "Branch permanently deleted");
         }
-        tenantMetadataCache.invalidateTenant(TenantContext.getTenantId());
+        invalidateBranchCacheAfterCommit();
     }
 
     /* =====================================================
@@ -247,7 +249,7 @@ public class BranchService {
 
         recordAudit(branch, "RESTORE", "deleted",
                 "true", "false", authentication, "Branch restored");
-        tenantMetadataCache.invalidateTenant(TenantContext.getTenantId());
+        invalidateBranchCacheAfterCommit();
     }
 
     /* =====================================================
@@ -365,6 +367,24 @@ public class BranchService {
                     field, oldValue, newValue,
                     authentication, "Field updated");
         }
+    }
+
+    private void invalidateBranchCacheAfterCommit() {
+
+        UUID tenantId =
+                TenantContext.getTenantId();
+
+        TransactionSynchronizationManager
+                .registerSynchronization(
+                        new TransactionSynchronization() {
+                            @Override
+                            public void afterCommit() {
+                                tenantMetadataCache.invalidateBranchCache(
+                                        tenantId
+                                );
+                            }
+                        }
+                );
     }
 
     private BranchDTO toDTO(Branch branch) {

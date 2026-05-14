@@ -59,23 +59,39 @@ public class VatLedgerProjectionConsumer {
     }
 
     private void process(JournalPostedEvent event) {
-        if (processedRepo.existsByTenantIdAndEventIdAndConsumer(
-                event.tenantId(),
-                event.journalId(),
-                CONSUMER
-        )) return;
-        try {
 
-            TenantContext.setTenantId(event.tenantId());
+        TenantContext.setTenantId(event.tenantId());
+
+        int claimed =
+                processedRepo.tryClaim(
+                        UUID.randomUUID(),
+                        event.tenantId(),
+                        event.journalId(),
+                        CONSUMER
+                );
+
+        if (claimed == 0) {
+            return;
+        }
+
+        try {
 
             UUID tenantId = event.tenantId();
             UUID branchId = event.branchId();
 
             UUID outputVat =
-                    accounts.get(tenantId, branchId, AccountRole.VAT_OUTPUT);
+                    accounts.get(
+                            tenantId,
+                            branchId,
+                            AccountRole.VAT_OUTPUT
+                    );
 
             UUID inputVat =
-                    accounts.get(tenantId, branchId, AccountRole.VAT_INPUT);
+                    accounts.get(
+                            tenantId,
+                            branchId,
+                            AccountRole.VAT_INPUT
+                    );
 
             int year = LocalDate.now().getYear();
             int month = LocalDate.now().getMonthValue();
@@ -100,8 +116,9 @@ public class VatLedgerProjectionConsumer {
             for (LedgerEntryDTO entry : event.entries()) {
 
                 if (!entry.accountId().equals(outputVat)
-                        && !entry.accountId().equals(inputVat))
+                        && !entry.accountId().equals(inputVat)) {
                     continue;
+                }
 
                 BigDecimal delta =
                         entry.direction() == EntryDirection.DEBIT
@@ -124,13 +141,7 @@ public class VatLedgerProjectionConsumer {
 
             repo.save(projection);
 
-            ProcessedKafkaEvent processed = new ProcessedKafkaEvent();
-            processed.setEventId(event.journalId());
-            processed.setConsumer(CONSUMER);
-            processedRepo.save(processed);
-
         } finally {
-
             TenantContext.clear();
         }
     }
