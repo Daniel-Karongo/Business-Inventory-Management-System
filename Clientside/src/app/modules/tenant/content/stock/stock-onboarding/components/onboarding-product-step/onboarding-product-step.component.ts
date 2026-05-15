@@ -325,8 +325,7 @@ export class OnboardingProductStepComponent
 
     private loadBranches() {
 
-        this.branchService
-            .getAll(false)
+        this.branchService.getAllLegacy()
             .subscribe({
 
                 next: branches => {

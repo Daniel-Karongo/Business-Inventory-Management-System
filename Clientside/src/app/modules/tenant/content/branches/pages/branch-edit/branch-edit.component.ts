@@ -1,41 +1,61 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import {
-  FormBuilder,
-  Validators,
-  ReactiveFormsModule,
-  FormGroup
-} from '@angular/forms';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { Observable, map } from 'rxjs';
+  Component,
+  OnInit
+} from '@angular/core';
 
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatExpansionModule } from '@angular/material/expansion';
+import { CommonModule } from '@angular/common';
+
+import {
+  ActivatedRoute,
+  Router
+} from '@angular/router';
+
+import { finalize, forkJoin } from 'rxjs';
+
+import {
+  WorkflowShellComponent
+} from '../../../../../../shared/layout/workflow-shell/workflow-shell.component';
+
+import {
+  WorkflowCardComponent
+} from '../../../../../../shared/layout/workflow-card/workflow-card.component';
+
+import {
+  BranchFormComponent
+} from '../../components/branch-form/branch-form.component';
 
 import { BranchService } from '../../services/branch.service';
-import { DepartmentService } from '../../../departments/services/department.service';
-import { UserService } from '../../../users/services/user/user.service';
 
-import { BranchDTO } from '../../models/branch.model';
-import { DepartmentDTO } from '../../../departments/models/department.model';
-import { MinimalUserDTO } from '../../../users/models/user.model';
+import {
+  BranchDetailsDTO,
+  BranchFormDTO
+} from '../../models/branch.model';
 
-import { SearchableAssignComponent } from '../../../../../../shared/components/searchable-assign/searchable-assign.component';
+import {
+  DepartmentDTO
+} from '../../../departments/models/department.model';
+
+import {
+  MinimalUserDTO
+} from '../../../users/models/user.model';
+
+import {
+  DepartmentService
+} from '../../../departments/services/department.service';
+
+import {
+  UserService
+} from '../../../users/services/user/user.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   standalone: true,
   selector: 'app-branch-edit',
   imports: [
     CommonModule,
-    ReactiveFormsModule,
-    RouterModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatExpansionModule,
-    SearchableAssignComponent
+    WorkflowShellComponent,
+    WorkflowCardComponent,
+    BranchFormComponent
   ],
   templateUrl: './branch-edit.component.html',
   styleUrls: ['./branch-edit.component.scss']
@@ -43,77 +63,122 @@ import { SearchableAssignComponent } from '../../../../../../shared/components/s
 export class BranchEditComponent implements OnInit {
 
   id!: string;
-  fg!: FormGroup;
+
+  loading = true;
+
+  saving = false;
+
+  branch?: BranchDetailsDTO;
 
   users: MinimalUserDTO[] = [];
+
   departments: DepartmentDTO[] = [];
 
   userIds: string[] = [];
+
   departmentIds: string[] = [];
 
-  filteredUsers$!: Observable<MinimalUserDTO[]>;
-  filteredDepts$!: Observable<DepartmentDTO[]>;
-
   constructor(
-    private fb: FormBuilder,
     private route: ActivatedRoute,
     private router: Router,
     private branchService: BranchService,
-    private deptService: DepartmentService,
-    private userService: UserService
+    private departmentService: DepartmentService,
+    private userService: UserService,
+    private snackbar: MatSnackBar
   ) { }
 
   ngOnInit() {
-    this.fg = this.fb.group({
-      branchCode: ['', Validators.required],
-      name: ['', Validators.required],
-      location: [''],
-      phone: [''],
-      email: ['']
-    });
 
-    this.id = this.route.snapshot.paramMap.get('id')!;
+    this.id =
+      this.route.snapshot.paramMap.get('id')!;
 
-    // ---- USERS ----
-    this.userService.list(0, 500).subscribe(r => {
-      this.users = r.data;
-      this.filteredUsers$ = this.userService.list(0, 500).pipe(
-        map(x => x.data)
-      );
-    });
+    forkJoin({
+      branch:
+        this.branchService.getById(this.id),
 
-    // ---- DEPARTMENTS ----
-    this.deptService.getAll(false).subscribe(d => {
-      this.departments = d;
-      this.filteredDepts$ = this.deptService.getAll(false);
-    });
+      users:
+        this.userService.list(0, 500),
 
-    // ---- BRANCH ----
-    this.branchService.getById(this.id).subscribe(b => this.loadBranch(b));
+      departments:
+        this.departmentService.getAll(false)
+    })
+      .subscribe({
+        next: result => {
+
+          this.branch =
+            result.branch;
+
+          this.users =
+            result.users.data;
+
+          this.departments =
+            result.departments;
+
+          this.userIds =
+            result.branch.users?.map(u => u.id) ?? [];
+
+          this.departmentIds =
+            result.branch.departments?.map(d => d.id!) ?? [];
+
+          this.loading = false;
+        },
+
+        error: () => {
+          this.loading = false;
+        }
+      });
   }
 
-  private loadBranch(b: BranchDTO) {
-    this.fg.patchValue(b);
-    this.userIds = b.users?.map(u => u.id) ?? [];
-    this.departmentIds = b.departments?.map(d => d.id) ?? [];
-  }
+  save(dto: BranchFormDTO) {
 
-  // ---- REQUIRED by SearchableAssignComponent ----
-  userDisplay = (u: MinimalUserDTO) => u.username;
-  userId = (u: MinimalUserDTO) => u.id;
+    this.saving = true;
 
-  deptDisplay = (d: DepartmentDTO) => d.name;
-  deptId = (d: DepartmentDTO) => d.id!;
+    this.branchService
+      .update(
+        this.id,
+        {
+          ...dto,
+          userIds: this.userIds,
+          departmentIds: this.departmentIds
+        }
+      )
+      .pipe(
+        finalize(() => {
+          this.saving = false;
+        })
+      )
+      .subscribe({
+        next: () => {
 
-  save() {
-    if (this.fg.invalid) return;
+          this.snackbar.open(
+            'Branch updated successfully',
+            'Close',
+            {
+              duration: 3000
+            }
+          );
 
-    this.branchService.update(this.id, {
-      ...this.fg.value,
-      userIds: this.userIds,
-      departmentIds: this.departmentIds
-    }).subscribe(() =>
-      this.router.navigate(['/app/branches', this.id])
-    );
+          this.router.navigate([
+            '/app/branches',
+            this.id,
+            'overview'
+          ]);
+        },
+
+        error: (err) => {
+
+          const message =
+            err?.error?.message
+            || 'Failed to update branch';
+
+          this.snackbar.open(
+            message,
+            'Close',
+            {
+              duration: 4000
+            }
+          );
+        }
+      });
   }
 }

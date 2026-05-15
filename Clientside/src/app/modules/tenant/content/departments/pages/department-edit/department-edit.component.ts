@@ -81,9 +81,9 @@ export class DepartmentEditComponent implements OnInit {
         .pipe(map(x => x.data));
     });
 
-    this.branchService.getAll(false).subscribe(b => {
+    this.branchService.getAllLegacy().subscribe(b => {
       this.branches = b;
-      this.filteredBranches$ = this.branchService.getAll(false);
+      this.filteredBranches$ = this.branchService.getAllLegacy();
     });
 
     this.deptService.get(this.id).subscribe(d => this.loadDepartment(d));

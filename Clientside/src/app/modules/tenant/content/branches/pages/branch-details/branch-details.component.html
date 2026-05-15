@@ -1,16 +1,131 @@
-<div *ngIf="branch">
-  <div class="flex justify-between mb-4">
-    <h2 class="text-xl font-semibold">{{ branch.name }}</h2>
-    <button mat-stroked-button [routerLink]="['edit']">Edit</button>
+<app-workflow-card *ngIf="branch && !loading">
+
+  <!-- =====================================================
+       HEADER
+  ====================================================== -->
+
+  <div workflow-card-header>
+
+    <div>
+
+      <h2 class="overview-title">
+        Branch Overview
+      </h2>
+
+      <div class="overview-subtitle">
+        Operational branch summary
+      </div>
+
+    </div>
+
   </div>
 
-  <div class="grid grid-cols-2 gap-4 text-sm">
-    <div><strong>Code:</strong> {{ branch.branchCode }}</div>
-    <div><strong>Location:</strong> {{ branch.location }}</div>
-    <div><strong>Phone:</strong> {{ branch.phone }}</div>
-    <div><strong>Email:</strong> {{ branch.email }}</div>
-    <div><strong>Created On:</strong>{{ branch.createdAt | date:'medium' }}</div>
+  <!-- =====================================================
+       GRID
+  ====================================================== -->
+
+  <div class="overview-grid">
+
+    <div class="overview-item">
+
+      <div class="overview-label">
+        Branch Code
+      </div>
+
+      <div class="overview-value">
+        {{ branch.branchCode }}
+      </div>
+
+    </div>
+
+    <div class="overview-item">
+
+      <div class="overview-label">
+        Name
+      </div>
+
+      <div class="overview-value">
+        {{ branch.name }}
+      </div>
+
+    </div>
+
+    <div class="overview-item">
+
+      <div class="overview-label">
+        Location
+      </div>
+
+      <div class="overview-value">
+        {{ branch.location || '—' }}
+      </div>
+
+    </div>
+
+    <div class="overview-item">
+
+      <div class="overview-label">
+        Phone
+      </div>
+
+      <div class="overview-value">
+        {{ branch.phone || '—' }}
+      </div>
+
+    </div>
+
+    <div class="overview-item">
+
+      <div class="overview-label">
+        Email
+      </div>
+
+      <div class="overview-value">
+        {{ branch.email || '—' }}
+      </div>
+
+    </div>
+
+    <div class="overview-item">
+
+      <div class="overview-label">
+        Created
+      </div>
+
+      <div class="overview-value">
+        {{ branch.createdAt | date:'medium' }}
+      </div>
+
+    </div>
+
   </div>
-</div>
 
+</app-workflow-card>
 
+<!-- =====================================================
+     LOADING
+====================================================== -->
+
+<app-workflow-card *ngIf="loading">
+
+  <div class="overview-loading">
+
+    Loading branch overview...
+
+  </div>
+
+</app-workflow-card>
+
+<!-- =====================================================
+     EMPTY
+====================================================== -->
+
+<app-workflow-card *ngIf="!loading && !branch">
+
+  <div class="overview-empty">
+
+    Branch overview unavailable.
+
+  </div>
+
+</app-workflow-card>

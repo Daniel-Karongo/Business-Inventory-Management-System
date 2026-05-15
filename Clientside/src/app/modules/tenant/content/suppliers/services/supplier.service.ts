@@ -14,42 +14,69 @@ import {
 
 import { Product } from '../../stock/models/product.model';
 import { BulkRequest, BulkResult } from '../../../../../shared/models/bulk-import.model';
+import { BranchContextService } from '../../../../../core/services/branch-context.service';
 
 @Injectable({ providedIn: 'root' })
 export class SupplierService {
 
   private base = environment.apiUrl + environment.endpoints.suppliers.base;
 
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient,
+    private branchContext: BranchContextService
+  ) { }
+
+  private resolveBranch(override?: string): string {
+
+    const branchId =
+      override ?? this.branchContext.currentBranch;
+
+    if (!branchId) {
+      throw new Error('Branch not selected');
+    }
+
+    return branchId;
+  }
 
   /* ============================================================
      LIST / GET
   ============================================================ */
 
-  getAll(deleted?: boolean): Observable<Supplier[]> {
+  getAll(
+    deleted?: boolean,
+    overrideBranchId?: string
+  ): Observable<Supplier[]> {
+
+    let params = new HttpParams()
+      .set('branchId', this.resolveBranch(overrideBranchId));
+
     if (deleted !== undefined) {
-      let params = new HttpParams();
       params = params.set('deleted', String(deleted));
-      return this.http.get<Supplier[]>(`${this.base}/all`, { params });
-    } else {
-      return this.http.get<Supplier[]>(`${this.base}/all`);
     }
+
+    return this.http.get<Supplier[]>(
+      `${this.base}/all`,
+      { params }
+    );
   }
 
-  getById(identifier: string, deleted?: boolean): Observable<Supplier> {
-    let params = new HttpParams();
+  getById(
+    identifier: string,
+    deleted?: boolean,
+    overrideBranchId?: string
+  ): Observable<Supplier> {
+
+    let params = new HttpParams()
+      .set('branchId', this.resolveBranch(overrideBranchId));
 
     if (deleted !== undefined) {
       params = params.set('deleted', String(deleted));
-      return this.http.get<Supplier>(
-        `${this.base}/identifier/${identifier}`,
-        { params }
-      );
-    } else {
-      return this.http.get<Supplier>(
-        `${this.base}/identifier/${identifier}`
-      );
     }
+
+    return this.http.get<Supplier>(
+      `${this.base}/identifier/${identifier}`,
+      { params }
+    );
   }
 
   /* ============================================================

@@ -1,56 +1,31 @@
-<h2 class="text-xl font-semibold mb-4">Create Branch</h2>
+<app-workflow-shell>
 
-<form [formGroup]="fg" class="grid grid-cols-2 gap-4 bg-[var(--surface)] p-6 rounded">
+  <div workflow-header>
 
-  <mat-form-field>
-    <mat-label>Branch Code</mat-label>
-    <input matInput formControlName="branchCode">
-  </mat-form-field>
+    <div>
 
-  <mat-form-field>
-    <mat-label>Name</mat-label>
-    <input matInput formControlName="name">
-  </mat-form-field>
+      <h1 class="page-title">
+        Create Branch
+      </h1>
 
-  <mat-form-field>
-    <mat-label>Location</mat-label>
-    <input matInput formControlName="location">
-  </mat-form-field>
+      <div class="page-subtitle">
+        Configure a new operational branch workspace
+      </div>
 
-  <mat-form-field>
-    <mat-label>Phone</mat-label>
-    <input matInput formControlName="phone">
-  </mat-form-field>
+    </div>
 
-  <mat-form-field class="col-span-2">
-    <mat-label>Email</mat-label>
-    <input matInput formControlName="email">
-  </mat-form-field>
+  </div>
 
-  <mat-expansion-panel class="mt-4 col-span-2">
-    <mat-expansion-panel-header>
-      Assign Users (Optional)
-    </mat-expansion-panel-header>
+  <div workflow-content>
 
-    <app-searchable-assign label="Users" [items]="users" [display]="userDisplay" [id]="userId"
-      [(selectedIds)]="userIds">
-    </app-searchable-assign>
-  </mat-expansion-panel>
+    <app-workflow-card>
 
-  <mat-expansion-panel class="mt-4 col-span-2">
-    <mat-expansion-panel-header>
-      Assign Departments (Optional)
-    </mat-expansion-panel-header>
+      <app-branch-form [loading]="loading" submitLabel="Create Branch" [users]="users" [departments]="departments"
+        [(userIds)]="userIds" [(departmentIds)]="departmentIds" (submitted)="save($event)">
+      </app-branch-form>
 
-    <app-searchable-assign label="Departments" [items]="departments" [display]="deptDisplay" [id]="deptId"
-      [(selectedIds)]="departmentIds">
-    </app-searchable-assign>
-  </mat-expansion-panel>
-</form>
+    </app-workflow-card>
 
-<div class="mt-6 flex gap-2">
-  <button mat-flat-button (click)="save()">Save</button>
-  <button mat-stroked-button routerLink="/app/branches">Cancel</button>
-</div>
+  </div>
 
-
+</app-workflow-shell>

@@ -2,13 +2,15 @@
   display: block;
 }
 
-form {
-  background: var(--surface);
-  padding: 1.5rem;
-  border-radius: 8px;
-  max-width: 900px;
+.page-title {
+  margin: 0;
+
+  font-size: 28px;
+  font-weight: 700;
 }
 
-mat-form-field {
-  width: 100%;
+.page-subtitle {
+  margin-top: 8px;
+
+  color: var(--text-secondary);
 }

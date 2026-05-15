@@ -1,0 +1,148 @@
+<app-workflow-card>
+
+  <div class="settings-shell">
+
+    <div *ngIf="loading" class="progress-block">
+
+      <span>
+        Loading SMS settings...
+      </span>
+
+    </div>
+
+    <div class="settings-toolbar">
+
+      <div>
+
+        <div class="settings-kicker">
+          SMS Infrastructure
+        </div>
+
+        <h2 class="settings-heading">
+          SMS Provider Configuration
+        </h2>
+
+      </div>
+
+      <button mat-flat-button color="primary" (click)="save()" [disabled]="saving || form.pristine">
+
+        <ng-container *ngIf="!saving">
+          Save Changes
+        </ng-container>
+
+        <mat-spinner *ngIf="saving" diameter="18">
+        </mat-spinner>
+
+      </button>
+
+    </div>
+
+    <form [formGroup]="form" class="settings-grid">
+
+      <section class="settings-panel">
+
+        <div class="panel-title">
+          SMS Runtime
+        </div>
+
+        <div class="panel-description">
+          Configure provider activation and
+          operational execution mode.
+        </div>
+
+        <div class="toggle-group">
+
+          <mat-slide-toggle formControlName="enabled">
+
+            Enable SMS
+
+          </mat-slide-toggle>
+
+          <mat-slide-toggle formControlName="sandbox">
+
+            Sandbox Mode
+
+          </mat-slide-toggle>
+
+          <mat-slide-toggle formControlName="active">
+
+            Active
+
+          </mat-slide-toggle>
+
+        </div>
+
+      </section>
+
+      <section class="settings-panel">
+
+        <div class="panel-title">
+          Provider Credentials
+        </div>
+
+        <div class="panel-description">
+          Provider secrets remain preserved unless
+          explicitly replaced.
+        </div>
+
+        <div class="credentials-grid">
+
+          <mat-form-field appearance="fill">
+
+            <mat-label>
+              Provider
+            </mat-label>
+
+            <input matInput formControlName="provider">
+
+          </mat-form-field>
+
+          <mat-form-field appearance="fill">
+
+            <mat-label>
+              Username
+            </mat-label>
+
+            <input matInput formControlName="username">
+
+          </mat-form-field>
+
+          <mat-form-field appearance="fill">
+
+            <mat-label>
+              API Key
+            </mat-label>
+
+            <input matInput type="password" formControlName="apiKey">
+
+          </mat-form-field>
+
+          <mat-form-field appearance="fill">
+
+            <mat-label>
+              Sender ID
+            </mat-label>
+
+            <input matInput formControlName="senderId">
+
+          </mat-form-field>
+
+          <mat-form-field appearance="fill">
+
+            <mat-label>
+              Default Country Code
+            </mat-label>
+
+            <input matInput formControlName="defaultCountryCode">
+
+          </mat-form-field>
+
+        </div>
+
+      </section>
+
+    </form>
+
+  </div>
+
+</app-workflow-card>

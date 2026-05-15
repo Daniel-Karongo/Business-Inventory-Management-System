@@ -321,7 +321,7 @@ export class SaleCreateComponent implements OnInit {
 
     forkJoin({
       products: this.productService.getAll(),
-      branches: this.branchService.getAll(false)
+      branches: this.branchService.getAllLegacy()
     })
       .pipe(
         takeUntilDestroyed(this.destroyRef)

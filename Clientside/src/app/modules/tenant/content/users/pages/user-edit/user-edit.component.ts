@@ -224,7 +224,7 @@ export class UserEditComponent {
 
   private api = inject(UserService);
   private rolesApi = inject(RoleService);
-  private branchApi = inject(BranchService);
+  private branchService = inject(BranchService);
   private deptApi = inject(DepartmentService);
   private auth = inject(AuthService);
 
@@ -262,7 +262,7 @@ export class UserEditComponent {
           r.map(x => x.name);
       });
 
-    this.branchApi.getAll()
+    this.branchService.getAllLegacy()
       .subscribe(v => {
         this.branches = v;
       });

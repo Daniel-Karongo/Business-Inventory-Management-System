@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.controller;
 
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.dto.BranchSmsSettingsDTO;
+import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.dto.BranchSmsSettingsResponseDTO;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.model.BranchSmsSettings;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.service.BranchSmsSettingsService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
@@ -20,7 +21,7 @@ public class BranchSmsSettingsController {
     private final BranchSmsSettingsService service;
 
     @GetMapping("/branch/{branchId}")
-    public ResponseEntity<BranchSmsSettings> get(
+    public ResponseEntity<BranchSmsSettingsResponseDTO> get(
             @PathVariable UUID branchId
     ) {
 

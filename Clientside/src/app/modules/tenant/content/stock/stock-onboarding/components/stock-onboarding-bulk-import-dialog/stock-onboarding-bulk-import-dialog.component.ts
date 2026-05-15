@@ -152,8 +152,7 @@ export class
 
         this.rebuildPagedIndexes();
 
-        this.branchService
-            .getAll(false)
+        this.branchService.getAllLegacy()
             .subscribe(branches => {
 
                 this.branchMap.clear();

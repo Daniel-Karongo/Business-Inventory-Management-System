@@ -514,7 +514,7 @@ export class UserListComponent implements OnInit {
   ========================= */
 
   loadFilters() {
-    this.branchService.getAll().subscribe(b => this.branches = b || []);
+    this.branchService.getAllLegacy().subscribe(b => this.branches = b || []);
     this.departmentService.getAll().subscribe(d => this.departments = d || []);
     this.roleService.list().subscribe(r => this.roles = r || []);
   }

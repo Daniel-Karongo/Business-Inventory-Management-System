@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.payment.mpesa.controller;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.mpesa.dto.BranchMpesaSettingsDTO;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.mpesa.dto.BranchMpesaSettingsResponseDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.mpesa.model.BranchMpesaSettings;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.mpesa.service.BranchMpesaSettingsService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
@@ -20,7 +21,7 @@ public class BranchMpesaSettingsController {
     private final BranchMpesaSettingsService service;
 
     @GetMapping("/branch/{branchId}")
-    public ResponseEntity<BranchMpesaSettings> get(
+    public ResponseEntity<BranchMpesaSettingsResponseDTO> get(
             @PathVariable UUID branchId
     ) {
 

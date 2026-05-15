@@ -79,7 +79,7 @@ export class ReportDialogComponent implements OnInit {
     private reports: ReportsService,
     private auth: AuthService,
     private accountsSvc: AccountsService,
-    private branchesSvc: BranchService,
+    private branchService: BranchService,
     private snack: MatSnackBar
   ) { }
 
@@ -116,7 +116,7 @@ export class ReportDialogComponent implements OnInit {
 
       if (p.type === 'BRANCH') {
         this.params[p.name] = me?.branchId;
-        this.branchesSvc.getAll().subscribe(b => this.branches = b);
+        this.branchService.getAllLegacy().subscribe(b => this.branches = b);
       }
 
       if (p.type === 'ACCOUNT') {

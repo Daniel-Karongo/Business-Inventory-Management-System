@@ -1,6 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.person.branch.repository;
 
 import com.IntegrityTechnologies.business_manager.modules.person.branch.model.BranchAudit;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -20,9 +22,9 @@ public interface BranchAuditRepository extends JpaRepository<BranchAudit, UUID> 
             UUID branchId
     );
 
-    List<BranchAudit> findByTenantIdAndBranchIdAndPerformedByIdOrderByTimestampDesc(
+    Page<BranchAudit> findByTenantIdAndBranchIdOrderByTimestampDesc(
             UUID tenantId,
             UUID branchId,
-            UUID performedById
+            Pageable pageable
     );
 }

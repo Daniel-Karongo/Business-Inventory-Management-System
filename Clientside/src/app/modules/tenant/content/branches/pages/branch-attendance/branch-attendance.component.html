@@ -1,0 +1,93 @@
+<app-workflow-card>
+
+    <div class="settings-shell">
+
+        <div *ngIf="loading" class="progress-block">
+
+            <span>
+                Loading attendance settings...
+            </span>
+
+        </div>
+
+        <div class="settings-toolbar">
+
+            <div>
+
+                <div class="settings-kicker">
+                    Attendance Operations
+                </div>
+
+                <h2 class="settings-heading">
+                    Rollcall & Logout Policy
+                </h2>
+
+            </div>
+
+            <button mat-flat-button color="primary" (click)="save()" [disabled]="saving || form.pristine">
+
+                <ng-container *ngIf="!saving">
+                    Save Changes
+                </ng-container>
+
+                <mat-spinner *ngIf="saving" diameter="18">
+                </mat-spinner>
+
+            </button>
+
+        </div>
+
+        <form [formGroup]="form" class="settings-grid">
+
+            <section class="settings-panel">
+
+                <div class="panel-title">
+                    Rollcall Policy
+                </div>
+
+                <div class="panel-description">
+                    Configure branch attendance timing
+                    and operational logout policy.
+                </div>
+
+                <div class="time-grid">
+
+                    <mat-form-field appearance="fill">
+
+                        <mat-label>
+                            Rollcall Start Time
+                        </mat-label>
+
+                        <input matInput type="time" formControlName="rollcallStartTime">
+
+                    </mat-form-field>
+
+                    <mat-form-field appearance="fill">
+
+                        <mat-label>
+                            Grace Minutes
+                        </mat-label>
+
+                        <input matInput type="number" formControlName="rollcallGraceMinutes">
+
+                    </mat-form-field>
+
+                    <mat-form-field appearance="fill">
+
+                        <mat-label>
+                            Logout Time
+                        </mat-label>
+
+                        <input matInput type="time" formControlName="logoutTime">
+
+                    </mat-form-field>
+
+                </div>
+
+            </section>
+
+        </form>
+
+    </div>
+
+</app-workflow-card>

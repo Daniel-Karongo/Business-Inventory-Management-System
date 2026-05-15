@@ -81,7 +81,7 @@ export class ReceiveNewProductDialogComponent implements OnInit {
   }
 
   private loadBranches() {
-    this.branchService.getAll(false).subscribe({
+    this.branchService.getAllLegacy().subscribe({
       next: branches => {
         this.branches = branches
           .filter(b => !!b.id)

@@ -1,0 +1,143 @@
+<app-workflow-card>
+
+    <div class="settings-shell">
+
+        <div *ngIf="loading" class="progress-block">
+
+            <span>
+                Loading security settings...
+            </span>
+
+        </div>
+
+        <div class="settings-toolbar">
+
+            <div>
+
+                <div class="settings-kicker">
+                    Branch Security Operations
+                </div>
+
+                <h2 class="settings-heading">
+                    Geofence & Device Enforcement
+                </h2>
+
+            </div>
+
+            <button mat-flat-button color="primary" (click)="save()" [disabled]="saving || form.pristine">
+
+                <ng-container *ngIf="!saving">
+                    Save Changes
+                </ng-container>
+
+                <mat-spinner *ngIf="saving" diameter="18">
+                </mat-spinner>
+
+            </button>
+
+        </div>
+
+        <form [formGroup]="form" class="settings-grid">
+
+            <section class="settings-panel">
+
+                <div class="panel-title">
+                    Enforcement Policy
+                </div>
+
+                <div class="panel-description">
+                    Configure operational access validation
+                    policies for branch users and devices.
+                </div>
+
+                <div class="toggle-group">
+
+                    <mat-slide-toggle formControlName="enforceGeofence">
+
+                        Enforce Geofence Validation
+
+                    </mat-slide-toggle>
+
+                    <mat-slide-toggle formControlName="enforceDevice">
+
+                        Enforce Device Validation
+
+                    </mat-slide-toggle>
+
+                </div>
+
+            </section>
+
+            <section class="settings-panel">
+
+                <div class="panel-title">
+                    Geofence Coordinates
+                </div>
+
+                <div class="panel-description">
+                    Define the operational branch radius
+                    used during geofence validation.
+                </div>
+
+                <div class="location-toolbar">
+
+                    <button type="button" mat-stroked-button (click)="useCurrentLocation()"
+                        [disabled]="detectingLocation">
+
+                        <mat-icon>
+                            my_location
+                        </mat-icon>
+
+                        <ng-container *ngIf="!detectingLocation">
+                            Use Current Location
+                        </ng-container>
+
+                        <ng-container *ngIf="detectingLocation">
+                            Detecting Location...
+                        </ng-container>
+
+                    </button>
+
+                </div>
+
+                <div class="coordinates-grid">
+
+                    <mat-form-field appearance="fill">
+
+                        <mat-label>
+                            Latitude
+                        </mat-label>
+
+                        <input matInput type="number" formControlName="latitude">
+
+                    </mat-form-field>
+
+                    <mat-form-field appearance="fill">
+
+                        <mat-label>
+                            Longitude
+                        </mat-label>
+
+                        <input matInput type="number" formControlName="longitude">
+
+                    </mat-form-field>
+
+                    <mat-form-field appearance="fill">
+
+                        <mat-label>
+                            Radius (meters)
+                        </mat-label>
+
+                        <input matInput type="number" formControlName="radiusMeters">
+
+                    </mat-form-field>
+
+                </div>
+
+            </section>
+
+        </form>
+
+    </div>
+
+</app-workflow-card>

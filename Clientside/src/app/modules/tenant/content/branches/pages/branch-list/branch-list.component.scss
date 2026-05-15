@@ -1,32 +1,715 @@
-table {
-  background: var(--surface);
-  border-radius: 8px;
-  overflow: hidden;
+:host {
+  display: block;
+  min-width: 0;
 }
 
-th {
+/* =========================================================
+   HEADER
+========================================================= */
+
+.branch-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.header-left,
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-left button.active {
+  background: rgba(59, 130, 246, 0.15);
+  border-radius: 6px;
+}
+
+/* =========================================================
+   TOOLBAR
+========================================================= */
+
+.branch-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.search {
+  width: 100%;
+}
+
+.search mat-form-field {
+  width: 100%;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+/* =========================================================
+   BULK BAR
+========================================================= */
+
+.bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+
+  padding: 10px 12px;
+
+  border-radius: 10px;
+
+  background: rgba(96, 165, 250, 0.08);
+
+  border: 1px solid rgba(96, 165, 250, 0.25);
+}
+
+.bulk-count {
   font-weight: 600;
+  color: var(--active);
+}
+
+.cancel-selection {
+  margin-left: auto;
+}
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 10px;
+
+  padding: 48px 20px;
+
+  text-align: center;
+
   color: var(--text-secondary);
 }
 
-td {
+.empty-state mat-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+}
+
+.empty-state .title {
+  font-size: 1rem;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
-button[mat-icon-button] {
-  opacity: 0.85;
+.empty-state .sub {
+  font-size: 0.85rem;
 }
 
-button[mat-icon-button]:hover {
-  opacity: 1;
+/* =========================================================
+   GRID
+========================================================= */
+
+.branch-grid {
+  display: grid;
+  gap: 14px;
+
+  grid-template-columns: 1fr;
 }
 
-.actions-col {
-  width: 120px;
-  text-align: right;
+@media (min-width: 640px) {
+
+  .branch-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+
+  .branch-grid.compact {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .branch-grid.comfortable {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* =========================================================
+   CARD
+========================================================= */
+
+.branch-card {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  padding: 14px;
+
+  border-radius: 12px;
+
+  border: 1px solid var(--border);
+
+  background: var(--surface);
+
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.branch-card:hover {
+  transform: translateY(-2px);
+
+  box-shadow: var(--surface-shadow);
+}
+
+.branch-card.selected {
+  border: 2px solid var(--active);
+
+  background: rgba(96, 165, 250, 0.08);
+}
+
+.branch-card.deleted {
+  border: 1px solid rgba(220, 38, 38, 0.4);
+
+  background: rgba(220, 38, 38, 0.05);
+
+  opacity: 0.82;
+}
+
+/* =========================================================
+   CARD STATUS OVERLAY
+========================================================= */
+
+.status-overlay {
+  position: absolute;
+
+  top: 10px;
+  right: 10px;
+
+  padding: 3px 8px;
+
+  border-radius: 999px;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: 0.4px;
+
+  color: #991b1b;
+
+  background: #fee2e2;
+}
+
+/* =========================================================
+   CARD CONTENT
+========================================================= */
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.card-title-group {
+  min-width: 0;
+}
+
+.card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+
+  color: var(--text-primary);
+
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.actions-col button {
-  margin-left: 4px;
+.card-code {
+  margin-top: 3px;
+
+  font-size: 0.72rem;
+
+  color: var(--text-secondary);
+
+  letter-spacing: 0.4px;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  font-size: 0.78rem;
+
+  color: var(--text-secondary);
+}
+
+.card-meta mat-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+}
+
+.card-indicators {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  margin-top: auto;
+}
+
+.created-date {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+/* =========================================================
+   ACTIONS
+========================================================= */
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.card-actions button {
+  opacity: 0.78;
+
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+.branch-card:hover .card-actions button {
+  opacity: 1;
+}
+
+.card-actions button:hover {
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   STATUS PILL
+========================================================= */
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 72px;
+
+  padding: 4px 10px;
+
+  border-radius: 999px;
+
+  font-size: 11px;
+  font-weight: 600;
+
+  background: var(--status-active-bg);
+
+  color: var(--status-active-text);
+}
+
+.status-pill.deleted {
+  background: var(--status-disabled-bg);
+
+  color: var(--status-disabled-text);
+}
+
+/* =========================================================
+   INDICATORS
+========================================================= */
+
+.indicator-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.indicator-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 3px 8px;
+
+  border-radius: 999px;
+
+  font-size: 11px;
+  font-weight: 600;
+
+  border: 1px solid var(--border);
+
+  color: var(--text-secondary);
+
+  background: transparent;
+}
+
+.indicator-chip.active {
+  background: rgba(59, 130, 246, 0.12);
+
+  border-color: rgba(59, 130, 246, 0.22);
+
+  color: #2563eb;
+}
+
+body.dark .indicator-chip.active {
+  color: #93c5fd;
+}
+
+/* =========================================================
+   ATTENDANCE
+========================================================= */
+
+.attendance-state {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+/* =========================================================
+   TABLE
+========================================================= */
+
+.table-wrapper {
+  margin-top: 10px;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  border-radius: 12px;
+}
+
+table {
+  width: 100%;
+
+  background: var(--surface);
+
+  border-spacing: 0;
+}
+
+.mat-mdc-header-cell,
+.mat-mdc-cell {
+  white-space: nowrap;
+}
+
+/* =========================================================
+   COMPACT TABLE
+========================================================= */
+
+.table-wrapper.compact .mat-mdc-row {
+  height: 36px;
+}
+
+.table-wrapper.compact .mat-mdc-cell,
+.table-wrapper.compact .mat-mdc-header-cell {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+
+  font-size: 0.78rem;
+}
+
+/* =========================================================
+   BRANCH CELL
+========================================================= */
+
+.branch-name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.branch-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.branch-sub {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.branch-code {
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+/* =========================================================
+   SORTABLE
+========================================================= */
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.sortable:hover {
+  background: var(--surface-hover);
+}
+
+.sortable-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sort-icon {
+  font-size: 16px !important;
+
+  opacity: 0.7;
+
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+.sortable:hover .sort-icon {
+  opacity: 1;
+
+  transform: scale(1.05);
+}
+
+/* =========================================================
+   ACTION CELL
+========================================================= */
+
+.actions-cell {
+  white-space: nowrap;
+}
+
+.actions-cell button {
+  opacity: 0.82;
+
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+.actions-cell button:hover {
+  opacity: 1;
+
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   ROW SELECTION
+========================================================= */
+
+.mat-mdc-row {
+  transition:
+    background-color 120ms ease,
+    transform 120ms ease;
+}
+
+.mat-mdc-row:hover {
+  background: var(--surface-hover);
+
+  transform: translateX(1px);
+}
+
+.row-selected {
+  background: rgba(0, 122, 255, 0.08) !important;
+
+  border-left: 4px solid #007aff;
+}
+
+/* =========================================================
+   SKELETON
+========================================================= */
+
+.skeleton-card,
+.skeleton-line,
+.skeleton-row {
+  background:
+    linear-gradient(90deg,
+      rgba(255, 255, 255, 0.04) 25%,
+      rgba(255, 255, 255, 0.14) 50%,
+      rgba(255, 255, 255, 0.04) 75%);
+
+  background-size: 200% 100%;
+
+  animation: shimmer 1.2s infinite linear;
+}
+
+.skeleton-card {
+  min-height: 180px;
+
+  border-radius: 12px;
+}
+
+.skeleton-line {
+  height: 10px;
+
+  border-radius: 6px;
+}
+
+.skeleton-line.title {
+  width: 70%;
+  height: 14px;
+}
+
+.skeleton-line.short {
+  width: 40%;
+}
+
+.skeleton-row {
+  height: 36px;
+
+  border-radius: 8px;
+
+  margin-bottom: 8px;
+}
+
+@keyframes shimmer {
+
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* =========================================================
+   PAGINATOR
+========================================================= */
+
+.shared-paginator {
+  margin-top: 20px;
+
+  display: flex;
+  justify-content: center;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+  .filters {
+    width: 100%;
+  }
+
+  .bulk-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cancel-selection {
+    margin-left: 0;
+  }
+
+  .branch-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .branch-card {
+    padding: 12px;
+  }
+
+  .card-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .card-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .card-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .shared-paginator {
+    justify-content: stretch;
+  }
+
+  .mat-mdc-paginator-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .mat-mdc-paginator-range-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .mat-mdc-paginator-page-size {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 640px) {
+
+  .header-left,
+  .header-right {
+    width: 100%;
+  }
+
+  .header-right {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .branch-toolbar {
+    align-items: stretch;
+  }
+
+  .search {
+    width: 100%;
+  }
+
+  .search-input {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+  }
+
+  table {
+    min-width: 900px;
+  }
 }

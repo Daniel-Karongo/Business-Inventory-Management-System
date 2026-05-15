@@ -88,7 +88,7 @@ export class LoginComponent implements OnInit {
 
       this.form.controls.branchId.addValidators(Validators.required);
 
-      this.branchService.getAll(false).subscribe({
+      this.branchService.getAllLegacy().subscribe({
         next: (data) => {
 
           const list = (Array.isArray(data) ? data : [])

@@ -67,7 +67,7 @@ export class UserBulkImportDialogComponent
 
   private loadOrgMeta() {
     Promise.all([
-      this.branchService.getAll(false).toPromise(),
+      this.branchService.getAllLegacy().toPromise(),
       this.departmentService.getAll(false).toPromise()
     ]).then(([b, d]) => {
       this.branches = b || [];

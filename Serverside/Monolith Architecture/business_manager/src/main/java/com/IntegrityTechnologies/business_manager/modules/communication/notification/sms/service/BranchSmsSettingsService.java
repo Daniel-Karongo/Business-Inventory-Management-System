@@ -1,6 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.service;
 
+import com.IntegrityTechnologies.business_manager.config.util.SecretMaskingUtil;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.dto.BranchSmsSettingsDTO;
+import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.dto.BranchSmsSettingsResponseDTO;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.model.BranchSmsSettings;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.repository.BranchSmsSettingsRepository;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
@@ -23,20 +25,39 @@ public class BranchSmsSettingsService {
         return TenantContext.getTenantId();
     }
 
-    public BranchSmsSettings get(UUID branchId) {
+    public BranchSmsSettingsResponseDTO get(UUID branchId) {
 
         branchTenantGuard.validate(branchId);
 
-        return repo
-                .findByTenantIdAndBranchIdAndDeletedFalse(
-                        tenantId(),
-                        branchId
-                )
-                .orElseThrow(() ->
-                        new EntityNotFoundException(
-                                "SMS settings not found"
+        BranchSmsSettings settings =
+                repo
+                        .findByTenantIdAndBranchIdAndDeletedFalse(
+                                tenantId(),
+                                branchId
                         )
-                );
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "SMS settings not found"
+                                )
+                        );
+
+        return BranchSmsSettingsResponseDTO
+                .builder()
+                .enabled(settings.getEnabled())
+                .provider(settings.getProvider())
+                .username(settings.getUsername())
+                .apiKey(
+                        SecretMaskingUtil.mask(
+                                settings.getApiKey()
+                        )
+                )
+                .senderId(settings.getSenderId())
+                .defaultCountryCode(
+                        settings.getDefaultCountryCode()
+                )
+                .sandbox(settings.getSandbox())
+                .active(settings.getActive())
+                .build();
     }
 
     @Transactional

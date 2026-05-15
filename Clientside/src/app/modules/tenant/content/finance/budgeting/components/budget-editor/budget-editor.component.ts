@@ -58,7 +58,7 @@ export class BudgetEditorComponent implements OnInit, OnDestroy {
       this.initializeGrid();
     });
 
-    this.branchService.getAll(false).subscribe(b => {
+    this.branchService.getAllLegacy().subscribe(b => {
       this.branches = b;
     });
 

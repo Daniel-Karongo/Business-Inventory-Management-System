@@ -1,0 +1,224 @@
+<app-workflow-shell>
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <div workflow-header>
+
+        <div class="workspace-header">
+
+            <!-- =====================================================
+                 LEFT
+            ====================================================== -->
+
+            <div class="workspace-header-main">
+
+                <!-- BREADCRUMB -->
+
+                <div class="workspace-breadcrumb">
+                    Operational Workspace
+                </div>
+
+                <!-- TITLE ROW -->
+
+                <div class="workspace-title-row">
+
+                    <!-- TITLE -->
+
+                    <h1 *ngIf="!loading; else titleSkeleton" class="workspace-title">
+
+                        {{
+                        branch?.name
+                        }}
+
+                    </h1>
+
+                    <!-- SKELETON -->
+
+                    <ng-template #titleSkeleton>
+
+                        <div class="
+                                skeleton
+                                lg
+                                w-40
+                            ">
+                        </div>
+
+                    </ng-template>
+
+                    <!-- STATUS -->
+
+                    <span *ngIf="branch" class="workspace-status" [class.active]="
+                            statusClass === 'active'
+                        " [class.deleted]="
+                            statusClass === 'deleted'
+                        ">
+
+                        {{ statusLabel }}
+
+                    </span>
+
+                </div>
+
+                <!-- SUBTITLE -->
+
+                <div class="workspace-subtitle">
+
+                    Branch Administration
+
+                </div>
+
+                <!-- META -->
+
+                <div *ngIf="branch" class="workspace-meta">
+
+                    <!-- CODE -->
+
+                    <div class="meta-chip">
+
+                        <mat-icon>
+                            badge
+                        </mat-icon>
+
+                        <span>
+                            {{ branch.branchCode }}
+                        </span>
+
+                    </div>
+
+                    <!-- LOCATION -->
+
+                    <div *ngIf="branch.location" class="meta-chip">
+
+                        <mat-icon>
+                            location_on
+                        </mat-icon>
+
+                        <span>
+                            {{ branch.location }}
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- =====================================================
+                 ACTIONS
+            ====================================================== -->
+
+            <div class="workspace-actions">
+
+                <!-- BACK -->
+
+                <button mat-stroked-button routerLink="../">
+
+                    <mat-icon>
+                        arrow_back
+                    </mat-icon>
+
+                    Back
+
+                </button>
+
+                <!-- EDIT -->
+
+                <button *ngIf="branch" mat-flat-button [routerLink]="[
+                        '../',
+                        branch.id,
+                        'edit'
+                    ]">
+
+                    <mat-icon>
+                        edit
+                    </mat-icon>
+
+                    Edit Branch
+
+                </button>
+
+                <!-- MOBILE MENU -->
+
+                <button *ngIf="isMobile" mat-icon-button [matMenuTriggerFor]="workspaceMenu">
+
+                    <mat-icon>
+                        more_vert
+                    </mat-icon>
+
+                </button>
+
+                <!-- MENU -->
+
+                <mat-menu #workspaceMenu="matMenu">
+
+                    <button mat-menu-item [routerLink]="[
+                            '../',
+                            branch?.id,
+                            'edit'
+                        ]">
+
+                        <mat-icon>
+                            edit
+                        </mat-icon>
+
+                        <span>
+                            Edit Branch
+                        </span>
+
+                    </button>
+
+                </mat-menu>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- =====================================================
+         NAVIGATION
+    ====================================================== -->
+
+    <div workflow-toolbar>
+
+        <div class="workspace-tabs">
+
+            <a *ngFor="
+                    let tab of tabs;
+                    trackBy: trackTab
+                " class="workspace-tab" [class.active]="
+                    isActive(tab.route)
+                " [routerLink]="tab.route">
+
+                <mat-icon>
+                    {{ tab.icon }}
+                </mat-icon>
+
+                <span>
+                    {{ tab.label }}
+                </span>
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <!-- =====================================================
+         CONTENT
+    ====================================================== -->
+
+    <div workflow-content class="workspace-content">
+
+        <div class="workspace-content-inner">
+
+            <router-outlet>
+            </router-outlet>
+
+        </div>
+
+    </div>
+
+</app-workflow-shell>

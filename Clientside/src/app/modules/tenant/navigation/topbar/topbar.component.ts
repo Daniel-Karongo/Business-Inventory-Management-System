@@ -92,7 +92,7 @@ export class TopbarComponent implements OnInit {
   }
 
   private loadBranches() {
-    this.branchService.getAll(false).subscribe(list => {
+    this.branchService.getAllLegacy().subscribe(list => {
       this.branches = list;
 
       // 🔑 recompute AFTER branches load

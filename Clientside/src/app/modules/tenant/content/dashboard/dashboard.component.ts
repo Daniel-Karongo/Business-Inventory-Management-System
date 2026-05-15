@@ -93,7 +93,7 @@ export class DashboardComponent implements OnInit {
   }
 
   private loadBranches(): void {
-    this.branchService.getAll(false).subscribe({
+    this.branchService.getAllLegacy().subscribe({
       next: branches => {
         this.branches = branches.map(b => ({
           id: b.id!,

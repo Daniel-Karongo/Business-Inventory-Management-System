@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.communication.notification.email.controller;
 
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.dto.BranchEmailSettingsDTO;
+import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.dto.BranchEmailSettingsResponseDTO;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.model.BranchEmailSettings;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.service.BranchEmailSettingsService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
@@ -20,7 +21,7 @@ public class BranchEmailSettingsController {
     private final BranchEmailSettingsService service;
 
     @GetMapping("/branch/{branchId}")
-    public ResponseEntity<BranchEmailSettings> get(
+    public ResponseEntity<BranchEmailSettingsResponseDTO> get(
             @PathVariable UUID branchId
     ) {
 

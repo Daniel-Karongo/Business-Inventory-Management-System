@@ -1,0 +1,318 @@
+<app-workflow-card>
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <div workflow-card-header>
+
+        <div class="audit-header">
+
+            <div>
+                <h2 class="audit-title">
+                    Branch Audits
+                </h2>
+
+                <div class="audit-subtitle">
+                    Operational history and activity timeline
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- =====================================================
+         FILTERS
+    ====================================================== -->
+
+    <div workflow-card-toolbar>
+
+        <!-- ACTION FILTER -->
+
+        <div class="audit-filter">
+
+            <label>
+                Action
+            </label>
+
+            <select [(ngModel)]="selectedAction">
+
+                <option value="ALL">
+                    All Actions
+                </option>
+
+                <option *ngFor="let action of uniqueActions" [value]="action">
+
+                    {{ displayAction(action) }}
+
+                </option>
+
+            </select>
+
+        </div>
+
+        <!-- FIELD FILTER -->
+
+        <div class="audit-filter">
+
+            <label>
+                Field
+            </label>
+
+            <select [(ngModel)]="selectedField">
+
+                <option value="ALL">
+                    All Fields
+                </option>
+
+                <option *ngFor="let field of uniqueFields" [value]="field">
+
+                    {{ field }}
+
+                </option>
+
+            </select>
+
+        </div>
+
+    </div>
+
+    <!-- =====================================================
+         LOADING
+    ====================================================== -->
+
+    <div *ngIf="loading" class="audit-loading">
+
+        <mat-spinner diameter="40">
+        </mat-spinner>
+
+    </div>
+
+    <!-- =====================================================
+         EMPTY
+    ====================================================== -->
+
+    <div *ngIf="
+            !loading
+            && !filteredAudits.length
+        " class="audit-empty">
+
+        <mat-icon>
+            history
+        </mat-icon>
+
+        <div>
+            No audit records found.
+        </div>
+
+    </div>
+
+    <!-- =====================================================
+         TIMELINE
+    ====================================================== -->
+
+    <div *ngIf="
+            !loading
+            && filteredAudits.length
+        " class="audit-list">
+
+        <div *ngFor="
+                let audit of filteredAudits;
+                trackBy: trackAudit
+            " class="audit-item" [class.create]="
+                getActionClass(audit.action)
+                    === 'create'
+            " [class.update]="
+                getActionClass(audit.action)
+                    === 'update'
+            " [class.delete]="
+                getActionClass(audit.action)
+                    === 'delete'
+            " [class.restore]="
+                getActionClass(audit.action)
+                    === 'restore'
+            " [class.security]="
+                getActionClass(audit.action)
+                    === 'security'
+            " [class.attendance]="
+                getActionClass(audit.action)
+                    === 'attendance'
+            ">
+
+            <!-- TIMELINE -->
+
+            <div class="audit-line">
+
+                <div class="audit-dot">
+                </div>
+
+            </div>
+
+            <!-- CARD -->
+
+            <div class="audit-card">
+
+                <!-- TOP -->
+
+                <div class="audit-top">
+
+                    <!-- ACTION -->
+
+                    <div class="audit-badge" [class.create]="
+                            getActionClass(audit.action)
+                                === 'create'
+                        " [class.update]="
+                            getActionClass(audit.action)
+                                === 'update'
+                        " [class.delete]="
+                            getActionClass(audit.action)
+                                === 'delete'
+                        " [class.restore]="
+                            getActionClass(audit.action)
+                                === 'restore'
+                        " [class.security]="
+                            getActionClass(audit.action)
+                                === 'security'
+                        " [class.attendance]="
+                            getActionClass(audit.action)
+                                === 'attendance'
+                        ">
+
+                        <mat-icon>
+                            {{ getActionIcon(audit.action) }}
+                        </mat-icon>
+
+                        {{ displayAction(audit.action) }}
+
+                    </div>
+
+                    <!-- TIMESTAMP -->
+
+                    <div class="audit-time">
+
+                        {{
+                        audit.timestamp
+                        | date:'medium'
+                        }}
+
+                    </div>
+
+                </div>
+
+                <!-- META -->
+
+                <div class="audit-meta">
+
+                    <div class="meta-item">
+
+                        <mat-icon>
+                            person
+                        </mat-icon>
+
+                        {{
+                        audit.performedByUsername
+                        || 'System'
+                        }}
+
+                    </div>
+
+                    <div *ngIf="audit.fieldChanged" class="meta-item">
+
+                        <mat-icon>
+                            tune
+                        </mat-icon>
+
+                        {{ audit.fieldChanged }}
+
+                    </div>
+
+                </div>
+
+                <!-- DIFF -->
+
+                <div *ngIf="hasDiff(audit)" class="audit-diff">
+
+                    <!-- OLD -->
+
+                    <div class="diff-box diff-old">
+
+                        <div class="diff-label">
+                            From
+                        </div>
+
+                        <div class="diff-value">
+
+                            {{
+                            audit.oldValue
+                            || '—'
+                            }}
+
+                        </div>
+
+                    </div>
+
+                    <!-- ARROW -->
+
+                    <div class="diff-arrow">
+
+                        <mat-icon>
+                            arrow_forward
+                        </mat-icon>
+
+                    </div>
+
+                    <!-- NEW -->
+
+                    <div class="diff-box diff-new">
+
+                        <div class="diff-label">
+                            To
+                        </div>
+
+                        <div class="diff-value">
+
+                            {{
+                            audit.newValue
+                            || '—'
+                            }}
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- REASON -->
+
+                <div *ngIf="audit.reason" class="audit-reason">
+
+                    <mat-icon>
+                        info
+                    </mat-icon>
+
+                    <span>
+                        {{ audit.reason }}
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- =====================================================
+         PAGINATION
+    ====================================================== -->
+
+    <mat-paginator *ngIf="
+            !loading
+            && audits.length
+        " [length]="totalElements" [pageIndex]="page" [pageSize]="size" [pageSizeOptions]="pageSizeOptions"
+        (page)="onPageChange($event)">
+
+    </mat-paginator>
+
+</app-workflow-card>

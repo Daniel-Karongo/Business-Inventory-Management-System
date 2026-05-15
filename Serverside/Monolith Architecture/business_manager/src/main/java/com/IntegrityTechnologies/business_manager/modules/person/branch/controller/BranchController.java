@@ -1,16 +1,17 @@
 package com.IntegrityTechnologies.business_manager.modules.person.branch.controller;
 
-import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
-import com.IntegrityTechnologies.business_manager.modules.person.branch.dto.BranchDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.branch.service.BranchService;
-import com.IntegrityTechnologies.business_manager.modules.person.branch.dto.BranchBulkRow;
+import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
+import com.IntegrityTechnologies.business_manager.config.response.PageWrapper;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.dto.*;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.service.BranchAuditService;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.service.BranchBulkService;
-import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.*;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.service.BranchService;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
+import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -19,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-@Tag(name = "Branches")
 @RestController
 @RequestMapping("/api/branches")
 @RequiredArgsConstructor
@@ -27,87 +27,165 @@ import java.util.UUID;
 public class BranchController {
 
     private final BranchService branchService;
-    private final BranchBulkService bulkService;
-    private final BranchRepository branchRepository;
 
-    /* ====================================
+    private final BranchBulkService bulkService;
+
+    private final BranchAuditService branchAuditService;
+
+    /* =====================================================
        IMPORT
-       ==================================== */
+    ===================================================== */
 
     @TenantManagerOnly
     @PostMapping("/import")
-    public ResponseEntity<BulkResult<BranchDTO>> importBranches(
+    public ResponseEntity<BulkResult<BranchDetailsDTO>> importBranches(
             @RequestBody BulkRequest<BranchBulkRow> request,
             Authentication authentication
     ) {
+
         return ResponseEntity.ok(
-                bulkService.importBranches(request, authentication)
+                bulkService.importBranches(
+                        request,
+                        authentication
+                )
         );
     }
 
-    /* ====================================
+    /* =====================================================
        CREATE
-       ==================================== */
+    ===================================================== */
 
     @TenantAdminOnly
     @PostMapping
     public ResponseEntity<ApiResponse> create(
-            @RequestBody BranchDTO request,
+            @RequestBody BranchFormDTO request,
             Authentication authentication
     ) {
 
-        ApiResponse response =
+        return ResponseEntity.ok(
                 new ApiResponse(
                         "success",
                         "Branch created successfully",
-                        branchService.create(request, authentication)
-                );
-
-        return ResponseEntity.ok(response);
+                        branchService.create(
+                                request,
+                                authentication
+                        )
+                )
+        );
     }
 
-    /* ====================================
+    /* =====================================================
        READ
-       ==================================== */
+    ===================================================== */
 
     @GetMapping
-    public ResponseEntity<List<BranchDTO>> getAll(
-            @RequestParam(required = false) Boolean deleted
+    public ResponseEntity<PageWrapper<BranchListItemDTO>> getAll(
+            @ModelAttribute BranchQueryDTO query
     ) {
+
         return ResponseEntity.ok(
-                branchService.getAll(deleted)
+                branchService.getAll(query)
         );
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BranchDTO> getById(
+    public ResponseEntity<BranchDetailsDTO> getById(
             @PathVariable UUID id
     ) {
+
         return ResponseEntity.ok(
                 branchService.getById(id)
         );
     }
 
-    /* ====================================
+    /* =====================================================
+       AUDITS
+    ===================================================== */
+
+    @GetMapping("/{id}/audits")
+    public ResponseEntity<PageWrapper<BranchAuditDTO>> getAudits(
+            @PathVariable UUID id,
+
+            @RequestParam(defaultValue = "0")
+            int page,
+
+            @RequestParam(defaultValue = "20")
+            int size
+    ) {
+
+        return ResponseEntity.ok(
+                branchAuditService.getAudits(
+                        id,
+                        page,
+                        size
+                )
+        );
+    }
+
+    /* =====================================================
        UPDATE
-       ==================================== */
+    ===================================================== */
 
     @TenantManagerOnly
     @PatchMapping("/{id}")
-    public ResponseEntity<BranchDTO> update(
+    public ResponseEntity<BranchDetailsDTO> update(
             @PathVariable UUID id,
-            @RequestBody BranchDTO request,
+            @RequestBody BranchFormDTO request,
             Authentication authentication
     ) {
 
         return ResponseEntity.ok(
-                branchService.update(id, request, authentication)
+                branchService.update(
+                        id,
+                        request,
+                        authentication
+                )
         );
     }
 
-    /* ====================================
+        /* =====================================================
+       ATTENDANCE SETTINGS
+    ===================================================== */
+
+    @TenantManagerOnly
+    @PatchMapping("/{id}/attendance-settings")
+    public ResponseEntity<BranchDetailsDTO> updateAttendanceSettings(
+            @PathVariable UUID id,
+            @Valid @RequestBody BranchAttendanceSettingsUpdateDTO request,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(
+                branchService.updateAttendanceSettings(
+                        id,
+                        request,
+                        authentication
+                )
+        );
+    }
+
+    /* =====================================================
+       SECURITY SETTINGS
+    ===================================================== */
+
+    @TenantManagerOnly
+    @PatchMapping("/{id}/security-settings")
+    public ResponseEntity<BranchDetailsDTO> updateSecuritySettings(
+            @PathVariable UUID id,
+            @Valid @RequestBody BranchSecuritySettingsUpdateDTO request,
+            Authentication authentication
+    ) {
+        return ResponseEntity.ok(
+                branchService.updateSecuritySettings(
+                        id,
+                        request,
+                        authentication
+                )
+        );
+    }
+
+    /* =====================================================
        DELETE
-       ==================================== */
+    ===================================================== */
 
     @TenantManagerOnly
     @DeleteMapping("/{id}")
@@ -117,31 +195,35 @@ public class BranchController {
             Authentication authentication
     ) {
 
-        branchService.deleteBranch(id, soft, authentication);
+        branchService.deleteBranch(
+                id,
+                soft,
+                authentication
+        );
 
         return ResponseEntity.ok(
                 new ApiResponse(
                         "success",
-                        "Branch " + id + " deleted successfully"
+                        "Branch deleted successfully"
                 )
         );
     }
 
     @TenantManagerOnly
     @DeleteMapping("/bulk")
-    public ResponseEntity<ApiResponse> deleteBranchesInBulk(
+    public ResponseEntity<ApiResponse> deleteBulk(
             @RequestBody List<UUID> ids,
             @RequestParam Boolean soft,
             Authentication authentication
     ) {
 
-        if (Boolean.TRUE.equals(soft)) {
-            branchRepository.softDeleteBulk(
-                    TenantContext.getTenantId(),
-                    ids
+        for (UUID id : ids) {
+
+            branchService.deleteBranch(
+                    id,
+                    soft,
+                    authentication
             );
-        } else {
-            branchRepository.deleteAllById(ids);
         }
 
         return ResponseEntity.ok(
@@ -152,36 +234,43 @@ public class BranchController {
         );
     }
 
-    /* ====================================
+    /* =====================================================
        RESTORE
-       ==================================== */
+    ===================================================== */
 
     @TenantManagerOnly
-    @PatchMapping("restore/{id}")
-    public ResponseEntity<ApiResponse> restoreBranch(
+    @PatchMapping("/restore/{id}")
+    public ResponseEntity<ApiResponse> restore(
             @PathVariable UUID id,
             Authentication authentication
     ) {
 
-        branchService.restoreBranch(id, authentication);
+        branchService.restoreBranch(
+                id,
+                authentication
+        );
 
         return ResponseEntity.ok(
                 new ApiResponse(
                         "success",
-                        "Branch " + id + " restored successfully"
+                        "Branch restored successfully"
                 )
         );
     }
 
     @TenantManagerOnly
     @PatchMapping("/restore/bulk")
-    public ResponseEntity<ApiResponse> restoreBranchesInBulk(
+    public ResponseEntity<ApiResponse> restoreBulk(
             @RequestBody List<UUID> ids,
             Authentication authentication
     ) {
 
         for (UUID id : ids) {
-            branchService.restoreBranch(id, authentication);
+
+            branchService.restoreBranch(
+                    id,
+                    authentication
+            );
         }
 
         return ResponseEntity.ok(

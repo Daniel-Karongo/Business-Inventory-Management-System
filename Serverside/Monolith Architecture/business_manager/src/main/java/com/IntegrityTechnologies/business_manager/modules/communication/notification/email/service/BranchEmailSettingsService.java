@@ -1,6 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.communication.notification.email.service;
 
+import com.IntegrityTechnologies.business_manager.config.util.SecretMaskingUtil;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.dto.BranchEmailSettingsDTO;
+import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.dto.BranchEmailSettingsResponseDTO;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.model.BranchEmailSettings;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.repository.BranchEmailSettingsRepository;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
@@ -23,20 +25,38 @@ public class BranchEmailSettingsService {
         return TenantContext.getTenantId();
     }
 
-    public BranchEmailSettings get(UUID branchId) {
+    public BranchEmailSettingsResponseDTO get(UUID branchId) {
 
         branchTenantGuard.validate(branchId);
 
-        return repo
-                .findByTenantIdAndBranchIdAndDeletedFalse(
-                        tenantId(),
-                        branchId
-                )
-                .orElseThrow(() ->
-                        new EntityNotFoundException(
-                                "Email settings not found"
+        BranchEmailSettings settings =
+                repo
+                        .findByTenantIdAndBranchIdAndDeletedFalse(
+                                tenantId(),
+                                branchId
                         )
-                );
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Email settings not found"
+                                )
+                        );
+
+        return BranchEmailSettingsResponseDTO
+                .builder()
+                .enabled(settings.getEnabled())
+                .host(settings.getHost())
+                .port(settings.getPort())
+                .username(settings.getUsername())
+                .password(
+                        SecretMaskingUtil.mask(
+                                settings.getPassword()
+                        )
+                )
+                .fromAddress(settings.getFromAddress())
+                .authEnabled(settings.getAuthEnabled())
+                .tlsEnabled(settings.getTlsEnabled())
+                .active(settings.getActive())
+                .build();
     }
 
     @Transactional

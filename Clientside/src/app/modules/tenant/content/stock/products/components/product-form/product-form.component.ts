@@ -76,7 +76,7 @@ export class ProductFormComponent implements OnInit {
 
   ngOnInit(): void {
 
-    this.branchService.getAll(false).subscribe(branches => {
+    this.branchService.getAllLegacy().subscribe(branches => {
 
       this.branches = branches ?? [];
 

@@ -64,11 +64,13 @@ public class SupplierService {
     }
     /* ===================== read operations ===================== */
 
+    @Transactional(readOnly = true)
     public Supplier getSupplier(UUID branchId, UUID id) {
         return supplierRepository.findByIdSafe(id, false, tenantId(), branchId)
                 .orElseThrow(() -> new EntityNotFoundException("Supplier not found"));
     }
 
+    @Transactional(readOnly = true)
     public List<SupplierDTO> getSuppliers(UUID branchId, Boolean deleted) {
 
         List<Supplier> suppliers = supplierRepository.findAllSafe(
@@ -82,6 +84,7 @@ public class SupplierService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public SupplierDTO getByIdentifier(UUID branchId, String identifier, Boolean deleted) {
         Optional<Supplier> maybe = Optional.empty();
 
@@ -130,6 +133,7 @@ public class SupplierService {
         return supplierRepository.findByNameSafe(name, deleted, tenantId(), branchId);
     }
 
+    @Transactional(readOnly = true)
     public Page<SupplierDTO> advancedSearch(
             UUID branchId,
             List<Long> categoryIds,

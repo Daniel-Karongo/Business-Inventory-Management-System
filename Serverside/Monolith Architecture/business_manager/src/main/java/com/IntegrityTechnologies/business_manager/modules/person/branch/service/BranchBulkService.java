@@ -4,7 +4,8 @@ import com.IntegrityTechnologies.business_manager.config.bulk.BulkOptions;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.dto.BranchBulkRow;
-import com.IntegrityTechnologies.business_manager.modules.person.branch.dto.BranchDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.dto.BranchDetailsDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.dto.BranchFormDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
@@ -21,73 +22,101 @@ import java.util.Set;
 public class BranchBulkService {
 
     private final BranchService branchService;
+
     private final BranchRepository branchRepository;
 
     @Transactional
-    public BulkResult<BranchDTO> importBranches(
+    public BulkResult<BranchDetailsDTO> importBranches(
             BulkRequest<BranchBulkRow> request,
             Authentication authentication
     ) {
 
-        BulkResult<BranchDTO> result = new BulkResult<>();
-        result.setTotal(request.getItems().size());
+        BulkResult<BranchDetailsDTO> result =
+                new BulkResult<>();
+
+        result.setTotal(
+                request.getItems().size()
+        );
 
         BulkOptions options =
                 request.getOptions() != null
                         ? request.getOptions()
                         : new BulkOptions();
 
-        Set<String> seenCodes = new HashSet<>();
+        Set<String> seenCodes =
+                new HashSet<>();
 
         for (int i = 0; i < request.getItems().size(); i++) {
-            BranchBulkRow row = request.getItems().get(i);
-            int rowNumber = i + 1;
+
+            BranchBulkRow row =
+                    request.getItems().get(i);
+
+            int rowNumber =
+                    i + 1;
 
             try {
+
                 validate(row);
 
-                String code = normalizeCode(row.getBranchCode());
+                String code =
+                        normalizeCode(
+                                row.getBranchCode()
+                        );
 
-                // 🔥 1. Duplicate in same import
                 if (!seenCodes.add(code)) {
                     throw new IllegalArgumentException(
                             "Duplicate branch code in import: " + code
                     );
                 }
 
-                // 🔥 2. Duplicate in database
-                if (options.isSkipDuplicates()
-                        && branchRepository.existsByTenantIdAndBranchCodeIgnoreCase(
-                        TenantContext.getTenantId(),
-                        code
-                )) {
+                if (
+                        options.isSkipDuplicates()
+                                &&
+                                branchRepository
+                                        .existsByTenantIdAndBranchCodeIgnoreCase(
+                                                TenantContext.getTenantId(),
+                                                code
+                                        )
+                ) {
 
                     throw new IllegalArgumentException(
                             "Branch code already exists: " + code
                     );
                 }
 
-                BranchDTO dto = BranchDTO.builder()
-                        .branchCode(code)
-                        .name(row.getName())
-                        .location(row.getLocation())
-                        .phone(row.getPhone())
-                        .email(row.getEmail())
-                        .build();
+                BranchFormDTO dto =
+                        new BranchFormDTO();
+
+                dto.setBranchCode(code);
+                dto.setName(row.getName());
+                dto.setLocation(row.getLocation());
+                dto.setPhone(row.getPhone());
+                dto.setEmail(row.getEmail());
+
+                BranchDetailsDTO created = null;
 
                 if (!options.isDryRun()) {
-                    dto = branchService.create(dto, authentication);
+
+                    created =
+                            branchService.create(
+                                    dto,
+                                    authentication
+                            );
                 }
 
-                result.addSuccess(dto);
+                result.addSuccess(created);
 
             } catch (Exception ex) {
-                result.addError(rowNumber, ex.getMessage());
+
+                result.addError(
+                        rowNumber,
+                        ex.getMessage()
+                );
             }
         }
 
-        // 🔥 Ensure NOTHING persists on dry-run
         if (options.isDryRun()) {
+
             TransactionAspectSupport
                     .currentTransactionStatus()
                     .setRollbackOnly();
@@ -96,16 +125,35 @@ public class BranchBulkService {
         return result;
     }
 
-    private void validate(BranchBulkRow row) {
-        if (row.getBranchCode() == null || row.getBranchCode().isBlank()) {
-            throw new IllegalArgumentException("branchCode is required");
+    private void validate(
+            BranchBulkRow row
+    ) {
+
+        if (
+                row.getBranchCode() == null
+                        || row.getBranchCode().isBlank()
+        ) {
+            throw new IllegalArgumentException(
+                    "branchCode is required"
+            );
         }
-        if (row.getName() == null || row.getName().isBlank()) {
-            throw new IllegalArgumentException("name is required");
+
+        if (
+                row.getName() == null
+                        || row.getName().isBlank()
+        ) {
+            throw new IllegalArgumentException(
+                    "name is required"
+            );
         }
     }
 
-    private String normalizeCode(String code) {
-        return code == null ? null : code.trim().toUpperCase();
+    private String normalizeCode(
+            String code
+    ) {
+
+        return code == null
+                ? null
+                : code.trim().toUpperCase();
     }
 }

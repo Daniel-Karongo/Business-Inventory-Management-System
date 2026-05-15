@@ -36,7 +36,7 @@ export class UserCreateComponent {
 
   private api = inject(UserService);
   private rolesApi = inject(RoleService);
-  private branchApi = inject(BranchService);
+  private branchService = inject(BranchService);
   private deptApi = inject(DepartmentService);
   private router = inject(Router);
   private snack = inject(MatSnackBar);
@@ -51,7 +51,7 @@ export class UserCreateComponent {
     this.rolesApi.list().subscribe(r => {
       this.roles = r.map(x => x.name);
     });
-    this.branchApi.getAll().subscribe(v => this.branches = v);
+    this.branchService.getAllLegacy().subscribe(v => this.branches = v);
     this.deptApi.getAll().subscribe(v => this.departments = v);
   }
 

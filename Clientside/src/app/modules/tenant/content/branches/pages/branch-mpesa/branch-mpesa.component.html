@@ -1,0 +1,190 @@
+<app-workflow-card>
+
+    <div class="settings-shell">
+
+        <div *ngIf="loading" class="progress-block">
+
+            <span>
+                Loading MPESA settings...
+            </span>
+
+        </div>
+
+        <div class="settings-toolbar">
+
+            <div>
+
+                <div class="settings-kicker">
+                    Payment Infrastructure
+                </div>
+
+                <h2 class="settings-heading">
+                    MPESA Runtime Configuration
+                </h2>
+
+            </div>
+
+            <button mat-flat-button color="primary" (click)="save()" [disabled]="saving || form.pristine">
+
+                <ng-container *ngIf="!saving">
+                    Save Changes
+                </ng-container>
+
+                <mat-spinner *ngIf="saving" diameter="18">
+                </mat-spinner>
+
+            </button>
+
+        </div>
+
+        <form [formGroup]="form" class="settings-grid">
+
+            <section class="settings-panel">
+
+                <div class="panel-title">
+                    Runtime Mode
+                </div>
+
+                <div class="toggle-group">
+
+                    <mat-slide-toggle formControlName="enabled">
+
+                        Enable MPESA
+
+                    </mat-slide-toggle>
+
+                    <mat-slide-toggle formControlName="sandbox">
+
+                        Sandbox Mode
+
+                    </mat-slide-toggle>
+
+                    <mat-slide-toggle formControlName="active">
+
+                        Active
+
+                    </mat-slide-toggle>
+
+                </div>
+
+            </section>
+
+            <section class="settings-panel">
+
+                <div class="panel-title">
+                    Credentials
+                </div>
+
+                <div class="credentials-grid">
+
+                    <mat-form-field appearance="fill">
+
+                        <mat-label>
+                            Shortcode
+                        </mat-label>
+
+                        <input matInput formControlName="shortcode">
+
+                    </mat-form-field>
+
+                    <mat-form-field appearance="fill">
+
+                        <mat-label>
+                            Consumer Key
+                        </mat-label>
+
+                        <input matInput type="password" formControlName="consumerKey">
+
+                    </mat-form-field>
+
+                    <mat-form-field appearance="fill">
+
+                        <mat-label>
+                            Consumer Secret
+                        </mat-label>
+
+                        <input matInput type="password" formControlName="consumerSecret">
+
+                    </mat-form-field>
+
+                    <mat-form-field appearance="fill">
+
+                        <mat-label>
+                            Passkey
+                        </mat-label>
+
+                        <input matInput type="password" formControlName="passkey">
+
+                    </mat-form-field>
+
+                    <mat-form-field appearance="fill">
+
+                        <mat-label>
+                            Security Credential
+                        </mat-label>
+
+                        <input matInput type="password" formControlName="securityCredential">
+
+                    </mat-form-field>
+
+                    <mat-form-field appearance="fill">
+
+                        <mat-label>
+                            Initiator Name
+                        </mat-label>
+
+                        <input matInput formControlName="initiatorName">
+
+                    </mat-form-field>
+
+                </div>
+
+            </section>
+
+            <section class="settings-panel">
+
+                <div class="panel-title">
+                    Callback Infrastructure
+                </div>
+
+                <div class="callbacks-grid">
+
+                    <mat-form-field appearance="fill">
+
+                        <mat-label>
+                            STK Callback URL
+                        </mat-label>
+
+                        <input matInput formControlName="stkCallbackUrl">
+
+                    </mat-form-field>
+
+                    <mat-form-field appearance="fill">
+
+                        <mat-label>
+                            Validation URL
+                        </mat-label>
+
+                        <input matInput formControlName="c2bValidationUrl">
+
+                    </mat-form-field>
+
+                    <mat-form-field appearance="fill">
+
+                        <mat-label>
+                            Confirmation URL
+                        </mat-label>
+
+                        <input matInput formControlName="c2bConfirmationUrl">
+
+                    </mat-form-field>
+
+                </div>
+
+            </section>
+
+        </form>
+
+    </div>
+
+</app-workflow-card>

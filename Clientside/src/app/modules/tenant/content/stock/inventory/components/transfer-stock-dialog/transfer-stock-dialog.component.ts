@@ -52,7 +52,7 @@ export class TransferStockDialogComponent {
       note: ['']
     });
 
-    this.branchService.getAll(false).subscribe(list => {
+    this.branchService.getAllLegacy().subscribe(list => {
       this.branches = list
         .filter(b => !!b.id && b.id !== this.data.fromBranchId)
         .map(b => ({

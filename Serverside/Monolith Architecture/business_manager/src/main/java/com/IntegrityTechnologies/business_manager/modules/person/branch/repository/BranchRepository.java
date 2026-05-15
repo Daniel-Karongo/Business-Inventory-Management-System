@@ -5,6 +5,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.user.model.User
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -13,7 +14,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface BranchRepository extends JpaRepository<Branch, UUID> {
+public interface BranchRepository extends JpaRepository<Branch, UUID>,
+        JpaSpecificationExecutor<Branch> {
 
     /* =========================================================
        SAFE FETCH
@@ -42,10 +44,14 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
     ========================================================= */
 
     List<Branch> findByTenantIdAndDeletedFalse(UUID tenantId);
+    Page<Branch> findByTenantIdAndDeletedFalse(UUID tenantId, Pageable pageable);
 
     List<Branch> findByTenantIdAndDeletedTrue(UUID tenantId);
 
-    Page<Branch> findByTenantIdAndDeletedFalse(UUID tenantId, Pageable pageable);
+    Page<Branch> findAll(
+            Specification<Branch> spec,
+            Pageable pageable
+    );
 
     /* =========================================================
        RELATIONS

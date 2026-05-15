@@ -1,28 +1,73 @@
-import { Component, OnInit } from '@angular/core';
+import {
+  Component,
+  OnInit
+} from '@angular/core';
+
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, RouterModule } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
+
+import {
+  ActivatedRoute,
+  RouterModule
+} from '@angular/router';
+
+import {
+  WorkflowCardComponent
+} from '../../../../../../shared/layout/workflow-card/workflow-card.component';
 
 import { BranchService } from '../../services/branch.service';
-import { BranchDTO } from '../../models/branch.model';
+
+import {
+  BranchDetailsDTO
+} from '../../models/branch.model';
 
 @Component({
   standalone: true,
   selector: 'app-branch-details',
-  imports: [CommonModule, RouterModule, MatButtonModule],
-  templateUrl: './branch-details.component.html'
+  imports: [
+    CommonModule,
+    RouterModule,
+    WorkflowCardComponent
+  ],
+  templateUrl: './branch-details.component.html',
+  styleUrls: ['./branch-details.component.scss']
 })
 export class BranchDetailsComponent implements OnInit {
 
-  branch?: BranchDTO;
+  branch?: BranchDetailsDTO;
+
+  loading = true;
 
   constructor(
     private route: ActivatedRoute,
     private service: BranchService
-  ) {}
+  ) { }
 
-  ngOnInit() {
-    const id = this.route.snapshot.paramMap.get('id')!;
-    this.service.getById(id).subscribe(b => this.branch = b);
+  ngOnInit(): void {
+
+    const id =
+      this.route.parent?.snapshot.paramMap.get('id');
+
+    if (!id) {
+
+      this.loading = false;
+
+      return;
+    }
+
+    this.service
+      .getById(id)
+      .subscribe({
+        next: branch => {
+
+          this.branch = branch;
+
+          this.loading = false;
+        },
+
+        error: () => {
+
+          this.loading = false;
+        }
+      });
   }
 }

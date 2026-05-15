@@ -1,0 +1,109 @@
+<form class="branch-form" [formGroup]="form" (ngSubmit)="submit()">
+
+    <div class="form-grid">
+
+        <!-- BRANCH CODE -->
+
+        <mat-form-field appearance="fill">
+
+            <mat-label>
+                Branch Code
+            </mat-label>
+
+            <input matInput formControlName="branchCode">
+
+        </mat-form-field>
+
+        <!-- NAME -->
+
+        <mat-form-field appearance="fill">
+
+            <mat-label>
+                Name
+            </mat-label>
+
+            <input matInput formControlName="name">
+
+        </mat-form-field>
+
+        <!-- LOCATION -->
+
+        <mat-form-field appearance="fill">
+
+            <mat-label>
+                Location
+            </mat-label>
+
+            <input matInput formControlName="location">
+
+        </mat-form-field>
+
+        <!-- PHONE -->
+
+        <mat-form-field appearance="fill">
+
+            <mat-label>
+                Phone
+            </mat-label>
+
+            <input matInput formControlName="phone">
+
+        </mat-form-field>
+
+        <!-- EMAIL -->
+
+        <mat-form-field appearance="fill" class="full-width">
+
+            <mat-label>
+                Email
+            </mat-label>
+
+            <input matInput formControlName="email">
+
+        </mat-form-field>
+
+        <!-- USERS -->
+
+        <mat-expansion-panel class="full-width">
+
+            <mat-expansion-panel-header>
+                Assign Users
+            </mat-expansion-panel-header>
+
+            <app-searchable-assign label="Users" [items]="users" [display]="userDisplay" [id]="userId"
+                [selectedIds]="userIds" (selectedIdsChange)="userIdsChange.emit($event)">
+            </app-searchable-assign>
+
+        </mat-expansion-panel>
+
+        <!-- DEPARTMENTS -->
+
+        <mat-expansion-panel class="full-width">
+
+            <mat-expansion-panel-header>
+                Assign Departments
+            </mat-expansion-panel-header>
+
+            <app-searchable-assign label="Departments" [items]="departments" [display]="deptDisplay" [id]="deptId"
+                [selectedIds]="departmentIds" (selectedIdsChange)="departmentIdsChange.emit($event)">
+            </app-searchable-assign>
+
+        </mat-expansion-panel>
+
+    </div>
+
+    <div class="form-actions">
+
+        <button type="submit" mat-flat-button [disabled]="loading">
+
+            {{
+            loading
+            ? 'Saving...'
+            : submitLabel
+            }}
+
+        </button>
+
+    </div>
+
+</form>

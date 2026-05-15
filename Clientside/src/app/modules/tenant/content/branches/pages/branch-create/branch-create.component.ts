@@ -1,129 +1,143 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import {
-  FormBuilder,
-  Validators,
-  ReactiveFormsModule,
-  FormControl,
-  FormGroup
-} from '@angular/forms';
-import { Router } from '@angular/router';
-import { Observable } from 'rxjs';
-import { map, startWith } from 'rxjs/operators';
+  Component,
+  OnInit
+} from '@angular/core';
 
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatExpansionModule } from '@angular/material/expansion';
+import { CommonModule } from '@angular/common';
+
+import { Router } from '@angular/router';
+
+import { finalize, forkJoin } from 'rxjs';
+
+import {
+  WorkflowShellComponent
+} from '../../../../../../shared/layout/workflow-shell/workflow-shell.component';
+
+import {
+  WorkflowCardComponent
+} from '../../../../../../shared/layout/workflow-card/workflow-card.component';
+
+import {
+  BranchFormComponent
+} from '../../components/branch-form/branch-form.component';
 
 import { BranchService } from '../../services/branch.service';
-import { DepartmentService } from '../../../departments/services/department.service';
-import { UserService } from '../../../users/services/user/user.service';
 
-import { DepartmentDTO } from '../../../departments/models/department.model';
-import { MinimalUserDTO } from '../../../users/models/user.model';
-import { filterBy } from '../../../../../../core/utils/search-filter';
-import { SearchableAssignComponent } from '../../../../../../shared/components/searchable-assign/searchable-assign.component';
+import {
+  BranchFormDTO
+} from '../../models/branch.model';
+
+import {
+  DepartmentDTO
+} from '../../../departments/models/department.model';
+
+import {
+  MinimalUserDTO
+} from '../../../users/models/user.model';
+
+import { DepartmentService } from '../../../departments/services/department.service';
+
+import { UserService } from '../../../users/services/user/user.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   standalone: true,
   selector: 'app-branch-create',
   imports: [
     CommonModule,
-    ReactiveFormsModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatAutocompleteModule,
-    MatChipsModule,
-    MatExpansionModule,
-    SearchableAssignComponent
+    WorkflowShellComponent,
+    WorkflowCardComponent,
+    BranchFormComponent
   ],
   templateUrl: './branch-create.component.html',
   styleUrls: ['./branch-create.component.scss']
 })
 export class BranchCreateComponent implements OnInit {
 
-  fg!: FormGroup;
+  loading = false;
 
   users: MinimalUserDTO[] = [];
+
   departments: DepartmentDTO[] = [];
 
   userIds: string[] = [];
+
   departmentIds: string[] = [];
 
-  userCtrl = new FormControl<string>('');
-  deptCtrl = new FormControl<string>('');
-
-  filteredUsers$!: Observable<MinimalUserDTO[]>;
-  filteredDepts$!: Observable<DepartmentDTO[]>;
-
-  // ---- display & id helpers (REQUIRED by SearchableAssignComponent) ----
-  userDisplay = (u: MinimalUserDTO) => u.username;
-  userId = (u: MinimalUserDTO) => u.id;
-
-  deptDisplay = (d: DepartmentDTO) => d.name;
-  deptId = (d: DepartmentDTO) => d.id!;
-
   constructor(
-    private fb: FormBuilder,
     private router: Router,
     private branchService: BranchService,
-    private deptService: DepartmentService,
-    private userService: UserService
+    private departmentService: DepartmentService,
+    private userService: UserService,
+    private snackbar: MatSnackBar
   ) { }
 
   ngOnInit() {
-    this.fg = this.fb.group({
-      branchCode: ['', Validators.required],
-      name: ['', Validators.required],
-      location: [''],
-      phone: [''],
-      email: ['']
-    });
 
-    this.userService.list(0, 500).subscribe(r => {
-      this.users = r.data;
-      this.filteredUsers$ = this.userCtrl.valueChanges.pipe(
-        startWith(''),
-        map(v => filterBy(this.users, v ?? '', u => u.username))
-      );
-    });
+    forkJoin({
+      users:
+        this.userService.list(0, 500),
 
-    this.deptService.getAll(false).subscribe(d => {
-      this.departments = d;
-      this.filteredDepts$ = this.deptCtrl.valueChanges.pipe(
-        startWith(''),
-        map(v => filterBy(this.departments, v ?? '', x => x.name))
-      );
-    });
+      departments:
+        this.departmentService.getAll(false)
+    })
+      .subscribe({
+        next: result => {
+
+          this.users =
+            result.users.data;
+
+          this.departments =
+            result.departments;
+        }
+      });
   }
 
-  removeUser(id: string) {
-    this.userIds = this.userIds.filter(x => x !== id);
-  }
+  save(dto: BranchFormDTO) {
 
-  removeDept(id: string) {
-    this.departmentIds = this.departmentIds.filter(x => x !== id);
-  }
+    this.loading = true;
 
-  usernameById(id: string) {
-    return this.users.find(u => u.id === id)?.username ?? '';
-  }
+    this.branchService
+      .create({
+        ...dto,
+        userIds: this.userIds,
+        departmentIds: this.departmentIds
+      })
+      .pipe(
+        finalize(() => {
+          this.loading = false;
+        })
+      )
+      .subscribe({
+        next: () => {
 
-  deptNameById(id: string) {
-    return this.departments.find(d => d.id === id)?.name ?? '';
-  }
+          this.snackbar.open(
+            'Branch created successfully',
+            'Close',
+            {
+              duration: 3000
+            }
+          );
 
-  save() {
-    if (this.fg.invalid) return;
+          this.router.navigate([
+            '/app/branches'
+          ]);
+        },
 
-    this.branchService.create({
-      ...this.fg.value,
-      userIds: this.userIds,
-      departmentIds: this.departmentIds
-    }).subscribe(() => this.router.navigate(['/app/branches']));
+        error: (err) => {
+
+          const message =
+            err?.error?.message
+            || 'Failed to create branch';
+
+          this.snackbar.open(
+            message,
+            'Close',
+            {
+              duration: 4000
+            }
+          );
+        }
+      });
   }
 }

@@ -24,16 +24,12 @@ import java.util.UUID;
 @AllArgsConstructor
 @SuperBuilder
 public class TenantInventorySettings extends TenantAwareEntity {
-
     @Id
     @GeneratedValue
     private UUID id;
-
     @Enumerated(EnumType.STRING)
     private InventoryValuationService.ValuationMethod valuationMethod;
-
     private Boolean locked;
-
     private Boolean enforcePackagingIntegrity;
     private Boolean allowPartialPackaging;
     private Boolean enableReservationsExpiry;

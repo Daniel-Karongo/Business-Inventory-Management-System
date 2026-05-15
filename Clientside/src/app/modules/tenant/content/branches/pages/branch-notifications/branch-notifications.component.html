@@ -1,0 +1,82 @@
+<app-workflow-card>
+
+    <div class="settings-shell">
+
+        <div class="settings-toolbar">
+
+            <div>
+
+                <div class="settings-kicker">
+                    Notification Operations
+                </div>
+
+                <h2 class="settings-heading">
+                    Delivery & Retry Policy
+                </h2>
+
+            </div>
+
+            <button mat-flat-button color="primary" (click)="save()" [disabled]="saving || form.pristine">
+
+                <ng-container *ngIf="!saving">
+                    Save Changes
+                </ng-container>
+
+                <mat-spinner *ngIf="saving" diameter="18">
+                </mat-spinner>
+
+            </button>
+
+        </div>
+
+        <form [formGroup]="form" class="settings-grid">
+
+            <section class="settings-panel">
+
+                <div class="panel-title">
+                    Delivery Channels
+                </div>
+
+                <mat-slide-toggle formControlName="smsEnabled">
+
+                    SMS Notifications
+
+                </mat-slide-toggle>
+
+                <mat-slide-toggle formControlName="emailEnabled">
+
+                    Email Notifications
+
+                </mat-slide-toggle>
+
+            </section>
+
+            <section class="settings-panel">
+
+                <div class="panel-title">
+                    Retry Strategy
+                </div>
+
+                <mat-slide-toggle formControlName="allowRetries">
+
+                    Enable Retry Processing
+
+                </mat-slide-toggle>
+
+                <mat-form-field appearance="fill">
+
+                    <mat-label>
+                        Maximum Retry Count
+                    </mat-label>
+
+                    <input matInput type="number" formControlName="maxRetryCount">
+
+                </mat-form-field>
+
+            </section>
+
+        </form>
+
+    </div>
+
+</app-workflow-card>

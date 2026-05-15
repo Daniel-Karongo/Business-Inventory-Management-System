@@ -112,7 +112,7 @@ export class CategoryListComponent implements OnInit {
     this.canManageDeleted =
       ['SUPERUSER', 'ADMIN', 'MANAGER'].includes(user.role);
 
-    this.branchService.getAll(false).subscribe(branches => {
+    this.branchService.getAllLegacy().subscribe(branches => {
       this.branches = branches;
 
       // ✅ RULE: only allow selector if MORE THAN ONE branch

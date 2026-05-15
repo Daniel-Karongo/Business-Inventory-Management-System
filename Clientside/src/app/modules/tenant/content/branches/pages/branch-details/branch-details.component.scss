@@ -1,26 +1,133 @@
 :host {
   display: block;
+  width: 100%;
+  min-width: 0;
 }
 
-h2 {
-  margin-bottom: 1rem;
-}
+/* =========================================================
+   HEADER
+========================================================= */
 
-.grid {
-  background: var(--surface);
-  padding: 1.25rem;
-  border-radius: 8px;
-}
+.overview-title {
+  margin: 0;
 
-td {
+  font-size: 20px;
+  font-weight: 700;
+
   color: var(--text-primary);
-  font-size: 0.875rem;
 }
 
-th {
-  font-weight: 600;
+.overview-subtitle {
+  margin-top: 4px;
+
   color: var(--text-secondary);
-  text-transform: uppercase;
-  font-size: 0.7rem;
+}
+
+/* =========================================================
+   GRID
+========================================================= */
+
+.overview-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(auto-fit,
+      minmax(220px, 1fr));
+
+  gap: 16px;
+}
+
+/* =========================================================
+   ITEM
+========================================================= */
+
+.overview-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  min-width: 0;
+
+  padding: 14px;
+
+  border: 1px solid var(--border);
+
+  border-radius: 12px;
+
+  background: rgba(255, 255, 255, 0.02);
+
+  transition:
+    border-color 120ms ease,
+    transform 120ms ease,
+    background-color 120ms ease;
+}
+
+.overview-item:hover {
+  transform: translateY(-1px);
+
+  border-color: var(--active);
+}
+
+/* =========================================================
+   LABEL
+========================================================= */
+
+.overview-label {
+  font-size: 11px;
+  font-weight: 700;
+
   letter-spacing: 0.4px;
+
+  text-transform: uppercase;
+
+  color: var(--text-secondary);
+}
+
+/* =========================================================
+   VALUE
+========================================================= */
+
+.overview-value {
+  font-size: 15px;
+  font-weight: 600;
+
+  color: var(--text-primary);
+
+  word-break: break-word;
+}
+
+/* =========================================================
+   STATES
+========================================================= */
+
+.overview-loading,
+.overview-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 180px;
+
+  text-align: center;
+
+  color: var(--text-secondary);
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-item {
+    padding: 12px;
+  }
+
+  .overview-value {
+    font-size: 14px;
+  }
 }
