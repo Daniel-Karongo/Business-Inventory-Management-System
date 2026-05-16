@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.communication.notification.email.service;
 
 import com.IntegrityTechnologies.business_manager.config.util.SecretMaskingUtil;
+import com.IntegrityTechnologies.business_manager.modules.communication.notification.base.BranchNotificationChannelPolicyService;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.dto.BranchEmailSettingsDTO;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.dto.BranchEmailSettingsResponseDTO;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.model.BranchEmailSettings;
@@ -20,6 +21,7 @@ public class BranchEmailSettingsService {
 
     private final BranchEmailSettingsRepository repo;
     private final BranchTenantGuard branchTenantGuard;
+    private final BranchNotificationChannelPolicyService policyService;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -29,10 +31,12 @@ public class BranchEmailSettingsService {
 
         branchTenantGuard.validate(branchId);
 
+        UUID tenantId = tenantId();
+
         BranchEmailSettings settings =
                 repo
                         .findByTenantIdAndBranchIdAndDeletedFalse(
-                                tenantId(),
+                                tenantId,
                                 branchId
                         )
                         .orElseThrow(() ->
@@ -41,9 +45,16 @@ public class BranchEmailSettingsService {
                                 )
                         );
 
+        boolean effectiveEnabled =
+                policyService.resolveEmailEnabled(
+                        tenantId,
+                        branchId,
+                        settings
+                );
+
         return BranchEmailSettingsResponseDTO
                 .builder()
-                .enabled(settings.getEnabled())
+                .enabled(effectiveEnabled)
                 .host(settings.getHost())
                 .port(settings.getPort())
                 .username(settings.getUsername())
@@ -67,9 +78,11 @@ public class BranchEmailSettingsService {
 
         branchTenantGuard.validate(branchId);
 
+        UUID tenantId = tenantId();
+
         BranchEmailSettings settings =
                 repo.findByTenantIdAndBranchIdAndDeletedFalse(
-                                tenantId(),
+                                tenantId,
                                 branchId
                         )
                         .orElseThrow(() ->
@@ -78,14 +91,23 @@ public class BranchEmailSettingsService {
                                 )
                         );
 
-        settings.setEnabled(dto.getEnabled());
+        boolean globalEnabled =
+                policyService.isEmailGloballyEnabled(
+                        tenantId,
+                        branchId
+                );
+
+        settings.setEnabled(
+                globalEnabled
+                        && Boolean.TRUE.equals(dto.getEnabled())
+        );
+
         settings.setHost(dto.getHost());
         settings.setPort(dto.getPort());
         settings.setUsername(dto.getUsername());
 
         if (dto.getPassword() != null
                 && !dto.getPassword().isBlank()) {
-
             settings.setPassword(dto.getPassword());
         }
 

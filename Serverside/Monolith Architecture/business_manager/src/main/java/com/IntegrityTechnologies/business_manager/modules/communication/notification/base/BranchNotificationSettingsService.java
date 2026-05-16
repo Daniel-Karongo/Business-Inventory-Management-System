@@ -1,5 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.communication.notification.base;
 
+import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.repository.BranchEmailSettingsRepository;
+import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.repository.BranchSmsSettingsRepository;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.persistence.EntityNotFoundException;
@@ -15,6 +17,8 @@ public class BranchNotificationSettingsService {
 
     private final BranchNotificationSettingsRepository repo;
     private final BranchTenantGuard branchTenantGuard;
+    private final BranchEmailSettingsRepository emailRepo;
+    private final BranchSmsSettingsRepository smsRepo;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -88,6 +92,45 @@ public class BranchNotificationSettingsService {
             );
         }
 
+        syncChannelStates(
+                tenantId(),
+                branchId,
+                settings
+        );
+
         return repo.save(settings);
+    }
+
+    private void syncChannelStates(
+            UUID tenantId,
+            UUID branchId,
+            BranchNotificationSettings settings
+    ) {
+
+        if (!Boolean.TRUE.equals(settings.getEmailEnabled())) {
+
+            emailRepo
+                    .findByTenantIdAndBranchIdAndDeletedFalse(
+                            tenantId,
+                            branchId
+                    )
+                    .ifPresent(email -> {
+                        email.setEnabled(false);
+                        emailRepo.save(email);
+                    });
+        }
+
+        if (!Boolean.TRUE.equals(settings.getSmsEnabled())) {
+
+            smsRepo
+                    .findByTenantIdAndBranchIdAndDeletedFalse(
+                            tenantId,
+                            branchId
+                    )
+                    .ifPresent(sms -> {
+                        sms.setEnabled(false);
+                        smsRepo.save(sms);
+                    });
+        }
     }
 }

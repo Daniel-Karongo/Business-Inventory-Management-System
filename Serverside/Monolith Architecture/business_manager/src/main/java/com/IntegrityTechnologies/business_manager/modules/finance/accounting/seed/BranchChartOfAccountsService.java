@@ -24,6 +24,7 @@ public class BranchChartOfAccountsService {
         seed(tenantId, branchId,"1150","M-Pesa Clearing Account",AccountType.ASSET,AccountRole.MPESA);
         seed(tenantId, branchId,"1200","Inventory",AccountType.ASSET,AccountRole.INVENTORY);
         seed(tenantId, branchId,"1300","Input VAT",AccountType.ASSET,AccountRole.VAT_INPUT);
+        seed(tenantId, branchId, "1350", "VAT Receivable", AccountType.ASSET, AccountRole.VAT_RECEIVABLE);
         seed(tenantId, branchId,"1500","Accounts Receivable",AccountType.ASSET,AccountRole.ACCOUNTS_RECEIVABLE);
 
         seed(tenantId, branchId,"2000","Accounts Payable",AccountType.LIABILITY,AccountRole.ACCOUNTS_PAYABLE);

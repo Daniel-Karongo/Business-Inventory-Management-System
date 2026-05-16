@@ -366,21 +366,39 @@ public class InventoryService {
                                 .description("Inventory receipt with VAT")
                                 .performedBy(getCurrentUsername())
                                 .entries(List.of(
+
                                         AccountingEvent.Entry.builder()
-                                                .accountId(accountingAccounts.get(tenantId(), branch.getId(), AccountRole.INVENTORY))
+                                                .accountId(accountingAccounts.get(
+                                                        tenantId(),
+                                                        branch.getId(),
+                                                        AccountRole.INVENTORY
+                                                ))
                                                 .direction(EntryDirection.DEBIT)
                                                 .amount(incomingCostTotal)
                                                 .build(),
+
                                         AccountingEvent.Entry.builder()
-                                                .accountId(accountingAccounts.get(tenantId(), branch.getId(), AccountRole.VAT_INPUT))
+                                                .accountId(accountingAccounts.get(
+                                                        tenantId(),
+                                                        branch.getId(),
+                                                        AccountRole.VAT_INPUT
+                                                ))
                                                 .direction(EntryDirection.DEBIT)
                                                 .amount(totalInputVat)
                                                 .build(),
+
                                         AccountingEvent.Entry.builder()
-                                                .accountId(accountingAccounts.get(tenantId(), branch.getId(), AccountRole.VAT_PAYABLE))
+                                                .accountId(accountingAccounts.get(
+                                                        tenantId(),
+                                                        branch.getId(),
+                                                        AccountRole.ACCOUNTS_PAYABLE
+                                                ))
                                                 .direction(EntryDirection.CREDIT)
-                                                .amount(incomingCostTotal.add(totalInputVat))
+                                                .amount(
+                                                        incomingCostTotal.add(totalInputVat)
+                                                )
                                                 .build()
+
                                 ))
                                 .build()
                 );

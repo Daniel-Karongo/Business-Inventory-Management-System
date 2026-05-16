@@ -29,6 +29,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -109,7 +110,8 @@ public class PaymentServiceImpl implements PaymentService {
 
         BigDecimal paymentAmount =
                 Optional.ofNullable(req.getAmount())
-                        .orElse(BigDecimal.ZERO);
+                        .orElse(BigDecimal.ZERO)
+                        .setScale(2, RoundingMode.HALF_UP);
 
         if (paymentAmount.compareTo(BigDecimal.ZERO) <= 0) {
 
@@ -119,7 +121,9 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         BigDecimal remaining =
-                saleTotal.subtract(alreadyPaid);
+                saleTotal
+                        .subtract(alreadyPaid)
+                        .setScale(2, RoundingMode.HALF_UP);
 
         if (paymentAmount.compareTo(remaining) > 0) {
 

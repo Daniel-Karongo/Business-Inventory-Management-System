@@ -43,6 +43,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -64,6 +65,7 @@ public class SalesService {
     private final JournalEntryRepository journalEntryRepository;
     private final BatchConsumptionRepository batchConsumptionRepository;
     private final RevenueRecognitionService revenueRecognitionService;
+    private final SalesVatAccountingService salesVatAccountingService;
 
     private final ObjectMapper objectMapper;
     private final SellableResolutionService sellableResolutionService;
@@ -83,7 +85,7 @@ public class SalesService {
         String currentUser = SecurityUtils.currentUsername();
 
         List<SaleLineItem> lines = new ArrayList<>();
-        UUID branchId = extractSingleBranch(lines);
+        UUID branchId = extractSingleBranchSimple(req.getItems());
 
         UUID customerId = Optional.ofNullable(req.getCustomerIdentifiers())
                 .map(ci -> customerService.findOrCreateCustomer(branchId, List.of(ci)))
@@ -236,7 +238,13 @@ public class SalesService {
 
         BigDecimal total = lines.stream()
                 .map(SaleLineItem::getLineTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal totalTax = lines.stream()
+                .map(li -> defaultZero(li.getVatAmount()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
 
         String receiptNo = receiptNumberService.nextSaleReceipt();
 
@@ -250,7 +258,7 @@ public class SalesService {
                 .customerId(customerId)
                 .totalAmount(total)
                 .totalDiscount(Optional.ofNullable(req.getTotalDiscount()).orElse(BigDecimal.ZERO))
-                .totalTax(Optional.ofNullable(req.getTotalTax()).orElse(BigDecimal.ZERO))
+                .totalTax(totalTax)
                 .lineItems(lines)
                 .payments(new ArrayList<>())
                 .status(Sale.SaleStatus.CREATED)
@@ -305,6 +313,7 @@ public class SalesService {
         saleRepository.save(sale);
 
         sale.setStatus(Sale.SaleStatus.COMPLETED);
+
         saleRepository.save(sale);
 
         revenueRecognitionService.recognizeIfEligible(sale);
@@ -818,5 +827,11 @@ public class SalesService {
         } catch (Exception e) {
             return "[]";
         }
+    }
+
+    private BigDecimal defaultZero(BigDecimal value) {
+        return value != null
+                ? value
+                : BigDecimal.ZERO;
     }
 }

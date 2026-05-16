@@ -16,6 +16,7 @@ public enum AccountRole {
 
     VAT_INPUT,
     VAT_OUTPUT,
+    VAT_RECEIVABLE,
     VAT_PAYABLE,
 
     CORPORATE_TAX_PAYABLE,

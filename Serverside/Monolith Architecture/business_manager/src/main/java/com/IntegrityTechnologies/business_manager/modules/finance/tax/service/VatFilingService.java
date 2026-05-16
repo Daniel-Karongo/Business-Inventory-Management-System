@@ -121,10 +121,27 @@ public class VatFilingService {
         }
 
         if (payable.compareTo(BigDecimal.ZERO) > 0) {
+
             entries.add(AccountingEvent.Entry.builder()
-                    .accountId(accounts.get(tenantId(), branchId, AccountRole.VAT_PAYABLE))
+                    .accountId(accounts.get(
+                            tenantId(),
+                            branchId,
+                            AccountRole.VAT_PAYABLE
+                    ))
                     .direction(EntryDirection.CREDIT)
                     .amount(payable)
+                    .build());
+
+        } else if (payable.compareTo(BigDecimal.ZERO) < 0) {
+
+            entries.add(AccountingEvent.Entry.builder()
+                    .accountId(accounts.get(
+                            tenantId(),
+                            branchId,
+                            AccountRole.VAT_RECEIVABLE
+                    ))
+                    .direction(EntryDirection.DEBIT)
+                    .amount(payable.abs())
                     .build());
         }
 
@@ -132,10 +149,13 @@ public class VatFilingService {
     }
 
     @Transactional
-    public void markPaid(VatFiling filing, String user, UUID paymentAccountId) {
+    public void markPaid(
+            VatFiling filing,
+            String user,
+            UUID paymentAccountId
+    ) {
 
         if (filing.isPaid()) {
-
             throw new IllegalStateException(
                     "VAT filing already paid and locked."
             );
@@ -144,6 +164,12 @@ public class VatFilingService {
         UUID branchId = filing.getBranchId();
 
         BigDecimal amount = filing.getVatPayable();
+
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalStateException(
+                    "Cannot mark refundable VAT filing as paid"
+            );
+        }
 
         accountingFacade.post(
                 AccountingEvent.builder()
@@ -157,10 +183,15 @@ public class VatFilingService {
                         .tenantId(tenantId())
                         .entries(List.of(
                                 AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(tenantId(), branchId, AccountRole.VAT_PAYABLE))
+                                        .accountId(accounts.get(
+                                                tenantId(),
+                                                branchId,
+                                                AccountRole.VAT_PAYABLE
+                                        ))
                                         .direction(EntryDirection.DEBIT)
                                         .amount(amount)
                                         .build(),
+
                                 AccountingEvent.Entry.builder()
                                         .accountId(paymentAccountId)
                                         .direction(EntryDirection.CREDIT)
@@ -171,6 +202,7 @@ public class VatFilingService {
         );
 
         filing.setPaid(true);
+
         filingRepo.save(filing);
     }
 }

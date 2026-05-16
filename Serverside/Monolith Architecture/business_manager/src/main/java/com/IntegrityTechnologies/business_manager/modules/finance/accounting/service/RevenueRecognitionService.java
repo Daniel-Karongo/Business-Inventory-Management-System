@@ -9,6 +9,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.model.PaymentStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineItem;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.service.SalesVatAccountingService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class RevenueRecognitionService {
     private final AccountingAccounts accounts;
     private final BranchAccountingSettingsService branchAccountingSettingsService;
     private final BranchTenantGuard branchTenantGuard;
+    private final SalesVatAccountingService salesVatAccountingService;
 
     @Transactional
     public void recognizeIfEligible(Sale sale) {
@@ -61,46 +63,11 @@ public class RevenueRecognitionService {
             return;
         }
 
-        BigDecimal totalNet = sale.getLineItems().stream()
-                .map(SaleLineItem::getNetAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal totalVat = sale.getLineItems().stream()
-                .map(SaleLineItem::getVatAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        accountingFacade.post(
-                AccountingEvent.builder()
-                        .eventId(UUID.randomUUID())
-                        .sourceModule("SALE")
-                        .sourceId(sale.getId())
-                        .reference(sale.getReceiptNo())
-                        .description("Revenue recognition")
-                        .performedBy(sale.getCreatedBy())
-                        .branchId(branchId)
-                        .accountingDate(
-                                sale.getCreatedAt() != null
-                                        ? sale.getCreatedAt().toLocalDate()
-                                        : LocalDate.now()
-                        )
-                        .entries(List.of(
-                                AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(TenantContext.getTenantId(), branchId, AccountRole.ACCOUNTS_RECEIVABLE))
-                                        .direction(EntryDirection.DEBIT)
-                                        .amount(totalNet.add(totalVat))
-                                        .build(),
-                                AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(TenantContext.getTenantId(), branchId, AccountRole.REVENUE))
-                                        .direction(EntryDirection.CREDIT)
-                                        .amount(totalNet)
-                                        .build(),
-                                AccountingEvent.Entry.builder()
-                                        .accountId(accounts.get(TenantContext.getTenantId(), branchId, AccountRole.VAT_OUTPUT))
-                                        .direction(EntryDirection.CREDIT)
-                                        .amount(totalVat)
-                                        .build()
-                        ))
-                        .build()
+        salesVatAccountingService.postSaleAccounting(
+                TenantContext.getTenantId(),
+                branchId,
+                sale,
+                sale.getCreatedBy()
         );
     }
 

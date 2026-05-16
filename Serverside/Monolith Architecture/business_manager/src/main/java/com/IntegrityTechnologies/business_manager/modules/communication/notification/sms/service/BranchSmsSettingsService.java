@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.service;
 
 import com.IntegrityTechnologies.business_manager.config.util.SecretMaskingUtil;
+import com.IntegrityTechnologies.business_manager.modules.communication.notification.base.BranchNotificationChannelPolicyService;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.dto.BranchSmsSettingsDTO;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.dto.BranchSmsSettingsResponseDTO;
 import com.IntegrityTechnologies.business_manager.modules.communication.notification.sms.model.BranchSmsSettings;
@@ -20,6 +21,7 @@ public class BranchSmsSettingsService {
 
     private final BranchSmsSettingsRepository repo;
     private final BranchTenantGuard branchTenantGuard;
+    private final BranchNotificationChannelPolicyService policyService;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -29,10 +31,12 @@ public class BranchSmsSettingsService {
 
         branchTenantGuard.validate(branchId);
 
+        UUID tenantId = tenantId();
+
         BranchSmsSettings settings =
                 repo
                         .findByTenantIdAndBranchIdAndDeletedFalse(
-                                tenantId(),
+                                tenantId,
                                 branchId
                         )
                         .orElseThrow(() ->
@@ -41,9 +45,16 @@ public class BranchSmsSettingsService {
                                 )
                         );
 
+        boolean effectiveEnabled =
+                policyService.resolveSmsEnabled(
+                        tenantId,
+                        branchId,
+                        settings
+                );
+
         return BranchSmsSettingsResponseDTO
                 .builder()
-                .enabled(settings.getEnabled())
+                .enabled(effectiveEnabled)
                 .provider(settings.getProvider())
                 .username(settings.getUsername())
                 .apiKey(
@@ -68,9 +79,11 @@ public class BranchSmsSettingsService {
 
         branchTenantGuard.validate(branchId);
 
+        UUID tenantId = tenantId();
+
         BranchSmsSettings settings =
                 repo.findByTenantIdAndBranchIdAndDeletedFalse(
-                                tenantId(),
+                                tenantId,
                                 branchId
                         )
                         .orElseThrow(() ->
@@ -79,20 +92,31 @@ public class BranchSmsSettingsService {
                                 )
                         );
 
-        settings.setEnabled(dto.getEnabled());
+        boolean globalEnabled =
+                policyService.isSmsGloballyEnabled(
+                        tenantId,
+                        branchId
+                );
+
+        settings.setEnabled(
+                globalEnabled
+                        && Boolean.TRUE.equals(dto.getEnabled())
+        );
+
         settings.setProvider(dto.getProvider());
         settings.setUsername(dto.getUsername());
 
         if (dto.getApiKey() != null
                 && !dto.getApiKey().isBlank()) {
-
             settings.setApiKey(dto.getApiKey());
         }
 
         settings.setSenderId(dto.getSenderId());
+
         settings.setDefaultCountryCode(
                 dto.getDefaultCountryCode()
         );
+
         settings.setSandbox(dto.getSandbox());
         settings.setActive(dto.getActive());
 
