@@ -23,4 +23,11 @@ public interface GoodsReceiptRepository extends JpaRepository<GoodsReceipt, UUID
             UUID branchId,
             UUID matchedInvoiceId
     );
+
+    Optional<GoodsReceipt>
+    findByTenantIdAndBranchIdAndReceiptNumber(
+            UUID tenantId,
+            UUID branchId,
+            String receiptNumber
+    );
 }

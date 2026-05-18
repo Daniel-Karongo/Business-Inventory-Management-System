@@ -25,9 +25,6 @@ public class StockOnboardingBulkService {
 
     private final StockOnboardingService onboardingService;
 
-    @Transactional(
-            propagation = Propagation.REQUIRES_NEW
-    )
     public StockOnboardingResponse executeRow(
             StockOnboardingRequest row
     ) {
@@ -81,6 +78,7 @@ public class StockOnboardingBulkService {
                 + supplier;
     }
 
+    @Transactional
     public BulkResult<StockOnboardingBulkPreviewResult> bulkOnboard(
             BulkRequest<StockOnboardingRequest> request
     ) {
@@ -90,7 +88,6 @@ public class StockOnboardingBulkService {
 
         if (request == null
                 || request.getItems() == null) {
-
             return result;
         }
 
@@ -99,16 +96,26 @@ public class StockOnboardingBulkService {
                         ? request.getOptions()
                         : new BulkOptions();
 
-        result.setTotal(request.getItems().size());
+        result.setTotal(
+                request.getItems().size()
+        );
 
         List<StockOnboardingBulkPreviewRow> previewRows =
                 new ArrayList<>();
 
         long totalUnits = 0;
 
-        BigDecimal totalCost = BigDecimal.ZERO;
+        BigDecimal totalCost =
+                BigDecimal.ZERO;
 
-        Set<String> seenRows = new HashSet<>();
+        Set<String> seenRows =
+                new HashSet<>();
+
+        /*
+         * =====================================================
+         * PHASE 1 — PREVALIDATION ONLY
+         * =====================================================
+         */
 
         for (int i = 0; i < request.getItems().size(); i++) {
 
@@ -117,55 +124,37 @@ public class StockOnboardingBulkService {
             StockOnboardingRequest row =
                     request.getItems().get(i);
 
-            if (options.isSkipDuplicates()) {
-
-                String dedupeKey = dedupeKey(row);
-
-                if (!seenRows.add(dedupeKey)) {
-
-                    result.addError(
-                            rowNumber,
-                            "Duplicate onboarding row detected"
-                    );
-
-                    continue;
-                }
-            }
-
             try {
+
+                if (options.isSkipDuplicates()) {
+
+                    String dedupeKey =
+                            dedupeKey(row);
+
+                    if (!seenRows.add(dedupeKey)) {
+
+                        result.addError(
+                                rowNumber,
+                                "Duplicate onboarding row detected"
+                        );
+
+                        continue;
+                    }
+                }
 
                 StockOnboardingBulkPreviewRow preview =
                         onboardingService.preview(row);
 
                 previewRows.add(preview);
 
-                totalUnits += preview.getTotalUnits();
+                totalUnits +=
+                        preview.getTotalUnits();
 
                 totalCost =
-                        totalCost.add(preview.getTotalCost());
+                        totalCost.add(
+                                preview.getTotalCost()
+                        );
 
-                if (!options.isDryRun()) {
-
-                    executeRow(row);
-                }
-
-                result.setSuccess(result.getSuccess() + 1);
-
-            } catch (ExpectedConcurrencyException ex) {
-                result.addError(
-                        rowNumber,
-                        ex.getMessage()
-                );
-            } catch (IllegalArgumentException ex) {
-                result.addError(
-                        rowNumber,
-                        ex.getMessage()
-                );
-            } catch (IllegalStateException ex) {
-                result.addError(
-                        rowNumber,
-                        ex.getMessage()
-                );
             } catch (Exception ex) {
 
                 result.addError(
@@ -175,8 +164,68 @@ public class StockOnboardingBulkService {
             }
         }
 
+        /*
+         * =====================================================
+         * VALIDATION FAILED
+         * =====================================================
+         */
+
+        if (!result.getErrors().isEmpty()) {
+
+            result.getData().add(
+                    StockOnboardingBulkPreviewResult
+                            .builder()
+                            .rows(previewRows)
+                            .totalUnits(totalUnits)
+                            .totalCost(totalCost)
+                            .build()
+            );
+
+            return result;
+        }
+
+        /*
+         * =====================================================
+         * DRY RUN
+         * =====================================================
+         */
+
+        if (options.isDryRun()) {
+
+            result.setSuccess(
+                    request.getItems().size()
+            );
+
+            result.getData().add(
+                    StockOnboardingBulkPreviewResult
+                            .builder()
+                            .rows(previewRows)
+                            .totalUnits(totalUnits)
+                            .totalCost(totalCost)
+                            .build()
+            );
+
+            return result;
+        }
+
+        /*
+         * =====================================================
+         * PHASE 2 — ATOMIC EXECUTION
+         * =====================================================
+         */
+
+        for (StockOnboardingRequest row : request.getItems()) {
+
+            onboardingService.onboard(row);
+        }
+
+        result.setSuccess(
+                request.getItems().size()
+        );
+
         result.getData().add(
-                StockOnboardingBulkPreviewResult.builder()
+                StockOnboardingBulkPreviewResult
+                        .builder()
                         .rows(previewRows)
                         .totalUnits(totalUnits)
                         .totalCost(totalCost)

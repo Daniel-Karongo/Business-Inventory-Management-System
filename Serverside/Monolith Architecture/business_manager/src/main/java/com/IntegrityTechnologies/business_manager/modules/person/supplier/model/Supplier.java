@@ -83,10 +83,7 @@ public class Supplier extends BranchAwareEntity {
     @JoinColumn(name = "updated_by_id")
     private User updatedBy;
 
-    @OneToMany(
-            mappedBy = "supplier",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
+    @OneToMany(mappedBy = "supplier", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private Set<CategorySupplier> categorySuppliers = new HashSet<>();
 }

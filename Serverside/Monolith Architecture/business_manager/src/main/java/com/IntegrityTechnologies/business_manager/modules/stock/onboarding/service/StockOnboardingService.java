@@ -4,12 +4,13 @@ import com.IntegrityTechnologies.business_manager.config.caffeine.CacheInvalidat
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.service.SupplierService;
+import com.IntegrityTechnologies.business_manager.modules.procurement.matching.dto.ReceiveAndInvoiceRequest;
+import com.IntegrityTechnologies.business_manager.modules.procurement.matching.service.ReceiveAndInvoiceService;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.service.CategoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.ReceiveStockRequest;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.SupplierUnit;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingBulkPreviewRow;
 import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingRequest;
 import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingResponse;
@@ -47,7 +48,6 @@ public class StockOnboardingService {
     private final ProductVariantPackagingService packagingService;
     private final ProductPriceService priceService;
     private final ProductPriceRepository priceRepo;
-    private final InventoryService inventoryService;
     private final ProductRepository productRepository;
     private final CacheInvalidationService cacheInvalidationService;
     private final CategoryRepository categoryRepository;
@@ -55,6 +55,7 @@ public class StockOnboardingService {
     private final SupplierRepository supplierRepository;
     private final SupplierService supplierService;
     private final ProductVariantRepository variantRepo;
+    private final ReceiveAndInvoiceService receiveAndInvoiceService;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -111,7 +112,16 @@ public class StockOnboardingService {
         ReceiveStockRequest receiveReq =
                 buildInventoryRequest(req, product.getId(), variantId, packagingMap);
 
-        inventoryService.receiveStock(receiveReq);
+        ReceiveAndInvoiceRequest orchestration =
+                new ReceiveAndInvoiceRequest();
+
+        orchestration.setStockReceipt(
+                receiveReq
+        );
+
+        receiveAndInvoiceService.execute(
+                orchestration
+        );
 
         long totalUnits = receiveReq.getSuppliers().stream()
                 .mapToLong(SupplierUnit::getUnitsSupplied)
@@ -735,7 +745,7 @@ public class StockOnboardingService {
 
             if (base != null) {
                 base.setPrice(price.getSellingPrice());
-                priceRepo.saveAndFlush(base);
+                priceRepo.save(base);
             } else {
                 priceService.createPrice(
                         req.getBranchId(),
@@ -913,6 +923,7 @@ public class StockOnboardingService {
                     "At least one supplier is required"
             );
         }
+
 
         if (req.getPricing() == null
                 || req.getPricing().isEmpty()) {

@@ -47,6 +47,7 @@ import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -57,6 +58,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -224,29 +226,29 @@ public class InventoryService {
             // -------------------------------------------------------------
             try {
 
-                inventoryItemRepository
-                        .lockByVariant(
-                                variant.getId(),
-                                tenantId(),
-                                branch.getId()
-                        )
-                        .orElseGet(() ->
-                                inventoryItemRepository.saveAndFlush(
-                                        InventoryItem.builder()
-                                                .productId(product.getId())
-                                                .productVariantId(variant.getId())
-                                                .tenantId(tenantId())
-                                                .branchId(branch.getId())
-                                                .quantityOnHand(0L)
-                                                .averageCost(BigDecimal.ZERO)
-                                                .deleted(false)
-                                                .build()
-                                )
-                        );
+                boolean exists =
+                        inventoryItemRepository.existsByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
+                                        variant.getId(),
+                                        tenantId(),
+                                        branch.getId()
+                                );
 
-            } catch (
-                    DataIntegrityViolationException ex
-            ) {
+                if (!exists) {
+
+                    inventoryItemRepository.save(
+                            InventoryItem.builder()
+                                    .productId(product.getId())
+                                    .productVariantId(variant.getId())
+                                    .tenantId(tenantId())
+                                    .branchId(branch.getId())
+                                    .quantityOnHand(0L)
+                                    .averageCost(BigDecimal.ZERO)
+                                    .deleted(false)
+                                    .build()
+                    );
+                }
+
+            } catch (DataIntegrityViolationException ex) {
 
                 boolean exists =
                         inventoryItemRepository.existsByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
@@ -256,9 +258,7 @@ public class InventoryService {
                                 );
 
                 if (!exists) {
-                    throw new ExpectedConcurrencyException(
-                            "Concurrent inventory creation detected"
-                    );
+                    throw ex;
                 }
             }
 
@@ -291,8 +291,9 @@ public class InventoryService {
 
                 receipt.setReceiptNumber(
                         "GRN-" +
-                                receiptId.toString()
-                                        .substring(0, 8)
+                                UUID.randomUUID()
+                                        .toString()
+                                        .substring(0, 12)
                                         .toUpperCase()
                 );
 
@@ -341,14 +342,38 @@ public class InventoryService {
                         req.getNote()
                 );
 
-                GoodsReceipt savedReceipt =
-                        goodsReceiptRepository.save(
-                                receipt
+                try {
+
+                    GoodsReceipt savedReceipt =
+                            goodsReceiptRepository.save(
+                                    receipt
+                            );
+
+                    goodsReceiptIds.add(
+                            savedReceipt.getId()
+                    );
+
+                } catch (DataIntegrityViolationException ex) {
+
+                    Optional<GoodsReceipt> existingReceipt =
+                            goodsReceiptRepository
+                                    .findByTenantIdAndBranchIdAndReceiptNumber(
+                                            tenantId(),
+                                            branch.getId(),
+                                            receipt.getReceiptNumber()
+                                    );
+
+                    if (existingReceipt.isPresent()) {
+
+                        goodsReceiptIds.add(
+                                existingReceipt.get().getId()
                         );
 
-                goodsReceiptIds.add(
-                        savedReceipt.getId()
-                );
+                        continue;
+                    }
+
+                    throw ex;
+                }
             }
 
             recomputeWeightedAverage(variant.getId(), branch.getId());
@@ -1729,30 +1754,65 @@ public class InventoryService {
                 );
     }
 
-    private <T> T assertNotDuplicateOrIgnore(java.util.function.Supplier<T> operation,
-                                             String reference,
-                                             StockTransaction.TransactionType type,
-                                             UUID branchId) {
+    private <T> T assertNotDuplicateOrIgnore(
+            java.util.function.Supplier<T> operation,
+            String reference,
+            StockTransaction.TransactionType type,
+            UUID branchId
+    ) {
 
         try {
+
             return operation.get();
 
-        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+        } catch (DataIntegrityViolationException ex) {
 
-            if (reference != null) {
+            Throwable root =
+                    NestedExceptionUtils.getMostSpecificCause(ex);
 
-                boolean exists =
-                        stockTransactionRepository.existsByReferenceAndTypeAndTenantIdAndBranchId(
-                                reference,
-                                type,
-                                tenantId(),
-                                branchId
-                        );
+            String message =
+                    root != null
+                            ? root.getMessage()
+                            : ex.getMessage();
 
-                if (exists) {
-                    return (T) new ApiResponse("success", "Idempotent replay", null);
-                }
+            boolean duplicateConstraint =
+                    root instanceof SQLIntegrityConstraintViolationException
+                            || (
+                            message != null
+                                    && (
+                                    message.contains("Duplicate entry")
+                                            || message.contains("duplicate key")
+                                            || message.contains("unique constraint")
+                            )
+                    );
+
+            if (!duplicateConstraint) {
+                throw ex;
             }
+
+            if (reference == null || reference.isBlank()) {
+                throw ex;
+            }
+
+            boolean replayDetected =
+                    stockTransactionRepository
+                            .existsByReferenceAndTypeAndTenantIdAndBranchId(
+                                    reference,
+                                    type,
+                                    tenantId(),
+                                    branchId
+                            );
+
+            if (!replayDetected) {
+                throw ex;
+            }
+
+            /*
+             * STRICT ATOMICITY:
+             *
+             * ANY execution-phase replay collision
+             * aborts entire transaction.
+             */
 
             throw ex;
         }

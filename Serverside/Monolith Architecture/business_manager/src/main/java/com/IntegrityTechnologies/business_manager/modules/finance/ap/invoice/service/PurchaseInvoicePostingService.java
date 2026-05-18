@@ -75,6 +75,10 @@ public class PurchaseInvoicePostingService {
          * GRNI matching.
          */
 
+        if (invoice.getPostingLifecycleStatus() == PurchaseInvoicePostingStatus.POSTED) {
+            return invoice;
+        }
+
         invoice.setPostingLifecycleStatus(
                 PurchaseInvoicePostingStatus.POSTED
         );

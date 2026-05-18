@@ -1,14 +1,18 @@
 package com.IntegrityTechnologies.business_manager.modules.procurement.matching.service;
 
 import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.domain.PurchaseInvoice;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.dto.*;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.repository.PurchaseInvoiceRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.service.PurchaseInvoicePostingService;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.service.PurchaseInvoiceService;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.shared.mapper.PurchaseInvoiceMapper;
 import com.IntegrityTechnologies.business_manager.modules.procurement.matching.dto.MatchInvoiceToReceiptsRequest;
 import com.IntegrityTechnologies.business_manager.modules.procurement.matching.dto.ReceiveAndInvoiceRequest;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.ReceiveStockRequest;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.SupplierUnit;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +30,8 @@ public class ReceiveAndInvoiceService {
     private final PurchaseInvoiceService invoiceService;
     private final PurchaseInvoicePostingService postingService;
     private final GoodsReceiptMatchingService matchingService;
+    private final PurchaseInvoiceRepository invoiceRepository;
+    private final PurchaseInvoiceMapper invoiceMapper;
 
     @Transactional
     @SuppressWarnings("unchecked")
@@ -48,140 +55,251 @@ public class ReceiveAndInvoiceService {
         }
 
         /*
-         * STEP 1
-         * RECEIVE STOCK
+         * =====================================================
+         * PARTITION SUPPLIERS
+         * =====================================================
          */
-        ApiResponse receiptResult =
-                inventoryService.receiveStock(stock);
 
-        Map<String, Object> response =
-                (Map<String, Object>)
-                        receiptResult.getData();
+        Map<UUID, List<SupplierUnit>> supplierPartitions =
+                stock.getSuppliers()
+                        .stream()
+                        .collect(
+                                Collectors.groupingBy(
+                                        SupplierUnit::getSupplierId,
+                                        LinkedHashMap::new,
+                                        Collectors.toList()
+                                )
+                        );
 
-        List<UUID> goodsReceiptIds =
-                (List<UUID>)
-                        response.get("goodsReceiptIds");
+        PurchaseInvoiceResponse lastInvoice = null;
 
         /*
-         * STEP 2
-         * CREATE INVOICE
+         * =====================================================
+         * PROCESS EACH SUPPLIER IN SAME TX
+         * =====================================================
          */
-        CreatePurchaseInvoiceRequest invoice =
-                new CreatePurchaseInvoiceRequest();
-
-        invoice.setBranchId(
-                stock.getBranchId()
-        );
-
-        invoice.setInvoiceDate(
-                LocalDate.now()
-        );
-
-        invoice.setDueDate(
-                LocalDate.now().plusDays(30)
-        );
-
-        invoice.setSupplierId(
-                stock.getSuppliers()
-                        .get(0)
-                        .getSupplierId()
-        );
-
-        invoice.setSupplierInvoiceNumber(
-                "AUTO-GRN-" +
-                        orchestrationKey
-        );
-
-        invoice.setNotes(
-                "Auto-generated from stock receipt"
-        );
-
-        List<CreatePurchaseInvoiceLineRequest>
-                lines =
-                new ArrayList<>();
 
         for (
-                SupplierUnit supplier :
-                stock.getSuppliers()
+                Map.Entry<UUID, List<SupplierUnit>> entry :
+                supplierPartitions.entrySet()
         ) {
 
-            CreatePurchaseInvoiceLineRequest line =
-                    new CreatePurchaseInvoiceLineRequest();
+            UUID supplierId =
+                    entry.getKey();
 
-            line.setProductId(
+            List<SupplierUnit> supplierUnits =
+                    entry.getValue();
+
+            /*
+             * ---------------------------------------------
+             * SUPPLIER-SCOPED RECEIPT
+             * ---------------------------------------------
+             */
+
+            ReceiveStockRequest supplierReceipt =
+                    new ReceiveStockRequest();
+
+            supplierReceipt.setBranchId(
+                    stock.getBranchId()
+            );
+
+            supplierReceipt.setProductId(
                     stock.getProductId()
             );
 
-            line.setProductVariantId(
+            supplierReceipt.setProductVariantId(
                     stock.getProductVariantId()
             );
 
-            line.setQuantity(
-                    supplier.getUnitsSupplied()
+            supplierReceipt.setNote(
+                    stock.getNote()
             );
 
-            line.setUnitCost(
-                    supplier.getUnitCost()
+            supplierReceipt.setVatInclusive(
+                    stock.getVatInclusive()
             );
 
-            line.setVatAmount(
-                    BigDecimal.ZERO
+            supplierReceipt.setVatRate(
+                    stock.getVatRate()
             );
 
-            line.setDiscountAmount(
-                    BigDecimal.ZERO
+            supplierReceipt.setReference(
+                    orchestrationKey
+                            + "::SUPPLIER::"
+                            + supplierId
             );
 
-            lines.add(line);
+            supplierReceipt.setSuppliers(
+                    supplierUnits
+            );
+
+            /*
+             * ---------------------------------------------
+             * RECEIVE STOCK
+             * ---------------------------------------------
+             */
+
+            ApiResponse receiptResult =
+                    inventoryService.receiveStock(
+                            supplierReceipt
+                    );
+
+            Map<String, Object> response =
+                    (Map<String, Object>)
+                            receiptResult.getData();
+
+            List<UUID> goodsReceiptIds =
+                    (List<UUID>)
+                            response.get("goodsReceiptIds");
+
+            /*
+             * ---------------------------------------------
+             * CREATE SUPPLIER INVOICE
+             * ---------------------------------------------
+             */
+
+            CreatePurchaseInvoiceRequest invoice =
+                    new CreatePurchaseInvoiceRequest();
+
+            invoice.setBranchId(
+                    stock.getBranchId()
+            );
+
+            invoice.setInvoiceDate(
+                    LocalDate.now()
+            );
+
+            invoice.setDueDate(
+                    LocalDate.now().plusDays(30)
+            );
+
+            invoice.setSupplierId(
+                    supplierId
+            );
+
+            invoice.setSupplierInvoiceNumber(
+                    "AUTO-GRN-"
+                            + orchestrationKey
+                            + "-"
+                            + supplierId
+            );
+
+            invoice.setNotes(
+                    "Auto-generated from stock receipt"
+            );
+
+            List<CreatePurchaseInvoiceLineRequest>
+                    lines =
+                    new ArrayList<>();
+
+            for (
+                    SupplierUnit supplier :
+                    supplierUnits
+            ) {
+
+                CreatePurchaseInvoiceLineRequest line =
+                        new CreatePurchaseInvoiceLineRequest();
+
+                line.setProductId(
+                        stock.getProductId()
+                );
+
+                line.setProductVariantId(
+                        stock.getProductVariantId()
+                );
+
+                line.setQuantity(
+                        supplier.getUnitsSupplied()
+                );
+
+                line.setUnitCost(
+                        supplier.getUnitCost()
+                );
+
+                line.setVatAmount(
+                        BigDecimal.ZERO
+                );
+
+                line.setDiscountAmount(
+                        BigDecimal.ZERO
+                );
+
+                lines.add(line);
+            }
+
+            invoice.setLines(lines);
+
+            Optional<PurchaseInvoice> existingInvoice =
+                    invoiceRepository
+                            .findByTenantIdAndBranchIdAndSupplierInvoiceNumber(
+                                    TenantContext.getTenantId(),
+                                    stock.getBranchId(),
+                                    invoice.getSupplierInvoiceNumber()
+                            );
+
+            if (existingInvoice.isPresent()) {
+
+                lastInvoice =
+                        invoiceMapper.toResponse(
+                                existingInvoice.get()
+                        );
+
+                continue;
+            }
+            
+            PurchaseInvoiceResponse created =
+                    invoiceService.create(invoice);
+
+            /*
+             * ---------------------------------------------
+             * APPROVE
+             * ---------------------------------------------
+             */
+
+            invoiceService.markApproved(
+                    stock.getBranchId(),
+                    created.getId()
+            );
+
+            /*
+             * ---------------------------------------------
+             * POST
+             * ---------------------------------------------
+             */
+
+            postingService.post(
+                    stock.getBranchId(),
+                    created.getId()
+            );
+
+            /*
+             * ---------------------------------------------
+             * MATCH
+             * ---------------------------------------------
+             */
+
+            MatchInvoiceToReceiptsRequest matching =
+                    new MatchInvoiceToReceiptsRequest();
+
+            matching.setBranchId(
+                    stock.getBranchId()
+            );
+
+            matching.setPurchaseInvoiceId(
+                    created.getId()
+            );
+
+            matching.setGoodsReceiptIds(
+                    goodsReceiptIds
+            );
+
+            matchingService.match(
+                    matching
+            );
+
+            lastInvoice = created;
         }
 
-        invoice.setLines(lines);
-
-        PurchaseInvoiceResponse created =
-                invoiceService.create(invoice);
-
-        /*
-         * STEP 3
-         * APPROVE
-         */
-        invoiceService.markApproved(
-                stock.getBranchId(),
-                created.getId()
-        );
-
-        /*
-         * STEP 4
-         * POST
-         */
-        postingService.post(
-                stock.getBranchId(),
-                created.getId()
-        );
-
-        /*
-         * STEP 5
-         * MATCH
-         */
-        MatchInvoiceToReceiptsRequest matching =
-                new MatchInvoiceToReceiptsRequest();
-
-        matching.setBranchId(
-                stock.getBranchId()
-        );
-
-        matching.setPurchaseInvoiceId(
-                created.getId()
-        );
-
-        matching.setGoodsReceiptIds(
-                goodsReceiptIds
-        );
-
-        matchingService.match(matching);
-
-        return invoiceService.get(
-                stock.getBranchId(),
-                created.getId()
-        );
+        return lastInvoice;
     }
 }

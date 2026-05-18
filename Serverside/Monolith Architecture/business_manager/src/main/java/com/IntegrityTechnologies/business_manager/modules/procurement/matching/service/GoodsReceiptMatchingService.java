@@ -92,10 +92,7 @@ public class GoodsReceiptMatchingService {
                 );
             }
 
-            if (
-                    !receipt.getBranchId()
-                            .equals(request.getBranchId())
-            ) {
+            if (!receipt.getBranchId().equals(request.getBranchId())) {
                 throw new IllegalStateException(
                         "Cross-branch receipt access denied"
                 );
@@ -124,11 +121,7 @@ public class GoodsReceiptMatchingService {
             receipts.add(receipt);
         }
 
-        if (
-                receiptInventoryTotal.compareTo(
-                        invoice.getSubtotal()
-                ) != 0
-        ) {
+        if (receiptInventoryTotal.compareTo(invoice.getSubtotal()) != 0) {
             throw new IllegalStateException(
                     "Invoice subtotal does not match GRNI receipt total"
             );
@@ -238,9 +231,7 @@ public class GoodsReceiptMatchingService {
         for (GoodsReceipt receipt : receipts) {
 
             if (receipt.isInvoiced()) {
-                throw new IllegalStateException(
-                        "Goods receipt already matched"
-                );
+                continue;
             }
 
             receipt.setInvoiced(true);

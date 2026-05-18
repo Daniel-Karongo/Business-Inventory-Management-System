@@ -15,15 +15,15 @@ public interface ProductPriceRepository extends JpaRepository<ProductPrice, UUID
     );
 
     @Query("""
-        SELECT p FROM ProductPrice p
-        WHERE p.productVariant.id = :variantId
-          AND p.packaging.id = :packagingId
-          AND p.tenantId = :tenantId
-          AND p.branchId = :branchId
-          AND p.deleted = false
-          AND p.minQuantity <= :quantity
-        ORDER BY p.minQuantity DESC
-    """)
+                SELECT p FROM ProductPrice p
+                WHERE p.productVariant.id = :variantId
+                  AND p.packaging.id = :packagingId
+                  AND p.tenantId = :tenantId
+                  AND p.branchId = :branchId
+                  AND p.deleted = false
+                  AND p.minQuantity <= :quantity
+                ORDER BY p.minQuantity DESC
+            """)
     List<ProductPrice> findApplicablePrices(
             UUID variantId,
             UUID packagingId,

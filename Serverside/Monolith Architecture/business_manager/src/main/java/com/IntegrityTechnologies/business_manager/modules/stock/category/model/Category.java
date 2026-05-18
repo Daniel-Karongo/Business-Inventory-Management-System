@@ -52,14 +52,17 @@ public class Category extends BranchAwareEntity {
     private Category parent;
 
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
+    @Builder.Default
     private List<Category> subcategories = new ArrayList<>();
 
     @Column(nullable = false, length = 255)
     private String path;
 
     @OneToMany(mappedBy = "category")
+    @Builder.Default
     private List<Product> products = new ArrayList<>();
 
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private Set<CategorySupplier> categorySuppliers = new HashSet<>();
 }
