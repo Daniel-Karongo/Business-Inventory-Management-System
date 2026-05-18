@@ -86,6 +86,28 @@ public class ReportRegistry {
                         )
                 ),
 
+                Map.entry("accounts_payable_aging",
+                        new ReportDefinition(
+                                "accounts_payable_aging",
+                                "Accounts Payable Aging",
+                                "Supplier aging analysis",
+                                "Accounting",
+                                "reports/accounting/accounts_payable_aging.jrxml",
+                                Set.of("BRANCH_ID")
+                        )
+                ),
+
+                Map.entry("supplier_statement",
+                        new ReportDefinition(
+                                "supplier_statement",
+                                "Supplier Statement",
+                                "Supplier transactional statement",
+                                "Suppliers",
+                                "reports/suppliers/supplier_statement.jrxml",
+                                Set.of("SUPPLIER_ID", "BRANCH_ID")
+                        )
+                ),
+
                 /* ===================== INVENTORY ===================== */
 
                 Map.entry("stock_on_hand",

@@ -95,8 +95,8 @@ public class LedgerEntry extends BranchAwareEntity {
         this.postedAt = postedAt;
     }
 
-    @PreUpdate
-    public void preventUpdate() {
+    @Override
+    public void beforeUpdate() {
         throw new IllegalStateException("Ledger entries are immutable and cannot be updated.");
     }
 

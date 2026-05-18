@@ -30,6 +30,7 @@ public class BranchChartOfAccountsService {
         seed(tenantId, branchId,"2000","Accounts Payable",AccountType.LIABILITY,AccountRole.ACCOUNTS_PAYABLE);
         seed(tenantId, branchId,"2100","Output VAT",AccountType.LIABILITY,AccountRole.VAT_OUTPUT);
         seed(tenantId, branchId,"2200","VAT Payable",AccountType.LIABILITY,AccountRole.VAT_PAYABLE);
+        seed(tenantId, branchId, "2050", "Goods Received Not Invoiced", AccountType.LIABILITY, AccountRole.GOODS_RECEIVED_NOT_INVOICED);
         seed(tenantId, branchId,"2300","Branch Clearing",AccountType.LIABILITY,AccountRole.BRANCH_CLEARING);
         seed(tenantId, branchId,"2400","Corporate Tax Payable",AccountType.LIABILITY,AccountRole.CORPORATE_TAX_PAYABLE);
 

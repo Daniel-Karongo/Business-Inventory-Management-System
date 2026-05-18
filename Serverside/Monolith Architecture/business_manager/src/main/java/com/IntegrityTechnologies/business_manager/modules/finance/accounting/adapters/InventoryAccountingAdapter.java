@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,91 +21,168 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
     private final AccountingAccounts accounts;
 
     @Override
-    public void recordInventoryReceipt(UUID tenantId, UUID refId, UUID branchId, BigDecimal value, String ref) {
-
-        accountingFacade.post(buildEvent(
-                tenantId,
-                "INVENTORY_RECEIPT",
-                refId,
-                branchId,
-                ref,
-                "Inventory received",
-                List.of(
-                        entry(accounts.get(tenantId, branchId, AccountRole.INVENTORY), EntryDirection.DEBIT, value),
-                        entry(accounts.get(tenantId, branchId, AccountRole.ACCOUNTS_PAYABLE), EntryDirection.CREDIT, value)
+    public void recordInventoryConsumption(
+            UUID tenantId,
+            UUID refId,
+            UUID branchId,
+            BigDecimal value,
+            String ref
+    ) {
+        accountingFacade.post(
+                buildEvent(
+                        tenantId,
+                        "INVENTORY_CONSUMPTION",
+                        refId,
+                        branchId,
+                        ref,
+                        "Inventory sold",
+                        List.of(
+                                entry(
+                                        accounts.get(
+                                                tenantId,
+                                                branchId,
+                                                AccountRole.COGS
+                                        ),
+                                        EntryDirection.DEBIT,
+                                        value
+                                ),
+                                entry(
+                                        accounts.get(
+                                                tenantId,
+                                                branchId,
+                                                AccountRole.INVENTORY
+                                        ),
+                                        EntryDirection.CREDIT,
+                                        value
+                                )
+                        )
                 )
-        ));
+        );
     }
 
     @Override
-    public void recordInventoryConsumption(UUID tenantId, UUID refId, UUID branchId, BigDecimal value, String ref) {
-
-        accountingFacade.post(buildEvent(
-                tenantId,
-                "INVENTORY_CONSUMPTION",
-                refId,
-                branchId,
-                ref,
-                "Inventory sold",
-                List.of(
-                        entry(accounts.get(tenantId, branchId, AccountRole.COGS), EntryDirection.DEBIT, value),
-                        entry(accounts.get(tenantId, branchId, AccountRole.INVENTORY), EntryDirection.CREDIT, value)
+    public void recordInventoryReturn(
+            UUID tenantId,
+            UUID refId,
+            UUID branchId,
+            BigDecimal value,
+            String ref
+    ) {
+        accountingFacade.post(
+                buildEvent(
+                        tenantId,
+                        "INVENTORY_RETURN",
+                        refId,
+                        branchId,
+                        ref,
+                        "Inventory returned",
+                        List.of(
+                                entry(
+                                        accounts.get(
+                                                tenantId,
+                                                branchId,
+                                                AccountRole.INVENTORY
+                                        ),
+                                        EntryDirection.DEBIT,
+                                        value
+                                ),
+                                entry(
+                                        accounts.get(
+                                                tenantId,
+                                                branchId,
+                                                AccountRole.COGS
+                                        ),
+                                        EntryDirection.CREDIT,
+                                        value
+                                )
+                        )
                 )
-        ));
+        );
     }
 
     @Override
-    public void recordInventoryReturn(UUID tenantId, UUID refId, UUID branchId, BigDecimal value, String ref) {
-
-        accountingFacade.post(buildEvent(
-                tenantId,
-                "INVENTORY_RETURN",
-                refId,
-                branchId,
-                ref,
-                "Inventory returned",
-                List.of(
-                        entry(accounts.get(tenantId, branchId, AccountRole.INVENTORY), EntryDirection.DEBIT, value),
-                        entry(accounts.get(tenantId, branchId, AccountRole.COGS), EntryDirection.CREDIT, value)
+    public void recordInventoryTransferOut(
+            UUID tenantId,
+            UUID refId,
+            UUID branchId,
+            BigDecimal value,
+            String ref
+    ) {
+        accountingFacade.post(
+                buildEvent(
+                        tenantId,
+                        "INVENTORY_TRANSFER_OUT",
+                        refId,
+                        branchId,
+                        ref,
+                        "Inventory transferred out (source branch)",
+                        List.of(
+                                entry(
+                                        accounts.get(
+                                                tenantId,
+                                                branchId,
+                                                AccountRole.BRANCH_CLEARING
+                                        ),
+                                        EntryDirection.DEBIT,
+                                        value
+                                ),
+                                entry(
+                                        accounts.get(
+                                                tenantId,
+                                                branchId,
+                                                AccountRole.INVENTORY
+                                        ),
+                                        EntryDirection.CREDIT,
+                                        value
+                                )
+                        )
                 )
-        ));
+        );
     }
 
     @Override
-    public void recordInventoryTransferOut(UUID tenantId, UUID refId, UUID branchId, BigDecimal value, String ref) {
-
-        accountingFacade.post(buildEvent(
-                tenantId,
-                "INVENTORY_TRANSFER_OUT",
-                refId,
-                branchId,
-                ref,
-                "Inventory transferred out (source branch)",
-                List.of(
-                        entry(accounts.get(tenantId, branchId, AccountRole.BRANCH_CLEARING), EntryDirection.DEBIT, value),
-                        entry(accounts.get(tenantId, branchId, AccountRole.INVENTORY), EntryDirection.CREDIT, value)
+    public void recordInventoryTransferIn(
+            UUID tenantId,
+            UUID refId,
+            UUID branchId,
+            BigDecimal value,
+            String ref
+    ) {
+        accountingFacade.post(
+                buildEvent(
+                        tenantId,
+                        "INVENTORY_TRANSFER_IN",
+                        refId,
+                        branchId,
+                        ref,
+                        "Inventory transferred in (destination branch)",
+                        List.of(
+                                entry(
+                                        accounts.get(
+                                                tenantId,
+                                                branchId,
+                                                AccountRole.INVENTORY
+                                        ),
+                                        EntryDirection.DEBIT,
+                                        value
+                                ),
+                                entry(
+                                        accounts.get(
+                                                tenantId,
+                                                branchId,
+                                                AccountRole.BRANCH_CLEARING
+                                        ),
+                                        EntryDirection.CREDIT,
+                                        value
+                                )
+                        )
                 )
-        ));
+        );
     }
 
-    @Override
-    public void recordInventoryTransferIn(UUID tenantId, UUID refId, UUID branchId, BigDecimal value, String ref) {
-
-        accountingFacade.post(buildEvent(
-                tenantId,
-                "INVENTORY_TRANSFER_IN",
-                refId,
-                branchId,
-                ref,
-                "Inventory transferred in (destination branch)",
-                List.of(
-                        entry(accounts.get(tenantId, branchId, AccountRole.INVENTORY), EntryDirection.DEBIT, value),
-                        entry(accounts.get(tenantId, branchId, AccountRole.BRANCH_CLEARING), EntryDirection.CREDIT, value)
-                )
-        ));
-    }
-
-    /* ========================= INTERNAL HELPERS ========================= */
+    /* =========================================================
+       INTERNAL HELPERS
+    ========================================================= */
 
     private AccountingEvent buildEvent(
             UUID tenantId,
@@ -115,8 +193,18 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
             String description,
             List<AccountingEvent.Entry> entries
     ) {
+
+        UUID deterministicEventId =
+                UUID.nameUUIDFromBytes(
+                        (
+                                module +
+                                        ":" +
+                                        sourceId
+                        ).getBytes(StandardCharsets.UTF_8)
+                );
+
         return AccountingEvent.builder()
-                .eventId(UUID.randomUUID())
+                .eventId(deterministicEventId)
                 .tenantId(tenantId)
                 .sourceModule(module)
                 .sourceId(sourceId)
@@ -128,7 +216,11 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                 .build();
     }
 
-    private AccountingEvent.Entry entry(UUID accountId, EntryDirection direction, BigDecimal amount) {
+    private AccountingEvent.Entry entry(
+            UUID accountId,
+            EntryDirection direction,
+            BigDecimal amount
+    ) {
         return AccountingEvent.Entry.builder()
                 .accountId(accountId)
                 .direction(direction)

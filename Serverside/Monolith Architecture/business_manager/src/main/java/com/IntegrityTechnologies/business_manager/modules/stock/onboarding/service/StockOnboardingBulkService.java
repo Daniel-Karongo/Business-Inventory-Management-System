@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.stock.onboarding.serv
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkOptions;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
+import com.IntegrityTechnologies.business_manager.exception.ExpectedConcurrencyException;
 import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingBulkPreviewResult;
 import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingBulkPreviewRow;
 import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingRequest;
@@ -150,6 +151,21 @@ public class StockOnboardingBulkService {
 
                 result.setSuccess(result.getSuccess() + 1);
 
+            } catch (ExpectedConcurrencyException ex) {
+                result.addError(
+                        rowNumber,
+                        ex.getMessage()
+                );
+            } catch (IllegalArgumentException ex) {
+                result.addError(
+                        rowNumber,
+                        ex.getMessage()
+                );
+            } catch (IllegalStateException ex) {
+                result.addError(
+                        rowNumber,
+                        ex.getMessage()
+                );
             } catch (Exception ex) {
 
                 result.addError(

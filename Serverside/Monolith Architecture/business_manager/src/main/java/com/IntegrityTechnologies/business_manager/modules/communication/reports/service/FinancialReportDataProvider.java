@@ -1,6 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.communication.reports.service;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.FinancialStatementService;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.reporting.service.AccountsPayableAgingService;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.reporting.service.SupplierStatementService;
 import lombok.RequiredArgsConstructor;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import org.springframework.stereotype.Component;
@@ -15,6 +17,8 @@ import java.util.UUID;
 public class FinancialReportDataProvider {
 
     private final FinancialStatementService financialStatementService;
+    private final AccountsPayableAgingService accountsPayableAgingService;
+    private final SupplierStatementService supplierStatementService;
 
     public boolean supports(String reportName) {
         return reportName.startsWith("trial_balance")
@@ -23,7 +27,9 @@ public class FinancialReportDataProvider {
                 || reportName.startsWith("balance_sheet")
                 || reportName.startsWith("cash_flow_statement")
                 || reportName.startsWith("accounts_receivable_summary")
-                || reportName.startsWith("accounts_payable_summary");
+                || reportName.startsWith("accounts_payable_summary")
+                || reportName.startsWith("accounts_payable_aging")
+                || reportName.startsWith("supplier_statement");
     }
 
     public JRBeanCollectionDataSource provide(
@@ -101,6 +107,29 @@ public class FinancialReportDataProvider {
                         : financialStatementService.getAccountsPayableMultiBranch(from, to);
             }
 
+            case "accounts_payable_aging" -> {
+                data = branchProvided
+                        ? accountsPayableAgingService.generateAging(branchId)
+                        : accountsPayableAgingService.generateConsolidatedAging();
+            }
+
+            case "supplier_statement" -> {
+
+                UUID supplierId =
+                        UUID.fromString(
+                                params.get("SUPPLIER_ID").toString()
+                        );
+
+                data = branchProvided
+                        ? supplierStatementService.generateStatement(
+                        branchId,
+                        supplierId
+                )
+                        : supplierStatementService.generateConsolidatedStatement(
+                        supplierId
+                );
+            }
+            
             default -> throw new IllegalArgumentException(
                     "Unsupported financial report: " + reportName
             );

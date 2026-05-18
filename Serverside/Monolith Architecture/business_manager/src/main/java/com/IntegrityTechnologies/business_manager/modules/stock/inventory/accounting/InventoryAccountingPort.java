@@ -5,14 +5,6 @@ import java.util.UUID;
 
 public interface InventoryAccountingPort {
 
-    void recordInventoryReceipt(
-            UUID tenantId,
-            UUID referenceId,
-            UUID branchId,
-            BigDecimal value,
-            String reference
-    );
-
     void recordInventoryConsumption(
             UUID tenantId,
             UUID referenceId,

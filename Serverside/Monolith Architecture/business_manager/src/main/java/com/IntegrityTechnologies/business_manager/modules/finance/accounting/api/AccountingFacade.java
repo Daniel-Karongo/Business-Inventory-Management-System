@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.api;
 
+import com.IntegrityTechnologies.business_manager.exception.ExpectedConcurrencyException;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.cache.AccountingLedgerUpdatedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.Account;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
@@ -15,6 +16,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.ser
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -106,7 +108,28 @@ public class AccountingFacade {
 
         policy.validate(ledger);
 
-        postingService.post(journal, ledger, event.getPerformedBy());
+        try {
+
+            postingService.post(
+                    journal,
+                    ledger,
+                    event.getPerformedBy()
+            );
+
+        } catch (DataIntegrityViolationException ex) {
+
+            boolean alreadyPosted =
+                    journalRepo.existsByTenantIdAndAccountingEventId(
+                            tenantId,
+                            event.getEventId()
+                    );
+
+            if (alreadyPosted) {
+                return;
+            }
+
+            throw ex;
+        }
 
         applicationEventPublisher.publishEvent(
                 new AccountingLedgerUpdatedEvent(

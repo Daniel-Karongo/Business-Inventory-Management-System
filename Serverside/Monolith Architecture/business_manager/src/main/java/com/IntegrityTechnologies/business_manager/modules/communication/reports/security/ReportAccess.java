@@ -63,6 +63,14 @@ public enum ReportAccess {
             "accounts_payable_summary", Role.ADMIN
     ),
 
+    ACCOUNTS_PAYABLE_AGING(
+            "accounts_payable_aging", Role.ADMIN
+    ),
+
+    SUPPLIER_STATEMENT(
+            "supplier_statement", Role.MANAGER
+    ),
+
     /* ===================== ACCOUNTING (MULTI BRANCH) ===================== */
 
     TRIAL_BALANCE_MULTI_BRANCH(

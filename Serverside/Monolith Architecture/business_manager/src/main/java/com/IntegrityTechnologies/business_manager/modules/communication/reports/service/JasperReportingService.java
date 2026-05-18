@@ -17,6 +17,7 @@ import net.sf.jasperreports.engine.export.ooxml.JRXlsxExporter;
 import net.sf.jasperreports.export.SimpleExporterInput;
 import net.sf.jasperreports.export.SimpleOutputStreamExporterOutput;
 import net.sf.jasperreports.export.SimpleWriterExporterOutput;
+import net.sf.jasperreports.export.SimpleXlsxReportConfiguration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
@@ -149,6 +150,16 @@ public class JasperReportingService implements ReportingService {
                     exporter.setExporterOutput(
                             new SimpleOutputStreamExporterOutput(out)
                     );
+                    SimpleXlsxReportConfiguration config =
+                            new SimpleXlsxReportConfiguration();
+
+                    config.setDetectCellType(true);
+                    config.setCollapseRowSpan(false);
+                    config.setRemoveEmptySpaceBetweenRows(true);
+                    config.setWhitePageBackground(false);
+
+                    exporter.setConfiguration(config);
+
                     exporter.exportReport();
                 }
 

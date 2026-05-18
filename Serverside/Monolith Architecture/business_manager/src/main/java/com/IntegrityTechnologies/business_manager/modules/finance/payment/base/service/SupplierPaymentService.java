@@ -1,165 +1,225 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.payment.base.service;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.enums.SupplierPaymentStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.domain.SupplierPayment;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.dto.CreateSupplierPaymentRequest;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.dto.SupplierPaymentResponse;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.mapper.SupplierPaymentMapper;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.repository.SupplierPaymentRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.shared.service.DocumentNumberGeneratorService;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class SupplierPaymentService {
 
-    private final SupplierPaymentRepository paymentRepository;
-    private final AccountingFacade accountingFacade;
-    private final AccountingAccounts accounts;
-    private final BranchTenantGuard branchTenantGuard;
+    private final SupplierPaymentRepository
+            repository;
+
+    private final BranchTenantGuard
+            branchTenantGuard;
+
+    private final SupplierPaymentMapper
+            mapper;
+
+    private final DocumentNumberGeneratorService
+            numberGeneratorService;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
     }
 
     @Transactional
-    public SupplierPayment pay(
-            UUID branchId,
-            UUID supplierId,
-            BigDecimal amount,
-            String method,
-            String reference
+    public SupplierPaymentResponse create(
+            CreateSupplierPaymentRequest request
     ) {
 
-        branchTenantGuard.validate(branchId);
+        branchTenantGuard.validate(
+                request.getBranchId()
+        );
 
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+        if (
+                request.getAmount() == null
+                        || request.getAmount()
+                        .compareTo(BigDecimal.ZERO) <= 0
+        ) {
             throw new IllegalArgumentException(
                     "Amount must be greater than zero"
             );
         }
 
-        UUID creditAccount =
-                resolvePaymentAccount(method, branchId);
-
-        accountingFacade.post(
-                AccountingEvent.builder()
-                        .eventId(UUID.randomUUID())
-                        .sourceModule("SUPPLIER_PAYMENT")
-                        .sourceId(UUID.randomUUID())
-                        .reference(reference)
-                        .description("Supplier payment via " + method)
-                        .performedBy(currentUser())
-                        .branchId(branchId)
-                        .tenantId(tenantId())
-                        .accountingDate(LocalDate.now())
-                        .entries(List.of(
-                                AccountingEvent.Entry.builder()
-                                        .accountId(
-                                                accounts.get(
-                                                        tenantId(),
-                                                        branchId,
-                                                        AccountRole.ACCOUNTS_PAYABLE
-                                                )
-                                        )
-                                        .direction(EntryDirection.DEBIT)
-                                        .amount(amount)
-                                        .build(),
-
-                                AccountingEvent.Entry.builder()
-                                        .accountId(creditAccount)
-                                        .direction(EntryDirection.CREDIT)
-                                        .amount(amount)
-                                        .build()
-                        ))
-                        .build()
-        );
-
         SupplierPayment payment =
                 SupplierPayment.builder()
                         .tenantId(tenantId())
-                        .branchId(branchId)
-                        .supplierId(supplierId)
-                        .amount(amount)
-                        .method(method.toUpperCase())
-                        .reference(reference)
-                        .paidAt(LocalDateTime.now())
-                        .paidBy(currentUser())
+                        .branchId(request.getBranchId())
+                        .documentNumber(
+                                numberGeneratorService
+                                        .nextSupplierPaymentNumber(
+                                                request.getBranchId()
+                                        )
+                        )
+                        .supplierId(
+                                request.getSupplierId()
+                        )
+                        .amount(
+                                request.getAmount()
+                        )
+                        .allocatedAmount(
+                                BigDecimal.ZERO
+                        )
+                        .unappliedAmount(
+                                request.getAmount()
+                        )
+                        .fullyAllocated(false)
+                        .status(
+                                SupplierPaymentStatus.POSTED
+                        )
+                        .method(
+                                request.getMethod()
+                                        .toUpperCase()
+                        )
+                        .reference(
+                                request.getReference()
+                        )
+                        .posted(true)
+                        .postedAt(
+                                LocalDateTime.now()
+                        )
+                        .postedBy(
+                                currentUser()
+                        )
+                        .paymentDate(
+                                request.getPaymentDate()
+                        )
+                        .paidAt(
+                                LocalDateTime.now()
+                        )
+                        .paidBy(
+                                currentUser()
+                        )
                         .build();
 
-        return paymentRepository.save(payment);
+        return mapper.toResponse(
+                repository.save(payment)
+        );
     }
 
-    private UUID resolvePaymentAccount(
-            String method,
-            UUID branchId
+    public Page<SupplierPaymentResponse> list(
+            UUID branchId,
+            Pageable pageable
     ) {
 
-        return switch (method.toUpperCase()) {
+        branchTenantGuard.validate(
+                branchId
+        );
 
-            case "CASH" ->
-                    accounts.get(
-                            tenantId(),
-                            branchId,
-                            AccountRole.CASH
-                    );
+        return repository
+                .findByTenantIdAndBranchIdOrderByPaidAtDesc(
+                        tenantId(),
+                        branchId,
+                        pageable
+                )
+                .map(mapper::toResponse);
+    }
 
-            case "BANK" ->
-                    accounts.get(
-                            tenantId(),
-                            branchId,
-                            AccountRole.BANK
-                    );
+    public SupplierPayment getManaged(
+            UUID branchId,
+            UUID paymentId
+    ) {
 
-            case "MPESA" ->
-                    accounts.get(
-                            tenantId(),
-                            branchId,
-                            AccountRole.MPESA
-                    );
+        branchTenantGuard.validate(
+                branchId
+        );
 
-            default ->
-                    throw new IllegalArgumentException(
-                            "Unsupported payment method"
-                    );
-        };
+        return repository
+                .findByTenantIdAndBranchIdAndId(
+                        tenantId(),
+                        branchId,
+                        paymentId
+                )
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Supplier payment not found"
+                        )
+                );
+    }
+
+    @Transactional
+    public SupplierPaymentResponse reverse(
+            UUID branchId,
+            UUID paymentId,
+            String reason
+    ) {
+
+        SupplierPayment payment =
+                getManaged(
+                        branchId,
+                        paymentId
+                );
+
+        if (payment.isReversed()) {
+            throw new IllegalStateException(
+                    "Payment already reversed"
+            );
+        }
+
+        /*
+         * DO NOT ALLOW REVERSAL OF
+         * ALLOCATED PAYMENTS
+         */
+
+        if (
+                payment.getAllocatedAmount()
+                        .compareTo(BigDecimal.ZERO) > 0
+        ) {
+            throw new IllegalStateException(
+                    "Cannot reverse allocated payment"
+            );
+        }
+
+        payment.setReversed(true);
+
+        payment.setReversedAt(
+                LocalDateTime.now()
+        );
+
+        payment.setReversedBy(
+                currentUser()
+        );
+
+        payment.setReversalReason(
+                reason
+        );
+
+        payment.setStatus(
+                SupplierPaymentStatus.REVERSED
+        );
+
+        return mapper.toResponse(
+                repository.save(payment)
+        );
     }
 
     private String currentUser() {
 
         var auth =
-                SecurityContextHolder.getContext().getAuthentication();
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
 
         return auth != null
                 ? auth.getName()
                 : "SYSTEM";
-    }
-
-    public Page<SupplierPayment> list(
-            UUID branchId,
-            Pageable pageable
-    ) {
-
-        branchTenantGuard.validate(branchId);
-
-        return paymentRepository
-                .findByTenantIdAndBranchIdOrderByPaidAtDesc(
-                        tenantId(),
-                        branchId,
-                        pageable
-                );
     }
 }

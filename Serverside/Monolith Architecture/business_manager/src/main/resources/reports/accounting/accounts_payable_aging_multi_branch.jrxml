@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="accounts_payable_aging_multi_branch"
+              language="java"
+              pageWidth="1190"
+              pageHeight="842"
+              orientation="Landscape"
+              columnWidth="1130"
+              leftMargin="30"
+              rightMargin="30"
+              topMargin="30"
+              bottomMargin="30"
+              uuid="e93d90d8-7d11-4d28-b8d2-7f1fd1e91001">
+
+    <property name="net.sf.jasperreports.when.no.data.type" value="NoDataSection"/>
+
+    <parameter name="COMPANY_NAME" class="java.lang.String"/>
+    <parameter name="GENERATED_BY" class="java.lang.String"/>
+    <parameter name="GENERATED_AT" class="java.util.Date"/>
+
+    <queryString>
+        <![CDATA[]]>
+    </queryString>
+
+    <field name="branchName" class="java.lang.String"/>
+    <field name="supplierName" class="java.lang.String"/>
+    <field name="current" class="java.math.BigDecimal"/>
+    <field name="days1To30" class="java.math.BigDecimal"/>
+    <field name="days31To60" class="java.math.BigDecimal"/>
+    <field name="days61To90" class="java.math.BigDecimal"/>
+    <field name="days91To120" class="java.math.BigDecimal"/>
+    <field name="over120Days" class="java.math.BigDecimal"/>
+    <field name="totalOutstanding" class="java.math.BigDecimal"/>
+
+    <variable name="GrandTotal"
+              class="java.math.BigDecimal"
+              calculation="Sum">
+        <variableExpression><![CDATA[$F{totalOutstanding}]]></variableExpression>
+    </variable>
+
+    <group name="BranchGroup">
+
+        <groupExpression><![CDATA[$F{branchName}]]></groupExpression>
+
+        <groupHeader>
+            <band height="24">
+
+                <textField>
+                    <reportElement x="0" y="2" width="1130" height="20" uuid="11111111-aaaa-bbbb-cccc-111111111111"/>
+                    <textElement>
+                        <font size="12" isBold="true"/>
+                    </textElement>
+                    <textFieldExpression><![CDATA["Branch: " + $F{branchName}]]></textFieldExpression>
+                </textField>
+
+            </band>
+        </groupHeader>
+
+    </group>
+
+    <title>
+        <band height="70">
+
+            <textField>
+                <reportElement x="0" y="0" width="1130" height="24" uuid="22222222-aaaa-bbbb-cccc-222222222222"/>
+                <textElement textAlignment="Center">
+                    <font size="18" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{COMPANY_NAME}]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="35" width="1130" height="20" uuid="33333333-aaaa-bbbb-cccc-333333333333"/>
+                <textElement textAlignment="Center">
+                    <font size="13" isBold="true"/>
+                </textElement>
+                <text><![CDATA[ACCOUNTS PAYABLE AGING - MULTI BRANCH]]></text>
+            </staticText>
+
+        </band>
+    </title>
+
+    <columnHeader>
+        <band height="22">
+
+            <staticText>
+                <reportElement x="0" y="0" width="290" height="20" uuid="44444444-aaaa-bbbb-cccc-444444444444"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[Supplier]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="290" y="0" width="120" height="20" uuid="55555555-aaaa-bbbb-cccc-555555555555"/>
+                <textElement textAlignment="Right"><font isBold="true"/></textElement>
+                <text><![CDATA[Current]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="410" y="0" width="120" height="20" uuid="66666666-aaaa-bbbb-cccc-666666666666"/>
+                <textElement textAlignment="Right"><font isBold="true"/></textElement>
+                <text><![CDATA[1 - 30]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="530" y="0" width="120" height="20" uuid="77777777-aaaa-bbbb-cccc-777777777777"/>
+                <textElement textAlignment="Right"><font isBold="true"/></textElement>
+                <text><![CDATA[31 - 60]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="650" y="0" width="120" height="20" uuid="88888888-aaaa-bbbb-cccc-888888888888"/>
+                <textElement textAlignment="Right"><font isBold="true"/></textElement>
+                <text><![CDATA[61 - 90]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="770" y="0" width="120" height="20" uuid="99999999-aaaa-bbbb-cccc-999999999999"/>
+                <textElement textAlignment="Right"><font isBold="true"/></textElement>
+                <text><![CDATA[91 - 120]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="890" y="0" width="120" height="20" uuid="aaaaaaaa-aaaa-bbbb-cccc-aaaaaaaaaaaa"/>
+                <textElement textAlignment="Right"><font isBold="true"/></textElement>
+                <text><![CDATA[120+]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="1010" y="0" width="120" height="20" uuid="bbbbbbbb-aaaa-bbbb-cccc-bbbbbbbbbbbb"/>
+                <textElement textAlignment="Right"><font isBold="true"/></textElement>
+                <text><![CDATA[Total]]></text>
+            </staticText>
+
+        </band>
+    </columnHeader>
+
+    <detail>
+        <band height="20">
+
+            <textField>
+                <reportElement x="0" y="0" width="290" height="18" uuid="cccccccc-aaaa-bbbb-cccc-cccccccccccc"/>
+                <textFieldExpression><![CDATA[$F{supplierName}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="290" y="0" width="120" height="18" uuid="dddddddd-aaaa-bbbb-cccc-dddddddddddd"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{current}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="410" y="0" width="120" height="18" uuid="eeeeeeee-aaaa-bbbb-cccc-eeeeeeeeeeee"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{days1To30}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="530" y="0" width="120" height="18" uuid="ffffffff-aaaa-bbbb-cccc-ffffffffffff"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{days31To60}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="650" y="0" width="120" height="18" uuid="12121212-aaaa-bbbb-cccc-121212121212"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{days61To90}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="770" y="0" width="120" height="18" uuid="13131313-aaaa-bbbb-cccc-131313131313"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{days91To120}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="890" y="0" width="120" height="18" uuid="14141414-aaaa-bbbb-cccc-141414141414"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{over120Days}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="1010" y="0" width="120" height="18" uuid="15151515-aaaa-bbbb-cccc-151515151515"/>
+                <textElement textAlignment="Right">
+                    <font isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{totalOutstanding}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </detail>
+
+    <pageFooter>
+        <band height="18">
+
+            <textField>
+                <reportElement x="0" y="0" width="600" height="15" uuid="16161616-aaaa-bbbb-cccc-161616161616"/>
+                <textFieldExpression><![CDATA["Generated by " + $P{GENERATED_BY}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="1030" y="0" width="100" height="15" uuid="17171717-aaaa-bbbb-cccc-171717171717"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA["Page " + $V{PAGE_NUMBER}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </pageFooter>
+
+    <summary>
+        <band height="28">
+
+            <staticText>
+                <reportElement x="850" y="5" width="160" height="18" uuid="18181818-aaaa-bbbb-cccc-181818181818"/>
+                <textElement><font isBold="true"/></textElement>
+                <text><![CDATA[GRAND TOTAL]]></text>
+            </staticText>
+
+            <textField pattern="#,##0.00;(#,##0.00)">
+                <reportElement x="1010" y="5" width="120" height="18" uuid="19191919-aaaa-bbbb-cccc-191919191919"/>
+                <textElement textAlignment="Right">
+                    <font isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$V{GrandTotal}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </summary>
+
+    <noData>
+        <band height="40">
+
+            <staticText>
+                <reportElement x="0" y="10" width="1130" height="20" uuid="20202020-aaaa-bbbb-cccc-202020202020"/>
+                <textElement textAlignment="Center"/>
+                <text><![CDATA[No accounts payable aging data found.]]></text>
+            </staticText>
+
+        </band>
+    </noData>
+
+</jasperReport>

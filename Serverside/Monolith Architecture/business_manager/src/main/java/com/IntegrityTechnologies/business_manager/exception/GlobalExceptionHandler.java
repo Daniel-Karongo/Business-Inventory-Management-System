@@ -275,6 +275,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(ex.getMessage());
     }
 
+    @ExceptionHandler(ExpectedConcurrencyException.class)
+    public ResponseEntity<ApiResponse> handleExpectedConcurrency(
+            ExpectedConcurrencyException ex
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(
+                        new ApiResponse(
+                                "EXPECTED_CONCURRENCY",
+                                ex.getMessage(),
+                                null
+                        )
+                );
+    }
+
     /* ====================== BUSINESS LOGIC ERRORS ====================== */
 
     @ExceptionHandler(StorageFullException.class)
@@ -337,8 +352,6 @@ public class GlobalExceptionHandler {
             // Let Spring handle static resource errors normally
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-
-        ex.printStackTrace(); // ✅ ADD
 
         return buildResponse(
                 ex.getMessage(), // ✅ NO WRAPPING

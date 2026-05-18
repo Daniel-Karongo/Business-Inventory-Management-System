@@ -25,6 +25,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
             Specification<Product> spec,
             Pageable pageable
     );
+
     @EntityGraph(attributePaths = {
             "images",
             "variants",

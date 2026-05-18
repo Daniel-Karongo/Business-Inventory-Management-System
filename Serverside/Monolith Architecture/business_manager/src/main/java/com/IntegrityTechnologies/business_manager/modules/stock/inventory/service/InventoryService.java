@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.stock.inventory.servi
 
 import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
 import com.IntegrityTechnologies.business_manager.config.response.PageWrapper;
+import com.IntegrityTechnologies.business_manager.exception.ExpectedConcurrencyException;
 import com.IntegrityTechnologies.business_manager.exception.OutOfStockException;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
@@ -16,6 +17,8 @@ import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Br
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.repository.SupplierRepository;
+import com.IntegrityTechnologies.business_manager.modules.procurement.receipt.domain.GoodsReceipt;
+import com.IntegrityTechnologies.business_manager.modules.procurement.receipt.repository.GoodsReceiptRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplier;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplierId;
@@ -44,6 +47,7 @@ import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -86,6 +90,7 @@ public class InventoryService {
     private final InventoryValuationEngine valuationEngine;
     private final TenantInventorySettingsService settingsService;
     private final StockEngine stockEngine;
+    private final GoodsReceiptRepository goodsReceiptRepository;
 
     private static final int MAX_RETRIES = 5;
 
@@ -217,28 +222,51 @@ public class InventoryService {
             // -------------------------------------------------------------
             // 4. ENSURE INVENTORY ITEM EXISTS (NO MUTATION)
             // -------------------------------------------------------------
-            inventoryItemRepository
-                    .lockByVariant(
-                            variant.getId(),
-                            tenantId(),
-                            branch.getId()
-                    )
-                    .orElseGet(() -> inventoryItemRepository.save(
-                            InventoryItem.builder()
-                                    .productId(product.getId())
-                                    .productVariantId(variant.getId())
-                                    .tenantId(tenantId())
-                                    .branchId(branch.getId())
-                                    .quantityOnHand(0L)
-                                    .averageCost(BigDecimal.ZERO)
-                                    .deleted(false)
-                                    .build()
-                    ));
+            try {
+
+                inventoryItemRepository
+                        .lockByVariant(
+                                variant.getId(),
+                                tenantId(),
+                                branch.getId()
+                        )
+                        .orElseGet(() ->
+                                inventoryItemRepository.saveAndFlush(
+                                        InventoryItem.builder()
+                                                .productId(product.getId())
+                                                .productVariantId(variant.getId())
+                                                .tenantId(tenantId())
+                                                .branchId(branch.getId())
+                                                .quantityOnHand(0L)
+                                                .averageCost(BigDecimal.ZERO)
+                                                .deleted(false)
+                                                .build()
+                                )
+                        );
+
+            } catch (
+                    DataIntegrityViolationException ex
+            ) {
+
+                boolean exists =
+                        inventoryItemRepository.existsByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
+                                        variant.getId(),
+                                        tenantId(),
+                                        branch.getId()
+                                );
+
+                if (!exists) {
+                    throw new ExpectedConcurrencyException(
+                            "Concurrent inventory creation detected"
+                    );
+                }
+            }
 
             // -------------------------------------------------------------
             // 5. ENGINE-DRIVEN RECEIPT (🔥 FIXED)
             // -------------------------------------------------------------
             UUID receiptId = requireReferenceId(req.getReference(), "Receipt");
+            List<UUID> goodsReceiptIds = new ArrayList<>();
 
             for (SupplierUnit su : req.getSuppliers()) {
 
@@ -248,6 +276,78 @@ public class InventoryService {
                         su.getUnitsSupplied(),
                         su.getUnitCost(),
                         receiptId
+                );
+
+                GoodsReceipt receipt =
+                        new GoodsReceipt();
+
+                receipt.setTenantId(
+                        tenantId()
+                );
+
+                receipt.setBranchId(
+                        branch.getId()
+                );
+
+                receipt.setReceiptNumber(
+                        "GRN-" +
+                                receiptId.toString()
+                                        .substring(0, 8)
+                                        .toUpperCase()
+                );
+
+                receipt.setSupplierId(
+                        su.getSupplierId()
+                );
+
+                receipt.setProductId(
+                        product.getId()
+                );
+
+                receipt.setVariantId(
+                        variant.getId()
+                );
+
+                receipt.setQuantity(
+                        su.getUnitsSupplied()
+                );
+
+                receipt.setUnitCost(
+                        su.getUnitCost()
+                );
+
+                receipt.setTotalCost(
+                        su.getUnitCost()
+                                .multiply(
+                                        BigDecimal.valueOf(
+                                                su.getUnitsSupplied()
+                                        )
+                                )
+                );
+
+                receipt.setVatAmount(
+                        BigDecimal.ZERO
+                );
+
+                receipt.setReceiptDate(
+                        LocalDate.now()
+                );
+
+                receipt.setSupplierReference(
+                        req.getReference()
+                );
+
+                receipt.setNote(
+                        req.getNote()
+                );
+
+                GoodsReceipt savedReceipt =
+                        goodsReceiptRepository.save(
+                                receipt
+                        );
+
+                goodsReceiptIds.add(
+                        savedReceipt.getId()
                 );
             }
 
@@ -351,75 +451,101 @@ public class InventoryService {
             }
 
             // -------------------------------------------------------------
-            // 9. ACCOUNTING (UNCHANGED)
+            // 9. ACCOUNTING (MANDATORY GRNI ACCRUAL)
             // -------------------------------------------------------------
-            if (vatEnabled && totalInputVat.compareTo(BigDecimal.ZERO) > 0) {
+            List<AccountingEvent.Entry> entries =
+                    new ArrayList<>();
 
-                accountingFacade.post(
-                        AccountingEvent.builder()
-                                .eventId(UUID.randomUUID())
-                                .sourceModule("INVENTORY_RECEIPT")
-                                .branchId(branch.getId())
-                                .tenantId(tenantId())
-                                .sourceId(receiptId)
-                                .reference(req.getReference())
-                                .description("Inventory receipt with VAT")
-                                .performedBy(getCurrentUsername())
-                                .entries(List.of(
+            entries.add(
+                    AccountingEvent.Entry.builder()
+                            .accountId(
+                                    accountingAccounts.get(
+                                            tenantId(),
+                                            branch.getId(),
+                                            AccountRole.INVENTORY
+                                    )
+                            )
+                            .direction(
+                                    EntryDirection.DEBIT
+                            )
+                            .amount(
+                                    incomingCostTotal
+                            )
+                            .build()
+            );
 
-                                        AccountingEvent.Entry.builder()
-                                                .accountId(accountingAccounts.get(
-                                                        tenantId(),
-                                                        branch.getId(),
-                                                        AccountRole.INVENTORY
-                                                ))
-                                                .direction(EntryDirection.DEBIT)
-                                                .amount(incomingCostTotal)
-                                                .build(),
+            entries.add(
+                    AccountingEvent.Entry.builder()
+                            .accountId(
+                                    accountingAccounts.get(
+                                            tenantId(),
+                                            branch.getId(),
+                                            AccountRole.GOODS_RECEIVED_NOT_INVOICED
+                                    )
+                            )
+                            .direction(
+                                    EntryDirection.CREDIT
+                            )
+                            .amount(
+                                    incomingCostTotal
+                            )
+                            .build()
+            );
 
-                                        AccountingEvent.Entry.builder()
-                                                .accountId(accountingAccounts.get(
-                                                        tenantId(),
-                                                        branch.getId(),
-                                                        AccountRole.VAT_INPUT
-                                                ))
-                                                .direction(EntryDirection.DEBIT)
-                                                .amount(totalInputVat)
-                                                .build(),
-
-                                        AccountingEvent.Entry.builder()
-                                                .accountId(accountingAccounts.get(
-                                                        tenantId(),
-                                                        branch.getId(),
-                                                        AccountRole.ACCOUNTS_PAYABLE
-                                                ))
-                                                .direction(EntryDirection.CREDIT)
-                                                .amount(
-                                                        incomingCostTotal.add(totalInputVat)
-                                                )
-                                                .build()
-
-                                ))
-                                .build()
-                );
-
-            } else {
-
-                inventoryAccountingPort.recordInventoryReceipt(
-                        tenantId(),
-                        receiptId,
-                        branch.getId(),
-                        incomingCostTotal,
-                        req.getReference()
-                );
-            }
+            accountingFacade.post(
+                    AccountingEvent.builder()
+                            .eventId(
+                                    UUID.nameUUIDFromBytes(
+                                            (
+                                                    "GRN_RECEIPT:" +
+                                                            receiptId
+                                            ).getBytes()
+                                    )
+                            )
+                            .sourceModule("GOODS_RECEIPT")
+                            .sourceId(receiptId)
+                            .tenantId(tenantId())
+                            .branchId(branch.getId())
+                            .reference(req.getReference())
+                            .description(
+                                    "Inventory receipt into GRNI"
+                            )
+                            .performedBy(
+                                    getCurrentUsername()
+                            )
+                            .entries(entries)
+                            .build()
+            );
 
             settingsService.lock(tenantId());
+
+            Map<String, Object> response =
+                    new HashMap<>();
+
+            response.put(
+                    "inventory",
+                    buildResponse(
+                            getItemOrThrow(
+                                    variant.getId(),
+                                    branch.getId()
+                            )
+                    )
+            );
+
+            response.put(
+                    "goodsReceiptIds",
+                    goodsReceiptIds
+            );
+
+            response.put(
+                    "referenceId",
+                    receiptId
+            );
 
             return new ApiResponse(
                     "success",
                     "Stock received successfully",
-                    buildResponse(getItemOrThrow(variant.getId(), branch.getId()))
+                    response
             );
 
         }, req.getReference(), StockTransaction.TransactionType.RECEIPT, req.getBranchId());

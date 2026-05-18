@@ -1,14 +1,15 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.payment.base.controller;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.domain.SupplierPayment;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.dto.CreateSupplierPaymentRequest;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.dto.SupplierPaymentResponse;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.service.SupplierPaymentService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 @RestController
@@ -17,28 +18,21 @@ import java.util.UUID;
 @TenantManagerOnly
 public class SupplierPaymentController {
 
-    private final SupplierPaymentService service;
+    private final SupplierPaymentService
+            service;
 
     @PostMapping
-    public SupplierPayment pay(
-            @RequestParam UUID branchId,
-            @RequestParam UUID supplierId,
-            @RequestParam BigDecimal amount,
-            @RequestParam String method,
-            @RequestParam(required = false) String reference
+    public SupplierPaymentResponse create(
+            @Valid
+            @RequestBody
+            CreateSupplierPaymentRequest request
     ) {
 
-        return service.pay(
-                branchId,
-                supplierId,
-                amount,
-                method,
-                reference
-        );
+        return service.create(request);
     }
 
     @GetMapping
-    public Page<SupplierPayment> list(
+    public Page<SupplierPaymentResponse> list(
             @RequestParam UUID branchId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size

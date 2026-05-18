@@ -12,27 +12,22 @@ import java.util.*;
 @Table(
         name = "journal_entries",
         indexes = {
-
                 @Index(
                         name = "idx_journal_tenant_branch_status_date",
                         columnList = "tenant_id,branch_id,posted,reversed,accountingDate"
                 ),
-
                 @Index(
                         name = "idx_journal_tenant_branch_postedAt",
                         columnList = "tenant_id,branch_id,postedAt"
                 ),
-
                 @Index(
                         name = "idx_journal_period",
                         columnList = "periodId"
                 ),
-
                 @Index(
                         name = "idx_journal_accountingDate",
                         columnList = "accountingDate"
                 ),
-
                 @Index(
                         name = "idx_journal_tenant_branch_postedAt_hash",
                         columnList = "tenant_id,branch_id,postedAt,hash"
@@ -42,12 +37,21 @@ import java.util.*;
 
                 @UniqueConstraint(
                         name = "uk_journal_source",
-                        columnNames = {"sourceModule","sourceId"}
+                        columnNames = {
+                                "tenant_id",
+                                "branch_id",
+                                "sourceModule",
+                                "sourceId"
+                        }
                 ),
 
                 @UniqueConstraint(
                         name = "uk_journal_event_id",
-                        columnNames = {"accountingEventId"}
+                        columnNames = {
+                                "tenant_id",
+                                "branch_id",
+                                "accountingEventId"
+                        }
                 )
         }
 )
@@ -81,7 +85,7 @@ public class JournalEntry extends BranchAwareEntity {
     @Column(nullable = false, updatable = false)
     private UUID periodId;
 
-    @Column(nullable = false, unique = true, updatable = false)
+    @Column(nullable = false, updatable = false)
     private UUID accountingEventId;
 
     @Column(nullable = false)
@@ -90,7 +94,7 @@ public class JournalEntry extends BranchAwareEntity {
     @Column(nullable = false)
     private boolean reversed = false;
 
-    @Column(unique = true)
+    @Column
     private UUID reversalJournalId;
 
     @OneToMany(mappedBy = "journalEntry", cascade = CascadeType.ALL, orphanRemoval = false)
@@ -103,7 +107,7 @@ public class JournalEntry extends BranchAwareEntity {
     @Column(length = 64, updatable = false)
     private String previousHash;
 
-    @Column(length = 64, unique = true)
+    @Column(length = 64)
     private String hash;
 
     protected JournalEntry() {}
@@ -185,8 +189,8 @@ public class JournalEntry extends BranchAwareEntity {
         this.reversalJournalId = reversalId;
     }
 
-    @PreUpdate
-    public void preventModification() {
+    @Override
+    public void beforeUpdate() {
 
         if (posted)
             throw new IllegalStateException("Posted journal entries are immutable");
