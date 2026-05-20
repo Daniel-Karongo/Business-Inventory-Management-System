@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.engine;
 
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryItem;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.BatchConsumptionRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryBatchRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
@@ -45,7 +46,14 @@ public class StockAdjustmentService {
             BigDecimal totalCost =
                     batchConsumptionRepository.sumCostBySaleId(referenceId, tenantId());
 
-            updateItem(variantId, branchId, -qty);
+            InventoryItem item = inventoryItemRepository.lockByVariant(
+                            variantId,
+                            tenantId(),
+                            branchId
+                    )
+                    .orElseThrow();
+
+            updateItem(item, -qty);
 
             return totalCost;
         }
@@ -64,19 +72,29 @@ public class StockAdjustmentService {
                         .build()
         );
 
-        updateItem(variantId, branchId, qty);
+        InventoryItem item = inventoryItemRepository.lockByVariant(
+                                variantId,
+                                tenantId(),
+                                branchId
+                        )
+                        .orElseThrow();
+
+        updateItem(item, qty);
 
         return batch.getUnitCost().multiply(BigDecimal.valueOf(qty));
     }
 
-    private void updateItem(UUID variantId, UUID branchId, long delta) {
+    private void updateItem(
+            InventoryItem item,
+            long delta
+    ) {
+        item.setQuantityOnHand(
+                item.getQuantityOnHand() + delta
+        );
 
-        var item =
-                inventoryItemRepository.lockByVariant(variantId, tenantId(), branchId)
-                        .orElseThrow();
-
-        item.setQuantityOnHand(item.getQuantityOnHand() + delta);
-        item.setLastUpdatedAt(LocalDateTime.now());
+        item.setLastUpdatedAt(
+                LocalDateTime.now()
+        );
 
         inventoryItemRepository.save(item);
     }

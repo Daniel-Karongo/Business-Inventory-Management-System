@@ -9,6 +9,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.ser
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.shared.mapper.PurchaseInvoiceMapper;
 import com.IntegrityTechnologies.business_manager.modules.procurement.matching.dto.MatchInvoiceToReceiptsRequest;
 import com.IntegrityTechnologies.business_manager.modules.procurement.matching.dto.ReceiveAndInvoiceRequest;
+import com.IntegrityTechnologies.business_manager.modules.procurement.receipt.repository.GoodsReceiptRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.ReceiveStockRequest;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.SupplierUnit;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,6 +34,7 @@ public class ReceiveAndInvoiceService {
     private final GoodsReceiptMatchingService matchingService;
     private final PurchaseInvoiceRepository invoiceRepository;
     private final PurchaseInvoiceMapper invoiceMapper;
+    private final GoodsReceiptRepository goodsReceiptRepository;
 
     @Transactional
     @SuppressWarnings("unchecked")
@@ -86,6 +89,25 @@ public class ReceiveAndInvoiceService {
 
             UUID supplierId =
                     entry.getKey();
+
+            String deterministicReceiptNumber =
+                    deterministicReceiptNumber(
+                            supplierId,
+                            orchestrationKey
+                    );
+
+            boolean receiptAlreadyExists =
+                    goodsReceiptRepository
+                            .findByTenantIdAndBranchIdAndReceiptNumber(
+                                    TenantContext.getTenantId(),
+                                    stock.getBranchId(),
+                                    deterministicReceiptNumber
+                            )
+                            .isPresent();
+
+            if (receiptAlreadyExists) {
+                continue;
+            }
 
             List<SupplierUnit> supplierUnits =
                     entry.getValue();
@@ -301,5 +323,20 @@ public class ReceiveAndInvoiceService {
         }
 
         return lastInvoice;
+    }
+
+    private String deterministicReceiptNumber(
+            UUID supplierId,
+            String reference
+    ) {
+        return "GRN-" +
+                UUID.nameUUIDFromBytes(
+                        (
+                                "GRN:" +
+                                        supplierId +
+                                        ":" +
+                                        reference
+                        ).getBytes(StandardCharsets.UTF_8)
+                );
     }
 }

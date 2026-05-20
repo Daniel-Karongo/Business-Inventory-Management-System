@@ -45,15 +45,15 @@ public class TenantInventorySettingsService {
                 .build());
     }
 
-    public void lock(UUID tenantId) {
-
-        repo.findById(tenantId).ifPresent(s -> {
-            if (!s.getLocked()) {
-                s.setLocked(true);
-                repo.save(s);
-            }
-        });
-    }
+//    public void lock(UUID tenantId) {
+//
+//        repo.findById(tenantId).ifPresent(s -> {
+//            if (!s.getLocked()) {
+//                s.setLocked(true);
+//                repo.save(s);
+//            }
+//        });
+//    }
 
     public void change(UUID tenantId, String method) {
 

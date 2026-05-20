@@ -131,7 +131,10 @@ public class StockEngine {
             UUID branchId,
             UUID referenceId
     ) {
-        consumptionService.consumeAndSync(variantId, branchId, referenceId);
+        consumptionService.consume(
+                branchId,
+                referenceId
+        );
     }
 
     /* =====================================================

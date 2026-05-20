@@ -66,31 +66,4 @@ public class StockConsumptionService {
             reservationRepo.save(r);
         }
     }
-
-    @Transactional
-    public void consumeAndSync(
-            UUID variantId,
-            UUID branchId,
-            UUID referenceId
-    ) {
-
-        consume(branchId, referenceId);
-
-        long consumed =
-                batchConsumptionRepository.sumQuantityBySaleId(referenceId, tenantId());
-
-        updateItem(variantId, branchId, -consumed);
-    }
-
-    private void updateItem(UUID variantId, UUID branchId, long delta) {
-
-        InventoryItem item =
-                inventoryItemRepository.lockByVariant(variantId, tenantId(), branchId)
-                        .orElseThrow(() -> new IllegalStateException("Inventory item missing"));
-
-        item.setQuantityOnHand(item.getQuantityOnHand() + delta);
-        item.setLastUpdatedAt(LocalDateTime.now());
-
-        inventoryItemRepository.save(item);
-    }
 }

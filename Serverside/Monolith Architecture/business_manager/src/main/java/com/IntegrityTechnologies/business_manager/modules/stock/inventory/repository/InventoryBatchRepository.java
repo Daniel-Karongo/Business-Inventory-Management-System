@@ -2,11 +2,13 @@ package com.IntegrityTechnologies.business_manager.modules.stock.inventory.repos
 
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryBatch;
 import jakarta.persistence.LockModeType;
+import jakarta.persistence.QueryHint;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -25,14 +27,20 @@ public interface InventoryBatchRepository
     ===================================================== */
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @QueryHints({
+            @QueryHint(
+                    name = "jakarta.persistence.lock.timeout",
+                    value = "10000"
+            )
+    })
     @Query(value = """
                 SELECT * FROM inventory_batches b
                 WHERE b.product_variant_id = :variantId
                   AND b.tenant_id = :tenantId
                   AND b.branch_id = :branchId
                   AND b.quantity_remaining > 0
-                ORDER BY b.received_at ASC
-                FOR UPDATE SKIP LOCKED
+                ORDER BY b.received_at ASC, b.id ASC
+                FOR UPDATE
             """, nativeQuery = true)
     List<InventoryBatch> lockAvailableBatchesFIFO(
             UUID variantId,
@@ -41,13 +49,19 @@ public interface InventoryBatchRepository
     );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @QueryHints({
+            @QueryHint(
+                    name = "jakarta.persistence.lock.timeout",
+                    value = "10000"
+            )
+    })
     @Query("""
                 SELECT b FROM InventoryBatch b
                 WHERE b.productVariantId = :variantId
                   AND b.branchId = :branchId
                   AND b.tenantId = :tenantId
                   AND b.quantityRemaining > 0
-                ORDER BY b.receivedAt ASC
+                ORDER BY b.receivedAt ASC, b.id ASC
             """)
     List<InventoryBatch> lockBatchesByBranch(
             UUID variantId,
@@ -78,7 +92,7 @@ public interface InventoryBatchRepository
                   AND b.tenantId = :tenantId
                   AND b.branchId = :branchId
                   AND b.quantityRemaining > 0
-                ORDER BY b.receivedAt ASC
+                ORDER BY b.receivedAt ASC, b.id ASC
             """)
     List<InventoryBatch> findAvailableBatches(
             @Param("variantId") UUID variantId,
@@ -93,6 +107,12 @@ public interface InventoryBatchRepository
     );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @QueryHints({
+            @QueryHint(
+                    name = "jakarta.persistence.lock.timeout",
+                    value = "10000"
+            )
+    })
     @Query("""
                 SELECT b FROM InventoryBatch b
                 WHERE b.id = :batchId

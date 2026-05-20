@@ -8,6 +8,8 @@ import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.S
 import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingBulkPreviewRow;
 import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingRequest;
 import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingResponse;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -24,6 +26,9 @@ import java.util.Set;
 public class StockOnboardingBulkService {
 
     private final StockOnboardingService onboardingService;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public StockOnboardingResponse executeRow(
             StockOnboardingRequest row
@@ -217,6 +222,9 @@ public class StockOnboardingBulkService {
         for (StockOnboardingRequest row : request.getItems()) {
 
             onboardingService.onboard(row);
+
+            entityManager.flush();
+            entityManager.clear();
         }
 
         result.setSuccess(

@@ -137,8 +137,6 @@ public class AccountingFacade {
                         event.getBranchId()
                 )
         );
-
-        stateService.lockIfNecessary(event.getBranchId());
     }
 
     @Transactional

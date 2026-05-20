@@ -6,19 +6,24 @@ export interface DeviceLocation {
   accuracy: number;
 }
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class LocationService {
 
   async getLocation(): Promise<DeviceLocation> {
 
     if (!navigator.geolocation) {
 
+      console.error(
+        '[LocationService] Geolocation API not supported by browser'
+      );
+
       return {
         latitude: 0,
         longitude: 0,
         accuracy: 0
       };
-
     }
 
     return new Promise<DeviceLocation>((resolve) => {
@@ -33,17 +38,21 @@ export class LocationService {
 
         resolved = true;
 
+        console.error(
+          '[LocationService] Geolocation timeout fallback triggered'
+        );
+
         resolve({
           latitude: 0,
           longitude: 0,
           accuracy: 0
         });
 
-      }, 8000);
+      }, 15000);
 
       navigator.geolocation.getCurrentPosition(
 
-        position => {
+        (position) => {
 
           if (resolved) {
             return;
@@ -52,16 +61,24 @@ export class LocationService {
           resolved = true;
 
           clearTimeout(fallbackTimer);
+
+          console.info(
+            '[LocationService] Geolocation success',
+            {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy
+            }
+          );
 
           resolve({
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
             accuracy: position.coords.accuracy
           });
-
         },
 
-        () => {
+        (error) => {
 
           if (resolved) {
             return;
@@ -71,21 +88,27 @@ export class LocationService {
 
           clearTimeout(fallbackTimer);
 
+          console.error(
+            '[LocationService] Geolocation failure',
+            {
+              code: error.code,
+              message: error.message
+            }
+          );
+
           resolve({
             latitude: 0,
             longitude: 0,
             accuracy: 0
           });
-
         },
 
         {
-          enableHighAccuracy: false,
-          timeout: 7000,
-          maximumAge: 300000
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
         }
       );
-
     });
   }
 }

@@ -55,13 +55,14 @@ public class LedgerPostingService {
         journal.getLedgerEntries().addAll(entries);
 
         journal.markPosted(performedBy);
+
         for (LedgerEntry entry : entries) {
             entry.markPosted(journal.getPostedAt());
         }
 
-        systemStateService.lockIfNecessary(branchId);
-
         UUID tenantId = journal.getTenantId();
+
+        systemStateService.lockIfNecessary(branchId);
 
         String previousHash =
                 journalRepo.findTopByTenantIdAndBranchIdAndPostedTrueAndIdNotOrderByPostedAtDescIdDesc(

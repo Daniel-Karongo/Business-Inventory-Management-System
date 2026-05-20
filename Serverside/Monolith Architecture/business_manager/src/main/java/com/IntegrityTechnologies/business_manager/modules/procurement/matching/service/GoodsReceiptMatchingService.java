@@ -235,16 +235,10 @@ public class GoodsReceiptMatchingService {
             }
 
             receipt.setInvoiced(true);
-
-            receipt.setMatchedInvoiceId(
-                    invoice.getId()
-            );
-
-            receipt.setInvoicedAt(
-                    LocalDateTime.now()
-            );
-
-            goodsReceiptRepository.save(receipt);
+            receipt.setMatchedInvoiceId(invoice.getId());
+            receipt.setInvoicedAt(LocalDateTime.now());
         }
+
+        goodsReceiptRepository.saveAll(receipts);
     }
 }

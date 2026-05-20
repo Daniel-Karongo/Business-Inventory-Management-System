@@ -2,7 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.stock.inventory.servi
 
 import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
 import com.IntegrityTechnologies.business_manager.config.response.PageWrapper;
-import com.IntegrityTechnologies.business_manager.exception.ExpectedConcurrencyException;
+import java.nio.charset.StandardCharsets;
 import com.IntegrityTechnologies.business_manager.exception.OutOfStockException;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
@@ -290,11 +290,12 @@ public class InventoryService {
                 );
 
                 receipt.setReceiptNumber(
-                        "GRN-" +
-                                UUID.randomUUID()
-                                        .toString()
-                                        .substring(0, 12)
-                                        .toUpperCase()
+                        deterministicReceiptNumber(
+                                su.getSupplierId(),
+                                su.getUnitsSupplied(),
+                                su.getUnitCost(),
+                                req.getReference()
+                        )
                 );
 
                 receipt.setSupplierId(
@@ -542,7 +543,7 @@ public class InventoryService {
                             .build()
             );
 
-            settingsService.lock(tenantId());
+//            settingsService.lock(tenantId());
 
             Map<String, Object> response =
                     new HashMap<>();
@@ -1877,6 +1878,27 @@ public class InventoryService {
 
     private String buildKey(UUID variantId, UUID branchId) {
         return variantId + "|" + branchId;
+    }
+
+    private String deterministicReceiptNumber(
+            UUID supplierId,
+            Long quantity,
+            BigDecimal unitCost,
+            String reference
+    ) {
+        return "GRN-" +
+                UUID.nameUUIDFromBytes(
+                        (
+                                "GRN:" +
+                                        supplierId +
+                                        ":" +
+                                        quantity +
+                                        ":" +
+                                        unitCost.stripTrailingZeros().toPlainString() +
+                                        ":" +
+                                        reference
+                        ).getBytes(StandardCharsets.UTF_8)
+                );
     }
 
     @Transactional(readOnly = true)

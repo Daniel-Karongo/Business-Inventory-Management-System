@@ -1024,6 +1024,9 @@ public class StockOnboardingService {
             }
         }
 
+        Set<String> supplierReceiptKeys =
+                new HashSet<>();
+
         for (var s : req.getSuppliers()) {
 
             if (s.getSupplierId() == null
@@ -1070,6 +1073,27 @@ public class StockOnboardingService {
 
                 throw new IllegalArgumentException(
                         "unitCost must be > 0"
+                );
+            }
+
+            String receiptKey =
+                    normalize(
+                            s.getSupplierName() != null
+                                    ? s.getSupplierName()
+                                    : String.valueOf(s.getSupplierId())
+                    )
+                            + "::"
+                            + normalize(s.getPackagingName())
+                            + "::"
+                            + s.getUnitsSupplied()
+                            + "::"
+                            + s.getUnitCost()
+                            .stripTrailingZeros()
+                            .toPlainString();
+
+            if (!supplierReceiptKeys.add(receiptKey)) {
+                throw new IllegalArgumentException(
+                        "Duplicate supplier receipt line detected"
                 );
             }
         }
