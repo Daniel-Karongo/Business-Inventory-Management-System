@@ -14,6 +14,9 @@ public class AllocateSupplierPaymentRequest {
     private UUID branchId;
 
     @NotNull
+    private UUID supplierId;
+
+    @NotNull
     private UUID paymentId;
 
     @NotNull

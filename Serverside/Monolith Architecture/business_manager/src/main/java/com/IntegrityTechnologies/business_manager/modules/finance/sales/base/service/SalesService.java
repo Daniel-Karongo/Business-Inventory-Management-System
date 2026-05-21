@@ -7,7 +7,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.rep
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.RevenueRecognitionService;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.dto.PaymentDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.model.Payment;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.model.PaymentStatus;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.enums.PaymentStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.service.PaymentService;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.Sale;

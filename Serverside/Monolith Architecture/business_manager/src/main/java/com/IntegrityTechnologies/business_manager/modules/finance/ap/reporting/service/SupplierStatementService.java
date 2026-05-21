@@ -5,8 +5,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.repository.PurchaseInvoiceRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.reporting.dto.SupplierStatementEntryDto;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.shared.enums.SupplierDocumentType;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.domain.SupplierPayment;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.repository.SupplierPaymentRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.model.SupplierPayment;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.repository.SupplierPaymentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;

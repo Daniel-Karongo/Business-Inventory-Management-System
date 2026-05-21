@@ -1,0 +1,199 @@
+<div class="dialog-shell">
+
+    <div class="dialog-header">
+
+        <div>
+            <div class="title">
+                Allocate Supplier Payment
+            </div>
+
+            <div class="subtitle">
+                Apply unapplied supplier payments to invoices
+            </div>
+        </div>
+
+        <button mat-icon-button mat-dialog-close>
+            <mat-icon>
+                close
+            </mat-icon>
+        </button>
+
+    </div>
+
+    <div class="dialog-content">
+
+        <!-- MODE -->
+
+        <mat-form-field appearance="fill">
+
+            <mat-label>
+                Allocation Mode
+            </mat-label>
+
+            <mat-select [formControl]="modeControl">
+
+                <mat-option value="auto">
+                    Auto Allocate
+                </mat-option>
+
+                <mat-option value="manual">
+                    Manual Allocate
+                </mat-option>
+
+            </mat-select>
+
+        </mat-form-field>
+
+        <!-- PAYMENT -->
+
+        <mat-form-field appearance="fill">
+
+            <mat-label>
+                Supplier Payment
+            </mat-label>
+
+            <mat-select [formControl]="paymentControl" (selectionChange)="
+          selectPayment($event.value)
+        ">
+
+                <mat-option *ngFor="let payment of data.payments" [value]="payment.paymentId">
+
+                    {{ payment.paymentNumber }}
+                    —
+                    {{
+                    payment.unappliedAmount
+                    | currency:'KES '
+                    }}
+
+                </mat-option>
+
+            </mat-select>
+
+        </mat-form-field>
+
+        <!-- INVOICE -->
+
+        <mat-form-field *ngIf="modeControl.value === 'manual'" appearance="fill">
+
+            <mat-label>
+                Invoice
+            </mat-label>
+
+            <mat-select [formControl]="invoiceControl" (selectionChange)="
+          selectInvoice($event.value)
+        ">
+
+                <mat-option *ngFor="let bill of data.bills" [value]="bill.invoiceId">
+
+                    {{ bill.billNumber }}
+                    —
+                    {{
+                    bill.remainingAmount
+                    | currency:'KES '
+                    }}
+
+                </mat-option>
+
+            </mat-select>
+
+        </mat-form-field>
+
+        <!-- AMOUNT -->
+
+        <mat-form-field appearance="fill">
+
+            <mat-label>
+                Allocation Amount
+            </mat-label>
+
+            <input matInput type="number" [formControl]="amountControl">
+
+        </mat-form-field>
+
+        <!-- PREVIEW -->
+
+        <div *ngIf="preview" class="preview-panel">
+
+            <div class="preview-title">
+                Allocation Preview
+            </div>
+
+            <div *ngFor="
+          let item of preview.allocations
+        " class="preview-row">
+
+                <div>
+
+                    <strong>
+                        {{ item.invoiceNumber }}
+                    </strong>
+
+                    <div class="muted">
+
+                        Due:
+                        {{
+                        item.dueDate
+                        | date:'dd MMM yyyy'
+                        }}
+
+                    </div>
+
+                </div>
+
+                <strong>
+                    {{
+                    item.allocationAmount
+                    | currency:'KES '
+                    }}
+                </strong>
+
+            </div>
+
+            <div class="preview-summary">
+
+                <div>
+
+                    Remaining:
+                    {{
+                    preview.remainingUnallocated
+                    | currency:'KES '
+                    }}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="dialog-actions">
+
+        <button mat-stroked-button mat-dialog-close>
+            Cancel
+        </button>
+
+        <button *ngIf="modeControl.value === 'auto'" mat-stroked-button color="primary" [disabled]="previewLoading"
+            (click)="previewAllocation()">
+
+            Preview
+
+        </button>
+
+        <button mat-flat-button color="primary" [disabled]="
+                loading ||
+                submitting ||
+                amountControl.invalid
+            " (click)="submit()">
+
+            <mat-icon *ngIf="!loading">
+                payments
+            </mat-icon>
+
+            {{ loading ? 'Allocating...' : 'Allocate' }}
+
+        </button>
+
+    </div>
+
+</div>

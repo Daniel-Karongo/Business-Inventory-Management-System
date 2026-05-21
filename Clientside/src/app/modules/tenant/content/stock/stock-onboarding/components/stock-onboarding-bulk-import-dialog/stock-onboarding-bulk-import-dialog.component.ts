@@ -417,10 +417,6 @@ export class
                 row.value;
 
             const key = [
-                value.groupCode
-                    ?.trim()
-                    ?.toUpperCase(),
-
                 value.productName
                     ?.trim()
                     ?.toUpperCase(),
@@ -687,10 +683,6 @@ export class
 
             const groupingKey = [
 
-                String(value.groupCode || '')
-                    .trim()
-                    .toUpperCase(),
-
                 String(value.productName || '')
                     .trim()
                     .toUpperCase(),
@@ -749,7 +741,7 @@ export class
                 affectedRow.patchValue({
 
                     _error:
-                        `Conflicting packaging units detected for packaging "${value.packagingName}". Multiple rows define different packaging units within the same onboarding group.`
+                        `Conflicting packaging units detected for packaging "${value.packagingName}". Multiple rows define different packaging units within the same onboarding group (product classification).`
 
                 });
 

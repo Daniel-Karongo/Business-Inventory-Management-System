@@ -66,6 +66,10 @@ import java.util.UUID;
                 @Index(
                         name = "idx_purchase_invoice_due_date",
                         columnList = "tenant_id,branch_id,due_date"
+                ),
+                @Index(
+                        name = "idx_invoice_outstanding",
+                        columnList = "tenant_id,branch_id,supplier_id,outstanding_amount"
                 )
         }
 )

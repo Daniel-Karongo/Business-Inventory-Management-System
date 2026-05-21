@@ -1,0 +1,147 @@
+<div class="dialog-shell">
+
+    <div class="header">
+
+        <div>
+
+            <div class="title">
+                {{ bill.billNumber }}
+            </div>
+
+            <div class="subtitle">
+
+                {{
+                bill.invoiceDate
+                | date:'dd MMM yyyy'
+                }}
+
+            </div>
+
+        </div>
+
+        <button mat-stroked-button mat-dialog-close>
+            Close
+        </button>
+
+    </div>
+
+    <div class="summary-grid">
+
+        <div class="summary-item">
+            <span>Total</span>
+
+            <strong>
+                {{
+                bill.totalAmount
+                | currency:'KES '
+                }}
+            </strong>
+        </div>
+
+        <div class="summary-item">
+            <span>Paid</span>
+
+            <strong>
+                {{
+                bill.paidAmount
+                | currency:'KES '
+                }}
+            </strong>
+        </div>
+
+        <div class="summary-item">
+            <span>Remaining</span>
+
+            <strong class="danger">
+                {{
+                bill.remainingAmount
+                | currency:'KES '
+                }}
+            </strong>
+        </div>
+
+    </div>
+
+    <div class="section-title">
+        Invoice Items
+    </div>
+
+    <div class="items-grid">
+
+        <div *ngFor="let item of bill.items" class="item-card">
+
+            <div class="item-title">
+                {{ item.productName }}
+            </div>
+
+            <div class="muted">
+                {{ item.variantName }}
+            </div>
+
+            <div class="item-row">
+                Qty: {{ item.quantity }}
+            </div>
+
+            <div class="item-row">
+                Unit:
+                {{
+                item.unitCost
+                | currency:'KES '
+                }}
+            </div>
+
+            <div class="item-row">
+                Total:
+                {{
+                item.totalCost
+                | currency:'KES '
+                }}
+            </div>
+
+        </div>
+
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="section-title">
+        Settlements
+    </div>
+
+    <div *ngIf="!bill.settlements.length" class="empty">
+        No settlements recorded
+    </div>
+
+    <div *ngFor="
+      let settlement of bill.settlements
+    " class="settlement-row">
+
+        <div>
+
+            <strong>
+                {{
+                settlement.paymentNumber
+                }}
+            </strong>
+
+            <div class="muted">
+
+                {{
+                settlement.paymentDate
+                | date:'dd MMM yyyy'
+                }}
+
+            </div>
+
+        </div>
+
+        <strong>
+            {{
+            settlement.allocatedAmount
+            | currency:'KES '
+            }}
+        </strong>
+
+    </div>
+
+</div>

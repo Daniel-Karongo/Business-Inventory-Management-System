@@ -12,8 +12,6 @@ import {
 
 export interface StockOnboardingBulkRow {
 
-    groupCode: string;
-
     productName: string;
 
     classification?: string;
@@ -63,8 +61,6 @@ export const
             false,
 
         headers: [
-            'groupCode',
-
             'productName',
 
             'classification',
@@ -91,11 +87,6 @@ export const
         ],
 
         fields: [
-            {
-                name: 'groupCode',
-                required: true
-            },
-
             {
                 name: 'productName',
                 required: true
@@ -194,13 +185,6 @@ export const
             'Stock Onboarding',
 
         excelColumns: [
-
-            {
-                header: 'groupCode',
-                key: 'groupCode',
-                width: 22
-            },
-
             {
                 header: 'productName',
                 key: 'productName',
@@ -275,9 +259,6 @@ export const
         ],
 
         exampleRow: {
-            groupCode:
-                'MILK-001',
-
             productName:
                 'Milk 1L',
 

@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.payment.base.dto;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.model.PaymentStatus;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.enums.PaymentStatus;
 import lombok.Builder;
 import lombok.Data;
 import java.math.BigDecimal;

@@ -13,7 +13,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.d
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.model.Payment;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.repository.PaymentRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.dto.PaymentDTO;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.model.PaymentStatus;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.enums.PaymentStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineItem;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.repository.SaleRepository;

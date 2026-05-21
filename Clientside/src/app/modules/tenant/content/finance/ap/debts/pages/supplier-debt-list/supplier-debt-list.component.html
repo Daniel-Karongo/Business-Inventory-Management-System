@@ -1,0 +1,452 @@
+<app-workflow-shell>
+
+    <!-- HEADER -->
+
+    <div workflow-header>
+
+        <div class="header">
+
+            <div>
+                <div class="title">
+                    Accounts Payable
+                </div>
+
+                <div class="subtitle">
+                    Monitor supplier debt, overdue invoices, and unapplied payments
+                </div>
+            </div>
+
+            <button mat-flat-button color="primary" routerLink="/app/procurement/purchase-invoices">
+                <mat-icon>
+                    receipt_long
+                </mat-icon>
+
+                Purchase Invoices
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- TOOLBAR -->
+
+    <div workflow-toolbar>
+
+        <div class="toolbar">
+
+            <mat-form-field appearance="fill" class="search-field">
+                <mat-label>
+                    Search supplier
+                </mat-label>
+
+                <input matInput [formControl]="searchControl">
+
+                <mat-icon matSuffix>
+                    search
+                </mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="fill" class="filter-field">
+                <mat-label>
+                    Overdue
+                </mat-label>
+
+                <mat-select [formControl]="overdueFilter">
+                    <mat-option value="all">
+                        All Suppliers
+                    </mat-option>
+
+                    <mat-option value="overdue">
+                        Has Overdue
+                    </mat-option>
+
+                    <mat-option value="current">
+                        Current Only
+                    </mat-option>
+                </mat-select>
+            </mat-form-field>
+
+        </div>
+
+    </div>
+
+    <!-- CONTENT -->
+
+    <div workflow-content>
+
+        <!-- SUMMARY -->
+
+        <div class="summary-grid">
+
+            <app-workflow-card>
+
+                <div class="summary-card">
+
+                    <div class="summary-label">
+                        Suppliers
+                    </div>
+
+                    <div class="summary-value">
+                        {{ total }}
+                    </div>
+
+                </div>
+
+            </app-workflow-card>
+
+            <app-workflow-card>
+
+                <div class="summary-card">
+
+                    <div class="summary-label">
+                        Overdue Suppliers
+                    </div>
+
+                    <div class="summary-value danger">
+                        {{ overdueSuppliers }}
+                    </div>
+
+                </div>
+
+            </app-workflow-card>
+
+            <app-workflow-card>
+
+                <div class="summary-card">
+
+                    <div class="summary-label">
+                        High Risk
+                    </div>
+
+                    <div class="summary-value warning">
+                        {{ highRiskSuppliers }}
+                    </div>
+
+                </div>
+
+            </app-workflow-card>
+
+        </div>
+
+        <!-- EMPTY -->
+
+        <app-workflow-card *ngIf="!loading && rows.length === 0">
+
+            <div class="empty-state">
+
+                <mat-icon>
+                    payments
+                </mat-icon>
+
+                <div class="empty-title">
+                    No supplier debt records found
+                </div>
+
+            </div>
+
+        </app-workflow-card>
+
+        <!-- MOBILE -->
+
+        <div *ngIf="!loading" class="mobile-list">
+
+            <app-workflow-card *ngFor="let row of rows" class="mobile-card" (click)="openWorkspace(row)">
+
+                <div class="mobile-top">
+
+                    <div>
+
+                        <div class="supplier-name">
+                            {{ row.supplierName }}
+                        </div>
+
+                        <div class="supplier-meta">
+
+                            {{ row.openBills }}
+                            open bills
+
+                            <span *ngIf="row.oldestDueDate">
+                                • oldest due
+                                {{
+                                row.oldestDueDate
+                                | date:'dd MMM yyyy'
+                                }}
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                    <div class="risk-chip" [ngClass]="riskClass(row.riskLevel)">
+                        {{ row.riskLevel }}
+                    </div>
+
+                </div>
+
+                <div class="financial-grid">
+
+                    <div>
+
+                        <span>
+                            Outstanding
+                        </span>
+
+                        <strong>
+                            {{
+                            row.totalOutstanding
+                            | currency:'KES '
+                            }}
+                        </strong>
+
+                    </div>
+
+                    <div>
+
+                        <span>
+                            Overdue
+                        </span>
+
+                        <strong class="danger">
+                            {{
+                            row.overdueAmount
+                            | currency:'KES '
+                            }}
+                        </strong>
+
+                    </div>
+
+                    <div>
+
+                        <span>
+                            Unapplied
+                        </span>
+
+                        <strong>
+                            {{
+                            row.unappliedPayments
+                            | currency:'KES '
+                            }}
+                        </strong>
+
+                    </div>
+
+                    <div>
+
+                        <span>
+                            Net Payable
+                        </span>
+
+                        <strong>
+                            {{
+                            row.netPayable
+                            | currency:'KES '
+                            }}
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </app-workflow-card>
+
+        </div>
+
+        <!-- TABLE -->
+
+        <app-workflow-card class="desktop-table" *ngIf="!loading">
+
+            <div class="table-wrapper">
+
+                <table mat-table [dataSource]="rows">
+
+                    <!-- SUPPLIER -->
+
+                    <ng-container matColumnDef="supplier">
+
+                        <th mat-header-cell *matHeaderCellDef>
+
+                            <button class="sort-btn" (click)="sort('supplierName')">
+                                Supplier
+                            </button>
+
+                        </th>
+
+                        <td mat-cell *matCellDef="let row">
+
+                            <div class="supplier-cell">
+
+                                <div class="supplier-name">
+                                    {{ row.supplierName }}
+                                </div>
+
+                                <div class="supplier-meta">
+
+                                    {{ row.openBills }}
+                                    open bills
+
+                                </div>
+
+                            </div>
+
+                        </td>
+
+                    </ng-container>
+
+                    <!-- OUTSTANDING -->
+
+                    <ng-container matColumnDef="outstanding">
+
+                        <th mat-header-cell *matHeaderCellDef>
+
+                            <button class="sort-btn" (click)="sort('totalOutstanding')">
+                                Outstanding
+                            </button>
+
+                        </th>
+
+                        <td mat-cell *matCellDef="let row">
+
+                            {{
+                            row.totalOutstanding
+                            | currency:'KES '
+                            }}
+
+                        </td>
+
+                    </ng-container>
+
+                    <!-- OVERDUE -->
+
+                    <ng-container matColumnDef="overdue">
+
+                        <th mat-header-cell *matHeaderCellDef>
+
+                            <button class="sort-btn" (click)="sort('overdueAmount')">
+                                Overdue
+                            </button>
+
+                        </th>
+
+                        <td mat-cell *matCellDef="let row">
+
+                            <div class="overdue-cell">
+
+                                <strong class="danger">
+
+                                    {{
+                                    row.overdueAmount
+                                    | currency:'KES '
+                                    }}
+
+                                </strong>
+
+                                <div *ngIf="row.hasOverdue" class="overdue-badge">
+                                    overdue
+                                </div>
+
+                            </div>
+
+                        </td>
+
+                    </ng-container>
+
+                    <!-- UNAPPLIED -->
+
+                    <ng-container matColumnDef="unapplied">
+
+                        <th mat-header-cell *matHeaderCellDef>
+
+                            <button class="sort-btn" (click)="sort('unappliedPayments')">
+                                Unapplied
+                            </button>
+
+                        </th>
+
+                        <td mat-cell *matCellDef="let row">
+
+                            <div class="unapplied-cell">
+
+                                {{
+                                row.unappliedPayments
+                                | currency:'KES '
+                                }}
+
+                                <div *ngIf="row.hasUnappliedPayments" class="unapplied-badge">
+                                    available
+                                </div>
+
+                            </div>
+
+                        </td>
+
+                    </ng-container>
+
+                    <!-- RISK -->
+
+                    <ng-container matColumnDef="risk">
+
+                        <th mat-header-cell *matHeaderCellDef>
+                            Risk
+                        </th>
+
+                        <td mat-cell *matCellDef="let row">
+
+                            <div class="risk-chip" [ngClass]="riskClass(row.riskLevel)">
+                                {{ row.riskLevel }}
+                            </div>
+
+                        </td>
+
+                    </ng-container>
+
+                    <!-- ACTIONS -->
+
+                    <ng-container matColumnDef="actions">
+
+                        <th mat-header-cell *matHeaderCellDef>
+                        </th>
+
+                        <td mat-cell *matCellDef="let row">
+
+                            <button mat-flat-button color="primary" (click)="openWorkspace(row)">
+                                Workspace
+                            </button>
+
+                        </td>
+
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+
+                    <tr mat-row *matRowDef="
+              let row;
+              columns: displayedColumns
+            " class="clickable-row" (click)="openWorkspace(row)"></tr>
+
+                </table>
+
+            </div>
+
+        </app-workflow-card>
+
+        <!-- LOADING -->
+
+        <div *ngIf="loading" class="loading-grid">
+
+            <app-workflow-card *ngFor="let item of [1,2,3,4,5,6]">
+
+                <div class="loading-card"></div>
+
+            </app-workflow-card>
+
+        </div>
+
+        <!-- PAGINATION -->
+
+        <mat-paginator *ngIf="!loading && rows.length" [length]="total" [pageSize]="query.size ?? 20"
+            [pageIndex]="query.page ?? 0" [pageSizeOptions]="[10,20,50,100]" (page)="changePage($event)">
+        </mat-paginator>
+
+    </div>
+
+</app-workflow-shell>

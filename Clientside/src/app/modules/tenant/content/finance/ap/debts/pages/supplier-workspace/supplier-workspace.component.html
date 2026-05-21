@@ -1,0 +1,645 @@
+<app-workflow-shell>
+
+    <!-- HEADER -->
+
+    <div workflow-header>
+
+        <div class="header">
+
+            <div class="header-left">
+
+                <button mat-icon-button (click)="back()">
+                    <mat-icon>
+                        arrow_back
+                    </mat-icon>
+                </button>
+
+                <div>
+
+                    <div class="title">
+                        {{ workspace?.supplierName }}
+                    </div>
+
+                    <div class="subtitle">
+                        Supplier workspace
+                    </div>
+
+                </div>
+
+            </div>
+
+            <button mat-flat-button color="primary" (click)="openAllocationDialog()">
+
+                <mat-icon>
+                    payments
+                </mat-icon>
+
+                Allocate Payment
+
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- CONTENT -->
+
+    <div workflow-content>
+
+        <!-- LOADING -->
+
+        <div *ngIf="loading" class="loading-grid">
+
+            <app-workflow-card *ngFor="let i of [1,2,3,4]">
+                <div class="loading-card"></div>
+            </app-workflow-card>
+
+        </div>
+
+        <ng-container *ngIf="workspace">
+
+            <!-- SUMMARY -->
+
+            <div class="summary-grid">
+
+                <app-workflow-card>
+
+                    <div class="summary-card">
+
+                        <div class="summary-label">
+                            Outstanding
+                        </div>
+
+                        <div class="summary-value">
+                            {{
+                            workspace.totalOutstanding
+                            | currency:'KES '
+                            }}
+                        </div>
+
+                    </div>
+
+                </app-workflow-card>
+
+                <app-workflow-card>
+
+                    <div class="summary-card">
+
+                        <div class="summary-label">
+                            Overdue
+                        </div>
+
+                        <div class="summary-value danger">
+                            {{
+                            workspace.overdueAmount
+                            | currency:'KES '
+                            }}
+                        </div>
+
+                    </div>
+
+                </app-workflow-card>
+
+                <app-workflow-card>
+
+                    <div class="summary-card">
+
+                        <div class="summary-label">
+                            Unapplied Payments
+                        </div>
+
+                        <div class="summary-value success">
+                            {{
+                            workspace.unappliedPayments
+                            | currency:'KES '
+                            }}
+                        </div>
+
+                    </div>
+
+                </app-workflow-card>
+
+                <app-workflow-card>
+
+                    <div class="summary-card">
+
+                        <div class="summary-label">
+                            Net Payable
+                        </div>
+
+                        <div class="summary-value">
+                            {{
+                            workspace.netPayable
+                            | currency:'KES '
+                            }}
+                        </div>
+
+                    </div>
+
+                </app-workflow-card>
+
+            </div>
+
+            <!-- TABS -->
+
+            <mat-tab-group dynamicHeight>
+
+                <!-- BILLS -->
+
+                <mat-tab label="Bills">
+
+                    <app-workflow-card>
+
+                        <div class="table-wrapper">
+
+                            <table mat-table [dataSource]="workspace.bills">
+
+                                <ng-container matColumnDef="invoice">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+                                        Invoice
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        <div class="primary-cell">
+
+                                            <strong>
+                                                {{ row.billNumber }}
+                                            </strong>
+
+                                            <span>
+                                                {{
+                                                row.invoiceDate
+                                                | date:'dd MMM yyyy'
+                                                }}
+                                            </span>
+
+                                        </div>
+
+                                    </td>
+
+                                </ng-container>
+
+                                <ng-container matColumnDef="dueDate">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+                                        Due
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        <div>
+
+                                            {{
+                                            row.dueDate
+                                            | date:'dd MMM yyyy'
+                                            }}
+
+                                            <div *ngIf="row.overdue" class="overdue-badge">
+                                                overdue
+                                            </div>
+
+                                        </div>
+
+                                    </td>
+
+                                </ng-container>
+
+                                <ng-container matColumnDef="remaining">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+                                        Remaining
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        <strong>
+                                            {{
+                                            row.remainingAmount
+                                            | currency:'KES '
+                                            }}
+                                        </strong>
+
+                                    </td>
+
+                                </ng-container>
+
+                                <ng-container matColumnDef="status">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+                                        Status
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        {{ row.status }}
+
+                                    </td>
+
+                                </ng-container>
+
+                                <ng-container matColumnDef="actions">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        <button mat-button color="primary" (click)="openInvoiceDetails(row, $event)">
+                                            Details
+                                        </button>
+                                        <button mat-button (click)="toggleInvoice(row.invoiceId)">
+                                            {{ expandedInvoiceId === row.invoiceId ? 'Hide' : 'Settlements' }}
+                                        </button>
+                                    </td>
+
+                                </ng-container>
+
+                                <tr mat-header-row *matHeaderRowDef="billColumns"></tr>
+
+                                <tr mat-row *matRowDef="let row; columns: billColumns"></tr>
+
+                            </table>
+
+                        </div>
+
+                        <!-- EXPANDED -->
+
+                        <div *ngFor="let bill of workspace.bills; trackBy: trackByInvoice">
+
+                            <div *ngIf="expandedInvoiceId === bill.invoiceId" class="expanded-panel">
+
+                                <div class="section-title">
+                                    Invoice Items
+                                </div>
+
+                                <div class="items-grid">
+
+                                    <div *ngFor="let item of bill.items" class="item-card">
+
+                                        <div class="item-title">
+                                            {{ item.productName }}
+                                        </div>
+
+                                        <div class="item-meta">
+                                            {{ item.variantName }}
+                                        </div>
+
+                                        <div class="item-row">
+                                            Qty:
+                                            {{ item.quantity }}
+                                        </div>
+
+                                        <div class="item-row">
+                                            Total:
+                                            {{
+                                            item.totalCost
+                                            | currency:'KES '
+                                            }}
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                <mat-divider></mat-divider>
+
+                                <div class="section-title">
+                                    Settlements
+                                </div>
+
+                                <div *ngIf="!bill.settlements.length" class="muted">
+                                    No allocations yet
+                                </div>
+
+                                <div *ngFor="
+                    let settlement of bill.settlements
+                  " class="settlement-row">
+
+                                    <div>
+                                        <strong>
+                                            {{
+                                            settlement.paymentNumber
+                                            }}
+                                        </strong>
+
+                                        <div class="muted">
+                                            {{
+                                            settlement.paymentDate
+                                            | date:'dd MMM yyyy'
+                                            }}
+                                        </div>
+                                    </div>
+
+                                    <strong>
+                                        {{
+                                        settlement.allocatedAmount
+                                        | currency:'KES '
+                                        }}
+                                    </strong>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </app-workflow-card>
+
+                </mat-tab>
+
+                <!-- PAYMENTS -->
+
+                <mat-tab label="Payments">
+
+                    <app-workflow-card>
+
+                        <div class="table-wrapper">
+
+                            <table mat-table [dataSource]="workspace.payments">
+
+                                <ng-container matColumnDef="payment">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+                                        Payment
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        <div class="primary-cell">
+
+                                            <strong>
+                                                {{ row.paymentNumber }}
+                                            </strong>
+
+                                            <span>
+                                                {{ row.paymentMethod }}
+                                            </span>
+
+                                        </div>
+
+                                    </td>
+
+                                </ng-container>
+
+                                <ng-container matColumnDef="date">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+                                        Date
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        {{
+                                        row.paymentDate
+                                        | date:'dd MMM yyyy'
+                                        }}
+
+                                    </td>
+
+                                </ng-container>
+
+                                <ng-container matColumnDef="amount">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+                                        Amount
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        {{
+                                        row.amount
+                                        | currency:'KES '
+                                        }}
+
+                                    </td>
+
+                                </ng-container>
+
+                                <ng-container matColumnDef="unapplied">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+                                        Unapplied
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        <strong class="success">
+                                            {{
+                                            row.unappliedAmount
+                                            | currency:'KES '
+                                            }}
+                                        </strong>
+
+                                    </td>
+
+                                </ng-container>
+
+                                <ng-container matColumnDef="actions">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        <button mat-button color="primary" (click)="openPaymentDetails(row, $event)">
+                                            Details
+                                        </button>
+
+                                        <button mat-button (click)="togglePayment(row.paymentId)">
+                                            {{ expandedPaymentId === row.paymentId ? 'Hide' : 'Allocations' }}
+                                        </button>
+
+                                    </td>
+
+                                </ng-container>
+
+                                <tr mat-header-row *matHeaderRowDef="paymentColumns"></tr>
+
+                                <tr mat-row *matRowDef="let row; columns: paymentColumns"></tr>
+
+                            </table>
+
+                        </div>
+
+                        <!-- EXPANDED -->
+
+                        <div *ngFor="let payment of workspace.payments; trackBy: trackByPayment">
+
+                            <div *ngIf="expandedPaymentId === payment.paymentId" class="expanded-panel">
+
+                                <div class="section-title">
+                                    Allocations
+                                </div>
+
+                                <div *ngIf="!payment.allocations.length" class="muted">
+                                    No allocations yet
+                                </div>
+
+                                <div *ngFor="let allocation of payment.allocations" class="settlement-row">
+
+                                    <div>
+
+                                        <strong>
+                                            {{
+                                            allocation.billNumber
+                                            }}
+                                        </strong>
+
+                                        <div class="muted">
+                                            {{
+                                            allocation.invoiceDate
+                                            | date:'dd MMM yyyy'
+                                            }}
+                                        </div>
+
+                                    </div>
+
+                                    <strong>
+                                        {{
+                                        allocation.allocatedAmount
+                                        | currency:'KES '
+                                        }}
+                                    </strong>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </app-workflow-card>
+
+                </mat-tab>
+
+                <!-- TIMELINE -->
+
+                <mat-tab label="Timeline">
+
+                    <app-workflow-card>
+
+                        <div class="table-wrapper">
+
+                            <table mat-table [dataSource]="workspace.timeline">
+
+                                <ng-container matColumnDef="date">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+                                        Date
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        {{
+                                        row.timestamp
+                                        | date:'dd MMM yyyy HH:mm'
+                                        }}
+
+                                    </td>
+
+                                </ng-container>
+
+                                <ng-container matColumnDef="activity">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+                                        Activity
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        {{ row.activity }}
+
+                                    </td>
+
+                                </ng-container>
+
+                                <ng-container matColumnDef="reference">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+                                        Reference
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        {{ row.reference }}
+
+                                    </td>
+
+                                </ng-container>
+
+                                <ng-container matColumnDef="debit">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+                                        Debit
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        {{
+                                        row.debitAmount
+                                        | currency:'KES '
+                                        }}
+
+                                    </td>
+
+                                </ng-container>
+
+                                <ng-container matColumnDef="credit">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+                                        Credit
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        {{
+                                        row.creditAmount
+                                        | currency:'KES '
+                                        }}
+
+                                    </td>
+
+                                </ng-container>
+
+                                <ng-container matColumnDef="balance">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+                                        Balance
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        <strong>
+                                            {{
+                                            row.runningBalance
+                                            | currency:'KES '
+                                            }}
+                                        </strong>
+
+                                    </td>
+
+                                </ng-container>
+
+                                <tr mat-header-row *matHeaderRowDef="timelineColumns"></tr>
+
+                                <tr mat-row *matRowDef="
+                    let row;
+                    columns: timelineColumns
+                  "></tr>
+
+                            </table>
+
+                        </div>
+
+                    </app-workflow-card>
+
+                </mat-tab>
+
+            </mat-tab-group>
+
+        </ng-container>
+
+    </div>
+
+</app-workflow-shell>

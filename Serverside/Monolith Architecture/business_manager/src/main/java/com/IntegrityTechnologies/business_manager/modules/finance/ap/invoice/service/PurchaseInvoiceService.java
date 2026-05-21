@@ -9,6 +9,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.dto
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.enums.PurchaseInvoicePostingStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.enums.PurchaseInvoiceStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.repository.PurchaseInvoiceRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.model.SupplierPayment;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.shared.mapper.PurchaseInvoiceMapper;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.shared.validation.ApValidationService;
 import com.IntegrityTechnologies.business_manager.modules.finance.shared.enums.FinancialDocumentStatus;
@@ -363,25 +364,93 @@ public class PurchaseInvoiceService {
     }
 
     @Transactional
-    public void recalculateOverdueStatus(
+    public void applyAllocation(
+            PurchaseInvoice invoice,
+            BigDecimal amount
+    ) {
+        BigDecimal outstanding =
+                invoice.getOutstandingAmount()
+                        .subtract(amount);
+
+        BigDecimal allocated =
+                invoice.getAllocatedAmount()
+                        .add(amount);
+
+        invoice.setOutstandingAmount(
+                outstanding
+        );
+
+        invoice.setAllocatedAmount(
+                allocated
+        );
+
+        boolean fullyAllocated =
+                outstanding.compareTo(BigDecimal.ZERO) == 0;
+
+        invoice.setFullyAllocated(
+                fullyAllocated
+        );
+
+        invoice.setStatus(
+                fullyAllocated
+                        ? PurchaseInvoiceStatus.PAID
+                        : PurchaseInvoiceStatus.PARTIALLY_PAID
+        );
+
+        validateAllocationInvariants(
+                invoice
+        );
+    }
+
+    @Transactional
+    public void reverseAllocation(
+            PurchaseInvoice invoice,
+            BigDecimal amount
+    ) {
+        invoice.setAllocatedAmount(
+                invoice.getAllocatedAmount()
+                        .subtract(amount)
+        );
+
+        invoice.setOutstandingAmount(
+                invoice.getOutstandingAmount()
+                        .add(amount)
+        );
+
+        boolean fullyAllocated =
+                invoice.getOutstandingAmount()
+                        .compareTo(BigDecimal.ZERO) == 0;
+
+        invoice.setFullyAllocated(
+                fullyAllocated
+        );
+
+        invoice.setStatus(
+                fullyAllocated
+                        ? PurchaseInvoiceStatus.PAID
+                        : (
+                        invoice.getAllocatedAmount()
+                                .compareTo(BigDecimal.ZERO) > 0
+                                ? PurchaseInvoiceStatus.PARTIALLY_PAID
+                                : PurchaseInvoiceStatus.POSTED
+                )
+        );
+
+        validateAllocationInvariants(
+                invoice
+        );
+    }
+
+    private void validateAllocationInvariants(
             PurchaseInvoice invoice
     ) {
-
-        boolean overdue =
-                validationService
-                        .isOverdue(invoice);
-
-        invoice.setOverdue(overdue);
-
         if (
-                overdue
-                        &&
-                        invoice.getStatus()
-                                != PurchaseInvoiceStatus.PAID
+                invoice.getAllocatedAmount()
+                        .add(invoice.getOutstandingAmount())
+                        .compareTo(invoice.getTotalAmount()) != 0
         ) {
-
-            invoice.setStatus(
-                    PurchaseInvoiceStatus.OVERDUE
+            throw new IllegalStateException(
+                    "Invoice allocation invariant violation"
             );
         }
     }
@@ -419,17 +488,5 @@ public class PurchaseInvoiceService {
                                 "Purchase invoice not found"
                         )
                 );
-    }
-
-    private String currentUser() {
-
-        var auth =
-                SecurityContextHolder
-                        .getContext()
-                        .getAuthentication();
-
-        return auth != null
-                ? auth.getName()
-                : "SYSTEM";
     }
 }

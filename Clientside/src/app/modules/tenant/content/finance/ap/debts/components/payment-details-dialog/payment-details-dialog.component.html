@@ -1,0 +1,168 @@
+<div class="dialog-shell">
+
+    <div class="header">
+
+        <div>
+
+            <div class="title">
+                {{ payment.paymentNumber }}
+            </div>
+
+            <div class="subtitle">
+
+                {{
+                payment.paymentDate
+                | date:'dd MMM yyyy'
+                }}
+
+            </div>
+
+        </div>
+
+        <button mat-stroked-button mat-dialog-close>
+            Close
+        </button>
+
+    </div>
+
+    <!-- SUMMARY -->
+
+    <div class="summary-grid">
+
+        <div class="summary-item">
+
+            <span>Total Payment</span>
+
+            <strong>
+                {{
+                payment.amount
+                | currency:'KES '
+                }}
+            </strong>
+
+        </div>
+
+        <div class="summary-item">
+
+            <span>Allocated</span>
+
+            <strong>
+                {{
+                payment.allocatedAmount
+                | currency:'KES '
+                }}
+            </strong>
+
+        </div>
+
+        <div class="summary-item">
+
+            <span>Unapplied</span>
+
+            <strong class="success">
+                {{
+                payment.unappliedAmount
+                | currency:'KES '
+                }}
+            </strong>
+
+        </div>
+
+        <div class="summary-item">
+
+            <span>Method</span>
+
+            <strong>
+                {{ payment.paymentMethod }}
+            </strong>
+
+        </div>
+
+    </div>
+
+    <!-- REFERENCE -->
+
+    <div *ngIf="payment.reference" class="reference-panel">
+
+        <div class="section-title">
+            Reference
+        </div>
+
+        <div class="reference-value">
+            {{ payment.reference }}
+        </div>
+
+    </div>
+
+    <!-- ALLOCATION BAR -->
+
+    <div class="allocation-progress">
+
+        <div class="allocation-header">
+
+            <span>
+                Allocation Progress
+            </span>
+
+            <strong>
+                {{
+                allocationRate
+                | number:'1.0-0'
+                }}%
+            </strong>
+
+        </div>
+
+        <div class="progress-track">
+
+            <div class="progress-fill" [style.width.%]="allocationRate"></div>
+
+        </div>
+
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <!-- ALLOCATIONS -->
+
+    <div class="section-title">
+        Invoice Allocations
+    </div>
+
+    <div *ngIf="!payment.allocations.length" class="empty">
+
+        No allocations recorded
+
+    </div>
+
+    <div *ngFor="
+      let allocation of payment.allocations
+    " class="allocation-row">
+
+        <div>
+
+            <strong>
+                {{ allocation.billNumber }}
+            </strong>
+
+            <div class="muted">
+
+                {{
+                allocation.invoiceDate
+                | date:'dd MMM yyyy'
+                }}
+
+            </div>
+
+        </div>
+
+        <strong>
+            {{
+            allocation.allocatedAmount
+            | currency:'KES '
+            }}
+        </strong>
+
+    </div>
+
+</div>

@@ -3,7 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.ap.allocation
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.allocation.enums.ApAllocationType;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.allocation.enums.PaymentAllocationStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.domain.PurchaseInvoice;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.domain.SupplierPayment;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.model.SupplierPayment;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -39,6 +39,10 @@ import java.util.UUID;
                 @Index(
                         name = "idx_ap_allocation_payment",
                         columnList = "tenant_id,branch_id,supplier_payment_id"
+                ),
+                @Index(
+                        name = "idx_allocation_active",
+                        columnList = "tenant_id,branch_id,status"
                 )
         }
 )

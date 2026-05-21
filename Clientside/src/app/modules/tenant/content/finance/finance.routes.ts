@@ -25,10 +25,10 @@ export const FINANCE_ROUTES: Routes = [
             .then(m => m.TAX_ROUTES)
       },
       {
-        path: 'payments',
+        path: 'ap',
         loadChildren: () =>
-          import('./payments/payments.routes')
-            .then(m => m.PAYMENTS_ROUTES)
+          import('./ap/ap.routes')
+            .then(m => m.AP_ROUTES)
       }
     ]
   }

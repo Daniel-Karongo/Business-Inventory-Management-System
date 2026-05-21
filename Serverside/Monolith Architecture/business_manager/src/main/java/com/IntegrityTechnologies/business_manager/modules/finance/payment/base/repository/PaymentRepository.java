@@ -1,7 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.payment.base.repository;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.model.Payment;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.model.PaymentStatus;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.enums.PaymentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

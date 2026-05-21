@@ -5,4 +5,10 @@ export interface PageQuery {
   sortBy?: string;
 
   direction?: 'asc' | 'desc';
+
+  search?: string;
+
+  hasOverdue?: boolean;
+
+  hasUnapplied?: boolean;
 }

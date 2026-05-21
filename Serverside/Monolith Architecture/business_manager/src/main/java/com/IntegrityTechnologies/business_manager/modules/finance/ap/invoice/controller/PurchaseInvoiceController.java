@@ -19,14 +19,10 @@ import java.util.UUID;
 @TenantManagerOnly
 public class PurchaseInvoiceController {
 
-    private final PurchaseInvoiceService
-            service;
-    private final PurchaseInvoiceMapper
-            mapper;
-    private final PurchaseInvoicePostingService
-            postingService;
-    private final PurchaseInvoiceReversalService
-            reversalService;
+    private final PurchaseInvoiceService service;
+    private final PurchaseInvoiceMapper mapper;
+    private final PurchaseInvoicePostingService postingService;
+    private final PurchaseInvoiceReversalService reversalService;
 
     @PostMapping
     public PurchaseInvoiceResponse create(

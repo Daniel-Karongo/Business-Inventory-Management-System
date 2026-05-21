@@ -1,0 +1,82 @@
+.dialog-shell {
+    width: min(100vw, 760px);
+    display: flex;
+    flex-direction: column;
+}
+
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 20px 20px 0;
+}
+
+.title {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.subtitle {
+    margin-top: 4px;
+    color: var(--text-secondary);
+    font-size: .85rem;
+}
+
+.dialog-content {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 0 20px 20px;
+}
+
+.preview-panel {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.preview-title {
+    margin-bottom: 12px;
+    font-size: .9rem;
+    font-weight: 700;
+}
+
+.preview-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.preview-summary {
+    margin-top: 14px;
+    font-weight: 700;
+}
+
+.muted {
+    color: var(--text-secondary);
+    font-size: .75rem;
+}
+
+@media (max-width: 768px) {
+
+    .dialog-shell {
+        width: 100%;
+    }
+
+    .dialog-actions {
+        flex-wrap: wrap;
+    }
+
+    .dialog-actions button {
+        flex: 1;
+    }
+}
