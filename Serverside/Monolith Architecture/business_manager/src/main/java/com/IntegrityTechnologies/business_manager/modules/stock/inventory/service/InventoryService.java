@@ -2,7 +2,6 @@ package com.IntegrityTechnologies.business_manager.modules.stock.inventory.servi
 
 import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
 import com.IntegrityTechnologies.business_manager.config.response.PageWrapper;
-import java.nio.charset.StandardCharsets;
 import com.IntegrityTechnologies.business_manager.exception.OutOfStockException;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
@@ -60,6 +59,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -168,13 +168,6 @@ public class InventoryService {
             BigDecimal totalInputVat = BigDecimal.ZERO;
 
             boolean vatEnabled = taxProperties.isVatEnabled();
-            BigDecimal vatRate = req.getVatRate() != null
-                    ? req.getVatRate()
-                    : taxProperties.getVatRate();
-
-            boolean vatInclusive = req.getVatInclusive() != null
-                    ? req.getVatInclusive()
-                    : taxProperties.isPricesVatInclusive();
 
             Set<Supplier> suppliersUsed = new HashSet<>();
 
@@ -190,6 +183,17 @@ public class InventoryService {
                 BigDecimal unitCost = su.getUnitCost();
 
                 BigDecimal gross = unitCost.multiply(qty);
+
+                boolean vatInclusive =
+                        su.getVatInclusive() != null
+                                ? su.getVatInclusive()
+                                : taxProperties.isPricesVatInclusive();
+
+                BigDecimal vatRate =
+                        su.getVatRate() != null
+                                ? su.getVatRate()
+                                : taxProperties.getVatRate();
+
                 VatBreakdown breakdown =
                         vatEnabled
                                 ? vatCalculationService.calculate(
@@ -269,11 +273,52 @@ public class InventoryService {
 
             for (SupplierUnit su : req.getSuppliers()) {
 
+                BigDecimal supplierGross =
+                        su.getUnitCost()
+                                .multiply(
+                                        BigDecimal.valueOf(
+                                                su.getUnitsSupplied()
+                                        )
+                                );
+
+                boolean vatInclusive =
+                        su.getVatInclusive() != null
+                                ? su.getVatInclusive()
+                                : taxProperties.isPricesVatInclusive();
+
+                BigDecimal vatRate =
+                        su.getVatRate() != null
+                                ? su.getVatRate()
+                                : taxProperties.getVatRate();
+
+                VatBreakdown supplierBreakdown =
+                        vatEnabled
+                                ? vatCalculationService.calculate(
+                                supplierGross,
+                                vatInclusive,
+                                vatRate
+                        )
+                                : new VatBreakdown(
+                                supplierGross,
+                                BigDecimal.ZERO,
+                                supplierGross
+                        );
+
+                BigDecimal inventoryUnitCost =
+                        supplierBreakdown.net()
+                                .divide(
+                                        BigDecimal.valueOf(
+                                                su.getUnitsSupplied()
+                                        ),
+                                        6,
+                                        RoundingMode.HALF_UP
+                                );
+
                 stockEngine.adjustAndSync(
                         variant.getId(),
                         branch.getId(),
                         su.getUnitsSupplied(),
-                        su.getUnitCost(),
+                        inventoryUnitCost,
                         receiptId
                 );
 
@@ -314,29 +359,8 @@ public class InventoryService {
                 );
 
                 receipt.setUnitCost(
-                        su.getUnitCost()
+                        inventoryUnitCost
                 );
-
-                BigDecimal supplierGross =
-                        su.getUnitCost()
-                                .multiply(
-                                        BigDecimal.valueOf(
-                                                su.getUnitsSupplied()
-                                        )
-                                );
-
-                VatBreakdown supplierBreakdown =
-                        vatEnabled
-                                ? vatCalculationService.calculate(
-                                supplierGross,
-                                vatInclusive,
-                                vatRate
-                        )
-                                : new VatBreakdown(
-                                supplierGross,
-                                BigDecimal.ZERO,
-                                supplierGross
-                        );
 
                 receipt.setNetAmount(
                         supplierBreakdown.net()
@@ -361,6 +385,9 @@ public class InventoryService {
                 receipt.setNote(
                         req.getNote()
                 );
+
+                receipt.setVatInclusive(vatInclusive);
+                receipt.setVatRate(vatRate);
 
                 try {
 
@@ -645,7 +672,10 @@ public class InventoryService {
        ========================= */
 
         long totalUnits = 0;
-        BigDecimal totalCost = BigDecimal.ZERO;
+
+        BigDecimal grossCost = BigDecimal.ZERO;
+        BigDecimal netCost = BigDecimal.ZERO;
+        BigDecimal vatAmount = BigDecimal.ZERO;
 
         for (SupplierUnit su : req.getSuppliers()) {
 
@@ -657,18 +687,58 @@ public class InventoryService {
 
             totalUnits += su.getUnitsSupplied();
 
-            totalCost = totalCost.add(
-                    su.getUnitCost().multiply(
-                            BigDecimal.valueOf(su.getUnitsSupplied())
+            BigDecimal gross =
+                    su.getUnitCost()
+                            .multiply(
+                                    BigDecimal.valueOf(
+                                            su.getUnitsSupplied()
+                                    )
+                            );
+
+            boolean vatInclusive =
+                    su.getVatInclusive() != null
+                            ? su.getVatInclusive()
+                            : taxProperties.isPricesVatInclusive();
+
+            BigDecimal vatRate =
+                    su.getVatRate() != null
+                            ? su.getVatRate()
+                            : taxProperties.getVatRate();
+
+            VatBreakdown breakdown =
+                    taxProperties.isVatEnabled()
+                            ? vatCalculationService.calculate(
+                            gross,
+                            vatInclusive,
+                            vatRate
                     )
-            );
+                            : new VatBreakdown(
+                            gross,
+                            BigDecimal.ZERO,
+                            gross
+                    );
+
+            grossCost =
+                    grossCost.add(
+                            breakdown.gross()
+                    );
+
+            netCost =
+                    netCost.add(
+                            breakdown.net()
+                    );
+
+            vatAmount =
+                    vatAmount.add(
+                            breakdown.vat()
+                    );
         }
 
         if (totalUnits == 0)
             throw new IllegalArgumentException("Total units must be > 0");
 
         BigDecimal unitCost =
-                totalCost.divide(
+                netCost.divide(
                         BigDecimal.valueOf(totalUnits),
                         6,
                         RoundingMode.HALF_UP
@@ -692,7 +762,9 @@ public class InventoryService {
                 .unitsReceived(totalUnits)
                 .unitCost(unitCost)
                 .sellingPrice(req.getSellingPrice())
-                .totalCost(totalCost)
+                .grossCost(grossCost)
+                .netCost(netCost)
+                .vatAmount(vatAmount)
                 .build();
     }
 

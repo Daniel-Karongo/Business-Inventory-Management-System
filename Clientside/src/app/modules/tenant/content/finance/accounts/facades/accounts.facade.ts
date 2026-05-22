@@ -45,18 +45,19 @@ export class AccountsFacade {
         this.store.request;
 
     load(
-        query: TableQuery
+        query: TableQuery,
+        branchId?: string
     ): void {
 
         FacadeRequestUtils.handle(
             this.store.request,
-
-            this.api.list(query),
-
+            this.api.list(
+                query,
+                branchId
+            ),
             result => {
                 this.store.data.set(result);
             },
-
             'Failed to load accounts'
         );
     }

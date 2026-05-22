@@ -32,6 +32,13 @@ import { Account }
 import { WorkflowCardComponent } from '../../../../../../../shared/layout/workflow-card/workflow-card.component';
 import { WorkflowShellComponent } from '../../../../../../../shared/layout/workflow-shell/workflow-shell.component';
 import { EnterprisePaginatorComponent } from '../../../../../../../shared/components/enterprise-paginator/enterprise-paginator.component';
+import { FormsModule } from '@angular/forms';
+import { MatSelectModule } from '@angular/material/select';
+import { BranchContextService } from '../../../../../../../core/services/branch-context.service';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { MatInputModule } from '@angular/material/input';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 
 @Component({
   standalone: true,
@@ -44,7 +51,12 @@ import { EnterprisePaginatorComponent } from '../../../../../../../shared/compon
     EnterpriseTableComponent,
     WorkflowShellComponent,
     WorkflowCardComponent,
-    EnterprisePaginatorComponent
+    EnterprisePaginatorComponent,
+    MatSelectModule,
+    FormsModule,
+    MatInputModule,
+    MatChipsModule,
+    MatButtonToggleModule
   ],
   templateUrl:
     './account-list.component.html',
@@ -61,15 +73,25 @@ export class AccountListComponent
   private readonly router =
     inject(Router);
 
+  private readonly branchContext =
+    inject(BranchContextService);
+
   readonly displayedColumns = [
     'code',
     'name',
     'type',
+    'balance',
+    'updatedAt',
     'actions'
   ];
 
-  readonly accounts =
+  readonly rawAccounts =
     this.facade.data;
+
+  readonly accounts =
+    computed(() =>
+      this.rawAccounts()
+    );
 
   readonly request =
     this.facade.request;
@@ -89,15 +111,138 @@ export class AccountListComponent
       this.facade.page()
     );
 
+  tableState = {
+    search: '',
+    type: 'ALL',
+    balanceFilter: 'ALL',
+    status: 'ACTIVE',
+    page: 0,
+    size: 50,
+    sort: 'code,asc'
+  };
+
   currentSize = 50;
+
+  readonly currentBranch =
+    toSignal(
+      this.branchContext.branch$,
+      {
+        initialValue: null
+      }
+    );
+
+  readonly branches =
+    toSignal(
+      this.branchContext.branches$,
+      {
+        initialValue: []
+      }
+    );
+
+  readonly accountTypes = [
+    'ALL',
+    'ASSET',
+    'LIABILITY',
+    'EQUITY',
+    'INCOME',
+    'EXPENSE'
+  ];
+
+  readonly balanceFilters = [
+    'ALL',
+    'POSITIVE',
+    'NEGATIVE',
+    'ZERO',
+    'NON_ZERO'
+  ];
+
+  selectedBranchId: string | null =
+    null;
 
   ngOnInit(): void {
 
-    this.facade.load({
-      page: 0,
-      size: 50,
-      sort: 'code'
-    });
+    this.selectedBranchId =
+      this.currentBranch();
+
+    this.loadAccounts();
+  }
+
+  loadAccounts(): void {
+    this.facade.load(
+      {
+        page: this.tableState.page,
+        size: this.tableState.size,
+        sort: this.tableState.sort,
+        search:
+          this.tableState.search,
+        type:
+          this.tableState.type !== 'ALL'
+            ? this.tableState.type
+            : undefined,
+        active:
+          this.tableState.status === 'ALL'
+            ? undefined
+            : this.tableState.status === 'ACTIVE',
+        balanceFilter:
+          this.tableState.balanceFilter !== 'ALL'
+            ? this.tableState.balanceFilter
+            : undefined
+      },
+      this.selectedBranchId ?? undefined
+    );
+  }
+
+  sort(
+    column: string
+  ): void {
+    const current =
+      this.tableState.sort;
+
+    const [
+      currentColumn,
+      currentDirection
+    ] = current.split(',');
+
+    const nextDirection =
+      currentColumn === column &&
+        currentDirection === 'asc'
+        ? 'desc'
+        : 'asc';
+
+    this.tableState.sort =
+      `${column},${nextDirection}`;
+
+    this.loadAccounts();
+  }
+
+  readonly nonZeroAccountsCount =
+    computed(
+      () =>
+        this.accounts()
+          .filter(
+            a => a.balance !== 0
+          )
+          .length
+    );
+
+  readonly totalBalance =
+    computed(
+      () =>
+        this.accounts().reduce(
+          (sum, a) =>
+            sum + a.balance,
+          0
+        )
+    );
+
+  changeBranch(
+    branchId: string
+  ): void {
+
+    this.selectedBranchId =
+      branchId;
+
+    this.loadAccounts();
   }
 
   changeSize(
@@ -106,22 +251,28 @@ export class AccountListComponent
 
     this.currentSize = size;
 
-    this.facade.load({
-      page: 0,
-      size,
-      sort: 'code'
-    });
+    this.facade.load(
+      {
+        page: 0,
+        size,
+        sort: 'code'
+      },
+      this.selectedBranchId ?? undefined
+    );
   }
 
   changePage(
     page: number
   ): void {
 
-    this.facade.load({
-      page,
-      size: this.currentSize,
-      sort: 'code'
-    });
+    this.facade.load(
+      {
+        page,
+        size: this.currentSize,
+        sort: 'code'
+      },
+      this.selectedBranchId ?? undefined
+    );
   }
 
   create(): void {
@@ -129,6 +280,21 @@ export class AccountListComponent
     this.router.navigate([
       '/app/finance/accounting/chart/create'
     ]);
+  }
+
+  resetFilters(): void {
+
+    this.tableState = {
+      ...this.tableState,
+      search: '',
+      type: 'ALL',
+      balanceFilter: 'ALL',
+      status: 'ACTIVE',
+      page: 0,
+      sort: 'code,asc'
+    };
+
+    this.loadAccounts();
   }
 
   edit(

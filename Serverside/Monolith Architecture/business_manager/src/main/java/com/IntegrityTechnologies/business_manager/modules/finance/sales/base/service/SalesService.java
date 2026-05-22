@@ -6,8 +6,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.RevenueRecognitionService;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.dto.PaymentDTO;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.model.Payment;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.enums.PaymentStatus;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.model.Payment;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.service.PaymentService;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.Sale;
@@ -65,7 +65,6 @@ public class SalesService {
     private final JournalEntryRepository journalEntryRepository;
     private final BatchConsumptionRepository batchConsumptionRepository;
     private final RevenueRecognitionService revenueRecognitionService;
-    private final SalesVatAccountingService salesVatAccountingService;
 
     private final ObjectMapper objectMapper;
     private final SellableResolutionService sellableResolutionService;

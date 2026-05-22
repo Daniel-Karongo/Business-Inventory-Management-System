@@ -15,6 +15,7 @@ import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -47,7 +48,9 @@ public class InventoryBulkService {
         List<InventoryBulkPreviewRow> previewRows = new ArrayList<>();
 
         long totalUnits = 0;
-        var totalCost = java.math.BigDecimal.ZERO;
+        BigDecimal grossCost = BigDecimal.ZERO;
+        BigDecimal netCost = BigDecimal.ZERO;
+        BigDecimal vatAmount = BigDecimal.ZERO;
 
         for (int i = 0; i < request.getItems().size(); i++) {
             int rowNum = i + 1;
@@ -63,7 +66,20 @@ public class InventoryBulkService {
 
                 previewRows.add(preview);
                 totalUnits += preview.getUnitsReceived();
-                totalCost = totalCost.add(preview.getTotalCost());
+                grossCost =
+                        grossCost.add(
+                                preview.getGrossCost()
+                        );
+
+                netCost =
+                        netCost.add(
+                                preview.getNetCost()
+                        );
+
+                vatAmount =
+                        vatAmount.add(
+                                preview.getVatAmount()
+                        );
 
                 if (!options.isDryRun()) {
                     inventoryService.receiveStock(req);
@@ -80,7 +96,9 @@ public class InventoryBulkService {
                 InventoryBulkPreviewResult.builder()
                         .rows(previewRows)
                         .totalUnits(totalUnits)
-                        .totalCost(totalCost)
+                        .grossCost(grossCost)
+                        .netCost(netCost)
+                        .vatAmount(vatAmount)
                         .build()
         );
 
@@ -204,6 +222,8 @@ public class InventoryBulkService {
             unit.setSupplierId(supplier.getId());
             unit.setUnitsSupplied(su.getUnitsSupplied());
             unit.setUnitCost(su.getUnitCost());
+            unit.setVatInclusive(su.getVatInclusive());
+            unit.setVatRate(su.getVatRate());
 
             supplierUnits.add(unit);
         }

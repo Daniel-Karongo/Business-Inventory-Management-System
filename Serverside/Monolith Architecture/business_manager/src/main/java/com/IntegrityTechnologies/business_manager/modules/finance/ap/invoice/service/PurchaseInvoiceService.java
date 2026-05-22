@@ -234,6 +234,12 @@ public class PurchaseInvoiceService {
                             .vatAmount(
                                     lineRequest.getVatAmount()
                             )
+                            .vatInclusive(
+                                    lineRequest.getVatInclusive()
+                            )
+                            .vatRate(
+                                    lineRequest.getVatRate()
+                            )
                             .lineSubtotal(
                                     lineSubtotal
                             )

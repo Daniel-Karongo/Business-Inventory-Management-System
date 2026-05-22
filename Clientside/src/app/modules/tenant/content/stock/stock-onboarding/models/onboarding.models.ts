@@ -37,11 +37,15 @@ export interface OnboardingPricingDraft {
 }
 
 export interface OnboardingSupplierEntry {
-    supplierId?: string | null;
-    supplierName?: string | null;
-    packagingTempId: string;
-    quantity: number;
+    supplierId?: string;
+    supplierName?: string;
+    packagingId?: string;
+    packagingName?: string;
+    packagingTempId?: string;
+    unitsSupplied: number;
     unitCost: number;
+    vatInclusive: boolean;
+    vatRate: number;
 }
 
 export interface StockOnboardingState {

@@ -146,38 +146,43 @@ export class OnboardingSupplierStepComponent implements OnInit, OnChanges {
 
         const group =
             this.fb.group({
-
                 supplierId: [
                     row?.supplierId ??
                     this.NEW_SUPPLIER
                 ],
-
                 supplierName: [
                     row?.supplierName ?? ''
                 ],
-
                 packagingTempId: [
                     row?.packagingTempId ?? '',
                     Validators.required
                 ],
-
-                quantity: [
-                    row?.quantity ?? 1,
+                unitsSupplied: [
+                    row?.unitsSupplied ?? 1,
                     [
                         Validators.required,
                         Validators.min(1)
                     ]
                 ],
-
                 unitCost: [
                     row?.unitCost ?? 0,
                     [
                         Validators.required,
                         Validators.min(0.01)
                     ]
+                ],
+                vatInclusive: [
+                    row?.vatInclusive ?? true
+                ],
+                vatRate: [
+                    row?.vatRate ?? 16,
+                    [
+                        Validators.required,
+                        Validators.min(0),
+                        Validators.max(100)
+                    ]
                 ]
-
-            })
+            });
 
         group.valueChanges
             .subscribe(value => {
@@ -257,26 +262,26 @@ export class OnboardingSupplierStepComponent implements OnInit, OnChanges {
     }
 
     private emit() {
-
         const value =
             this.rows.getRawValue() as any[];
 
         this.valueChange.emit(
-
             value.map(row => ({
-
                 ...row,
-
                 supplierId:
                     row.supplierId ===
                         this.NEW_SUPPLIER
                         ? null
-                        : row.supplierId
-
+                        : row.supplierId,
+                unitsSupplied:
+                    Number(row.unitsSupplied),
+                unitCost:
+                    Number(row.unitCost),
+                vatRate:
+                    Number(row.vatRate),
+                vatInclusive:
+                    !!row.vatInclusive
             }))
-
         );
-
     }
-
 }

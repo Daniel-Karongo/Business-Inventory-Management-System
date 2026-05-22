@@ -22,7 +22,9 @@ public class StockOnboardingBulkPreviewRow {
 
     private long totalUnits;
 
-    private BigDecimal totalCost;
+    private BigDecimal grossCost;
+    private BigDecimal netCost;
+    private BigDecimal vatAmount;
 
     private boolean existingProduct;
 

@@ -10,4 +10,6 @@ public class SupplierUnitBulkRow {
     private String supplierName;
     private Long unitsSupplied;
     private BigDecimal unitCost;
+    private Boolean vatInclusive;
+    private BigDecimal vatRate;
 }

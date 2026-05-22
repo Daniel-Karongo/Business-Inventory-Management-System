@@ -1,10 +1,12 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.controller;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.Account;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.projection.AccountListItemProjection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,17 +25,25 @@ public class AccountsController {
     private final BranchTenantGuard branchTenantGuard;
 
     @GetMapping
-    public Page<AccountResponse> listAccounts(
+    public Page<AccountListItemProjection> listAccounts(
             @RequestParam UUID branchId,
-            @PageableDefault(size = 50, sort = "code") Pageable pageable
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) AccountType type,
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) String balanceFilter,
+            Pageable pageable
     ) {
         branchTenantGuard.validate(branchId);
-        return accountRepository.findByTenantIdAndBranchIdAndActiveTrue(
-                        TenantContext.getTenantId(),
-                        branchId,
-                        pageable
-                )
-                .map(AccountResponse::from);
+
+        return accountRepository.findAccountListItems(
+                TenantContext.getTenantId(),
+                branchId,
+                search,
+                type,
+                active,
+                balanceFilter,
+                pageable
+        );
     }
 
     @GetMapping("/{id}")

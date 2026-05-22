@@ -12,5 +12,7 @@ public class InventoryBulkPreviewResult {
 
     private List<InventoryBulkPreviewRow> rows;
     private long totalUnits;
-    private BigDecimal totalCost;
+    private BigDecimal grossCost;
+    private BigDecimal netCost;
+    private BigDecimal vatAmount;
 }

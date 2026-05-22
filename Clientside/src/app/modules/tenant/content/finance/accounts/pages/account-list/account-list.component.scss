@@ -58,6 +58,72 @@
   min-width: 760px;
 }
 
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.sortable-header:hover {
+  background:
+    rgba(255, 255, 255, 0.02);
+}
+
+.header-sort {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+
+  gap: 0.3rem;
+
+  width: 100%;
+
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+
+  white-space: nowrap;
+}
+
+.header-sort span {
+  line-height: 1;
+}
+
+.header-sort mat-icon {
+  width: 16px;
+  height: 16px;
+
+  min-width: 16px;
+  min-height: 16px;
+
+  font-size: 16px;
+  line-height: 16px;
+
+  opacity: 0.72;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  transform:
+    translateY(-1px);
+}
+
+.accounts-table .mat-mdc-header-cell {
+  height: 58px;
+
+  padding-top: 0;
+  padding-bottom: 0;
+
+  vertical-align: middle;
+
+  border-bottom:
+    1px solid var(--border);
+}
+
 .account-code {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -89,6 +155,143 @@
   font-weight: 700;
   letter-spacing: 0.02em;
 }
+
+.branch-selector {
+  width: 240px;
+}
+
+.balance-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.balance-value.positive {
+  color:
+    rgb(34, 197, 94);
+}
+
+.balance-value.negative {
+  color:
+    rgb(239, 68, 68);
+}
+
+.updated-at {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.filters-toolbar {
+  display: grid;
+
+  grid-template-columns:
+    minmax(280px, 1fr) 180px 180px auto;
+
+  grid-template-areas:
+    "chips chips chips chips"
+    "search type balance reset";
+
+  align-items: start;
+
+  gap: 1rem;
+
+  padding: 1.25rem;
+
+  border-bottom:
+    1px solid var(--border);
+}
+
+.filters-toolbar>* {
+  min-width: 0;
+}
+
+/* =========================================================
+   QUICK FILTERS
+========================================================= */
+
+.quick-filters {
+  grid-area: chips;
+}
+
+.quick-filters mat-chip-set {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.quick-filters mat-chip {
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    background 120ms ease;
+}
+
+.quick-filters mat-chip:hover {
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   SEARCH
+========================================================= */
+
+.search-field {
+  grid-area: search;
+  width: 100%;
+}
+
+/* =========================================================
+   FILTERS
+========================================================= */
+
+.filter-field {
+  width: 100%;
+}
+
+.filter-field.type-filter {
+  grid-area: type;
+}
+
+.filter-field.balance-filter {
+  grid-area: balance;
+}
+
+/* =========================================================
+   RESET
+========================================================= */
+
+.reset-button {
+  grid-area: reset;
+
+  min-width: 110px;
+  height: 56px;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 900px) {
+
+  .filters-toolbar {
+
+    grid-template-columns:
+      1fr;
+
+    grid-template-areas:
+      "chips"
+      "search"
+      "type"
+      "balance"
+      "reset";
+  }
+
+  .filter-field,
+  .reset-button {
+    width: 100%;
+  }
+
+}
+
 
 /* =========================================================
    MOBILE

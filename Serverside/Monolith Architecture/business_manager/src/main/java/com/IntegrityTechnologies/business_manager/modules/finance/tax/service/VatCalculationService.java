@@ -15,6 +15,7 @@ public class VatCalculationService {
             boolean vatInclusive,
             BigDecimal vatRate
     ) {
+
         if (amount == null) {
             throw new IllegalArgumentException(
                     "amount is required"
@@ -25,6 +26,26 @@ public class VatCalculationService {
             vatRate = BigDecimal.ZERO;
         }
 
+        if (vatRate.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new IllegalArgumentException(
+                    "VAT rate cannot exceed 100%"
+            );
+        }
+
+        /*
+         * UI/API sends:
+         * 16 = 16%
+         *
+         * Convert to:
+         * 0.16
+         */
+        BigDecimal normalizedRate =
+                vatRate.divide(
+                        BigDecimal.valueOf(100),
+                        MoneyScale.INTERNAL_SCALE,
+                        MoneyScale.ROUNDING
+                );
+
         BigDecimal net;
         BigDecimal vat;
         BigDecimal gross;
@@ -33,21 +54,29 @@ public class VatCalculationService {
 
             gross = amount;
 
-            net = gross.divide(
-                    BigDecimal.ONE.add(vatRate),
-                    MoneyScale.INTERNAL_SCALE,
-                    MoneyScale.ROUNDING
-            );
+            net =
+                    gross.divide(
+                            BigDecimal.ONE.add(
+                                    normalizedRate
+                            ),
+                            MoneyScale.INTERNAL_SCALE,
+                            MoneyScale.ROUNDING
+                    );
 
-            vat = gross.subtract(net);
+            vat =
+                    gross.subtract(net);
 
         } else {
 
             net = amount;
 
-            vat = net.multiply(vatRate);
+            vat =
+                    net.multiply(
+                            normalizedRate
+                    );
 
-            gross = net.add(vat);
+            gross =
+                    net.add(vat);
         }
 
         return new VatBreakdown(

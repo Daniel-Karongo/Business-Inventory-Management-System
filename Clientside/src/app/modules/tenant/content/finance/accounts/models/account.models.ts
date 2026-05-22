@@ -30,15 +30,19 @@ export interface Account {
     id: string;
     code: string;
     name: string;
-    type: AccountType;
+    type: string;
+    role: string;
+    active: boolean;
+    balance: number;
+    updatedAt?: string | null;
 }
 
 export interface CreateAccountRequest {
     branchId: string;
     code: string;
     name: string;
-    type: AccountType;
-    role: AccountRole;
+    type: string;
+    role: string;
 }
 
 export interface UpdateAccountRequest {

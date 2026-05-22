@@ -18,9 +18,6 @@ export interface ReceiveStockRequest {
 
     reference?: string;
     note?: string;
-
-    vatInclusive?: boolean;
-    vatRate?: number;
 }
 
 export interface TransferStockRequest {

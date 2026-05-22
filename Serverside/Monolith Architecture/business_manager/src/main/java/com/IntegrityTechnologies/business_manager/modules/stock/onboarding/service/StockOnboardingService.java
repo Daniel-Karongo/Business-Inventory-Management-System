@@ -1,6 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.onboarding.service;
 
 import com.IntegrityTechnologies.business_manager.config.caffeine.CacheInvalidationService;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.dto.VatBreakdown;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.VatCalculationService;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.service.SupplierService;
@@ -56,6 +59,8 @@ public class StockOnboardingService {
     private final SupplierService supplierService;
     private final ProductVariantRepository variantRepo;
     private final ReceiveAndInvoiceService receiveAndInvoiceService;
+    private final TaxProperties taxProperties;
+    private final VatCalculationService vatCalculationService;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -184,7 +189,9 @@ public class StockOnboardingService {
 
         long totalUnits = 0;
 
-        BigDecimal totalCost = BigDecimal.ZERO;
+        BigDecimal grossCost = BigDecimal.ZERO;
+        BigDecimal netCost = BigDecimal.ZERO;
+        BigDecimal vatAmount = BigDecimal.ZERO;
 
         int suppliersCreated = 0;
 
@@ -202,11 +209,47 @@ public class StockOnboardingService {
 
             totalUnits += units;
 
-            totalCost =
-                    totalCost.add(
-                            cost.multiply(
-                                    BigDecimal.valueOf(units)
-                            )
+            BigDecimal gross =
+                    cost.multiply(
+                            BigDecimal.valueOf(units)
+                    );
+
+            boolean vatInclusive =
+                    s.getVatInclusive() != null
+                            ? s.getVatInclusive()
+                            : taxProperties.isPricesVatInclusive();
+
+            BigDecimal vatRate =
+                    s.getVatRate() != null
+                            ? s.getVatRate()
+                            : taxProperties.getVatRate();
+
+            VatBreakdown breakdown =
+                    taxProperties.isVatEnabled()
+                            ? vatCalculationService.calculate(
+                            gross,
+                            vatInclusive,
+                            vatRate
+                    )
+                            : new VatBreakdown(
+                            gross,
+                            BigDecimal.ZERO,
+                            gross
+                    );
+
+            grossCost =
+                    grossCost.add(
+                            breakdown.gross()
+                    );
+
+            netCost =
+                    netCost.add(
+                            breakdown.net()
+                    );
+
+            vatAmount =
+                    vatAmount.add(
+                            breakdown.vat()
                     );
 
             if (s.getSupplierId() == null
@@ -251,7 +294,9 @@ public class StockOnboardingService {
                 .classification(req.getClassification())
                 .branchId(req.getBranchId())
                 .totalUnits(totalUnits)
-                .totalCost(totalCost)
+                .grossCost(grossCost)
+                .netCost(netCost)
+                .vatAmount(vatAmount)
                 .existingProduct(existingProductFlag)
                 .existingVariant(existingVariantFlag)
                 .categoryCreated(categoryCreated)
@@ -882,6 +927,9 @@ public class StockOnboardingService {
             su.setUnitsSupplied(baseUnits);
 
             su.setUnitCost(unitCost);
+
+            su.setVatInclusive(s.getVatInclusive());
+            su.setVatRate(s.getVatRate());
 
             supplierUnits.add(su);
         }

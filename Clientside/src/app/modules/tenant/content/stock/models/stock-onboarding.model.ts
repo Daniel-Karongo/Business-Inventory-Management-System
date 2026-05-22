@@ -7,12 +7,14 @@ export interface PricingInput {
     sellingPrice: number;
 }
 export interface SupplierInput {
-    supplierId?: string;
-    supplierName?: string;
-    createSupplierIfMissing?: boolean;
-    unitsSupplied: number;
-    unitCost: number;
-    packagingName: string;
+  supplierId?: string;
+  supplierName?: string;
+  packagingId?: string;
+  packagingName?: string;
+  unitsSupplied: number;
+  unitCost: number;
+  vatInclusive: boolean;
+  vatRate: number;
 }
 export interface StockOnboardingRequest {
     productName?: string;
@@ -62,4 +64,43 @@ export interface StockOnboardingBulkPreviewResult {
     rows: StockOnboardingBulkPreviewRow[];
     totalUnits: number;
     totalCost: number;
+}
+export interface SupplierPreviewLine {
+  supplierName: string;
+  packagingName: string;
+  unitsSupplied: number;
+  quotedUnitCost: number;
+  vatInclusive: boolean;
+  vatRate: number;
+  grossCost: number;
+  netCost: number;
+  vatAmount: number;
+}
+export interface StockOnboardingPreviewResponse {
+  supplierLines: SupplierPreviewLine[];
+  totalGrossCost: number;
+  totalNetCost: number;
+  totalVatAmount: number;
+  totalUnits: number;
+}
+export interface PreviewSupplierLine {
+  supplierName: string;
+  packagingName: string;
+  unitsSupplied: number;
+  quotedUnitCost: number;
+  vatInclusive: boolean;
+  vatRate: number;
+  grossCost: number;
+  netCost: number;
+  vatAmount: number;
+}
+export interface PreviewTotals {
+  totalGrossCost: number;
+  totalNetCost: number;
+  totalVatAmount: number;
+  totalUnits: number;
+}
+export interface PreviewResponse {
+  supplierLines: PreviewSupplierLine[];
+  totals: PreviewTotals;
 }

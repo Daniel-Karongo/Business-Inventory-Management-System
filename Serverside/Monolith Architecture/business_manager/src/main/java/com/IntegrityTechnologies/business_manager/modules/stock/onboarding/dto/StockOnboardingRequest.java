@@ -14,29 +14,12 @@ public class StockOnboardingRequest {
     ===================================================== */
 
     private String productName;
-
     private UUID productId;
-
     private Long categoryId;
-
-    /**
-     * Used when category does not exist.
-     */
     private String newCategoryName;
-
-    /**
-     * Optional explicit control.
-     * Defaults handled in service.
-     */
     private Boolean createCategoryIfMissing;
-
-    /**
-     * Future-safe import behavior.
-     */
     private Boolean createProductIfMissing;
-
     private List<UUID> supplierIds;
-
     private Double minimumPercentageProfit;
 
     /* =====================================================
@@ -44,7 +27,6 @@ public class StockOnboardingRequest {
     ===================================================== */
 
     private String classification;
-
     private UUID variantId;
 
     /* =====================================================
@@ -64,11 +46,8 @@ public class StockOnboardingRequest {
     ===================================================== */
 
     private List<SupplierInput> suppliers;
-
     private UUID branchId;
-
     private String reference;
-
     private String note;
 
     /* =====================================================
@@ -77,9 +56,7 @@ public class StockOnboardingRequest {
 
     @Data
     public static class PackagingInput {
-
         private String name;
-
         private Long units;
     }
 
@@ -89,9 +66,7 @@ public class StockOnboardingRequest {
 
     @Data
     public static class PricingInput {
-
         private String packagingName;
-
         private BigDecimal sellingPrice;
     }
 
@@ -101,32 +76,13 @@ public class StockOnboardingRequest {
 
     @Data
     public static class SupplierInput {
-
-        /**
-         * Existing supplier flow.
-         */
         private UUID supplierId;
-
-        /**
-         * Inline supplier creation flow.
-         */
         private String supplierName;
-
-        /**
-         * Explicit create behavior.
-         */
         private Boolean createSupplierIfMissing;
-
         private Long unitsSupplied;
-
-        /**
-         * Cost per supplied packaging.
-         */
         private BigDecimal unitCost;
-
-        /**
-         * Packaging used during intake.
-         */
         private String packagingName;
+        private Boolean vatInclusive;
+        private BigDecimal vatRate;
     }
 }

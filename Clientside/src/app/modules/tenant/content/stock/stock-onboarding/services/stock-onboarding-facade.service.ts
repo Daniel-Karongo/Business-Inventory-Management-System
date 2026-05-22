@@ -88,7 +88,7 @@ export class StockOnboardingFacadeService {
                 .suppliers
                 .reduce(
                     (sum, row) =>
-                        sum + row.quantity,
+                        sum + row.unitsSupplied,
                     0
                 )
         );
@@ -100,7 +100,7 @@ export class StockOnboardingFacadeService {
                 .reduce(
                     (sum, row) =>
                         sum + (
-                            row.quantity *
+                            row.unitsSupplied *
                             row.unitCost
                         ),
                     0
@@ -210,32 +210,26 @@ export class StockOnboardingFacadeService {
         suppliers:
             OnboardingSupplierEntry[]
     ) {
-
         this.patch({
-
             suppliers:
                 suppliers.map(row => ({
-
                     supplierId:
                         row.supplierId ?? null,
-
                     supplierName:
                         row.supplierName?.trim()
                         || null,
-
                     packagingTempId:
                         row.packagingTempId,
-
-                    quantity:
-                        Number(row.quantity),
-
+                    unitsSupplied:
+                        Number(row.unitsSupplied),
                     unitCost:
-                        Number(row.unitCost)
-
+                        Number(row.unitCost),
+                    vatInclusive:
+                        !!row.vatInclusive,
+                    vatRate:
+                        Number(row.vatRate ?? 0)
                 }))
-
         });
-
     }
 
     nextStep() {

@@ -12,6 +12,21 @@ export class BranchContextService {
   private branchSubject = new BehaviorSubject<string | null>(null);
   branch$ = this.branchSubject.asObservable();
 
+  private readonly branchesSubject =
+    new BehaviorSubject<any[]>([]);
+
+  readonly branches$ =
+    this.branchesSubject.asObservable();
+
+  setBranches(
+    branches: any[]
+  ): void {
+
+    this.branchesSubject.next(
+      branches
+    );
+  }
+
   constructor() {
     const saved = localStorage.getItem(this.STORAGE_KEY);
 

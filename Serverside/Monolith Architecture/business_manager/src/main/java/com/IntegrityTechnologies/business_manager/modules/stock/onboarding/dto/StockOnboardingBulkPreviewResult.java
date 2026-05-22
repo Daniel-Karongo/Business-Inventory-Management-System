@@ -14,5 +14,7 @@ public class StockOnboardingBulkPreviewResult {
 
     private long totalUnits;
 
-    private BigDecimal totalCost;
+    private BigDecimal grossCost;
+    private BigDecimal netCost;
+    private BigDecimal vatAmount;
 }

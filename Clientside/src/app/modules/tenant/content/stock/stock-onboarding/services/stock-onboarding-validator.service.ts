@@ -129,8 +129,8 @@ export class StockOnboardingValidatorService {
             }
 
             if (
-                !row.quantity ||
-                row.quantity <= 0
+                !row.unitsSupplied ||
+                row.unitsSupplied <= 0
             ) {
 
                 errors.push(
@@ -148,6 +148,23 @@ export class StockOnboardingValidatorService {
                     'Supplier unit cost must be greater than zero.'
                 );
 
+            }
+
+            if (
+                row.vatRate == null ||
+                row.vatRate < 0
+            ) {
+                errors.push(
+                    'VAT rate cannot be negative.'
+                );
+            }
+
+            if (
+                row.vatRate > 100
+            ) {
+                errors.push(
+                    'VAT rate cannot exceed 100.'
+                );
             }
 
         }

@@ -23,5 +23,7 @@ public class InventoryBulkPreviewRow {
     private Long unitsReceived;
     private BigDecimal unitCost;
     private BigDecimal sellingPrice;
-    private BigDecimal totalCost;
+    private BigDecimal grossCost;
+    private BigDecimal netCost;
+    private BigDecimal vatAmount;
 }

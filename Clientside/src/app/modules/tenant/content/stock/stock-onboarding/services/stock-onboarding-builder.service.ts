@@ -132,27 +132,24 @@ export class StockOnboardingBuilderService {
                         }
 
                         return {
-
                             supplierId:
                                 supplier.supplierId
                                 ?? undefined,
-
                             supplierName:
                                 supplier.supplierName
                                 || undefined,
-
                             createSupplierIfMissing:
                                 !!supplier.supplierName,
-
                             packagingName:
                                 packaging.name,
-
                             unitsSupplied:
-                                supplier.quantity,
-
+                                supplier.unitsSupplied,
                             unitCost:
-                                supplier.unitCost
-
+                                supplier.unitCost,
+                            vatInclusive:
+                                supplier.vatInclusive,
+                            vatRate:
+                                supplier.vatRate
                         };
 
                     })

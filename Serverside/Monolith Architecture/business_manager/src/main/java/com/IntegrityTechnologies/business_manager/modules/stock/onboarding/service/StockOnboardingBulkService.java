@@ -110,8 +110,9 @@ public class StockOnboardingBulkService {
 
         long totalUnits = 0;
 
-        BigDecimal totalCost =
-                BigDecimal.ZERO;
+        BigDecimal grossCost = BigDecimal.ZERO;
+        BigDecimal netCost = BigDecimal.ZERO;
+        BigDecimal vatAmount = BigDecimal.ZERO;
 
         Set<String> seenRows =
                 new HashSet<>();
@@ -155,9 +156,19 @@ public class StockOnboardingBulkService {
                 totalUnits +=
                         preview.getTotalUnits();
 
-                totalCost =
-                        totalCost.add(
-                                preview.getTotalCost()
+                grossCost =
+                        grossCost.add(
+                                preview.getGrossCost()
+                        );
+
+                netCost =
+                        netCost.add(
+                                preview.getNetCost()
+                        );
+
+                vatAmount =
+                        vatAmount.add(
+                                preview.getVatAmount()
                         );
 
             } catch (Exception ex) {
@@ -182,7 +193,9 @@ public class StockOnboardingBulkService {
                             .builder()
                             .rows(previewRows)
                             .totalUnits(totalUnits)
-                            .totalCost(totalCost)
+                            .grossCost(grossCost)
+                            .netCost(netCost)
+                            .vatAmount(vatAmount)
                             .build()
             );
 
@@ -206,7 +219,9 @@ public class StockOnboardingBulkService {
                             .builder()
                             .rows(previewRows)
                             .totalUnits(totalUnits)
-                            .totalCost(totalCost)
+                            .grossCost(grossCost)
+                            .netCost(netCost)
+                            .vatAmount(vatAmount)
                             .build()
             );
 
@@ -236,7 +251,9 @@ public class StockOnboardingBulkService {
                         .builder()
                         .rows(previewRows)
                         .totalUnits(totalUnits)
-                        .totalCost(totalCost)
+                        .grossCost(grossCost)
+                        .netCost(netCost)
+                        .vatAmount(vatAmount)
                         .build()
         );
 

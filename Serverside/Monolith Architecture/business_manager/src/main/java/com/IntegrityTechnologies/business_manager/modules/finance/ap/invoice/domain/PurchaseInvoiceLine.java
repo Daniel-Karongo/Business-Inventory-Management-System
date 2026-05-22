@@ -84,6 +84,12 @@ public class PurchaseInvoiceLine extends BranchAwareEntity {
     @Builder.Default
     private BigDecimal vatAmount = BigDecimal.ZERO;
 
+    @Column(nullable = false)
+    private Boolean vatInclusive;
+
+    @Column(nullable = false, precision = 19, scale = 6)
+    private BigDecimal vatRate;
+
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal lineSubtotal;
 

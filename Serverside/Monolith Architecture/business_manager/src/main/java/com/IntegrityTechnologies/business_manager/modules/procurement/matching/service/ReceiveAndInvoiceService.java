@@ -143,14 +143,6 @@ public class ReceiveAndInvoiceService {
                     stock.getNote()
             );
 
-            supplierReceipt.setVatInclusive(
-                    stock.getVatInclusive()
-            );
-
-            supplierReceipt.setVatRate(
-                    stock.getVatRate()
-            );
-
             supplierReceipt.setReference(
                     orchestrationKey
                             + "::SUPPLIER::"
@@ -237,28 +229,14 @@ public class ReceiveAndInvoiceService {
                 );
 
                 boolean vatInclusive =
-                        stock.getVatInclusive() != null
-                                ? stock.getVatInclusive()
+                        supplier.getVatInclusive() != null
+                                ? supplier.getVatInclusive()
                                 : taxProperties.isPricesVatInclusive();
 
                 BigDecimal vatRate =
-                        stock.getVatRate() != null
-                                ? stock.getVatRate()
+                        supplier.getVatRate() != null
+                                ? supplier.getVatRate()
                                 : taxProperties.getVatRate();
-
-                BigDecimal netUnitCost =
-                        supplier.getUnitCost();
-
-                if (vatInclusive) {
-
-                    netUnitCost =
-                            supplier.getUnitCost()
-                                    .divide(
-                                            BigDecimal.ONE.add(vatRate),
-                                            6,
-                                            RoundingMode.HALF_UP
-                                    );
-                }
 
                 BigDecimal grossAmount =
                         supplier.getUnitCost()
@@ -305,6 +283,9 @@ public class ReceiveAndInvoiceService {
                 line.setDiscountAmount(
                         BigDecimal.ZERO
                 );
+
+                line.setVatInclusive(vatInclusive);
+                line.setVatRate(vatRate);
 
                 lines.add(line);
             }

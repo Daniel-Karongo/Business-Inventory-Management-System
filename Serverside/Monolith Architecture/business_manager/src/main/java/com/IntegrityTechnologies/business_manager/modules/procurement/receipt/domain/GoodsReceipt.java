@@ -82,6 +82,12 @@ public class GoodsReceipt
     private BigDecimal grossAmount;
 
     @Column(nullable = false)
+    private Boolean vatInclusive;
+
+    @Column(nullable = false, precision = 19, scale = 6)
+    private BigDecimal vatRate;
+
+    @Column(nullable = false)
     private LocalDate receiptDate;
 
     private String supplierReference;

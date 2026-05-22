@@ -1,53 +1,167 @@
 <div class="review-shell">
 
+    <!-- PRODUCT -->
     <div class="review-section">
 
         <div class="section-title">
             Product
         </div>
 
-        <div>
-            {{
-            state.productDraft.name
-            }}
+        <div class="review-grid">
+
+            <div class="review-item">
+                <span>Name</span>
+                <strong>
+                    {{
+                    state.productDraft.name
+                    }}
+                </strong>
+            </div>
+
+            <div class="review-item">
+                <span>Variant</span>
+                <strong>
+                    {{
+                    state.variantDraft
+                    .classification
+                    }}
+                </strong>
+            </div>
+
         </div>
 
     </div>
 
-    <div class="review-section">
-
-        <div class="section-title">
-            Variant
-        </div>
-
-        <div>
-            {{
-            state.variantDraft
-            .classification
-            }}
-        </div>
-
-    </div>
-
+    <!-- PACKAGING -->
     <div class="review-section">
 
         <div class="section-title">
             Packaging
         </div>
 
-        <div *ngFor="
-        let packaging
-        of state.packagings
-      ">
+        <div class="review-list" *ngIf="state.packagings?.length">
 
-            {{
-            packaging.name
-            }}
-            —
-            {{
-            packaging.unitQuantity
-            }}
-            units
+            <div class="review-row" *ngFor="
+                    let packaging
+                    of state.packagings
+                ">
+
+                <div>
+                    {{
+                    packaging.name
+                    }}
+                </div>
+
+                <strong>
+                    {{
+                    packaging.unitQuantity
+                    }}
+                    units
+                </strong>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- SUPPLIERS -->
+    <div class="review-section">
+
+        <div class="section-title">
+            Supplier Inventory
+        </div>
+
+        <div class="supplier-table-shell" *ngIf="state.suppliers?.length">
+
+            <table class="supplier-table">
+
+                <thead>
+                    <tr>
+                        <th>Supplier</th>
+                        <th>Packaging</th>
+                        <th>Units</th>
+                        <th>Unit Cost</th>
+                        <th>VAT Inclusive</th>
+                        <th>VAT Rate</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    <tr *ngFor="
+                            let supplier
+                            of state.suppliers
+                        ">
+
+                        <td>
+                            {{ supplier.supplierName || supplier.supplierId }}
+                        </td>
+
+                        <td>
+                            {{ getPackagingName(supplier.packagingTempId) }}
+                        </td>
+
+                        <td>
+                            {{ supplier.unitsSupplied }}
+                        </td>
+
+                        <td>
+                            {{ supplier.unitCost | number:'1.2-2' }}
+                        </td>
+
+                        <td>
+                            {{ supplier.vatInclusive ? 'Yes' : 'No' }}
+                        </td>
+
+                        <td>
+                            {{ supplier.vatRate }}%
+                        </td>
+
+                        <td>
+                            {{ supplier.unitsSupplied * supplier.unitCost | number:'1.2-2' }}
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+    <!-- TOTALS -->
+    <div class="review-section">
+
+        <div class="section-title">
+            Totals
+        </div>
+
+        <div class="review-grid">
+
+            <div class="review-item">
+                <span>Total Units</span>
+
+                <strong>
+                    {{
+                    totalUnits
+                    }}
+                </strong>
+            </div>
+
+            <div class="review-item">
+                <span>Inventory Value</span>
+
+                <strong>
+                    {{
+                    totalValue
+                    | number:'1.2-2'
+                    }}
+                </strong>
+            </div>
 
         </div>
 

@@ -33,4 +33,9 @@ public class CreatePurchaseInvoiceLineRequest {
 
     @DecimalMin(value = "0.00")
     private BigDecimal vatAmount = BigDecimal.ZERO;
+
+    private Boolean vatInclusive;
+
+    @DecimalMin(value = "0.00")
+    private BigDecimal vatRate;
 }

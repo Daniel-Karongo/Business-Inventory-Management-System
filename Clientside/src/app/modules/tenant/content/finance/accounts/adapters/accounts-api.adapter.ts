@@ -36,29 +36,26 @@ export class AccountsApiAdapter {
     private readonly adminUrl =
         `${environment.apiUrl}/accounts/admin`;
 
-    private resolveBranchId(): string {
-
-        const branchId =
-            this.branchContext.currentBranch;
-
-        if (!branchId) {
-            throw new Error(
-                'Branch not selected'
-            );
-        }
-
-        return branchId;
+    private resolveBranchId(
+        branchId?: string
+    ): string {
+        return (
+            branchId ??
+            this.branchContext.currentBranch ??
+            ''
+        );
     }
 
     list(
-        query: TableQuery
+        query: TableQuery,
+        branchId?: string
     ): Observable<PageWrapper<Account>> {
 
         let params =
             new HttpParams()
                 .set(
                     'branchId',
-                    this.resolveBranchId()
+                    this.resolveBranchId(branchId)
                 )
                 .set(
                     'page',
@@ -77,6 +74,34 @@ export class AccountsApiAdapter {
                 );
         }
 
+        if (query.search) {
+            params = params.set(
+                'search',
+                query.search
+            );
+        }
+
+        if (query.type) {
+            params = params.set(
+                'type',
+                query.type
+            );
+        }
+
+        if (query.active !== undefined) {
+            params = params.set(
+                'active',
+                query.active
+            );
+        }
+
+        if (query.balanceFilter) {
+            params = params.set(
+                'balanceFilter',
+                query.balanceFilter
+            );
+        }
+
         return this.http
             .get<any>(
                 this.baseUrl,
@@ -86,19 +111,14 @@ export class AccountsApiAdapter {
                 map(response => ({
                     content:
                         response.content ?? [],
-
                     pageNumber:
                         response.number ?? 0,
-
                     pageSize:
                         response.size ?? 25,
-
                     totalElements:
                         response.totalElements ?? 0,
-
                     totalPages:
                         response.totalPages ?? 0,
-
                     last:
                         response.last ?? true
                 }))
