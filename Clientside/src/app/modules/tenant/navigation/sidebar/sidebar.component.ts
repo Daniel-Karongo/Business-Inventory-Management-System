@@ -131,7 +131,6 @@ export class SidebarComponent implements OnInit {
         feature: 'finance',
         children: [
           { title: 'Accounting', route: '/app/finance/accounting', icon: 'accounts' },
-          { title: 'Budgeting', route: '/app/finance/budgeting', icon: 'budget' },
           { title: 'Tax', route: '/app/finance/tax', icon: 'tax' },
           { title: 'Payments', route: '/app/finance/ap/debts', icon: 'payments' }
         ]

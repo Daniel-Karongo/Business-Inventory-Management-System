@@ -1,46 +1,110 @@
-<div class="page-container p-4">
+<app-workflow-shell>
 
-  <div class="page-header">
-    <div>
-      <h2>Edit Account</h2>
-      <div class="breadcrumb">Accounts / Chart / Edit</div>
+  <div workflow-header>
+
+    <div class="page-header">
+
+      <div class="header-content">
+
+        <div class="eyebrow">
+          Accounting Setup
+        </div>
+
+        <h1 class="page-title">
+          Edit Business Account
+        </h1>
+
+        <div class="page-description">
+          Update account naming and
+          business-facing metadata.
+        </div>
+
+      </div>
+
     </div>
 
-    <div class="actions">
-      <button mat-stroked-button (click)="cancel()">Cancel</button>
-      <button
-        mat-flat-button
-        color="primary"
-        (click)="save()"
-        [disabled]="form.invalid">
-        Save
-      </button>
-    </div>
   </div>
 
-  <mat-card>
-    <h3>Account Information</h3>
+  <div workflow-content>
 
-    <form [formGroup]="form" class="form-grid">
+    <app-workflow-card>
 
-      <mat-form-field appearance="fill">
-        <mat-label>Account Code</mat-label>
-        <input matInput formControlName="code" />
-      </mat-form-field>
+      <form [formGroup]="form" class="account-form">
 
-      <mat-form-field appearance="fill">
-        <mat-label>Account Name</mat-label>
-        <input matInput formControlName="name" />
-      </mat-form-field>
+        <div class="form-grid">
 
-      <mat-form-field appearance="fill">
-        <mat-label>Account Type</mat-label>
-        <input matInput formControlName="type" />
-      </mat-form-field>
+          <!-- CODE -->
 
-    </form>
-  </mat-card>
+          <mat-form-field appearance="fill">
 
-</div>
+            <mat-label>
+              Account Code
+            </mat-label>
 
+            <input matInput formControlName="code" />
 
+          </mat-form-field>
+
+          <!-- NAME -->
+
+          <mat-form-field appearance="fill">
+
+            <mat-label>
+              Account Name
+            </mat-label>
+
+            <input matInput formControlName="name" />
+
+          </mat-form-field>
+
+          <!-- TYPE -->
+
+          <mat-form-field appearance="fill">
+
+            <mat-label>
+              Classification
+            </mat-label>
+
+            <input matInput formControlName="type" />
+
+          </mat-form-field>
+
+        </div>
+
+        <!-- INFO -->
+
+        <div class="immutable-note">
+
+          Account code and classification
+          cannot be modified after creation.
+
+        </div>
+
+        <!-- ACTIONS -->
+
+        <div class="form-actions">
+
+          <button mat-stroked-button type="button" (click)="cancel()">
+
+            Cancel
+
+          </button>
+
+          <button mat-flat-button color="primary" type="button" [disabled]="
+              form.invalid
+              || saving()
+            " (click)="submit()">
+
+            Save Changes
+
+          </button>
+
+        </div>
+
+      </form>
+
+    </app-workflow-card>
+
+  </div>
+
+</app-workflow-shell>

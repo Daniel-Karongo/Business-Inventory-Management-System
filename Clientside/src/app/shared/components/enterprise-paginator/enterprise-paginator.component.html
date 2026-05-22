@@ -1,0 +1,117 @@
+<div class="paginator-shell">
+
+    <!-- ================================================= -->
+    <!-- LEFT -->
+    <!-- ================================================= -->
+
+    <div class="top-row">
+
+        <div class="results-info">
+
+            Showing
+
+            {{ start }}
+
+            -
+
+            {{ end }}
+
+            of
+
+            {{ totalElements }}
+
+            records
+
+        </div>
+
+        <div class="size-control">
+
+            <span class="size-label">
+                Rows
+            </span>
+
+            <mat-form-field appearance="fill" class="size-field">
+
+                <mat-select [ngModel]="size" (ngModelChange)="updateSize($event)">
+
+                    <mat-option *ngFor="
+                          let option of pageSizes
+                        " [value]="option">
+
+                        {{ option }}
+
+                    </mat-option>
+
+                </mat-select>
+
+            </mat-form-field>
+
+        </div>
+
+    </div>
+
+    <!-- ================================================= -->
+    <!-- RIGHT -->
+    <!-- ================================================= -->
+
+    <div class="bottom-row">
+
+        <button mat-icon-button matTooltip="First page" matTooltipPosition="above" [disabled]="
+              isFirstPage
+              || loading
+            " (click)="first()">
+
+            <mat-icon>
+                first_page
+            </mat-icon>
+
+        </button>
+
+        <button mat-icon-button matTooltip="Previous page" matTooltipPosition="above" [disabled]="
+              isFirstPage
+              || loading
+            " (click)="previous()">
+
+            <mat-icon>
+                chevron_left
+            </mat-icon>
+
+        </button>
+
+        <div class="page-info">
+
+            Page
+
+            {{ displayPage }}
+
+            of
+
+            {{ totalPages }}
+
+        </div>
+
+        <button mat-icon-button matTooltip="Next page" matTooltipPosition="above" [disabled]="
+              isLastPage
+              || loading
+            " (click)="next()">
+
+            <mat-icon>
+                chevron_right
+            </mat-icon>
+
+        </button>
+
+        <button mat-icon-button matTooltip="Last page" matTooltipPosition="above" [disabled]="
+              isLastPage
+              || loading
+            " (click)="last()">
+
+            <mat-icon>
+                last_page
+            </mat-icon>
+
+        </button>
+
+    </div>
+
+</div>

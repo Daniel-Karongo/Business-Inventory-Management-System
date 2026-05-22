@@ -5,9 +5,6 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.gov
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.ReconciliationStateRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.security.JournalIntegrityAudit;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.security.JournalIntegrityAuditRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.Budget;
-import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.domain.enums.BudgetStatus;
-import com.IntegrityTechnologies.business_manager.modules.finance.budgeting.repository.BudgetRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
@@ -23,26 +20,22 @@ public class CloseChecklistService {
 
     private final ReconciliationStateRepository reconciliationRepository;
     private final JournalIntegrityAuditRepository auditRepository;
-    private final BudgetRepository budgetRepository;
     private final TaxSystemStateService taxStateService;
 
     public CloseChecklistResult validate(UUID branchId, AccountingPeriod period) {
 
         boolean reconciliationValid = validateReconciliation(branchId);
         boolean integrityValid = validateIntegrity(branchId);
-        boolean budgetsApproved = validateBudgets(branchId, period);
         boolean taxAccrued = validateTax(branchId, period);
 
         boolean canClose =
                 reconciliationValid &&
                         integrityValid &&
-                        budgetsApproved &&
                         taxAccrued;
 
         return new CloseChecklistResult(
                 reconciliationValid,
                 integrityValid,
-                budgetsApproved,
                 taxAccrued,
                 canClose
         );
@@ -82,32 +75,6 @@ public class CloseChecklistService {
         return audit.isValid();
     }
 
-    private boolean validateBudgets(UUID branchId, AccountingPeriod period) {
-
-        int fiscalYear = period.getStartDate().getYear();
-
-        var branchBudgets =
-                budgetRepository.findByTenantIdAndBranchIdAndFiscalYear(
-                        TenantContext.getTenantId(),
-                        branchId,
-                        fiscalYear
-                );
-
-        var globalBudgets =
-                budgetRepository.findByTenantIdAndBranchIdIsNullAndFiscalYear(
-                        TenantContext.getTenantId(),
-                        fiscalYear
-                );
-
-        return branchBudgets.stream().noneMatch(this::isBlockingStatus)
-                && globalBudgets.stream().noneMatch(this::isBlockingStatus);
-    }
-
-    private boolean isBlockingStatus(Budget b) {
-        return b.getStatus() == BudgetStatus.DRAFT
-                || b.getStatus() == BudgetStatus.SUBMITTED;
-    }
-
     private boolean validateTax(UUID branchId, AccountingPeriod period) {
 
         var taxState = taxStateService.getOrCreate(branchId);
@@ -123,7 +90,6 @@ public class CloseChecklistService {
     public record CloseChecklistResult(
             boolean reconciliationValid,
             boolean integrityValid,
-            boolean budgetsApproved,
             boolean taxAccrued,
             boolean canClose
     ) {}

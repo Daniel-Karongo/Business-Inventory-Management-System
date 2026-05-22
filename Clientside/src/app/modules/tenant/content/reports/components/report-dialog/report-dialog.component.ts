@@ -120,7 +120,17 @@ export class ReportDialogComponent implements OnInit {
       }
 
       if (p.type === 'ACCOUNT') {
-        this.accountsSvc.list().subscribe(a => this.accounts = a);
+        this.accountsSvc
+          .list({
+            page: 0,
+            size: 1000,
+            sort: 'code'
+          })
+          .subscribe({
+            next: res => {
+              this.accounts = res.content ?? [];
+            }
+          });
       }
 
       if (p.type === 'CUSTOMER') {

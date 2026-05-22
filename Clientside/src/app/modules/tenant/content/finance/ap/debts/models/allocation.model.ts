@@ -13,18 +13,6 @@ export interface AutoAllocatePaymentRequest {
     amount: number;
 }
 
-export interface AllocationResponse {
-    allocationId: string;
-    paymentId: string;
-    paymentNumber: string;
-    invoiceId: string;
-    invoiceNumber: string;
-    allocatedAmount: number;
-    remainingInvoiceBalance: number;
-    remainingPaymentBalance: number;
-    allocatedAt: string;
-}
-
 export interface AllocationPreviewItem {
     invoiceId: string;
     invoiceNumber: string;
@@ -40,4 +28,21 @@ export interface AllocationPreviewResponse {
     totalAllocated: number;
     remainingUnallocated: number;
     allocations: AllocationPreviewItem[];
+}
+
+export interface AllocationResponse {
+    allocationId: string;
+    paymentId: string;
+    paymentNumber: string;
+    invoiceId: string;
+    invoiceNumber: string;
+    allocatedAmount: number;
+    remainingInvoiceBalance: number;
+    remainingPaymentBalance: number;
+    allocatedAt: string;
+    status: string;
+    reversed: boolean;
+    reversedAt?: string;
+    reversedBy?: string;
+    reversalReason?: string;
 }

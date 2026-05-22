@@ -24,6 +24,10 @@ public class CreatePurchaseInvoiceLineRequest {
     @DecimalMin(value = "0.00")
     private BigDecimal unitCost;
 
+    private BigDecimal lineSubtotal;
+
+    private BigDecimal lineTotal;
+
     @DecimalMin(value = "0.00")
     private BigDecimal discountAmount = BigDecimal.ZERO;
 

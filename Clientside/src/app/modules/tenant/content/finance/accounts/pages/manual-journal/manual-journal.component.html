@@ -1,110 +1,320 @@
-<div class="page-container p-4">
+<app-workflow-shell>
 
-  <!-- PAGE HEADER -->
-  <div class="page-header mb-6">
-    <div>
-      <h2 class="text-xl font-semibold">New Journal Entry</h2>
-      <div class="text-sm text-[var(--text-secondary)]">
-        Accounts / Journals / New
+  <!-- =================================================== -->
+  <!-- HEADER -->
+  <!-- =================================================== -->
+
+  <div workflow-header>
+
+    <div class="page-header">
+
+      <div class="header-content">
+
+        <div class="eyebrow">
+          Accounting Workflow
+        </div>
+
+        <h1 class="page-title">
+          New Transaction Entry
+        </h1>
+
+        <div class="page-description">
+          Record balanced transaction activity
+          across business accounts.
+        </div>
+
       </div>
+
+      <div class="header-actions">
+
+        <button mat-stroked-button (click)="cancel()">
+
+          Cancel
+
+        </button>
+
+        <button mat-flat-button color="primary" [disabled]="
+            form.invalid
+            || posting()
+            || !balanced()
+          " (click)="submit()">
+
+          Post Transaction
+
+        </button>
+
+      </div>
+
     </div>
 
-    <div class="actions">
-      <button mat-stroked-button (click)="cancel()">Cancel</button>
-      <button
-        mat-flat-button
-        color="primary"
-        [disabled]="form.invalid || posting"
-        (click)="submit()">
-        Post Journal
-      </button>
-    </div>
   </div>
 
-  <!-- FORM -->
-  <div class="bg-[var(--surface)] rounded p-4">
+  <!-- =================================================== -->
+  <!-- CONTENT -->
+  <!-- =================================================== -->
 
-    <form [formGroup]="form" class="space-y-4">
+  <div workflow-content>
 
-      <!-- HEADER FIELDS -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <mat-form-field appearance="fill">
-          <mat-label>Reference</mat-label>
-          <input matInput formControlName="reference" />
-        </mat-form-field>
+    <!-- =============================================== -->
+    <!-- SUMMARY -->
+    <!-- =============================================== -->
 
-        <mat-form-field appearance="fill">
-          <mat-label>Description</mat-label>
-          <input matInput formControlName="description" />
-        </mat-form-field>
+    <app-workflow-card>
+
+      <div class="totals-grid">
+
+        <div class="summary-card">
+
+          <div class="summary-label">
+            Money In
+          </div>
+
+          <div class="summary-value in">
+
+            {{
+            debitTotal()
+            | number:'1.2-2'
+            }}
+
+          </div>
+
+        </div>
+
+        <div class="summary-card">
+
+          <div class="summary-label">
+            Money Out
+          </div>
+
+          <div class="summary-value out">
+
+            {{
+            creditTotal()
+            | number:'1.2-2'
+            }}
+
+          </div>
+
+        </div>
+
+        <div class="summary-card" [class.valid]="balanced()" [class.invalid]="!balanced()">
+
+          <div class="summary-label">
+            Status
+          </div>
+
+          <div class="summary-status">
+
+            {{
+            balanced()
+            ? 'Balanced'
+            : 'Out of Balance'
+            }}
+
+          </div>
+
+        </div>
+
       </div>
 
-      <!-- LINES -->
-      <div class="table-wrapper">
-        <table class="journal-lines">
-          <thead>
-            <tr>
-              <th>Account</th>
-              <th>Direction</th>
-              <th>Amount</th>
-              <th></th>
-            </tr>
-          </thead>
+    </app-workflow-card>
 
-          <tbody formArrayName="lines">
-            <tr *ngFor="let g of lines.controls; let i = index"
-                [formGroupName]="i">
+    <!-- =============================================== -->
+    <!-- FORM -->
+    <!-- =============================================== -->
 
-              <td>
-                <mat-form-field appearance="fill">
-                  <mat-select formControlName="accountId">
-                    <mat-option *ngFor="let a of (accounts$ | async)"
-                                [value]="a.id">
-                      {{ a.code }} — {{ a.name }}
-                    </mat-option>
-                  </mat-select>
-                </mat-form-field>
-              </td>
+    <app-workflow-card>
 
-              <td>
-                <mat-form-field appearance="fill">
-                  <mat-select formControlName="direction">
-                    <mat-option value="DEBIT">Debit</mat-option>
-                    <mat-option value="CREDIT">Credit</mat-option>
-                  </mat-select>
-                </mat-form-field>
-              </td>
+      <form [formGroup]="form" class="journal-form">
 
-              <td>
-                <mat-form-field appearance="fill">
-                  <input matInput type="number" formControlName="amount" />
-                </mat-form-field>
-              </td>
+        <!-- HEADER FIELDS -->
 
-              <td class="actions-cell">
-                <button
-                  mat-icon-button
-                  type="button"
-                  (click)="removeLine(i)"
-                  matTooltip="Remove line">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              </td>
+        <div class="header-grid">
 
-            </tr>
-          </tbody>
-        </table>
-      </div>
+          <mat-form-field appearance="fill">
 
-      <!-- ADD LINE -->
-      <button mat-stroked-button type="button" (click)="addLine()">
-        <mat-icon>add</mat-icon>
-        Add Line
-      </button>
+            <mat-label>
+              Reference
+            </mat-label>
 
-    </form>
+            <input matInput formControlName="reference" />
+
+          </mat-form-field>
+
+          <mat-form-field appearance="fill">
+
+            <mat-label>
+              Description
+            </mat-label>
+
+            <input matInput formControlName="description" />
+
+          </mat-form-field>
+
+        </div>
+
+        <!-- LINES -->
+
+        <div class="lines-section">
+
+          <div class="section-title">
+            Transaction Entries
+          </div>
+
+          <div class="table-wrapper">
+
+            <table class="journal-lines">
+
+              <thead>
+
+                <tr>
+
+                  <th>
+                    Account
+                  </th>
+
+                  <th>
+                    Movement
+                  </th>
+
+                  <th>
+                    Amount
+                  </th>
+
+                  <th>
+                  </th>
+
+                </tr>
+
+              </thead>
+
+              <tbody formArrayName="lines">
+
+                <tr *ngFor="
+                    let g of lines.controls;
+                    let i = index
+                  " [formGroupName]="i">
+
+                  <!-- ACCOUNT -->
+
+                  <td>
+
+                    <mat-form-field appearance="fill">
+
+                      <mat-label>
+                        Account
+                      </mat-label>
+
+                      <mat-select formControlName="accountId">
+
+                        <mat-option *ngFor="
+                            let a of accounts()
+                          " [value]="a.id">
+
+                          {{ a.code }}
+
+                          —
+
+                          {{ a.name }}
+
+                        </mat-option>
+
+                      </mat-select>
+
+                    </mat-form-field>
+
+                  </td>
+
+                  <!-- DIRECTION -->
+
+                  <td>
+
+                    <mat-form-field appearance="fill">
+
+                      <mat-label>
+                        Movement
+                      </mat-label>
+
+                      <mat-select formControlName="direction">
+
+                        <mat-option value="DEBIT">
+
+                          Money In
+
+                        </mat-option>
+
+                        <mat-option value="CREDIT">
+
+                          Money Out
+
+                        </mat-option>
+
+                      </mat-select>
+
+                    </mat-form-field>
+
+                  </td>
+
+                  <!-- AMOUNT -->
+
+                  <td>
+
+                    <mat-form-field appearance="fill">
+
+                      <mat-label>
+                        Amount
+                      </mat-label>
+
+                      <input matInput type="number" formControlName="amount" />
+
+                    </mat-form-field>
+
+                  </td>
+
+                  <!-- REMOVE -->
+
+                  <td class="actions-cell">
+
+                    <button mat-icon-button type="button" (click)="removeLine(i)">
+
+                      <mat-icon>
+                        delete
+                      </mat-icon>
+
+                    </button>
+
+                  </td>
+
+                </tr>
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+          <!-- ADD -->
+
+          <div class="add-row">
+
+            <button mat-stroked-button type="button" (click)="addLine()">
+
+              <mat-icon>
+                add
+              </mat-icon>
+
+              Add Entry
+
+            </button>
+
+          </div>
+
+        </div>
+
+      </form>
+
+    </app-workflow-card>
 
   </div>
-</div>
 
-
+</app-workflow-shell>

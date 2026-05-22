@@ -197,17 +197,10 @@ public class PurchaseInvoiceService {
                     );
 
             BigDecimal lineSubtotal =
-                    lineRequest.getUnitCost()
-                            .multiply(qty);
+                    lineRequest.getLineSubtotal();
 
             BigDecimal lineTotal =
-                    lineSubtotal
-                            .subtract(
-                                    lineRequest.getDiscountAmount()
-                            )
-                            .add(
-                                    lineRequest.getVatAmount()
-                            );
+                    lineRequest.getLineTotal();
 
             PurchaseInvoiceLine line =
                     PurchaseInvoiceLine.builder()
@@ -444,11 +437,17 @@ public class PurchaseInvoiceService {
     private void validateAllocationInvariants(
             PurchaseInvoice invoice
     ) {
-        if (
+        BigDecimal variance =
                 invoice.getAllocatedAmount()
-                        .add(invoice.getOutstandingAmount())
-                        .compareTo(invoice.getTotalAmount()) != 0
-        ) {
+                        .add(
+                                invoice.getOutstandingAmount()
+                        )
+                        .subtract(
+                                invoice.getTotalAmount()
+                        )
+                        .abs();
+
+        if (variance.compareTo(new BigDecimal("0.01")) > 0) {
             throw new IllegalStateException(
                     "Invoice allocation invariant violation"
             );

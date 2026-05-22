@@ -1,28 +1,28 @@
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+
 import { environment } from '../../../../../../../environments/environment';
 
-export interface ManualJournalLine {
-  accountId: string;
-  direction: 'DEBIT' | 'CREDIT';
-  amount: number;
-}
+import { ManualJournalRequest } from '../models/journal.models';
 
-export interface ManualJournalRequest {
-  reference: string;
-  description?: string;
-  lines: ManualJournalLine[];
-}
-
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class ManualJournalService {
 
-  private base =
-    environment.apiUrl + environment.endpoints.manualJournals.base;
+  private readonly http = inject(HttpClient);
 
-  constructor(private http: HttpClient) {}
+  private readonly baseUrl =
+    `${environment.apiUrl}/accounting/manual-journals`;
 
-  post(req: ManualJournalRequest) {
-    return this.http.post<void>(this.base, req);
+  post(
+    payload: ManualJournalRequest
+  ): Observable<void> {
+
+    return this.http.post<void>(
+      this.baseUrl,
+      payload
+    );
   }
 }

@@ -1,11 +1,12 @@
-export interface RequestState<T> {
+export interface RequestState {
   loading: boolean;
+  loaded: boolean;
   error: string | null;
-  data: T | null;
 }
 
-export const initialRequestState = <T>(): RequestState<T> => ({
-  loading: false,
-  error: null,
-  data: null
-});
+export const initialRequestState =
+  (): RequestState => ({
+    loading: false,
+    loaded: false,
+    error: null
+  });

@@ -1,41 +1,67 @@
-.page-container {
-  max-width: 900px;
-  margin: auto;
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
 }
 
 .page-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 18px;
-
-  h2 {
-    margin: 0;
-    font-weight: 600;
-  }
-
-  .breadcrumb {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-  }
-
-  .actions {
-    display: flex;
-    gap: 0.5rem;
-  }
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-mat-card {
-  padding: 18px;
+.eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--active);
+}
 
-  h3 {
-    margin-bottom: 14px;
-    font-weight: 600;
-  }
+.page-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.page-description {
+  max-width: 760px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
+  grid-template-columns:
+    repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+
 }

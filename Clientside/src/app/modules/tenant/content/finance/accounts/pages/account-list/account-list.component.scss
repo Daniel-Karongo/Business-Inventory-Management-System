@@ -1,8 +1,115 @@
-.page-container {
-  max-width: 1100px;
-  margin: auto;
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
 }
 
-mat-table {
+/* =========================================================
+   PAGE HEADER
+========================================================= */
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--active);
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.page-description {
+  max-width: 760px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* =========================================================
+   TABLE
+========================================================= */
+
+.table-wrapper {
   width: 100%;
+  overflow-x: auto;
+}
+
+.accounts-table {
+  width: 100%;
+  min-width: 760px;
+}
+
+.account-code {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.account-name {
+  font-weight: 500;
+}
+
+.type-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 28px;
+
+  padding:
+    0.2rem 0.75rem;
+
+  border-radius: 999px;
+
+  background:
+    rgba(59, 130, 246, 0.12);
+
+  color:
+    rgb(96, 165, 250);
+
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+  .page-header {
+    align-items: stretch;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-actions button {
+    width: 100%;
+  }
+
+  .accounts-table {
+    min-width: 640px;
+  }
+
 }

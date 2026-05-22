@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.re
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
 import org.springframework.data.domain.*;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.*;
@@ -42,6 +43,13 @@ public interface JournalEntryRepository extends JpaRepository<JournalEntry, UUID
             UUID branchId,
             Pageable pageable
     );
+
+    @EntityGraph(attributePaths = {
+            "ledgerEntries",
+            "ledgerEntries.account"
+    })
+    List<JournalEntry>
+    findByIdIn(List<UUID> ids);
 
     Page<JournalEntry>
     findByTenantIdAndBranchIdAndPostedTrueOrderByPostedAtAsc(
@@ -100,6 +108,10 @@ public interface JournalEntryRepository extends JpaRepository<JournalEntry, UUID
        SAFE FETCH
     ========================================================= */
 
+    @EntityGraph(attributePaths = {
+            "ledgerEntries",
+            "ledgerEntries.account"
+    })
     Optional<JournalEntry>
     findByTenantIdAndId(
             UUID tenantId,

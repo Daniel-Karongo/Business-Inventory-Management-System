@@ -8,16 +8,20 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
-import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/accounting/journals")
@@ -28,7 +32,6 @@ public class JournalController {
     private final JournalEntryRepository repo;
     private final AccountingFacade accountingFacade;
     private final GovernanceAuditService governanceAuditService;
-    private final BranchTenantGuard branchTenantGuard;
 
     @GetMapping
     public Page<JournalResponse> list(
@@ -37,13 +40,37 @@ public class JournalController {
     ) {
         UUID tenantId = TenantContext.getTenantId();
 
-        return repo
-                .findByTenantIdAndBranchIdOrderByPostedAtDesc(
+        Page<JournalEntry> page =
+                repo.findByTenantIdAndBranchIdOrderByPostedAtDesc(
                         tenantId,
                         branchId,
                         pageable
-                )
-                .map(this::toResponse);
+                );
+
+        List<UUID> ids = page.getContent()
+                .stream()
+                .map(JournalEntry::getId)
+                .toList();
+
+        Map<UUID, JournalEntry> hydrated =
+                repo.findByIdIn(ids)
+                        .stream()
+                        .collect(Collectors.toMap(
+                                JournalEntry::getId,
+                                Function.identity()
+                        ));
+
+        List<JournalResponse> content =
+                ids.stream()
+                        .map(hydrated::get)
+                        .map(this::toResponse)
+                        .toList();
+
+        return new PageImpl<>(
+                content,
+                pageable,
+                page.getTotalElements()
+        );
     }
 
     @GetMapping("/{id}")

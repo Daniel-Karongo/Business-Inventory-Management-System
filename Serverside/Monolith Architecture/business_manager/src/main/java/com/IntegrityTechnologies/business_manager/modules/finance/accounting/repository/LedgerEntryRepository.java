@@ -52,7 +52,13 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, UUID> 
 
     @Query(value = """
                 SELECT 
-                    je.id AS journalId,
+                    LOWER(CONCAT(
+                        SUBSTR(HEX(je.id), 1, 8), '-',
+                        SUBSTR(HEX(je.id), 9, 4), '-',
+                        SUBSTR(HEX(je.id), 13, 4), '-',
+                        SUBSTR(HEX(je.id), 17, 4), '-',
+                        SUBSTR(HEX(je.id), 21)
+                    )) AS journalId,
                     je.reference AS reference,
                     le.posted_at AS postedAt,
                     le.direction AS direction,

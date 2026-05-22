@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Check;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -39,6 +40,10 @@ import java.util.UUID;
                 )
         }
 )
+@Check(
+        constraints =
+                "ABS(gross_amount - (net_amount + vat_amount)) <= 0.01"
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -68,10 +73,13 @@ public class GoodsReceipt
     private BigDecimal unitCost;
 
     @Column(nullable = false, precision = 19, scale = 2)
-    private BigDecimal totalCost;
+    private BigDecimal netAmount;
 
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal vatAmount;
+
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal grossAmount;
 
     @Column(nullable = false)
     private LocalDate receiptDate;
@@ -95,4 +103,49 @@ public class GoodsReceipt
     private String reversedBy;
 
     private String reversalReason;
+
+    @Override
+    protected void beforePersist() {
+        normalizeMoney();
+    }
+
+    @Override
+    protected void beforeUpdate() {
+        normalizeMoney();
+    }
+
+    private void normalizeMoney() {
+
+        if (netAmount != null) {
+            netAmount =
+                    netAmount.setScale(
+                            2,
+                            BigDecimal.ROUND_HALF_UP
+                    );
+        }
+
+        if (vatAmount != null) {
+            vatAmount =
+                    vatAmount.setScale(
+                            2,
+                            BigDecimal.ROUND_HALF_UP
+                    );
+        }
+
+        if (grossAmount != null) {
+            grossAmount =
+                    grossAmount.setScale(
+                            2,
+                            BigDecimal.ROUND_HALF_UP
+                    );
+        }
+
+        if (unitCost != null) {
+            unitCost =
+                    unitCost.setScale(
+                            6,
+                            BigDecimal.ROUND_HALF_UP
+                    );
+        }
+    }
 }

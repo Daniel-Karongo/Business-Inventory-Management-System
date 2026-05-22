@@ -89,6 +89,17 @@ export class BreadcrumbComponent implements OnInit {
   }
 
   private format(seg: string) {
+    const overrides: Record<string, string> = {
+      finance: 'Finance',
+      accounting: 'Accounts',
+      ap: 'Payments',
+      tax: 'Tax'
+    };
+
+    if (overrides[seg]) {
+      return overrides[seg];
+    }
+
     return decodeURIComponent(seg)
       .replace(/-/g, ' ')
       .replace(/\b\w/g, c => c.toUpperCase());

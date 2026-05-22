@@ -1,0 +1,173 @@
+import { CommonModule } from '@angular/common';
+import { Component, Inject, inject } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { finalize, switchMap, of } from 'rxjs';
+
+import { FundingAccount } from '../../models/funding-account.model';
+import { ApPaymentService } from '../../services/ap-payment.service';
+import { ApAllocationService } from '../../services/ap-allocation.service';
+
+@Component({
+  selector: 'app-create-payment-dialog',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatCheckboxModule,
+    MatDatepickerModule,
+    MatIconModule,
+    MatSnackBarModule
+  ],
+  templateUrl: './create-payment-dialog.component.html',
+  styleUrls: ['./create-payment-dialog.component.scss']
+})
+export class CreatePaymentDialogComponent {
+
+  private fb = inject(FormBuilder);
+  private payments = inject(ApPaymentService);
+  private allocations = inject(ApAllocationService);
+  private snack = inject(MatSnackBar);
+
+  loading = false;
+
+  accounts: FundingAccount[] = [];
+  get selectedAccount(): FundingAccount | undefined {
+
+    const id =
+      this.form.get('fundingAccountId')?.value;
+
+    return this.accounts.find(
+      a => a.id === id
+    );
+  }
+
+  get derivedMethod(): string {
+
+    return this.selectedAccount?.role || '-';
+  }
+
+  get selectedBalance(): number {
+
+    return this.selectedAccount?.balance || 0;
+  }
+
+  get insufficientFunds(): boolean {
+
+    return Number(
+      this.form.get('amount')?.value || 0
+    ) > this.selectedBalance;
+  }
+
+  readonly form = this.fb.nonNullable.group({
+    fundingAccountId: ['', Validators.required],
+    amount: [0, [Validators.required, Validators.min(0.01)]],
+    reference: [''],
+    paymentDate: [new Date(), Validators.required],
+    autoPost: [true],
+    autoAllocate: [true]
+  });
+
+  constructor(
+    @Inject(MAT_DIALOG_DATA)
+    public data: {
+      branchId: string;
+      supplierId: string;
+    },
+    private ref: MatDialogRef<CreatePaymentDialogComponent>
+  ) { }
+
+  ngOnInit(): void {
+    this.loading = true;
+
+    this.payments
+      .fundingAccounts()
+      .pipe(finalize(() => this.loading = false))
+      .subscribe({
+        next: res => this.accounts = res,
+        error: err => this.error(err)
+      });
+  }
+
+  submit(): void {
+
+    if (this.loading || this.form.invalid) return;
+
+    this.loading = true;
+
+    const v = this.form.getRawValue();
+    if (!this.selectedAccount) {
+      return;
+    }
+
+    this.payments.create({
+      branchId: this.data.branchId,
+      supplierId: this.data.supplierId,
+      fundingAccountId: v.fundingAccountId,
+      amount: Number(v.amount),
+      method: this.selectedAccount?.role as any,
+      reference: v.reference || undefined,
+      paymentDate: new Date(v.paymentDate).toISOString().split('T')[0]
+    }).pipe(
+
+      switchMap(payment => {
+
+        if (!v.autoPost)
+          return of(payment);
+
+        return this.payments.post(payment.paymentId).pipe(
+
+          switchMap(posted => {
+
+            if (
+              !v.autoAllocate
+              ||
+              posted.unappliedAmount <= 0
+            ) {
+              return of(posted);
+            }
+
+            return this.allocations.autoAllocate({
+              branchId: this.data.branchId,
+              supplierId: this.data.supplierId,
+              paymentId: posted.paymentId,
+              amount: posted.unappliedAmount
+            }).pipe(
+              switchMap(() => of(posted))
+            );
+          })
+        );
+      }),
+
+      finalize(() => this.loading = false)
+
+    ).subscribe({
+      next: () => {
+        this.snack.open('Payment processed', 'Close', { duration: 3000 });
+        this.ref.close(true);
+      },
+      error: err => this.error(err)
+    });
+  }
+
+  private error(err: any): void {
+    this.snack.open(
+      err?.message || 'Operation failed',
+      'Close',
+      { duration: 5000 }
+    );
+  }
+}

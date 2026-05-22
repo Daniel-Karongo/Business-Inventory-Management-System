@@ -1,61 +1,105 @@
-/* ================= TABLE WRAPPER ================= */
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--active);
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.page-description {
+  max-width: 760px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
 
 .table-wrapper {
-  display: block;
+  width: 100%;
   overflow-x: auto;
 }
 
-/* Force natural column widths */
-mat-table {
+.journal-table {
   width: 100%;
+  min-width: 1040px;
 }
 
-/* Disable flex squeezing */
-.mat-header-cell,
-.mat-cell {
-  flex: 0 0 auto !important;
-  width: auto !important;
-  white-space: nowrap;
-  padding-right: 24px;
+.reference-cell {
+  font-weight: 700;
 }
 
-/* ================= COLUMN SIZES ================= */
-
-.mat-column-reference {
-  min-width: 220px;
-}
-
-.mat-column-description {
-  min-width: 320px;
-}
-
-/* Allow description to wrap */
-.mat-column-description {
-  white-space: normal !important;
-  word-break: break-word;
+.description-cell {
   max-width: 420px;
-  /* prevents table explosion */
+  line-height: 1.45;
+  color: var(--text-secondary);
 }
 
-.mat-cell.mat-column-description {
-  line-height: 1.35;
-  padding-top: 10px;
-  padding-bottom: 10px;
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 28px;
+
+  padding:
+    0.2rem 0.75rem;
+
+  border-radius: 999px;
+
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  &.posted {
+
+    background:
+      rgba(34, 197, 94, 0.12);
+
+    color:
+      rgb(34, 197, 94);
+  }
 }
 
-.mat-column-source {
-  min-width: 160px;
-}
+@media (max-width: 768px) {
 
-.mat-column-postedAt {
-  min-width: 220px;
-}
+  .page-header {
+    align-items: stretch;
+  }
 
-.mat-column-status {
-  min-width: 120px;
-}
+  .header-actions {
+    width: 100%;
+  }
 
-.mat-column-actions {
-  min-width: 100px;
-  text-align: center;
+  .header-actions button {
+    width: 100%;
+  }
+
+  .journal-table {
+    min-width: 860px;
+  }
+
 }

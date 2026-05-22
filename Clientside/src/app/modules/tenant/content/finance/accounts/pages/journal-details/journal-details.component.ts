@@ -1,13 +1,58 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
+import {
+  Component,
+  OnInit,
+  inject
+} from '@angular/core';
 
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { environment } from '../../../../../../../../environments/environment';
-import { ReasonDialogComponent } from '../../../../../../../shared/components/reason-dialog/reason-dialog.component';
+import { CommonModule }
+  from '@angular/common';
+
+import {
+  ActivatedRoute,
+  Router
+} from '@angular/router';
+
+import {
+  MatButtonModule
+} from '@angular/material/button';
+
+import {
+  MatDialog,
+  MatDialogModule
+} from '@angular/material/dialog';
+
+import {
+  MatSnackBar,
+  MatSnackBarModule
+} from '@angular/material/snack-bar';
+
+import {
+  MatTableModule
+} from '@angular/material/table';
+
+import {
+  finalize
+} from 'rxjs/operators';
+
+import {
+  WorkflowShellComponent
+} from '../../../../../../../shared/layout/workflow-shell/workflow-shell.component';
+
+import {
+  WorkflowCardComponent
+} from '../../../../../../../shared/layout/workflow-card/workflow-card.component';
+
+import {
+  JournalService
+} from '../../services/journal.service';
+
+import {
+  Journal
+} from '../../models/journal.models';
+
+import {
+  ReasonDialogComponent
+} from '../../../../../../../shared/components/reason-dialog/reason-dialog.component';
 
 @Component({
   standalone: true,
@@ -15,77 +60,186 @@ import { ReasonDialogComponent } from '../../../../../../../shared/components/re
     CommonModule,
     MatButtonModule,
     MatDialogModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatTableModule,
+    WorkflowShellComponent,
+    WorkflowCardComponent
   ],
-  templateUrl: './journal-details.component.html',
-  styleUrls: ['./journal-details.component.scss']
+  templateUrl:
+    './journal-details.component.html',
+  styleUrls: [
+    './journal-details.component.scss'
+  ]
 })
-export class JournalDetailsComponent {
+export class JournalDetailsComponent
+  implements OnInit {
 
-  journal: any;
-  loading = true;
+  private readonly route =
+    inject(ActivatedRoute);
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private http: HttpClient,
-    private dialog: MatDialog,
-    private snackbar: MatSnackBar
-  ) {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (!id) return;
+  private readonly router =
+    inject(Router);
 
-    this.http.get(`${environment.apiUrl}/accounting/journals/${id}`)
-      .subscribe({
-        next: j => {
-          this.journal = j;
-          this.loading = false;
-        },
-        error: () => {
-          this.snackbar.open('Failed to load journal', 'Close', { duration: 3000 });
-          this.loading = false;
-        }
-      });
+  private readonly journalService =
+    inject(JournalService);
+
+  private readonly dialog =
+    inject(MatDialog);
+
+  private readonly snackbar =
+    inject(MatSnackBar);
+
+  journal?: Journal;
+
+  loading = false;
+
+  reversing = false;
+
+  readonly displayedColumns = [
+    'account',
+    'direction',
+    'amount'
+  ];
+
+  ngOnInit(): void {
+
+    const id =
+      this.route
+        .snapshot
+        .paramMap
+        .get('id');
+
+    if (!id) {
+      return;
+    }
+
+    this.load(id);
   }
 
-  /* ============================================================
-     REVERSAL
-  ============================================================ */
+  load(
+    id: string
+  ): void {
 
-  reverse() {
-    const ref = this.dialog.open(ReasonDialogComponent, {
-      width: '420px',
-      data: {
-        title: 'Reverse Journal?',
-        message: 'Provide a reason for reversing this journal. This action is permanent.',
-        action: 'REVERSE',
-        confirmText: 'Reverse Journal'
-      }
-    });
+    this.loading = true;
 
-    ref.afterClosed().subscribe(result => {
-      if (!result?.confirmed) return;
-
-      this.http.post(
-        `${environment.apiUrl}/accounting/journals/${this.journal.id}/reverse`,
-        { reason: result.reason }
-      ).subscribe({
-        next: () => {
-          this.snackbar.open('Journal reversed successfully', 'Close', { duration: 2500 });
-          this.journal.reversed = true;
+    this.journalService
+      .get(id)
+      .pipe(
+        finalize(() => {
+          this.loading = false;
+        })
+      )
+      .subscribe({
+        next: journal => {
+          this.journal = journal;
         },
-        error: err => {
+        error: () => {
           this.snackbar.open(
-            err?.error?.message || 'Failed to reverse journal',
+            'Failed to load journal',
             'Close',
-            { duration: 4000 }
+            { duration: 3000 }
           );
         }
       });
-    });
   }
 
-  back() {
-    this.router.navigate(['/app/accounts/journals']);
+  reverse(): void {
+
+    if (
+      !this.journal
+      || this.reversing
+    ) {
+      return;
+    }
+
+    const ref =
+      this.dialog.open(
+        ReasonDialogComponent,
+        {
+          width: '420px',
+          data: {
+            title:
+              'Reverse Transaction?',
+            message:
+              'Provide a reason for reversal.',
+            action:
+              'REVERSE',
+            confirmText:
+              'Reverse Transaction'
+          }
+        }
+      );
+
+    ref.afterClosed()
+      .subscribe(result => {
+
+        if (!result?.confirmed) {
+          return;
+        }
+
+        this.reversing = true;
+
+        this.journalService
+          .reverse(
+            this.journal!.id,
+            {
+              reason:
+                result.reason
+            }
+          )
+          .pipe(
+            finalize(() => {
+              this.reversing = false;
+            })
+          )
+          .subscribe({
+            next: () => {
+
+              this.snackbar.open(
+                'Transaction reversed successfully',
+                'Close',
+                { duration: 2500 }
+              );
+
+              this.load(
+                this.journal!.id
+              );
+            },
+            error: err => {
+
+              this.snackbar.open(
+                err?.error?.message
+                ||
+                'Failed to reverse transaction',
+                'Close',
+                { duration: 4000 }
+              );
+            }
+          });
+      });
   }
+
+  back(): void {
+
+    this.router.navigate([
+      '/app/finance/accounting/journals'
+    ]);
+  }
+
+  total(): number {
+
+    if (
+      !this.journal?.entries?.length
+    ) {
+      return 0;
+    }
+
+    return this.journal.entries
+      .reduce(
+        (sum, e) =>
+          sum + e.amount,
+        0
+      );
+  }
+
 }

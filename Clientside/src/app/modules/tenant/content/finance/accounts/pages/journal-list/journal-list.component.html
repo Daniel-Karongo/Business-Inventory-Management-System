@@ -1,80 +1,219 @@
-<div class="table-wrapper">
+<app-workflow-shell>
 
-  <mat-table [dataSource]="journals" class="mat-elevation-z1 rounded bg-[var(--surface)]">
+  <!-- =================================================== -->
+  <!-- HEADER -->
+  <!-- =================================================== -->
 
-    <!-- Reference -->
-    <ng-container matColumnDef="reference">
-      <mat-header-cell *matHeaderCellDef class="mat-column-reference sortable">
-        Reference
-      </mat-header-cell>
-      <mat-cell *matCellDef="let j" class="mat-column-reference">
-        {{ j.reference }}
-      </mat-cell>
-    </ng-container>
+  <div workflow-header>
 
-    <!-- Description -->
-    <ng-container matColumnDef="description">
-      <mat-header-cell *matHeaderCellDef class="mat-column-description">
-        Description
-      </mat-header-cell>
+    <div class="page-header">
 
-      <mat-cell *matCellDef="let j" class="mat-column-description">
-        {{ j.description }}
-      </mat-cell>
-    </ng-container>
+      <div class="header-content">
 
-    <!-- Source -->
-    <ng-container matColumnDef="source">
-      <mat-header-cell *matHeaderCellDef class="mat-column-source">
-        Source
-      </mat-header-cell>
-      <mat-cell *matCellDef="let j" class="mat-column-source">
-        {{ j.sourceModule }}
-      </mat-cell>
-    </ng-container>
+        <div class="eyebrow">
+          Accounting
+        </div>
 
-    <!-- Posted -->
-    <ng-container matColumnDef="postedAt">
-      <mat-header-cell *matHeaderCellDef class="mat-column-postedAt sortable">
-        Posted At
-      </mat-header-cell>
-      <mat-cell *matCellDef="let j" class="mat-column-postedAt">
-        {{ j.postedAt | date:'medium' }}
-      </mat-cell>
-    </ng-container>
+        <h1 class="page-title">
+          Transaction Records
+        </h1>
 
-    <!-- Status -->
-    <ng-container matColumnDef="status">
-      <mat-header-cell *matHeaderCellDef class="mat-column-status">
-        Status
-      </mat-header-cell>
-      <mat-cell *matCellDef="let j" class="mat-column-status">
-        <span [class.text-red-400]="j.reversed">
-          {{ j.reversed ? 'Reversed' : 'Posted' }}
-        </span>
-      </mat-cell>
-    </ng-container>
+        <div class="page-description">
+          Review accounting transaction history,
+          posting activity, and reversal traceability.
+        </div>
 
-    <!-- Actions -->
-    <ng-container matColumnDef="actions">
-      <mat-header-cell *matHeaderCellDef class="mat-column-actions">
-        Actions
-      </mat-header-cell>
+      </div>
 
-      <mat-cell *matCellDef="let j" class="mat-column-actions">
-        <button mat-icon-button (click)="view(j)" matTooltip="View journal details" matTooltipPosition="above"
-          [attr.aria-label]="'View journal ' + j.reference">
+      <div class="header-actions">
 
-          <mat-icon>visibility</mat-icon>
+        <button mat-flat-button color="primary" (click)="create()">
+
+          <mat-icon>
+            add
+          </mat-icon>
+
+          New Journal Entry
+
         </button>
-      </mat-cell>
-    </ng-container>
 
-    <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-    <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
+      </div>
 
-  </mat-table>
+    </div>
 
-</div>
+  </div>
 
+  <!-- =================================================== -->
+  <!-- CONTENT -->
+  <!-- =================================================== -->
 
+  <div workflow-content>
+
+    <app-workflow-card [padded]="false">
+
+      <app-enterprise-table [loading]="loading()" [error]="error()" [hasData]="journals().length > 0"
+        emptyMessage="No transaction history found">
+
+        <div class="table-wrapper">
+
+          <table mat-table [dataSource]="journals()" class="journal-table">
+
+            <!-- REFERENCE -->
+
+            <ng-container matColumnDef="reference">
+
+              <th mat-header-cell *matHeaderCellDef>
+
+                Reference
+
+              </th>
+
+              <td mat-cell *matCellDef="let row">
+
+                <div class="reference-cell">
+
+                  {{ row.reference }}
+
+                </div>
+
+              </td>
+
+            </ng-container>
+
+            <!-- DESCRIPTION -->
+
+            <ng-container matColumnDef="description">
+
+              <th mat-header-cell *matHeaderCellDef>
+
+                Description
+
+              </th>
+
+              <td mat-cell *matCellDef="let row">
+
+                <div class="description-cell">
+
+                  {{
+                  row.description
+                  || 'No description'
+                  }}
+
+                </div>
+
+              </td>
+
+            </ng-container>
+
+            <!-- SOURCE -->
+
+            <ng-container matColumnDef="source">
+
+              <th mat-header-cell *matHeaderCellDef>
+
+                Source
+
+              </th>
+
+              <td mat-cell *matCellDef="let row">
+
+                {{ row.sourceModule }}
+
+              </td>
+
+            </ng-container>
+
+            <!-- POSTED -->
+
+            <ng-container matColumnDef="postedAt">
+
+              <th mat-header-cell *matHeaderCellDef>
+
+                Posted
+
+              </th>
+
+              <td mat-cell *matCellDef="let row">
+
+                {{
+                row.postedAt
+                | date:'medium'
+                }}
+
+              </td>
+
+            </ng-container>
+
+            <!-- STATUS -->
+
+            <ng-container matColumnDef="status">
+
+              <th mat-header-cell *matHeaderCellDef>
+
+                Status
+
+              </th>
+
+              <td mat-cell *matCellDef="let row">
+
+                <div class="status-chip posted">
+
+                  Posted
+
+                </div>
+
+              </td>
+
+            </ng-container>
+
+            <!-- ACTIONS -->
+
+            <ng-container matColumnDef="actions">
+
+              <th mat-header-cell *matHeaderCellDef>
+
+              </th>
+
+              <td mat-cell *matCellDef="let row">
+
+                <button mat-icon-button matTooltip="View transaction" (click)="view(row)">
+
+                  <mat-icon>
+                    visibility
+                  </mat-icon>
+
+                </button>
+
+              </td>
+
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="
+                displayedColumns
+              ">
+
+            </tr>
+
+            <tr mat-row *matRowDef="
+                let row;
+                columns: displayedColumns;
+              ">
+
+            </tr>
+
+          </table>
+
+        </div>
+
+      </app-enterprise-table>
+
+      <app-enterprise-paginator [page]="pageData().pageNumber" [size]="pageData().pageSize"
+        [totalPages]="pageData().totalPages" [totalElements]="pageData().totalElements" [loading]="loading()"
+        (pageChange)="changePage($event)" (sizeChange)="changeSize($event)">
+      </app-enterprise-paginator>
+
+    </app-workflow-card>
+
+  </div>
+
+</app-workflow-shell>

@@ -17,10 +17,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
+import static java.math.RoundingMode.HALF_UP;
 
 @Service
 @RequiredArgsConstructor
@@ -115,13 +118,43 @@ public class GoodsReceiptMatchingService {
 
             receiptInventoryTotal =
                     receiptInventoryTotal.add(
-                            receipt.getTotalCost()
+                            receipt.getNetAmount() != null
+                                    ? receipt.getNetAmount()
+                                    : BigDecimal.ZERO
                     );
 
             receipts.add(receipt);
         }
 
-        if (receiptInventoryTotal.compareTo(invoice.getSubtotal()) != 0) {
+        System.out.println(
+                "GRNI receiptInventoryTotal: "
+                        + receiptInventoryTotal
+        );
+
+        System.out.println(
+                "Invoice subtotal: "
+                        + invoice.getSubtotal()
+        );
+
+        System.out.println(
+                "Variance: "
+                        + receiptInventoryTotal
+                        .subtract(
+                                invoice.getSubtotal()
+                        )
+                        .abs()
+        );
+
+        BigDecimal variance =
+                receiptInventoryTotal
+                        .setScale(2, HALF_UP)
+                        .subtract(
+                                invoice.getSubtotal()
+                                        .setScale(2, HALF_UP)
+                        )
+                        .abs();
+
+        if (variance.compareTo(new BigDecimal("0.01")) > 0) {
             throw new IllegalStateException(
                     "Invoice subtotal does not match GRNI receipt total"
             );

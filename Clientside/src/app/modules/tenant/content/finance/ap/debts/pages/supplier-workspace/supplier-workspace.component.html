@@ -28,15 +28,19 @@
 
             </div>
 
-            <button mat-flat-button color="primary" (click)="openAllocationDialog()">
+            <div class="header-actions">
 
-                <mat-icon>
-                    payments
-                </mat-icon>
+                <button mat-stroked-button (click)="openAllocationDialog()">
+                    <mat-icon>account_balance_wallet</mat-icon>
+                    Allocate
+                </button>
 
-                Allocate Payment
+                <button mat-flat-button color="primary" (click)="openCreatePaymentDialog()">
+                    <mat-icon>payments</mat-icon>
+                    New Payment
+                </button>
 
-            </button>
+            </div>
 
         </div>
 
@@ -436,6 +440,22 @@
 
                                 </ng-container>
 
+                                <ng-container matColumnDef="status">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+                                        Status
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        <div class="status-badge" [ngClass]="paymentBadgeClass(row.status)">
+                                            {{ postingLabel(row) }}
+                                        </div>
+
+                                    </td>
+
+                                </ng-container>
+
                                 <ng-container matColumnDef="actions">
 
                                     <th mat-header-cell *matHeaderCellDef>
@@ -443,13 +463,42 @@
 
                                     <td mat-cell *matCellDef="let row">
 
-                                        <button mat-button color="primary" (click)="openPaymentDetails(row, $event)">
-                                            Details
-                                        </button>
+                                        <div class="table-actions">
 
-                                        <button mat-button (click)="togglePayment(row.paymentId)">
-                                            {{ expandedPaymentId === row.paymentId ? 'Hide' : 'Allocations' }}
-                                        </button>
+                                            <button mat-button color="primary"
+                                                (click)="openPaymentDetails(row, $event)">
+                                                Details
+                                            </button>
+
+                                            <button mat-button (click)="togglePayment(row.paymentId)">
+                                                {{
+                                                expandedPaymentId === row.paymentId
+                                                ? 'Hide'
+                                                : 'Allocations'
+                                                }}
+                                            </button>
+
+                                            <button mat-button color="primary" *ngIf="!row.posted && !row.reversed"
+                                                [disabled]="postingPayments.has(row.paymentId)"
+                                                (click)="postPayment(row)">
+                                                {{
+                                                postingPayments.has(row.paymentId)
+                                                ? 'Posting...'
+                                                : 'Post'
+                                                }}
+                                            </button>
+
+                                            <button mat-button color="warn" *ngIf="row.posted && !row.reversed"
+                                                [disabled]="reversingPayments.has(row.paymentId)"
+                                                (click)="reversePayment(row)">
+                                                {{
+                                                reversingPayments.has(row.paymentId)
+                                                ? 'Reversing...'
+                                                : 'Reverse'
+                                                }}
+                                            </button>
+
+                                        </div>
 
                                     </td>
 
@@ -477,14 +526,13 @@
                                     No allocations yet
                                 </div>
 
-                                <div *ngFor="let allocation of payment.allocations" class="settlement-row">
+                                <div *ngFor="let allocation of payment.allocations" class="settlement-row"
+                                    [class.reversed-row]="allocation.reversed">
 
                                     <div>
 
                                         <strong>
-                                            {{
-                                            allocation.billNumber
-                                            }}
+                                            {{ allocation.billNumber }}
                                         </strong>
 
                                         <div class="muted">
@@ -494,14 +542,29 @@
                                             }}
                                         </div>
 
+                                        <div *ngIf="allocation.reversed" class="reversal-meta">
+                                            Reversed:
+                                            {{ allocation.reversalReason }}
+                                        </div>
+
                                     </div>
 
-                                    <strong>
-                                        {{
-                                        allocation.allocatedAmount
-                                        | currency:'KES '
-                                        }}
-                                    </strong>
+                                    <div class="allocation-actions">
+
+                                        <strong>
+                                            {{
+                                            allocation.allocatedAmount
+                                            | currency:'KES '
+                                            }}
+                                        </strong>
+
+                                        <button mat-button color="warn" *ngIf="!allocation.reversed"
+                                            [disabled]="!allocation.allocationId || reversingAllocations.has(allocation.allocationId)"
+                                            (click)="reverseAllocation(allocation)">
+                                            Reverse
+                                        </button>
+
+                                    </div>
 
                                 </div>
 

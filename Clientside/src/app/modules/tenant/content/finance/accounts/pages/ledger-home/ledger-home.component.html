@@ -1,21 +1,52 @@
 <div class="page-container p-4">
 
   <div class="page-header mb-6">
-    <h2 class="text-xl font-semibold">Ledger</h2>
-    <div class="text-sm text-[var(--text-secondary)]">
-      Select an account to view transactions
+
+    <div>
+      <h2 class="text-xl font-semibold">
+        Account Activity
+      </h2>
+
+      <div class="text-sm text-[var(--text-secondary)]">
+        Select an account to view transaction history
+      </div>
     </div>
+
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div *ngFor="let a of accounts"
-         class="bg-[var(--surface)] p-4 rounded cursor-pointer hover:bg-[var(--surface-hover)]"
-         (click)="open(a.id)">
-      <div class="font-medium">{{ a.code }} — {{ a.name }}</div>
-      <div class="text-sm text-[var(--text-secondary)]">{{ a.type }}</div>
+  <app-enterprise-table [loading]="loading" [hasData]="accounts.length > 0" emptyMessage="No accounts found">
+
+    <div class="account-grid">
+
+      <div *ngFor="
+          let a of accounts;
+          trackBy: trackByAccount
+        " class="account-card" (click)="open(a.id)">
+
+        <div class="account-top">
+
+          <div class="account-code">
+            {{ a.code }}
+          </div>
+
+          <mat-icon>
+            account_balance_wallet
+          </mat-icon>
+
+        </div>
+
+        <div class="account-name">
+          {{ a.name }}
+        </div>
+
+        <div class="account-type">
+          {{ a.type }}
+        </div>
+
+      </div>
+
     </div>
-  </div>
+
+  </app-enterprise-table>
 
 </div>
-
-

@@ -1,85 +1,209 @@
-<div class="page-container p-4">
+<app-workflow-shell>
 
+  <!-- =================================================== -->
   <!-- HEADER -->
-  <div class="page-header mb-6">
-    <div>
-      <h2 class="text-xl font-semibold">
-        Ledger — {{ account?.code }} {{ account?.name }}
-      </h2>
-      <div class="text-sm text-[var(--text-secondary)]">
-        {{ account?.type }}
+  <!-- =================================================== -->
+
+  <div workflow-header>
+
+    <div class="page-header">
+
+      <div class="header-content">
+
+        <div class="ledger-label">
+          Account Activity
+        </div>
+
+        <h1 class="page-title">
+
+          {{ account?.code }}
+
+          —
+
+          {{ account?.name }}
+
+        </h1>
+
+        <div class="page-description">
+
+          {{ account?.type }}
+
+        </div>
+
       </div>
+
+      <div class="header-actions">
+
+        <button mat-stroked-button (click)="back()">
+
+          Back
+
+        </button>
+
+      </div>
+
     </div>
 
-    <button mat-stroked-button (click)="back()">
-      Back
-    </button>
   </div>
 
-  <!-- LOADING -->
-  <div *ngIf="loading" class="py-8 text-center text-gray-400">
-    Loading ledger…
+  <!-- =================================================== -->
+  <!-- CONTENT -->
+  <!-- =================================================== -->
+
+  <div workflow-content>
+
+    <app-workflow-card [padded]="false">
+
+      <app-enterprise-table [loading]="loading()" [error]="error()" [hasData]="rows().length > 0"
+        emptyMessage="No transaction history found">
+
+        <div class="table-wrapper">
+
+          <table mat-table [dataSource]="rows()" class="ledger-table">
+
+            <!-- DATE -->
+
+            <ng-container matColumnDef="date">
+
+              <th mat-header-cell *matHeaderCellDef>
+
+                Date
+
+              </th>
+
+              <td mat-cell *matCellDef="let row">
+
+                {{ row.postedAt | date:'medium' }}
+
+              </td>
+
+            </ng-container>
+
+            <!-- REFERENCE -->
+
+            <ng-container matColumnDef="reference">
+
+              <th mat-header-cell *matHeaderCellDef>
+
+                Transaction
+
+              </th>
+
+              <td mat-cell *matCellDef="let row">
+
+                <div class="reference-cell">
+
+                  {{ row.journalReference }}
+
+                </div>
+
+              </td>
+
+            </ng-container>
+
+            <!-- DIRECTION -->
+
+            <ng-container matColumnDef="direction">
+
+              <th mat-header-cell *matHeaderCellDef>
+
+                Movement
+
+              </th>
+
+              <td mat-cell *matCellDef="let row">
+
+                <div class="direction-chip" [class.in]="row.direction === 'DEBIT'"
+                  [class.out]="row.direction === 'CREDIT'">
+
+                  {{
+                  row.direction === 'DEBIT'
+                  ? 'Money In'
+                  : 'Money Out'
+                  }}
+
+                </div>
+
+              </td>
+
+            </ng-container>
+
+            <!-- AMOUNT -->
+
+            <ng-container matColumnDef="amount">
+
+              <th mat-header-cell *matHeaderCellDef>
+
+                Amount
+
+              </th>
+
+              <td mat-cell *matCellDef="let row">
+
+                <div class="amount-cell">
+
+                  {{
+                  row.amount
+                  | number:'1.2-2'
+                  }}
+
+                </div>
+
+              </td>
+
+            </ng-container>
+
+            <!-- BALANCE -->
+
+            <ng-container matColumnDef="balance">
+
+              <th mat-header-cell *matHeaderCellDef>
+
+                Running Balance
+
+              </th>
+
+              <td mat-cell *matCellDef="let row">
+
+                <div class="balance-cell">
+
+                  {{
+                  row.runningBalance
+                  | number:'1.2-2'
+                  }}
+
+                </div>
+
+              </td>
+
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="
+                displayedColumns
+              ">
+
+            </tr>
+
+            <tr mat-row *matRowDef="
+                let row;
+                columns: displayedColumns;
+              ">
+
+            </tr>
+
+          </table>
+
+        </div>
+
+      </app-enterprise-table>
+
+      <app-enterprise-paginator [page]="pageData().pageNumber" [size]="pageData().pageSize"
+        [totalPages]="pageData().totalPages" [totalElements]="pageData().totalElements" [loading]="loading()"
+        (pageChange)="changePage($event)" (sizeChange)="changeSize($event)">
+      </app-enterprise-paginator>
+
+    </app-workflow-card>
+
   </div>
 
-  <!-- TABLE -->
-  <div class="table-wrapper" *ngIf="!loading">
-
-    <mat-table
-      [dataSource]="rows"
-      class="mat-elevation-z1 rounded bg-[var(--surface)]">
-
-      <!-- DATE -->
-      <ng-container matColumnDef="date">
-        <mat-header-cell *matHeaderCellDef>Date</mat-header-cell>
-        <mat-cell *matCellDef="let r">
-          {{ r.postedAt | date:'medium' }}
-        </mat-cell>
-      </ng-container>
-
-      <!-- REFERENCE -->
-      <ng-container matColumnDef="reference">
-        <mat-header-cell *matHeaderCellDef>Reference</mat-header-cell>
-        <mat-cell *matCellDef="let r">
-          {{ r.journalReference || '—' }}
-        </mat-cell>
-      </ng-container>
-
-      <!-- DIRECTION -->
-      <ng-container matColumnDef="direction">
-        <mat-header-cell *matHeaderCellDef>Type</mat-header-cell>
-        <mat-cell *matCellDef="let r">
-          <span
-            [ngClass]="{
-              'text-green-500': r.direction === 'DEBIT',
-              'text-red-500': r.direction === 'CREDIT'
-            }">
-            {{ r.direction === 'DEBIT' ? 'In' : 'Out' }}
-          </span>
-        </mat-cell>
-      </ng-container>
-
-      <!-- AMOUNT -->
-      <ng-container matColumnDef="amount">
-        <mat-header-cell *matHeaderCellDef>Amount</mat-header-cell>
-        <mat-cell *matCellDef="let r">
-          {{ r.amount | number:'1.2-2' }}
-        </mat-cell>
-      </ng-container>
-
-      <!-- BALANCE -->
-      <ng-container matColumnDef="balance">
-        <mat-header-cell *matHeaderCellDef>Balance</mat-header-cell>
-        <mat-cell *matCellDef="let r">
-          {{ r.runningBalance | number:'1.2-2' }}
-        </mat-cell>
-      </ng-container>
-
-      <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-      <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
-
-    </mat-table>
-  </div>
-
-</div>
-
-
+</app-workflow-shell>

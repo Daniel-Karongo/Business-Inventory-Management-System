@@ -1,60 +1,257 @@
-<div class="page-container p-4" *ngIf="!loading && journal">
+<app-workflow-shell>
 
+  <!-- =================================================== -->
   <!-- HEADER -->
-  <div class="page-header mb-6">
-    <div>
-      <h2 class="text-xl font-semibold">Journal Details</h2>
-      <div class="text-sm text-[var(--text-secondary)]">
-        {{ journal.reference }} · {{ journal.postedAt | date:'medium' }}
+  <!-- =================================================== -->
+
+  <div workflow-header>
+
+    <div class="page-header">
+
+      <div class="header-content">
+
+        <div class="eyebrow">
+          Accounting Transaction
+        </div>
+
+        <h1 class="page-title">
+
+          {{ journal?.reference }}
+
+        </h1>
+
+        <div class="page-description">
+
+          {{
+          journal?.description
+          || 'No transaction description'
+          }}
+
+        </div>
+
       </div>
+
+      <div class="header-actions">
+
+        <button mat-stroked-button (click)="back()">
+
+          Back
+
+        </button>
+
+        <button mat-flat-button color="warn" [disabled]="reversing" (click)="reverse()">
+
+          Reverse Transaction
+
+        </button>
+
+      </div>
+
     </div>
 
-    <div class="actions">
-      <button mat-stroked-button (click)="back()">Back</button>
-
-      <!-- REVERSAL -->
-      <button
-        mat-stroked-button
-        color="warn"
-        *ngIf="!journal.reversed"
-        (click)="reverse()">
-        Reverse Journal
-      </button>
-    </div>
   </div>
 
-  <!-- REVERSED BANNER -->
-  <div
-    *ngIf="journal.reversed"
-    class="reversed-banner">
-    This journal has been reversed
+  <!-- =================================================== -->
+  <!-- CONTENT -->
+  <!-- =================================================== -->
+
+  <div workflow-content>
+
+    <!-- =============================================== -->
+    <!-- SUMMARY -->
+    <!-- =============================================== -->
+
+    <app-workflow-card>
+
+      <div class="summary-grid">
+
+        <div class="summary-item">
+
+          <div class="summary-label">
+            Posted At
+          </div>
+
+          <div class="summary-value">
+
+            {{
+            journal?.postedAt
+            | date:'medium'
+            }}
+
+          </div>
+
+        </div>
+
+        <div class="summary-item">
+
+          <div class="summary-label">
+            Source Module
+          </div>
+
+          <div class="summary-value">
+
+            {{ journal?.sourceModule }}
+
+          </div>
+
+        </div>
+
+        <div class="summary-item">
+
+          <div class="summary-label">
+            Posted By
+          </div>
+
+          <div class="summary-value">
+
+            {{ journal?.postedBy }}
+
+          </div>
+
+        </div>
+
+        <div class="summary-item">
+
+          <div class="summary-label">
+            Transaction Total
+          </div>
+
+          <div class="summary-value amount">
+
+            {{
+            total()
+            | number:'1.2-2'
+            }}
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </app-workflow-card>
+
+    <!-- =============================================== -->
+    <!-- ENTRIES -->
+    <!-- =============================================== -->
+
+    <app-workflow-card [padded]="false">
+
+      <div class="section-header">
+
+        <div class="section-title">
+          Transaction Entries
+        </div>
+
+      </div>
+
+      <div class="table-wrapper">
+
+        <table mat-table [dataSource]="journal?.entries || []" class="entries-table">
+
+          <!-- ACCOUNT -->
+
+          <ng-container matColumnDef="account">
+
+            <th mat-header-cell *matHeaderCellDef>
+
+              Account
+
+            </th>
+
+            <td mat-cell *matCellDef="let row">
+
+              <div class="account-cell">
+
+                <div class="account-code">
+
+                  {{ row.accountCode }}
+
+                </div>
+
+                <div class="account-name">
+
+                  {{ row.accountName }}
+
+                </div>
+
+              </div>
+
+            </td>
+
+          </ng-container>
+
+          <!-- DIRECTION -->
+
+          <ng-container matColumnDef="direction">
+
+            <th mat-header-cell *matHeaderCellDef>
+
+              Movement
+
+            </th>
+
+            <td mat-cell *matCellDef="let row">
+
+              <div class="direction-chip" [class.in]="row.direction === 'DEBIT'"
+                [class.out]="row.direction === 'CREDIT'">
+
+                {{
+                row.direction === 'DEBIT'
+                ? 'Money In'
+                : 'Money Out'
+                }}
+
+              </div>
+
+            </td>
+
+          </ng-container>
+
+          <!-- AMOUNT -->
+
+          <ng-container matColumnDef="amount">
+
+            <th mat-header-cell *matHeaderCellDef>
+
+              Amount
+
+            </th>
+
+            <td mat-cell *matCellDef="let row">
+
+              <div class="amount-cell">
+
+                {{
+                row.amount
+                | number:'1.2-2'
+                }}
+
+              </div>
+
+            </td>
+
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="
+              displayedColumns
+            ">
+
+          </tr>
+
+          <tr mat-row *matRowDef="
+              let row;
+              columns: displayedColumns;
+            ">
+
+          </tr>
+
+        </table>
+
+      </div>
+
+    </app-workflow-card>
+
   </div>
 
-  <!-- DETAILS -->
-  <div class="bg-[var(--surface)] rounded p-4">
-
-    <div class="mb-2"><strong>Description:</strong> {{ journal.description }}</div>
-    <div class="mb-2"><strong>Source:</strong> {{ journal.sourceModule }}</div>
-    <div class="mb-2"><strong>Posted By:</strong> {{ journal.postedBy }}</div>
-
-    <table class="w-full mt-4">
-      <thead>
-        <tr>
-          <th>Account</th>
-          <th>Direction</th>
-          <th>Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let e of journal.entries">
-          <td>{{ e.accountCode }} — {{ e.accountName }}</td>
-          <td>{{ e.direction }}</td>
-          <td>{{ e.amount | number:'1.2-2' }}</td>
-        </tr>
-      </tbody>
-    </table>
-
-  </div>
-</div>
-
-
+</app-workflow-shell>

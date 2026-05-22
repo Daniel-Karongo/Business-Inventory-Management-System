@@ -16,6 +16,7 @@ export interface ReasonDialogData {
 
   reasons?: string[];
   allowCustomReason?: boolean;
+  requireReason?: boolean;
 }
 
 @Component({
@@ -56,12 +57,28 @@ export class ReasonDialogComponent {
     let reason: string | null = null;
 
     if (this.selectedReason === 'OTHER') {
-      reason = this.customReason.trim() || null;
+
+      reason =
+        this.customReason.trim() || null;
+
     } else {
-      reason = this.selectedReason ?? null;
+
+      reason =
+        this.selectedReason ?? null;
     }
 
-    this.ref.close({ confirmed: true, reason });
+    if (
+      this.data.requireReason
+      &&
+      !reason?.trim()
+    ) {
+      return;
+    }
+
+    this.ref.close({
+      confirmed: true,
+      reason
+    });
   }
 
   cancel() {

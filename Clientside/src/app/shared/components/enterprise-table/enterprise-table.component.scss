@@ -1,0 +1,139 @@
+:host {
+    display: block;
+    width: 100%;
+    min-width: 0;
+}
+
+.enterprise-table-shell {
+    width: 100%;
+    min-width: 0;
+}
+
+/* =========================================================
+   LOADING
+========================================================= */
+
+.enterprise-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 280px;
+
+    padding: 2rem;
+}
+
+.loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.loading-text {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+
+/* =========================================================
+   EMPTY
+========================================================= */
+
+.enterprise-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 260px;
+
+    padding: 2rem;
+
+    border:
+        1px dashed var(--border);
+
+    border-radius:
+        var(--surface-radius);
+
+    background:
+        var(--surface-bg);
+}
+
+.empty-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.65rem;
+
+    text-align: center;
+}
+
+.empty-title {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.empty-message {
+    max-width: 480px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* =========================================================
+   ERROR
+========================================================= */
+
+.enterprise-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 260px;
+
+    padding: 2rem;
+
+    border:
+        1px solid rgba(239, 68, 68, 0.22);
+
+    border-radius:
+        var(--surface-radius);
+
+    background:
+        rgba(239, 68, 68, 0.04);
+
+    text-align: center;
+}
+
+.error-title {
+    font-size: 1rem;
+    font-weight: 700;
+
+    color:
+        rgb(239, 68, 68);
+
+    margin-bottom: 0.5rem;
+}
+
+.error-message {
+    max-width: 520px;
+
+    color:
+        var(--text-secondary);
+
+    line-height: 1.5;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+    .enterprise-loading,
+    .enterprise-empty,
+    .enterprise-error {
+        min-height: 220px;
+        padding: 1.25rem;
+    }
+
+}

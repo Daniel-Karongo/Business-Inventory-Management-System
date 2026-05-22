@@ -38,11 +38,21 @@ export class VatCenterComponent implements OnInit {
     private taxService: TaxService,
     private accountsService: AccountsService,
     private snackbar: MatSnackBar
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.load();
-    this.accountsService.list().subscribe(a => this.accounts = a);
+    this.accountsService
+      .list({
+        page: 0,
+        size: 500,
+        sort: 'code'
+      })
+      .subscribe({
+        next: res => {
+          this.accounts = res.content ?? [];
+        }
+      });
   }
 
   load() {

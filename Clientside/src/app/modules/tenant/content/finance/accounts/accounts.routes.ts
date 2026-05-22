@@ -17,6 +17,12 @@ export const ACCOUNTS_ROUTES: Routes = [
     canMatch: [roleAtLeast('MANAGER')],
     children: [
 
+      {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: 'accounting'
+      },
+
       { path: '', component: AccountsDashboardComponent },
 
       { path: 'chart', component: AccountListComponent },

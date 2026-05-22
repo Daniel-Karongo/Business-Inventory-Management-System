@@ -7,16 +7,16 @@ export const FINANCE_ROUTES: Routes = [
     canMatch: [roleAtLeast('MANAGER')],
     children: [
       {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: 'accounting'
+      },
+
+      {
         path: 'accounting',
         loadChildren: () =>
           import('./accounts/accounts.routes')
             .then(m => m.ACCOUNTS_ROUTES)
-      },
-      {
-        path: 'budgeting',
-        loadChildren: () =>
-          import('./budgeting/budgeting.routes')
-            .then(m => m.BUDGETING_ROUTES)
       },
       {
         path: 'tax',

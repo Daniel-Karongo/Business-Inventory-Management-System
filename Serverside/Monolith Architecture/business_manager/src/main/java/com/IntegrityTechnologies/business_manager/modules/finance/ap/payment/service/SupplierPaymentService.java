@@ -2,7 +2,9 @@ package com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.se
 
 import com.IntegrityTechnologies.business_manager.exception.ExpectedConcurrencyException;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.Account;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountBalance;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.allocation.repository.SupplierPaymentAllocationRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.debt.dto.PaymentSettlementDto;
@@ -54,6 +56,7 @@ public class SupplierPaymentService {
 
     private final AccountRepository accountRepository;
     private final SupplierPaymentAllocationRepository allocationRepository;
+    private final AccountBalanceRepository accountBalanceRepository;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -344,6 +347,7 @@ public class SupplierPaymentService {
     public List<FundingAccountResponse> getFundingAccounts(
             UUID branchId
     ) {
+
         branchTenantGuard.validate(
                 branchId
         );
@@ -359,15 +363,28 @@ public class SupplierPaymentService {
                                 a.getRole()
                         )
                 )
-                .map(a ->
-                        FundingAccountResponse
-                                .builder()
-                                .id(a.getId())
-                                .code(a.getCode())
-                                .name(a.getName())
-                                .role(a.getRole())
-                                .build()
-                )
+                .map(a -> {
+
+                    BigDecimal balance =
+                            accountBalanceRepository
+                                    .findByTenantIdAndAccount_IdAndBranch_Id(
+                                            tenantId(),
+                                            a.getId(),
+                                            branchId
+                                    )
+                                    .map(AccountBalance::getBalance)
+                                    .orElse(BigDecimal.ZERO);
+
+                    return FundingAccountResponse
+                            .builder()
+                            .id(a.getId())
+                            .code(a.getCode())
+                            .name(a.getName())
+                            .role(a.getRole())
+                            .active(a.isActive())
+                            .balance(balance)
+                            .build();
+                })
                 .toList();
     }
 

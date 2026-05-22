@@ -1,0 +1,75 @@
+<div class="enterprise-table-shell">
+
+    <!-- =================================================== -->
+    <!-- LOADING -->
+    <!-- =================================================== -->
+
+    <div *ngIf="loading" class="enterprise-loading">
+
+        <div class="loading-content">
+
+            <mat-spinner diameter="34">
+
+            </mat-spinner>
+
+            <div class="loading-text">
+                Loading data...
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- =================================================== -->
+    <!-- CONTENT -->
+    <!-- =================================================== -->
+
+    <ng-container *ngIf="!loading">
+
+        <!-- =============================================== -->
+        <!-- ERROR -->
+        <!-- =============================================== -->
+
+        <div *ngIf="error" class="enterprise-error">
+
+            <div class="error-title">
+                Failed to load data
+            </div>
+
+            <div class="error-message">
+                {{ error }}
+            </div>
+
+        </div>
+
+        <!-- =============================================== -->
+        <!-- EMPTY -->
+        <!-- =============================================== -->
+
+        <div *ngIf="!error && !hasData" class="enterprise-empty">
+
+            <div class="empty-content">
+
+                <div class="empty-title">
+                    No Results
+                </div>
+
+                <div class="empty-message">
+                    {{ emptyMessage }}
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- =============================================== -->
+        <!-- TABLE -->
+        <!-- =============================================== -->
+
+        <ng-content *ngIf="!error && hasData">
+
+        </ng-content>
+
+    </ng-container>
+
+</div>

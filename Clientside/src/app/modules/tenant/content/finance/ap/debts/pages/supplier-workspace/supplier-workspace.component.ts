@@ -66,6 +66,10 @@ import {
 import { BranchContextService } from '../../../../../../../../core/services/branch-context.service';
 import { InvoiceDetailsDialogComponent } from '../../components/invoice-details-dialog/invoice-details-dialog.component';
 import { PaymentDetailsDialogComponent } from '../../components/payment-details-dialog/payment-details-dialog.component';
+import { CreatePaymentDialogComponent } from '../../components/create-payment-dialog/create-payment-dialog.component';
+import { ApPaymentService } from '../../services/ap-payment.service';
+import { ApAllocationService } from '../../services/ap-allocation.service';
+import { ReasonDialogComponent } from '../../../../../../../../shared/components/reason-dialog/reason-dialog.component';
 
 @Component({
     selector: 'app-supplier-workspace',
@@ -110,8 +114,16 @@ export class SupplierWorkspaceComponent
     private branchContext =
         inject(BranchContextService);
 
-    loading = false;
+    private paymentService =
+        inject(ApPaymentService);
 
+    private allocationService =
+        inject(ApAllocationService);
+
+    loading = false;
+    postingPayments = new Set<string>();
+    reversingPayments = new Set<string>();
+    reversingAllocations = new Set<string>();
     workspace?: SupplierWorkspace;
 
     billColumns = [
@@ -127,6 +139,7 @@ export class SupplierWorkspaceComponent
         'date',
         'amount',
         'unapplied',
+        'status',
         'actions'
     ];
 
@@ -205,6 +218,38 @@ export class SupplierWorkspaceComponent
         );
     }
 
+    paymentBadgeClass(status?: string): string {
+
+        switch (status) {
+
+            case 'DRAFT':
+                return 'badge-warn';
+
+            case 'PARTIALLY_ALLOCATED':
+                return 'badge-info';
+
+            case 'FULLY_ALLOCATED':
+                return 'badge-success';
+
+            case 'REVERSED':
+                return 'badge-danger';
+
+            default:
+                return 'badge-neutral';
+        }
+    }
+
+    postingLabel(payment: any): string {
+
+        if (payment.reversed)
+            return 'Reversed';
+
+        if (payment.postingStatus === 'POSTED')
+            return 'Posted';
+
+        return 'Draft';
+    }
+
     openPaymentDetails(
         payment: any,
         event?: Event
@@ -220,6 +265,220 @@ export class SupplierWorkspaceComponent
                 data: payment
             }
         );
+    }
+
+    postPayment(payment: any): void {
+
+        if (
+            payment.posted
+            ||
+            payment.reversed
+            ||
+            this.postingPayments.has(payment.paymentId)
+        ) return;
+
+        this.postingPayments.add(payment.paymentId);
+
+        this.paymentService
+            .post(payment.paymentId)
+            .pipe(
+                finalize(() =>
+                    this.postingPayments.delete(payment.paymentId)
+                )
+            )
+            .subscribe({
+
+                next: () => {
+
+                    this.snackBar.open(
+                        'Payment posted',
+                        'Close',
+                        { duration: 2500 }
+                    );
+
+                    this.load();
+                },
+
+                error: err => {
+
+                    this.snackBar.open(
+                        err?.message
+                        ||
+                        'Posting failed',
+                        'Close',
+                        { duration: 5000 }
+                    );
+
+                    this.load();
+                }
+            });
+    }
+
+    reversePayment(payment: any): void {
+
+        if (
+            payment.reversed
+            ||
+            this.reversingPayments.has(payment.paymentId)
+        ) return;
+
+        this.dialog.open(
+            ReasonDialogComponent,
+            {
+                width: '520px',
+                maxWidth: '95vw',
+                data: {
+                    title: 'Reverse Payment',
+                    message: `Reverse payment ${payment.paymentNumber}?`,
+                    confirmText: 'Reverse',
+                    reasons: [
+                        'Duplicate payment',
+                        'Wrong supplier',
+                        'Wrong amount',
+                        'Fraud suspected',
+                        'Bank rejection'
+                    ],
+                    allowCustomReason: true,
+                    requireReason: true
+                }
+            }
+        )
+            .afterClosed()
+            .subscribe(result => {
+
+                if (!result?.confirmed) return;
+
+                const reason =
+                    result.reason;
+
+                this.reversingPayments.add(
+                    payment.paymentId
+                );
+
+                this.paymentService
+                    .reverse(
+                        payment.paymentId,
+                        { reason }
+                    )
+                    .pipe(
+                        finalize(() =>
+                            this.reversingPayments.delete(
+                                payment.paymentId
+                            )
+                        )
+                    )
+                    .subscribe({
+
+                        next: () => {
+
+                            this.snackBar.open(
+                                'Payment reversed',
+                                'Close',
+                                { duration: 3000 }
+                            );
+
+                            this.load();
+                        },
+
+                        error: err => {
+
+                            this.snackBar.open(
+                                err?.message
+                                ||
+                                'Reversal failed',
+                                'Close',
+                                { duration: 5000 }
+                            );
+
+                            this.load();
+                        }
+                    });
+            });
+    }
+
+    reverseAllocation(allocation: any): void {
+
+        if (
+            allocation.reversed
+            ||
+            !allocation.allocationId
+            ||
+            this.reversingAllocations.has(
+                allocation.allocationId
+            )
+        ) return;
+
+        this.dialog.open(
+            ReasonDialogComponent,
+            {
+                width: '520px',
+                maxWidth: '95vw',
+                data: {
+                    title: 'Reverse Allocation',
+                    message: `Reverse allocation for ${allocation.billNumber}?`,
+                    confirmText: 'Reverse',
+                    reasons: [
+                        'Incorrect allocation',
+                        'Duplicate allocation',
+                        'Invoice dispute',
+                        'Supplier reconciliation'
+                    ],
+                    allowCustomReason: true,
+                    requireReason: true
+                }
+            }
+        )
+            .afterClosed()
+            .subscribe(result => {
+
+                if (!result?.confirmed) return;
+
+                const reason =
+                    result.reason;
+
+                this.reversingAllocations.add(
+                    allocation.allocationId
+                );
+
+                this.allocationService
+                    .reverse(
+                        allocation.allocationId,
+                        reason
+                    )
+                    .pipe(
+                        finalize(() =>
+                            this.reversingAllocations.delete(
+                                allocation.allocationId
+                            )
+                        )
+                    )
+                    .subscribe({
+
+                        next: () => {
+
+                            this.snackBar.open(
+                                'Allocation reversed',
+                                'Close',
+                                { duration: 3000 }
+                            );
+
+                            this.load();
+                        },
+
+                        error: err => {
+
+                            this.snackBar.open(
+                                err?.message
+                                ||
+                                'Allocation reversal failed',
+                                'Close',
+                                { duration: 5000 }
+                            );
+
+                            this.load();
+                        }
+                    });
+            });
     }
 
     toggleInvoice(
@@ -270,6 +529,36 @@ export class SupplierWorkspaceComponent
             default:
                 return 'risk-clear';
         }
+    }
+
+    openCreatePaymentDialog(): void {
+
+        if (!this.workspace) return;
+
+        this.dialog.open(
+            CreatePaymentDialogComponent,
+            {
+                width: '720px',
+                maxWidth: '95vw',
+                data: {
+                    branchId: this.branchContext.currentBranch,
+                    supplierId: this.workspace.supplierId
+                }
+            }
+        )
+            .afterClosed()
+            .subscribe(refresh => {
+
+                if (!refresh) return;
+
+                this.load();
+
+                this.snackBar.open(
+                    'Workspace refreshed',
+                    'Close',
+                    { duration: 2500 }
+                );
+            });
     }
 
     openAllocationDialog(): void {

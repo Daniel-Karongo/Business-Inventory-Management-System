@@ -7,6 +7,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.rep
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.service.PurchaseInvoicePostingService;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.service.PurchaseInvoiceService;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.shared.mapper.PurchaseInvoiceMapper;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.dto.VatBreakdown;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.VatCalculationService;
 import com.IntegrityTechnologies.business_manager.modules.procurement.matching.dto.MatchInvoiceToReceiptsRequest;
 import com.IntegrityTechnologies.business_manager.modules.procurement.matching.dto.ReceiveAndInvoiceRequest;
 import com.IntegrityTechnologies.business_manager.modules.procurement.receipt.repository.GoodsReceiptRepository;
@@ -19,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.*;
@@ -35,6 +39,8 @@ public class ReceiveAndInvoiceService {
     private final PurchaseInvoiceRepository invoiceRepository;
     private final PurchaseInvoiceMapper invoiceMapper;
     private final GoodsReceiptRepository goodsReceiptRepository;
+    private final VatCalculationService vatCalculationService;
+    private final TaxProperties taxProperties;
 
     @Transactional
     @SuppressWarnings("unchecked")
@@ -230,16 +236,70 @@ public class ReceiveAndInvoiceService {
                         stock.getProductVariantId()
                 );
 
+                boolean vatInclusive =
+                        stock.getVatInclusive() != null
+                                ? stock.getVatInclusive()
+                                : taxProperties.isPricesVatInclusive();
+
+                BigDecimal vatRate =
+                        stock.getVatRate() != null
+                                ? stock.getVatRate()
+                                : taxProperties.getVatRate();
+
+                BigDecimal netUnitCost =
+                        supplier.getUnitCost();
+
+                if (vatInclusive) {
+
+                    netUnitCost =
+                            supplier.getUnitCost()
+                                    .divide(
+                                            BigDecimal.ONE.add(vatRate),
+                                            6,
+                                            RoundingMode.HALF_UP
+                                    );
+                }
+
+                BigDecimal grossAmount =
+                        supplier.getUnitCost()
+                                .multiply(
+                                        BigDecimal.valueOf(
+                                                supplier.getUnitsSupplied()
+                                        )
+                                );
+
+                VatBreakdown persistedBreakdown =
+                        vatCalculationService.calculate(
+                                grossAmount,
+                                vatInclusive,
+                                vatRate
+                        );
+
                 line.setQuantity(
                         supplier.getUnitsSupplied()
                 );
 
                 line.setUnitCost(
-                        supplier.getUnitCost()
+                        persistedBreakdown.net()
+                                .divide(
+                                        BigDecimal.valueOf(
+                                                supplier.getUnitsSupplied()
+                                        ),
+                                        6,
+                                        RoundingMode.HALF_UP
+                                )
                 );
 
                 line.setVatAmount(
-                        BigDecimal.ZERO
+                        persistedBreakdown.vat()
+                );
+
+                line.setLineSubtotal(
+                        persistedBreakdown.net()
+                );
+
+                line.setLineTotal(
+                        persistedBreakdown.gross()
                 );
 
                 line.setDiscountAmount(

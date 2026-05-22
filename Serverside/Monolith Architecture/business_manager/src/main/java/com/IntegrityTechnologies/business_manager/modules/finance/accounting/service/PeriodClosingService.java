@@ -52,7 +52,6 @@ public class PeriodClosingService {
                     "Close checklist failed: " +
                             "reconciliation=" + checklist.reconciliationValid() +
                             ", integrity=" + checklist.integrityValid() +
-                            ", budgets=" + checklist.budgetsApproved() +
                             ", tax=" + checklist.taxAccrued()
             );
         }

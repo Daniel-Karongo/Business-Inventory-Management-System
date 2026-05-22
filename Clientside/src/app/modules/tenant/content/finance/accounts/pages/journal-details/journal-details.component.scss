@@ -1,40 +1,160 @@
-.page-container {
-  max-width: 1000px;
-  margin: auto;
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
 }
 
 .page-header {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
-
-  .actions {
-    display: flex;
-    gap: 8px;
-  }
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
-.reversed-banner {
-  background: rgba(220, 38, 38, 0.12);
-  border-left: 4px solid #dc2626;
-  padding: 10px 14px;
-  margin-bottom: 14px;
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--active);
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.page-description {
+  max-width: 760px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.summary-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+.summary-value {
+  font-size: 1rem;
   font-weight: 600;
-  color: #dc2626;
+
+  &.amount {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
-table {
-  border-spacing: 0;
+.section-header {
+  padding:
+    1rem 1.25rem 0;
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.table-wrapper {
   width: 100%;
+  overflow-x: auto;
+}
 
-  th {
-    text-align: left;
-    font-weight: 600;
-    padding-bottom: 8px;
-    color: var(--text-secondary);
+.entries-table {
+  width: 100%;
+  min-width: 760px;
+}
+
+.account-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.account-code {
+  font-weight: 700;
+}
+
+.account-name {
+  color: var(--text-secondary);
+}
+
+.amount-cell {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.direction-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 28px;
+
+  padding:
+    0.2rem 0.75rem;
+
+  border-radius: 999px;
+
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  &.in {
+    background:
+      rgba(34, 197, 94, 0.12);
+
+    color:
+      rgb(34, 197, 94);
   }
 
-  td {
-    padding: 8px 0;
+  &.out {
+    background:
+      rgba(239, 68, 68, 0.12);
+
+    color:
+      rgb(239, 68, 68);
   }
+}
+
+@media (max-width: 768px) {
+
+  .page-header {
+    align-items: stretch;
+  }
+
+  .header-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .header-actions button {
+    width: 100%;
+  }
+
 }

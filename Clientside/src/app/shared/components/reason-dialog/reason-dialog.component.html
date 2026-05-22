@@ -21,22 +21,31 @@
     </mat-select>
   </mat-form-field>
 
-  <mat-form-field appearance="fill"
-                  class="w-full"
-                  *ngIf="selectedReason === 'OTHER'">
+  <mat-form-field appearance="fill" class="w-full" *ngIf="selectedReason === 'OTHER'">
 
     <mat-label>Custom reason</mat-label>
 
-    <textarea
-      matInput
-      cdkTextareaAutosize
-      cdkAutosizeMinRows="1"
-      cdkAutosizeMaxRows="6"
-      [(ngModel)]="customReason"
+    <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="1" cdkAutosizeMaxRows="6" [(ngModel)]="customReason"
       placeholder="Enter custom reason">
     </textarea>
 
   </mat-form-field>
+
+  <div class="text-red-500 text-xs mb-2" *ngIf="
+    data.requireReason
+    &&
+    (
+      !selectedReason
+      ||
+      (
+        selectedReason === 'OTHER'
+        &&
+        !customReason.trim()
+      )
+    )
+  ">
+    Reason is required
+  </div>
 
   <div class="flex justify-end gap-2 mt-4">
 
@@ -44,11 +53,17 @@
       {{ data.cancelText || 'Cancel' }}
     </button>
 
-    <button mat-flat-button color="warn" (click)="confirm()">
+    <button mat-flat-button color="warn" (click)="confirm()" [disabled]="
+    data.requireReason && (
+      !selectedReason || (
+        selectedReason === 'OTHER'
+        &&
+        !customReason.trim()
+      )
+    )
+  ">
       {{ data.confirmText || 'Confirm' }}
     </button>
 
   </div>
 </div>
-
-

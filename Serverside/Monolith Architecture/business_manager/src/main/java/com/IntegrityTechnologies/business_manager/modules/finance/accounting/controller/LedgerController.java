@@ -36,7 +36,7 @@ public class LedgerController {
                         pageable
                 )
                 .map(p -> new LedgerRowResponse(
-                        p.getJournalId(),
+                        UUID.fromString(p.getJournalId()),
                         p.getReference(),
                         p.getPostedAt(),
                         p.getDirection(),

@@ -1,50 +1,134 @@
-<div class="page-container p-4">
+<app-workflow-shell>
 
-  <div class="page-header">
-    <div>
-      <h2>Create Account</h2>
-      <div class="breadcrumb">Accounts / Chart / Create</div>
+  <div workflow-header>
+
+    <div class="page-header">
+
+      <div class="header-content">
+
+        <div class="eyebrow">
+          Accounting Setup
+        </div>
+
+        <h1 class="page-title">
+          Create Business Account
+        </h1>
+
+        <div class="page-description">
+          Configure a new account for
+          transaction posting, reporting,
+          reconciliation, and workflows.
+        </div>
+
+      </div>
+
     </div>
 
-    <div class="actions">
-      <button mat-stroked-button (click)="cancel()">Cancel</button>
-      <button
-        mat-flat-button
-        color="primary"
-        (click)="submit()"
-        [disabled]="form.invalid">
-        Create
-      </button>
-    </div>
   </div>
 
-  <mat-card>
-    <h3>Account Details</h3>
+  <div workflow-content>
 
-    <form [formGroup]="form" class="form-grid">
+    <app-workflow-card>
 
-      <mat-form-field appearance="fill">
-        <mat-label>Account Code</mat-label>
-        <input matInput formControlName="code" />
-      </mat-form-field>
+      <form [formGroup]="form" class="account-form">
 
-      <mat-form-field appearance="fill">
-        <mat-label>Account Name</mat-label>
-        <input matInput formControlName="name" />
-      </mat-form-field>
+        <div class="form-grid">
 
-      <mat-form-field appearance="fill">
-        <mat-label>Account Type</mat-label>
-        <mat-select formControlName="type">
-          <mat-option *ngFor="let t of types" [value]="t.value">
-            {{ t.label }}
-          </mat-option>
-        </mat-select>
-      </mat-form-field>
+          <!-- CODE -->
 
-    </form>
-  </mat-card>
+          <mat-form-field appearance="fill">
 
-</div>
+            <mat-label>
+              Account Code
+            </mat-label>
 
+            <input matInput formControlName="code" />
 
+          </mat-form-field>
+
+          <!-- NAME -->
+
+          <mat-form-field appearance="fill">
+
+            <mat-label>
+              Account Name
+            </mat-label>
+
+            <input matInput formControlName="name" />
+
+          </mat-form-field>
+
+          <!-- TYPE -->
+
+          <mat-form-field appearance="fill">
+
+            <mat-label>
+              Classification
+            </mat-label>
+
+            <mat-select formControlName="type">
+
+              <mat-option *ngFor="
+                  let type of accountTypes
+                " [value]="type">
+
+                {{ type }}
+
+              </mat-option>
+
+            </mat-select>
+
+          </mat-form-field>
+
+          <!-- ROLE -->
+
+          <mat-form-field appearance="fill">
+
+            <mat-label>
+              Business Role
+            </mat-label>
+
+            <mat-select formControlName="role">
+
+              <mat-option *ngFor="
+                  let role of accountRoles
+                " [value]="role">
+
+                {{ role }}
+
+              </mat-option>
+
+            </mat-select>
+
+          </mat-form-field>
+
+        </div>
+
+        <!-- ACTIONS -->
+
+        <div class="form-actions">
+
+          <button mat-stroked-button type="button" (click)="cancel()">
+
+            Cancel
+
+          </button>
+
+          <button mat-flat-button color="primary" type="button" [disabled]="
+              form.invalid
+              || saving()
+            " (click)="submit()">
+
+            Create Account
+
+          </button>
+
+        </div>
+
+      </form>
+
+    </app-workflow-card>
+
+  </div>
+
+</app-workflow-shell>

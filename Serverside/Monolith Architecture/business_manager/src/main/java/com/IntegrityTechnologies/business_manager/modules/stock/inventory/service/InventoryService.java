@@ -13,6 +13,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.ser
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineBatchSelection;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.dto.AllocationResult;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.dto.VatBreakdown;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.VatCalculationService;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.model.Supplier;
@@ -93,6 +95,7 @@ public class InventoryService {
     private final TenantInventorySettingsService settingsService;
     private final StockEngine stockEngine;
     private final GoodsReceiptRepository goodsReceiptRepository;
+    private final VatCalculationService vatCalculationService;
 
     private static final int MAX_RETRIES = 5;
 
@@ -187,28 +190,24 @@ public class InventoryService {
                 BigDecimal unitCost = su.getUnitCost();
 
                 BigDecimal gross = unitCost.multiply(qty);
-                BigDecimal net;
-                BigDecimal vat;
-
-                if (vatEnabled) {
-
-                    if (vatInclusive) {
-                        net = gross.divide(
-                                BigDecimal.ONE.add(vatRate),
-                                6,
-                                RoundingMode.HALF_UP
+                VatBreakdown breakdown =
+                        vatEnabled
+                                ? vatCalculationService.calculate(
+                                gross,
+                                vatInclusive,
+                                vatRate
+                        )
+                                : new VatBreakdown(
+                                gross,
+                                BigDecimal.ZERO,
+                                gross
                         );
-                        vat = gross.subtract(net);
-                    } else {
-                        net = gross;
-                        vat = net.multiply(vatRate);
-                        gross = net.add(vat);
-                    }
 
-                } else {
-                    net = gross;
-                    vat = BigDecimal.ZERO;
-                }
+                BigDecimal net =
+                        breakdown.net();
+
+                BigDecimal vat =
+                        breakdown.vat();
 
                 incomingUnits += su.getUnitsSupplied();
                 incomingCostTotal = incomingCostTotal.add(net);
@@ -318,17 +317,37 @@ public class InventoryService {
                         su.getUnitCost()
                 );
 
-                receipt.setTotalCost(
+                BigDecimal supplierGross =
                         su.getUnitCost()
                                 .multiply(
                                         BigDecimal.valueOf(
                                                 su.getUnitsSupplied()
                                         )
-                                )
+                                );
+
+                VatBreakdown supplierBreakdown =
+                        vatEnabled
+                                ? vatCalculationService.calculate(
+                                supplierGross,
+                                vatInclusive,
+                                vatRate
+                        )
+                                : new VatBreakdown(
+                                supplierGross,
+                                BigDecimal.ZERO,
+                                supplierGross
+                        );
+
+                receipt.setNetAmount(
+                        supplierBreakdown.net()
                 );
 
                 receipt.setVatAmount(
-                        BigDecimal.ZERO
+                        supplierBreakdown.vat()
+                );
+
+                receipt.setGrossAmount(
+                        supplierBreakdown.gross()
                 );
 
                 receipt.setReceiptDate(
