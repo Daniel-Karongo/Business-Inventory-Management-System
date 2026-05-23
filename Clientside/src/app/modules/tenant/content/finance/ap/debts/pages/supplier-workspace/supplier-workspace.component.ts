@@ -52,8 +52,11 @@ import {
 } from '../../services/ap-debt.service';
 
 import {
-    SupplierWorkspace
+    SupplierWorkspaceDto,
+    SupplierWorkspacePaymentDto
 } from '../../models/supplier-workspace.model';
+import { SupplierBill } from '../../models/supplier-bill.model';
+import { PaymentSettlementDto } from '../../models/payment-settlement.model';
 import { WorkflowShellComponent } from '../../../../../../../../shared/layout/workflow-shell/workflow-shell.component';
 import { WorkflowCardComponent } from '../../../../../../../../shared/layout/workflow-card/workflow-card.component';
 import {
@@ -124,7 +127,7 @@ export class SupplierWorkspaceComponent
     postingPayments = new Set<string>();
     reversingPayments = new Set<string>();
     reversingAllocations = new Set<string>();
-    workspace?: SupplierWorkspace;
+    workspace?: SupplierWorkspaceDto;
 
     billColumns = [
         'invoice',
@@ -187,7 +190,7 @@ export class SupplierWorkspaceComponent
 
     trackByInvoice(
         _: number,
-        row: any
+        row: SupplierBill
     ): string {
 
         return row.invoiceId;
@@ -195,14 +198,14 @@ export class SupplierWorkspaceComponent
 
     trackByPayment(
         _: number,
-        row: any
+        row: SupplierWorkspacePaymentDto
     ): string {
 
         return row.paymentId;
     }
 
     openInvoiceDetails(
-        bill: any,
+        bill: SupplierBill,
         event?: Event
     ): void {
 
@@ -218,7 +221,9 @@ export class SupplierWorkspaceComponent
         );
     }
 
-    paymentBadgeClass(status?: string): string {
+    paymentBadgeClass(
+        status: string
+    ): string {
 
         switch (status) {
 
@@ -234,40 +239,82 @@ export class SupplierWorkspaceComponent
             case 'REVERSED':
                 return 'badge-danger';
 
+            case 'POSTED':
+                return 'badge-primary';
+
             default:
                 return 'badge-neutral';
         }
     }
 
-    postingLabel(payment: any): string {
+    postingLabel(
+        payment: SupplierWorkspacePaymentDto
+    ): string {
 
-        if (payment.reversed)
+        if (payment.reversed) {
             return 'Reversed';
+        }
 
-        if (payment.postingStatus === 'POSTED')
-            return 'Posted';
+        switch (payment.postingStatus) {
 
-        return 'Draft';
+            case 'POSTED':
+                return 'Posted';
+
+            case 'REVERSED':
+                return 'Reversed';
+
+            default:
+                return 'Draft';
+        }
     }
 
     openPaymentDetails(
-        payment: any,
+        payment: SupplierWorkspacePaymentDto,
         event?: Event
     ): void {
 
         event?.stopPropagation();
 
-        this.dialog.open(
-            PaymentDetailsDialogComponent,
-            {
-                width: '900px',
-                maxWidth: '95vw',
-                data: payment
-            }
-        );
+        this.paymentService
+            .details(payment.paymentId)
+            .subscribe({
+
+                next: details => {
+
+                    this.dialog.open(
+                        PaymentDetailsDialogComponent,
+                        {
+                            width: '820px',
+
+                            maxWidth: '95vw',
+
+                            panelClass: 'payment-details-dialog-panel',
+
+                            autoFocus: false,
+
+                            data: details
+                        }
+                    );
+                },
+
+                error: err => {
+
+                    this.snackBar.open(
+                        err?.error?.message
+                        ||
+                        'Failed to load payment details',
+                        'Close',
+                        {
+                            duration: 5000
+                        }
+                    );
+                }
+            });
     }
 
-    postPayment(payment: any): void {
+    postPayment(
+        payment: SupplierWorkspacePaymentDto
+    ): void {
 
         if (
             payment.posted
@@ -314,7 +361,9 @@ export class SupplierWorkspaceComponent
             });
     }
 
-    reversePayment(payment: any): void {
+    reversePayment(
+        payment: SupplierWorkspacePaymentDto
+    ): void {
 
         if (
             payment.reversed
@@ -356,8 +405,7 @@ export class SupplierWorkspaceComponent
                 );
 
                 this.paymentService
-                    .reverse(
-                        payment.paymentId,
+                    .reverse(payment.paymentId,
                         { reason }
                     )
                     .pipe(
@@ -396,7 +444,9 @@ export class SupplierWorkspaceComponent
             });
     }
 
-    reverseAllocation(allocation: any): void {
+    reverseAllocation(
+        allocation: PaymentSettlementDto
+    ): void {
 
         if (
             allocation.reversed
@@ -539,7 +589,10 @@ export class SupplierWorkspaceComponent
             CreatePaymentDialogComponent,
             {
                 width: '720px',
-                maxWidth: '95vw',
+                maxWidth: '96vw',
+                maxHeight: '92vh',
+                autoFocus: false,
+                panelClass: 'enterprise-dialog',
                 data: {
                     branchId: this.branchContext.currentBranch,
                     supplierId: this.workspace.supplierId
@@ -554,7 +607,7 @@ export class SupplierWorkspaceComponent
                 this.load();
 
                 this.snackBar.open(
-                    'Workspace refreshed',
+                    'Payment made successfully',
                     'Close',
                     { duration: 2500 }
                 );
@@ -570,8 +623,11 @@ export class SupplierWorkspaceComponent
         this.dialog.open(
             AllocationDialogComponent,
             {
-                width: '760px',
-                maxWidth: '95vw',
+                width: '720px',
+                maxWidth: '96vw',
+                maxHeight: '92vh',
+                autoFocus: false,
+                panelClass: 'enterprise-dialog',
                 data: {
                     branchId:
                         this.branchContext.currentBranch,
@@ -603,7 +659,7 @@ export class SupplierWorkspaceComponent
                 this.load();
 
                 this.snackBar.open(
-                    'Workspace refreshed',
+                    'Allocation made successfully',
                     'Close',
                     { duration: 2500 }
                 );

@@ -69,6 +69,7 @@ import {
 import {
   SalesService
 } from '../../services/sales.service';
+import { ConfirmDialogComponent } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 
 @Component({
   standalone: true,
@@ -342,52 +343,79 @@ export class SaleDetailsComponent
       });
   }
 
+  private confirmAction(
+    title: string,
+    message: string,
+    confirmText = 'Confirm'
+  ) {
+
+    return this.dialog.open(
+      ConfirmDialogComponent,
+      {
+        width: '420px',
+        data: {
+          title,
+          message,
+          confirmText,
+          cancelText: 'Cancel'
+        }
+      }
+    ).afterClosed();
+  }
+
   deliverSale(): void {
 
     if (!this.sale?.id) {
       return;
     }
 
-    if (!confirm(
-      'Deliver this sale and consume inventory?'
-    )) {
-      return;
-    }
+    this.confirmAction(
+      'Deliver Sale',
+      'Deliver this sale and consume inventory?',
+      'Deliver'
+    )
+      .subscribe(confirmed => {
 
-    this.actionLoading = true;
-
-    this.salesService
-      .deliver(this.sale.id)
-      .pipe(
-        finalize(() => {
-          this.actionLoading = false;
-        }),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe({
-        next: sale => {
-
-          this.sale = sale;
-
-          this.snackBar.open(
-            'Sale delivered successfully.',
-            'Close',
-            {
-              duration: 3000
-            }
-          );
-        },
-        error: error => {
-
-          this.snackBar.open(
-            error?.error?.message ??
-            'Failed to deliver sale.',
-            'Close',
-            {
-              duration: 4000
-            }
-          );
+        if (!confirmed) {
+          return;
         }
+
+        this.actionLoading = true;
+
+        this.salesService
+          .deliver(this.sale.id)
+          .pipe(
+            finalize(() => {
+              this.actionLoading = false;
+            }),
+            takeUntilDestroyed(this.destroyRef)
+          )
+          .subscribe({
+            next: sale => {
+
+              this.sale = sale;
+
+              this.snackBar.open(
+                'Sale delivered successfully.',
+                'Close',
+                {
+                  duration: 3000
+                }
+              );
+            },
+
+            error: error => {
+
+              this.snackBar.open(
+                error?.error?.message ??
+                'Failed to deliver sale.',
+                'Close',
+                {
+                  duration: 4000
+                }
+              );
+            }
+          });
       });
   }
 
@@ -397,46 +425,53 @@ export class SaleDetailsComponent
       return;
     }
 
-    if (!confirm(
-      'Cancel this sale and release reserved stock?'
-    )) {
-      return;
-    }
+    this.confirmAction(
+      'Cancel Sale',
+      'Cancel this sale and release reserved stock?',
+      'Cancel Sale'
+    )
+      .subscribe(confirmed => {
 
-    this.actionLoading = true;
-
-    this.salesService
-      .cancel(this.sale.id)
-      .pipe(
-        finalize(() => {
-          this.actionLoading = false;
-        }),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe({
-        next: sale => {
-
-          this.sale = sale;
-
-          this.snackBar.open(
-            'Sale cancelled successfully.',
-            'Close',
-            {
-              duration: 3000
-            }
-          );
-        },
-        error: error => {
-
-          this.snackBar.open(
-            error?.error?.message ??
-            'Failed to cancel sale.',
-            'Close',
-            {
-              duration: 4000
-            }
-          );
+        if (!confirmed) {
+          return;
         }
+
+        this.actionLoading = true;
+
+        this.salesService
+          .cancel(this.sale.id)
+          .pipe(
+            finalize(() => {
+              this.actionLoading = false;
+            }),
+            takeUntilDestroyed(this.destroyRef)
+          )
+          .subscribe({
+            next: sale => {
+
+              this.sale = sale;
+
+              this.snackBar.open(
+                'Sale cancelled successfully.',
+                'Close',
+                {
+                  duration: 3000
+                }
+              );
+            },
+
+            error: error => {
+
+              this.snackBar.open(
+                error?.error?.message ??
+                'Failed to cancel sale.',
+                'Close',
+                {
+                  duration: 4000
+                }
+              );
+            }
+          });
       });
   }
 
@@ -446,46 +481,53 @@ export class SaleDetailsComponent
       return;
     }
 
-    if (!confirm(
-      'Refund this completed sale?'
-    )) {
-      return;
-    }
+    this.confirmAction(
+      'Refund Sale',
+      'Refund this completed sale?',
+      'Refund'
+    )
+      .subscribe(confirmed => {
 
-    this.actionLoading = true;
-
-    this.salesService
-      .refund(this.sale.id)
-      .pipe(
-        finalize(() => {
-          this.actionLoading = false;
-        }),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe({
-        next: sale => {
-
-          this.sale = sale;
-
-          this.snackBar.open(
-            'Sale refunded successfully.',
-            'Close',
-            {
-              duration: 3000
-            }
-          );
-        },
-        error: error => {
-
-          this.snackBar.open(
-            error?.error?.message ??
-            'Failed to refund sale.',
-            'Close',
-            {
-              duration: 4000
-            }
-          );
+        if (!confirmed) {
+          return;
         }
+
+        this.actionLoading = true;
+
+        this.salesService
+          .refund(this.sale.id)
+          .pipe(
+            finalize(() => {
+              this.actionLoading = false;
+            }),
+            takeUntilDestroyed(this.destroyRef)
+          )
+          .subscribe({
+            next: sale => {
+
+              this.sale = sale;
+
+              this.snackBar.open(
+                'Sale refunded successfully.',
+                'Close',
+                {
+                  duration: 3000
+                }
+              );
+            },
+
+            error: error => {
+
+              this.snackBar.open(
+                error?.error?.message ??
+                'Failed to refund sale.',
+                'Close',
+                {
+                  duration: 4000
+                }
+              );
+            }
+          });
       });
   }
 
@@ -495,46 +537,53 @@ export class SaleDetailsComponent
       return;
     }
 
-    if (!confirm(
-      'Cancel sale and refund all successful payments?'
-    )) {
-      return;
-    }
+    this.confirmAction(
+      'Cancel And Refund',
+      'Cancel sale and refund all successful payments?',
+      'Cancel + Refund'
+    )
+      .subscribe(confirmed => {
 
-    this.actionLoading = true;
-
-    this.salesService
-      .cancelAndRefund(this.sale.id)
-      .pipe(
-        finalize(() => {
-          this.actionLoading = false;
-        }),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe({
-        next: sale => {
-
-          this.sale = sale;
-
-          this.snackBar.open(
-            'Sale cancelled and refunded.',
-            'Close',
-            {
-              duration: 4000
-            }
-          );
-        },
-        error: error => {
-
-          this.snackBar.open(
-            error?.error?.message ??
-            'Failed to cancel and refund sale.',
-            'Close',
-            {
-              duration: 4000
-            }
-          );
+        if (!confirmed) {
+          return;
         }
+
+        this.actionLoading = true;
+
+        this.salesService
+          .cancelAndRefund(this.sale.id)
+          .pipe(
+            finalize(() => {
+              this.actionLoading = false;
+            }),
+            takeUntilDestroyed(this.destroyRef)
+          )
+          .subscribe({
+            next: sale => {
+
+              this.sale = sale;
+
+              this.snackBar.open(
+                'Sale cancelled and refunded.',
+                'Close',
+                {
+                  duration: 4000
+                }
+              );
+            },
+
+            error: error => {
+
+              this.snackBar.open(
+                error?.error?.message ??
+                'Failed to cancel and refund sale.',
+                'Close',
+                {
+                  duration: 4000
+                }
+              );
+            }
+          });
       });
   }
 
@@ -546,46 +595,53 @@ export class SaleDetailsComponent
       return;
     }
 
-    if (!confirm(
-      'Refund this payment?'
-    )) {
-      return;
-    }
+    this.confirmAction(
+      'Refund Payment',
+      'Refund this payment?',
+      'Refund'
+    )
+      .subscribe(confirmed => {
 
-    this.actionLoading = true;
-
-    this.paymentsService
-      .refund(paymentId)
-      .pipe(
-        finalize(() => {
-          this.actionLoading = false;
-        }),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe({
-        next: () => {
-
-          this.snackBar.open(
-            'Payment refunded successfully.',
-            'Close',
-            {
-              duration: 3000
-            }
-          );
-
-          this.reload();
-        },
-        error: error => {
-
-          this.snackBar.open(
-            error?.error?.message ??
-            'Failed to refund payment.',
-            'Close',
-            {
-              duration: 4000
-            }
-          );
+        if (!confirmed) {
+          return;
         }
+
+        this.actionLoading = true;
+
+        this.paymentsService
+          .refund(paymentId)
+          .pipe(
+            finalize(() => {
+              this.actionLoading = false;
+            }),
+            takeUntilDestroyed(this.destroyRef)
+          )
+          .subscribe({
+            next: () => {
+
+              this.snackBar.open(
+                'Payment refunded successfully.',
+                'Close',
+                {
+                  duration: 3000
+                }
+              );
+
+              this.reload();
+            },
+
+            error: error => {
+
+              this.snackBar.open(
+                error?.error?.message ??
+                'Failed to refund payment.',
+                'Close',
+                {
+                  duration: 4000
+                }
+              );
+            }
+          });
       });
   }
 

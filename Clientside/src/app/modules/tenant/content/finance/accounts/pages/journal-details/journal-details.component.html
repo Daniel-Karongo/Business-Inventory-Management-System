@@ -39,9 +39,16 @@
 
         </button>
 
-        <button mat-flat-button color="warn" [disabled]="reversing" (click)="reverse()">
+        <button mat-flat-button color="warn" [disabled]="
+    reversing
+    || journal?.reversed
+  " (click)="reverse()">
 
-          Reverse Transaction
+          {{
+          journal?.reversed
+          ? 'Transaction Reversed'
+          : 'Reverse Transaction'
+          }}
 
         </button>
 
@@ -127,6 +134,23 @@
 
         </div>
 
+        <div class="summary-item">
+
+          <div class="summary-label">
+            Status
+          </div>
+
+          <div class="summary-value" [class.text-red-600]="journal?.reversed">
+
+            {{
+            journal?.reversed
+            ? 'Reversed'
+            : 'Posted'
+            }}
+
+          </div>
+
+        </div>
       </div>
 
     </app-workflow-card>

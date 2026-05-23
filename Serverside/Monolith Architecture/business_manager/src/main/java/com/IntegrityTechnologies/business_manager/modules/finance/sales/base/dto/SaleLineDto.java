@@ -13,5 +13,7 @@ public class SaleLineDto {
     private Long quantity;
     private BigDecimal unitPrice; // optional
     private List<BatchSelectionDto> batchSelections;
+    private BigDecimal requestedUnitPrice;
+    private String overrideReason;
     private UUID packagingId;
 }

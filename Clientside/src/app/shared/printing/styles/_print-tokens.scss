@@ -1,0 +1,135 @@
+:root {
+
+    /* =========================================================
+     TYPOGRAPHY
+  ========================================================= */
+
+    --print-font-sans:
+        'Inter',
+        'Segoe UI',
+        'Helvetica Neue',
+        Arial,
+        sans-serif;
+
+    --print-font-mono:
+        'JetBrains Mono',
+        'Consolas',
+        monospace;
+
+    --print-text-2xs: 0.625rem;
+    --print-text-xs: 0.72rem;
+    --print-text-sm: 0.82rem;
+    --print-text-md: 0.92rem;
+    --print-text-lg: 1rem;
+    --print-text-xl: 1.18rem;
+    --print-text-2xl: 1.6rem;
+    --print-text-3xl: 2rem;
+
+    --print-leading-tight: 1.1;
+    --print-leading-normal: 1.45;
+    --print-leading-relaxed: 1.7;
+
+    --print-weight-regular: 400;
+    --print-weight-medium: 500;
+    --print-weight-semibold: 600;
+    --print-weight-bold: 700;
+    --print-weight-black: 800;
+
+    /* =========================================================
+     SPACING SCALE
+  ========================================================= */
+
+    --print-space-1: 4px;
+    --print-space-2: 8px;
+    --print-space-3: 12px;
+    --print-space-4: 16px;
+    --print-space-5: 20px;
+    --print-space-6: 24px;
+    --print-space-7: 32px;
+    --print-space-8: 40px;
+    --print-space-9: 52px;
+
+    /* =========================================================
+     SURFACES
+  ========================================================= */
+
+    --print-bg: #ffffff;
+
+    --print-surface:
+        #ffffff;
+
+    --print-surface-alt:
+        #f8fafc;
+
+    --print-border:
+        #e5e7eb;
+
+    --print-border-strong:
+        #d1d5db;
+
+    --print-text:
+        #111827;
+
+    --print-text-muted:
+        #6b7280;
+
+    --print-text-soft:
+        #9ca3af;
+
+    /* =========================================================
+     STATUS
+  ========================================================= */
+
+    --print-success:
+        #047857;
+
+    --print-warning:
+        #b45309;
+
+    --print-danger:
+        #b91c1c;
+
+    --print-info:
+        #1d4ed8;
+
+    /* =========================================================
+     EFFECTS
+  ========================================================= */
+
+    --print-radius-sm: 8px;
+    --print-radius-md: 14px;
+    --print-radius-lg: 20px;
+    --print-radius-xl: 28px;
+
+    --print-shadow-sm:
+        0 1px 2px rgba(15, 23, 42, 0.05);
+
+    --print-shadow-md:
+        0 10px 24px rgba(15, 23, 42, 0.08);
+
+    --print-shadow-lg:
+        0 18px 42px rgba(15, 23, 42, 0.12);
+
+    /* =========================================================
+     TABLES
+  ========================================================= */
+
+    --print-table-header:
+        #f3f4f6;
+
+    --print-table-stripe:
+        #fafafa;
+
+    /* =========================================================
+     THERMAL
+  ========================================================= */
+
+    --thermal-text:
+        #000000;
+
+    --thermal-border:
+        #000000;
+
+    --thermal-muted:
+        #444444;
+}

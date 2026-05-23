@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 
 import { PaymentsService } from '../../services/payments.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   standalone: true,
@@ -31,7 +32,8 @@ export class CashPaymentDialogComponent {
     @Inject(MAT_DIALOG_DATA) public data: { sale: any },
     private dialogRef: MatDialogRef<CashPaymentDialogComponent>,
     private fb: FormBuilder,
-    private paymentsService: PaymentsService
+    private paymentsService: PaymentsService,
+    private snackBar: MatSnackBar
   ) {
     this.form = this.fb.group({
       amount: [
@@ -51,14 +53,44 @@ export class CashPaymentDialogComponent {
   }
 
   submit() {
-    if (this.form.invalid) return;
+
+    if (this.form.invalid) {
+      return;
+    }
 
     this.paymentsService.create({
       saleId: this.data.sale.id,
       amount: this.form.value.amount,
       method: 'CASH',
       note: this.form.value.note
-    }).subscribe(() => this.dialogRef.close(true));
+    })
+      .subscribe({
+
+        next: () => {
+
+          this.snackBar.open(
+            'Payment recorded successfully.',
+            'Close',
+            {
+              duration: 3000
+            }
+          );
+
+          this.dialogRef.close(true);
+        },
+
+        error: error => {
+
+          this.snackBar.open(
+            error?.error?.message ??
+            'Failed to record payment.',
+            'Close',
+            {
+              duration: 4000
+            }
+          );
+        }
+      });
   }
 
   cancel() {

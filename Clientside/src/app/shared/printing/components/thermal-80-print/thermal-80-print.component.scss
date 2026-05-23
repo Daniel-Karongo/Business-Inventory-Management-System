@@ -1,0 +1,227 @@
+@use '../../styles/thermal-base';
+
+.thermal-80 {
+
+    width: 72mm;
+
+    padding:
+        4mm;
+
+    box-sizing:
+        border-box;
+
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* =========================================================
+   TYPOGRAPHY
+========================================================= */
+
+.thermal-section-title {
+
+    font-size:
+        10px;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        0.12em;
+
+    text-transform:
+        uppercase;
+
+    margin-bottom:
+        8px;
+}
+
+.thermal-mono {
+
+    font-family:
+        var(--print-font-mono);
+}
+
+/* =========================================================
+   STACKS
+========================================================= */
+
+.thermal-stack {
+
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.thermal-stack.compact {
+    gap: 2px;
+}
+
+/* =========================================================
+   ITEMS
+========================================================= */
+
+.thermal-item-main {
+    padding-right: 10px;
+}
+
+.thermal-item-name {
+
+    font-size:
+        11px;
+
+    font-weight:
+        800;
+
+    line-height:
+        1.3;
+}
+
+.thermal-item-meta {
+
+    margin-top:
+        3px;
+
+    color:
+        var(--thermal-muted);
+
+    font-size:
+        10px;
+}
+
+/* =========================================================
+   CUSTOMER
+========================================================= */
+
+.thermal-customer-name {
+
+    font-weight:
+        800;
+}
+
+.thermal-customer-meta {
+
+    color:
+        var(--thermal-muted);
+
+    font-size:
+        10px;
+}
+
+/* =========================================================
+   TOTALS
+========================================================= */
+
+.thermal-total {
+
+    font-size:
+        15px;
+
+    font-weight:
+        900;
+
+    line-height:
+        1.1;
+}
+
+/* =========================================================
+   PAYMENTS
+========================================================= */
+
+.thermal-payments-list {
+
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.thermal-payment {
+
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+
+    align-items: flex-start;
+}
+
+.thermal-payment-left {
+
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.thermal-payment-method {
+
+    font-weight:
+        700;
+}
+
+.thermal-payment-ref {
+
+    color:
+        var(--thermal-muted);
+
+    font-size:
+        10px;
+}
+
+.thermal-payment-amount {
+
+    font-weight:
+        800;
+}
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.thermal-footer {
+
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.thermal-footer-message {
+
+    font-weight:
+        700;
+
+    text-align:
+        center;
+}
+
+.thermal-footer-soft {
+
+    text-align:
+        center;
+
+    font-size:
+        10px;
+
+    color:
+        var(--thermal-muted);
+}
+
+/* =========================================================
+   PRINT
+========================================================= */
+
+@media print {
+
+    @page {
+        size: 80mm auto;
+        margin: 0;
+    }
+
+    .thermal-80 {
+        width: 72mm;
+    }
+
+    * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}

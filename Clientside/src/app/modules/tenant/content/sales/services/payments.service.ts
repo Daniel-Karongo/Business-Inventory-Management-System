@@ -12,6 +12,7 @@ import { environment } from '../../../../../../environments/environment';
 import {
   PaymentDTO
 } from '../../stock/models/sale.model';
+import { BranchContextService } from '../../../../../core/services/branch-context.service';
 
 @Injectable({
   providedIn: 'root'
@@ -25,8 +26,23 @@ export class PaymentsService {
     environment.endpoints.payments;
 
   constructor(
-    private readonly http: HttpClient
+    private readonly http: HttpClient,
+    private readonly branchContext: BranchContextService
   ) { }
+
+  private branchId(): string {
+
+    const branchId =
+      this.branchContext.currentBranch;
+
+    if (!branchId) {
+      throw new Error(
+        'No active branch selected.'
+      );
+    }
+
+    return branchId;
+  }
 
   create(
     payload: unknown
@@ -34,7 +50,9 @@ export class PaymentsService {
 
     return this.http.post(
       this.api +
-      this.endpoints.create,
+      this.endpoints.create(
+        this.branchId()
+      ),
       payload
     );
   }
@@ -45,7 +63,10 @@ export class PaymentsService {
 
     return this.http.post(
       this.api +
-      this.endpoints.refund(id),
+      this.endpoints.refund(
+        this.branchId(),
+        id
+      ),
       {}
     );
   }
@@ -60,15 +81,15 @@ export class PaymentsService {
 
     if (note) {
       params =
-        params.set(
-          'note',
-          note
-        );
+        params.set('note', note);
     }
 
     return this.http.post(
       this.api +
-      this.endpoints.reverse(id),
+      this.endpoints.reverse(
+        this.branchId(),
+        id
+      ),
       {},
       { params }
     );
@@ -82,7 +103,10 @@ export class PaymentsService {
 
     return this.http.post(
       this.api +
-      this.endpoints.mpesa.initiateStk,
+      this.endpoints.mpesa
+        .initiateStk(
+          this.branchId()
+        ),
       null,
       {
         params: {

@@ -1,0 +1,140 @@
+<section class="thermal-document thermal-58">
+
+    <!-- =====================================================
+       HEADER
+  ====================================================== -->
+
+    <header class="thermal-header compact">
+
+        <div class="thermal-company compact">
+
+            {{ data.branchName || 'Integrity Technologies' }}
+
+        </div>
+
+        <div class="thermal-mini-meta">
+
+            {{ data.createdAt | date:'short' }}
+
+        </div>
+
+    </header>
+
+    <div class="thermal-separator"></div>
+
+    <!-- =====================================================
+       RECEIPT
+  ====================================================== -->
+
+    <section class="thermal-mini-section">
+
+        <div class="thermal-mini-row">
+
+            <span>
+                Receipt
+            </span>
+
+            <strong class="thermal-mono">
+                {{ data.receiptNumber }}
+            </strong>
+
+        </div>
+
+        <div class="thermal-mini-row">
+
+            <span>
+                Cashier
+            </span>
+
+            <strong>
+                {{ data.servedBy || '-' }}
+            </strong>
+
+        </div>
+
+    </section>
+
+    <!-- =====================================================
+       ITEMS
+  ====================================================== -->
+
+    <section class="thermal-mini-items">
+
+        <div class="thermal-separator"></div>
+
+        <div class="thermal-mini-item" *ngFor="let item of data.items">
+
+            <div class="thermal-mini-name">
+
+                {{ item.productName }}
+
+            </div>
+
+            <div class="thermal-mini-line">
+
+                <span>
+
+                    {{ item.quantity }}
+                    ×
+                    {{ item.unitPrice | number:'1.2-2' }}
+
+                </span>
+
+                <strong class="thermal-mono">
+
+                    {{ item.total | number:'1.2-2' }}
+
+                </strong>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- =====================================================
+       TOTAL
+  ====================================================== -->
+
+    <section class="thermal-total-section">
+
+        <div class="thermal-separator bold"></div>
+
+        <div class="thermal-grand-total">
+
+            <span>
+                TOTAL
+            </span>
+
+            <span class="thermal-mono">
+
+                {{
+                data.totals.total
+                | number:'1.2-2'
+                }}
+
+            </span>
+
+        </div>
+
+    </section>
+
+    <!-- =====================================================
+       FOOTER
+  ====================================================== -->
+
+    <footer class="thermal-mini-footer">
+
+        <div class="thermal-separator"></div>
+
+        <div>
+            {{ data.footerText }}
+        </div>
+
+        <div class="thermal-mini-soft">
+            Thank you
+        </div>
+
+    </footer>
+
+</section>

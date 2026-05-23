@@ -272,6 +272,22 @@
 
         </mat-form-field>
 
+        <mat-form-field appearance="fill">
+          <mat-label>
+            Override Price
+          </mat-label>
+
+          <input matInput type="number" min="0" [formControl]="controlAt(i,'requestedUnitPrice')" />
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>
+            Override Reason
+          </mat-label>
+
+          <input matInput [formControl]="controlAt(i,'overrideReason')" />
+        </mat-form-field>
+
       </div>
 
       <!-- =============================================== -->

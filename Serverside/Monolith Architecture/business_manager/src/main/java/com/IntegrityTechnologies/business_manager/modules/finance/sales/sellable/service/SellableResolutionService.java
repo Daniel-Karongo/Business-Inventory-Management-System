@@ -6,7 +6,6 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.dto.AllocationResult;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.engine.StockEngine;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.service.ProductVariantPackagingService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingContext;
@@ -28,7 +27,6 @@ public class SellableResolutionService {
 
     private final ProductVariantPackagingService packagingService;
     private final PricingEngineService pricingEngine;
-    private final InventoryService inventoryService;
     private final TaxSystemStateService taxSystemStateService;
     private final ObjectMapper objectMapper;
     private final StockEngine stockEngine;
@@ -72,38 +70,27 @@ public class SellableResolutionService {
         // =========================
         // 3. COST STRATEGY
         // =========================
+
         BigDecimal totalCost;
         BigDecimal unitCost;
         AllocationResult allocation = null;
 
-        if (ctx.getMode() == ResolutionMode.UI_FAST) {
+        allocation = stockEngine.previewAllocation(
+                ctx.getProductVariantId(),
+                ctx.getBranchId(),
+                baseUnits,
+                ctx.getBatchIds()
+        );
 
-            unitCost = inventoryService.getAverageCost(
-                    ctx.getProductVariantId(),
-                    ctx.getBranchId()
-            );
+        totalCost = allocation.getTotalCost();
 
-            totalCost = unitCost.multiply(BigDecimal.valueOf(baseUnits));
-
-        } else {
-
-            allocation = stockEngine.previewAllocation(
-                    ctx.getProductVariantId(),
-                    ctx.getBranchId(),
-                    baseUnits,
-                    ctx.getBatchIds()
-            );
-
-            totalCost = allocation.getTotalCost();
-
-            unitCost = baseUnits == 0
-                    ? BigDecimal.ZERO
-                    : totalCost.divide(
-                    BigDecimal.valueOf(baseUnits),
-                    6,
-                    RoundingMode.HALF_UP
-            );
-        }
+        unitCost = baseUnits == 0
+                ? BigDecimal.ZERO
+                : totalCost.divide(
+                BigDecimal.valueOf(baseUnits),
+                6,
+                RoundingMode.HALF_UP
+        );
 
         // =========================
         // 4. PRICING
@@ -123,7 +110,34 @@ public class SellableResolutionService {
                         .build()
         );
 
-        BigDecimal unitPrice = pricing.getFinalPrice();
+        BigDecimal unitPrice;
+
+        boolean manualOverride =
+                ctx.getRequestedUnitPrice() != null;
+
+        if (manualOverride) {
+
+            if (ctx.getRequestedUnitPrice()
+                    .compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalStateException(
+                        "Price cannot be negative"
+                );
+            }
+
+            if (ctx.getOverrideReason() == null ||
+                    ctx.getOverrideReason().isBlank()) {
+                throw new IllegalStateException(
+                        "Override reason is required"
+                );
+            }
+
+            unitPrice = ctx.getRequestedUnitPrice();
+
+        } else {
+
+            unitPrice = pricing.getFinalPrice();
+        }
+
         BigDecimal gross = unitPrice.multiply(BigDecimal.valueOf(ctx.getQuantity()));
 
         // =========================

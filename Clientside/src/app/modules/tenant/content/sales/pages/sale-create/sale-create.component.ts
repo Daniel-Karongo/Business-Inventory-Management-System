@@ -172,6 +172,8 @@ interface SaleLineFormValue {
     batchId: string;
     quantity: number;
   }[] | null;
+  requestedUnitPrice: number | null;
+  overrideReason: string | null;
 }
 
 type SaleItemForm = FormGroup<{
@@ -185,6 +187,8 @@ type SaleItemForm = FormGroup<{
     batchId: string;
     quantity: number;
   }[] | null>;
+  requestedUnitPrice: FormControl<number | null>;
+  overrideReason: FormControl<string | null>;
 }>;
 
 @Component({
@@ -253,11 +257,11 @@ export class SaleCreateComponent implements OnInit {
 
   private readonly posBarcodeService =
     inject(PosBarcodeService);
-  
-  private readonly branchContext = 
+
+  private readonly branchContext =
     inject(BranchContextService);
 
-    
+
   barcodeCtrl =
     new FormControl('');
 
@@ -453,7 +457,9 @@ export class SaleCreateComponent implements OnInit {
       batchSelections: this.fb.control<{
         batchId: string;
         quantity: number;
-      }[] | null>(null)
+      }[] | null>(null),
+      requestedUnitPrice: this.fb.control<number | null>(null),
+      overrideReason: this.fb.control<string | null>(null)
     });
   }
 
@@ -467,7 +473,7 @@ export class SaleCreateComponent implements OnInit {
     row.valueChanges
       .pipe(
         debounceTime(250),
-        distinctUntilChanged(),
+
         switchMap(() => {
 
           const value =
@@ -479,33 +485,60 @@ export class SaleCreateComponent implements OnInit {
             !value.branchId ||
             !value.quantity
           ) {
+
+            this.previewStateMap[index] = {
+              loading: false,
+              resolved: false,
+              preview: undefined,
+              warnings: [],
+              adjustments: [],
+              allocations: []
+            };
+
             return of(null);
           }
+
+          const existing =
+            this.previewStateMap[index];
 
           this.previewStateMap[index] = {
             loading: true,
             resolved: false,
+
+            // IMPORTANT
+            // preserve existing preview during refresh
+            preview: existing?.preview,
+
             warnings: [],
-            adjustments: [],
-            allocations: []
+            adjustments:
+              existing?.adjustments ?? [],
+            allocations:
+              existing?.allocations ?? []
           };
 
-          return this.previewService.previewLine({
-            productVariantId:
-              value.productVariantId,
-            packagingId:
-              value.packagingId,
-            quantity:
-              value.quantity,
-            branchId:
-              value.branchId,
-            batchSelections:
-              value.batchSelections ?? undefined
-          });
+          return this.previewService
+            .previewLine({
+              productVariantId:
+                value.productVariantId,
+              packagingId:
+                value.packagingId,
+              quantity:
+                value.quantity,
+              branchId:
+                value.branchId,
+              batchSelections:
+                value.batchSelections ?? undefined,
+              requestedUnitPrice:
+                value.requestedUnitPrice ?? undefined,
+              overrideReason:
+                value.overrideReason ?? undefined,
+            });
         }),
+
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
+
         next: preview => {
 
           if (!preview) {
@@ -518,22 +551,34 @@ export class SaleCreateComponent implements OnInit {
             preview,
             warnings: [],
             adjustments:
-              preview.adjustments,
+              preview.adjustments ?? [],
             allocations:
-              preview.batchAllocations
+              preview.batchAllocations ?? []
           };
         },
+
         error: error => {
+
+          const existing =
+            this.previewStateMap[index];
 
           this.previewStateMap[index] = {
             loading: false,
             resolved: false,
+
+            // preserve previous successful preview
+            preview: existing?.preview,
+
             warnings: [
               error?.error?.message ??
               'Failed to resolve pricing and allocation.'
             ],
-            adjustments: [],
-            allocations: []
+
+            adjustments:
+              existing?.adjustments ?? [],
+
+            allocations:
+              existing?.allocations ?? []
           };
         }
       });
@@ -953,14 +998,19 @@ export class SaleCreateComponent implements OnInit {
       payments: [],
       totalAmount:
         this.grandTotal(),
-      customerIdentifiers: {
-        customerName:
-          customer.name ?? undefined,
-        phoneNumber:
-          customer.phone ?? undefined,
-        email:
-          customer.email ?? undefined
-      }
+      customerIdentifiers:
+        customer.name ||
+          customer.phone ||
+          customer.email
+          ? {
+            name:
+              customer.name ?? undefined,
+            phone:
+              customer.phone ?? undefined,
+            email:
+              customer.email ?? undefined
+          }
+          : undefined
     };
 
     this.salesService.create(payload)

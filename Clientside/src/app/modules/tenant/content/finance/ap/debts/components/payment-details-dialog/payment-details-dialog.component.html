@@ -5,7 +5,7 @@
         <div>
 
             <div class="title">
-                {{ payment.paymentNumber }}
+                {{ payment.documentNumber }}
             </div>
 
             <div class="subtitle">
@@ -73,7 +73,7 @@
             <span>Method</span>
 
             <strong>
-                {{ payment.paymentMethod }}
+                {{ payment.method }}
             </strong>
 
         </div>
@@ -129,14 +129,14 @@
         Invoice Allocations
     </div>
 
-    <div *ngIf="!payment.allocations.length" class="empty">
+    <div *ngIf="!allocations.length" class="empty">
 
         No allocations recorded
 
     </div>
 
     <div *ngFor="
-      let allocation of payment.allocations
+      let allocation of allocations
     " class="allocation-row">
 
         <div>

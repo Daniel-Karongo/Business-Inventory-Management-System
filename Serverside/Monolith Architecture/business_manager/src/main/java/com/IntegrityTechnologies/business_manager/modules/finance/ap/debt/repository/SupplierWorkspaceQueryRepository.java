@@ -89,13 +89,16 @@ public interface SupplierWorkspaceQueryRepository
                     sp.amount AS amount,
                     sp.allocatedAmount AS allocatedAmount,
                     sp.unappliedAmount AS unappliedAmount,
+                    sp.status AS status,
                     sp.method AS paymentMethod,
-                    sp.reference AS reference
+                    sp.reference AS reference,
+                    sp.posted AS posted,
+                    sp.reversed AS reversed,
+                    sp.postingStatus AS postingStatus
                 FROM SupplierPayment sp
                 WHERE sp.tenantId = :tenantId
                 AND sp.branchId = :branchId
                 AND sp.supplierId = :supplierId
-                AND sp.reversed = false
                 ORDER BY sp.paymentDate DESC
             """)
     List<SupplierPaymentProjection> findPayments(
@@ -106,17 +109,22 @@ public interface SupplierWorkspaceQueryRepository
 
     @Query("""
                 SELECT
+                    spa.id AS allocationId,
                     sp.id AS paymentId,
                     pi.id AS invoiceId,
                     pi.documentNumber AS billNumber,
                     pi.documentDate AS invoiceDate,
-                    spa.allocatedAmount AS allocatedAmount
+                    spa.allocatedAmount AS allocatedAmount,
+                    spa.status AS status,
+                    spa.reversed AS reversed,
+                    spa.reversedAt AS reversedAt,
+                    spa.reversedBy AS reversedBy,
+                    spa.reversalReason AS reversalReason
                 FROM SupplierPaymentAllocation spa
                 JOIN spa.supplierPayment sp
                 JOIN spa.purchaseInvoice pi
                 WHERE spa.tenantId = :tenantId
                 AND spa.branchId = :branchId
-                AND spa.status = 'ACTIVE'
                 AND sp.supplierId = :supplierId
             """)
     List<PaymentSettlementProjection> findPaymentSettlements(

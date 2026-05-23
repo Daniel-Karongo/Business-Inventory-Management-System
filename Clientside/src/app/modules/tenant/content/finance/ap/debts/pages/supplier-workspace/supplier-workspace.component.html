@@ -156,7 +156,7 @@
 
                         <div class="table-wrapper">
 
-                            <table mat-table [dataSource]="workspace.bills">
+                            <table mat-table class="workspace-table" [dataSource]="workspace.bills">
 
                                 <ng-container matColumnDef="invoice">
 
@@ -246,16 +246,31 @@
                                 <ng-container matColumnDef="actions">
 
                                     <th mat-header-cell *matHeaderCellDef>
+                                        Actions
                                     </th>
 
                                     <td mat-cell *matCellDef="let row">
 
-                                        <button mat-button color="primary" (click)="openInvoiceDetails(row, $event)">
-                                            Details
-                                        </button>
-                                        <button mat-button (click)="toggleInvoice(row.invoiceId)">
-                                            {{ expandedInvoiceId === row.invoiceId ? 'Hide' : 'Settlements' }}
-                                        </button>
+                                        <div class="table-action-bar">
+
+                                            <button mat-stroked-button color="primary" type="button"
+                                                (click)="openInvoiceDetails(row, $event)">
+
+                                                Details
+                                            </button>
+
+                                            <button mat-stroked-button type="button"
+                                                (click)="toggleInvoice(row.invoiceId)">
+
+                                                {{
+                                                expandedInvoiceId === row.invoiceId
+                                                ? 'Hide'
+                                                : 'Settlements'
+                                                }}
+                                            </button>
+
+                                        </div>
+
                                     </td>
 
                                 </ng-container>
@@ -361,7 +376,7 @@
 
                         <div class="table-wrapper">
 
-                            <table mat-table [dataSource]="workspace.payments">
+                            <table mat-table class="workspace-table" [dataSource]="workspace.payments">
 
                                 <ng-container matColumnDef="payment">
 
@@ -459,18 +474,22 @@
                                 <ng-container matColumnDef="actions">
 
                                     <th mat-header-cell *matHeaderCellDef>
+                                        Actions
                                     </th>
 
                                     <td mat-cell *matCellDef="let row">
 
-                                        <div class="table-actions">
+                                        <div class="table-action-bar">
 
-                                            <button mat-button color="primary"
+                                            <button mat-stroked-button type="button"
                                                 (click)="openPaymentDetails(row, $event)">
+
                                                 Details
                                             </button>
 
-                                            <button mat-button (click)="togglePayment(row.paymentId)">
+                                            <button mat-stroked-button type="button"
+                                                (click)="togglePayment(row.paymentId)">
+
                                                 {{
                                                 expandedPaymentId === row.paymentId
                                                 ? 'Hide'
@@ -478,9 +497,10 @@
                                                 }}
                                             </button>
 
-                                            <button mat-button color="primary" *ngIf="!row.posted && !row.reversed"
-                                                [disabled]="postingPayments.has(row.paymentId)"
+                                            <button *ngIf="!row.posted && !row.reversed" mat-flat-button color="primary"
+                                                type="button" [disabled]="postingPayments.has(row.paymentId)"
                                                 (click)="postPayment(row)">
+
                                                 {{
                                                 postingPayments.has(row.paymentId)
                                                 ? 'Posting...'
@@ -488,9 +508,10 @@
                                                 }}
                                             </button>
 
-                                            <button mat-button color="warn" *ngIf="row.posted && !row.reversed"
-                                                [disabled]="reversingPayments.has(row.paymentId)"
+                                            <button *ngIf="row.posted && !row.reversed" mat-stroked-button color="warn"
+                                                type="button" [disabled]="reversingPayments.has(row.paymentId)"
                                                 (click)="reversePayment(row)">
+
                                                 {{
                                                 reversingPayments.has(row.paymentId)
                                                 ? 'Reversing...'
@@ -584,7 +605,7 @@
 
                         <div class="table-wrapper">
 
-                            <table mat-table [dataSource]="workspace.timeline">
+                            <table mat-table class="workspace-table" [dataSource]="workspace.timeline">
 
                                 <ng-container matColumnDef="date">
 

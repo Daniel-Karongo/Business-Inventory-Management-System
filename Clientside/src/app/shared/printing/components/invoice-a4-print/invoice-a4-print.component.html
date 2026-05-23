@@ -1,0 +1,434 @@
+<section class="invoice-document">
+
+    <!-- =====================================================
+       HEADER
+  ====================================================== -->
+
+    <header class="invoice-header">
+
+        <div class="invoice-branding">
+
+            <div class="invoice-eyebrow">
+                Enterprise Retail Invoice
+            </div>
+
+            <div class="invoice-title">
+                TAX INVOICE
+            </div>
+
+            <div class="invoice-company-block">
+
+                <div class="invoice-company">
+                    {{ data.branchName || 'Integrity Technologies' }}
+                </div>
+
+                <div class="invoice-company-meta" *ngIf="data.branchAddress">
+
+                    {{ data.branchAddress }}
+
+                </div>
+
+                <div class="invoice-company-meta" *ngIf="data.branchPhone">
+
+                    {{ data.branchPhone }}
+
+                </div>
+
+                <div class="invoice-company-meta" *ngIf="data.branchEmail">
+
+                    {{ data.branchEmail }}
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <aside class="invoice-meta-card">
+
+            <div class="invoice-meta-grid">
+
+                <div class="invoice-meta-item">
+
+                    <div class="invoice-meta-label">
+                        Receipt Number
+                    </div>
+
+                    <div class="invoice-meta-value mono">
+                        {{ data.receiptNumber }}
+                    </div>
+
+                </div>
+
+                <div class="invoice-meta-item">
+
+                    <div class="invoice-meta-label">
+                        Invoice Date
+                    </div>
+
+                    <div class="invoice-meta-value">
+                        {{ data.createdAt | date:'mediumDate' }}
+                    </div>
+
+                </div>
+
+                <div class="invoice-meta-item">
+
+                    <div class="invoice-meta-label">
+                        Time
+                    </div>
+
+                    <div class="invoice-meta-value">
+                        {{ data.createdAt | date:'shortTime' }}
+                    </div>
+
+                </div>
+
+                <div class="invoice-meta-item">
+
+                    <div class="invoice-meta-label">
+                        Served By
+                    </div>
+
+                    <div class="invoice-meta-value">
+                        {{ data.servedBy || 'System User' }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </aside>
+
+    </header>
+
+    <!-- =====================================================
+       CUSTOMER
+  ====================================================== -->
+
+    <section class="invoice-customer-card" *ngIf="data.customer">
+
+        <div class="invoice-section-heading">
+
+            <div class="invoice-section-eyebrow">
+                Customer Information
+            </div>
+
+            <h2 class="invoice-section-title">
+                Bill To
+            </h2>
+
+        </div>
+
+        <div class="invoice-customer-grid">
+
+            <div class="invoice-customer-item">
+
+                <div class="invoice-customer-label">
+                    Customer Name
+                </div>
+
+                <div class="invoice-customer-value">
+                    {{ data.customer.name || '-' }}
+                </div>
+
+            </div>
+
+            <div class="invoice-customer-item">
+
+                <div class="invoice-customer-label">
+                    Phone Number
+                </div>
+
+                <div class="invoice-customer-value">
+                    {{ data.customer.phone || '-' }}
+                </div>
+
+            </div>
+
+            <div class="invoice-customer-item">
+
+                <div class="invoice-customer-label">
+                    Email Address
+                </div>
+
+                <div class="invoice-customer-value">
+                    {{ data.customer.email || '-' }}
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- =====================================================
+       ITEMS
+  ====================================================== -->
+
+    <section class="invoice-section">
+
+        <div class="invoice-section-heading">
+
+            <div class="invoice-section-eyebrow">
+                Sales Breakdown
+            </div>
+
+            <h2 class="invoice-section-title">
+                Purchased Items
+            </h2>
+
+        </div>
+
+        <div class="invoice-table-shell">
+
+            <table class="invoice-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th class="item-column">
+                            Item Description
+                        </th>
+
+                        <th class="qty-column">
+                            Qty
+                        </th>
+
+                        <th class="price-column">
+                            Unit Price
+                        </th>
+
+                        <th class="total-column">
+                            Total
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    <tr *ngFor="let item of data.items">
+
+                        <td>
+
+                            <div class="invoice-product">
+
+                                <div class="invoice-product-name">
+                                    {{ item.productName }}
+                                </div>
+
+                                <div class="invoice-product-variant">
+
+                                    {{
+                                    item.variantName
+                                    || 'Standard Variant'
+                                    }}
+
+                                </div>
+
+                            </div>
+
+                        </td>
+
+                        <td class="align-center mono">
+                            {{ item.quantity }}
+                        </td>
+
+                        <td class="align-right mono">
+                            {{ item.unitPrice | number:'1.2-2' }}
+                        </td>
+
+                        <td class="align-right total-value mono">
+                            {{ item.total | number:'1.2-2' }}
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+    <!-- =====================================================
+       LOWER GRID
+  ====================================================== -->
+
+    <section class="invoice-lower-grid">
+
+        <!-- ===================================================
+         PAYMENTS
+    ==================================================== -->
+
+        <section class="invoice-payments-card" *ngIf="data.payments?.length">
+
+            <div class="invoice-section-heading compact">
+
+                <div class="invoice-section-eyebrow">
+                    Collection Summary
+                </div>
+
+                <h2 class="invoice-section-title">
+                    Payments
+                </h2>
+
+            </div>
+
+            <div class="invoice-payments-list">
+
+                <article class="invoice-payment-item" *ngFor="let payment of data.payments">
+
+                    <div class="invoice-payment-top">
+
+                        <div class="invoice-payment-method">
+                            {{ payment.method }}
+                        </div>
+
+                        <div class="invoice-payment-amount mono">
+                            {{ payment.amount | number:'1.2-2' }}
+                        </div>
+
+                    </div>
+
+                    <div class="invoice-payment-bottom">
+
+                        <div class="invoice-payment-reference">
+
+                            {{
+                            payment.reference
+                            || 'No Reference'
+                            }}
+
+                        </div>
+
+                        <div class="invoice-payment-date">
+
+                            {{
+                            payment.timestamp
+                            | date:'medium'
+                            }}
+
+                        </div>
+
+                    </div>
+
+                </article>
+
+            </div>
+
+        </section>
+
+        <!-- ===================================================
+         TOTALS
+    ==================================================== -->
+
+        <aside class="invoice-totals-card">
+
+            <div class="invoice-totals-header">
+
+                <div class="invoice-section-eyebrow">
+                    Financial Summary
+                </div>
+
+                <h2 class="invoice-section-title">
+                    Totals
+                </h2>
+
+            </div>
+
+            <div class="invoice-totals-body">
+
+                <div class="invoice-total-row">
+
+                    <span>
+                        Subtotal
+                    </span>
+
+                    <strong class="mono">
+                        {{
+                        data.totals.subtotal
+                        | number:'1.2-2'
+                        }}
+                    </strong>
+
+                </div>
+
+                <div class="invoice-total-row">
+
+                    <span>
+                        VAT
+                    </span>
+
+                    <strong class="mono">
+                        {{
+                        data.totals.tax
+                        | number:'1.2-2'
+                        }}
+                    </strong>
+
+                </div>
+
+                <div class="invoice-total-row">
+
+                    <span>
+                        Discount
+                    </span>
+
+                    <strong class="mono">
+                        {{
+                        data.totals.discount
+                        | number:'1.2-2'
+                        }}
+                    </strong>
+
+                </div>
+
+                <div class="invoice-totals-divider"></div>
+
+                <div class="invoice-grand-total">
+
+                    <span>
+                        TOTAL
+                    </span>
+
+                    <span class="mono">
+                        {{
+                        data.totals.total
+                        | number:'1.2-2'
+                        }}
+                    </span>
+
+                </div>
+
+            </div>
+
+        </aside>
+
+    </section>
+
+    <!-- =====================================================
+       FOOTER
+  ====================================================== -->
+
+    <footer class="invoice-footer">
+
+        <div class="footer-left">
+
+            {{ data.footerText || 'Thank you for your business.' }}
+
+        </div>
+
+        <div class="footer-right">
+
+            Generated by Enterprise POS Platform
+
+        </div>
+
+    </footer>
+
+</section>

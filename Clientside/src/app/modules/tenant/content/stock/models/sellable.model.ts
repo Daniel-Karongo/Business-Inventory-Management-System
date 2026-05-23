@@ -39,38 +39,6 @@ export interface SellableVariantDTO {
   warnings: WarningDTO[];
 }
 
-export interface SellableResolveRequest {
-  branchId: string;
-  productVariantId: string;
-  packagingId?: string;
-
-  quantity?: number;
-
-  customerId?: string;
-  customerGroupId?: string;
-
-  batchIds?: string[];
-}
-
-export interface SellableResolveResponse {
-  productVariantId: string;
-  packagingId: string;
-
-  requestedQuantity: number;
-  baseUnits: number;
-
-  unitPrice: number;
-  totalPrice: number;
-
-  availableStock: number;
-
-  totalCost: number;
-
-  batchAllocations?: AllocationDetail[];
-
-  adjustments: PricingAdjustment[];
-}
-
 export interface SellableProductRequest {
   branchId: string;
 

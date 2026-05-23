@@ -188,11 +188,4 @@ public class JournalEntry extends BranchAwareEntity {
         this.reversed = true;
         this.reversalJournalId = reversalId;
     }
-
-    @Override
-    public void beforeUpdate() {
-
-        if (posted)
-            throw new IllegalStateException("Posted journal entries are immutable");
-    }
 }

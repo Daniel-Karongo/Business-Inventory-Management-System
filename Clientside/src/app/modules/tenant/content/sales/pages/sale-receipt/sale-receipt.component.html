@@ -1,324 +1,479 @@
-<div class="receipt-loading" *ngIf="loading">
+<div class="receipt-page" *ngIf="sale as s">
 
-  Loading receipt...
+  <!-- ======================================================
+       HERO HEADER
+  ======================================================= -->
 
-</div>
+  <section class="receipt-hero">
 
-<div *ngIf="!loading && sale" class="receipt-page">
+    <div class="hero-left">
 
-  <!-- =================================================== -->
-  <!-- ACTIONS -->
-  <!-- =================================================== -->
-
-  <div class="receipt-actions no-print">
-
-    <button mat-stroked-button type="button" routerLink="/app/sales/{{ sale.id }}">
-
-      Back to Sale
-
-    </button>
-
-    <button mat-flat-button type="button" (click)="print()">
-
-      Print Receipt
-
-    </button>
-
-  </div>
-
-  <!-- =================================================== -->
-  <!-- RECEIPT -->
-  <!-- =================================================== -->
-
-  <div id="print-area" class="receipt">
-
-    <!-- =============================================== -->
-    <!-- HEADER -->
-    <!-- =============================================== -->
-
-    <div class="receipt-header">
-
-      <div class="business-name">
-        Business Manager
+      <div class="eyebrow">
+        Enterprise Sales Receipt
       </div>
 
-      <div class="receipt-title">
-        SALES RECEIPT
-      </div>
+      <h1 class="hero-title">
+        {{ s.receiptNo }}
+      </h1>
 
-      <div class="sale-status" [ngClass]="saleStatusClass()">
-
-        {{ sale.status }}
-
+      <div class="hero-subtitle">
+        Generated on
+        {{ s.createdAt | date:'fullDate' }}
+        at
+        {{ s.createdAt | date:'shortTime' }}
       </div>
 
     </div>
 
-    <!-- =============================================== -->
-    <!-- META -->
-    <!-- =============================================== -->
+    <div class="hero-actions">
 
-    <div class="receipt-meta">
+      <button mat-stroked-button type="button" [routerLink]="['/app/sales', s.id]">
 
-      <div class="meta-row">
+        <mat-icon>
+          arrow_back
+        </mat-icon>
 
-        <span>
-          Receipt No
-        </span>
+        Back To Sale
 
-        <strong>
-          {{ sale.receiptNo }}
-        </strong>
+      </button>
 
-      </div>
+      <button mat-flat-button type="button" (click)="printA4()">
 
-      <div class="meta-row">
+        <mat-icon>
+          description
+        </mat-icon>
 
-        <span>
-          Date
-        </span>
+        A4 Invoice
 
-        <strong>
-          {{
-          sale.createdAt
-          | date:'dd/MM/yyyy HH:mm'
-          }}
-        </strong>
+      </button>
 
-      </div>
+      <button mat-flat-button type="button" (click)="printThermal80()">
 
-      <div class="meta-row">
+        <mat-icon>
+          print
+        </mat-icon>
 
-        <span>
-          Served By
-        </span>
+        Thermal 80mm
 
-        <strong>
-          {{ sale.createdBy }}
-        </strong>
+      </button>
 
-      </div>
+      <button mat-flat-button type="button" (click)="printThermal58()">
+
+        <mat-icon>
+          receipt_long
+        </mat-icon>
+
+        Thermal 58mm
+
+      </button>
 
     </div>
 
-    <div class="divider"></div>
+  </section>
 
-    <!-- =============================================== -->
-    <!-- ITEMS -->
-    <!-- =============================================== -->
+  <!-- ======================================================
+       EXECUTIVE SUMMARY
+  ======================================================= -->
 
-    <div class="receipt-section-title">
-      ITEMS
-    </div>
+  <section class="summary-grid">
 
-    <div class="receipt-items">
+    <article class="summary-card">
 
-      <div class="receipt-item" *ngFor="let item of sale.items">
-
-        <div class="item-main">
-
-          <div class="item-name">
-
-            {{ item.productName }}
-
-          </div>
-
-          <div class="item-meta">
-
-            {{ item.quantity }}
-            ×
-            {{
-            item.unitPrice
-            | currency:'KES '
-            }}
-
-          </div>
-
-        </div>
-
-        <div class="item-total">
-
-          {{
-          item.lineTotal
-          | currency:'KES '
-          }}
-
-        </div>
-
+      <div class="summary-label">
+        Receipt Status
       </div>
 
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- =============================================== -->
-    <!-- TOTALS -->
-    <!-- =============================================== -->
-
-    <div class="totals-section">
-
-      <div class="total-row">
-
-        <span>
-          Total
-        </span>
-
-        <strong>
-          {{
-          sale.totalAmount
-          | currency:'KES '
-          }}
-        </strong>
-
+      <div class="summary-main">
+        {{ s.status }}
       </div>
 
-      <div class="total-row">
-
-        <span>
-          Paid
-        </span>
-
-        <strong>
-          {{
-          paidAmount()
-          | currency:'KES '
-          }}
-        </strong>
-
+      <div class="summary-badge status-success">
+        Completed Sale
       </div>
 
-      <div class="total-row" *ngIf="refundedAmount() > 0">
+    </article>
 
-        <span>
-          Refunded
-        </span>
+    <article class="summary-card">
 
-        <strong>
-          {{
-          refundedAmount()
-          | currency:'KES '
-          }}
-        </strong>
-
+      <div class="summary-label">
+        Cashier
       </div>
 
-      <div class="total-row balance">
-
-        <span>
-          Balance
-        </span>
-
-        <strong>
-          {{
-          balance()
-          | currency:'KES '
-          }}
-        </strong>
-
+      <div class="summary-main">
+        {{ s.createdBy }}
       </div>
 
-    </div>
+      <div class="summary-meta">
+        Point Of Sale Operator
+      </div>
 
-    <div class="divider"></div>
+    </article>
 
-    <!-- =============================================== -->
-    <!-- PAYMENTS -->
-    <!-- =============================================== -->
+    <article class="summary-card">
 
-    <div class="receipt-section-title" *ngIf="sale.payments?.length">
+      <div class="summary-label">
+        Customer
+      </div>
 
-      PAYMENTS
+      <div class="summary-main">
+        {{ s.customer?.name || 'Walk-In Customer' }}
+      </div>
 
-    </div>
+      <div class="summary-meta">
+        {{ s.customer?.phoneNumbers?.[0] || 'No Phone Number' }}
+      </div>
 
-    <div class="payments-section" *ngIf="sale.payments?.length">
+    </article>
 
-      <div class="payment-row" *ngFor="let payment of sale.payments">
+    <article class="summary-card total-highlight">
 
-        <div class="payment-main">
+      <div class="summary-label">
+        Total Amount
+      </div>
+
+      <div class="summary-total">
+        {{ s.totalAmount | currency:'KES ' }}
+      </div>
+
+      <div class="summary-meta">
+        VAT Inclusive
+      </div>
+
+    </article>
+
+  </section>
+
+  <!-- ======================================================
+       MAIN LAYOUT
+  ======================================================= -->
+
+  <section class="receipt-layout">
+
+    <!-- ===================================================
+         LEFT COLUMN
+    ==================================================== -->
+
+    <div class="receipt-main-column">
+
+      <!-- ===============================================
+           CUSTOMER
+      ================================================ -->
+
+      <section class="content-card" *ngIf="s.customer">
+
+        <div class="card-header">
 
           <div>
 
-            {{
-            payment.paymentMethod ||
-            'PAYMENT'
-            }}
+            <div class="card-eyebrow">
+              Customer Information
+            </div>
 
-          </div>
-
-          <div class="payment-status" [ngClass]="paymentStatusClass(payment.status)">
-
-            {{ payment.status }}
+            <h2 class="card-title">
+              Customer Details
+            </h2>
 
           </div>
 
         </div>
 
-        <div class="payment-amount">
+        <div class="customer-grid">
 
-          {{
-          payment.amount
-          | currency:'KES '
-          }}
+          <div class="info-block">
+
+            <div class="info-label">
+              Customer Name
+            </div>
+
+            <div class="info-value">
+              {{ s.customer.name }}
+            </div>
+
+          </div>
+
+          <div class="info-block">
+
+            <div class="info-label">
+              Phone Number
+            </div>
+
+            <div class="info-value">
+              {{ s.customer.phoneNumbers[0] || '-' }}
+            </div>
+
+          </div>
+
+          <div class="info-block">
+
+            <div class="info-label">
+              Email Address
+            </div>
+
+            <div class="info-value">
+              {{ s.customer.emailAddresses[0] || '-' }}
+            </div>
+
+          </div>
 
         </div>
 
-      </div>
+      </section>
+
+      <!-- ===============================================
+           ITEMS
+      ================================================ -->
+
+      <section class="content-card">
+
+        <div class="card-header">
+
+          <div>
+
+            <div class="card-eyebrow">
+              Sales Breakdown
+            </div>
+
+            <h2 class="card-title">
+              Purchased Items
+            </h2>
+
+          </div>
+
+          <div class="items-count">
+            {{ s.items.length }}
+            item(s)
+          </div>
+
+        </div>
+
+        <div class="table-shell">
+
+          <table class="enterprise-table">
+
+            <thead>
+
+              <tr>
+
+                <th>
+                  Product
+                </th>
+
+                <th class="align-center">
+                  Qty
+                </th>
+
+                <th class="align-right">
+                  Unit Price
+                </th>
+
+                <th class="align-right">
+                  Total
+                </th>
+
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              <tr *ngFor="let item of s.items">
+
+                <td>
+
+                  <div class="product-cell">
+
+                    <div class="product-name">
+                      {{ item.productName }}
+                    </div>
+
+                    <div class="product-variant">
+                      {{ item.classification || 'Standard Variant' }}
+                    </div>
+
+                  </div>
+
+                </td>
+
+                <td class="align-center qty-cell">
+                  {{ item.quantity }}
+                </td>
+
+                <td class="align-right mono">
+
+                  {{ item.unitPrice | currency:'KES ' }}
+
+                </td>
+
+                <td class="align-right total-cell mono">
+
+                  {{ item.lineTotal | currency:'KES ' }}
+
+                </td>
+
+              </tr>
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </section>
 
     </div>
 
-    <!-- =============================================== -->
-    <!-- CUSTOMER -->
-    <!-- =============================================== -->
+    <!-- ===================================================
+         RIGHT COLUMN
+    ==================================================== -->
 
-    <div *ngIf="sale.customer" class="customer-section">
+    <aside class="receipt-side-column">
 
-      <div class="divider"></div>
+      <!-- ===============================================
+           TOTALS
+      ================================================ -->
 
-      <div class="receipt-section-title">
-        CUSTOMER
-      </div>
+      <section class="totals-card">
 
-      <div class="customer-line">
-        {{ sale.customer.name }}
-      </div>
+        <div class="totals-header">
 
-      <div class="customer-line muted" *ngIf="sale.customer.phoneNumbers?.length">
+          <div class="card-eyebrow">
+            Financial Summary
+          </div>
 
-        {{
-        sale.customer.phoneNumbers[0]
-        }}
+          <h2 class="card-title">
+            Totals
+          </h2>
 
-      </div>
+        </div>
 
-      <div class="customer-line muted" *ngIf="sale.customer.emailAddresses?.length">
+        <div class="totals-body">
 
-        {{
-        sale.customer.emailAddresses[0]
-        }}
+          <div class="totals-row">
 
-      </div>
+            <span>
+              Subtotal
+            </span>
 
-    </div>
+            <strong class="mono">
+              {{
+              (s.totalAmount - s.totalTax)
+              | currency:'KES '
+              }}
+            </strong>
 
-    <!-- =============================================== -->
-    <!-- FOOTER -->
-    <!-- =============================================== -->
+          </div>
 
-    <div class="divider"></div>
+          <div class="totals-row">
 
-    <div class="receipt-footer">
+            <span>
+              VAT
+            </span>
 
-      <div>
-        Thank you for your business
-      </div>
+            <strong class="mono">
+              {{ s.totalTax | currency:'KES ' }}
+            </strong>
 
-      <div class="footer-meta">
-        Generated by Business Manager
-      </div>
+          </div>
 
-    </div>
+          <div class="totals-row">
 
-  </div>
+            <span>
+              Discount
+            </span>
+
+            <strong class="mono">
+              {{ s.totalDiscount | currency:'KES ' }}
+            </strong>
+
+          </div>
+
+          <div class="totals-divider"></div>
+
+          <div class="grand-total-row">
+
+            <span>
+              TOTAL
+            </span>
+
+            <span class="mono">
+              {{ s.totalAmount | currency:'KES ' }}
+            </span>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ===============================================
+           PAYMENTS
+      ================================================ -->
+
+      <section class="content-card payments-card" *ngIf="s.payments?.length">
+
+        <div class="card-header">
+
+          <div>
+
+            <div class="card-eyebrow">
+              Payment Collection
+            </div>
+
+            <h2 class="card-title">
+              Payments
+            </h2>
+
+          </div>
+
+        </div>
+
+        <div class="payments-list">
+
+          <article class="payment-item" *ngFor="let payment of s.payments">
+
+            <div class="payment-top">
+
+              <div class="payment-method">
+                {{ payment.method }}
+              </div>
+
+              <div class="payment-amount mono">
+                {{ payment.amount | currency:'KES ' }}
+              </div>
+
+            </div>
+
+            <div class="payment-bottom">
+
+              <div class="payment-reference">
+
+                {{
+                payment.transactionCode
+                || payment.providerReference
+                || 'No Reference'
+                }}
+
+              </div>
+
+              <div class="payment-date">
+
+                {{
+                payment.timestamp
+                | date:'medium'
+                }}
+
+              </div>
+
+            </div>
+
+          </article>
+
+        </div>
+
+      </section>
+
+    </aside>
+
+  </section>
 
 </div>

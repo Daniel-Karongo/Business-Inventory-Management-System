@@ -1,5 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.ap.debt.dto;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.enums.SupplierPaymentMethod;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.enums.SupplierPaymentStatus;
+import com.IntegrityTechnologies.business_manager.modules.finance.shared.enums.FinancialPostingStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,11 +26,22 @@ public class SupplierPaymentDto {
     private LocalDate paymentDate;
 
     private BigDecimal amount;
+
     private BigDecimal allocatedAmount;
+
     private BigDecimal unappliedAmount;
 
-    private String paymentMethod;
+    private SupplierPaymentStatus status;
+
+    private SupplierPaymentMethod paymentMethod;
+
     private String reference;
+
+    private boolean posted;
+
+    private boolean reversed;
+
+    private FinancialPostingStatus postingStatus;
 
     private List<PaymentSettlementDto> allocations;
 }

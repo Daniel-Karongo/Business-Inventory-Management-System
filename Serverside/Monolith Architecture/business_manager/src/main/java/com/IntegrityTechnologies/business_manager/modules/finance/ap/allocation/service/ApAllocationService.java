@@ -571,4 +571,88 @@ public class ApAllocationService {
                 payment
         );
     }
+
+    @Transactional
+    public void reverseAllForPayment(
+            UUID branchId,
+            SupplierPayment payment,
+            String reason
+    ) {
+
+        List<SupplierPaymentAllocation> allocations =
+                allocationRepository
+                        .findActiveLockedByTenantIdAndBranchIdAndPaymentId(
+                                TenantContext.getTenantId(),
+                                branchId,
+                                payment.getId()
+                        );
+
+        for (
+                SupplierPaymentAllocation allocation :
+                allocations
+        ) {
+
+            PurchaseInvoice invoice =
+                    invoiceRepository
+                            .findLockedByTenantIdAndBranchIdAndId(
+                                    TenantContext.getTenantId(),
+                                    branchId,
+                                    allocation.getPurchaseInvoice().getId()
+                            )
+                            .orElseThrow(() ->
+                                    new IllegalStateException(
+                                            "Invoice not found during allocation reversal"
+                                    )
+                            );
+
+            /*
+             * Reverse invoice/payment balances
+             */
+            BigDecimal amount =
+                    allocation.getAllocatedAmount();
+
+            paymentService.reverseAllocation(
+                    payment,
+                    amount
+            );
+
+            invoiceService.reverseAllocation(
+                    invoice,
+                    amount
+            );
+
+            /*
+             * Preserve allocation audit trail
+             */
+            allocation.setReversed(true);
+
+            allocation.setStatus(
+                    PaymentAllocationStatus.REVERSED
+            );
+
+            allocation.setReversedAt(
+                    LocalDateTime.now()
+            );
+
+            allocation.setReversedBy(
+                    currentUser()
+            );
+
+            allocation.setReversalReason(
+                    reason
+            );
+
+            allocationRepository.save(
+                    allocation
+            );
+
+            invoiceRepository.save(
+                    invoice
+            );
+        }
+
+        paymentRepository.save(
+                payment
+        );
+    }
 }

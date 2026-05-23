@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dt
 
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,4 +19,6 @@ public class SaleLinePreviewRequest {
     private UUID branchId;
 
     private List<BatchSelectionDto> batchSelections;
+    private BigDecimal requestedUnitPrice;
+    private String overrideReason;
 }

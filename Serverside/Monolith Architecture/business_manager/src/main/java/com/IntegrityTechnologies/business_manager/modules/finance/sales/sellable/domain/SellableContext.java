@@ -4,6 +4,7 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,4 +28,6 @@ public class SellableContext {
     private PricingPolicy pricingPolicy;
 
     private ResolutionMode mode;
+    private BigDecimal requestedUnitPrice;
+    private String overrideReason;
 }

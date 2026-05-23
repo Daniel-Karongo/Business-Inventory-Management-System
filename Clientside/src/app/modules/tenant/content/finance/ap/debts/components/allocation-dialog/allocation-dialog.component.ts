@@ -61,7 +61,7 @@ import {
 } from '../../models/supplier-bill.model';
 
 import {
-    SupplierPayment
+    SupplierPaymentResponseDto
 } from '../../models/supplier-payment.model';
 
 import {
@@ -76,7 +76,7 @@ import { ConfirmDialogComponent } from '../../../../../../../../shared/component
 export interface AllocationDialogData {
     branchId: string;
     supplierId: string;
-    payments: SupplierPayment[];
+    payments: SupplierPaymentResponseDto[];
     bills: SupplierBill[];
 }
 
@@ -118,7 +118,7 @@ export class AllocationDialogComponent {
 
     preview?: AllocationPreviewResponse;
 
-    selectedPayment?: SupplierPayment;
+    selectedPayment?: SupplierPaymentResponseDto;
 
     selectedInvoice?: SupplierBill;
 
@@ -161,13 +161,27 @@ export class AllocationDialogComponent {
         public data: AllocationDialogData
     ) { }
 
+    get availablePayments(): SupplierPaymentResponseDto[] {
+
+        return this.data.payments.filter(payment =>
+
+            payment.posted
+            &&
+
+            !payment.reversed
+            &&
+
+            payment.unappliedAmount > 0
+        );
+    }
+
     selectPayment(
         paymentId: string | null
     ): void {
 
         this.selectedPayment =
             this.data.payments.find(
-                p => p.paymentId === paymentId
+                p => p.id === paymentId
             );
 
         this.preview = undefined;
@@ -229,7 +243,7 @@ export class AllocationDialogComponent {
                     this.data.supplierId,
 
                 paymentId:
-                    this.selectedPayment.paymentId,
+                    this.selectedPayment.id,
 
                 amount:
                     this.amountControl.value
@@ -394,7 +408,7 @@ export class AllocationDialogComponent {
                         this.data.supplierId,
 
                     paymentId:
-                        this.selectedPayment.paymentId,
+                        this.selectedPayment.id,
 
                     amount:
                         this.amountControl.value
@@ -419,7 +433,7 @@ export class AllocationDialogComponent {
                     this.data.supplierId,
 
                 paymentId:
-                    this.selectedPayment.paymentId,
+                    this.selectedPayment.id,
 
                 purchaseInvoiceId:
                     this.selectedInvoice!.invoiceId,

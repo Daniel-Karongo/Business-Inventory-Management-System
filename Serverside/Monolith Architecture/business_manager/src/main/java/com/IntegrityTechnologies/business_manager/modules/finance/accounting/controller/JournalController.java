@@ -121,6 +121,8 @@ public class JournalController {
                 j.getSourceModule(),
                 j.getPostedBy(),
                 j.getPostedAt(),
+                j.isReversed(),
+                j.getReversalJournalId(),
                 j.getLedgerEntries().stream()
                         .map(e -> new LedgerLineResponse(
                                 e.getAccount().getId(),

@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 
 import { PaymentsService } from '../../services/payments.service';
 import { MpesaPaymentSuccessDialogComponent } from '../mpesa-payment-success-dialog/mpesa-payment-success-dialog.component';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   standalone: true,
@@ -35,7 +36,8 @@ export class MpesaPaymentDialogComponent {
     private dialogRef: MatDialogRef<MpesaPaymentDialogComponent>,
     private dialog: MatDialog,
     private fb: FormBuilder,
-    private paymentsService: PaymentsService
+    private paymentsService: PaymentsService,
+    private snackBar: MatSnackBar
   ) {
     this.form = this.fb.group({
       phone: ['', [Validators.required]],
@@ -57,7 +59,19 @@ export class MpesaPaymentDialogComponent {
       this.form.value.amount
     ).subscribe({
       next: () => this.startPollingForSuccess(),
-      error: () => this.loading = false
+      error: error => {
+
+        this.loading = false;
+
+        this.snackBar.open(
+          error?.error?.message ??
+          'Failed to initiate MPESA payment.',
+          'Close',
+          {
+            duration: 4000
+          }
+        );
+      }
     });
   }
 

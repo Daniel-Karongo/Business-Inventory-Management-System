@@ -15,11 +15,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
 
     @Override
     @EntityGraph(attributePaths = {
-            "category",
-            "suppliers",
-            "suppliers.supplier",
-            "variants",
-            "images"
+            "category"
     })
     Page<Product> findAll(
             Specification<Product> spec,

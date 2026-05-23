@@ -16,27 +16,27 @@ import {
 import { environment } from '../../../../../../../../environments/environment';
 import { BranchContextService } from '../../../../../../../core/services/branch-context.service';
 import { PageWrapper } from '../../../../../../../core/models/page-wrapper.model';
-import { SupplierPayment } from '../models/supplier-payment.model';
+import { ProcessSupplierPaymentRequest, SupplierPaymentResponseDto } from '../models/supplier-payment.model';
 import {
     CreateSupplierPaymentRequest,
     ReverseSupplierPaymentRequest
 } from '../models/create-supplier-payment-request.model';
 import { FundingAccount } from '../models/funding-account.model';
-import { SupplierPaymentDetails } from '../models/supplier-payment-details.model';
+import { SupplierPaymentDetailsDto } from '../models/supplier-payment-details.model';
 
 @Injectable({
     providedIn: 'root'
 })
 export class ApPaymentService {
-    
+
     private readonly http =
         inject(HttpClient);
     private readonly branchContext =
         inject(BranchContextService);
     private readonly baseUrl =
         `${environment.apiUrl}/finance/supplier-payments`;
-    
-        private resolveBranchId(
+
+    private resolveBranchId(
         override?: string
     ): string {
         const branchId =
@@ -53,9 +53,9 @@ export class ApPaymentService {
 
     create(
         request: CreateSupplierPaymentRequest
-    ): Observable<SupplierPayment> {
+    ): Observable<SupplierPaymentResponseDto> {
         return this.http
-            .post<SupplierPayment>(
+            .post<SupplierPaymentResponseDto>(
                 this.baseUrl,
                 request
             )
@@ -69,7 +69,7 @@ export class ApPaymentService {
     post(
         paymentId: string,
         overrideBranchId?: string
-    ): Observable<SupplierPayment> {
+    ): Observable<SupplierPaymentResponseDto> {
         const params =
             new HttpParams()
                 .set(
@@ -79,10 +79,26 @@ export class ApPaymentService {
                     )
                 );
         return this.http
-            .post<SupplierPayment>(
+            .post<SupplierPaymentResponseDto>(
                 `${this.baseUrl}/${paymentId}/post`,
                 {},
                 { params }
+            )
+            .pipe(
+                catchError(
+                    this.handleError
+                )
+            );
+    }
+
+    process(
+        request: ProcessSupplierPaymentRequest
+    ): Observable<SupplierPaymentResponseDto> {
+
+        return this.http
+            .post<SupplierPaymentResponseDto>(
+                `${this.baseUrl}/process`,
+                request
             )
             .pipe(
                 catchError(
@@ -95,7 +111,7 @@ export class ApPaymentService {
         paymentId: string,
         request: ReverseSupplierPaymentRequest,
         overrideBranchId?: string
-    ): Observable<SupplierPayment> {
+    ): Observable<SupplierPaymentResponseDto> {
         const params =
             new HttpParams()
                 .set(
@@ -105,7 +121,7 @@ export class ApPaymentService {
                     )
                 );
         return this.http
-            .post<SupplierPayment>(
+            .post<SupplierPaymentResponseDto>(
                 `${this.baseUrl}/${paymentId}/reverse`,
                 request,
                 { params }
@@ -120,7 +136,7 @@ export class ApPaymentService {
     details(
         paymentId: string,
         overrideBranchId?: string
-    ): Observable<SupplierPaymentDetails> {
+    ): Observable<SupplierPaymentDetailsDto> {
         const params =
             new HttpParams()
                 .set(
@@ -130,7 +146,7 @@ export class ApPaymentService {
                     )
                 );
         return this.http
-            .get<SupplierPaymentDetails>(
+            .get<SupplierPaymentDetailsDto>(
                 `${this.baseUrl}/${paymentId}`,
                 { params }
             )
@@ -171,7 +187,7 @@ export class ApPaymentService {
         status?: string,
         overrideBranchId?: string
     ): Observable<
-        PageWrapper<SupplierPayment>
+        PageWrapper<SupplierPaymentResponseDto>
     > {
         let params =
             new HttpParams()
@@ -199,7 +215,7 @@ export class ApPaymentService {
         }
         return this.http
             .get<
-                PageWrapper<SupplierPayment>
+                PageWrapper<SupplierPaymentResponseDto>
             >(
                 this.baseUrl,
                 { params }
@@ -210,7 +226,7 @@ export class ApPaymentService {
                 )
             );
     }
-    
+
     private handleError = (
         error: any
     ) => {

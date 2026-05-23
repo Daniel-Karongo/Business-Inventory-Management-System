@@ -11,5 +11,8 @@ public record JournalResponse(
         String sourceModule,
         String postedBy,
         LocalDateTime postedAt,
+        Boolean reversed,
+        UUID reversalJournalId,
         List<LedgerLineResponse> entries
-) {}
+) {
+}

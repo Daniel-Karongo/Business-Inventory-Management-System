@@ -68,7 +68,7 @@ public class BarcodeScanService {
                                 .productVariantId(p.getVariantId())
                                 .packagingId(packaging.getId())
                                 .quantity(quantity)
-                                .mode(ResolutionMode.UI_FAST)
+                                .mode(ResolutionMode.PREVIEW)
                                 .build()
                 );
 

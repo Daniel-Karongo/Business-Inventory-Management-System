@@ -6,7 +6,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.allocation.dto.AutoAllocatePaymentRequest;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.allocation.repository.SupplierPaymentAllocationRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.allocation.service.ApAllocationService;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.debt.dto.PaymentSettlementDto;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.enums.SupplierPaymentStatus;
@@ -432,19 +434,25 @@ public class SupplierPaymentService {
             SupplierPayment payment,
             BigDecimal amount
     ) {
-        payment.setAllocatedAmount(
+
+        BigDecimal updatedAllocated =
                 payment.getAllocatedAmount()
-                        .subtract(amount)
+                        .subtract(amount);
+
+        BigDecimal updatedUnapplied =
+                payment.getUnappliedAmount()
+                        .add(amount);
+
+        payment.setAllocatedAmount(
+                updatedAllocated
         );
 
         payment.setUnappliedAmount(
-                payment.getUnappliedAmount()
-                        .add(amount)
+                updatedUnapplied
         );
 
         boolean fullyAllocated =
-                payment.getUnappliedAmount()
-                        .compareTo(BigDecimal.ZERO) == 0;
+                updatedUnapplied.compareTo(BigDecimal.ZERO) == 0;
 
         payment.setFullyAllocated(
                 fullyAllocated
@@ -454,8 +462,7 @@ public class SupplierPaymentService {
                 fullyAllocated
                         ? SupplierPaymentStatus.FULLY_ALLOCATED
                         : (
-                        payment.getAllocatedAmount()
-                                .compareTo(BigDecimal.ZERO) > 0
+                        updatedAllocated.compareTo(BigDecimal.ZERO) > 0
                                 ? SupplierPaymentStatus.PARTIALLY_ALLOCATED
                                 : SupplierPaymentStatus.POSTED
                 )
@@ -465,7 +472,6 @@ public class SupplierPaymentService {
                 payment
         );
     }
-
     private void validateAllocationInvariants(
             SupplierPayment payment
     ) {

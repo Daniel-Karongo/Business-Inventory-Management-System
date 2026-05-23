@@ -213,22 +213,57 @@ export const environment = {
        PAYMENTS
     ============================================================ */
     payments: {
+
       base: '/payments',
 
-      create: '/payments',
-      get: (id: string) => `/payments/${id}`,
-      list: '/payments',
+      create: (branchId: string) =>
+        `/payments/branch/${branchId}`,
 
-      refund: (id: string) => `/payments/${id}/refund`,
-      reverse: (id: string) => `/payments/${id}/reverse`,
+      get: (
+        branchId: string,
+        id: string
+      ) =>
+        `/payments/branch/${branchId}/${id}`,
 
-      reconcile: '/payments/reconcile',
+      list: (branchId: string) =>
+        `/payments/branch/${branchId}`,
+
+      refund: (
+        branchId: string,
+        id: string
+      ) =>
+        `/payments/branch/${branchId}/${id}/refund`,
+
+      reverse: (
+        branchId: string,
+        id: string
+      ) =>
+        `/payments/branch/${branchId}/${id}/reverse`,
+
+      reconcile: (branchId: string) =>
+        `/payments/branch/${branchId}/reconcile`,
 
       mpesa: {
-        initiateStk: '/payments/mpesa/stk/initiate',
-        callback: '/payments/mpesa/stk/callback',
-        c2bConfirm: '/payments/mpesa/c2b/confirm',
-        c2bValidate: '/payments/mpesa/c2b/validate',
+
+        initiateStk: (
+          branchId: string
+        ) =>
+          `/payments/mpesa/branch/${branchId}/stk/initiate`,
+
+        callback: (
+          branchId: string
+        ) =>
+          `/payments/mpesa/branch/${branchId}/stk/callback`,
+
+        c2bConfirm: (
+          branchId: string
+        ) =>
+          `/payments/mpesa/branch/${branchId}/c2b/confirm`,
+
+        c2bValidate: (
+          branchId: string
+        ) =>
+          `/payments/mpesa/branch/${branchId}/c2b/validate`
       }
     },
     /* =====================================================

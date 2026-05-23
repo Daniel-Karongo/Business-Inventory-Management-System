@@ -121,6 +121,14 @@ export class ManualJournalComponent
 
   form!: FormGroup;
 
+  readonly imbalance =
+    computed(() =>
+      Math.abs(
+        this.debitTotal()
+        - this.creditTotal()
+      )
+    );
+
   readonly debitTotal =
     computed(() => {
 
@@ -285,6 +293,59 @@ export class ManualJournalComponent
     this.lines.removeAt(index);
   }
 
+  private buildFriendlyError(
+    err: any
+  ): string {
+
+    const raw =
+      err?.error?.message
+      || err?.error
+      || '';
+
+    if (
+      typeof raw === 'string'
+      && raw.includes(
+        'Unbalanced journal'
+      )
+    ) {
+
+      const debitMatch =
+        raw.match(/debit=(\d+(\.\d+)?)/i);
+
+      const creditMatch =
+        raw.match(/credit=(\d+(\.\d+)?)/i);
+
+      const debit =
+        Number(
+          debitMatch?.[1] || 0
+        );
+
+      const credit =
+        Number(
+          creditMatch?.[1] || 0
+        );
+
+      const difference =
+        Math.abs(
+          debit - credit
+        );
+
+      return `
+Transaction is out of balance by ${difference.toLocaleString()}.
+
+Money In: ${debit.toLocaleString()}
+Money Out: ${credit.toLocaleString()}
+
+Please make both totals equal before posting.
+    `.trim();
+    }
+
+    return (
+      err?.error?.message
+      || 'Failed to post transaction'
+    );
+  }
+
   submit(): void {
 
     if (
@@ -350,11 +411,11 @@ export class ManualJournalComponent
           this.posting.set(false);
 
           this.snackbar.open(
-            err?.error?.message
-            ||
-            'Failed to post transaction',
+            this.buildFriendlyError(err),
             'Close',
-            { duration: 3500 }
+            {
+              duration: 7000
+            }
           );
         }
       });

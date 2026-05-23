@@ -160,12 +160,28 @@ export class JournalDetailsComponent
           data: {
             title:
               'Reverse Transaction?',
+
             message:
-              'Provide a reason for reversal.',
+              'This will create a reversing accounting entry. Select the reason for reversal.',
+
             action:
               'REVERSE',
+
             confirmText:
-              'Reverse Transaction'
+              'Reverse Transaction',
+
+            requireReason: true,
+
+            allowCustomReason: true,
+
+            reasons: [
+              'Incorrect account selected',
+              'Incorrect amount entered',
+              'Duplicate transaction',
+              'Wrong accounting period',
+              'Transaction posted by mistake',
+              'Correction of previous entry'
+            ]
           }
         }
       );
@@ -208,11 +224,13 @@ export class JournalDetailsComponent
             error: err => {
 
               this.snackbar.open(
-                err?.error?.message
-                ||
-                'Failed to reverse transaction',
+                this.buildFriendlyReverseError(
+                  err
+                ),
                 'Close',
-                { duration: 4000 }
+                {
+                  duration: 7000
+                }
               );
             }
           });
@@ -242,4 +260,41 @@ export class JournalDetailsComponent
       );
   }
 
+  private buildFriendlyReverseError(
+    err: any
+  ): string {
+
+    const message =
+      err?.error?.message
+      || '';
+
+    if (
+      message.includes(
+        'immutable'
+      )
+    ) {
+      return `
+This transaction could not be reversed.
+
+The accounting system prevented changes to a locked journal entry.
+
+Please contact your administrator if this transaction should still be reversible.
+    `.trim();
+    }
+
+    if (
+      message.includes(
+        'already reversed'
+      )
+    ) {
+      return `
+This transaction has already been reversed.
+    `.trim();
+    }
+
+    return (
+      err?.error?.message
+      || 'Failed to reverse transaction'
+    );
+  }
 }

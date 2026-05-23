@@ -27,18 +27,16 @@ import {
 } from '@angular/material/icon';
 
 import {
-    SupplierPayment
-} from '../../models/supplier-payment.model';
+    SupplierPaymentDetailsDto
+} from '../../models/supplier-payment-details.model';
 
 @Component({
     selector: 'app-payment-details-dialog',
     standalone: true,
     imports: [
         CommonModule,
-
         CurrencyPipe,
         DatePipe,
-
         MatDialogModule,
         MatButtonModule,
         MatDividerModule,
@@ -54,8 +52,16 @@ export class PaymentDetailsDialogComponent {
 
     constructor(
         @Inject(MAT_DIALOG_DATA)
-        public payment: SupplierPayment
+        public data: SupplierPaymentDetailsDto
     ) { }
+
+    get payment() {
+        return this.data.payment;
+    }
+
+    get allocations() {
+        return this.data.allocations;
+    }
 
     get allocationRate(): number {
 

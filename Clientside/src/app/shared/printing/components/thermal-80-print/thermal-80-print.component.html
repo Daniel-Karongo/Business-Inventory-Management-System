@@ -1,0 +1,330 @@
+<section class="thermal-document thermal-80">
+
+    <!-- =====================================================
+       HEADER
+  ====================================================== -->
+
+    <header class="thermal-header">
+
+        <div class="thermal-company">
+            {{ data.branchName || 'Integrity Technologies' }}
+        </div>
+
+        <div class="thermal-meta" *ngIf="data.branchAddress">
+
+            {{ data.branchAddress }}
+
+        </div>
+
+        <div class="thermal-meta" *ngIf="data.branchPhone">
+
+            {{ data.branchPhone }}
+
+        </div>
+
+        <div class="thermal-meta" *ngIf="data.branchEmail">
+
+            {{ data.branchEmail }}
+
+        </div>
+
+    </header>
+
+    <div class="thermal-separator"></div>
+
+    <!-- =====================================================
+       RECEIPT META
+  ====================================================== -->
+
+    <section class="thermal-stack">
+
+        <div class="thermal-row">
+
+            <span class="thermal-row-label">
+                Receipt No
+            </span>
+
+            <strong class="thermal-mono">
+                {{ data.receiptNumber }}
+            </strong>
+
+        </div>
+
+        <div class="thermal-row">
+
+            <span class="thermal-row-label">
+                Date
+            </span>
+
+            <strong>
+                {{ data.createdAt | date:'medium' }}
+            </strong>
+
+        </div>
+
+        <div class="thermal-row">
+
+            <span class="thermal-row-label">
+                Cashier
+            </span>
+
+            <strong>
+                {{ data.servedBy || 'System User' }}
+            </strong>
+
+        </div>
+
+    </section>
+
+    <!-- =====================================================
+       CUSTOMER
+  ====================================================== -->
+
+    <section class="thermal-customer" *ngIf="data.customer">
+
+        <div class="thermal-separator"></div>
+
+        <div class="thermal-section-title">
+            CUSTOMER
+        </div>
+
+        <div class="thermal-stack compact">
+
+            <div class="thermal-customer-name">
+
+                {{ data.customer.name }}
+
+            </div>
+
+            <div class="thermal-customer-meta" *ngIf="data.customer.phone">
+
+                {{ data.customer.phone }}
+
+            </div>
+
+            <div class="thermal-customer-meta" *ngIf="data.customer.email">
+
+                {{ data.customer.email }}
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- =====================================================
+       ITEMS
+  ====================================================== -->
+
+    <section class="thermal-items-section">
+
+        <div class="thermal-separator"></div>
+
+        <div class="thermal-section-title">
+            ITEMS
+        </div>
+
+        <table class="thermal-items">
+
+            <tbody>
+
+                <tr *ngFor="let item of data.items">
+
+                    <td class="thermal-item-main">
+
+                        <div class="thermal-item-name">
+                            {{ item.productName }}
+                        </div>
+
+                        <div class="thermal-item-variant" *ngIf="item.variantName">
+
+                            {{ item.variantName }}
+
+                        </div>
+
+                        <div class="thermal-item-meta">
+
+                            {{ item.quantity }}
+                            ×
+                            {{ item.unitPrice | number:'1.2-2' }}
+
+                        </div>
+
+                    </td>
+
+                    <td class="thermal-price thermal-mono">
+
+                        {{ item.total | number:'1.2-2' }}
+
+                    </td>
+
+                </tr>
+
+            </tbody>
+
+        </table>
+
+    </section>
+
+    <!-- =====================================================
+       TOTALS
+  ====================================================== -->
+
+    <section class="thermal-summary-section">
+
+        <div class="thermal-separator"></div>
+
+        <div class="thermal-summary">
+
+            <div class="thermal-row">
+
+                <span class="thermal-row-label">
+                    Subtotal
+                </span>
+
+                <strong class="thermal-mono">
+
+                    {{
+                    data.totals.subtotal
+                    | number:'1.2-2'
+                    }}
+
+                </strong>
+
+            </div>
+
+            <div class="thermal-row">
+
+                <span class="thermal-row-label">
+                    VAT
+                </span>
+
+                <strong class="thermal-mono">
+
+                    {{
+                    data.totals.tax
+                    | number:'1.2-2'
+                    }}
+
+                </strong>
+
+            </div>
+
+            <div class="thermal-row" *ngIf="data.totals.discount">
+
+                <span class="thermal-row-label">
+                    Discount
+                </span>
+
+                <strong class="thermal-mono">
+
+                    -
+                    {{
+                    data.totals.discount
+                    | number:'1.2-2'
+                    }}
+
+                </strong>
+
+            </div>
+
+        </div>
+
+        <div class="thermal-separator bold"></div>
+
+        <div class="thermal-row thermal-total">
+
+            <span>
+                TOTAL
+            </span>
+
+            <span class="thermal-mono">
+
+                {{
+                data.totals.total
+                | number:'1.2-2'
+                }}
+
+            </span>
+
+        </div>
+
+    </section>
+
+    <!-- =====================================================
+       PAYMENTS
+  ====================================================== -->
+
+    <section class="thermal-payments" *ngIf="data.payments?.length">
+
+        <div class="thermal-separator"></div>
+
+        <div class="thermal-section-title">
+            PAYMENTS
+        </div>
+
+        <div class="thermal-payments-list">
+
+            <article class="thermal-payment" *ngFor="let payment of data.payments">
+
+                <div class="thermal-payment-left">
+
+                    <div class="thermal-payment-method">
+                        {{ payment.method }}
+                    </div>
+
+                    <div class="thermal-payment-ref" *ngIf="payment.reference">
+
+                        {{ payment.reference }}
+
+                    </div>
+
+                </div>
+
+                <div class="thermal-payment-right">
+
+                    <div class="thermal-payment-amount thermal-mono">
+
+                        {{
+                        payment.amount
+                        | number:'1.2-2'
+                        }}
+
+                    </div>
+
+                </div>
+
+            </article>
+
+        </div>
+
+    </section>
+
+    <!-- =====================================================
+       FOOTER
+  ====================================================== -->
+
+    <footer class="thermal-footer">
+
+        <div class="thermal-separator"></div>
+
+        <div class="thermal-footer-message">
+
+            {{
+            data.footerText
+            || 'Thank you for your business.'
+            }}
+
+        </div>
+
+        <div class="thermal-footer-soft">
+            Goods once sold are not returnable.
+        </div>
+
+        <div class="thermal-footer-soft">
+            Powered by Enterprise POS
+        </div>
+
+    </footer>
+
+</section>

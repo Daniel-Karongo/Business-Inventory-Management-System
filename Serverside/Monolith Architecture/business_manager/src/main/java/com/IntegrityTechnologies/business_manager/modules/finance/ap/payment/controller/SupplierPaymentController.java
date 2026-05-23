@@ -4,6 +4,7 @@ import com.IntegrityTechnologies.business_manager.config.response.PageWrapper;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.enums.SupplierPaymentStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.service.SupplierPaymentPostingService;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.service.SupplierPaymentProcessingService;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.service.SupplierPaymentService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import jakarta.validation.Valid;
@@ -24,6 +25,7 @@ public class SupplierPaymentController {
     private final SupplierPaymentService service;
 
     private final SupplierPaymentPostingService postingService;
+    private final SupplierPaymentProcessingService processingService;
 
     @PostMapping
     public SupplierPaymentResponse create(
@@ -43,6 +45,15 @@ public class SupplierPaymentController {
                 branchId,
                 paymentId
         );
+    }
+
+    @PostMapping("/process")
+    public SupplierPaymentResponse process(
+            @Valid
+            @RequestBody
+            ProcessSupplierPaymentRequest request
+    ) {
+        return processingService.process(request);
     }
 
     @PostMapping("/{paymentId}/reverse")

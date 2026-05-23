@@ -24,7 +24,6 @@ import com.IntegrityTechnologies.business_manager.modules.stock.category.model.C
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplier;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.CategorySupplierId;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.accounting.InventoryAccountingPort;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.engine.StockEngine;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.*;
@@ -82,7 +81,6 @@ public class InventoryService {
     private final InventoryBatchRepository batchRepository;
     private final TaxProperties taxProperties;
     private final PeriodGuardService periodGuardService;
-    private final InventoryAccountingPort inventoryAccountingPort;
     private final AccountingFacade accountingFacade;
     private final AccountingAccounts accountingAccounts;
     private final BatchConsumptionRepository batchConsumptionRepository;
@@ -840,14 +838,17 @@ public class InventoryService {
             // 3️⃣ DELEGATE TO STOCK ENGINE (SINGLE SOURCE OF TRUTH)
             // ======================================================
 
-            BigDecimal totalTransferValue =
-                    stockEngine.transferAndSyncItem(
-                            variantId,
-                            fromBranch,
-                            toBranch,
-                            quantity,
-                            req.getDestinationUnitCost()
-                    );
+            UUID transferId = requireReferenceId(req.getReference(), "Transfer");
+
+            stockEngine.transferAndSyncItem(
+                    variantId,
+                    fromBranch,
+                    toBranch,
+                    quantity,
+                    req.getDestinationUnitCost(),
+                    transferId,
+                    req.getReference()
+            );
 
             // ======================================================
             // 6️⃣ RECOMPUTE AVERAGES
@@ -857,28 +858,6 @@ public class InventoryService {
 
             validateInventoryInvariant(variantId, fromBranch);
             validateInventoryInvariant(variantId, toBranch);
-
-            // ======================================================
-            // 7️⃣ ACCOUNTING (UNCHANGED)
-            // ======================================================
-
-            UUID transferId = requireReferenceId(req.getReference(), "Transfer");
-
-            inventoryAccountingPort.recordInventoryTransferOut(
-                    tenantId,
-                    transferId, // ✅ FIXED
-                    fromBranch,
-                    totalTransferValue,
-                    req.getReference()
-            );
-
-            inventoryAccountingPort.recordInventoryTransferIn(
-                    tenantId,
-                    transferId, // ✅ FIXED
-                    toBranch,
-                    totalTransferValue,
-                    req.getReference()
-            );
 
             return new ApiResponse("success", "Batch-aware transfer complete");
 
@@ -958,27 +937,6 @@ public class InventoryService {
                             req.getUnitCost(),
                             refId
                     );
-
-            // =========================
-            // ACCOUNTING
-            // =========================
-            if (delta < 0) {
-                inventoryAccountingPort.recordInventoryConsumption(
-                        tenantId,
-                        refId,
-                        branch.getId(),
-                        totalValue,
-                        req.getReference()
-                );
-            } else {
-                inventoryAccountingPort.recordInventoryReturn(
-                        tenantId,
-                        refId,
-                        branch.getId(),
-                        totalValue,
-                        req.getReference()
-                );
-            }
 
             // =========================
             // RECOMPUTE + VALIDATE

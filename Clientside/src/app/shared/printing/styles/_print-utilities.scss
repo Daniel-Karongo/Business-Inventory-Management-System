@@ -1,0 +1,204 @@
+.print-stack-xs {
+    display: flex;
+    flex-direction: column;
+    gap: var(--print-space-1);
+}
+
+.print-stack-sm {
+    display: flex;
+    flex-direction: column;
+    gap: var(--print-space-2);
+}
+
+.print-stack-md {
+    display: flex;
+    flex-direction: column;
+    gap: var(--print-space-4);
+}
+
+.print-stack-lg {
+    display: flex;
+    flex-direction: column;
+    gap: var(--print-space-6);
+}
+
+.print-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--print-space-4);
+}
+
+.print-muted {
+    color: var(--print-text-muted);
+}
+
+.print-soft {
+    color: var(--print-text-soft);
+}
+
+.print-mono {
+    font-family: var(--print-font-mono);
+}
+
+.print-card {
+    background: var(--print-surface);
+    border: 1px solid var(--print-border);
+    border-radius: var(--print-radius-lg);
+    box-shadow: var(--print-shadow-sm);
+}
+
+.print-card-soft {
+    background: var(--print-surface-alt);
+    border: 1px solid var(--print-border);
+    border-radius: var(--print-radius-md);
+}
+
+.print-section-title {
+    font-size: var(--print-text-sm);
+    font-weight: var(--print-weight-bold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.print-divider {
+    height: 1px;
+    background: var(--print-border);
+    width: 100%;
+}
+
+.print-dashed-divider {
+    border-top: 1px dashed var(--print-border-strong);
+}
+
+.print-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 30px;
+
+    padding:
+        0 14px;
+
+    border-radius: 999px;
+
+    font-size: var(--print-text-xs);
+    font-weight: var(--print-weight-bold);
+
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.print-status-success {
+    background: rgba(5, 150, 105, 0.10);
+    color: var(--print-success);
+}
+
+.print-status-warning {
+    background: rgba(217, 119, 6, 0.12);
+    color: var(--print-warning);
+}
+
+.print-status-danger {
+    background: rgba(220, 38, 38, 0.10);
+    color: var(--print-danger);
+}
+
+.print-status-info {
+    background: rgba(37, 99, 235, 0.10);
+    color: var(--print-info);
+}
+
+.print-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.print-table thead th {
+    background: var(--print-table-header);
+
+    color: var(--print-text-muted);
+
+    font-size: var(--print-text-xs);
+    font-weight: var(--print-weight-bold);
+
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+
+    padding:
+        14px 16px;
+
+    border-bottom:
+        1px solid var(--print-border);
+}
+
+.print-table tbody td {
+    padding:
+        16px;
+
+    border-bottom:
+        1px solid var(--print-border);
+}
+
+.print-table tbody tr:nth-child(even) {
+    background: var(--print-table-stripe);
+}
+
+.print-amount {
+    font-family: var(--print-font-mono);
+    font-weight: var(--print-weight-bold);
+}
+
+.print-total-card {
+    width: 100%;
+    max-width: 420px;
+
+    margin-left: auto;
+
+    background:
+        linear-gradient(180deg,
+            #ffffff,
+            #f8fafc);
+
+    border:
+        1px solid var(--print-border);
+
+    border-radius:
+        var(--print-radius-lg);
+
+    padding:
+        var(--print-space-6);
+
+    box-shadow:
+        var(--print-shadow-md);
+}
+
+.print-total-row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--print-space-4);
+
+    padding:
+        10px 0;
+
+    font-size:
+        var(--print-text-sm);
+}
+
+.print-grand-total {
+    margin-top:
+        var(--print-space-3);
+
+    padding-top:
+        var(--print-space-4);
+
+    border-top:
+        2px solid var(--print-border-strong);
+
+    font-size:
+        var(--print-text-xl);
+
+    font-weight:
+        var(--print-weight-black);
+}

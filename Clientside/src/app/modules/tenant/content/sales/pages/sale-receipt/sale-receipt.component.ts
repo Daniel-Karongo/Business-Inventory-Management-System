@@ -1,13 +1,10 @@
 import {
-  CommonModule,
-  CurrencyPipe,
-  DatePipe
+  CommonModule
 } from '@angular/common';
 
 import {
   Component,
   DestroyRef,
-  Input,
   OnInit,
   inject
 } from '@angular/core';
@@ -22,29 +19,44 @@ import {
 } from '@angular/router';
 
 import {
-  MatButtonModule
-} from '@angular/material/button';
-
-import {
   finalize
 } from 'rxjs';
 
 import {
+  MatButtonModule
+} from '@angular/material/button';
+
+import {
+  MatIconModule
+} from '@angular/material/icon';
+
+import {
+  MatSnackBar
+} from '@angular/material/snack-bar';
+
+import {
   SalesService
 } from '../../services/sales.service';
+import { EnterprisePrintService } from '../../../../../../shared/printing/services/enterprise-print.service';
+import { SalePrintMapper } from '../../utils/sale-print.mapper';
+import { SaleDTO } from '../../../stock/models/sale.model';
 
 @Component({
   standalone: true,
   selector: 'app-sale-receipt',
+
   imports: [
     CommonModule,
-    CurrencyPipe,
-    DatePipe,
     RouterModule,
-    MatButtonModule
+    MatButtonModule,
+    MatIconModule
   ],
-  templateUrl: './sale-receipt.component.html',
-  styleUrls: ['./sale-receipt.component.scss']
+
+  templateUrl:
+    './sale-receipt.component.html',
+
+  styleUrls:
+    ['./sale-receipt.component.scss']
 })
 export class SaleReceiptComponent
   implements OnInit {
@@ -55,28 +67,41 @@ export class SaleReceiptComponent
   private readonly destroyRef =
     inject(DestroyRef);
 
+  private readonly snackBar =
+    inject(MatSnackBar);
+
   private readonly salesService =
     inject(SalesService);
 
-  @Input()
-  sale: any = null;
+  private readonly enterprisePrintService =
+    inject(EnterprisePrintService);
 
-  loading = true;
+  private readonly salePrintMapper =
+    inject(SalePrintMapper);
 
-  autoPrintTriggered = false;
+  sale: SaleDTO | null = null;
+
+  loading = false;
 
   ngOnInit(): void {
 
-    const id =
-      this.route.snapshot
-        .paramMap
-        .get('id');
+    this.route.paramMap
+      .pipe(
+        takeUntilDestroyed(
+          this.destroyRef
+        )
+      )
+      .subscribe(params => {
 
-    if (!id) {
-      return;
-    }
+        const id =
+          params.get('id');
 
-    this.load(id);
+        if (!id) {
+          return;
+        }
+
+        this.load(id);
+      });
   }
 
   load(
@@ -88,120 +113,77 @@ export class SaleReceiptComponent
     this.salesService.get(id)
       .pipe(
         finalize(() => {
+
           this.loading = false;
         }),
-        takeUntilDestroyed(this.destroyRef)
+
+        takeUntilDestroyed(
+          this.destroyRef
+        )
       )
       .subscribe({
+
         next: sale => {
 
           this.sale = sale;
+        },
 
-          if (
-            !this.autoPrintTriggered
-          ) {
+        error: error => {
 
-            this.autoPrintTriggered = true;
-
-            setTimeout(() => {
-              window.print();
-            }, 350);
-          }
+          this.snackBar.open(
+            error?.error?.message
+            ?? 'Failed to load receipt.',
+            'Close',
+            {
+              duration: 4000
+            }
+          );
         }
       });
   }
 
-  print(): void {
+  async printA4(): Promise<void> {
 
-    window.print();
-  }
-
-  paidAmount(): number {
-
-    return (
-      this.sale?.payments ?? []
-    )
-      .filter((payment: any) =>
-        payment.status === 'SUCCESS'
-      )
-      .reduce(
-        (
-          sum: number,
-          payment: any
-        ) =>
-          sum +
-          Number(
-            payment.amount ?? 0
-          ),
-        0
-      );
-  }
-
-  refundedAmount(): number {
-
-    return (
-      this.sale?.payments ?? []
-    )
-      .filter((payment: any) =>
-        payment.status === 'REFUNDED'
-      )
-      .reduce(
-        (
-          sum: number,
-          payment: any
-        ) =>
-          sum +
-          Number(
-            payment.amount ?? 0
-          ),
-        0
-      );
-  }
-
-  balance(): number {
-
-    return Number(
-      this.sale?.totalAmount ?? 0
-    ) - this.paidAmount();
-  }
-
-  paymentStatusClass(
-    status: string
-  ): string {
-
-    switch (status) {
-
-      case 'SUCCESS':
-        return 'payment-success';
-
-      case 'REFUNDED':
-        return 'payment-refunded';
-
-      case 'FAILED':
-        return 'payment-failed';
-
-      default:
-        return 'payment-pending';
+    if (!this.sale) {
+      return;
     }
+
+    const data =
+      this.salePrintMapper.map(
+        this.sale
+      );
+
+    await this.enterprisePrintService
+      .printA4(data);
   }
 
-  saleStatusClass(): string {
+  async printThermal80(): Promise<void> {
 
-    switch (
-    this.sale?.status
-    ) {
-
-      case 'COMPLETED':
-        return 'status-completed';
-
-      case 'REFUNDED':
-        return 'status-refunded';
-
-      case 'CANCELLED':
-        return 'status-cancelled';
-
-      default:
-        return 'status-created';
+    if (!this.sale) {
+      return;
     }
+
+    const data =
+      this.salePrintMapper.map(
+        this.sale
+      );
+
+    await this.enterprisePrintService
+      .printThermal80(data);
+  }
+
+  async printThermal58(): Promise<void> {
+
+    if (!this.sale) {
+      return;
+    }
+
+    const data =
+      this.salePrintMapper.map(
+        this.sale
+      );
+
+    await this.enterprisePrintService
+      .printThermal58(data);
   }
 }

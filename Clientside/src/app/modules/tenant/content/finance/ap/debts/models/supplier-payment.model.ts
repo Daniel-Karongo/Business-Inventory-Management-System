@@ -1,34 +1,62 @@
-export interface PaymentSettlement {
-    allocationId?: string;
-    invoiceId: string;
-    billNumber: string;
-    invoiceDate: string;
+export type SupplierPaymentStatus =
+    | 'DRAFT'
+    | 'APPROVED'
+    | 'POSTED'
+    | 'PARTIALLY_ALLOCATED'
+    | 'FULLY_ALLOCATED'
+    | 'REVERSED'
+    | 'CANCELLED';
+
+export type SupplierPaymentMethod =
+    | 'CASH'
+    | 'BANK'
+    | 'MPESA';
+
+export interface SupplierPaymentResponseDto {
+    id: string;
+    documentNumber: string;
+
+    supplierId: string;
+    fundingAccountId: string;
+
+    amount: number;
     allocatedAmount: number;
-    status?: string;
-    reversed?: boolean;
+    unappliedAmount: number;
+
+    fullyAllocated: boolean;
+
+    status: SupplierPaymentStatus;
+    method: SupplierPaymentMethod;
+
+    reference?: string;
+
+    posted: boolean;
+
+    paymentDate: string;
+
+    postedAt?: string;
+    postedBy?: string;
+
+    reversed: boolean;
+
     reversedAt?: string;
     reversedBy?: string;
     reversalReason?: string;
 }
 
-export interface SupplierPayment {
-    paymentId: string;
-    paymentNumber: string;
-    paymentDate: string;
+export interface ProcessSupplierPaymentRequest {
+    branchId: string;
+    supplierId: string;
+    fundingAccountId: string;
+
     amount: number;
-    allocatedAmount: number;
-    unappliedAmount: number;
-    paymentMethod: string;
-    fundingAccountId?: string;
-    reference: string;
-    allocations: PaymentSettlement[];
-    status: string;
-    posted: boolean;
-    postingStatus: string;
-    documentStatus: string;
-    fullyAllocated: boolean;
-    reversed: boolean;
-    reversedAt?: string;
-    reversedBy?: string;
-    reversalReason?: string;
+
+    method: SupplierPaymentMethod;
+
+    reference?: string;
+
+    paymentDate: string;
+
+    autoPost: boolean;
+    autoAllocate: boolean;
 }

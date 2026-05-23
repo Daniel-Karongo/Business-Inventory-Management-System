@@ -56,9 +56,9 @@
           selectPayment($event.value)
         ">
 
-                <mat-option *ngFor="let payment of data.payments" [value]="payment.paymentId">
+                <mat-option *ngFor="let payment of availablePayments" [value]="payment.id">
 
-                    {{ payment.paymentNumber }}
+                    {{ payment.documentNumber }}
                     —
                     {{
                     payment.unappliedAmount
@@ -70,6 +70,12 @@
             </mat-select>
 
         </mat-form-field>
+
+        <div *ngIf="!availablePayments.length" class="empty-state">
+
+            No allocatable supplier payments available.
+
+        </div>
 
         <!-- INVOICE -->
 

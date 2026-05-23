@@ -31,6 +31,8 @@ public class SalePreviewService {
                                                 .toList()
                         )
                         .mode(ResolutionMode.PREVIEW)
+                        .requestedUnitPrice(req.getRequestedUnitPrice())
+                        .overrideReason(req.getOverrideReason())
                         .build()
         );
 

@@ -238,16 +238,43 @@ public class SupplierWorkspaceService {
             SupplierPaymentProjection payment,
             List<PaymentSettlementProjection> settlements
     ) {
-
         return SupplierPaymentDto.builder()
-                .paymentId(payment.getPaymentId())
-                .paymentNumber(payment.getPaymentNumber())
-                .paymentDate(payment.getPaymentDate())
-                .amount(payment.getAmount())
-                .allocatedAmount(payment.getAllocatedAmount())
-                .unappliedAmount(payment.getUnappliedAmount())
-                .paymentMethod(payment.getPaymentMethod())
-                .reference(payment.getReference())
+                .paymentId(
+                        payment.getPaymentId()
+                )
+                .paymentNumber(
+                        payment.getPaymentNumber()
+                )
+                .paymentDate(
+                        payment.getPaymentDate()
+                )
+                .amount(
+                        payment.getAmount()
+                )
+                .allocatedAmount(
+                        payment.getAllocatedAmount()
+                )
+                .unappliedAmount(
+                        payment.getUnappliedAmount()
+                )
+                .status(
+                        payment.getStatus()
+                )
+                .paymentMethod(
+                        payment.getPaymentMethod()
+                )
+                .reference(
+                        payment.getReference()
+                )
+                .posted(
+                        payment.getPosted()
+                )
+                .reversed(
+                        payment.getReversed()
+                )
+                .postingStatus(
+                        payment.getPostingStatus()
+                )
                 .allocations(
                         settlements.stream()
                                 .map(this::mapPaymentSettlement)
@@ -259,12 +286,37 @@ public class SupplierWorkspaceService {
     private PaymentSettlementDto mapPaymentSettlement(
             PaymentSettlementProjection settlement
     ) {
-
         return PaymentSettlementDto.builder()
-                .invoiceId(settlement.getInvoiceId())
-                .billNumber(settlement.getBillNumber())
-                .invoiceDate(settlement.getInvoiceDate())
-                .allocatedAmount(settlement.getAllocatedAmount())
+                .allocationId(
+                        settlement.getAllocationId()
+                )
+                .invoiceId(
+                        settlement.getInvoiceId()
+                )
+                .billNumber(
+                        settlement.getBillNumber()
+                )
+                .invoiceDate(
+                        settlement.getInvoiceDate()
+                )
+                .allocatedAmount(
+                        settlement.getAllocatedAmount()
+                )
+                .status(
+                        settlement.getStatus()
+                )
+                .reversed(
+                        settlement.getReversed()
+                )
+                .reversedAt(
+                        settlement.getReversedAt()
+                )
+                .reversedBy(
+                        settlement.getReversedBy()
+                )
+                .reversalReason(
+                        settlement.getReversalReason()
+                )
                 .build();
     }
 

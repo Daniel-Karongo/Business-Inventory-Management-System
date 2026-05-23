@@ -1,0 +1,145 @@
+@use './print-tokens.scss';
+@use './print-utilities.scss';
+
+:host {
+    display: block;
+}
+
+.thermal-document {
+    background: white;
+    color: var(--thermal-text);
+
+    font-family:
+        var(--print-font-sans);
+
+    font-size:
+        11px;
+
+    line-height:
+        1.45;
+
+    font-feature-settings:
+        'tnum';
+
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.thermal-header {
+    text-align: center;
+
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.thermal-company {
+    font-size: 17px;
+    font-weight: 800;
+    line-height: 1.15;
+}
+
+.thermal-meta {
+    color: var(--thermal-muted);
+    font-size: 10px;
+}
+
+.thermal-separator {
+    border-top:
+        1px dashed var(--thermal-border);
+
+    margin:
+        10px 0;
+}
+
+.thermal-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.thermal-row-label {
+    color: var(--thermal-muted);
+}
+
+.thermal-items {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.thermal-items td {
+    vertical-align: top;
+    padding:
+        7px 0;
+}
+
+.thermal-item-name {
+    font-weight: 700;
+}
+
+.thermal-item-variant {
+    color: var(--thermal-muted);
+    font-size: 10px;
+    margin-top: 2px;
+}
+
+.thermal-qty {
+    width: 30px;
+}
+
+.thermal-price {
+    text-align: right;
+    white-space: nowrap;
+    font-weight: 700;
+}
+
+.thermal-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.thermal-total {
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.thermal-payment {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+
+    padding:
+        7px 0;
+}
+
+.thermal-footer {
+    text-align: center;
+
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+
+    color: var(--thermal-muted);
+
+    font-size: 10px;
+}
+
+@media print {
+
+    html,
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+    }
+
+    * {
+        box-shadow: none !important;
+    }
+
+    .thermal-document {
+        page-break-inside: avoid;
+    }
+}

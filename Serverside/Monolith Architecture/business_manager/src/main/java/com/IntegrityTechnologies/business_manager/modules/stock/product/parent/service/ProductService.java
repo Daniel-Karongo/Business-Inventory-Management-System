@@ -133,6 +133,7 @@ public class ProductService {
             "deleted"
     );
 
+    @Transactional(readOnly = true)
     public Page<ProductDTO> getProductsAdvanced(
             UUID branchId,
             List<Long> categoryIds,

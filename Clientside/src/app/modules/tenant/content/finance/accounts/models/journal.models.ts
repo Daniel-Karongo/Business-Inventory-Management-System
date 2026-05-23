@@ -18,6 +18,8 @@ export interface Journal {
     postedBy: string;
     postedAt: string;
     entries: LedgerLine[];
+    reversed: boolean;
+    reversalJournalId?: string;
 }
 
 export interface ManualJournalLine {

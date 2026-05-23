@@ -579,24 +579,27 @@ export class
                     {
                         supplierId:
                             row.supplierId || undefined,
-
                         supplierName:
                             row.supplierName || undefined,
-
                         createSupplierIfMissing:
                             !!row.supplierName,
-
                         packagingName:
                             row.packagingName,
-
                         unitsSupplied:
                             Number(
                                 row.unitsSupplied
                             ),
-
                         unitCost:
                             Number(
                                 row.unitCost
+                            ),
+                        vatInclusive:
+                            this.parseBoolean(
+                                row.vatInclusive
+                            ),
+                        vatRate:
+                            Number(
+                                row.vatRate
                             )
                     }
                 );
@@ -681,6 +684,22 @@ export class
 
             const value = row.value;
 
+            const vatRate =
+                Number(value.vatRate);
+
+            if (
+                isNaN(vatRate)
+                || vatRate < 0
+                || vatRate > 100
+            ) {
+                row.patchValue({
+                    _error:
+                        'VAT rate must be between 0 and 100.'
+                });
+
+                return;
+            }
+
             const groupingKey = [
 
                 String(value.productName || '')
@@ -749,6 +768,18 @@ export class
 
         });
 
+    }
+
+    private parseBoolean(value: any): boolean {
+        if (typeof value === 'boolean') {
+            return value;
+        }
+
+        if (typeof value === 'string') {
+            return value.trim().toLowerCase() === 'true';
+        }
+
+        return !!value;
     }
 
     afterRowsImported() {

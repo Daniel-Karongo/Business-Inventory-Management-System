@@ -108,7 +108,13 @@
             {{
             balanced()
             ? 'Balanced'
-            : 'Out of Balance'
+            : (
+            'Out of Balance by '
+            + (
+            imbalance()
+            | number:'1.2-2'
+            )
+            )
             }}
 
           </div>

@@ -60,7 +60,8 @@
 }
 
 .grid-2,
-.grid-3 {
+.grid-3,
+.grid-5 {
     display: grid;
     gap: 16px;
 }
@@ -73,6 +74,11 @@
 .grid-3 {
     grid-template-columns:
         repeat(3, minmax(0, 1fr));
+}
+
+.grid-5 {
+    grid-template-columns:
+        repeat(5, minmax(0, 1fr));
 }
 
 mat-form-field {
@@ -165,11 +171,11 @@ mat-form-field {
 
 @media (max-width: 1024px) {
 
-    .grid-3 {
+    .grid-3,
+    .grid-5 {
         grid-template-columns:
             repeat(2, minmax(0, 1fr));
     }
-
 }
 
 @media (max-width: 768px) {
@@ -179,7 +185,8 @@ mat-form-field {
     }
 
     .grid-2,
-    .grid-3 {
+    .grid-3,
+    .grid-5 {
         grid-template-columns:
             1fr;
     }

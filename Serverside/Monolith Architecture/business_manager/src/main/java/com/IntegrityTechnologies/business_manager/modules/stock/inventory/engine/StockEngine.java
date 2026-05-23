@@ -147,14 +147,18 @@ public class StockEngine {
             UUID fromBranch,
             UUID toBranch,
             long quantity,
-            BigDecimal overrideCost
+            BigDecimal overrideCost,
+            UUID transferId,
+            String reference
     ) {
         return transferService.transferAndSync(
                 variantId,
                 fromBranch,
                 toBranch,
                 quantity,
-                overrideCost
+                overrideCost,
+                transferId,
+                reference
         );
     }
 

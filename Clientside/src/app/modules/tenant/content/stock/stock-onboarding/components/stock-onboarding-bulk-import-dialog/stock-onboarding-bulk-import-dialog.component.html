@@ -57,7 +57,8 @@
                         Row {{ rowIndex + 1 }}
                     </span>
 
-                    <button mat-icon-button color="warn" type="button" (click)="removeRow(rowIndex)" matTooltip="Remove onboarding row">
+                    <button mat-icon-button color="warn" type="button" (click)="removeRow(rowIndex)"
+                        matTooltip="Remove onboarding row">
 
                         <mat-icon>
                             delete
@@ -147,38 +148,45 @@
 
                 </div>
 
-                <div class="grid-3">
-
+                <div class="grid-5">
                     <mat-form-field>
-
                         <mat-label>
                             Supplier
                         </mat-label>
-
                         <input matInput formControlName="supplierName">
-
                     </mat-form-field>
 
                     <mat-form-field>
-
                         <mat-label>
                             Units Supplied
                         </mat-label>
-
                         <input matInput type="number" formControlName="unitsSupplied">
-
                     </mat-form-field>
 
                     <mat-form-field>
-
                         <mat-label>
                             Unit Cost
                         </mat-label>
-
                         <input matInput type="number" formControlName="unitCost">
-
                     </mat-form-field>
 
+                    <mat-form-field>
+                        <mat-label>
+                            VAT Inclusive
+                        </mat-label>
+
+                        <select matNativeControl formControlName="vatInclusive">
+                            <option [ngValue]="true">Yes</option>
+                            <option [ngValue]="false">No</option>
+                        </select>
+                    </mat-form-field>
+
+                    <mat-form-field>
+                        <mat-label>
+                            VAT Rate (%)
+                        </mat-label>
+                        <input matInput type="number" formControlName="vatRate">
+                    </mat-form-field>
                 </div>
 
                 <div class="grid-2">
@@ -216,9 +224,7 @@
 
                 </mat-form-field>
 
-                <div class="row-error" matTooltip="Validation error" 
-                    *ngIf="rows.at(rowIndex).value._error"
-                >
+                <div class="row-error" matTooltip="Validation error" *ngIf="rows.at(rowIndex).value._error">
 
                     {{
                     rows.at(rowIndex).value._error

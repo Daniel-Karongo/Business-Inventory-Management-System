@@ -20,7 +20,7 @@ export const ACCOUNTS_ROUTES: Routes = [
       {
         path: '',
         pathMatch: 'full',
-        redirectTo: 'accounting'
+        redirectTo: 'charts'
       },
 
       { path: '', component: AccountsDashboardComponent },

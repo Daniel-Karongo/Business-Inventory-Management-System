@@ -104,63 +104,77 @@ export class CreatePaymentDialogComponent {
 
   submit(): void {
 
-    if (this.loading || this.form.invalid) return;
+    if (
+      this.loading
+      || this.form.invalid
+    ) {
+      return;
+    }
 
-    this.loading = true;
-
-    const v = this.form.getRawValue();
     if (!this.selectedAccount) {
       return;
     }
 
-    this.payments.create({
-      branchId: this.data.branchId,
-      supplierId: this.data.supplierId,
-      fundingAccountId: v.fundingAccountId,
-      amount: Number(v.amount),
-      method: this.selectedAccount?.role as any,
-      reference: v.reference || undefined,
-      paymentDate: new Date(v.paymentDate).toISOString().split('T')[0]
-    }).pipe(
+    this.loading = true;
 
-      switchMap(payment => {
+    const v =
+      this.form.getRawValue();
 
-        if (!v.autoPost)
-          return of(payment);
+    this.payments.process({
 
-        return this.payments.post(payment.paymentId).pipe(
+      branchId:
+        this.data.branchId,
 
-          switchMap(posted => {
+      supplierId:
+        this.data.supplierId,
 
-            if (
-              !v.autoAllocate
-              ||
-              posted.unappliedAmount <= 0
-            ) {
-              return of(posted);
+      fundingAccountId:
+        v.fundingAccountId,
+
+      amount:
+        Number(v.amount),
+
+      method:
+        this.selectedAccount.role as any,
+
+      reference:
+        v.reference || undefined,
+
+      paymentDate:
+        new Date(v.paymentDate)
+          .toISOString()
+          .split('T')[0],
+
+      autoPost:
+        v.autoPost,
+
+      autoAllocate:
+        v.autoAllocate
+
+    })
+      .pipe(
+        finalize(() =>
+          this.loading = false
+        )
+      )
+      .subscribe({
+
+        next: () => {
+
+          this.snack.open(
+            'Payment processed successfully',
+            'Close',
+            {
+              duration: 3000
             }
+          );
 
-            return this.allocations.autoAllocate({
-              branchId: this.data.branchId,
-              supplierId: this.data.supplierId,
-              paymentId: posted.paymentId,
-              amount: posted.unappliedAmount
-            }).pipe(
-              switchMap(() => of(posted))
-            );
-          })
-        );
-      }),
+          this.ref.close(true);
+        },
 
-      finalize(() => this.loading = false)
-
-    ).subscribe({
-      next: () => {
-        this.snack.open('Payment processed', 'Close', { duration: 3000 });
-        this.ref.close(true);
-      },
-      error: err => this.error(err)
-    });
+        error: err =>
+          this.error(err)
+      });
   }
 
   private error(err: any): void {

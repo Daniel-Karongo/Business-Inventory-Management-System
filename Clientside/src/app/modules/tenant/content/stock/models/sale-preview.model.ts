@@ -18,6 +18,8 @@ export interface SaleLinePreviewRequest {
     branchId: string;
 
     batchSelections?: BatchSelectionDto[];
+    requestedUnitPrice?: number;
+    overrideReason?: string;
 }
 
 export interface SaleLinePreviewResponse {

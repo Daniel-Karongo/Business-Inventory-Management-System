@@ -67,4 +67,22 @@ public interface SupplierPaymentAllocationRepository
             UUID branchId,
             UUID paymentId
     );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT spa
+            FROM SupplierPaymentAllocation spa
+            JOIN FETCH spa.purchaseInvoice pi
+            JOIN FETCH spa.supplierPayment sp
+            WHERE spa.tenantId = :tenantId
+            AND spa.branchId = :branchId
+            AND sp.id = :paymentId
+            AND spa.reversed = false
+            """)
+    List<SupplierPaymentAllocation>
+    findActiveLockedByTenantIdAndBranchIdAndPaymentId(
+            UUID tenantId,
+            UUID branchId,
+            UUID paymentId
+    );
 }

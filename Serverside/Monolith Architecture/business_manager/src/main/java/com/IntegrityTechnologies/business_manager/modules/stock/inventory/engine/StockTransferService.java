@@ -1,14 +1,22 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.engine;
 
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.*;
-import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.*;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.accounting.InventoryAccountingPort;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.BatchConsumption;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryBatch;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.InventoryItem;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.BatchConsumptionRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.BatchReservationRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryBatchRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,6 +27,7 @@ public class StockTransferService {
     private final BatchReservationRepository reservationRepo;
     private final BatchConsumptionRepository batchConsumptionRepository;
     private final InventoryItemRepository inventoryItemRepository;
+    private final InventoryAccountingPort inventoryAccountingPort;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -102,13 +111,47 @@ public class StockTransferService {
             UUID fromBranch,
             UUID toBranch,
             long quantity,
-            BigDecimal overrideCost
+            BigDecimal overrideCost,
+            UUID transferId,
+            String reference
     ) {
 
-        BigDecimal value = transfer(variantId, fromBranch, toBranch, quantity, overrideCost);
+        BigDecimal value =
+                transfer(
+                        variantId,
+                        fromBranch,
+                        toBranch,
+                        quantity,
+                        overrideCost
+                );
 
-        updateItem(variantId, fromBranch, -quantity);
-        updateItem(variantId, toBranch, +quantity);
+        updateItem(
+                variantId,
+                fromBranch,
+                -quantity
+        );
+
+        updateItem(
+                variantId,
+                toBranch,
+                +quantity
+        );
+
+        inventoryAccountingPort.recordInventoryTransferOut(
+                tenantId(),
+                transferId,
+                fromBranch,
+                value,
+                reference
+        );
+
+        inventoryAccountingPort.recordInventoryTransferIn(
+                tenantId(),
+                transferId,
+                toBranch,
+                value,
+                reference
+        );
 
         return value;
     }

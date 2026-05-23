@@ -18,6 +18,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableContext;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableSnapshot;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.service.SellableResolutionService;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.customer.model.Customer;
 import com.IntegrityTechnologies.business_manager.modules.person.customer.repository.CustomerRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.customer.service.CustomerService;
@@ -28,6 +30,8 @@ import com.IntegrityTechnologies.business_manager.modules.stock.inventory.servic
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.repository.ProductVariantPackagingRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.PricingPolicy;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
@@ -69,6 +73,9 @@ public class SalesService {
     private final ObjectMapper objectMapper;
     private final SellableResolutionService sellableResolutionService;
     private final StockEngine stockEngine;
+
+    private final ProductVariantPackagingRepository packagingRepository;
+    private final BranchRepository branchRepository;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -141,6 +148,8 @@ public class SalesService {
                     .batchIds(batchIds)
                     .pricingPolicy(policy)
                     .mode(ResolutionMode.FINAL_STRICT)
+                    .requestedUnitPrice(li.getRequestedUnitPrice())
+                    .overrideReason(li.getOverrideReason())
                     .build();
 
             SellableSnapshot snap = sellableResolutionService.resolve(ctx);
@@ -425,6 +434,8 @@ public class SalesService {
                             .enforceMinimumPrice(true)
                             .build())
                     .mode(ResolutionMode.FINAL_STRICT)
+                    .requestedUnitPrice(li.getRequestedUnitPrice())
+                    .overrideReason(li.getOverrideReason())
                     .build();
 
             SellableSnapshot snap = sellableResolutionService.resolve(ctx);
@@ -753,10 +764,49 @@ public class SalesService {
                                             )
                                             .toList();
 
+                            ProductVariant variant =
+                                    productVariantRepository.findById(
+                                            li.getProductVariantId()
+                                    ).orElse(null);
+
+                            String classification =
+                                    variant != null
+                                            ? variant.getClassification()
+                                            : null;
+
+                            String packagingName = null;
+
+                            if (li.getPackagingId() != null) {
+
+                                packagingName =
+                                        packagingRepository.findById(
+                                                        li.getPackagingId()
+                                                )
+                                                .map(ProductVariantPackaging::getName)
+                                                .orElse(null);
+                            }
+
+                            String branchName = null;
+
+                            if (li.getBranchId() != null) {
+
+                                branchName =
+                                        branchRepository.findByTenantIdAndId(
+                                                        tenantId(),
+                                                        li.getBranchId()
+                                                )
+                                                .map(Branch::getName)
+                                                .orElse(null);
+                            }
+
                             return SaleLineItemDTO.builder()
                                     .productVariantId(li.getProductVariantId())
                                     .productName(li.getProductName())
+                                    .classification(classification)
+                                    .packagingId(li.getPackagingId())
+                                    .packagingName(packagingName)
                                     .branchId(li.getBranchId())
+                                    .branchName(branchName)
                                     .quantity(li.getQuantity())
                                     .unitPrice(li.getUnitPrice())
                                     .lineTotal(li.getLineTotal())

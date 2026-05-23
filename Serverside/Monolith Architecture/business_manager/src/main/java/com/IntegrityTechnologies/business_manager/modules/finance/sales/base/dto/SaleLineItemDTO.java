@@ -10,11 +10,26 @@ import java.util.UUID;
 @Data
 @Builder
 public class SaleLineItemDTO {
+
     private UUID productVariantId;
+
     private String productName;
+
+    private String classification;
+
+    private UUID packagingId;
+
+    private String packagingName;
+
     private UUID branchId;
+
+    private String branchName;
+
     private long quantity;
+
     private BigDecimal unitPrice;
+
     private BigDecimal lineTotal;
+
     private List<BatchConsumptionDTO> batchConsumptions;
 }

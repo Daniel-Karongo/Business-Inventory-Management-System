@@ -2,6 +2,7 @@
    GLOBAL THEME + COLORS
 =================================================================== */
 @use '@angular/material' as mat;
+@use './app/shared/printing/styles/print-reset';
 @import '@angular/cdk/overlay-prebuilt.css';
 
 @tailwind base;
@@ -561,6 +562,90 @@ ACTION BUTTON
 
 body.dark .cdk-overlay-backdrop {
   background: rgba(0, 0, 0, 0.65) !important;
+}
+
+/* =========================================================
+   ENTERPRISE DIALOG SYSTEM
+========================================================= */
+
+.enterprise-dialog .mat-mdc-dialog-container {
+
+  padding: 0 !important;
+}
+
+.enterprise-dialog .mdc-dialog__surface,
+.enterprise-dialog .mat-mdc-dialog-surface {
+
+  padding: 0 !important;
+
+  overflow: hidden !important;
+
+  border-radius: 18px !important;
+
+  background: var(--surface) !important;
+
+  border: 1px solid var(--border);
+
+  display: flex !important;
+
+  flex-direction: column;
+
+  max-height: 92vh;
+
+  box-sizing: border-box;
+
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.24),
+    0 2px 12px rgba(0, 0, 0, 0.12) !important;
+}
+
+body.dark .enterprise-dialog .mdc-dialog__surface,
+body.dark .enterprise-dialog .mat-mdc-dialog-surface {
+
+  background:
+    linear-gradient(180deg,
+      #161a22,
+      #131720) !important;
+
+  border: 1px solid rgba(255, 255, 255, 0.06);
+
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03) !important;
+}
+
+/* =========================================================
+   ENTERPRISE DIALOG SCROLL SYSTEM
+========================================================= */
+
+.enterprise-dialog .mat-mdc-dialog-inner-container {
+
+  max-height: 100vh;
+
+  overflow: hidden;
+}
+
+.enterprise-dialog .mat-mdc-dialog-surface,
+.enterprise-dialog .mdc-dialog__surface {
+
+  max-height: 92vh !important;
+
+  overflow: hidden !important;
+
+  display: flex !important;
+
+  flex-direction: column !important;
+}
+
+.enterprise-dialog .mat-mdc-dialog-content {
+
+  flex: 1 1 auto;
+
+  overflow: auto !important;
+
+  max-height: unset !important;
+
+  padding: 0 !important;
 }
 
 /* =========================================================

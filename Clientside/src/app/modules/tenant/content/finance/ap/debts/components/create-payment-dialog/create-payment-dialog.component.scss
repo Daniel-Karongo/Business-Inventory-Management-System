@@ -1,96 +1,322 @@
-.dialog {
-    width: min(100vw, 720px);
-    padding: 20px;
+:host {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-.header,
-.actions,
-.checks {
+.dialog {
+
+    width: 100%;
+    max-width: 720px;
+
     display: flex;
-    align-items: center;
+    flex-direction: column;
+
+    overflow: hidden;
+
+    box-sizing: border-box;
+
+    max-height: 92vh;
+}
+
+/* ======================================================
+   HEADER
+====================================================== */
+
+.header {
+
+    display: flex;
     justify-content: space-between;
-    gap: 12px;
+    align-items: flex-start;
+
+    gap: 16px;
+
+    padding: 22px 24px 10px;
+
+    background:
+        linear-gradient(180deg,
+            rgba(0, 122, 255, 0.035),
+            transparent);
 }
 
 .title {
-    font-size: 1.05rem;
+
+    font-size: 1.22rem;
+
     font-weight: 700;
+
+    line-height: 1.2;
+
+    letter-spacing: -0.3px;
+
+    color: var(--text-primary);
 }
 
 .subtitle {
+
+    margin-top: 6px;
+
     color: var(--text-secondary);
+
+    font-size: .88rem;
+
+    line-height: 1.5;
 }
 
+/* ======================================================
+   CLOSE BUTTON
+====================================================== */
+
+.header button {
+
+    flex-shrink: 0;
+
+    width: 40px;
+    height: 40px;
+
+    border-radius: 50%;
+
+    background: rgba(255, 255, 255, 0.04);
+
+    transition:
+        background-color 160ms ease,
+        transform 140ms ease;
+}
+
+.header button:hover {
+
+    background: rgba(255, 255, 255, 0.08);
+
+    transform: scale(1.04);
+}
+
+/* ======================================================
+   FORM
+====================================================== */
+
+form {
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 18px 24px 24px;
+
+    flex: 1 1 auto;
+
+    overflow-y: auto;
+
+    min-height: 0;
+}
+
+/* ======================================================
+   GRID
+====================================================== */
+
 .grid {
+
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 14px;
-    margin: 20px 0 14px;
+
+    grid-template-columns:
+        repeat(auto-fit, minmax(240px, 1fr));
+
+    gap: 16px;
+
+    margin-bottom: 14px;
 }
 
 .full {
+
     width: 100%;
 }
 
-.actions {
-    margin-top: 20px;
-}
+/* ======================================================
+   METHOD PREVIEW
+====================================================== */
 
 .method-preview {
+
     display: flex;
-    flex-direction: column;
-    justify-content: center;
-    min-height: 56px;
-    padding: 0 14px;
-    border-radius: 12px;
-    background: rgba(0, 0, 0, .04);
+    justify-content: space-between;
+    align-items: center;
+
+    gap: 16px;
+
+    min-height: 68px;
+
+    padding: 14px 16px;
+
+    border-radius: 14px;
+
+    background:
+        linear-gradient(180deg,
+            rgba(255, 255, 255, 0.02),
+            rgba(255, 255, 255, 0.01));
+
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .method-label {
+
     font-size: .72rem;
-    opacity: .7;
+
+    color: var(--text-secondary);
+
+    margin-bottom: 4px;
 }
 
 .method-value {
+
+    font-size: .95rem;
+
     font-weight: 600;
-    margin-top: 4px;
+
+    color: var(--text-primary);
 }
 
 .balance-block {
+
     text-align: right;
 }
 
 .balance-value {
+
+    font-size: 1rem;
+
     font-weight: 700;
+
+    color: var(--text-primary);
 }
 
+/* ======================================================
+   WARNINGS
+====================================================== */
+
 .insufficient {
-    border: 1px solid #dc2626;
+
+    box-shadow:
+        inset 0 0 0 1px rgba(239, 68, 68, 0.35);
 }
 
 .balance-warning {
-    color: #dc2626;
-    font-size: .78rem;
-    margin-top: 6px;
+
+    margin-top: -4px;
+
+    padding: 12px 14px;
+
+    border-radius: 12px;
+
+    background: rgba(239, 68, 68, 0.06);
+
+    border: 1px solid rgba(239, 68, 68, 0.12);
+
+    color: #f87171;
+
+    font-size: .82rem;
 }
+
+/* ======================================================
+   CHECKBOXES
+====================================================== */
+
+.checks {
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 10px;
+
+    margin-top: 18px;
+}
+
+/* ======================================================
+   ACTIONS
+====================================================== */
+
+.actions {
+
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+
+    gap: 12px;
+
+    margin-top: 24px;
+}
+
+.actions button {
+
+    min-width: 120px;
+}
+
+button[mat-flat-button] {
+
+    min-width: 170px;
+}
+
+/* ======================================================
+   MOBILE
+====================================================== */
 
 @media (max-width:768px) {
 
-    .dialog {
-        width: 100%;
-        padding: 16px;
+    .header {
+
+        padding: 18px 18px 10px;
+
+        gap: 12px;
+    }
+
+    .title {
+
+        font-size: 1.05rem;
+    }
+
+    .subtitle {
+
+        font-size: .82rem;
+    }
+
+    form {
+
+        padding: 16px 18px 18px;
+    }
+
+    .grid {
+
+        grid-template-columns: 1fr;
+
+        gap: 14px;
+    }
+
+    .method-preview {
+
+        flex-direction: column;
+
+        align-items: flex-start;
+    }
+
+    .balance-block {
+
+        text-align: left;
     }
 
     .actions {
+
         flex-direction: column-reverse;
+
+        align-items: stretch;
+
+        gap: 10px;
     }
 
     .actions button {
+
         width: 100%;
     }
 
-    .checks {
-        align-items: flex-start;
-        flex-direction: column;
+    button[mat-flat-button] {
+
+        min-width: unset;
     }
 }

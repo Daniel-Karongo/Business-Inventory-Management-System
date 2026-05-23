@@ -1,0 +1,180 @@
+@use '../../styles/thermal-base';
+
+.thermal-58 {
+
+    width: 48mm;
+
+    padding:
+        3mm;
+
+    box-sizing:
+        border-box;
+
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    font-size:
+        10px;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.thermal-header.compact {
+    gap: 2px;
+}
+
+.thermal-company.compact {
+
+    font-size:
+        14px;
+
+    line-height:
+        1.1;
+}
+
+.thermal-mini-meta {
+
+    font-size:
+        9px;
+
+    color:
+        var(--thermal-muted);
+
+    text-align:
+        center;
+}
+
+/* =========================================================
+   MINI ROWS
+========================================================= */
+
+.thermal-mini-section {
+
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.thermal-mini-row {
+
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+
+    align-items: flex-start;
+}
+
+.thermal-mono {
+
+    font-family:
+        var(--print-font-mono);
+}
+
+/* =========================================================
+   ITEMS
+========================================================= */
+
+.thermal-mini-items {
+
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.thermal-mini-item {
+
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.thermal-mini-name {
+
+    font-weight:
+        800;
+
+    line-height:
+        1.25;
+}
+
+.thermal-mini-line {
+
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+
+    color:
+        var(--thermal-muted);
+
+    font-size:
+        9px;
+}
+
+/* =========================================================
+   TOTAL
+========================================================= */
+
+.thermal-grand-total {
+
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+
+    align-items: center;
+
+    font-size:
+        14px;
+
+    font-weight:
+        900;
+
+    line-height:
+        1.1;
+}
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.thermal-mini-footer {
+
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+
+    text-align:
+        center;
+
+    font-size:
+        9px;
+}
+
+.thermal-mini-soft {
+
+    color:
+        var(--thermal-muted);
+}
+
+/* =========================================================
+   PRINT
+========================================================= */
+
+@media print {
+
+    @page {
+        size: 58mm auto;
+        margin: 0;
+    }
+
+    .thermal-58 {
+        width: 48mm;
+    }
+
+    * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}

@@ -9,8 +9,6 @@ import { BaseApiService } from '../../../../../core/services/api/base-api.servic
 import {
     SellableProductRequest,
     SellableProductResponse,
-    SellableResolveRequest,
-    SellableResolveResponse
 } from '../../stock/models/sellable.model';
 
 @Injectable({
@@ -33,24 +31,6 @@ export class SellableService extends BaseApiService {
         ).pipe(
             map(response =>
                 this.unwrap<SellableProductResponse>(
-                    response
-                )
-            )
-        );
-    }
-
-    resolve(
-        request: SellableResolveRequest
-    ): Observable<SellableResolveResponse> {
-
-        return this.post<
-            ApiResponse<SellableResolveResponse>
-        >(
-            this.endpoints.resolve,
-            request
-        ).pipe(
-            map(response =>
-                this.unwrap<SellableResolveResponse>(
                     response
                 )
             )

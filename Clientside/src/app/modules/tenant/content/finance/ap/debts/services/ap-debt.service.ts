@@ -10,7 +10,7 @@ import { PageWrapper } from '../../../../../../../core/models/page-wrapper.model
 import { PageQuery } from '../../../../../../../core/models/page-query.model';
 
 import { SupplierDebtSummary } from '../models/supplier-debt-summary.model';
-import { SupplierWorkspace } from '../models/supplier-workspace.model';
+import { SupplierWorkspaceDto } from '../models/supplier-workspace.model';
 
 @Injectable({ providedIn: 'root' })
 export class ApDebtService {
@@ -92,7 +92,7 @@ export class ApDebtService {
     getWorkspace(
         supplierId: string,
         overrideBranchId?: string
-    ): Observable<SupplierWorkspace> {
+    ): Observable<SupplierWorkspaceDto> {
 
         const branchId =
             this.resolveBranchId(overrideBranchId);
@@ -100,7 +100,7 @@ export class ApDebtService {
         const params = new HttpParams()
             .set('branchId', branchId);
 
-        return this.http.get<SupplierWorkspace>(
+        return this.http.get<SupplierWorkspaceDto>(
             `${this.baseUrl}/${supplierId}`,
             { params }
         );

@@ -8,6 +8,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.allocation.repository.SupplierPaymentAllocationRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.allocation.service.ApAllocationService;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.dto.SupplierPaymentResponse;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.enums.SupplierPaymentStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.mapper.SupplierPaymentMapper;
@@ -21,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -40,6 +42,7 @@ public class SupplierPaymentPostingService {
     private final AccountingAccounts accountingAccounts;
     private final JournalEntryRepository journalEntryRepository;
     private final SupplierPaymentAllocationRepository allocationRepository;
+    private final ApAllocationService allocationService;
 
     @Transactional
     public SupplierPaymentResponse post(
@@ -214,24 +217,12 @@ public class SupplierPaymentPostingService {
             UUID paymentId,
             String reason
     ) {
+
         SupplierPayment payment =
                 paymentService.getLocked(
                         branchId,
                         paymentId
                 );
-
-        boolean hasActiveAllocations =
-                allocationRepository.existsByTenantIdAndBranchIdAndSupplierPayment_IdAndReversedFalse(
-                        TenantContext.getTenantId(),
-                        branchId,
-                        payment.getId()
-                );
-
-        if (hasActiveAllocations) {
-            throw new IllegalStateException(
-                    "Cannot reverse payment with active allocations"
-            );
-        }
 
         if (payment.isReversed()) {
             throw new IllegalStateException(
@@ -245,14 +236,11 @@ public class SupplierPaymentPostingService {
             );
         }
 
-        if (
-                payment.getAllocatedAmount()
-                        .compareTo(java.math.BigDecimal.ZERO) > 0
-        ) {
-            throw new IllegalStateException(
-                    "Cannot reverse allocated payment"
-            );
-        }
+        allocationService.reverseAllForPayment(
+                branchId,
+                payment,
+                reason
+        );
 
         accountingFacade.reverseJournal(
                 payment.getJournalEntryId(),
@@ -288,6 +276,18 @@ public class SupplierPaymentPostingService {
 
         payment.setReversalReason(
                 reason
+        );
+
+        /*
+         * Reversed payments are financially inactive.
+         * They must no longer contribute supplier credit.
+         */
+        payment.setUnappliedAmount(
+                BigDecimal.ZERO
+        );
+
+        payment.setFullyAllocated(
+                false
         );
 
         payment.setStatus(

@@ -159,7 +159,7 @@ public class SellableProductService {
                                 .quantity(quantity)
                                 .customerId(request.getCustomerId())
                                 .customerGroupId(request.getCustomerGroupId())
-                                .mode(ResolutionMode.UI_FAST)
+                                .mode(ResolutionMode.PREVIEW)
                                 .build()
                 );
 

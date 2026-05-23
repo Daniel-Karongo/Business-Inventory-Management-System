@@ -287,7 +287,13 @@ export class LoginComponent implements OnInit {
 
         if (this.biometric.shouldPrompt(deviceId)) {
 
-          const ref = this.dialog.open(BiometricPromptDialog);
+          const ref = this.dialog.open(BiometricPromptDialog, {
+            width: '440px',
+            maxWidth: '95vw',
+            maxHeight: '90vh',
+            autoFocus: false,
+            panelClass: 'enterprise-dialog'
+          });
 
           ref.afterClosed().subscribe(enable => {
             if (enable === true) {

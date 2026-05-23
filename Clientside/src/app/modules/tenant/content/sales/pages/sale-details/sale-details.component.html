@@ -58,7 +58,7 @@
 
         <div class="header-actions">
 
-            <button mat-stroked-button type="button" routerLink="/app/sales/receipt/{{ s.id }}">
+            <button mat-stroked-button type="button" [routerLink]="['/app/sales', s.id, 'receipt']">
 
                 <mat-icon>
                     receipt_long
@@ -391,7 +391,7 @@
                     </th>
 
                     <td mat-cell *matCellDef="let payment">
-                        {{ payment.paidAt | date:'medium' }}
+                        {{ payment.timestamp | date:'medium' }}
                     </td>
 
                 </ng-container>
@@ -405,7 +405,7 @@
                     </th>
 
                     <td mat-cell *matCellDef="let payment">
-                        {{ payment.paymentMethod || '-' }}
+                        {{ payment.method || '-' }}
                     </td>
 
                 </ng-container>
@@ -455,7 +455,7 @@
                     <td mat-cell *matCellDef="let payment">
 
                         <button mat-icon-button type="button" matTooltip="Refund Payment"
-                            *ngIf="payment.status === 'SUCCESS'" (click)="refundPayment(payment.id)">
+                            *ngIf="payment.status === 'SUCCESS'" (click)="refundPayment(payment.paymentId)">
 
                             <mat-icon>
                                 undo
