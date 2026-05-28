@@ -4,10 +4,7 @@ import com.IntegrityTechnologies.business_manager.config.bulk.BulkOptions;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.exception.ExpectedConcurrencyException;
-import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingBulkPreviewResult;
-import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingBulkPreviewRow;
-import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingRequest;
-import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingResponse;
+import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +23,7 @@ import java.util.Set;
 public class StockOnboardingBulkService {
 
     private final StockOnboardingService onboardingService;
+    private final StockOnboardingValidationService validationService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -132,6 +130,12 @@ public class StockOnboardingBulkService {
 
             try {
 
+                /*
+                 * =====================================================
+                 * DUPLICATES
+                 * =====================================================
+                 */
+
                 if (options.isSkipDuplicates()) {
 
                     String dedupeKey =
@@ -141,17 +145,55 @@ public class StockOnboardingBulkService {
 
                         result.addError(
                                 rowNumber,
-                                "Duplicate onboarding row detected"
+                                "row",
+                                "DUPLICATE_ROW",
+                                "Duplicate onboarding row detected",
+                                null
                         );
 
                         continue;
                     }
                 }
 
+                /*
+                 * =====================================================
+                 * PREVIEW
+                 * =====================================================
+                 */
+
                 StockOnboardingBulkPreviewRow preview =
                         onboardingService.preview(row);
 
                 previewRows.add(preview);
+
+                /*
+                 * =====================================================
+                 * BUSINESS VALIDATION
+                 * =====================================================
+                 */
+
+                StockOnboardingRowValidationResult validation =
+                        validationService.validate(
+                                rowNumber,
+                                row
+                        );
+
+                if (!validation.isValid()) {
+
+                    validation.getErrors()
+                            .forEach(error -> {
+
+                                result.addError(
+                                        error.getRow(),
+                                        error.getField(),
+                                        error.getCode(),
+                                        error.getMessage(),
+                                        error.getRejectedValue()
+                                );
+                            });
+
+                    continue;
+                }
 
                 totalUnits +=
                         preview.getTotalUnits();
@@ -175,7 +217,10 @@ public class StockOnboardingBulkService {
 
                 result.addError(
                         rowNumber,
-                        ex.getMessage()
+                        "row",
+                        "ROW_VALIDATION_FAILED",
+                        ex.getMessage(),
+                        null
                 );
             }
         }
@@ -211,7 +256,7 @@ public class StockOnboardingBulkService {
         if (options.isDryRun()) {
 
             result.setSuccess(
-                    request.getItems().size()
+                    result.getTotal() - result.getFailed()
             );
 
             result.getData().add(
@@ -243,7 +288,7 @@ public class StockOnboardingBulkService {
         }
 
         result.setSuccess(
-                request.getItems().size()
+                result.getTotal() - result.getFailed()
         );
 
         result.getData().add(

@@ -4,14 +4,6 @@ import { roleAtLeast } from '../../../../../core/security/role-at-least.guard';
 export const PRODUCT_ROUTES: Routes = [
 
 {
-  path: '',
-  canMatch: [roleAtLeast('EMPLOYEE')],
-  loadComponent: () =>
-    import('./parent/pages/product-list/product-list.component')
-      .then(m => m.ProductListComponent)
-},
-
-{
   path: 'create',
   canMatch: [roleAtLeast('EMPLOYEE')],
   loadComponent: () =>

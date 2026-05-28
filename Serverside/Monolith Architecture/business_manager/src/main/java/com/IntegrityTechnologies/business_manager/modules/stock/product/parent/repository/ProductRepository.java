@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository;
 
+import com.IntegrityTechnologies.business_manager.modules.stock.catalog.projection.ProductSupplierProjection;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.*;
@@ -38,9 +39,29 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
 
     Optional<Product> findByTenantIdAndBranchIdAndNameIgnoreCase(UUID tenantId, UUID branchId, String name);
 
-    Optional<Product> findByIdAndTenantIdAndBranchId(UUID id, UUID tenantId, UUID branchId);
+    @EntityGraph(attributePaths = {
+            "category",
+            "images",
+            "variants",
+            "suppliers.supplier"
+    })
+    Optional<Product> findByIdAndTenantIdAndBranchId(
+            UUID id,
+            UUID tenantId,
+            UUID branchId
+    );
 
-    Optional<Product> findByIdAndTenantIdAndBranchIdAndDeletedFalse(UUID id, UUID tenantId, UUID branchId);
+    @EntityGraph(attributePaths = {
+            "category",
+            "images",
+            "variants",
+            "suppliers.supplier"
+    })
+    Optional<Product> findByIdAndTenantIdAndBranchIdAndDeletedFalse(
+            UUID id,
+            UUID tenantId,
+            UUID branchId
+    );
 
     List<Product> findAllByTenantIdAndBranchIdAndDeletedFalse(UUID tenantId, UUID branchId);
 
@@ -110,5 +131,19 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
             @Param("tenantId") UUID tenantId,
             @Param("branchId") UUID branchId,
             @Param("name") String name
+    );
+
+    @Query(value = """
+            SELECT
+                ps.product_id as productId,
+                s.name as supplierName
+            FROM product_suppliers ps
+            JOIN suppliers s
+                ON s.id = ps.supplier_id
+            WHERE ps.product_id IN (:productIds)
+            """,
+            nativeQuery = true)
+    List<ProductSupplierProjection> findSupplierNamesByProductIds(
+            @Param("productIds") List<UUID> productIds
     );
 }

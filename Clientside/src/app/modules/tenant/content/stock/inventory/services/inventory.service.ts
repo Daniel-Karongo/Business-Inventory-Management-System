@@ -218,14 +218,19 @@ export class InventoryService {
     }
 
     getBatchConsumptions(
-        batchId: string
+        batchId: string,
+        branchId: string
     ): Observable<BatchConsumptionDTO[]> {
 
         return this.http
             .get<ApiResponse>(
                 this.api +
                 this.endpoints.batches
-                    .consumptions(batchId)
+                    .consumptions(batchId),
+                {
+                    params: new HttpParams()
+                        .set('branchId', branchId)
+                }
             )
             .pipe(
                 map(res => res.data ?? [])

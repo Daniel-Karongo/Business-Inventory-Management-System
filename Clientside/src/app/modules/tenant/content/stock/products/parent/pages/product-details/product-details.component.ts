@@ -13,6 +13,7 @@ import { ProductAuditsComponent } from '../../components/product-audits/product-
 import { VariantSummaryComponent } from '../../components/variant-summary/variant-summary.component';
 import { ProductImagesComponent } from '../../components/product-images/product-images.component';
 import { VariantCommercialSummaryComponent } from '../../../variant/components/variant-commercial-summary/variant-commercial-summary.component';
+import { ProductInventorySummaryComponent } from '../../components/product-inventory-summary/product-inventory-summary.component';
 
 @Component({
   selector: 'app-product-details',
@@ -28,6 +29,7 @@ import { VariantCommercialSummaryComponent } from '../../../variant/components/v
     ProductAuditsComponent,
     ProductImagesComponent,
     VariantCommercialSummaryComponent,
+    ProductInventorySummaryComponent,
   ],
   templateUrl: './product-details.component.html',
   styleUrls: ['./product-details.component.scss']

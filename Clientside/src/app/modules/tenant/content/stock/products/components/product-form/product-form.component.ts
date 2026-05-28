@@ -165,15 +165,27 @@ export class ProductFormComponent implements OnInit {
         name: this.form.value.name,
         description: this.form.value.description,
         categoryId: this.form.value.categoryId,
-        minimumPercentageProfit: this.form.value.minimumPercentageProfit
+        minimumPercentageProfit:
+          this.form.value.minimumPercentageProfit
       },
-      variants: this.form.value.variants,
+
+      variants: this.form.value.variants.map((v: any) => ({
+        classification: v.classification,
+        barcode: v.barcode
+      })),
+
       fileAssignments: this.files.map(f => ({
         fileName: f.file.name,
-        target: f.target,
-        variantClassifications: this.form.value.variants
-          .filter((v: any) => f.variantKeys.includes(v.tempKey))
-          .map((v: any) => v.classification)
+
+        assignToProduct:
+          f.target === 'PRODUCT',
+
+        variantClassifications:
+          this.form.value.variants
+            .filter((v: any) =>
+              f.variantKeys.includes(v.tempKey)
+            )
+            .map((v: any) => v.classification)
       }))
     };
 

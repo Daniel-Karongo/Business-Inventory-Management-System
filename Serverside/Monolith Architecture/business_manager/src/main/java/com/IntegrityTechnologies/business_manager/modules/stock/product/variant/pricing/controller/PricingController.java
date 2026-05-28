@@ -1,14 +1,14 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.controller;
 
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.dto.CreatePriceRequest;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.dto.ProductPriceDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.dto.UpdatePriceRequest;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.*;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.ProductPrice;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.service.PricingEngineService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.service.ProductPriceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,42 +18,51 @@ import java.util.UUID;
 public class PricingController {
 
     private final PricingEngineService pricingEngine;
+
     private final ProductPriceService service;
 
-//    @PostMapping("/resolve")
-//    public PricingResult resolve(@RequestBody PricingContext ctx) {
-//        if (ctx.getPricingTime() == null) {
-//            ctx.setPricingTime(LocalDateTime.now());
-//        }
-//        return pricingEngine.resolve(ctx);
-//    }
-
     @GetMapping("/variant/{variantId}")
-    public List<ProductPrice> getVariantPrices(
+    public List<ProductPriceDTO> getVariantPrices(
             @PathVariable UUID variantId,
             @RequestParam UUID branchId
     ) {
-        // add method in service if missing
-        return service.getPricesForVariant(branchId, variantId);
+
+        return service
+                .getPricesForVariant(branchId, variantId)
+                .stream()
+                .map(this::map)
+                .toList();
     }
 
     @PostMapping
-    public ProductPrice create(@RequestBody CreatePriceRequest req) {
-        return service.createPrice(
-                req.getBranchId(),
-                req.getVariantId(),
-                req.getPackagingId(),
-                req.getPrice(),
-                req.getMinQuantity()
+    public ProductPriceDTO create(
+            @RequestBody CreatePriceRequest req
+    ) {
+
+        return map(
+                service.createPrice(
+                        req.getBranchId(),
+                        req.getVariantId(),
+                        req.getPackagingId(),
+                        req.getPrice(),
+                        req.getMinQuantity()
+                )
         );
     }
 
     @PutMapping("/{id}")
-    public ProductPrice update(
+    public ProductPriceDTO update(
             @PathVariable UUID id,
             @RequestBody UpdatePriceRequest req
     ) {
-        return service.updatePrice(req.getBranchId(), id, req.getPrice());
+
+        return map(
+                service.updatePrice(
+                        req.getBranchId(),
+                        id,
+                        req.getPrice()
+                )
+        );
     }
 
     @DeleteMapping("/{id}")
@@ -61,6 +70,31 @@ public class PricingController {
             @PathVariable UUID id,
             @RequestParam UUID branchId
     ) {
+
         service.deletePrice(branchId, id);
+    }
+
+    private ProductPriceDTO map(
+            ProductPrice p
+    ) {
+
+        return ProductPriceDTO.builder()
+                .id(p.getId())
+                .variantId(
+                        p.getProductVariant().getId()
+                )
+                .packagingId(
+                        p.getPackaging().getId()
+                )
+                .packagingName(
+                        p.getPackaging().getName()
+                )
+                .unitsPerPackaging(
+                        p.getPackaging().getUnitsPerPackaging()
+                )
+                .price(p.getPrice())
+                .minQuantity(p.getMinQuantity())
+                .deleted(p.getDeleted())
+                .build();
     }
 }

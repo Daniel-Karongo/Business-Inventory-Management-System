@@ -21,7 +21,35 @@ public class BulkResult<T> {
     private List<Map<String, Object>> preview = new ArrayList<>();
 
     public void addError(int row, String message) {
-        errors.add(new BulkError(row, message));
+
+        errors.add(
+                BulkError.builder()
+                        .row(row)
+                        .message(message)
+                        .build()
+        );
+
+        failed++;
+    }
+
+    public void addError(
+            int row,
+            String field,
+            String code,
+            String message,
+            Object rejectedValue
+    ) {
+
+        errors.add(
+                BulkError.builder()
+                        .row(row)
+                        .field(field)
+                        .code(code)
+                        .message(message)
+                        .rejectedValue(rejectedValue)
+                        .build()
+        );
+
         failed++;
     }
 

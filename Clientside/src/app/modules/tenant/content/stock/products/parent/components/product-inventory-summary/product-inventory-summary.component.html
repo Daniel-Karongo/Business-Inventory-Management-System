@@ -1,0 +1,149 @@
+<section class="inventory-section">
+
+    <div class="section-header">
+
+        <div>
+            <div class="section-title">
+                Inventory Snapshot
+            </div>
+
+            <div class="section-subtitle">
+                Operational stock visibility across branches
+            </div>
+        </div>
+
+        <div class="summary-metrics">
+
+            <div class="metric-card">
+                <div class="metric-label">
+                    Available
+                </div>
+
+                <div class="metric-value">
+                    {{ totalAvailable() }}
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">
+                    Reserved
+                </div>
+
+                <div class="metric-value">
+                    {{ totalReserved() }}
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">
+                    Total Value
+                </div>
+
+                <div class="metric-value">
+                    {{ totalValue() | number:'1.2-2' }}
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div *ngIf="loading" class="loading">
+        Loading inventory...
+    </div>
+
+    <div *ngIf="!loading && !rows.length" class="empty-state">
+        No inventory records found for this product.
+    </div>
+
+    <div *ngIf="!loading && rows.length" class="inventory-grid">
+
+        <div *ngFor="let row of rows" class="inventory-card">
+
+            <div class="top-row">
+
+                <div>
+                    <div class="variant-name">
+                        {{ row.productClassification }}
+                    </div>
+
+                    <div class="variant-sku">
+                        SKU: {{ row.productVariantSKU }}
+                    </div>
+                </div>
+
+                <div class="stock-badge" [class.low]="available(row) <= 5">
+                    {{ available(row) }} Available
+                </div>
+
+            </div>
+
+            <div class="metrics-grid">
+
+                <div>
+                    <div class="label">
+                        On Hand
+                    </div>
+
+                    <div class="value">
+                        {{ row.quantityOnHand }}
+                    </div>
+                </div>
+
+                <div>
+                    <div class="label">
+                        Reserved
+                    </div>
+
+                    <div class="value">
+                        {{ row.quantityReserved }}
+                    </div>
+                </div>
+
+                <div>
+                    <div class="label">
+                        Batches
+                    </div>
+
+                    <div class="value">
+                        {{ row.batchCount || 0 }}
+                    </div>
+                </div>
+
+                <div>
+                    <div class="label">
+                        Value
+                    </div>
+
+                    <div class="value">
+                        {{ row.totalRemainingBatchValue | number:'1.2-2' }}
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="actions">
+
+                <button mat-stroked-button (click)="createSale(row)">
+                    <mat-icon>
+                        point_of_sale
+                    </mat-icon>
+
+                    Sell
+                </button>
+
+                <button mat-stroked-button (click)="openTransactions(row)">
+                    <mat-icon>
+                        history
+                    </mat-icon>
+
+                    Transactions
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>

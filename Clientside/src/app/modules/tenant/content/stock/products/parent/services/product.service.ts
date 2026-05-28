@@ -416,4 +416,21 @@ export class ProductService extends BaseApiService {
       }
     );
   }
+
+  getThumbnailBlob(
+    productId: string,
+    branchId: string
+  ) {
+
+    return this.http.get(
+      this.api +
+      this.endpoints.thumbnail(productId),
+      {
+        params: {
+          branchId
+        },
+        responseType: 'blob'
+      }
+    );
+  }
 }

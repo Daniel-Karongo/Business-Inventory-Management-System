@@ -17,7 +17,7 @@ export interface Product {
   minimumProfit?: number;
   variants: ProductVariant[];
   imageUrls: string[];
-  thumbnail?: string;
+  thumbnail?: string | null;
   categoryId?: number;
   categoryName?: string;
   suppliers: SupplierMinimalDTO[];

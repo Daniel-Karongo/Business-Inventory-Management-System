@@ -292,7 +292,7 @@ export const environment = {
       audits: (id: string) =>
         `/products/${id}/audits`,
       thumbnail: (id: string) =>
-        `/products/${id}/thumbnail`,
+        `/products/images/${id}/thumbnail`,
       /* =========================================
          SEARCH
       ========================================= */

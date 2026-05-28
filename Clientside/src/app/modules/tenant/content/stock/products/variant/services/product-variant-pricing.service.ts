@@ -1,8 +1,13 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 
-import { environment } from '../../../../../../../../environments/environment';
+import { environment }
+    from '../../../../../../../../environments/environment';
 
-import { BaseApiService } from '../../../../../../../core/services/api/base-api.service';
+import { BaseApiService }
+    from '../../../../../../../core/services/api/base-api.service';
+
+import { BranchContextService }
+    from '../../../../../../../core/services/branch-context.service';
 
 import {
     ProductPrice,
@@ -11,33 +16,97 @@ import {
 } from '../../../models/pricing.model';
 
 @Injectable({ providedIn: 'root' })
-export class ProductVariantPricingService extends BaseApiService {
+export class ProductVariantPricingService
+    extends BaseApiService {
 
-    private endpoints = environment.endpoints.products.variants.pricing;
+    private branchContext =
+        inject(BranchContextService);
 
-    getForVariant(variantId: string) {
+    private endpoints =
+        environment.endpoints.products.variants.pricing;
+
+    private resolveBranch(
+        override?: string
+    ): string {
+
+        const branchId =
+            override ??
+            this.branchContext.currentBranch;
+
+        if (!branchId) {
+            throw new Error(
+                'Branch not selected'
+            );
+        }
+
+        return branchId;
+    }
+
+    getForVariant(
+        variantId: string,
+        overrideBranchId?: string
+    ) {
         return super.get<ProductPrice[]>(
-            this.endpoints.forVariant(variantId)
+            this.endpoints.forVariant(variantId),
+            {
+                branchId:
+                    this.resolveBranch(
+                        overrideBranchId
+                    )
+            }
         );
     }
 
-    create(payload: CreatePriceRequest) {
+    create(
+        payload: CreatePriceRequest,
+        overrideBranchId?: string
+    ) {
+
         return super.post<ProductPrice>(
             this.endpoints.create,
-            payload
+            {
+                ...payload,
+                branchId:
+                    this.resolveBranch(
+                        overrideBranchId ??
+                        payload.branchId
+                    )
+            }
         );
     }
 
-    update(id: string, payload: UpdatePriceRequest) {
+    update(
+        id: string,
+        payload: UpdatePriceRequest,
+        overrideBranchId?: string
+    ) {
+
         return super.put<ProductPrice>(
             this.endpoints.update(id),
-            payload
+            {
+                ...payload,
+                branchId:
+                    this.resolveBranch(
+                        overrideBranchId ??
+                        payload.branchId
+                    )
+            }
         );
     }
 
-    remove(id: string) {
+    remove(
+        id: string,
+        overrideBranchId?: string
+    ) {
+
         return super.delete<void>(
-            this.endpoints.delete(id)
+            this.endpoints.delete(id),
+            {
+                branchId:
+                    this.resolveBranch(
+                        overrideBranchId
+                    )
+            }
         );
     }
 }

@@ -51,6 +51,13 @@ export const TENANT_ROUTES: Routes = [
           ).then(m => m.STOCK_ONBOARDING_ROUTES)
       },
 
+      {
+        path: 'stock',
+        loadChildren: () =>
+          import('./content/stock/workspace/workspace.routes')
+            .then(m => m.STOCK_WORKSPACE_ROUTES)
+      },
+
       /* ============================================================
          INVENTORY
       ============================================================ */

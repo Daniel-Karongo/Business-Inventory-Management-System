@@ -1,0 +1,852 @@
+:host {
+    display: block;
+}
+
+:host ::ng-deep [page-header] {
+    width: 100%;
+    display: block;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.workspace-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.header-left,
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.header-left button.active {
+    background:
+        rgba(59, 130, 246, 0.15);
+
+    border-radius: 6px;
+}
+
+/* =========================================================
+   TOOLBAR
+========================================================= */
+
+.workspace-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+
+    overflow: hidden;
+
+    transition:
+        opacity 160ms ease,
+        transform 160ms ease;
+}
+
+.search-field {
+    flex: 1;
+    min-width: 320px;
+}
+
+/* =========================================================
+   BULK TOOLBAR
+========================================================= */
+
+.bulk-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+
+    padding: 1rem;
+    margin-bottom: 1rem;
+
+    border:
+        1px solid var(--border);
+
+    border-radius: 14px;
+
+    background:
+        rgba(59, 130, 246, 0.08);
+
+    position: sticky;
+    top: 0;
+    z-index: 20;
+
+    backdrop-filter: blur(12px);
+}
+
+.bulk-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 600;
+}
+
+.bulk-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* =========================================================
+   TABLE
+========================================================= */
+
+.explorer-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.explorer-table-wrapper.compact {
+    --row-height: 52px;
+}
+
+.explorer-table-wrapper.comfortable {
+    --row-height: 64px;
+}
+
+table {
+    width: 100%;
+}
+
+.mat-mdc-header-cell.mat-column-select,
+.mat-mdc-cell.mat-column-select {
+    width: 56px !important;
+    min-width: 56px !important;
+    max-width: 56px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+}
+
+.mat-column-product {
+    min-width: 340px;
+}
+
+.mat-mdc-row,
+.mat-mdc-cell {
+    height:
+        var(--row-height, 56px);
+}
+
+.explorer-row {
+    transition:
+        background 120ms ease,
+        border-color 120ms ease;
+}
+
+.explorer-row.clickable {
+    cursor: pointer;
+}
+
+.explorer-row.selected {
+    background:
+        rgba(96, 165, 250, 0.08);
+}
+
+.explorer-row.deleted {
+    opacity: 0.65;
+}
+
+.explorer-row.level-1 .hierarchy-cell {
+    padding-left: 8px;
+}
+
+.explorer-row.level-2 .hierarchy-cell {
+    padding-left: 18px;
+}
+
+/* =========================================================
+   SORTING
+========================================================= */
+
+.sortable-content {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.sortable-content.sortable {
+    cursor: pointer;
+}
+
+.sort-icon {
+    font-size: 16px;
+}
+
+/* =========================================================
+   ACTIONS
+========================================================= */
+
+.explorer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.actions-cell {
+    width: 1%;
+    white-space: nowrap;
+
+    padding-right: 12px !important;
+}
+
+.fallback-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    border-top: 1px solid var(--border);
+    padding-top: 0.5rem;
+    margin-top: auto;
+}
+
+/* =========================================================
+   HIERARCHY TABLE
+========================================================= */
+
+.explorer-hierarchy-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 48px;
+    position: relative;
+    overflow: visible;
+    min-width: 0;
+}
+
+.expand-btn {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    flex-shrink: 0;
+    z-index: 5;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.expand-spacer {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+}
+
+.hierarchy-value {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* =========================================================
+   HIERARCHY CELL
+========================================================= */
+
+.hierarchy-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    min-height: 56px;
+    overflow: visible;
+}
+
+.expand-btn {
+    margin-right: 4px;
+}
+
+.expand-btn .mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+.hierarchy-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.row-icon {
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+/* =========================================================
+   PRODUCT CELL
+========================================================= */
+
+.product-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    min-width: 0;
+}
+
+.product-name {
+    font-weight: 600;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.product-category {
+    font-size: 0.75rem;
+    opacity: 0.7;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* =========================================================
+   VALUES
+========================================================= */
+
+.available-value.low,
+.availability.low {
+    color: #dc2626;
+    font-weight: 700;
+}
+
+/* =========================================================
+   THUMBNAILS
+========================================================= */
+
+.thumbnail-wrapper {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+}
+
+.card-thumbnail-wrapper {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+}
+
+.thumbnail,
+.card-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+
+    border-radius: 10px;
+
+    border:
+        1px solid var(--border);
+}
+
+.clickable-thumbnail {
+    cursor: pointer;
+
+    transition:
+        transform 120ms ease,
+        box-shadow 120ms ease;
+}
+
+.clickable-thumbnail:hover {
+    transform: scale(1.04);
+
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.thumbnail-placeholder,
+.card-thumbnail-placeholder {
+    width: 100%;
+    height: 100%;
+
+    border-radius: 10px;
+
+    border:
+        1px dashed var(--border);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    opacity: 0.6;
+}
+
+/* =========================================================
+   GRID VIEW
+========================================================= */
+.explorer-grid {
+    width: 100%;
+    display: grid;
+    overflow-x: hidden;
+    align-items: start;
+}
+
+.explorer-grid.compact {
+    gap: 0.75rem;
+    grid-template-columns:
+        repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.explorer-grid.comfortable {
+    gap: 1rem;
+    grid-template-columns:
+        repeat(auto-fill, minmax(340px, 1fr));
+}
+
+/* =========================================================
+   CARD WRAPPERS
+========================================================= */
+
+.projected-card-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.mobile-row-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+/* =========================================================
+   STOCK CARD
+========================================================= */
+
+.stock-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    transition:
+        transform 120ms ease,
+        border-color 120ms ease,
+        box-shadow 120ms ease,
+        background 120ms ease;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.stock-card:hover {
+    transform:
+        translateY(-2px);
+
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.stock-card.selected {
+    border-color: var(--active);
+
+    box-shadow:
+        0 0 0 1px var(--active);
+}
+
+.stock-card.deleted {
+    opacity: 0.6;
+}
+
+/* =========================================================
+   CARD TYPES
+========================================================= */
+
+.stock-card.product {
+    border-left:
+        4px solid #2563eb;
+
+    position: relative;
+}
+
+.stock-card.variant {
+    border-left:
+        4px solid #059669;
+
+    position: relative;
+
+    margin-left: 0.5rem;
+}
+
+.stock-card.inventory {
+    border-left:
+        4px solid #d97706;
+
+    position: relative;
+
+    margin-left: 1rem;
+}
+
+.stock-card.variant::before {
+    content: '';
+
+    position: absolute;
+
+    left: -10px;
+    top: -8px;
+    bottom: -8px;
+
+    width: 2px;
+
+    background:
+        rgba(16, 185, 129, 0.18);
+
+    border-radius: 999px;
+}
+
+.stock-card.inventory::before {
+    content: '';
+
+    position: absolute;
+
+    left: -16px;
+    top: -8px;
+    bottom: -8px;
+
+    width: 2px;
+
+    background:
+        rgba(245, 158, 11, 0.18);
+
+    border-radius: 999px;
+}
+
+/* =========================================================
+   CARD HIERARCHY
+========================================================= */
+
+.card-expand-btn {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+}
+
+/* =========================================================
+   CARD TREE HEADER
+========================================================= */
+
+.card-tree-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.tree-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+.tree-badge.product {
+    background: rgba(37, 99, 235, 0.12);
+    color: #60a5fa;
+}
+
+.tree-badge.variant {
+    background: rgba(5, 150, 105, 0.12);
+    color: #34d399;
+}
+
+.tree-badge.inventory {
+    background: rgba(217, 119, 6, 0.12);
+    color: #fbbf24;
+}
+
+.tree-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+}
+
+.card-expand-btn {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    min-height: 30px;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    line-height: 1;
+    overflow: hidden;
+}
+
+.card-expand-btn .mat-icon,
+.card-expand-btn .material-icons {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+
+    width: 18px;
+    height: 18px;
+
+    font-size: 18px;
+    line-height: 18px;
+
+    margin: 0;
+    padding: 0;
+}
+
+/* =========================================================
+   CARD TOP
+========================================================= */
+
+.card-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    align-items: flex-start;
+}
+
+.card-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+
+    min-width: 0;
+    flex: 1;
+}
+
+.card-type {
+    font-size: 0.7rem;
+    font-weight: 700;
+
+    letter-spacing: 0.04em;
+
+    opacity: 0.7;
+}
+
+.card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.card-subtitle {
+    font-size: 0.8rem;
+    opacity: 0.7;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.availability {
+    font-size: 1rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    min-width: 32px;
+    text-align: right;
+}
+
+/* =========================================================
+   CARD GRID
+========================================================= */
+
+.card-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    padding-top: 0.25rem;
+}
+
+.meta-label {
+    font-size: 0.72rem;
+    opacity: 0.7;
+}
+
+.meta-value {
+    font-weight: 600;
+}
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+.empty-state {
+    padding: 5rem 1rem;
+    text-align: center;
+    opacity: 0.6;
+}
+
+/* =========================================================
+   PAGINATOR
+========================================================= */
+
+.shared-paginator {
+    margin-top: 2rem;
+
+    display: flex;
+    justify-content: center;
+}
+
+/* =========================================================
+   HIERARCHY LEVELS
+========================================================= */
+
+.explorer-row.level-0 {
+    background:
+        rgba(255, 255, 255, 0.015);
+}
+
+.explorer-row.level-1 {
+    background:
+        rgba(255, 255, 255, 0.025);
+}
+
+.explorer-row.level-2 {
+    background:
+        rgba(59, 130, 246, 0.04);
+}
+
+.explorer-row.level-2:hover {
+    background:
+        rgba(59, 130, 246, 0.08);
+}
+
+.explorer-row.level-0 td {
+    border-top:
+        1px solid rgba(255, 255, 255, 0.08);
+}
+
+.explorer-row.level-1 td {
+    border-top:
+        1px dashed rgba(255, 255, 255, 0.04);
+}
+
+.explorer-row.level-2 td {
+    border-top:
+        1px dashed rgba(59, 130, 246, 0.08);
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1200px) {
+
+    .explorer-grid.compact,
+    .explorer-grid.comfortable {
+
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+
+    .workspace-toolbar {
+        display: grid;
+
+        grid-template-columns:
+            1fr;
+
+        gap: 0.75rem;
+    }
+
+    .search-field {
+        min-width: 0;
+    }
+
+    .workspace-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .header-left,
+    .header-right {
+        width: 100%;
+    }
+
+    .header-right button {
+        width: 100%;
+    }
+
+    .card-top {
+        gap: 0.75rem;
+    }
+
+    .card-title {
+        font-size: 0.95rem;
+    }
+
+    .bulk-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .bulk-actions {
+        width: 100%;
+
+        display: grid;
+
+        grid-template-columns:
+            1fr 1fr;
+    }
+
+    .bulk-actions button {
+        width: 100%;
+    }
+
+    .explorer-grid.compact,
+    .explorer-grid.comfortable {
+
+        grid-template-columns:
+            1fr;
+    }
+}
+
+.expand-icon-wrapper {
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.spin {
+    animation: spin 900ms linear infinite;
+
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+
+    transform-origin: center center;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

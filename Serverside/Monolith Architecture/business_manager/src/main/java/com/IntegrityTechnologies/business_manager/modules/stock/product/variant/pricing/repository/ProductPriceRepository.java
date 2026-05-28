@@ -7,22 +7,35 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 import java.util.UUID;
 
-public interface ProductPriceRepository extends JpaRepository<ProductPrice, UUID> {
+public interface ProductPriceRepository
+        extends JpaRepository<ProductPrice, UUID> {
 
+    @Query("""
+            SELECT p
+            FROM ProductPrice p
+            JOIN FETCH p.packaging pkg
+            JOIN FETCH p.productVariant pv
+            WHERE pv.id = :variantId
+              AND pkg.id = :packagingId
+              AND p.deleted = false
+            """)
     List<ProductPrice> findByProductVariantIdAndPackagingIdAndDeletedFalse(
             UUID variantId,
             UUID packagingId
     );
 
     @Query("""
-                SELECT p FROM ProductPrice p
-                WHERE p.productVariant.id = :variantId
-                  AND p.packaging.id = :packagingId
-                  AND p.tenantId = :tenantId
-                  AND p.branchId = :branchId
-                  AND p.deleted = false
-                  AND p.minQuantity <= :quantity
-                ORDER BY p.minQuantity DESC
+            SELECT p
+            FROM ProductPrice p
+            JOIN FETCH p.packaging pkg
+            JOIN FETCH p.productVariant pv
+            WHERE pv.id = :variantId
+              AND pkg.id = :packagingId
+              AND p.tenantId = :tenantId
+              AND p.branchId = :branchId
+              AND p.deleted = false
+              AND p.minQuantity <= :quantity
+            ORDER BY p.minQuantity DESC
             """)
     List<ProductPrice> findApplicablePrices(
             UUID variantId,
@@ -32,7 +45,20 @@ public interface ProductPriceRepository extends JpaRepository<ProductPrice, UUID
             Long quantity
     );
 
-    List<ProductPrice> findByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
+    @Query("""
+            SELECT p
+            FROM ProductPrice p
+            JOIN FETCH p.packaging pkg
+            JOIN FETCH p.productVariant pv
+            WHERE pv.id = :variantId
+              AND p.tenantId = :tenantId
+              AND p.branchId = :branchId
+              AND p.deleted = false
+            ORDER BY pkg.unitsPerPackaging ASC,
+                     p.minQuantity ASC
+            """)
+    List<ProductPrice>
+    findByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
             UUID variantId,
             UUID tenantId,
             UUID branchId

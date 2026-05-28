@@ -182,6 +182,7 @@ public class ProductService {
                 .map(productMapper::toDTO);
     }
 
+    @Transactional(readOnly = true)
     public ProductDTO getProductById(UUID branchId, UUID id, Boolean deleted) {
 
         Product product = productRepository
@@ -220,6 +221,7 @@ public class ProductService {
         return productMapper.toDTO(product);
     }
 
+    @Transactional(readOnly = true)
     public List<ProductDTO> getProductsBySupplier(UUID branchId, UUID supplierId, Boolean deleted) {
 
         List<Product> products =
@@ -239,6 +241,7 @@ public class ProductService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<ProductDTO> getProductsByCategory(UUID branchId, Long categoryId, Boolean deleted, Boolean strict) {
 
         List<Product> products;
@@ -554,6 +557,56 @@ public class ProductService {
      * <p>
      * Example: ACT-000547
      */
+
+    @Transactional
+    public ProductDTO fullUpdate(
+            UUID branchId,
+            UUID productId,
+            ProductFullUpdateDTO dto,
+            List<MultipartFile> files
+    ) throws IOException {
+
+        ProductUpdateDTO productDto =
+                dto.getProduct();
+
+        productDto.setBranchId(branchId);
+
+        ProductDTO updated =
+                updateProduct(
+                        productId,
+                        productDto
+                );
+
+        Product product =
+                productRepository
+                        .findById(productId)
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Product not found"
+                                )
+                        );
+
+        List<ProductVariant> variants =
+                productVariantRepository
+                        .findByTenantIdAndBranchIdAndProduct_Id(
+                                tenantId(),
+                                branchId,
+                                productId
+                        );
+
+        if (files != null && !files.isEmpty()) {
+
+            productImageService.attachFilesWithAssignments(
+                    branchId,
+                    product,
+                    variants,
+                    dto.getFileAssignments(),
+                    files
+            );
+        }
+
+        return updated;
+    }
 
     @Transactional
     public ProductDTO updateProduct(UUID id, ProductUpdateDTO dto) throws IOException {
@@ -1586,7 +1639,7 @@ public class ProductService {
 
         Resource res = new FileSystemResource(zip);
 
-        transactionalFileManager.runAfterCommit(zip::delete);
+        zip.deleteOnExit();
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
@@ -1605,7 +1658,7 @@ public class ProductService {
 
         Resource res = new FileSystemResource(zip);
 
-        transactionalFileManager.runAfterCommit(zip::delete);
+        zip.deleteOnExit();
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
@@ -1614,6 +1667,7 @@ public class ProductService {
                 .body(res);
     }
 
+    @Transactional(readOnly = true)
     public List<String> getProductImageUrls(UUID branchId, UUID id, Boolean deleted) {
 
         Product product = getProduct(branchId, id);
@@ -1758,6 +1812,7 @@ public class ProductService {
        PRODUCT AUDITS
        ============================= */
 
+    @Transactional(readOnly = true)
     public List<ProductAudit> getProductAudits(UUID branchId, UUID productId) {
 
         return productAuditRepository

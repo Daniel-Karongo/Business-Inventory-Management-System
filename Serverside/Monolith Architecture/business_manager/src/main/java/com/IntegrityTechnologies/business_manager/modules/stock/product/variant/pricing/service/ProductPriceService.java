@@ -100,22 +100,11 @@ public class ProductPriceService {
             Long minQty
     ) {
 
-        BigDecimal avgCost =
-                inventoryService.getAverageCost(
-                        variantId,
-                        branchId
-                );
-
-        if (avgCost != null
-                && avgCost.compareTo(BigDecimal.ZERO) > 0) {
-
-            if (price.compareTo(avgCost) < 0) {
-
-                throw new IllegalStateException(
-                        "Selling price cannot be below cost"
-                );
-            }
-        }
+        validatePriceAgainstCost(
+                branchId,
+                variantId,
+                price
+        );
 
         ProductPrice p = ProductPrice.builder()
                 .productVariant(
@@ -157,6 +146,12 @@ public class ProductPriceService {
             );
         }
 
+        validatePriceAgainstCost(
+                branchId,
+                p.getProductVariant().getId(),
+                price
+        );
+
         p.setPrice(price);
 
         cacheInvalidationService.evictPricingByVariant(
@@ -165,6 +160,30 @@ public class ProductPriceService {
         );
 
         return priceRepo.save(p);
+    }
+
+    public void validatePriceAgainstCost(
+            UUID branchId,
+            UUID variantId,
+            BigDecimal price
+    ) {
+
+        BigDecimal avgCost =
+                inventoryService.getAverageCost(
+                        variantId,
+                        branchId
+                );
+
+        if (
+                avgCost != null
+                        && avgCost.compareTo(BigDecimal.ZERO) > 0
+                        && price.compareTo(avgCost) < 0
+        ) {
+
+            throw new IllegalStateException(
+                    "Selling price cannot be below cost"
+            );
+        }
     }
 
     @Transactional

@@ -110,15 +110,31 @@ public class ProductController {
 
     /* ===================== UPDATE ===================== */
 
-    @PutMapping("/{id}")
+    @PutMapping(
+            value = "/{id}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
     public ApiResponse update(
             @PathVariable UUID id,
-            @RequestBody ProductUpdateDTO dto
+            @RequestParam UUID branchId,
+            @RequestPart("payload")
+            ProductFullUpdateDTO dto,
+            @RequestPart(
+                    value = "files",
+                    required = false
+            )
+            List<MultipartFile> files
     ) throws IOException {
+
         return new ApiResponse(
                 "success",
                 "Product updated",
-                productService.updateProduct(id, dto)
+                productService.fullUpdate(
+                        branchId,
+                        id,
+                        dto,
+                        files
+                )
         );
     }
 

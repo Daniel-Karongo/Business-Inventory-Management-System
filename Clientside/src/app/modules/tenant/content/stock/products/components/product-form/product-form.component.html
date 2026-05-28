@@ -16,7 +16,7 @@
             </option>
           </select>
         </mat-form-field>
-        
+
         <mat-form-field appearance="fill" class="w-full">
           <mat-label>Name</mat-label>
           <input matInput formControlName="name" />
@@ -100,7 +100,7 @@
     </button>
 
     <button mat-flat-button color="primary" type="button" (click)="save()" [disabled]="form.invalid">
-      Create Product
+      {{ editMode ? 'Update Product' : 'Create Product' }}
     </button>
   </div>
 

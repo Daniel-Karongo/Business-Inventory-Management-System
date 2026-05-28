@@ -19,13 +19,13 @@ import { authInterceptor } from './modules/auth/interceptors/auth.interceptor';
 
 import { DatePipe } from '@angular/common';
 import { provideServiceWorker } from '@angular/service-worker';
-import { APP_DATE_FORMATS } from './core/services/date-formats';
-import { IconLoader } from './core/utils/icon-loader';
-import { AuthService } from './modules/auth/services/auth.service';
-import { tenantInterceptor } from './core/interceptors/tenant.interceptor';
-import { TenantBrandingService } from './core/services/tenant-branding.service';
 import { catchError, firstValueFrom, of } from 'rxjs';
 import { networkErrorInterceptor } from './core/interceptors/network-error.interceptor';
+import { tenantInterceptor } from './core/interceptors/tenant.interceptor';
+import { APP_DATE_FORMATS } from './core/services/date-formats';
+import { TenantBrandingService } from './core/services/tenant-branding.service';
+import { IconLoader } from './core/utils/icon-loader';
+import { AuthService } from './modules/auth/services/auth.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [

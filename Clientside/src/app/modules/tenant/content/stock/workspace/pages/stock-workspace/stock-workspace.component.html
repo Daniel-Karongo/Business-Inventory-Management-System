@@ -1,0 +1,889 @@
+<app-page-shell>
+
+    <!-- =====================================================
+       HEADER
+    ====================================================== -->
+
+    <div page-header>
+
+        <div class="workspace-header">
+
+            <div class="header-left">
+
+                <button mat-icon-button [class.active]="viewMode === 'grid'" (click)="setView('grid')">
+
+                    <mat-icon>
+                        grid_view
+                    </mat-icon>
+
+                </button>
+
+                <button mat-icon-button [class.active]="viewMode === 'table'" (click)="setView('table')">
+
+                    <mat-icon>
+                        table_rows
+                    </mat-icon>
+
+                </button>
+
+                <button *ngIf="!isMobile" mat-icon-button (click)="toggleDensity()">
+
+                    <mat-icon>
+                        format_line_spacing
+                    </mat-icon>
+
+                </button>
+
+            </div>
+
+            <div class="header-right">
+
+                <button mat-stroked-button (click)="openReceiveNewProduct()">
+
+                    <mat-icon>
+                        add_box
+                    </mat-icon>
+
+                    Receive New Product
+                </button>
+
+                <button mat-stroked-button (click)="openBulkReceive()">
+
+                    <mat-icon>
+                        cloud_upload
+                    </mat-icon>
+
+                    Bulk Receive
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- =====================================================
+       TOOLBAR
+    ====================================================== -->
+
+    <div page-toolbar class="workspace-toolbar" *ngIf="filtersVisible">
+
+        <!-- SEARCH -->
+
+        <mat-form-field appearance="fill" class="search-field">
+
+            <mat-label>
+                Search products, variants, SKU
+            </mat-label>
+
+            <input matInput #searchInput (input)="setSearch(searchInput.value)">
+
+        </mat-form-field>
+
+        <!-- BRANCH -->
+        <mat-form-field *ngIf="showBranchFilter" appearance="fill">
+
+            <mat-label>
+                Branch
+            </mat-label>
+
+            <mat-select (selectionChange)="setBranch($event.value)">
+
+                <mat-option [value]="null">
+                    All
+                </mat-option>
+
+                <mat-option *ngFor="let branch of branches" [value]="branch.id">
+
+                    {{ branch.name }}
+
+                </mat-option>
+
+            </mat-select>
+
+        </mat-form-field>
+
+        <!-- CATEGORY -->
+        <mat-form-field *ngIf="showCategoryFilter" appearance="fill">
+
+            <mat-label>
+                Category
+            </mat-label>
+
+            <mat-select (selectionChange)="setCategory($event.value)">
+
+                <mat-option [value]="null">
+                    All
+                </mat-option>
+
+                <mat-option *ngFor="let category of categories" [value]="category.id">
+
+                    {{ category.name }}
+
+                </mat-option>
+
+            </mat-select>
+
+        </mat-form-field>
+
+        <!-- SUPPLIER -->
+        <mat-form-field *ngIf="showSupplierFilter" appearance="fill">
+
+            <mat-label>
+                Supplier
+            </mat-label>
+
+            <mat-select (selectionChange)="setSupplier($event.value)">
+
+                <mat-option [value]="null">
+                    All
+                </mat-option>
+
+                <mat-option *ngFor="let supplier of suppliers" [value]="supplier.id">
+
+                    {{ supplier.name }}
+
+                </mat-option>
+
+            </mat-select>
+
+        </mat-form-field>
+
+    </div>
+
+    <!-- =====================================================
+       CONTENT
+    ====================================================== -->
+
+    <div page-content>
+
+        <!-- =====================================================
+           BULK TOOLBAR
+        ====================================================== -->
+
+        <div *ngIf="selectedIds.size" class="bulk-toolbar">
+
+            <div class="bulk-left">
+
+                <mat-icon>
+                    check_circle
+                </mat-icon>
+
+                <span>
+
+                    {{ selectedIds.size }}
+
+                    selected
+
+                </span>
+
+            </div>
+
+            <div class="bulk-actions">
+
+                <button mat-stroked-button color="warn" (click)="bulkDelete()">
+
+                    <mat-icon>
+                        delete
+                    </mat-icon>
+
+                    Delete
+
+                </button>
+
+                <button mat-stroked-button (click)="clearSelection()">
+
+                    Clear
+
+                </button>
+
+            </div>
+
+        </div>
+
+        <!-- =====================================================
+           TABLE VIEW
+        ====================================================== -->
+
+        <div *ngIf="viewMode === 'table' && !isMobile" class="explorer-table-wrapper"
+            [class.compact]="density === 'compact'" [class.comfortable]="density === 'comfortable'">
+
+            <table mat-table [dataSource]="rows" class="w-full">
+
+                <!-- =================================================
+                     SELECTION
+                ================================================== -->
+
+                <ng-container matColumnDef="select">
+
+                    <th mat-header-cell *matHeaderCellDef>
+
+                        <mat-checkbox [checked]="allSelected()" [indeterminate]="
+                                selectedIds.size > 0 &&
+                                !allSelected()
+                            " (change)="toggleAll()">
+
+                        </mat-checkbox>
+
+                    </th>
+
+                    <td mat-cell *matCellDef="let row" class="actions-cell">
+
+                        <mat-checkbox (click)="$event.stopPropagation()" [checked]="isSelected(row)"
+                            (change)="toggleSelection(row)">
+
+                        </mat-checkbox>
+
+                    </td>
+
+                </ng-container>
+
+                <!-- =================================================
+                     DYNAMIC COLUMNS
+                ================================================== -->
+
+                <ng-container *ngFor="let column of columns" [matColumnDef]="column.id">
+
+                    <th mat-header-cell *matHeaderCellDef>
+
+                        <div class="sortable-content" [class.sortable]="column.sortable" (click)="triggerSort(column)">
+
+                            <span>
+                                {{ column.label }}
+                            </span>
+
+                            <mat-icon *ngIf="column.sortable" class="sort-icon">
+
+                                {{
+                                getSortIcon(column)
+                                }}
+
+                            </mat-icon>
+
+                        </div>
+
+                    </th>
+
+                    <td mat-cell *matCellDef="let row">
+
+                        <!-- =============================================
+                             HIERARCHY CELL
+                        ============================================== -->
+
+                        <ng-container *ngIf="
+                                column.id === columns[0]?.id;
+                                else normalCell
+                            ">
+
+                            <div class="explorer-hierarchy-cell" [style.padding-left.px]="
+                                    rowLevelValue(row) * 24
+                                ">
+
+                                <!-- EXPAND -->
+
+                                <button *ngIf="expandable(row)" mat-icon-button class="expand-btn" (click)="
+                                        toggleRowExpanded(
+                                            row,
+                                            $event
+                                        )
+                                    ">
+
+                                    <div class="expand-icon-wrapper">
+                                        <mat-icon *ngIf="!row.loadingChildren">
+                                            {{
+                                            expanded(row)
+                                            ? 'expand_more'
+                                            : 'chevron_right'
+                                            }}
+                                        </mat-icon>
+
+                                        <mat-icon *ngIf="row.loadingChildren" class="spin">
+                                            autorenew
+                                        </mat-icon>
+                                    </div>
+
+                                </button>
+
+                                <div *ngIf="!expandable(row)" class="expand-spacer">
+
+                                </div>
+
+                                <!-- CONTENT -->
+
+                                <div class="hierarchy-value">
+
+                                    <!-- =====================================================
+                                         PRODUCT COLUMN
+                                    ====================================================== -->
+
+                                    <ng-container *ngIf="column.id === 'product'">
+
+                                        <div class="hierarchy-cell">
+
+                                            <!-- THUMBNAIL -->
+
+                                            <div class="thumbnail-wrapper">
+
+                                                <img *ngIf="
+                                                        thumbnail(
+                                                            row.productId
+                                                        ) as thumb;
+                                                        else noThumb
+                                                    " [src]="thumb" alt="thumbnail"
+                                                    class="thumbnail clickable-thumbnail" (click)="
+                                                        openThumbnail(
+                                                            row.productId
+                                                        );
+                                                        $event.stopPropagation()
+                                                    ">
+
+                                                <ng-template #noThumb>
+
+                                                    <div class="thumbnail-placeholder">
+
+                                                        <mat-icon>
+
+                                                            <ng-container [ngSwitch]="row.type">
+
+                                                                <ng-container *ngSwitchCase="'PRODUCT'">
+                                                                    inventory_2
+                                                                </ng-container>
+
+                                                                <ng-container *ngSwitchCase="'VARIANT'">
+                                                                    category
+                                                                </ng-container>
+
+                                                                <ng-container *ngSwitchCase="'INVENTORY'">
+                                                                    warehouse
+                                                                </ng-container>
+
+                                                            </ng-container>
+
+                                                        </mat-icon>
+
+                                                    </div>
+
+                                                </ng-template>
+
+                                            </div>
+
+                                            <!-- DETAILS -->
+
+                                            <div class="product-cell">
+
+                                                <div class="product-name">
+
+                                                    <ng-container [ngSwitch]="row.type">
+
+                                                        <ng-container *ngSwitchCase="'PRODUCT'">
+
+                                                            {{
+                                                            row.productName
+                                                            }}
+
+                                                        </ng-container>
+
+                                                        <ng-container *ngSwitchCase="'VARIANT'">
+
+                                                            {{
+                                                            row.variantName
+                                                            }}
+
+                                                        </ng-container>
+
+                                                        <ng-container *ngSwitchCase="'INVENTORY'">
+
+                                                            {{
+                                                            row.branchName
+                                                            }}
+
+                                                        </ng-container>
+
+                                                    </ng-container>
+
+                                                </div>
+
+                                                <div class="product-category">
+
+                                                    <ng-container [ngSwitch]="row.type">
+
+                                                        <ng-container *ngSwitchCase="'PRODUCT'">
+
+                                                            {{
+                                                            row.categoryName
+                                                            }}
+
+                                                            •
+
+                                                            {{
+                                                            row.totalVariants
+                                                            }}
+
+                                                            variants
+
+                                                        </ng-container>
+
+                                                        <ng-container *ngSwitchCase="'VARIANT'">
+
+                                                            SKU:
+
+                                                            {{
+                                                            row.sku || '-'
+                                                            }}
+
+                                                        </ng-container>
+
+                                                        <ng-container *ngSwitchCase="'INVENTORY'">
+
+                                                            {{
+                                                            row.quantityReserved
+                                                            }}
+
+                                                            reserved
+
+                                                        </ng-container>
+
+                                                    </ng-container>
+
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                    </ng-container>
+
+                                </div>
+
+                            </div>
+
+                        </ng-container>
+
+                        <!-- =============================================
+                             NORMAL CELL
+                        ============================================== -->
+
+                        <ng-template #normalCell>
+
+                            <!-- VARIANT -->
+                            <ng-container *ngIf="column.id === 'variant'">
+                                <ng-container [ngSwitch]="row.type">
+
+                                    <span *ngSwitchCase="'VARIANT'">
+                                        {{
+                                        row.variantName
+                                        }}
+                                    </span>
+
+                                    <span *ngSwitchCase="'INVENTORY'">
+                                        {{
+                                        row.variantName
+                                        }}
+                                    </span>
+
+                                    <span *ngSwitchDefault>
+                                        -
+                                    </span>
+
+                                </ng-container>
+                            </ng-container>
+
+                            <!-- SKU -->
+                            <ng-container *ngIf="column.id === 'variantSku'">
+                                {{
+                                row.sku || '-'
+                                }}
+                            </ng-container>
+
+                            <!-- BRANCH -->
+                            <ng-container *ngIf="column.id === 'branch'">
+                                {{
+                                row.branchName || '-'
+                                }}
+                            </ng-container>
+
+                            <!-- ON HAND -->
+                            <ng-container *ngIf="column.id === 'onHand'">
+                                <ng-container *ngIf="row.type === 'INVENTORY'">
+                                    {{ row.quantityOnHand }}
+                                </ng-container>
+                            </ng-container>
+
+                            <!-- RESERVED -->
+                            <ng-container *ngIf="column.id === 'reserved'">
+                                <ng-container *ngIf="row.type === 'INVENTORY'">
+                                    {{ row.quantityReserved }}
+                                </ng-container>
+                            </ng-container>
+
+                            <!-- AVAILABLE -->
+                            <ng-container *ngIf="column.id === 'available'">
+                                <ng-container *ngIf="row.type === 'INVENTORY'">
+                                    <div class="available-value" [class.low]="(row.quantityAvailable ?? 0) <= 0">
+                                        {{ row.quantityAvailable }}
+                                    </div>
+                                </ng-container>
+                            </ng-container>
+
+                            <!-- BATCHES -->
+                            <ng-container *ngIf="column.id === 'batches'">
+                                {{ row.batchCount ?? '-' }}
+                            </ng-container>
+
+                            <!-- VALUE -->
+                            <ng-container *ngIf="column.id === 'value'">
+                                {{ row.inventoryValue | number:'1.2-2' }}
+                            </ng-container>
+
+                            <!-- UPDATED -->
+                            <ng-container *ngIf="column.id === 'updated'">
+                                {{ row.updatedAt | date:'medium' }}
+                            </ng-container>
+
+                        </ng-template>
+
+                    </td>
+
+                </ng-container>
+
+                <!-- =================================================
+                     ACTIONS
+                ================================================== -->
+
+                <ng-container matColumnDef="actions">
+
+                    <th mat-header-cell *matHeaderCellDef>
+
+                    </th>
+
+                    <td mat-cell *matCellDef="let row">
+
+                        <div class="explorer-actions">
+
+                            <ng-container *ngFor="
+                                    let action of actions
+                                ">
+
+                                <button *ngIf="
+                                        !action.hidden?.(row)
+                                    " mat-icon-button [disabled]="
+                                        action.disabled?.(row)
+                                    " [matTooltip]="
+                                        action.tooltip
+                                    " (click)="
+                                        action.execute(row);
+                                        $event.stopPropagation()
+                                    ">
+
+                                    <mat-icon>
+                                        {{ action.icon }}
+                                    </mat-icon>
+
+                                </button>
+
+                            </ng-container>
+
+                        </div>
+
+                    </td>
+
+                </ng-container>
+
+                <!-- =================================================
+                     ROWS
+                ================================================== -->
+
+                <tr mat-header-row *matHeaderRowDef="displayedColumns">
+
+                </tr>
+
+                <tr mat-row *matRowDef="
+                        let row;
+                        columns: displayedColumns;
+                    " class="explorer-row" [class.selected]="isSelected(row)" [class.deleted]="rowDeleted(row)"
+                    [class.clickable]="true" [class.level-0]="rowLevelValue(row) === 0"
+                    [class.level-1]="rowLevelValue(row) === 1" [class.level-2]="rowLevelValue(row) === 2">
+
+                </tr>
+
+            </table>
+
+        </div>
+
+        <!-- =====================================================
+           MOBILE / GRID VIEW
+        ====================================================== -->
+
+        <div *ngIf="
+                viewMode === 'grid' ||
+                isMobile
+            " class="explorer-grid" [class.compact]="density === 'compact'"
+            [class.comfortable]="density === 'comfortable'">
+
+            <ng-container *ngFor="
+                    let item of rows;
+                    trackBy: trackById
+                ">
+
+                <div class="projected-card-wrapper" [class.selected]="isSelected(item)"
+                    [class.deleted]="rowDeleted(item)">
+
+                    <div class="stock-card" [class.expandable]="item.hasChildren" [class.expanded]="item.expanded"
+                        [ngClass]="{
+                            product: item.type === 'PRODUCT',
+                            variant: item.type === 'VARIANT',
+                            inventory: item.type === 'INVENTORY'
+                        }">
+
+                        <!-- =====================================================
+                             HIERARCHY HEADER
+                        ====================================================== -->
+
+                        <div class="card-tree-header">
+
+                            <div class="tree-badge" [ngClass]="{
+            product: item.type === 'PRODUCT',
+            variant: item.type === 'VARIANT',
+            inventory: item.type === 'INVENTORY'
+        }">
+
+                                <mat-icon class="tree-icon">
+                                    {{
+                                    item.type === 'PRODUCT'
+                                    ? 'inventory_2'
+                                    : item.type === 'VARIANT'
+                                    ? 'category'
+                                    : 'warehouse'
+                                    }}
+                                </mat-icon>
+
+                                <span>
+                                    Level {{ item.level + 1 }}
+                                </span>
+                            </div>
+
+                            <button *ngIf="expandable(item)" mat-icon-button class="card-expand-btn" (click)="
+            toggleExpanded(item);
+            $event.stopPropagation()
+        ">
+
+                                <mat-icon *ngIf="!item.loadingChildren">
+                                    {{
+                                    item.expanded
+                                    ? 'expand_more'
+                                    : 'chevron_right'
+                                    }}
+                                </mat-icon>
+
+                                <mat-icon *ngIf="item.loadingChildren" class="spin">
+                                    autorenew
+                                </mat-icon>
+                            </button>
+
+                        </div>
+
+                        <!-- =====================================================
+                             CARD TOP
+                        ====================================================== -->
+
+                        <div class="card-top">
+
+                            <div class="card-thumbnail-wrapper">
+
+                                <img *ngIf="
+                                        thumbnail(
+                                            item.productId
+                                        ) as thumb;
+                                        else mobileNoThumb
+                                    " [src]="thumb" class="card-thumbnail clickable-thumbnail" alt="thumbnail" (click)="
+                                        openThumbnail(
+                                            item.productId
+                                        );
+                                        $event.stopPropagation()
+                                    ">
+
+                                <ng-template #mobileNoThumb>
+
+                                    <div class="card-thumbnail-placeholder">
+
+                                        <mat-icon>
+
+                                            <ng-container [ngSwitch]="item.type">
+
+                                                <ng-container *ngSwitchCase="'PRODUCT'">
+                                                    inventory_2
+                                                </ng-container>
+
+                                                <ng-container *ngSwitchCase="'VARIANT'">
+                                                    category
+                                                </ng-container>
+
+                                                <ng-container *ngSwitchCase="'INVENTORY'">
+                                                    warehouse
+                                                </ng-container>
+
+                                            </ng-container>
+
+                                        </mat-icon>
+
+                                    </div>
+
+                                </ng-template>
+
+                            </div>
+
+                            <div class="card-main">
+
+                                <div class="card-type">
+
+                                    {{ item.type }}
+
+                                </div>
+
+                                <div class="card-title">
+
+                                    {{
+                                    item.type === 'PRODUCT'
+                                    ? item.productName
+                                    : item.type === 'VARIANT'
+                                    ? item.variantName
+                                    : item.branchName
+                                    }}
+
+                                </div>
+
+                                <div class="card-subtitle">
+
+                                    {{
+                                    item.type === 'PRODUCT'
+                                    ? item.categoryName
+                                    : item.type === 'VARIANT'
+                                    ? item.sku
+                                    : item.productName
+                                    }}
+
+                                </div>
+
+                            </div>
+
+                            <div class="availability" [class.low]="
+                                    (item.quantityAvailable ?? 0) <= 0
+                                ">
+
+                                {{
+                                item.quantityAvailable ?? 0
+                                }}
+
+                            </div>
+
+                        </div>
+
+                        <!-- =====================================================
+                             META GRID
+                        ====================================================== -->
+
+                        <div class="card-grid">
+
+                            <div>
+
+                                <div class="meta-label">
+                                    Reserved
+                                </div>
+
+                                <div class="meta-value">
+
+                                    {{
+                                    item.quantityReserved ?? 0
+                                    }}
+
+                                </div>
+
+                            </div>
+
+                            <div>
+
+                                <div class="meta-label">
+                                    Value
+                                </div>
+
+                                <div class="meta-value">
+
+                                    {{
+                                    item.inventoryValue
+                                    | number:'1.2-2'
+                                    }}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- =====================================================
+                             ACTIONS
+                        ====================================================== -->
+
+                        <div class="fallback-actions">
+
+                            <ng-container *ngFor="
+                                    let action of actions
+                                ">
+
+                                <button *ngIf="
+                                        !action.hidden?.(item)
+                                    " mat-icon-button [disabled]="
+                                        action.disabled?.(item)
+                                    " [matTooltip]="
+                                        action.tooltip
+                                    " (click)="
+                                        action.execute(item);
+                                        $event.stopPropagation()
+                                    ">
+
+                                    <mat-icon>
+                                        {{ action.icon }}
+                                    </mat-icon>
+
+                                </button>
+
+                            </ng-container>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </ng-container>
+
+        </div>
+
+        <!-- =====================================================
+           EMPTY STATE
+        ====================================================== -->
+
+        <div *ngIf="
+                !loading &&
+                !rows.length
+            " class="empty-state">
+
+            No records found
+
+        </div>
+
+        <!-- =====================================================
+           PAGINATOR
+        ====================================================== -->
+
+        <div class="shared-paginator">
+
+            <mat-paginator [length]="total" [pageIndex]="0" [pageSize]="25" [pageSizeOptions]="[10,25,50,100]"
+                (page)="pageChange($event)">
+
+            </mat-paginator>
+
+        </div>
+
+    </div>
+
+</app-page-shell>

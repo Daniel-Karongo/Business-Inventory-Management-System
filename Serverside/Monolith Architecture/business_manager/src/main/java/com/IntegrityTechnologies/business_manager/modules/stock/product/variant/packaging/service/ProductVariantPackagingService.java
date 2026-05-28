@@ -94,6 +94,7 @@ public class ProductVariantPackagingService {
     /* =====================================================
        GET PACKAGINGS
     ===================================================== */
+    @Transactional(readOnly = true)
     public Map<UUID, List<PackagingDTO>> getPackagingsBulk(List<UUID> variantIds) {
 
         List<ProductVariantPackaging> all =
@@ -119,6 +120,7 @@ public class ProductVariantPackagingService {
         return map;
     }
 
+    @Transactional(readOnly = true)
     @Cacheable(
             value = "packaging",
             key = "T(com.IntegrityTechnologies.business_manager.config.caffeine.CacheKeys)" +
@@ -130,6 +132,7 @@ public class ProductVariantPackagingService {
         return packagingRepo.findByProductVariantIdAndDeletedFalse(variantId);
     }
 
+    @Transactional(readOnly = true)
     public ProductVariantPackaging getBasePackaging(UUID variantId) {
         ProductVariantPackaging base =
                 packagingRepo.findByProductVariantIdAndIsBaseUnitTrueAndDeletedFalse(variantId);

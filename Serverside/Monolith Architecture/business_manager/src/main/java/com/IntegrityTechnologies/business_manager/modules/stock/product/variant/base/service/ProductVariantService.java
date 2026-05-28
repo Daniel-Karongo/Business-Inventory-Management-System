@@ -165,6 +165,7 @@ public class ProductVariantService {
         packagingRepo.saveAndFlush(packaging);
     }
 
+    @Transactional(readOnly = true)
     public ProductVariant getEntity(UUID branchId, UUID id) {
         return variantRepo.findByIdSafe(
                 id,
@@ -174,6 +175,7 @@ public class ProductVariantService {
         ).orElseThrow(() -> new EntityNotFoundException("Variant not found"));
     }
 
+    @Transactional(readOnly = true)
     public List<ProductVariant> getEntitiesForProduct(UUID branchId, UUID productId) {
         return variantRepo.findByProduct_IdSafe(
                 productId,
@@ -183,10 +185,13 @@ public class ProductVariantService {
         );
     }
 
+    @Transactional(readOnly = true)
     public ProductVariantDTO getVariant(UUID branchId, UUID id) {
         return mapper.toDTO(getEntity(branchId, id));
     }
 
+
+    @Transactional(readOnly = true)
     public List<ProductVariantDTO> getVariantsForProduct(UUID branchId, UUID productId) {
         return getEntitiesForProduct(branchId, productId)
                 .stream()

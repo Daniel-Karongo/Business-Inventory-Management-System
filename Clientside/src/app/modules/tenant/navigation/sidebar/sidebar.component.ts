@@ -94,19 +94,14 @@ export class SidebarComponent implements OnInit {
         feature: 'stock',
         children: [
           {
+            title: 'Products',
+            route: '/app/stock',
+            icon: 'inventory'
+          },
+          {
             title: 'Categories',
             route: '/app/categories',
             icon: 'categories'
-          },
-          {
-            title: 'Products',
-            route: '/app/products',
-            icon: 'products'
-          },
-          {
-            title: 'Inventory',
-            route: '/app/inventory',
-            icon: 'inventory'
           },
           {
             title: 'Stock Onboarding',
