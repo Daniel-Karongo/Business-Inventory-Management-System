@@ -40,7 +40,7 @@ export class ProductEditComponent implements OnInit {
     const id = this.route.snapshot.paramMap.get('id');
 
     if (!id) {
-      this.router.navigate(['/app/products']);
+      this.router.navigate(['/app/stock']);
       return;
     }
 
@@ -84,7 +84,7 @@ export class ProductEditComponent implements OnInit {
         );
 
         this.router.navigate([
-          '/app/products',
+          '/app/stock',
           this.productId
         ]);
       },

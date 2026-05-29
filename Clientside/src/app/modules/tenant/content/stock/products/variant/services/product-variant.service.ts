@@ -62,21 +62,15 @@ export class ProductVariantService
     overrideBranchId?: string
   ): Observable<ProductVariant> {
 
-    return super
-      .get<ApiResponse<ProductVariant>>(
-        this.endpoints.get(id),
-        {
-          branchId:
-            this.resolveBranch(
-              overrideBranchId
-            )
-        }
-      )
-      .pipe(
-        map(res =>
-          this.unwrap<ProductVariant>(res)!
-        )
-      );
+    return super.get<ProductVariant>(
+      this.endpoints.get(id),
+      {
+        branchId:
+          this.resolveBranch(
+            overrideBranchId
+          )
+      }
+    );
   }
 
   forProduct(
@@ -103,23 +97,16 @@ export class ProductVariantService
     payload: ProductVariantCreateDTO,
     overrideBranchId?: string
   ): Observable<ProductVariant> {
-
-    return super
-      .post<ApiResponse<ProductVariant>>(
-        this.endpoints.create,
-        payload,
-        {
-          branchId:
-            this.resolveBranch(
-              overrideBranchId
-            )
-        }
-      )
-      .pipe(
-        map(res =>
-          this.unwrap<ProductVariant>(res)!
-        )
-      );
+    return super.post<ProductVariant>(
+      this.endpoints.create,
+      payload,
+      {
+        branchId:
+          this.resolveBranch(
+            overrideBranchId
+          )
+      }
+    );
   }
 
   /* =========================================================
@@ -131,23 +118,16 @@ export class ProductVariantService
     payload: ProductVariantUpdateDTO,
     overrideBranchId?: string
   ): Observable<ProductVariant> {
-
-    return super
-      .put<ApiResponse<ProductVariant>>(
-        this.endpoints.update(id),
-        payload,
-        {
-          branchId:
-            this.resolveBranch(
-              overrideBranchId
-            )
-        }
-      )
-      .pipe(
-        map(res =>
-          this.unwrap<ProductVariant>(res)!
-        )
-      );
+    return super.put<ProductVariant>(
+      this.endpoints.update(id),
+      payload,
+      {
+        branchId:
+          this.resolveBranch(
+            overrideBranchId
+          )
+      }
+    );
   }
 
   /* =========================================================

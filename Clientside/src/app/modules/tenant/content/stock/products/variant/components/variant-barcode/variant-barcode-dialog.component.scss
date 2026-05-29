@@ -1,0 +1,14 @@
+.barcode-wrapper {
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    min-height: 240px;
+
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+}

@@ -378,17 +378,7 @@ export class StockWorkspaceService {
         product.deleted,
 
       updatedAt:
-        product.updatedAt,
-
-      capabilities: {
-        inspectable: true,
-        editable: true,
-        deletable:
-          !product.deleted,
-        restorable:
-          !!product.deleted,
-        receivable: true
-      }
+        product.updatedAt
     };
   }
 
@@ -446,16 +436,7 @@ export class StockWorkspaceService {
         product.deleted,
 
       updatedAt:
-        product.updatedAt,
-
-      capabilities: {
-        inspectable: true,
-        editable: true,
-        receivable: true,
-        transferable: true,
-        adjustable: true,
-        sellable: true
-      }
+        product.updatedAt
     };
   }
 
@@ -529,15 +510,7 @@ export class StockWorkspaceService {
         inventory.batchCount,
 
       updatedAt:
-        inventory.lastUpdatedAt,
-
-      capabilities: {
-        inspectable: true,
-        receivable: true,
-        transferable: true,
-        adjustable: true,
-        sellable: true
-      }
+        inventory.lastUpdatedAt
     };
   }
 

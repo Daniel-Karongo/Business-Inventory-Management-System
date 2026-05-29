@@ -37,7 +37,10 @@ export class ProductCreateComponent {
       next: product => {
         this.saving = false;
         this.snackbar.open('Product created successfully', 'Close', { duration: 3000 });
-        this.router.navigate(['/app/products', product.id]);
+        this.router.navigate([
+          '/app/stock',
+          product.id
+        ]);
       },
       error: () => {
         this.saving = false;
@@ -47,6 +50,6 @@ export class ProductCreateComponent {
   }
 
   cancel() {
-    this.router.navigate(['/app/products']);
+    this.router.navigate(['/app/stock']);
   }
 }

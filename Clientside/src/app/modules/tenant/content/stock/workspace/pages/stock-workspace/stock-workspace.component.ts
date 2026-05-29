@@ -83,11 +83,6 @@ import {
     PageShellComponent
 } from '../../../../../../../shared/layout/page-shell/page-shell.component';
 
-
-import {
-    StockWorkspaceAction
-} from '../../models/stock-workspace-action.model';
-
 import {
     StockWorkspaceCardField
 } from '../../models/stock-workspace-card-field.model';
@@ -137,13 +132,22 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import {
     FileViewerDialog
 } from '../../../../../../../shared/components/file-viewer/file-viewer.component';
+
+
+
+import { ProductSelectorDialogComponent } from '../../../../sales/dialogs/product-selector-dialog/product-selector-dialog.component';
 import { AdjustStockDialogComponent } from '../../../inventory/components/adjust-stock-dialog/adjust-stock-dialog.component';
+import { InventoryBulkImportDialogComponent } from '../../../inventory/components/inventory-bulk-import-dialog/inventory-bulk-import-dialog.component';
+import { ReceiveNewProductDialogComponent } from '../../../inventory/components/receive-new-product-dialog/receive-new-product-dialog.component';
 import { ReceiveStockDialogComponent } from '../../../inventory/components/receive-stock-dialog/receive-stock-dialog.component';
 import { TransferStockDialogComponent } from '../../../inventory/components/transfer-stock-dialog/transfer-stock-dialog.component';
 import { Product } from '../../../models/product.model';
-import { ReceiveNewProductDialogComponent } from '../../../inventory/components/receive-new-product-dialog/receive-new-product-dialog.component';
-import { InventoryBulkImportDialogComponent } from '../../../inventory/components/inventory-bulk-import-dialog/inventory-bulk-import-dialog.component';
-import { ProductSelectorDialogComponent } from '../../../../sales/dialogs/product-selector-dialog/product-selector-dialog.component';
+import { ProductVariantService } from '../../../products/variant/services/product-variant.service';
+import { ProductVariant } from '../../../models/product-variant.model';
+import { VariantFormComponent } from '../../../products/variant/components/variant-form/variant-form.component';
+import { VariantImagesDialogComponent } from '../../../products/variant/components/variant-images/variant-images-dialog.component';
+import { VariantBarcodeDialogComponent } from '../../../products/variant/components/variant-barcode/variant-barcode-dialog.component';
+import { VariantDetailsDialogComponent } from '../../../products/variant/components/variant-details/variant-details-dialog.component';
 
 @Component({
     selector: 'app-stock-workspace',
@@ -203,6 +207,9 @@ export class StockWorkspaceComponent
 
     private snackBar =
         inject(MatSnackBar);
+
+    private variantService =
+        inject(ProductVariantService);
 
     /* =========================================================
        UI
@@ -371,131 +378,6 @@ export class StockWorkspaceComponent
 
     cardFields:
         StockWorkspaceCardField<StockWorkspaceRow>[] = [];
-
-    actions:
-        StockWorkspaceAction<StockWorkspaceRow>[] = [
-
-            /* =====================================================
-               INSPECT
-            ====================================================== */
-
-            {
-                icon: 'visibility',
-                tooltip:
-                    'Inspect Product',
-                hidden: row =>
-                    !row.capabilities
-                        ?.inspectable,
-                execute: row =>
-                    this.inspect(row)
-            },
-
-            /* =====================================================
-               EDIT
-            ====================================================== */
-
-            {
-                icon: 'edit',
-                tooltip:
-                    'Edit Product',
-                hidden: row =>
-                    !row.capabilities
-                        ?.editable,
-                execute: row =>
-                    this.editProduct(row)
-            },
-
-            /* =====================================================
-               DELETE
-            ====================================================== */
-
-            {
-                icon: 'delete',
-                tooltip:
-                    'Delete Product',
-                hidden: row =>
-                    !row.capabilities
-                        ?.deletable,
-                execute: row =>
-                    this.deleteProduct(row)
-            },
-
-            /* =====================================================
-               RESTORE
-            ====================================================== */
-
-            {
-                icon:
-                    'restore_from_trash',
-                tooltip:
-                    'Restore Product',
-                hidden: row =>
-                    !row.capabilities
-                        ?.restorable,
-                execute: row =>
-                    this.restoreProduct(row)
-            },
-
-            /* =====================================================
-               RECEIVE
-            ====================================================== */
-
-            {
-                icon: 'add_circle',
-                tooltip:
-                    'Receive Stock',
-                hidden: row =>
-                    !row.capabilities
-                        ?.receivable,
-                execute: row =>
-                    this.receive(row)
-            },
-
-            /* =====================================================
-               SALE
-            ====================================================== */
-
-            {
-                icon: 'point_of_sale',
-                tooltip:
-                    'Create Sale',
-                hidden: row =>
-                    !row.capabilities
-                        ?.sellable,
-                execute: row =>
-                    this.createSale(row)
-            },
-
-            /* =====================================================
-               TRANSFER
-            ====================================================== */
-
-            {
-                icon: 'swap_horiz',
-                tooltip:
-                    'Transfer Stock',
-                hidden: row =>
-                    !row.capabilities
-                        ?.transferable,
-                execute: row =>
-                    this.transfer(row)
-            },
-
-            /* =====================================================
-               ADJUST
-            ====================================================== */
-
-            {
-                icon: 'tune',
-                tooltip:
-                    'Adjust Inventory',
-                hidden: row =>
-                    !row.capabilities
-                        ?.adjustable,
-                execute: row =>
-                    this.adjust(row)
-            }
-        ];
 
     /* =========================================================
        TEMPLATES
@@ -1206,19 +1088,19 @@ export class StockWorkspaceComponent
     ) {
 
         this.router.navigate([
-            '/app/products',
+            '/app/stock',
             row.productId
         ]);
     }
 
     editProduct(
-        row:
-            StockWorkspaceRow
+        row: StockWorkspaceRow
     ) {
 
         this.router.navigate([
-            '/app/stock/products/edit',
-            row.productId
+            '/app/stock',
+            row.productId,
+            'edit'
         ]);
     }
 
@@ -1347,6 +1229,332 @@ export class StockWorkspaceComponent
                     this.reload();
                 }
             });
+    }
+
+    openTransactions(
+        row: StockWorkspaceRow
+    ) {
+        const missing: string[] = [];
+
+        if (!row.variantId) {
+            missing.push('variant');
+        }
+
+        if (!row.branchId) {
+            missing.push('branch');
+        }
+
+        if (missing.length) {
+            this.snackBar.open(
+                `Cannot open transactions. Missing ${missing.join(' and ')} information.`,
+                'OK',
+                {
+                    duration: 5000
+                }
+            );
+            return;
+        }
+
+        this.router.navigate(
+            [
+                '/app/stock/inventory',
+                row.variantId
+            ],
+            {
+                state: {
+                    branchId:
+                        row.branchId
+                }
+            }
+        );
+    }
+
+    toggleProductStatus(
+        row: StockWorkspaceRow
+    ) {
+        if (row.deleted) {
+            this.restoreProduct(row);
+        } else {
+            this.deleteProduct(row);
+        }
+    }
+
+    viewVariant(
+        row: StockWorkspaceRow
+    ) {
+        if (!row.variantId) {
+
+            this.snackBar.open(
+                'Variant information is missing.',
+                'Close',
+                {
+                    duration: 3000
+                }
+            );
+
+            return;
+        }
+
+        this.variantService
+            .getById(row.variantId)
+            .subscribe({
+                next: variant => {
+
+                    this.dialog.open(
+                        VariantDetailsDialogComponent,
+                        {
+                            panelClass: 'enterprise-dialog',
+
+                            width: 'min(1100px, 94vw)',
+                            maxWidth: '94vw',
+
+                            height: 'auto',
+                            maxHeight: '92vh',
+
+                            autoFocus: false,
+                            restoreFocus: false,
+
+                            data: {
+                                variant,
+                                branchId: row.branchId
+                            }
+                        }
+                    );
+                },
+                error: () => {
+
+                    this.snackBar.open(
+                        'Failed to load variant.',
+                        'Close',
+                        {
+                            duration: 3000
+                        }
+                    );
+                }
+            });
+    }
+
+    editVariant(
+        row: StockWorkspaceRow
+    ) {
+
+        if (!row.variantId) {
+
+            this.snackBar.open(
+                'Variant information is missing.',
+                'Close',
+                {
+                    duration: 3000
+                }
+            );
+
+            return;
+        }
+
+        this.variantService
+            .getById(row.variantId)
+            .subscribe({
+
+                next: variant => {
+
+                    if (!variant) {
+                        this.snackBar.open(
+                            'Variant was not returned from API.',
+                            'Close',
+                            { duration: 5000 }
+                        );
+                        return;
+                    }
+
+                    const ref =
+                        this.dialog.open(
+                            VariantFormComponent,
+                            {
+                                width: '420px',
+                                data: variant
+                            }
+                        );
+
+                    ref.afterClosed()
+                        .subscribe(updated => {
+
+                            if (!updated) {
+                                return;
+                            }
+
+                            this.snackBar.open(
+                                'Variant updated',
+                                'Close',
+                                {
+                                    duration: 2000
+                                }
+                            );
+
+                            this.reload();
+                        });
+                },
+
+                error: () => {
+
+                    this.snackBar.open(
+                        'Failed to load variant.',
+                        'Close',
+                        {
+                            duration: 3000
+                        }
+                    );
+                }
+            });
+    }
+
+    manageVariantImages(
+        row: StockWorkspaceRow
+    ) {
+
+        if (!row.variantId) {
+
+            this.snackBar.open(
+                'Variant information is missing.',
+                'Close',
+                {
+                    duration: 3000
+                }
+            );
+
+            return;
+        }
+
+        this.dialog.open(
+            VariantImagesDialogComponent,
+            {
+                panelClass: 'enterprise-dialog',
+                width: '1000px',
+                maxWidth: '95vw',
+                data: {
+                    variantId:
+                        row.variantId,
+                    variantName:
+                        row.variantName
+                }
+            }
+        );
+    }
+
+    showVariantBarcode(
+        row: StockWorkspaceRow
+    ) {
+
+        if (!row.variantId) {
+
+            this.snackBar.open(
+                'Variant information is missing.',
+                'Close',
+                {
+                    duration: 3000
+                }
+            );
+
+            return;
+        }
+
+        this.dialog.open(
+            VariantBarcodeDialogComponent,
+            {
+                width: '700px',
+                maxWidth: '95vw',
+                data: {
+                    variantId:
+                        row.variantId,
+                    variantName:
+                        row.variantName
+                }
+            }
+        );
+    }
+
+    deleteVariant(
+        row: StockWorkspaceRow
+    ) {
+
+        if (!row.variantId) {
+
+            this.snackBar.open(
+                'Variant information is missing.',
+                'Close',
+                {
+                    duration: 3000
+                }
+            );
+
+            return;
+        }
+
+        const ok = confirm(
+            `Delete variant "${row.variantName}"?`
+        );
+
+        if (!ok) {
+            return;
+        }
+
+        this.variantService
+            .remove(
+                row.variantId
+            )
+            .subscribe({
+
+                next: () => {
+
+                    this.snackBar.open(
+                        'Variant deleted',
+                        'Close',
+                        {
+                            duration: 2000
+                        }
+                    );
+
+                    this.reload();
+                },
+
+                error: err => {
+
+                    const msg =
+                        err?.error
+                        || 'Delete failed';
+
+                    this.snackBar.open(
+                        msg,
+                        'Close',
+                        {
+                            duration: 4000
+                        }
+                    );
+                }
+            });
+    }
+
+    createSaleFromInventory(
+        row: StockWorkspaceRow
+    ) {
+        this.createSale(row);
+    }
+
+    openReceiveDialog(
+        row: StockWorkspaceRow
+    ) {
+        this.receive(row);
+    }
+
+    openTransferDialog(
+        row: StockWorkspaceRow
+    ) {
+        this.transfer(row);
+    }
+
+    openAdjustDialog(
+        row: StockWorkspaceRow
+    ) {
+        this.adjust(row);
     }
 
     receive(
@@ -1630,8 +1838,11 @@ export class StockWorkspaceComponent
     private branchServiceBranchId():
         string {
 
-        return this.branches[0]?.id
-            ?? '';
+        return (
+            this.branchId$.value
+            ?? this.branches[0]?.id
+            ?? ''
+        );
     }
 
     thumbnail(

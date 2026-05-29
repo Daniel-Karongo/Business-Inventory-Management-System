@@ -1,0 +1,104 @@
+<ng-container *ngIf="data.variant as variant">
+
+    <div class="dialog-shell">
+
+        <div class="dialog-header">
+
+            <div class="header-content">
+
+                <div class="header-title">
+                    {{ variant.classification }}
+                </div>
+
+                <div class="header-subtitle">
+                    Product Variant Details
+                </div>
+
+            </div>
+
+        </div>
+
+        <mat-dialog-content>
+
+            <div class="overview-grid">
+
+                <div class="overview-card primary">
+
+                    <div class="overview-label">
+                        PRODUCT
+                    </div>
+
+                    <div class="overview-value">
+                        {{ variant.productName }}
+                    </div>
+
+                </div>
+
+                <div class="overview-card">
+
+                    <div class="overview-label">
+                        SKU
+                    </div>
+
+                    <div class="overview-value mono">
+                        {{ variant.sku || '-' }}
+                    </div>
+
+                </div>
+
+                <div class="overview-card">
+
+                    <div class="overview-label">
+                        BARCODE
+                    </div>
+
+                    <div class="overview-value mono">
+                        {{ variant.barcode || '-' }}
+                    </div>
+
+                </div>
+
+                <div class="overview-card metric">
+
+                    <div class="metric-value">
+                        {{ variant.minimumProfit ?? 0 }}
+                    </div>
+
+                    <div class="metric-label">
+                        Minimum Profit
+                    </div>
+
+                </div>
+
+                <div class="overview-card metric">
+
+                    <div class="metric-value">
+                        {{ variant.minimumPercentageProfit ?? 0 }}%
+                    </div>
+
+                    <div class="metric-label">
+                        Minimum Margin
+                    </div>
+
+                </div>
+
+            </div>
+
+            <app-variant-commercial-summary [variant]="variant" [branchId]="data.branchId">
+            </app-variant-commercial-summary>
+
+        </mat-dialog-content>
+
+        <mat-dialog-actions align="end">
+
+            <button mat-stroked-button mat-dialog-close>
+
+                Close
+
+            </button>
+
+        </mat-dialog-actions>
+
+    </div>
+
+</ng-container>

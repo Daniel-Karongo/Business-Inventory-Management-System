@@ -2,65 +2,95 @@
 
     <div class="header">
 
-        <div>
+        <div class="header-info">
+
             <h2>Pricing</h2>
-            <span>{{ pricing.length }} pricing rules</span>
+
+            <span>
+                {{ pricing.length }}
+                pricing rule{{
+                pricing.length === 1 ? '' : 's'
+                }}
+            </span>
+
         </div>
 
         <button mat-flat-button color="primary" type="button" (click)="create()">
+
+            <mat-icon>add</mat-icon>
             Add Pricing
+
         </button>
 
     </div>
 
-    <div class="loading" *ngIf="loading">
-        Loading pricing...
-    </div>
+    <div class="empty" *ngIf="!pricing.length">
 
-    <div class="empty" *ngIf="!loading && !pricing.length">
         No pricing configured.
+
     </div>
 
-    <div class="table-wrapper">
+    <div class="pricing-cards" *ngIf="pricing.length > 0">
 
-        <table *ngIf="pricing.length">
+        <div class="pricing-card" *ngFor="let p of pricing">
 
-            <thead>
-                <tr>
-                    <th>Packaging</th>
-                    <th>Min Qty</th>
-                    <th>Price</th>
-                    <th></th>
-                </tr>
-            </thead>
+            <div class="row">
 
-            <tbody>
+                <span class="label">
+                    Packaging
+                </span>
 
-                <tr *ngFor="let p of pricing">
+                <span class="value">
+                    {{ packagingName(p.packagingId) }}
+                </span>
 
-                    <td>{{ packagingName(p.packaging?.id) }}</td>
+            </div>
 
-                    <td>{{ p.minQuantity }}</td>
+            <div class="row">
 
-                    <td>{{ p.price | number:'1.2-2' }}</td>
+                <span class="label">
+                    Minimum Qty
+                </span>
 
-                    <td class="actions">
+                <span class="value">
+                    {{ p.minQuantity }}
+                </span>
 
-                        <button mat-button type="button" (click)="edit(p)">
-                            Edit
-                        </button>
+            </div>
 
-                        <button mat-button color="warn" type="button" (click)="remove(p)">
-                            Delete
-                        </button>
+            <div class="row">
 
-                    </td>
+                <span class="label">
+                    Price
+                </span>
 
-                </tr>
+                <span class="price">
+                    {{ p.price | number:'1.2-2' }}
+                </span>
 
-            </tbody>
+            </div>
 
-        </table>
+            <div class="actions">
+
+                <button mat-icon-button matTooltip="Edit Pricing" (click)="edit(p)">
+
+                    <mat-icon>
+                        edit
+                    </mat-icon>
+
+                </button>
+
+                <button mat-icon-button color="warn" matTooltip="Delete Pricing" (click)="remove(p)">
+
+                    <mat-icon>
+                        delete_outline
+                    </mat-icon>
+
+                </button>
+
+            </div>
+
+        </div>
 
     </div>
 

@@ -62,7 +62,7 @@ export class PricingFormComponent {
         if (data?.pricing) {
 
             this.form.patchValue({
-                packagingId: data.pricing.packaging?.id ?? '',
+                packagingId: data.pricing.packagingId ?? '',
                 price: data.pricing.price,
                 minQuantity: data.pricing.minQuantity
             });

@@ -3,8 +3,12 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.variant
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.*;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.service.*;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantCreateDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantUpdateDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.service.ProductVariantImageService;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.service.ProductVariantService;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.service.VariantPdfOrchestrationService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -23,9 +27,7 @@ import java.util.UUID;
 public class ProductVariantController {
 
     private final ProductVariantService service;
-    private final VariantBarcodeService barcodeService;
     private final ProductVariantImageService imageService;
-    private final BarcodeScanService scanService;
     private final VariantPdfOrchestrationService pdfOrchestrationService;
 
     @TenantManagerOnly

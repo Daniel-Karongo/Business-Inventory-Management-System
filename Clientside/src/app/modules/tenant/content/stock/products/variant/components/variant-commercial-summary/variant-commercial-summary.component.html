@@ -5,98 +5,143 @@
         <mat-expansion-panel-header>
 
             <mat-panel-title>
+
                 {{ variant.classification }}
+
             </mat-panel-title>
 
             <mat-panel-description>
 
-                <span class="header-meta">
+                <div class="header-stats">
 
-                    <span>
-                        {{ packagings.length || 0 }}
-                        packaging
-                    </span>
+                    <div class="stat-chip">
 
-                    <span>
-                        {{ pricing.length || 0 }}
-                        pricing
-                    </span>
+                        {{ packagings.length }}
 
-                </span>
+                        Packaging
+
+                    </div>
+
+                    <div class="stat-chip">
+
+                        {{ pricing.length }}
+
+                        Pricing
+
+                    </div>
+
+                </div>
 
             </mat-panel-description>
 
         </mat-expansion-panel-header>
 
-        <div *ngIf="loading && expanded" class="loading">
+        <div *ngIf="loading && expanded" class="loading-state">
+
             Loading commercial configuration...
+
         </div>
 
-        <ng-container *ngIf="!loading && expanded">
+        <ng-container *ngIf="
+                !loading &&
+                expanded
+            ">
 
-            <!-- SUMMARY -->
-            <div class="summary-grid">
+            <div class="kpi-grid">
 
-                <mat-card class="summary-card">
+                <div class="kpi-card">
 
-                    <div class="value">
+                    <div class="kpi-value">
                         {{ packagings.length }}
                     </div>
 
-                    <div class="label">
+                    <div class="kpi-label">
                         Packaging Configurations
                     </div>
 
-                </mat-card>
+                </div>
 
-                <mat-card class="summary-card">
+                <div class="kpi-card">
 
-                    <div class="value">
+                    <div class="kpi-value">
                         {{ pricing.length }}
                     </div>
 
-                    <div class="label">
+                    <div class="kpi-label">
                         Pricing Rules
                     </div>
 
-                </mat-card>
+                </div>
 
             </div>
 
-            <!-- TABS -->
-            <mat-tab-group dynamicHeight>
+            <ng-container *ngIf="!isMobile; else mobileLayout">
 
-                <!-- PACKAGING -->
-                <mat-tab label="Packaging">
+                <mat-tab-group dynamicHeight>
 
-                    <div class="tab-content">
+                    <mat-tab label="Packaging">
+                        <div class="tab-content">
 
-                        <app-variant-packaging-manager [variantId]="variant.id" [branchId]="branchId">
-                        </app-variant-packaging-manager>
+                            <app-variant-packaging-manager [variantId]="variant.id" [branchId]="branchId"
+                                [packagings]="packagings" (refreshRequested)="load()">
+                            </app-variant-packaging-manager>
 
-                        <app-packaging-conversion-table [packaging]="packagings">
-                        </app-packaging-conversion-table>
+                            <app-packaging-conversion-table [packaging]="packagings">
+                            </app-packaging-conversion-table>
 
+                        </div>
+                    </mat-tab>
+
+                    <mat-tab label="Pricing">
+                        <div class="tab-content">
+
+                            <app-variant-pricing-manager [variantId]="variant.id" [packaging]="packagings"
+                                [pricing]="pricing" (refreshRequested)="load()">
+                            </app-variant-pricing-manager>
+
+                            <app-pricing-tier-table [pricing]="pricing" [packaging]="packagings">
+                            </app-pricing-tier-table>
+
+                        </div>
+                    </mat-tab>
+
+                </mat-tab-group>
+
+            </ng-container>
+
+            <ng-template #mobileLayout>
+
+                <div class="mobile-section">
+
+                    <div class="mobile-section-title">
+                        Packaging
                     </div>
 
-                </mat-tab>
+                    <app-variant-packaging-manager [variantId]="variant.id" [branchId]="branchId"
+                        [packagings]="packagings" (refreshRequested)="load()">
+                    </app-variant-packaging-manager>
 
-                <!-- PRICING -->
-                <mat-tab label="Pricing">
+                    <app-packaging-conversion-table [packaging]="packagings">
+                    </app-packaging-conversion-table>
 
-                    <div class="tab-content">
+                </div>
 
-                        <app-variant-pricing-manager [variantId]="variant.id" [packaging]="packagings">
-                        </app-variant-pricing-manager>
+                <div class="mobile-section">
 
-                        <app-pricing-tier-table [pricing]="pricing" [packaging]="packagings">
-                        </app-pricing-tier-table>
-
+                    <div class="mobile-section-title">
+                        Pricing
                     </div>
 
-                </mat-tab>
+                    <app-variant-pricing-manager [variantId]="variant.id" [packaging]="packagings" [pricing]="pricing"
+                        (refreshRequested)="load()">
+                    </app-variant-pricing-manager>
 
-            </mat-tab-group>
+                    <app-pricing-tier-table [pricing]="pricing" [packaging]="packagings">
+                    </app-pricing-tier-table>
+
+                </div>
+
+            </ng-template>
 
         </ng-container>
 

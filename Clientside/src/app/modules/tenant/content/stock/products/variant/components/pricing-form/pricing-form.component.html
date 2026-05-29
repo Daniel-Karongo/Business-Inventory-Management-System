@@ -1,54 +1,76 @@
-<h2 mat-dialog-title>
-    {{ data.editMode ? 'Edit Price' : 'Create Price' }}
-</h2>
+<div class="dialog-shell">
 
-<mat-dialog-content>
+    <div class="dialog-header">
 
-    <form [formGroup]="form" class="form">
+        <div class="header-title">
+            {{ data.editMode ? 'Edit Pricing Rule' : 'Create Pricing Rule' }}
+        </div>
 
-        <mat-form-field appearance="fill">
+        <div class="header-subtitle">
+            Configure packaging pricing and quantity thresholds
+        </div>
 
-            <mat-label>Packaging</mat-label>
+    </div>
 
-            <mat-select formControlName="packagingId">
+    <mat-dialog-content>
 
-                <mat-option *ngFor="let p of data.packaging" [value]="p.packagingId">
-                    {{ p.name }}
-                    ({{ p.unitsPerPackaging }} units)
-                </mat-option>
+        <form [formGroup]="form" class="enterprise-form">
 
-            </mat-select>
+            <div class="form-grid">
 
-        </mat-form-field>
+                <mat-form-field appearance="outline">
 
-        <mat-form-field appearance="fill">
+                    <mat-label>Packaging</mat-label>
 
-            <mat-label>Selling Price</mat-label>
+                    <mat-select formControlName="packagingId">
 
-            <input matInput type="number" formControlName="price">
+                        <mat-option *ngFor="let p of data.packaging" [value]="p.packagingId">
 
-        </mat-form-field>
+                            {{ p.name }}
+                            ({{ p.unitsPerPackaging }} units)
 
-        <mat-form-field appearance="fill">
+                        </mat-option>
 
-            <mat-label>Minimum Quantity</mat-label>
+                    </mat-select>
 
-            <input matInput type="number" formControlName="minQuantity">
+                </mat-form-field>
 
-        </mat-form-field>
+                <mat-form-field appearance="outline">
 
-    </form>
+                    <mat-label>Selling Price</mat-label>
 
-</mat-dialog-content>
+                    <input matInput type="number" formControlName="price">
 
-<mat-dialog-actions align="end">
+                </mat-form-field>
 
-    <button mat-stroked-button type="button" (click)="close()">
-        Cancel
-    </button>
+                <mat-form-field appearance="outline">
 
-    <button mat-flat-button color="primary" type="button" (click)="submit()">
-        Save
-    </button>
+                    <mat-label>Minimum Quantity</mat-label>
 
-</mat-dialog-actions>
+                    <input matInput type="number" formControlName="minQuantity">
+
+                </mat-form-field>
+
+            </div>
+
+        </form>
+
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end">
+
+        <button mat-stroked-button type="button" (click)="close()">
+
+            Cancel
+
+        </button>
+
+        <button mat-flat-button color="primary" type="button" [disabled]="saving" (click)="submit()">
+
+            {{ saving ? 'Saving...' : 'Save Pricing' }}
+
+        </button>
+
+    </mat-dialog-actions>
+
+</div>

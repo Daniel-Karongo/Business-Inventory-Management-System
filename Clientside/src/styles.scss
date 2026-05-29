@@ -619,33 +619,62 @@ body.dark .enterprise-dialog .mat-mdc-dialog-surface {
 ========================================================= */
 
 .enterprise-dialog .mat-mdc-dialog-inner-container {
-
-  max-height: 100vh;
-
   overflow: hidden;
 }
 
 .enterprise-dialog .mat-mdc-dialog-surface,
 .enterprise-dialog .mdc-dialog__surface {
+  display: flex !important;
+  flex-direction: column !important;
 
   max-height: 92vh !important;
 
   overflow: hidden !important;
-
-  display: flex !important;
-
-  flex-direction: column !important;
 }
 
 .enterprise-dialog .mat-mdc-dialog-content {
-
   flex: 1 1 auto;
 
-  overflow: auto !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
 
-  max-height: unset !important;
+  max-height: none !important;
 
   padding: 0 !important;
+
+  scrollbar-width: thin;
+}
+
+/* =========================================================
+   ENTERPRISE DIALOG MOBILE FIXES
+========================================================= */
+
+.enterprise-dialog .mat-mdc-dialog-container {
+  max-width: 96vw !important;
+}
+
+@media (max-width: 768px) {
+
+  .enterprise-dialog .mat-mdc-dialog-container {
+    width: 96vw !important;
+    max-width: 96vw !important;
+  }
+
+  .enterprise-dialog .mat-mdc-dialog-surface,
+  .enterprise-dialog .mdc-dialog__surface {
+
+    max-height: 94vh !important;
+
+    border-radius: 16px !important;
+  }
+
+  .enterprise-dialog .mat-mdc-dialog-content {
+
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* =========================================================

@@ -1,76 +1,101 @@
+:host {
+    display: block;
+    width: 100%;
+}
+
 .tier-table {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 20px;
 }
 
 .packaging-block {
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--surface-border);
+
     border-radius: 16px;
+
     overflow: hidden;
-    background: white;
+
+    background: var(--surface-bg);
+
+    box-shadow: var(--surface-shadow);
 }
 
 .packaging-header {
-    padding: 1rem;
-    border-bottom: 1px solid #f3f4f6;
+    padding: 18px;
+
+    border-bottom: 1px solid var(--surface-border);
 }
 
 .title {
-    font-weight: 600;
+    font-size: 1rem;
+    font-weight: 700;
 }
 
 .meta {
-    color: #6b7280;
-    margin-top: 0.2rem;
+    margin-top: 4px;
+
+    color: var(--text-secondary);
+    font-size: .875rem;
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
+.pricing-cards {
+    display: grid;
+
+    grid-template-columns:
+        repeat(auto-fit,
+            minmax(220px, 1fr));
+
+    gap: 12px;
+
+    padding: 16px;
 }
 
-th,
-td {
-    padding: 1rem;
-    text-align: left;
+.pricing-card {
+    border: 1px solid var(--surface-border);
+
+    border-radius: 12px;
+
+    padding: 14px;
+
+    background: var(--surface-bg);
 }
 
-thead {
-    background: #f9fafb;
+.pricing-row {
+    display: flex;
+
+    justify-content: space-between;
+
+    gap: 12px;
 }
 
-tr:not(:last-child) td {
-    border-bottom: 1px solid #f3f4f6;
+.pricing-row+.pricing-row {
+    margin-top: 10px;
+}
+
+.label {
+    color: var(--text-secondary);
+}
+
+.value {
+    font-weight: 600;
+}
+
+.price {
+    font-weight: 700;
+    color: var(--active);
 }
 
 .empty {
-    padding: 1rem;
-    color: #6b7280;
+    padding: 18px;
+
+    color: var(--text-secondary);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
 
-    table,
-    thead,
-    tbody,
-    tr,
-    th,
-    td {
-        display: block;
-    }
-
-    tr {
-        padding: 1rem;
-        border-bottom: 1px solid #f3f4f6;
-    }
-
-    th {
-        display: none;
-    }
-
-    td {
-        padding: 0.35rem 0;
+    .pricing-cards {
+        grid-template-columns: 1fr;
     }
 
 }

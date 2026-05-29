@@ -2,7 +2,7 @@
   Edit Variant
 </h2>
 
-<mat-dialog-content class="variant-form" [formGroup]="form">
+<mat-dialog-content *ngIf="form" class="variant-form" [formGroup]="form">
 
   <mat-form-field appearance="fill">
     <mat-label>
@@ -18,6 +18,14 @@
     </mat-label>
 
     <input matInput formControlName="sku" />
+  </mat-form-field>
+
+  <mat-form-field appearance="fill" *ngIf="variant">
+    <mat-label>
+      Barcode
+    </mat-label>
+
+    <input matInput [value]="variant.barcode || ''" readonly />
   </mat-form-field>
 
   <mat-form-field appearance="fill">

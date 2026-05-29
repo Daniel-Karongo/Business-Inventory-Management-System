@@ -25,10 +25,9 @@ export class PricingTierTableComponent {
     @Input({ required: true }) packaging: PackagingDTO[] = [];
 
     rows(packagingId: string): ProductPrice[] {
-
         return this.pricing
             .filter(
-                p => p.packaging?.id === packagingId
+                p => p.packagingId === packagingId
             )
             .sort(
                 (a, b) =>

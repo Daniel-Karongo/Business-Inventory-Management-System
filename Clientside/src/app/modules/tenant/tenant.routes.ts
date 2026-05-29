@@ -59,28 +59,6 @@ export const TENANT_ROUTES: Routes = [
       },
 
       /* ============================================================
-         INVENTORY
-      ============================================================ */
-
-      {
-        path: 'inventory',
-        loadChildren: () =>
-          import('./content/stock/inventory/inventory.routes')
-            .then(m => m.INVENTORY_ROUTES)
-      },
-
-      /* ============================================================
-         PRODUCTS
-      ============================================================ */
-
-      {
-        path: 'products',
-        loadChildren: () =>
-          import('./content/stock/products/products.routes')
-            .then(m => m.PRODUCT_ROUTES)
-      },
-
-      /* ============================================================
          CATEGORIES
       ============================================================ */
 

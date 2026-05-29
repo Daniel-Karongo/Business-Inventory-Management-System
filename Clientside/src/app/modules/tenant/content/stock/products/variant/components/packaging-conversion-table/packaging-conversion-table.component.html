@@ -4,39 +4,51 @@
         Packaging Conversion Matrix
     </div>
 
-    <table *ngIf="packaging.length">
+    <div class="empty" *ngIf="!packaging.length">
 
-        <thead>
-            <tr>
-                <th>Packaging</th>
-                <th>Units</th>
-                <th>Base Unit Equivalent</th>
-            </tr>
-        </thead>
+        No packaging configured.
 
-        <tbody>
+    </div>
 
-            <tr *ngFor="let p of packaging">
+    <div class="conversion-cards" *ngIf="packaging.length">
 
-                <td>
-                    {{ p.name }}
-                </td>
+        <div class="conversion-card" *ngFor="let p of packaging">
 
-                <td>
+            <div class="title">
+                {{ p.name }}
+            </div>
+
+            <div class="row">
+
+                <span class="label">
+                    Units
+                </span>
+
+                <span class="value">
                     {{ p.unitsPerPackaging }}
-                </td>
+                </span>
 
-                <td>
+            </div>
+
+            <div class="row">
+
+                <span class="label">
+                    Conversion
+                </span>
+
+                <span class="value">
+
                     1 {{ p.name }}
                     =
                     {{ p.unitsPerPackaging }}
                     base units
-                </td>
 
-            </tr>
+                </span>
 
-        </tbody>
+            </div>
 
-    </table>
+        </div>
+
+    </div>
 
 </div>

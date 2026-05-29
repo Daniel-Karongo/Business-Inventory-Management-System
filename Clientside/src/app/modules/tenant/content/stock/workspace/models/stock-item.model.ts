@@ -82,25 +82,6 @@ export interface StockWorkspaceRow {
 
    updatedAt?: string | null;
 
-   capabilities?: {
-
-      receivable?: boolean;
-
-      adjustable?: boolean;
-
-      transferable?: boolean;
-
-      sellable?: boolean;
-
-      editable?: boolean;
-
-      deletable?: boolean;
-
-      restorable?: boolean;
-
-      inspectable?: boolean;
-   };
-
    childrenLoaded?: boolean;
 
    loadingChildren?: boolean;

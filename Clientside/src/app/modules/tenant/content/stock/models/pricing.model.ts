@@ -20,16 +20,18 @@ export interface PricingBreakdownDTO {
 export interface ProductPrice {
     id?: string;
 
-    productVariant?: {
-        id: string;
-    };
+    variantId: string;
 
-    packaging?: {
-        id: string;
-    };
+    packagingId: string;
+
+    packagingName?: string;
+
+    unitsPerPackaging?: number;
 
     price: number;
+
     minQuantity: number;
+
     deleted?: boolean;
 }
 

@@ -551,34 +551,144 @@
                 ================================================== -->
 
                 <ng-container matColumnDef="actions">
-
                     <th mat-header-cell *matHeaderCellDef>
-
                     </th>
 
                     <td mat-cell *matCellDef="let row">
 
                         <div class="explorer-actions">
 
-                            <ng-container *ngFor="
-                                    let action of actions
-                                ">
+                            <!-- ==========================================
+                                PRODUCT ACTIONS
+                            =========================================== -->
 
-                                <button *ngIf="
-                                        !action.hidden?.(row)
-                                    " mat-icon-button [disabled]="
-                                        action.disabled?.(row)
-                                    " [matTooltip]="
-                                        action.tooltip
-                                    " (click)="
-                                        action.execute(row);
-                                        $event.stopPropagation()
-                                    ">
+                            <ng-container *ngIf="row.type === 'PRODUCT'">
+
+                                <button mat-icon-button [disabled]="row.deleted" matTooltip="Create Sale"
+                                    (click)="createSale(row); $event.stopPropagation()">
 
                                     <mat-icon>
-                                        {{ action.icon }}
+                                        point_of_sale
                                     </mat-icon>
 
+                                </button>
+
+                                <button mat-icon-button [disabled]="row.deleted" matTooltip="View Product"
+                                    [routerLink]="['/app/stock', row.productId]" [state]="{ deleted: row.deleted }">
+
+                                    <mat-icon>
+                                        visibility
+                                    </mat-icon>
+
+                                </button>
+
+                                <button mat-icon-button [disabled]="row.deleted" matTooltip="Edit Product"
+                                    [routerLink]="['/app/stock', row.productId, 'edit']"
+                                    [state]="{ deleted: row.deleted }">
+
+                                    <mat-icon>
+                                        edit
+                                    </mat-icon>
+
+                                </button>
+
+                                <button mat-icon-button [matTooltip]="row.deleted ? 'Restore/Delete' : 'Disable'"
+                                    (click)="toggleProductStatus(row); $event.stopPropagation()">
+
+                                    <mat-icon>
+                                        {{
+                                        row.deleted
+                                        ? 'toggle_off'
+                                        : 'toggle_on'
+                                        }}
+                                    </mat-icon>
+
+                                </button>
+
+                            </ng-container>
+
+                            <!-- ==========================================
+                                INVENTORY ACTIONS
+                            =========================================== -->
+
+                            <ng-container *ngIf="row.type === 'INVENTORY'">
+
+                                <button mat-icon-button matTooltip="Create Sale"
+                                    (click)="createSaleFromInventory(row); $event.stopPropagation()">
+
+                                    <mat-icon>
+                                        point_of_sale
+                                    </mat-icon>
+
+                                </button>
+
+                                <button mat-icon-button matTooltip="Receive stock"
+                                    (click)="openReceiveDialog(row); $event.stopPropagation()">
+
+                                    <mat-icon>
+                                        add_circle
+                                    </mat-icon>
+
+                                </button>
+
+                                <button mat-icon-button matTooltip="Transfer stock"
+                                    (click)="openTransferDialog(row); $event.stopPropagation()">
+
+                                    <mat-icon>
+                                        swap_horiz
+                                    </mat-icon>
+
+                                </button>
+
+                                <button mat-icon-button matTooltip="Adjust stock"
+                                    (click)="openAdjustDialog(row); $event.stopPropagation()">
+
+                                    <mat-icon>
+                                        tune
+                                    </mat-icon>
+
+                                </button>
+
+                                <button mat-icon-button matTooltip="View transactions"
+                                    (click)="openTransactions(row); $event.stopPropagation()">
+
+                                    <mat-icon>
+                                        history
+                                    </mat-icon>
+
+                                </button>
+
+                            </ng-container>
+
+                            <!-- ==========================================
+                                VARIANT ACTIONS
+                            =========================================== -->
+
+                            <ng-container *ngIf="row.type === 'VARIANT'">
+
+                                <button mat-icon-button matTooltip="View Product"
+                                    (click)="viewVariant(row); $event.stopPropagation()">
+                                    <mat-icon>visibility</mat-icon>
+                                </button>
+
+                                <button mat-icon-button matTooltip="Edit Variant"
+                                    (click)="editVariant(row); $event.stopPropagation()">
+                                    <mat-icon>edit</mat-icon>
+                                </button>
+
+                                <button mat-icon-button matTooltip="Images"
+                                    (click)="manageVariantImages(row); $event.stopPropagation()">
+                                    <mat-icon>image</mat-icon>
+                                </button>
+
+                                <button mat-icon-button matTooltip="Barcode"
+                                    (click)="showVariantBarcode(row); $event.stopPropagation()">
+                                    <mat-icon>qr_code</mat-icon>
+                                </button>
+
+                                <button mat-icon-button color="warn" matTooltip="Delete Variant"
+                                    (click)="deleteVariant(row); $event.stopPropagation()">
+                                    <mat-icon>delete</mat-icon>
                                 </button>
 
                             </ng-container>
@@ -586,7 +696,6 @@
                         </div>
 
                     </td>
-
                 </ng-container>
 
                 <!-- =================================================
@@ -825,25 +934,130 @@
 
                         <div class="fallback-actions">
 
-                            <ng-container *ngFor="
-                                    let action of actions
-                                ">
+                            <!-- PRODUCT -->
 
-                                <button *ngIf="
-                                        !action.hidden?.(item)
-                                    " mat-icon-button [disabled]="
-                                        action.disabled?.(item)
-                                    " [matTooltip]="
-                                        action.tooltip
-                                    " (click)="
-                                        action.execute(item);
-                                        $event.stopPropagation()
-                                    ">
+                            <ng-container *ngIf="item.type === 'PRODUCT'">
+
+                                <button mat-icon-button [disabled]="item.deleted" matTooltip="Create Sale"
+                                    (click)="createSale(item); $event.stopPropagation()">
 
                                     <mat-icon>
-                                        {{ action.icon }}
+                                        point_of_sale
                                     </mat-icon>
 
+                                </button>
+
+                                <button mat-icon-button [disabled]="item.deleted" matTooltip="View Product"
+                                    [routerLink]="['/app/stock', item.productId]">
+
+                                    <mat-icon>
+                                        visibility
+                                    </mat-icon>
+
+                                </button>
+
+                                <button mat-icon-button [disabled]="item.deleted" matTooltip="Edit Product"
+                                    [routerLink]="['/app/stock', item.productId, 'edit']">
+
+                                    <mat-icon>
+                                        edit
+                                    </mat-icon>
+
+                                </button>
+
+                                <button mat-icon-button [matTooltip]="item.deleted ? 'Restore/Delete' : 'Disable'"
+                                    (click)="toggleProductStatus(item); $event.stopPropagation()">
+
+                                    <mat-icon>
+                                        {{
+                                        item.deleted
+                                        ? 'toggle_off'
+                                        : 'toggle_on'
+                                        }}
+                                    </mat-icon>
+
+                                </button>
+
+                            </ng-container>
+
+                            <!-- INVENTORY -->
+
+                            <ng-container *ngIf="item.type === 'INVENTORY'">
+
+                                <button mat-icon-button matTooltip="Create Sale"
+                                    (click)="createSaleFromInventory(item); $event.stopPropagation()">
+
+                                    <mat-icon>
+                                        point_of_sale
+                                    </mat-icon>
+
+                                </button>
+
+                                <button mat-icon-button matTooltip="Receive stock"
+                                    (click)="openReceiveDialog(item); $event.stopPropagation()">
+
+                                    <mat-icon>
+                                        add_circle
+                                    </mat-icon>
+
+                                </button>
+
+                                <button mat-icon-button matTooltip="Transfer stock"
+                                    (click)="openTransferDialog(item); $event.stopPropagation()">
+
+                                    <mat-icon>
+                                        swap_horiz
+                                    </mat-icon>
+
+                                </button>
+
+                                <button mat-icon-button matTooltip="Adjust stock"
+                                    (click)="openAdjustDialog(item); $event.stopPropagation()">
+
+                                    <mat-icon>
+                                        tune
+                                    </mat-icon>
+
+                                </button>
+
+                                <button mat-icon-button matTooltip="View transactions"
+                                    (click)="openTransactions(item); $event.stopPropagation()">
+
+                                    <mat-icon>
+                                        history
+                                    </mat-icon>
+
+                                </button>
+
+                            </ng-container>
+
+                            <!-- VARIANT -->
+
+                            <ng-container *ngIf="item.type === 'VARIANT'">
+
+                                <button mat-icon-button matTooltip="View Product"
+                                    (click)="viewVariant(item); $event.stopPropagation()">
+                                    <mat-icon>visibility</mat-icon>
+                                </button>
+
+                                <button mat-icon-button matTooltip="Edit Variant"
+                                    (click)="editVariant(item); $event.stopPropagation()">
+                                    <mat-icon>edit</mat-icon>
+                                </button>
+
+                                <button mat-icon-button matTooltip="Images"
+                                    (click)="manageVariantImages(item); $event.stopPropagation()">
+                                    <mat-icon>image</mat-icon>
+                                </button>
+
+                                <button mat-icon-button matTooltip="Barcode"
+                                    (click)="showVariantBarcode(item); $event.stopPropagation()">
+                                    <mat-icon>qr_code</mat-icon>
+                                </button>
+
+                                <button mat-icon-button color="warn" matTooltip="Delete Variant"
+                                    (click)="deleteVariant(item); $event.stopPropagation()">
+                                    <mat-icon>delete</mat-icon>
                                 </button>
 
                             </ng-container>

@@ -20,11 +20,10 @@ export interface ProductVariant {
 export interface ProductVariantCreateDTO {
   productId: string;
   classification: string;
-
   minimumPercentageProfit?: number;
   minimumProfit?: number;
-
   sku?: string;
+  autoCreateBasePackaging?: boolean;
 }
 
 export interface ProductVariantUpdateDTO {

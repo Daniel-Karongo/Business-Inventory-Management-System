@@ -1,8 +1,10 @@
 import { CommonModule } from '@angular/common';
 import {
     Component,
+    EventEmitter,
     Input,
-    OnInit
+    OnInit,
+    Output
 } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
@@ -24,6 +26,8 @@ import {
 import {
     PricingFormComponent
 } from '../pricing-form/pricing-form.component';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
     selector: 'app-variant-pricing-manager',
@@ -32,19 +36,24 @@ import {
         CommonModule,
         MatButtonModule,
         MatDialogModule,
-        MatSnackBarModule
+        MatSnackBarModule,
+        MatIconModule,
+        MatTooltipModule
     ],
     templateUrl: './variant-pricing-manager.component.html',
     styleUrls: ['./variant-pricing-manager.component.scss']
 })
-export class VariantPricingManagerComponent implements OnInit {
+export class VariantPricingManagerComponent {
 
     @Input({ required: true }) variantId!: string;
     @Input({ required: true }) packaging!: PackagingDTO[];
+    @Output()
+    refreshRequested =
+        new EventEmitter<void>();
 
-    loading = true;
-
+    @Input({ required: true })
     pricing: ProductPrice[] = [];
+
     packagingName(packagingId?: string): string {
 
         if (!packagingId) {
@@ -62,31 +71,15 @@ export class VariantPricingManagerComponent implements OnInit {
         private snackbar: MatSnackBar
     ) { }
 
-    ngOnInit(): void {
-        this.load();
-    }
-
-    load() {
-
-        this.loading = true;
-
-        this.service.getForVariant(this.variantId).subscribe({
-            next: res => {
-                this.pricing = res ?? [];
-                this.loading = false;
-            },
-            error: () => {
-                this.loading = false;
-            }
-        });
-    }
-
     create() {
 
         const ref = this.dialog.open(
             PricingFormComponent,
             {
-                width: '520px',
+                width: 'min(640px, 96vw)',
+                maxWidth: '96vw',
+                panelClass: 'enterprise-dialog',
+                autoFocus: false,
                 data: {
                     packaging: this.packaging
                 }
@@ -109,7 +102,7 @@ export class VariantPricingManagerComponent implements OnInit {
                         { duration: 3000 }
                     );
 
-                    this.load();
+                    this.refreshRequested.emit();
                 }
             });
         });
@@ -120,7 +113,10 @@ export class VariantPricingManagerComponent implements OnInit {
         const ref = this.dialog.open(
             PricingFormComponent,
             {
-                width: '520px',
+                width: 'min(640px, 96vw)',
+                maxWidth: '96vw',
+                panelClass: 'enterprise-dialog',
+                autoFocus: false,
                 data: {
                     pricing: price,
                     packaging: this.packaging,
@@ -145,7 +141,7 @@ export class VariantPricingManagerComponent implements OnInit {
                         { duration: 3000 }
                     );
 
-                    this.load();
+                    this.refreshRequested.emit();
                 }
             });
         });
@@ -156,16 +152,13 @@ export class VariantPricingManagerComponent implements OnInit {
         this.service.remove(price.id!).subscribe({
             next: () => {
 
-                this.pricing =
-                    this.pricing.filter(
-                        p => p.id! !== price.id!
-                    );
-
                 this.snackbar.open(
                     'Pricing deleted',
                     'Close',
                     { duration: 3000 }
                 );
+
+                this.refreshRequested.emit();
             }
         });
     }

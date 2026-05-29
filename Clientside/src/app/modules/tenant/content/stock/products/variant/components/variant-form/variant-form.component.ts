@@ -82,23 +82,32 @@ export class VariantFormComponent
 
   ngOnInit(): void {
 
+    if (!this.variant) {
+
+      console.error(
+        'VariantFormComponent received undefined variant'
+      );
+
+      this.form = this.fb.group({
+        classification: [''],
+        sku: [''],
+        minimumPercentageProfit: [null],
+        minimumProfit: [null]
+      });
+
+      return;
+    }
+
     this.form = this.fb.group({
       classification: [
-        {
-          value:
-            this.variant.classification,
-          disabled: true
-        }
+        this.variant.classification
       ],
-
       sku: [
         this.variant.sku ?? null
       ],
-
       minimumPercentageProfit: [
         this.variant.minimumPercentageProfit ?? null
       ],
-
       minimumProfit: [
         this.variant.minimumProfit ?? null
       ]
@@ -122,6 +131,9 @@ export class VariantFormComponent
     this.variantService.update(
       this.variant.id,
       {
+        classification:
+          raw.classification ?? undefined,
+
         sku:
           raw.sku ?? undefined,
 

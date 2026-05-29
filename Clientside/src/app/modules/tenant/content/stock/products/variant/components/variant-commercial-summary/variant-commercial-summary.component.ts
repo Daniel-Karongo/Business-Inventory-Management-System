@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import {
     Component,
+    HostListener,
     Input,
     OnChanges,
     SimpleChanges
@@ -60,6 +61,12 @@ export class VariantCommercialSummaryComponent implements OnChanges {
 
     @Input({ required: true }) variant!: ProductVariant;
     @Input() branchId?: string;
+
+    @HostListener('window:resize')
+    onResize(): void {
+        this.isMobile = window.innerWidth < 768;
+    }
+    isMobile = window.innerWidth < 768;
 
     loading = false;
     loaded = false;
@@ -132,7 +139,7 @@ export class VariantCommercialSummaryComponent implements OnChanges {
     packagingPricingCount(packagingId: string): number {
 
         return this.pricing.filter(
-            p => p.packaging?.id === packagingId
+            p => p.packagingId === packagingId
         ).length;
     }
 }

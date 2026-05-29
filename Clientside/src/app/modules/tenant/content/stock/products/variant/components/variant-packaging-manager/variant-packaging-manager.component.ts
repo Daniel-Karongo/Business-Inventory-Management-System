@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
 import {
     Component,
+    EventEmitter,
     Input,
-    OnInit
+    Output
 } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
@@ -21,6 +22,7 @@ import {
 import {
     PackagingFormComponent
 } from '../packaging-form/packaging-form.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
     selector: 'app-variant-packaging-manager',
@@ -30,18 +32,21 @@ import {
         MatButtonModule,
         MatDialogModule,
         MatIconModule,
-        MatSnackBarModule
+        MatSnackBarModule,
+        MatTooltipModule
     ],
     templateUrl: './variant-packaging-manager.component.html',
     styleUrls: ['./variant-packaging-manager.component.scss']
 })
-export class VariantPackagingManagerComponent implements OnInit {
+export class VariantPackagingManagerComponent {
 
     @Input({ required: true }) variantId!: string;
     @Input() branchId?: string;
+    @Output()
+    refreshRequested =
+        new EventEmitter<void>();
 
-    loading = true;
-
+    @Input({ required: true })
     packagings: PackagingDTO[] = [];
 
     constructor(
@@ -50,31 +55,15 @@ export class VariantPackagingManagerComponent implements OnInit {
         private snackbar: MatSnackBar
     ) { }
 
-    ngOnInit(): void {
-        this.load();
-    }
-
-    load() {
-
-        this.loading = true;
-
-        this.service.getForVariant(this.variantId).subscribe({
-            next: res => {
-                this.packagings = res ?? [];
-                this.loading = false;
-            },
-            error: () => {
-                this.loading = false;
-            }
-        });
-    }
-
     create() {
 
         const ref = this.dialog.open(
             PackagingFormComponent,
             {
-                width: '500px'
+                width: 'min(640px, 96vw)',
+                maxWidth: '96vw',
+                panelClass: 'enterprise-dialog',
+                autoFocus: false
             }
         );
 
@@ -87,13 +76,16 @@ export class VariantPackagingManagerComponent implements OnInit {
                 ...payload
             }).subscribe({
                 next: () => {
+
                     this.snackbar.open(
                         'Packaging created',
                         'Close',
-                        { duration: 3000 }
+                        {
+                            duration: 3000
+                        }
                     );
 
-                    this.load();
+                    this.refreshRequested.emit();
                 }
             });
         });
@@ -104,7 +96,10 @@ export class VariantPackagingManagerComponent implements OnInit {
         const ref = this.dialog.open(
             PackagingFormComponent,
             {
-                width: '500px',
+                width: 'min(640px, 96vw)',
+                maxWidth: '96vw',
+                panelClass: 'enterprise-dialog',
+                autoFocus: false,
                 data: {
                     packaging,
                     editMode: true
@@ -127,7 +122,7 @@ export class VariantPackagingManagerComponent implements OnInit {
                         { duration: 3000 }
                     );
 
-                    this.load();
+                    this.refreshRequested.emit();
                 }
             });
         });
@@ -148,16 +143,15 @@ export class VariantPackagingManagerComponent implements OnInit {
         ).subscribe({
             next: () => {
 
-                this.packagings =
-                    this.packagings.filter(
-                        p => p.packagingId !== packaging.packagingId
-                    );
-
                 this.snackbar.open(
                     'Packaging deleted',
                     'Close',
-                    { duration: 3000 }
+                    {
+                        duration: 3000
+                    }
                 );
+
+                this.refreshRequested.emit();
             }
         });
     }
