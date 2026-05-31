@@ -55,7 +55,7 @@ export const TENANT_ROUTES: Routes = [
         path: 'stock',
         loadChildren: () =>
           import('./content/stock/workspace/workspace.routes')
-            .then(m => m.STOCK_WORKSPACE_ROUTES)
+            .then(m => m.STOCK_LIST_ROUTES)
       },
 
       /* ============================================================

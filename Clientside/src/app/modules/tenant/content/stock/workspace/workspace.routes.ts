@@ -2,10 +2,10 @@ import { Routes } from '@angular/router';
 import { roleAtLeast }
     from '../../../../../core/security/role-at-least.guard';
 
-export const STOCK_WORKSPACE_ROUTES: Routes = [
+export const STOCK_LIST_ROUTES: Routes = [
 
     /* ============================================================
-       WORKSPACE
+       LIST
     ============================================================ */
 
     {
@@ -15,9 +15,9 @@ export const STOCK_WORKSPACE_ROUTES: Routes = [
         ],
         loadComponent: () =>
             import(
-                './pages/stock-workspace/stock-workspace.component'
+                './pages/stock-list/stock-list.component'
             ).then(
-                m => m.StockWorkspaceComponent
+                m => m.StockListComponent
             )
     },
 

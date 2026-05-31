@@ -150,7 +150,7 @@ import { ProductVariantService } from '../../../products/variant/services/produc
 import { ReasonDialogComponent } from '../../../../../../../shared/components/reason-dialog/reason-dialog.component';
 
 @Component({
-    selector: 'app-stock-workspace',
+    selector: 'app-stock-list',
     standalone: true,
     imports: [
         CommonModule,
@@ -170,12 +170,12 @@ import { ReasonDialogComponent } from '../../../../../../../shared/components/re
         MatSnackBarModule
     ],
     templateUrl:
-        './stock-workspace.component.html',
+        './stock-list.component.html',
     styleUrls: [
-        './stock-workspace.component.scss'
+        './stock-list.component.scss'
     ]
 })
-export class StockWorkspaceComponent
+export class StockListComponent
     implements OnInit {
 
     private workspace =
@@ -616,6 +616,10 @@ export class StockWorkspaceComponent
         row: StockWorkspaceRow
     ) =>
         row.level ?? 0;
+
+    toggleToolbar(): void {
+        this.filtersVisible = !this.filtersVisible;
+    }
 
     toggleExpanded = (
         row: StockWorkspaceRow
@@ -1198,6 +1202,12 @@ export class StockWorkspaceComponent
                 }
             }
         );
+    }
+
+    createProduct(): void {
+        this.router.navigate([
+            '/app/stock/create'
+        ]);
     }
 
     openReceiveNewProduct() {

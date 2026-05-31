@@ -5,66 +5,65 @@
     ====================================================== -->
 
     <div page-header>
-
         <div class="workspace-header">
 
             <div class="header-left">
-
                 <button mat-icon-button [class.active]="viewMode === 'grid'" (click)="setView('grid')">
-
-                    <mat-icon>
-                        grid_view
-                    </mat-icon>
-
+                    <mat-icon>grid_view</mat-icon>
                 </button>
 
                 <button mat-icon-button [class.active]="viewMode === 'table'" (click)="setView('table')">
-
-                    <mat-icon>
-                        table_rows
-                    </mat-icon>
-
+                    <mat-icon>table_rows</mat-icon>
                 </button>
 
                 <button mat-icon-button (click)="toggleDensity()" matTooltip="Toggle density">
-                    <mat-icon>
-                        format_line_spacing
-                    </mat-icon>
+                    <mat-icon>format_line_spacing</mat-icon>
                 </button>
 
+                <button mat-icon-button class="toolbar-toggle" (click)="toggleToolbar()" matTooltip="Filters">
+                    <mat-icon>tune</mat-icon>
+                </button>
             </div>
 
             <div class="header-right">
 
+                <button mat-flat-button color="primary" (click)="createProduct()">
+                    <mat-icon>inventory_2</mat-icon>
+                    Create Product
+                </button>
+
                 <button mat-stroked-button (click)="openReceiveNewProduct()">
-
-                    <mat-icon>
-                        add_box
-                    </mat-icon>
-
-                    Receive New Product
+                    <mat-icon>add_box</mat-icon>
+                    Receive Product
                 </button>
 
                 <button mat-stroked-button (click)="openBulkReceive()">
-
-                    <mat-icon>
-                        cloud_upload
-                    </mat-icon>
-
+                    <mat-icon>cloud_upload</mat-icon>
                     Bulk Receive
                 </button>
 
             </div>
 
         </div>
-
     </div>
 
     <!-- =====================================================
        TOOLBAR
     ====================================================== -->
 
-    <div page-toolbar class="workspace-toolbar" *ngIf="filtersVisible">
+    <div class="toolbar-summary" *ngIf="!filtersVisible">
+
+        Filters hidden
+
+        <button mat-button (click)="toggleToolbar()">
+
+            Show
+
+        </button>
+
+    </div>
+
+    <div page-toolbar class="workspace-toolbar" [class.collapsed]="!filtersVisible">
 
         <!-- SEARCH -->
 

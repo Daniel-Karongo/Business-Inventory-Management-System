@@ -246,7 +246,7 @@ body.dark .search-input {
 
 button[mat-flat-button] {
   background-color: #005cbb !important;
-  border-radius: 1px !important;
+  border-radius: 8px !important;
   color: white !important;
   box-shadow: 1px 2px 3px 0px rgba(0, 0, 0, 0.35) !important;
 }
@@ -259,6 +259,7 @@ button[mat-flat-button]:hover {
 button[mat-stroked-button] {
   box-shadow: 1px 2px 3px 0px rgba(0, 0, 0, 0.35) !important;
   margin-right: 5px !important;
+  border-radius: 8px !important;
 }
 
 /* =====================================================
