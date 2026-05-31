@@ -1,18 +1,14 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.tax.projection;
 
+import com.IntegrityTechnologies.business_manager.config.kafka.ProcessedKafkaEventRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
-import com.IntegrityTechnologies.business_manager.config.kafka.ProcessedKafkaEvent;
-import com.IntegrityTechnologies.business_manager.config.kafka.ProcessedKafkaEventRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.VatLedgerProjection;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.VatLedgerProjectionRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.EventListener;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -83,14 +79,14 @@ public class VatLedgerProjectionConsumer {
                     accounts.get(
                             tenantId,
                             branchId,
-                            AccountRole.VAT_OUTPUT
+                            "VAT_OUTPUT"
                     );
 
             UUID inputVat =
                     accounts.get(
                             tenantId,
                             branchId,
-                            AccountRole.VAT_INPUT
+                            "VAT_INPUT"
                     );
 
             int year = LocalDate.now().getYear();

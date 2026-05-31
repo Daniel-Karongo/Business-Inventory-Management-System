@@ -1,14 +1,12 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.Account;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.projection.AccountListItemProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -93,7 +91,7 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
     Optional<Account> findByTenantIdAndBranchIdAndRole(
             UUID tenantId,
             UUID branchId,
-            AccountRole role
+            String role
     );
 
     Optional<Account> findByTenantIdAndType(UUID tenantId, AccountType accountType);

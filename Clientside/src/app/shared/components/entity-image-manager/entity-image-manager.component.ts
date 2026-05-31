@@ -16,6 +16,7 @@ import { ReasonDialogComponent } from '../reason-dialog/reason-dialog.component'
 import * as pdfjsLib from 'pdfjs-dist';
 import { RenameDeviceDialogComponent } from '../rename-device-dialog/rename-device-dialog.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { BulkCameraCaptureService } from '../../bulk-import/camera/bulk-camera-capture.service';
 
 (pdfjsLib as any).GlobalWorkerOptions.workerSrc =
   '/assets/pdf.worker.mjs';
@@ -155,7 +156,8 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
 
   constructor(
     private snackbar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private camera: BulkCameraCaptureService
   ) { }
 
   ngOnInit() {
@@ -420,8 +422,12 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
             type: 'image'
           }
         },
-        width: '80%',
-        maxWidth: '1100px'
+        panelClass:
+          'enterprise-panel',
+        width: '90vw',
+        maxWidth: '90vw',
+        height: '90vh',
+        maxHeight: '90vh',
       });
       return;
     }
@@ -515,6 +521,66 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
 
       });
 
+  }
+
+  async capturePhotos() {
+
+    const files =
+      await this.camera.capture(
+        this.entityLabel.toLowerCase(),
+        0
+      );
+
+    if (!files?.length) {
+      return;
+    }
+
+    this.uploading = true;
+
+    const payload =
+      files.map(file => ({
+        file,
+        description: ''
+      }));
+
+    const beforeCount =
+      this.images.length;
+
+    this.adapter
+      .uploadImages(
+        this.entityId,
+        payload
+      )
+      .subscribe({
+        next: () => {
+
+          this.uploading = false;
+
+          this.snackbar.open(
+            `${files.length} ${this.entityLabelPlural.toLowerCase()} captured and queued for processing`,
+            'Close',
+            {
+              duration: 4000
+            }
+          );
+
+          this.startUploadPolling(
+            beforeCount
+          );
+        },
+        error: () => {
+
+          this.uploading = false;
+
+          this.snackbar.open(
+            'Camera upload failed',
+            'Close',
+            {
+              duration: 4000
+            }
+          );
+        }
+      });
   }
 
   private startUploadPolling(

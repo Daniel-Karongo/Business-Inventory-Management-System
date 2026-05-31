@@ -24,8 +24,6 @@ public class ProductCreateDTO {
 
     private String description;
 
-    private String barcode;
-
     @NotNull(message = "The category is required.")
     private Long categoryId;
 

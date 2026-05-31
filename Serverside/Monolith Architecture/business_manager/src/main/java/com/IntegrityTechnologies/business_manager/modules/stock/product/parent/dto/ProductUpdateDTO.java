@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto;
 
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantCreateDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantUpdateDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,14 +15,22 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class ProductUpdateDTO {
+
     private String name;
+
     private String description;
+
     private String sku;
-    private String barcode;
-    private List<ProductVariantCreateDTO> variants;
+
     private Double minimumPercentageProfit;
+
     private BigDecimal minimumProfit;
+
     private Long categoryId;
+
     private List<UUID> supplierIds;
+
     private UUID branchId;
+
+    private List<ProductVariantUpdateDTO> variants;
 }

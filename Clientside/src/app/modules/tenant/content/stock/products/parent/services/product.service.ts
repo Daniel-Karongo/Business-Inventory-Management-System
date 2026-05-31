@@ -162,7 +162,7 @@ export class ProductService extends BaseApiService {
     overrideBranchId?: string
   ) {
     return this.post<ApiResponse<Product>>(
-      this.endpoints.bulk.fullCreate,
+      this.endpoints.create,
       payload,
       {
         branchId: this.resolveBranch(overrideBranchId)
@@ -189,14 +189,16 @@ export class ProductService extends BaseApiService {
 
   update(
     id: string,
-    payload: ProductUpdateDTO,
+    payload: FormData,
     overrideBranchId?: string
   ) {
     return this.put<ApiResponse<Product>>(
       this.endpoints.update(id),
       payload,
       {
-        branchId: this.resolveBranch(overrideBranchId)
+        branchId: this.resolveBranch(
+          overrideBranchId
+        )
       }
     ).pipe(
       map(res => this.unwrap<Product>(res))
@@ -207,11 +209,18 @@ export class ProductService extends BaseApiService {
 
   softDelete(
     id: string,
-    reason?: string
+    reason?: string,
+    overrideBranchId?: string
   ) {
     return this.delete<void>(
       this.endpoints.softDelete(id),
-      { reason }
+      {
+        branchId:
+          this.resolveBranch(
+            overrideBranchId
+          ),
+        reason
+      }
     );
   }
 
@@ -221,12 +230,19 @@ export class ProductService extends BaseApiService {
     restoreOptions?: {
       restoreInventory?: boolean;
       restoreStockTransactions?: boolean;
-    }
+    },
+    overrideBranchId?: string
   ) {
     return this.post<void>(
       this.endpoints.restore(id),
       restoreOptions ?? {},
-      { reason }
+      {
+        branchId:
+          this.resolveBranch(
+            overrideBranchId
+          ),
+        reason
+      }
     );
   }
 
@@ -246,12 +262,19 @@ export class ProductService extends BaseApiService {
 
   bulkSoftDelete(
     ids: string[],
-    reason?: string
+    reason?: string,
+    overrideBranchId?: string
   ) {
     return this.http.delete<void>(
       `${this.api}${this.endpoints.bulk.softDelete}`,
       {
-        body: { ids, reason }
+        body: { ids, reason },
+        params: this.buildParams({
+          branchId:
+            this.resolveBranch(
+              overrideBranchId
+            )
+        })
       }
     );
   }
@@ -262,7 +285,8 @@ export class ProductService extends BaseApiService {
     restoreOptions?: {
       restoreInventory?: boolean;
       restoreStockTransactions?: boolean;
-    }
+    },
+    overrideBranchId?: string
   ) {
     return this.put<void>(
       this.endpoints.bulk.restore,
@@ -270,6 +294,12 @@ export class ProductService extends BaseApiService {
         ids,
         reason,
         restoreOptions
+      },
+      {
+        branchId:
+          this.resolveBranch(
+            overrideBranchId
+          )
       }
     );
   }

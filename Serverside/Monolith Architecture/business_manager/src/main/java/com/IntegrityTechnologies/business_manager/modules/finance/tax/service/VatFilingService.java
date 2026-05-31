@@ -3,7 +3,6 @@ package com.IntegrityTechnologies.business_manager.modules.finance.tax.service;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.TaxPeriod;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.VatFiling;
@@ -106,7 +105,7 @@ public class VatFilingService {
 
         if (outputVat.compareTo(BigDecimal.ZERO) > 0) {
             entries.add(AccountingEvent.Entry.builder()
-                    .accountId(accounts.get(tenantId(), branchId, AccountRole.VAT_OUTPUT))
+                    .accountId(accounts.get(tenantId(), branchId, "VAT_OUTPUT"))
                     .direction(EntryDirection.DEBIT)
                     .amount(outputVat)
                     .build());
@@ -114,7 +113,7 @@ public class VatFilingService {
 
         if (inputVat.compareTo(BigDecimal.ZERO) > 0) {
             entries.add(AccountingEvent.Entry.builder()
-                    .accountId(accounts.get(tenantId(), branchId, AccountRole.VAT_INPUT))
+                    .accountId(accounts.get(tenantId(), branchId, "VAT_INPUT"))
                     .direction(EntryDirection.CREDIT)
                     .amount(inputVat)
                     .build());
@@ -126,7 +125,7 @@ public class VatFilingService {
                     .accountId(accounts.get(
                             tenantId(),
                             branchId,
-                            AccountRole.VAT_PAYABLE
+                            "VAT_PAYABLE"
                     ))
                     .direction(EntryDirection.CREDIT)
                     .amount(payable)
@@ -138,7 +137,7 @@ public class VatFilingService {
                     .accountId(accounts.get(
                             tenantId(),
                             branchId,
-                            AccountRole.VAT_RECEIVABLE
+                            "VAT_RECEIVABLE"
                     ))
                     .direction(EntryDirection.DEBIT)
                     .amount(payable.abs())
@@ -186,7 +185,7 @@ public class VatFilingService {
                                         .accountId(accounts.get(
                                                 tenantId(),
                                                 branchId,
-                                                AccountRole.VAT_PAYABLE
+                                                "VAT_PAYABLE"
                                         ))
                                         .direction(EntryDirection.DEBIT)
                                         .amount(amount)

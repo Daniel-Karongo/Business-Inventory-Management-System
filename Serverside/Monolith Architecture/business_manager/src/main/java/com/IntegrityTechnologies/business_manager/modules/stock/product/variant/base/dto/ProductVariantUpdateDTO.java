@@ -1,12 +1,24 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto;
 
 import lombok.Data;
+
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 public class ProductVariantUpdateDTO {
+
+    private UUID id;
+
     private String classification;
+
     private Double minimumPercentageProfit;
+
     private BigDecimal minimumProfit;
+
     private String sku;
+
+    private Boolean deleted;
+
+    private Boolean autoCreateBasePackaging;
 }

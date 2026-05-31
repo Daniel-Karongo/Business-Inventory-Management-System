@@ -104,7 +104,7 @@ export class AccountCreateComponent {
       ],
 
       role: [
-        'CASH' as AccountRole,
+        '',
         Validators.required
       ]
     });
@@ -116,27 +116,29 @@ export class AccountCreateComponent {
     'EXPENSE'
   ];
 
-  readonly accountRoles: AccountRole[] = [
-    'CASH',
-    'BANK',
-    'MPESA',
-    'REVENUE',
-    'COGS',
-    'INVENTORY',
-    'ACCOUNTS_RECEIVABLE',
-    'ACCOUNTS_PAYABLE',
-    'VAT_INPUT',
-    'VAT_OUTPUT',
-    'VAT_RECEIVABLE',
-    'VAT_PAYABLE',
-    'CORPORATE_TAX_PAYABLE',
-    'CORPORATE_TAX_EXPENSE',
-    'BRANCH_CLEARING',
-    'EQUITY',
-    'PURCHASE_RETURNS',
-    'PURCHASE_PRICE_VARIANCE',
-    'GOODS_RECEIVED_NOT_INVOICED'
-  ];
+  constructor() {
+    this.form.controls.name.valueChanges
+      .subscribe(name => {
+
+        this.form.patchValue(
+          {
+            role: this.generateRole(name ?? '')
+          },
+          {
+            emitEvent: false
+          }
+        );
+
+      });
+  }
+
+  private generateRole(name: string): string {
+    return name
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  }
 
   submit(): void {
 

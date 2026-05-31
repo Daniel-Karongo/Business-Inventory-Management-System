@@ -1,26 +1,27 @@
 package com.IntegrityTechnologies.business_manager.modules.dashboard.service;
 
 import com.IntegrityTechnologies.business_manager.modules.dashboard.dto.ActivityDTO;
+import com.IntegrityTechnologies.business_manager.modules.dashboard.dto.AgingBucketDTO;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.dto.ChartPoint;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.dto.DashboardSummaryDTO;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.repository.DashboardDailySnapshotRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.repository.SupplierAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserAuditRepository;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.BatchConsumptionRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.valuation.InventoryValuationService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductAuditRepository;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -90,21 +91,21 @@ public class DashboardService {
         BigDecimal ar =
                 balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
                         tenantId(),
-                        accounts.get(tenantId(), branchId, AccountRole.ACCOUNTS_RECEIVABLE),
+                        accounts.get(tenantId(), branchId, "ACCOUNTS_RECEIVABLE"),
                         branchId)
                 .map(b -> b.getBalance()).orElse(BigDecimal.ZERO);
 
         BigDecimal ap =
                 balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
                         tenantId(),
-                        accounts.get(tenantId(), branchId, AccountRole.ACCOUNTS_PAYABLE),
+                        accounts.get(tenantId(), branchId, "ACCOUNTS_PAYABLE"),
                         branchId
                 ).map(b -> b.getBalance()).orElse(BigDecimal.ZERO);
 
         BigDecimal vat =
                 balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
                         tenantId(),
-                        accounts.get(tenantId(), branchId, AccountRole.VAT_PAYABLE),
+                        accounts.get(tenantId(), branchId, "VAT_PAYABLE"),
                         branchId
                 ).map(b -> b.getBalance()).orElse(BigDecimal.ZERO);
 
@@ -116,6 +117,44 @@ public class DashboardService {
                 .accountsPayable(ap)
                 .cashBalance(snap.getCash())
                 .inventoryValue(inventoryValue)
+
+                // temporary defaults until implemented
+
+                .corporateTaxAccrued(BigDecimal.ZERO)
+                .grossMarginPercent(
+                        snap.getRevenue() != null
+                                && snap.getRevenue().compareTo(BigDecimal.ZERO) > 0
+                                ? snap.getProfit()
+                                .divide(
+                                        snap.getRevenue(),
+                                        4,
+                                        RoundingMode.HALF_UP
+                                )
+                                .multiply(BigDecimal.valueOf(100))
+                                : BigDecimal.ZERO
+                )
+                .inventoryTurnover(BigDecimal.ZERO)
+                .burnRate(BigDecimal.ZERO)
+
+                .arAging(new AgingBucketDTO(
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO
+                ))
+
+                .apAging(new AgingBucketDTO(
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO
+                ))
+
+                .revenueBudgetVariance(BigDecimal.ZERO)
+                .expenseBudgetVariance(BigDecimal.ZERO)
+
                 .build();
     }
 
@@ -200,25 +239,41 @@ public class DashboardService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private List<ChartPoint> top5ProfitableBatches(UUID branchId) {
+    private BigDecimal toBigDecimal(Object value) {
+        if (value == null) {
+            return BigDecimal.ZERO;
+        }
 
+        if (value instanceof BigDecimal bd) {
+            return bd;
+        }
+
+        if (value instanceof Number n) {
+            return BigDecimal.valueOf(n.doubleValue());
+        }
+
+        return BigDecimal.ZERO;
+    }
+
+    private List<ChartPoint> top5ProfitableBatches(UUID branchId) {
         return batchConsumptionRepository.topBatchProfitRaw(tenantId(), branchId)
                 .stream()
                 .map(row -> {
-
                     UUID batchId = (UUID) row[0];
-                    BigDecimal revenue = (BigDecimal) row[1];
-                    BigDecimal cost = (BigDecimal) row[2];
 
-                    BigDecimal profit =
-                            Optional.ofNullable(revenue).orElse(BigDecimal.ZERO)
-                                    .subtract(Optional.ofNullable(cost).orElse(BigDecimal.ZERO));
+                    BigDecimal revenue = toBigDecimal(row[1]);
+                    BigDecimal cost = toBigDecimal(row[2]);
+
+                    BigDecimal profit = revenue.subtract(cost);
 
                     return new AbstractMap.SimpleEntry<>(batchId, profit);
                 })
                 .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
                 .limit(5)
-                .map(e -> new ChartPoint(e.getKey().toString(), e.getValue()))
+                .map(e -> new ChartPoint(
+                        e.getKey().toString(),
+                        e.getValue()
+                ))
                 .toList();
     }
 

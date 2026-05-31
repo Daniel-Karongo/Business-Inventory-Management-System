@@ -1,73 +1,117 @@
 <div class="auth-root">
+
+  <div class="auth-background"></div>
+
   <form class="auth-card" [formGroup]="form" (ngSubmit)="onSubmit()" enterNext>
 
-    <!-- HEADER -->
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
     <header class="dialog-header">
-      <div class="logo">
 
-        <ng-container *ngIf="logo$ | async as logo; else fallbackLogo">
-          <img [src]="logo" class="h-12 w-auto object-contain" />
-        </ng-container>
+      <div class="logo-shell">
 
-        <ng-template #fallbackLogo>
-          <span>BM</span>
-        </ng-template>
+        <div class="logo">
+          <ng-container *ngIf="logo$ | async as logo; else fallbackLogo">
+            <img [src]="logo" class="logo-image" />
+          </ng-container>
+
+          <ng-template #fallbackLogo>
+            <span>BM</span>
+          </ng-template>
+        </div>
 
       </div>
 
-      <div class="dialog-title">Business Manager</div>
+      <div class="dialog-title">
+        Business Manager
+      </div>
+
       <div class="dialog-subtitle">
-        Log in to your account
+        Secure access to your workspace
       </div>
+
     </header>
 
-    <!-- CONTENT -->
+    <!-- =====================================================
+         FORM
+    ====================================================== -->
+
     <section class="form-section">
+
       <div class="form-grid">
 
-        <!-- Username -->
+        <!-- USERNAME -->
+
         <mat-form-field appearance="fill">
           <mat-label>Username</mat-label>
+
           <input matInput formControlName="identifier" autocomplete="username" />
+
+          <mat-icon matSuffix>
+            person
+          </mat-icon>
         </mat-form-field>
 
-        <!-- Password -->
+        <!-- PASSWORD -->
+
         <mat-form-field appearance="fill">
+
           <mat-label>Password</mat-label>
+
           <input matInput [type]="hide ? 'password' : 'text'" formControlName="password"
             autocomplete="current-password" />
 
           <button mat-icon-button matSuffix type="button" (click)="hide = !hide">
+
             <mat-icon>
               {{ hide ? 'visibility' : 'visibility_off' }}
             </mat-icon>
+
           </button>
+
         </mat-form-field>
 
-        <!-- Branch -->
+        <!-- BRANCH -->
+
         <mat-form-field appearance="fill" *ngIf="!isPlatform && branches.length > 1">
+
           <mat-label>Branch</mat-label>
+
           <mat-select formControlName="branchId">
+
             <mat-option *ngFor="let b of branches" [value]="b.id">
+
               {{ b.name }}
+
             </mat-option>
+
           </mat-select>
+
         </mat-form-field>
 
       </div>
 
       <div class="forgot-row">
+
         <button mat-button type="button" (click)="onForgot()">
+
           Forgot password?
+
         </button>
+
       </div>
+
     </section>
 
-    <!-- FOOTER -->
+    <!-- =====================================================
+         ACTIONS
+    ====================================================== -->
+
     <footer class="dialog-footer">
 
-      <!-- Submit -->
-      <button type="submit" mat-flat-button color="primary" class="primary-action"
+      <button type="submit" mat-flat-button color="primary" class="primary-action primary-login"
         [disabled]="loginLoading || biometricLoading || form.invalid">
 
         <ng-container *ngIf="!loginLoading">
@@ -80,19 +124,29 @@
 
       </button>
 
-      <div class="divider">or</div>
+      <div class="divider">
+        <span>or continue with</span>
+      </div>
 
-      <!-- Biometrics -->
-      <button mat-stroked-button color="primary" class="primary-action" type="button" (click)="onBiometricLogin()"
-        [disabled]="loginLoading || biometricLoading">
+      <button mat-stroked-button color="primary" class="primary-action biometric-action" type="button"
+        (click)="onBiometricLogin()" [disabled]="loginLoading || biometricLoading">
 
         <ng-container *ngIf="!biometricLoading">
-          <mat-icon>fingerprint</mat-icon>
-          <span>Use Biometrics</span>
+
+          <mat-icon>
+            fingerprint
+          </mat-icon>
+
+          <span>
+            Use Biometrics
+          </span>
+
         </ng-container>
 
         <mat-icon *ngIf="biometricLoading" class="spin">
+
           autorenew
+
         </mat-icon>
 
       </button>
@@ -104,4 +158,5 @@
     </div>
 
   </form>
+
 </div>

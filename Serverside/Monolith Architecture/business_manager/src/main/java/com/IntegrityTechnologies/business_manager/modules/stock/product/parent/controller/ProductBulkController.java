@@ -34,14 +34,21 @@ public class ProductBulkController {
 
     @TenantManagerOnly
     @DeleteMapping
-    public void bulkSoftDelete(@RequestBody BulkActionRequest request) {
-        productService.bulkSoftDelete(request.getIds(), request.getReason());
+    public void bulkSoftDelete(
+            @RequestParam UUID branchId,
+            @RequestBody BulkActionRequest request
+    ) {
+        productService.bulkSoftDelete(branchId, request.getIds(), request.getReason());
     }
 
     @TenantManagerOnly
     @PutMapping("/restore")
-    public void bulkRestore(@RequestBody BulkActionRequest request) {
+    public void bulkRestore(
+            @RequestParam UUID branchId,
+            @RequestBody BulkActionRequest request
+    ) {
         productService.bulkRestore(
+                branchId,
                 request.getIds(),
                 request.getReason(),
                 request.getRestoreOptions()

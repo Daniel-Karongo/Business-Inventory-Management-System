@@ -4,7 +4,6 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.ada
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.allocation.repository.SupplierPaymentAllocationRepository;
@@ -77,7 +76,7 @@ public class SupplierPaymentPostingService {
                 accountingAccounts.get(
                         tenantId,
                         branchId,
-                        AccountRole.ACCOUNTS_PAYABLE
+                        "ACCOUNTS_PAYABLE"
                 );
 
         UUID accountingEventId =

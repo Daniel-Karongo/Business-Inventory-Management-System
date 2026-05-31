@@ -119,8 +119,10 @@ export class DashboardComponent implements OnInit {
 
   get isStale(): boolean {
     if (!this.lastLoadedAt) return false;
+
     const diff = (Date.now() - this.lastLoadedAt.getTime()) / 1000;
-    return diff > 3600; // 5 minutes
+
+    return diff > 300; // 5 minutes
   }
 
   private loadDashboard(branchId: string): void {
@@ -133,13 +135,11 @@ export class DashboardComponent implements OnInit {
         this.loading = false;
         this.lastLoadedAt = new Date();
         this.selectedBranchId = branchId;
-
         this.cdr.markForCheck();
       },
       error: () => {
         this.error = 'Failed to load dashboard';
         this.loading = false;
-
         this.cdr.markForCheck();
       }
     });

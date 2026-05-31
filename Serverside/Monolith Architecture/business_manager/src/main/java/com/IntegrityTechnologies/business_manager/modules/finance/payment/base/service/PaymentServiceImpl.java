@@ -5,15 +5,14 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.ada
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.RevenueRecognitionService;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.dto.PaymentDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.dto.PaymentRequest;
+import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.enums.PaymentStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.model.Payment;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.repository.PaymentRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.dto.PaymentDTO;
-import com.IntegrityTechnologies.business_manager.modules.finance.payment.base.enums.PaymentStatus;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineItem;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.repository.SaleRepository;
@@ -21,12 +20,12 @@ import com.IntegrityTechnologies.business_manager.modules.person.customer.servic
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.persistence.EntityNotFoundException;
-import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -163,21 +162,21 @@ public class PaymentServiceImpl implements PaymentService {
                             accountingAccounts.get(
                                     tenantId(),
                                     branchId,
-                                    AccountRole.CASH
+                                    "CASH"
                             );
 
                     case "BANK" ->
                             accountingAccounts.get(
                                     tenantId(),
                                     branchId,
-                                    AccountRole.BANK
+                                    "BANK"
                             );
 
                     case "MPESA" ->
                             accountingAccounts.get(
                                     tenantId(),
                                     branchId,
-                                    AccountRole.MPESA
+                                    "MPESA"
                             );
 
                     default ->
@@ -216,7 +215,7 @@ public class PaymentServiceImpl implements PaymentService {
                                                         accountingAccounts.get(
                                                                 tenantId(),
                                                                 branchId,
-                                                                AccountRole.ACCOUNTS_RECEIVABLE
+                                                                "ACCOUNTS_RECEIVABLE"
                                                         )
                                                 )
                                                 .direction(

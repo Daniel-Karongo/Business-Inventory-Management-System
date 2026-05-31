@@ -3,7 +3,6 @@ package com.IntegrityTechnologies.business_manager.modules.finance.sales.base.se
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.Sale;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineItem;
@@ -64,7 +63,7 @@ public class SalesVatAccountingService {
                                                 accountingAccounts.get(
                                                         tenantId,
                                                         branchId,
-                                                        AccountRole.ACCOUNTS_RECEIVABLE
+                                                        "ACCOUNTS_RECEIVABLE"
                                                 )
                                         )
                                         .direction(EntryDirection.DEBIT)
@@ -76,7 +75,7 @@ public class SalesVatAccountingService {
                                                 accountingAccounts.get(
                                                         tenantId,
                                                         branchId,
-                                                        AccountRole.REVENUE
+                                                        "REVENUE"
                                                 )
                                         )
                                         .direction(EntryDirection.CREDIT)
@@ -88,7 +87,7 @@ public class SalesVatAccountingService {
                                                 accountingAccounts.get(
                                                         tenantId,
                                                         branchId,
-                                                        AccountRole.VAT_OUTPUT
+                                                        "VAT_OUTPUT"
                                                 )
                                         )
                                         .direction(EntryDirection.CREDIT)

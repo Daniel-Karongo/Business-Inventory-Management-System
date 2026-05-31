@@ -3,7 +3,6 @@ package com.IntegrityTechnologies.business_manager.modules.procurement.matching.
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.domain.PurchaseInvoice;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.service.PurchaseInvoiceService;
@@ -17,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -177,8 +175,7 @@ public class GoodsReceiptMatchingService {
                                 accountingAccounts.get(
                                         tenantId,
                                         request.getBranchId(),
-                                        AccountRole
-                                                .GOODS_RECEIVED_NOT_INVOICED
+                                        "GOODS_RECEIVED_NOT_INVOICED"
                                 )
                         )
                         .direction(
@@ -201,7 +198,7 @@ public class GoodsReceiptMatchingService {
                                     accountingAccounts.get(
                                             tenantId,
                                             request.getBranchId(),
-                                            AccountRole.VAT_INPUT
+                                            "VAT_INPUT"
                                     )
                             )
                             .direction(
@@ -220,7 +217,7 @@ public class GoodsReceiptMatchingService {
                                 accountingAccounts.get(
                                         tenantId,
                                         request.getBranchId(),
-                                        AccountRole.ACCOUNTS_PAYABLE
+                                        "ACCOUNTS_PAYABLE"
                                 )
                         )
                         .direction(

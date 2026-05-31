@@ -3,12 +3,9 @@ package com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.se
 import com.IntegrityTechnologies.business_manager.exception.ExpectedConcurrencyException;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.Account;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountBalance;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.ap.allocation.dto.AutoAllocatePaymentRequest;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.allocation.repository.SupplierPaymentAllocationRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.ap.allocation.service.ApAllocationService;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.debt.dto.PaymentSettlementDto;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.enums.SupplierPaymentStatus;
@@ -25,7 +22,6 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -41,11 +37,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SupplierPaymentService {
 
-    private static final Set<AccountRole> ALLOWED_FUNDING_ROLES =
+    private static final Set<String> ALLOWED_FUNDING_ROLES =
             Set.of(
-                    AccountRole.CASH,
-                    AccountRole.BANK,
-                    AccountRole.MPESA
+                    "CASH",
+                    "BANK",
+                    "MPESA"
             );
 
     private final SupplierPaymentRepository repository;

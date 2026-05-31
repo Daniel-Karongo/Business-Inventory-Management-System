@@ -1,107 +1,394 @@
-<form [formGroup]="form" class="form-container">
+<div class="product-form-shell">
 
-  <mat-tab-group>
+  <div class="hero">
+    <div>
+      <h2>
+        {{ editMode ? 'Product Profile' : 'Create Product' }}
+      </h2>
 
-    <!-- ========================= -->
-    <!-- BASICS TAB -->
-    <!-- ========================= -->
-    <mat-tab label="Basics">
-      <div class="section">
-        <mat-form-field *ngIf="showBranchField" appearance="fill" class="w-full">
-          <mat-label>Branch</mat-label>
+      <div class="hero-meta">
+        {{
+        editMode
+        ? 'Update product information, suppliers, variants and files'
+        : 'Configure product information, suppliers, variants and files'
+        }}
+      </div>
+    </div>
+  </div>
+
+  <form [formGroup]="form">
+
+    <!-- ===================================================== -->
+    <!-- PRODUCT INFORMATION -->
+    <!-- ===================================================== -->
+
+    <section class="panel">
+
+      <h3>Product Information</h3>
+
+      <div class="grid">
+
+        <mat-form-field *ngIf="showBranchField" appearance="fill">
+
+          <mat-label>
+            Branch
+          </mat-label>
 
           <select matNativeControl formControlName="branchId">
+
             <option *ngFor="let b of branches" [value]="b.id">
+
               {{ b.name }}
+
             </option>
+
           </select>
+
         </mat-form-field>
 
-        <mat-form-field appearance="fill" class="w-full">
-          <mat-label>Name</mat-label>
-          <input matInput formControlName="name" />
+        <mat-form-field appearance="fill">
+
+          <mat-label>
+            Product Name
+          </mat-label>
+
+          <input matInput formControlName="name">
+
         </mat-form-field>
 
-        <mat-form-field appearance="fill" class="w-full">
-          <mat-label>Description</mat-label>
-          <textarea matInput formControlName="description"></textarea>
+        <mat-form-field appearance="fill">
+
+          <mat-label>
+            SKU
+          </mat-label>
+
+          <input matInput formControlName="sku">
+
         </mat-form-field>
 
-        <mat-form-field appearance="fill" class="w-full">
-          <mat-label>Minimum % Profit</mat-label>
-          <input matInput type="number" formControlName="minimumPercentageProfit" />
+        <mat-form-field appearance="fill">
+
+          <mat-label>
+            Minimum % Profit
+          </mat-label>
+
+          <input matInput type="number" formControlName="minimumPercentageProfit">
+
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+
+          <mat-label>
+            Minimum Profit
+          </mat-label>
+
+          <input matInput type="number" formControlName="minimumProfit">
+
         </mat-form-field>
 
       </div>
-    </mat-tab>
 
-    <!-- ========================= -->
-    <!-- VARIANTS TAB -->
-    <!-- ========================= -->
-    <mat-tab label="Variants">
-      <div class="section">
+      <div class="assignment-section">
 
-        <div formArrayName="variants">
+        <app-searchable-assign label="Category" [items]="categories" [selectedIds]="
+            form.value.categoryId
+              ? [form.value.categoryId + '']
+              : []
+          " [display]="categoryDisplay" [id]="categoryIdFn" (selectedIdsChange)="
+            onCategorySelected($event)
+          ">
+        </app-searchable-assign>
 
-          <div *ngFor="let v of variantGroups; let i = index" [formGroupName]="i" class="variant-row">
+      </div>
 
-            <mat-form-field appearance="fill">
-              <mat-label>Classification</mat-label>
-              <input matInput formControlName="classification" />
-            </mat-form-field>
+      <div class="assignment-section">
 
-            <mat-form-field appearance="fill">
-              <mat-label>Barcode (optional)</mat-label>
-              <input matInput formControlName="barcode" />
-            </mat-form-field>
+        <app-searchable-assign label="Suppliers" [items]="suppliers" [selectedIds]="
+            form.value.supplierIds ?? []
+          " [display]="supplierDisplay" [id]="supplierIdFn" (selectedIdsChange)="
+            onSuppliersSelected($event)
+          ">
+        </app-searchable-assign>
 
-            <button mat-stroked-button color="warn" type="button" (click)="removeVariant(i)">
-              Remove
+      </div>
+
+      <mat-form-field appearance="fill" class="full-width">
+
+        <mat-label>
+          Description
+        </mat-label>
+
+        <textarea matInput rows="5" formControlName="description">
+        </textarea>
+
+      </mat-form-field>
+
+    </section>
+
+    <!-- ===================================================== -->
+    <!-- VARIANTS -->
+    <!-- ===================================================== -->
+
+    <section class="panel">
+
+      <div class="section-header">
+
+        <div>
+          <h3>Variants</h3>
+
+          <div class="section-subtitle">
+            Configure classifications, pricing rules and identifiers.
+          </div>
+        </div>
+
+        <button mat-stroked-button type="button" (click)="addVariant()">
+
+          <mat-icon>
+            add
+          </mat-icon>
+
+          Add Variant
+
+        </button>
+
+      </div>
+
+      <div class="info-banner" *ngIf="variants.length === 1">
+
+        <mat-icon>
+          info
+        </mat-icon>
+
+        Every product should have at least one variant.
+
+      </div>
+
+      <div formArrayName="variants">
+
+        <div *ngFor="let group of variantGroups; let i = index; trackBy: trackVariant" [formGroupName]="i"
+          class="variant-card">
+
+          <div class="variant-header">
+
+            <div class="variant-title">
+              Variant {{ i + 1 }}
+            </div>
+
+            <button mat-icon-button type="button" (click)="removeVariant(i)" [disabled]="variants.length === 1">
+
+              <mat-icon>
+                delete
+              </mat-icon>
+
             </button>
+
+          </div>
+
+          <div class="variant-grid">
+
+            <mat-form-field appearance="fill">
+
+              <mat-label>
+                Classification
+              </mat-label>
+
+              <input matInput formControlName="classification">
+
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+
+              <mat-label>
+                Barcode
+              </mat-label>
+
+              <input matInput formControlName="barcode">
+
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+
+              <mat-label>
+                SKU
+              </mat-label>
+
+              <input matInput formControlName="sku">
+
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+
+              <mat-label>
+                Minimum % Profit
+              </mat-label>
+
+              <input matInput type="number" formControlName="minimumPercentageProfit">
+
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+
+              <mat-label>
+                Minimum Profit
+              </mat-label>
+
+              <input matInput type="number" formControlName="minimumProfit">
+
+            </mat-form-field>
 
           </div>
 
         </div>
 
-        <button mat-stroked-button type="button" (click)="addVariant()">
-          + Add Variant
-        </button>
-
       </div>
-    </mat-tab>
 
-    <!-- ========================= -->
-    <!-- FILES TAB -->
-    <!-- ========================= -->
-    <mat-tab label="Files">
-      <div class="section">
+    </section>
 
-        <input type="file" multiple (change)="addFiles($event)" />
+    <!-- ===================================================== -->
+    <!-- FILES -->
+    <!-- ===================================================== -->
 
-        <div *ngFor="let f of files; let i = index" class="file-card">
-          <span class="file-name">{{ f.file.name }}</span>
+    <section class="panel" *ngIf="!editMode">
 
-          <button mat-icon-button color="warn" type="button" (click)="removeFile(i)">
-            <mat-icon>delete</mat-icon>
-          </button>
+      <div class="section-header">
+
+        <div>
+          <h3>Files</h3>
+
+          <div class="section-subtitle">
+            Upload product images and supporting documents.
+          </div>
         </div>
 
       </div>
-    </mat-tab>
 
-  </mat-tab-group>
+      <div class="upload-toolbar">
 
-  <!-- ========================= -->
-  <!-- ACTIONS -->
-  <!-- ========================= -->
-  <div class="form-actions">
-    <button mat-button type="button" (click)="cancel.emit()">
-      Cancel
-    </button>
+        <input #fileInput type="file" multiple (change)="addFiles($event)" hidden>
 
-    <button mat-flat-button color="primary" type="button" (click)="save()" [disabled]="form.invalid">
-      {{ editMode ? 'Update Product' : 'Create Product' }}
-    </button>
-  </div>
+        <button mat-stroked-button type="button" (click)="fileInput.click()">
 
-</form>
+          <mat-icon>
+            upload
+          </mat-icon>
+
+          Upload Files
+
+        </button>
+
+        <button mat-stroked-button type="button" (click)="capturePhotos()">
+
+          <mat-icon>
+            photo_camera
+          </mat-icon>
+
+          Camera
+
+        </button>
+
+      </div>
+
+      <div class="empty-upload" *ngIf="!files.length">
+
+        No files attached.
+
+      </div>
+
+      <div class="file-grid" *ngIf="files.length">
+
+        <div *ngFor="let f of files; let i = index" class="file-card">
+
+          <div class="file-card-header">
+
+            <div class="file-preview" *ngIf="f.previewUrl">
+
+              <img [src]="f.previewUrl" [alt]="f.fileName">
+            </div>
+
+            <button *ngIf="!f.existing" mat-icon-button type="button" class="delete-btn" (click)="removeFile(i)">
+
+              <mat-icon>
+                delete
+              </mat-icon>
+
+            </button>
+
+          </div>
+
+          <div class="file-card-body">
+
+            <div class="file-name">
+              {{ f.fileName }}
+            </div>
+
+            <div class="file-status">
+
+              <span class="status-chip" [class.existing]="f.existing">
+
+                {{
+                f.existing
+                ? 'Existing Image'
+                : 'New Upload'
+                }}
+
+              </span>
+
+            </div>
+
+            <div class="file-assignments" *ngIf="!editMode">
+
+              <div class="assignment-label">
+                Assignments
+              </div>
+
+              <mat-checkbox [checked]="f.assignToProduct" (change)="f.assignToProduct = $event.checked">
+
+                Product
+
+              </mat-checkbox>
+
+              <mat-checkbox *ngFor="let variant of variantGroups; trackBy: trackVariant" [checked]="isVariantAssigned(f,variant.get('classification')?.value)" (change)="toggleVariantAssignment(f,variant.get('classification')?.value,$event.checked)">
+
+                {{
+                variant.get('classification')?.value
+                }}
+
+              </mat-checkbox>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ===================================================== -->
+    <!-- ACTIONS -->
+    <!-- ===================================================== -->
+
+    <div class="actions">
+
+      <button mat-stroked-button type="button" (click)="cancel.emit()">
+
+        Cancel
+
+      </button>
+
+      <button mat-flat-button type="button" [disabled]="form.invalid" (click)="save()">
+
+        {{
+        editMode
+        ? 'Save Changes'
+        : 'Create Product'
+        }}
+
+      </button>
+
+    </div>
+
+  </form>
+
+</div>

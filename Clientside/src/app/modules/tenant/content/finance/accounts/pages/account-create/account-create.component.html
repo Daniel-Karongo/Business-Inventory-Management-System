@@ -83,23 +83,15 @@
           <!-- ROLE -->
 
           <mat-form-field appearance="fill">
-
             <mat-label>
-              Business Role
+              Account Role
             </mat-label>
 
-            <mat-select formControlName="role">
+            <input matInput formControlName="role" readonly/>
 
-              <mat-option *ngFor="
-                  let role of accountRoles
-                " [value]="role">
-
-                {{ role }}
-
-              </mat-option>
-
-            </mat-select>
-
+            <mat-hint>
+              Automatically generated from account name
+            </mat-hint>
           </mat-form-field>
 
         </div>

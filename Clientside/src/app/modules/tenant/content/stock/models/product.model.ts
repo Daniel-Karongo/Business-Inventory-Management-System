@@ -1,4 +1,4 @@
-import { ProductVariant } from './product-variant.model';
+import { ProductVariant, ProductVariantUpdateDTO } from './product-variant.model';
 
 export interface SupplierMinimalDTO {
   id: string;
@@ -10,8 +10,6 @@ export interface Product {
   name: string;
   description?: string;
   sku?: string;
-  barcode?: string;
-  barcodeImagePath?: string;
   branchId?: string;
   minimumPercentageProfit?: number;
   minimumProfit?: number;
@@ -25,6 +23,7 @@ export interface Product {
   deletedAt?: string;
   createdAt?: string;
   updatedAt?: string;
+  images?: ProductImage[];
 }
 
 export interface ProductCreateDTO {
@@ -42,12 +41,12 @@ export interface ProductUpdateDTO {
   name?: string;
   description?: string;
   sku?: string;
-  barcode?: string;
   minimumPercentageProfit?: number;
   minimumProfit?: number;
   categoryId?: number;
   supplierIds?: string[];
   branchId?: string;
+  variants?: ProductVariantUpdateDTO[];
 }
 
 export interface ProductImage {

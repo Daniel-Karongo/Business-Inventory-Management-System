@@ -3,23 +3,22 @@ package com.IntegrityTechnologies.business_manager.modules.dashboard.service;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.model.DashboardDailySnapshot;
 import com.IntegrityTechnologies.business_manager.modules.dashboard.repository.DashboardDailySnapshotRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.valuation.InventoryValuationService;
-
-import static com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountingSignRules.*;
-
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+
+import static com.IntegrityTechnologies.business_manager.modules.finance.accounting.support.AccountingSignRules.*;
 
 @Service
 @RequiredArgsConstructor
@@ -50,7 +49,7 @@ public class DashboardSnapshotService {
         BigDecimal revenue =
                 ledgerRepo.netMovementForAccount(
                         tenantId,
-                        accounts.get(tenantId, branchId, AccountRole.REVENUE),
+                        accounts.get(tenantId, branchId, "REVENUE"),
                         start,
                         end,
                         branchId,
@@ -63,7 +62,7 @@ public class DashboardSnapshotService {
         BigDecimal cogs =
                 ledgerRepo.netMovementForAccount(
                         tenantId,
-                        accounts.get(tenantId, branchId, AccountRole.COGS),
+                        accounts.get(tenantId, branchId, "COGS"),
                         start,
                         end,
                         branchId,
@@ -76,7 +75,7 @@ public class DashboardSnapshotService {
         BigDecimal vat =
                 balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
                                 tenantId,
-                                accounts.get(tenantId, branchId, AccountRole.VAT_PAYABLE),
+                                accounts.get(tenantId, branchId, "VAT_PAYABLE"),
                                 branchId
                         )
                         .map(b -> b.getBalance())
@@ -85,7 +84,7 @@ public class DashboardSnapshotService {
         BigDecimal cash =
                 balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
                                 tenantId,
-                                accounts.get(tenantId, branchId, AccountRole.CASH),
+                                accounts.get(tenantId, branchId, "CASH"),
                                 branchId
                         )
                         .map(b -> b.getBalance())
@@ -93,7 +92,7 @@ public class DashboardSnapshotService {
                         .add(
                                 balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
                                                 tenantId,
-                                                accounts.get(tenantId, branchId, AccountRole.BANK),
+                                                accounts.get(tenantId, branchId, "BANK"),
                                                 branchId
                                         )
                                         .map(b -> b.getBalance())
@@ -102,7 +101,7 @@ public class DashboardSnapshotService {
                         .add(
                                 balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
                                                 tenantId,
-                                                accounts.get(tenantId, branchId, AccountRole.MPESA),
+                                                accounts.get(tenantId, branchId, "MPESA"),
                                                 branchId
                                         )
                                         .map(b -> b.getBalance())

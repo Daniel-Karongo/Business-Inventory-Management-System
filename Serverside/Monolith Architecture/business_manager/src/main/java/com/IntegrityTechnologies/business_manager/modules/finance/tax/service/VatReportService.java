@@ -1,7 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.tax.service;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
@@ -26,8 +25,8 @@ public class VatReportService {
 
     public VatReport generate(LocalDateTime from, LocalDateTime to, UUID branchId) {
 
-        UUID outputVatId = accountingAccounts.get(tenantId(), branchId, AccountRole.VAT_OUTPUT);
-        UUID inputVatId = accountingAccounts.get(tenantId(), branchId, AccountRole.VAT_INPUT);
+        UUID outputVatId = accountingAccounts.get(tenantId(), branchId, "VAT_OUTPUT");
+        UUID inputVatId = accountingAccounts.get(tenantId(), branchId, "VAT_INPUT");
 
         BigDecimal outputVat =
                 ledgerRepo.netMovementForAccount(

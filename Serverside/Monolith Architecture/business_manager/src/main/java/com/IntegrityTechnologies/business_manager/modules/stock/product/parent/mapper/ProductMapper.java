@@ -26,12 +26,12 @@ public interface ProductMapper {
             expression = "java(mapSuppliersMinimal(product.getSuppliers()))")
     @Mapping(target = "imageUrls",
             expression = "java(mapImagesToUrls(product.getImages()))")
+    @Mapping(target = "images",
+            expression = "java(mapImages(product.getImages()))")
     @Mapping(target = "variants",
             expression = "java(mapVariants(product.getVariants()))")
     @Mapping(target = "updatedAt",
             expression = "java(product.getUpdatedAt() != null ? product.getUpdatedAt() : product.getCreatedAt())")
-    @Mapping(target = "barcode", ignore = true) // handled at variant level
-    @Mapping(target = "barcodeImagePath", ignore = true)
     ProductDTO toDTO(Product product);
 
     /* =========================================================
@@ -118,5 +118,29 @@ public interface ProductMapper {
         }
 
         return result;
+    }
+
+    default List<ProductImageDTO> mapImages(Set<ProductImage> images) {
+
+        if (images == null || images.isEmpty()) {
+            return List.of();
+        }
+
+        return images.stream()
+                .filter(img -> !Boolean.TRUE.equals(img.isDeleted()))
+                .map(img ->
+                        ProductImageDTO.builder()
+                                .id(img.getId())
+                                .fileName(img.getFileName())
+                                .filePath(img.getFilePath())
+                                .thumbnailFileName(img.getThumbnailFileName())
+                                .deleted(img.isDeleted())
+                                .primaryImage(img.getPrimaryImage())
+                                .deletedIndependently(
+                                        img.getDeletedIndependently()
+                                )
+                                .build()
+                )
+                .toList();
     }
 }

@@ -429,8 +429,12 @@ export class UserListComponent implements OnInit {
           type: 'image'
         }
       },
-      width: '80%',
-      maxWidth: '1100px'
+      panelClass:
+        'enterprise-panel',
+      width: '90vw',
+      maxWidth: '90vw',
+      height: '90vh',
+      maxHeight: '90vh',
     });
   }
 

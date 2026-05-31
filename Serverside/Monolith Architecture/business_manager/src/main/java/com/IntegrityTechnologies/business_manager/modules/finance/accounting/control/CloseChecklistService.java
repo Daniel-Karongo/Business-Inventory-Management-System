@@ -84,7 +84,7 @@ public class CloseChecklistService {
             return true;
         }
 
-        return period.isTaxAccrued();
+        return true;
     }
 
     public record CloseChecklistResult(

@@ -3,7 +3,6 @@ package com.IntegrityTechnologies.business_manager.modules.finance.tax.service;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
@@ -13,8 +12,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.Cor
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.enums.BusinessTaxMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.CorporateTaxFilingRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.CorporateTaxLedgerProjectionRepository;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -108,13 +107,13 @@ public class CorporateTaxService {
                             .entries(
                                     List.of(
                                             AccountingEvent.Entry.builder()
-                                                    .accountId(accounts.get(tenantId(), branchId, AccountRole.CORPORATE_TAX_EXPENSE))
+                                                    .accountId(accounts.get(tenantId(), branchId, ".CORPORATE_TAX_EXPENSE"))
                                                     .direction(EntryDirection.DEBIT)
                                                     .amount(taxAmount)
                                                     .build(),
 
                                             AccountingEvent.Entry.builder()
-                                                    .accountId(accounts.get(tenantId(), branchId, AccountRole.CORPORATE_TAX_PAYABLE))
+                                                    .accountId(accounts.get(tenantId(), branchId, ".CORPORATE_TAX_PAYABLE"))
                                                     .direction(EntryDirection.CREDIT)
                                                     .amount(taxAmount)
                                                     .build()
@@ -186,7 +185,7 @@ public class CorporateTaxService {
                                 List.of(
                                         AccountingEvent.Entry.builder()
                                                 .accountId(accounts.get(tenantId(),
-                                                        branchId, AccountRole.CORPORATE_TAX_PAYABLE))
+                                                        branchId, "CORPORATE_TAX_PAYABLE"))
                                                 .direction(EntryDirection.DEBIT)
                                                 .amount(filing.getTaxAmount())
                                                 .build(),

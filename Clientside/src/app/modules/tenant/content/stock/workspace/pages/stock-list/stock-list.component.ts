@@ -2498,11 +2498,11 @@ export class StockListComponent
             FileViewerDialog,
             {
                 panelClass:
-                    'file-viewer-dialog',
-                width: '95vw',
-                maxWidth: '95vw',
-                height: '95vh',
-                maxHeight: '95vh',
+                    'enterprise-dialog',
+                width: '90vw',
+                maxWidth: '90vw',
+                height: '90vh',
+                maxHeight: '90vh',
                 data: {
                     preview: {
                         src: image,

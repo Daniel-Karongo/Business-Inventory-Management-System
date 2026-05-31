@@ -2,7 +2,6 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.ad
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.accounting.InventoryAccountingPort;
 import lombok.RequiredArgsConstructor;
@@ -41,7 +40,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                                         accounts.get(
                                                 tenantId,
                                                 branchId,
-                                                AccountRole.COGS
+                                                "COGS"
                                         ),
                                         EntryDirection.DEBIT,
                                         value
@@ -50,7 +49,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                                         accounts.get(
                                                 tenantId,
                                                 branchId,
-                                                AccountRole.INVENTORY
+                                                "INVENTORY"
                                         ),
                                         EntryDirection.CREDIT,
                                         value
@@ -81,7 +80,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                                         accounts.get(
                                                 tenantId,
                                                 branchId,
-                                                AccountRole.INVENTORY
+                                                "INVENTORY"
                                         ),
                                         EntryDirection.DEBIT,
                                         value
@@ -90,7 +89,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                                         accounts.get(
                                                 tenantId,
                                                 branchId,
-                                                AccountRole.COGS
+                                                "COGS"
                                         ),
                                         EntryDirection.CREDIT,
                                         value
@@ -121,7 +120,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                                         accounts.get(
                                                 tenantId,
                                                 branchId,
-                                                AccountRole.BRANCH_CLEARING
+                                                "BRANCH_CLEARING"
                                         ),
                                         EntryDirection.DEBIT,
                                         value
@@ -130,7 +129,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                                         accounts.get(
                                                 tenantId,
                                                 branchId,
-                                                AccountRole.INVENTORY
+                                                "INVENTORY"
                                         ),
                                         EntryDirection.CREDIT,
                                         value
@@ -161,7 +160,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                                         accounts.get(
                                                 tenantId,
                                                 branchId,
-                                                AccountRole.INVENTORY
+                                                "INVENTORY"
                                         ),
                                         EntryDirection.DEBIT,
                                         value
@@ -170,7 +169,7 @@ public class InventoryAccountingAdapter implements InventoryAccountingPort {
                                         accounts.get(
                                                 tenantId,
                                                 branchId,
-                                                AccountRole.BRANCH_CLEARING
+                                                "BRANCH_CLEARING"
                                         ),
                                         EntryDirection.CREDIT,
                                         value

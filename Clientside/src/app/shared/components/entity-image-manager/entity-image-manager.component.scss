@@ -883,3 +883,60 @@ body.dark .audit-row:hover {
     font-size: 64px !important;
   }
 }
+
+/* =========================================================
+   HEADER ACTIONS
+========================================================= */
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.empty-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.header-actions button,
+.empty-actions button {
+  min-height: 42px;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 768px) {
+
+  .header-actions,
+  .empty-actions {
+    width: 100%;
+  }
+
+  .header-actions button,
+  .empty-actions button {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 480px) {
+
+  .header-actions,
+  .empty-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-actions button,
+  .empty-actions button {
+    width: 100%;
+  }
+}

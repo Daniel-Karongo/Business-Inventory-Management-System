@@ -70,8 +70,12 @@ export class ProductImagesComponent implements OnInit {
 
   viewImage(img: { name: string; url: string }) {
     this.dialog.open(FileViewerDialog, {
-      width: '80%',
-      maxWidth: '1100px',
+      panelClass:
+        'enterprise-panel',
+      width: '90vw',
+      maxWidth: '90vw',
+      height: '90vh',
+      maxHeight: '90vh',
       data: {
         preview: {
           src: img.url,

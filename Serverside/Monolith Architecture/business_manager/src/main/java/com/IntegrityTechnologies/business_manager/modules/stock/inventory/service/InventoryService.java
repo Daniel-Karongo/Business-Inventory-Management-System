@@ -6,7 +6,6 @@ import com.IntegrityTechnologies.business_manager.exception.OutOfStockException;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.PeriodGuardService;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto.BatchSelectionDto;
@@ -536,7 +535,7 @@ public class InventoryService {
                                     accountingAccounts.get(
                                             tenantId(),
                                             branch.getId(),
-                                            AccountRole.INVENTORY
+                                            "INVENTORY"
                                     )
                             )
                             .direction(
@@ -554,7 +553,7 @@ public class InventoryService {
                                     accountingAccounts.get(
                                             tenantId(),
                                             branch.getId(),
-                                            AccountRole.GOODS_RECEIVED_NOT_INVOICED
+                                            "GOODS_RECEIVED_NOT_INVOICED"
                                     )
                             )
                             .direction(

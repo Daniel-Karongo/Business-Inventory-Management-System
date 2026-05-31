@@ -1,7 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.support;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.Account;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,9 +31,9 @@ public class AccountRoleResolver {
                 .filter(a ->
                         branchId.equals(a.getBranchId()) &&
                                 (
-                                        a.getRole() == AccountRole.CASH ||
-                                                a.getRole() == AccountRole.BANK ||
-                                                a.getRole() == AccountRole.MPESA
+                                        a.getRole() == "CASH" ||
+                                                a.getRole() == "BANK" ||
+                                                a.getRole() == "MPESA"
                                 )
                 )
                 .map(Account::getCode)
@@ -46,7 +45,7 @@ public class AccountRoleResolver {
         return getTenantAccounts(tenantId)
                 .stream()
                 .filter(a ->
-                        a.getRole() == AccountRole.ACCOUNTS_RECEIVABLE &&
+                        a.getRole() == "ACCOUNTS_RECEIVABLE" &&
                                 branchId.equals(a.getBranchId())
                 )
                 .findFirst()
@@ -59,7 +58,7 @@ public class AccountRoleResolver {
         return getTenantAccounts(tenantId)
                 .stream()
                 .filter(a ->
-                        a.getRole() == AccountRole.ACCOUNTS_PAYABLE &&
+                        a.getRole() == "ACCOUNTS_PAYABLE" &&
                                 branchId.equals(a.getBranchId())
                 )
                 .findFirst()
@@ -71,7 +70,7 @@ public class AccountRoleResolver {
 
         return getTenantAccounts(tenantId)
                 .stream()
-                .filter(a -> a.getRole() == AccountRole.ACCOUNTS_RECEIVABLE)
+                .filter(a -> a.getRole() == "ACCOUNTS_RECEIVABLE")
                 .map(Account::getCode)
                 .collect(Collectors.toSet());
     }
@@ -80,7 +79,7 @@ public class AccountRoleResolver {
 
         return getTenantAccounts(tenantId)
                 .stream()
-                .filter(a -> a.getRole() == AccountRole.ACCOUNTS_PAYABLE)
+                .filter(a -> a.getRole() == "ACCOUNTS_PAYABLE")
                 .map(Account::getCode)
                 .collect(Collectors.toSet());
     }
@@ -92,9 +91,9 @@ public class AccountRoleResolver {
                 .filter(a ->
                         a.getType() == AccountType.ASSET &&
                                 (
-                                        a.getRole() == AccountRole.CASH ||
-                                                a.getRole() == AccountRole.BANK ||
-                                                a.getRole() == AccountRole.MPESA
+                                        a.getRole() == "CASH" ||
+                                                a.getRole() == "BANK" ||
+                                                a.getRole() == "MPESA"
                                 )
                 )
                 .map(Account::getCode)

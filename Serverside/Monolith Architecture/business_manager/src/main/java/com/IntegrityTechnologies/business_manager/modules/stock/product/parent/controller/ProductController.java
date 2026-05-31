@@ -143,9 +143,14 @@ public class ProductController {
     @DeleteMapping("/{id}/soft")
     public ApiResponse softDelete(
             @PathVariable UUID id,
+            @RequestParam UUID branchId,
             @RequestParam(required = false) String reason
     ) {
-        productService.softDeleteProduct(id, reason);
+        productService.softDeleteProduct(
+                branchId,
+                id,
+                reason
+        );
         return new ApiResponse("success", "Product soft deleted", null);
     }
 
@@ -164,10 +169,16 @@ public class ProductController {
     @PostMapping("/{id}/restore")
     public ApiResponse restore(
             @PathVariable UUID id,
+            @RequestParam UUID branchId,
             @RequestParam(required = false) String reason,
             @RequestBody(required = false) ProductRestoreOptions options
     ) {
-        productService.restoreProduct(id, reason, options);
+        productService.restoreProduct(
+                branchId,
+                id,
+                reason,
+                options
+        );
         return new ApiResponse("success", "Product restored", null);
     }
 

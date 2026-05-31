@@ -13,6 +13,19 @@ import java.util.*;
 @Repository
 public interface ProductVariantRepository extends JpaRepository<ProductVariant, UUID> {
 
+    Optional<ProductVariant> findByTenantIdAndBranchIdAndIdAndDeletedFalse(
+            UUID tenantId,
+            UUID branchId,
+            UUID id
+    );
+
+    boolean existsByTenantIdAndBranchIdAndSkuAndIdNot(
+            UUID tenantId,
+            UUID branchId,
+            String sku,
+            UUID id
+    );
+
     @Query("""
                 SELECT v FROM ProductVariant v
                 WHERE v.id = :id

@@ -33,21 +33,7 @@ public class CorporateTaxAccrualListener {
     }
 
     private void process(AccountingPeriodClosedEvent event) {
-
-        try {
-
-            TenantContext.setTenantId(event.tenantId());
-
-            service.accrueCorporateTax(
-                    event.periodId(),
-                    event.branchId(),
-                    event.start(),
-                    event.end(),
-                    "SYSTEM"
-            );
-
-        } finally {
-            TenantContext.clear();
-        }
+        // Tax accrual already happens inside
+        // PeriodClosingService.executeClose()
     }
 }

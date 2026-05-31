@@ -13,6 +13,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.Ta
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PeriodClosingService {
@@ -100,8 +102,39 @@ public class PeriodClosingService {
                 );
 
         for (AccountingPeriod period : overdue) {
-            closePeriod(period.getId(), user);
+            try {
+                forceCloseOverduePeriod(
+                        period.getId(),
+                        user
+                );
+            } catch (Exception ex) {
+                log.error(
+                        "Failed closing overdue period {}",
+                        period.getId(),
+                        ex
+                );
+            }
         }
+    }
+
+    @Transactional
+    public void forceCloseOverduePeriod(
+            UUID periodId,
+            String user
+    ) {
+        UUID tenantId = TenantContext.getTenantId();
+
+        AccountingPeriod period =
+                periodRepository.findByTenantIdAndId(
+                                tenantId,
+                                periodId
+                        )
+                        .orElseThrow(() ->
+                                new IllegalArgumentException("Period not found"));
+
+        branchTenantGuard.validate(period.getBranchId());
+
+        executeClose(period, user);
     }
 
     private void executeClose(AccountingPeriod period, String user) {

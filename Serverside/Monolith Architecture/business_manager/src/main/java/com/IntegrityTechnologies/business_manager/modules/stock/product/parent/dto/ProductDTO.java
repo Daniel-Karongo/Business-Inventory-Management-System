@@ -19,24 +19,36 @@ import java.util.UUID;
 public class ProductDTO {
 
     private UUID id;
+
     private String name;
+
     private String description;
+
     private String sku;
-    private String barcode;
-    private String barcodeImagePath;
+
     private UUID branchId;
 
     private Double minimumPercentageProfit;
+
     private BigDecimal minimumProfit;
 
-    private List<ProductVariantDTO> variants; // <-- NEW
+    private List<ProductVariantDTO> variants;
+
     private List<String> imageUrls;
+
+    private List<ProductImageDTO> images;
+
     private Long categoryId;
+
     private String categoryName;
 
     private List<SupplierMinimalDTO> suppliers;
+
     private Boolean deleted;
+
     private LocalDateTime deletedAt;
+
     private LocalDateTime createdAt;
+
     private LocalDateTime updatedAt;
 }

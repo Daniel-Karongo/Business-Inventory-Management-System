@@ -29,14 +29,29 @@
 
         </div>
 
-        <button *ngIf="!readonly" mat-flat-button color="primary" (click)="triggerUpload()" [disabled]="uploading">
+        <div *ngIf="!readonly" class="header-actions">
 
-            <mat-icon>
-                upload
-            </mat-icon>
+            <button mat-stroked-button type="button" (click)="capturePhotos()" [disabled]="uploading">
 
-            Upload
-        </button>
+                <mat-icon>
+                    photo_camera
+                </mat-icon>
+
+                Camera
+
+            </button>
+
+            <button mat-flat-button color="primary" type="button" (click)="triggerUpload()" [disabled]="uploading">
+
+                <mat-icon>
+                    upload
+                </mat-icon>
+
+                Upload
+
+            </button>
+
+        </div>
 
     </div>
 
@@ -69,15 +84,29 @@
             images, PDFs or supporting documents.
         </p>
 
-        <button *ngIf="!readonly" mat-flat-button color="primary" (click)="triggerUpload()">
+        <div *ngIf="!readonly" class="header-actions">
 
-            <mat-icon>
-                upload
-            </mat-icon>
+            <button mat-stroked-button type="button" (click)="capturePhotos()" [disabled]="uploading">
 
-            Upload First {{ entityLabel }}
+                <mat-icon>
+                    photo_camera
+                </mat-icon>
 
-        </button>
+                Camera
+
+            </button>
+
+            <button mat-flat-button color="primary" type="button" (click)="triggerUpload()" [disabled]="uploading">
+
+                <mat-icon>
+                    upload
+                </mat-icon>
+
+                Upload
+
+            </button>
+
+        </div>
 
     </div>
 

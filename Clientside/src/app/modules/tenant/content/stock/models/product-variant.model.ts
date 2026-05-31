@@ -21,10 +21,13 @@ export interface ProductVariantCreateDTO {
 }
 
 export interface ProductVariantUpdateDTO {
+  id?: string;
   classification?: string;
   minimumPercentageProfit?: number;
   minimumProfit?: number;
   sku?: string;
+  deleted?: boolean;
+  autoCreateBasePackaging?: boolean;
 }
 
 export interface VariantImage {

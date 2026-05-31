@@ -1,10 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.UUID;
 
@@ -37,9 +38,8 @@ public class Account extends BranchAwareEntity {
     @Column(nullable = false)
     private String name;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private AccountRole role;
+    private String role;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -54,7 +54,7 @@ public class Account extends BranchAwareEntity {
             String code,
             String name,
             AccountType type,
-            AccountRole role
+            String role
     ) {
         this.setTenantId(tenantId);
         this.setBranchId(branchId);

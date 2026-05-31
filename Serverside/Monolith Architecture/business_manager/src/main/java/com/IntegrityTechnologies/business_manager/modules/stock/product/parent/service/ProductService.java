@@ -29,6 +29,7 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.r
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantCreateDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantUpdateDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariantAudit;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariantImage;
@@ -66,6 +67,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -575,6 +577,10 @@ public class ProductService {
 
         productDto.setBranchId(branchId);
 
+        productDto.setVariants(
+                dto.getVariants()
+        );
+
         ProductDTO updated =
                 updateProduct(
                         productId,
@@ -624,7 +630,7 @@ public class ProductService {
         updateBasicFields(product, dto, audits);
         updateCategory(product, dto, audits);
         updateSuppliers(product, dto, audits);
-        updateVariants(product, dto);
+        syncVariants(product, dto);
         updatePricing(product, dto, audits);
 
         product.setUpdatedAt(LocalDateTime.now());
@@ -744,59 +750,148 @@ public class ProductService {
         syncCategorySuppliers(branchId, product.getCategory(), new HashSet<>(suppliers));
     }
 
-    private void updateVariants(Product product, ProductUpdateDTO dto) {
+    private void syncVariants(
+            Product product,
+            ProductUpdateDTO dto
+    ) {
 
-        if (dto.getVariants() == null) return;
+        if (dto.getVariants() == null) {
+            return;
+        }
 
-        for (ProductVariantCreateDTO v : dto.getVariants()) {
+        UUID branchId = dto.getBranchId();
+
+        List<ProductVariant> existingVariants =
+                productVariantRepository
+                        .findByTenantIdAndBranchIdAndProduct_Id(
+                                tenantId(),
+                                branchId,
+                                product.getId()
+                        );
+
+        Map<UUID, ProductVariant> existingById =
+                existingVariants.stream()
+                        .collect(Collectors.toMap(
+                                ProductVariant::getId,
+                                Function.identity()
+                        ));
+
+        for (ProductVariantUpdateDTO incoming : dto.getVariants()) {
+
+            if (incoming.getId() == null) {
+
+                ProductVariantCreateDTO createDto =
+                        new ProductVariantCreateDTO();
+
+                createDto.setProductId(product.getId());
+                createDto.setClassification(
+                        incoming.getClassification()
+                );
+                createDto.setSku(
+                        incoming.getSku()
+                );
+                createDto.setMinimumProfit(
+                        incoming.getMinimumProfit()
+                );
+                createDto.setMinimumPercentageProfit(
+                        incoming.getMinimumPercentageProfit()
+                );
+                createDto.setAutoCreateBasePackaging(
+                        incoming.getAutoCreateBasePackaging()
+                );
+
+                productVariantService.createVariant(
+                        branchId,
+                        createDto
+                );
+
+                continue;
+            }
 
             ProductVariant existing =
-                    productVariantRepository
-                            .findByTenantIdAndBranchIdAndProduct_IdAndClassification(
-                                    tenantId(),
-                                    dto.getBranchId(),
-                                    product.getId(),
-                                    v.getClassification()
-                            ).orElse(null);
+                    existingById.get(
+                            incoming.getId()
+                    );
 
-            if (existing != null) continue;
+            if (existing == null) {
+                throw new IllegalArgumentException(
+                        "Variant not found: " +
+                                incoming.getId()
+                );
+            }
 
-            ProductVariant variant = new ProductVariant();
-            variant.setProduct(product);
-            variant.setClassification(v.getClassification());
+            if (Boolean.TRUE.equals(incoming.getDeleted())) {
 
-            variant.setSku(
-                    v.getSku() != null
-                            ? v.getSku()
-                            : generateVariantSku(product, v.getClassification())
+                existing.setDeleted(true);
+                existing.setDeletedAt(LocalDateTime.now());
+
+                productVariantRepository.save(existing);
+
+                continue;
+            }
+
+            productVariantService.updateVariant(
+                    branchId,
+                    existing.getId(),
+                    incoming,
+                    "Updated through product edit"
             );
-
-            productVariantRepository.save(variant);
         }
     }
 
-    private void updatePricing(Product product,
-                               ProductUpdateDTO dto,
-                               List<ProductAudit> audits) {
+    private void updatePricing(
+            Product product,
+            ProductUpdateDTO dto,
+            List<ProductAudit> audits
+    ) {
 
-        if (dto.getMinimumPercentageProfit() == null) return;
+        if (
+                dto.getMinimumPercentageProfit() != null &&
+                        !Objects.equals(
+                                dto.getMinimumPercentageProfit(),
+                                product.getMinimumPercentageProfit()
+                        )
+        ) {
 
-        if (Objects.equals(dto.getMinimumPercentageProfit(),
-                product.getMinimumPercentageProfit())) return;
+            audits.add(
+                    auditForField(
+                            product,
+                            "minimumPercentageProfit",
+                            product.getMinimumPercentageProfit() == null
+                                    ? null
+                                    : product.getMinimumPercentageProfit().toString(),
+                            dto.getMinimumPercentageProfit().toString()
+                    )
+            );
 
-        audits.add(auditForField(
-                product,
-                "minimumPercentageProfit",
-                product.getMinimumPercentageProfit() == null ? null :
-                        product.getMinimumPercentageProfit().toString(),
-                dto.getMinimumPercentageProfit().toString()
-        ));
+            product.setMinimumPercentageProfit(
+                    dto.getMinimumPercentageProfit()
+            );
+        }
 
-        product.setMinimumPercentageProfit(dto.getMinimumPercentageProfit());
+        if (
+                dto.getMinimumProfit() != null &&
+                        !Objects.equals(
+                                dto.getMinimumProfit(),
+                                product.getMinimumProfit()
+                        )
+        ) {
 
-        productRepository.save(product);
+            audits.add(
+                    auditForField(
+                            product,
+                            "minimumProfit",
+                            product.getMinimumProfit() == null
+                                    ? null
+                                    : product.getMinimumProfit().toString(),
+                            dto.getMinimumProfit().toString()
+                    )
+            );
 
-        // Pricing handled by PricingEngine rules. No mutation here.
+            product.setMinimumProfit(
+                    dto.getMinimumProfit()
+            );
+        }
     }
 
     private void validateUpdateDTOUniqueness(UUID productId, ProductUpdateDTO dto) {
@@ -1051,10 +1146,9 @@ public class ProductService {
        ============================= */
 
     @Transactional
-    public void softDeleteProduct(UUID productId, String reason) {
+    public void softDeleteProduct(UUID productId, UUID branchId, String reason) {
 
-        Product product = getProductOrThrow(productId, null);
-        UUID branchId = product.getBranchId();
+        Product product = getProductOrThrow(productId, branchId);
 
         if (Boolean.TRUE.equals(product.isDeleted())) {
             return;
@@ -1146,14 +1240,22 @@ public class ProductService {
         );
     }
 
-/* =========================================================
+    /* =========================================================
     BULK SOFT DELETE (All or Nothing)
     ========================================================= */
 
     @Transactional
-    public void bulkSoftDelete(List<UUID> ids, String reason) {
+    public void bulkSoftDelete(
+            UUID branchId,
+            List<UUID> ids,
+            String reason
+    ) {
         for (UUID id : ids) {
-            softDeleteProduct(id, reason);
+            softDeleteProduct(
+                    branchId,
+                    id,
+                    reason
+            );
         }
     }
 
@@ -1162,9 +1264,12 @@ public class ProductService {
     ========================================================= */
 
     @Transactional
-    public void restoreProduct(UUID productId,
-                               String reason,
-                               ProductRestoreOptions options) {
+    public void restoreProduct(
+            UUID branchId,
+            UUID productId,
+            String reason,
+            ProductRestoreOptions options
+    ) {
 
         if (options != null &&
                 options.isRestoreInventory() &&
@@ -1175,8 +1280,7 @@ public class ProductService {
             );
         }
 
-        Product product = getProductOrThrow(productId, null);
-        UUID branchId = product.getBranchId();
+        Product product = getProductOrThrow(productId, branchId);
 
         if (!Boolean.TRUE.equals(product.isDeleted())) {
             return;
@@ -1302,11 +1406,19 @@ public class ProductService {
     ========================================================= */
 
     @Transactional
-    public void bulkRestore(List<UUID> ids,
-                            String reason,
-                            ProductRestoreOptions options) {
+    public void bulkRestore(
+            UUID branchId,
+            List<UUID> ids,
+            String reason,
+            ProductRestoreOptions options
+    ) {
         for (UUID id : ids) {
-            restoreProduct(id, reason, options);
+            restoreProduct(
+                    branchId,
+                    id,
+                    reason,
+                    options
+            );
         }
     }
 
@@ -1346,11 +1458,22 @@ public class ProductService {
     PRIVATE HELPERS
     ========================================================= */
 
-    private Product getProductOrThrow(UUID id, UUID branchId) {
+    private Product getProductOrThrow(
+            UUID id,
+            UUID branchId
+    ) {
 
         return productRepository
-                .findByIdAndTenantIdAndBranchId(id, tenantId(), branchId == null ? branchId : branchId)
-                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+                .findByIdAndTenantIdAndBranchId(
+                        id,
+                        tenantId(),
+                        branchId
+                )
+                .orElseThrow(() ->
+                        new ProductNotFoundException(
+                                "Product not found"
+                        )
+                );
     }
 
     private void auditProductImages(List<ProductImage> images,
