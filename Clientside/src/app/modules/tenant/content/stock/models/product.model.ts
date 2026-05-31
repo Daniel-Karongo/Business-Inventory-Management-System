@@ -49,3 +49,35 @@ export interface ProductUpdateDTO {
   supplierIds?: string[];
   branchId?: string;
 }
+
+export interface ProductImage {
+  id: string;
+  fileName: string;
+  filePath: string;
+  thumbnailFileName: string;
+  deleted: boolean;
+  primaryImage: boolean;
+  deletedIndependently: boolean;
+}
+
+export interface ProductAudit {
+  action: string;
+  fieldChanged?: string;
+  oldValue?: string;
+  newValue?: string;
+  reason?: string;
+  performedBy?: string;
+  timestamp: string;
+}
+
+export interface ProductImageAudit {
+  id: string;
+  fileName: string;
+  filePath: string;
+  action: string;
+  reason?: string;
+  timestamp: string;
+  productId: string;
+  productName: string;
+  performedBy: string;
+}

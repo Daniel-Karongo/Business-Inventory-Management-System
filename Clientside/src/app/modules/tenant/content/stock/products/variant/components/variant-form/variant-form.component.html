@@ -1,61 +1,133 @@
-<h2 mat-dialog-title>
-  Edit Variant
-</h2>
+<div class="dialog-header">
 
-<mat-dialog-content *ngIf="form" class="variant-form" [formGroup]="form">
+    <div class="dialog-title">
+        Edit Variant
+    </div>
 
-  <mat-form-field appearance="fill">
-    <mat-label>
-      Classification
-    </mat-label>
+    <div class="dialog-subtitle">
+        {{ variant.classification }}
+    </div>
 
-    <input matInput formControlName="classification" />
-  </mat-form-field>
+</div>
 
-  <mat-form-field appearance="fill">
-    <mat-label>
-      SKU
-    </mat-label>
+<mat-dialog-content *ngIf="form">
 
-    <input matInput formControlName="sku" />
-  </mat-form-field>
+    <div class="content-wrapper" [formGroup]="form">
 
-  <mat-form-field appearance="fill" *ngIf="variant">
-    <mat-label>
-      Barcode
-    </mat-label>
+        <div class="summary-grid">
 
-    <input matInput [value]="variant.barcode || ''" readonly />
-  </mat-form-field>
+            <div class="summary-card">
 
-  <mat-form-field appearance="fill">
-    <mat-label>
-      Minimum Percentage Profit
-    </mat-label>
+                <div class="label">
+                    Barcode
+                </div>
 
-    <input matInput type="number" formControlName="minimumPercentageProfit" />
-  </mat-form-field>
+                <div class="value">
+                    {{ variant.barcode || '—' }}
+                </div>
 
-  <mat-form-field appearance="fill">
-    <mat-label>
-      Minimum Profit
-    </mat-label>
+            </div>
 
-    <input matInput type="number" formControlName="minimumProfit" />
-  </mat-form-field>
+            <div class="summary-card">
+
+                <div class="label">
+                    Variant ID
+                </div>
+
+                <div class="value mono">
+                    {{ variant.id }}
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="section">
+
+            <div class="section-title">
+                Variant Information
+            </div>
+
+            <div class="form-grid">
+
+                <mat-form-field appearance="fill">
+
+                    <mat-label>
+                        Classification
+                    </mat-label>
+
+                    <input matInput formControlName="classification">
+
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+
+                    <mat-label>
+                        SKU
+                    </mat-label>
+
+                    <input matInput formControlName="sku">
+
+                </mat-form-field>
+
+            </div>
+
+        </div>
+
+        <div class="section">
+
+            <div class="section-title">
+                Profit Controls
+            </div>
+
+            <div class="form-grid">
+
+                <mat-form-field appearance="fill">
+
+                    <mat-label>
+                        Minimum Percentage Profit
+                    </mat-label>
+
+                    <input matInput type="number" formControlName="minimumPercentageProfit">
+
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+
+                    <mat-label>
+                        Minimum Profit
+                    </mat-label>
+
+                    <input matInput type="number" formControlName="minimumProfit">
+
+                </mat-form-field>
+
+            </div>
+
+        </div>
+
+    </div>
 
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
 
-  <button mat-button (click)="cancel()">
+    <button mat-button (click)="cancel()">
 
-    Cancel
-  </button>
+        Cancel
 
-  <button mat-flat-button color="primary" [disabled]="saving || form.invalid" (click)="save()">
+    </button>
 
-    Save
-  </button>
+    <button mat-flat-button color="primary" [disabled]="saving" (click)="save()">
+
+        <span *ngIf="!saving">
+            Save Changes
+        </span>
+
+        <span *ngIf="saving">
+            Saving...
+        </span>
+
+    </button>
 
 </mat-dialog-actions>

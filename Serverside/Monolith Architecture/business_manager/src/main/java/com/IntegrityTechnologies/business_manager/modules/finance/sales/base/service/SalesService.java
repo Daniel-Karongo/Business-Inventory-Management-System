@@ -280,11 +280,12 @@ public class SalesService {
         for (SaleLineItem li : lines) {
             stockEngine.reserveWithSelection(
                     saleId,
+                    li.getId(),
                     li.getProductVariantId(),
-                    li.getPackagingId(),      // ✅ CRITICAL
+                    li.getPackagingId(),
                     branchId,
-                    li.getBaseUnits(),        // base units
-                    li.getQuantity(),         // sell units
+                    li.getBaseUnits(),
+                    li.getQuantity(),
                     li.getBatchSelections()
             );
         }
@@ -295,8 +296,13 @@ public class SalesService {
     @Transactional
     public SaleDTO deliverSale(UUID saleId) {
 
-        Sale sale = saleRepository.findById(saleId)
-                .orElseThrow(() -> new EntityNotFoundException("Sale not found: " + saleId));
+        Sale sale = saleRepository.lockForUpdate(saleId);
+
+        if (sale == null) {
+            throw new EntityNotFoundException(
+                    "Sale not found: " + saleId
+            );
+        }
 
         if (sale.getStatus() != Sale.SaleStatus.CREATED) {
             return toDTO(sale);
@@ -312,6 +318,11 @@ public class SalesService {
             stockEngine.consume(
                     li.getBranchId(),
                     sale.getId()
+            );
+
+            inventoryService.validateInventoryInvariant(
+                    li.getProductVariantId(),
+                    li.getBranchId()
             );
 
             totalCOGS = batchConsumptionRepository.sumCostBySaleId(saleId, tenantId());
@@ -501,6 +512,7 @@ public class SalesService {
         for (SaleLineItem li : newLines) {
             stockEngine.reserveWithSelection(
                     sale.getId(),
+                    li.getId(),
                     li.getProductVariantId(),
                     li.getPackagingId(),
                     li.getBranchId(),
@@ -546,8 +558,13 @@ public class SalesService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public SaleDTO refundSale(UUID id) {
 
-        Sale sale = saleRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Sale not found: " + id));
+        Sale sale = saleRepository.lockForUpdate(id);
+
+        if (sale == null) {
+            throw new EntityNotFoundException(
+                    "Sale not found: " + id
+            );
+        }
 
         if (sale.getStatus() == Sale.SaleStatus.REFUNDED) {
             return toDTO(sale);
@@ -626,6 +643,11 @@ public class SalesService {
                     li.getBranchId(),
                     li.getProductVariantId()
             );
+
+            inventoryService.validateInventoryInvariant(
+                    li.getProductVariantId(),
+                    li.getBranchId()
+            );
         }
     /* ============================================================
        4️⃣ CUSTOMER REFUND RECORD (non-financial)
@@ -677,15 +699,7 @@ public class SalesService {
             } catch (Exception ignored) {}
         }
 
-        refundSale(id);
-
-        Sale refundedSale = saleRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Sale not found after refund: " + id));
-
-        refundedSale.setStatus(Sale.SaleStatus.CANCELLED);
-        saleRepository.save(refundedSale);
-
-        return toDTO(refundedSale);
+        return refundSale(id);
     }
 
     /* ============================================================

@@ -27,11 +27,21 @@ import java.util.*;
                 @Index(name = "idx_variant_sku_lookup", columnList = "tenant_id, branch_id, sku")
         }
 )
-@Data
+@Getter
+@Setter
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(
+        callSuper = true,
+        onlyExplicitlyIncluded = true
+)
+@ToString(
+        exclude = {
+                "product",
+                "images"
+        }
+)
 public class ProductVariant extends BranchAwareEntity {
 
     // NOTE:
@@ -40,6 +50,7 @@ public class ProductVariant extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

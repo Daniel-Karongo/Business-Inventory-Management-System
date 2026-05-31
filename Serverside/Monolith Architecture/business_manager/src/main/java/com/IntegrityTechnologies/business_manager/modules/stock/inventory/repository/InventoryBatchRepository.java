@@ -170,4 +170,22 @@ public interface InventoryBatchRepository
             UUID tenantId,
             UUID branchId
     );
+
+    @Query("""
+            SELECT
+                COUNT(b),
+                COALESCE(SUM(b.quantityRemaining * b.unitCost), 0),
+                MIN(b.receivedAt),
+                MAX(b.receivedAt)
+            FROM InventoryBatch b
+            WHERE b.productVariantId = :variantId
+              AND b.tenantId = :tenantId
+              AND b.branchId = :branchId
+              AND b.quantityRemaining > 0
+            """)
+    List<Object[]> aggregateWorkspaceStats(
+            @Param("variantId") UUID variantId,
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId
+    );
 }

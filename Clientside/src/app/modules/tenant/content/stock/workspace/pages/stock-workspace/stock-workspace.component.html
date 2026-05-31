@@ -26,12 +26,10 @@
 
                 </button>
 
-                <button *ngIf="!isMobile" mat-icon-button (click)="toggleDensity()">
-
+                <button mat-icon-button (click)="toggleDensity()" matTooltip="Toggle density">
                     <mat-icon>
                         format_line_spacing
                     </mat-icon>
-
                 </button>
 
             </div>
@@ -155,7 +153,24 @@
        CONTENT
     ====================================================== -->
 
-    <div page-content>
+    <div page-content [class.loading-surface]="loading">
+
+        <!-- =====================================================
+     LOADING STATE
+===================================================== -->
+        <div *ngIf="loading" class="workspace-loading">
+            <div class="progress-block">
+                <mat-icon class="spin">
+                    autorenew
+                </mat-icon>
+
+                <span>
+                    Loading stock workspace...
+                </span>
+            </div>
+
+            <div class="progress-inline"></div>
+        </div>
 
         <!-- =====================================================
            BULK TOOLBAR
@@ -325,17 +340,12 @@
                                             <div class="thumbnail-wrapper">
 
                                                 <img *ngIf="
-                                                        thumbnail(
-                                                            row.productId
-                                                        ) as thumb;
+                                                        thumbnailForRow(row) as thumb;
                                                         else noThumb
                                                     " [src]="thumb" alt="thumbnail"
                                                     class="thumbnail clickable-thumbnail" (click)="
-                                                        openThumbnail(
-                                                            row.productId
-                                                        );
-                                                        $event.stopPropagation()
-                                                    ">
+                                                        openThumbnail(row); 
+                                                        $event.stopPropagation()">
 
                                                 <ng-template #noThumb>
 
@@ -532,7 +542,7 @@
 
                             <!-- VALUE -->
                             <ng-container *ngIf="column.id === 'value'">
-                                {{ row.inventoryValue | number:'1.2-2' }}
+                                {{ (row.inventoryValue ?? 0) | number:'1.2-2' }}
                             </ng-container>
 
                             <!-- UPDATED -->
@@ -571,6 +581,13 @@
                                         point_of_sale
                                     </mat-icon>
 
+                                </button>
+
+                                <button mat-icon-button [disabled]="row.deleted" matTooltip="Images"
+                                    (click)="manageProductImages(row); $event.stopPropagation()">
+                                    <mat-icon>
+                                        image
+                                    </mat-icon>
                                 </button>
 
                                 <button mat-icon-button [disabled]="row.deleted" matTooltip="View Product"
@@ -666,7 +683,14 @@
 
                             <ng-container *ngIf="row.type === 'VARIANT'">
 
-                                <button mat-icon-button matTooltip="View Product"
+                                <button mat-icon-button matTooltip="Create Sale"
+                                    (click)="createSale(row); $event.stopPropagation()">
+                                    <mat-icon>
+                                        point_of_sale
+                                    </mat-icon>
+                                </button>
+
+                                <button mat-icon-button matTooltip="View Variant Details"
                                     (click)="viewVariant(row); $event.stopPropagation()">
                                     <mat-icon>visibility</mat-icon>
                                 </button>
@@ -686,9 +710,21 @@
                                     <mat-icon>qr_code</mat-icon>
                                 </button>
 
-                                <button mat-icon-button color="warn" matTooltip="Delete Variant"
-                                    (click)="deleteVariant(row); $event.stopPropagation()">
-                                    <mat-icon>delete</mat-icon>
+                                <button mat-icon-button
+                                    [matTooltip]="row.deleted ? 'Restore Variant' : 'Disable Variant'"
+                                    (click)=" toggleVariantStatus(row); $event.stopPropagation()">
+                                    <mat-icon>
+                                        {{
+                                        row.deleted
+                                        ? 'toggle_off'
+                                        : 'toggle_on'
+                                        }}
+                                    </mat-icon>
+                                </button>
+
+                                <button *ngIf="row.deleted" mat-icon-button color="primary" matTooltip="Restore Variant"
+                                    (click)="restoreVariant(row); $event.stopPropagation()">
+                                    <mat-icon>restore</mat-icon>
                                 </button>
 
                             </ng-container>
@@ -748,15 +784,15 @@
                              HIERARCHY HEADER
                         ====================================================== -->
 
-                        <div class="card-tree-header">
+                        <div class="card-header-row">
 
-                            <div class="tree-badge" [ngClass]="{
+                            <div class="entity-chip" [ngClass]="{
             product: item.type === 'PRODUCT',
             variant: item.type === 'VARIANT',
             inventory: item.type === 'INVENTORY'
         }">
 
-                                <mat-icon class="tree-icon">
+                                <mat-icon>
                                     {{
                                     item.type === 'PRODUCT'
                                     ? 'inventory_2'
@@ -767,27 +803,47 @@
                                 </mat-icon>
 
                                 <span>
-                                    Level {{ item.level + 1 }}
+                                    {{
+                                    item.type === 'PRODUCT'
+                                    ? 'Product'
+                                    : item.type === 'VARIANT'
+                                    ? 'Variant'
+                                    : 'Inventory'
+                                    }}
                                 </span>
+
                             </div>
 
-                            <button *ngIf="expandable(item)" mat-icon-button class="card-expand-btn" (click)="
-            toggleExpanded(item);
-            $event.stopPropagation()
-        ">
+                            <div class="card-header-actions">
 
-                                <mat-icon *ngIf="!item.loadingChildren">
-                                    {{
-                                    item.expanded
-                                    ? 'expand_more'
-                                    : 'chevron_right'
-                                    }}
-                                </mat-icon>
+                                <div *ngIf="item.outOfStock" class="status-pill danger">
+                                    Out
+                                </div>
 
-                                <mat-icon *ngIf="item.loadingChildren" class="spin">
-                                    autorenew
-                                </mat-icon>
-                            </button>
+                                <div *ngIf="!item.outOfStock && item.lowStock" class="status-pill warning">
+                                    Low
+                                </div>
+
+                                <button *ngIf="expandable(item)" mat-icon-button class="card-expand-btn" (click)="
+                toggleExpanded(item);
+                $event.stopPropagation()
+            ">
+
+                                    <mat-icon *ngIf="!item.loadingChildren">
+                                        {{
+                                        item.expanded
+                                        ? 'expand_more'
+                                        : 'chevron_right'
+                                        }}
+                                    </mat-icon>
+
+                                    <mat-icon *ngIf="item.loadingChildren" class="spin">
+                                        autorenew
+                                    </mat-icon>
+
+                                </button>
+
+                            </div>
 
                         </div>
 
@@ -800,39 +856,25 @@
                             <div class="card-thumbnail-wrapper">
 
                                 <img *ngIf="
-                                        thumbnail(
-                                            item.productId
-                                        ) as thumb;
-                                        else mobileNoThumb
-                                    " [src]="thumb" class="card-thumbnail clickable-thumbnail" alt="thumbnail" (click)="
-                                        openThumbnail(
-                                            item.productId
-                                        );
-                                        $event.stopPropagation()
-                                    ">
+                thumbnailForRow(item) as thumb;
+                else mobileNoThumb
+            " [src]="thumb" class="card-thumbnail clickable-thumbnail" alt="thumbnail" (click)="
+                openThumbnail(item);
+                $event.stopPropagation()
+            ">
 
                                 <ng-template #mobileNoThumb>
 
                                     <div class="card-thumbnail-placeholder">
 
                                         <mat-icon>
-
-                                            <ng-container [ngSwitch]="item.type">
-
-                                                <ng-container *ngSwitchCase="'PRODUCT'">
-                                                    inventory_2
-                                                </ng-container>
-
-                                                <ng-container *ngSwitchCase="'VARIANT'">
-                                                    category
-                                                </ng-container>
-
-                                                <ng-container *ngSwitchCase="'INVENTORY'">
-                                                    warehouse
-                                                </ng-container>
-
-                                            </ng-container>
-
+                                            {{
+                                            item.type === 'PRODUCT'
+                                            ? 'inventory_2'
+                                            : item.type === 'VARIANT'
+                                            ? 'category'
+                                            : 'warehouse'
+                                            }}
                                         </mat-icon>
 
                                     </div>
@@ -842,12 +884,6 @@
                             </div>
 
                             <div class="card-main">
-
-                                <div class="card-type">
-
-                                    {{ item.type }}
-
-                                </div>
 
                                 <div class="card-title">
 
@@ -863,25 +899,29 @@
 
                                 <div class="card-subtitle">
 
-                                    {{
-                                    item.type === 'PRODUCT'
-                                    ? item.categoryName
-                                    : item.type === 'VARIANT'
-                                    ? item.sku
-                                    : item.productName
-                                    }}
+                                    <ng-container [ngSwitch]="item.type">
+
+                                        <ng-container *ngSwitchCase="'PRODUCT'">
+
+                                            {{ item.categoryName || 'Uncategorised' }}
+
+                                        </ng-container>
+
+                                        <ng-container *ngSwitchCase="'VARIANT'">
+
+                                            {{ item.sku || 'No SKU' }}
+
+                                        </ng-container>
+
+                                        <ng-container *ngSwitchCase="'INVENTORY'">
+
+                                            {{ item.productName }}
+
+                                        </ng-container>
+
+                                    </ng-container>
 
                                 </div>
-
-                            </div>
-
-                            <div class="availability" [class.low]="
-                                    (item.quantityAvailable ?? 0) <= 0
-                                ">
-
-                                {{
-                                item.quantityAvailable ?? 0
-                                }}
 
                             </div>
 
@@ -891,40 +931,78 @@
                              META GRID
                         ====================================================== -->
 
-                        <div class="card-grid">
+                        <div class="card-metrics">
 
-                            <div>
+                            <!-- PRODUCT -->
 
-                                <div class="meta-label">
-                                    Reserved
+                            <ng-container *ngIf="item.type === 'PRODUCT'">
+
+                                <div class="metric single">
+                                    <div class="metric-label">
+                                        Variants
+                                    </div>
+
+                                    <div class="metric-value">
+                                        {{ item.totalVariants ?? 0 }}
+                                    </div>
                                 </div>
 
-                                <div class="meta-value">
+                            </ng-container>
 
-                                    {{
-                                    item.quantityReserved ?? 0
-                                    }}
+                            <!-- VARIANT -->
 
+                            <ng-container *ngIf="item.type === 'VARIANT'">
+
+                                <div class="metric single">
+                                    <div class="metric-label">
+                                        SKU
+                                    </div>
+
+                                    <div class="metric-value">
+                                        {{ item.sku || '-' }}
+                                    </div>
                                 </div>
 
-                            </div>
+                            </ng-container>
 
-                            <div>
+                            <!-- INVENTORY -->
 
-                                <div class="meta-label">
-                                    Value
+                            <ng-container *ngIf="item.type === 'INVENTORY'">
+
+                                <div class="metric">
+                                    <div class="metric-label">
+                                        Available
+                                    </div>
+
+                                    <div class="metric-value">
+                                        {{ item.quantityAvailable ?? 0 }}
+                                    </div>
                                 </div>
 
-                                <div class="meta-value">
+                                <div class="metric">
+                                    <div class="metric-label">
+                                        Reserved
+                                    </div>
 
-                                    {{
-                                    item.inventoryValue
-                                    | number:'1.2-2'
-                                    }}
-
+                                    <div class="metric-value">
+                                        {{ item.quantityReserved ?? 0 }}
+                                    </div>
                                 </div>
 
-                            </div>
+                                <div class="metric">
+                                    <div class="metric-label">
+                                        Value
+                                    </div>
+
+                                    <div class="metric-value">
+                                        {{
+                                        (item.inventoryValue ?? 0)
+                                        | number:'1.0-0'
+                                        }}
+                                    </div>
+                                </div>
+
+                            </ng-container>
 
                         </div>
 
@@ -945,6 +1023,13 @@
                                         point_of_sale
                                     </mat-icon>
 
+                                </button>
+
+                                <button mat-icon-button [disabled]="item.deleted" matTooltip="Images"
+                                    (click)="manageProductImages(item); $event.stopPropagation()">
+                                    <mat-icon>
+                                        image
+                                    </mat-icon>
                                 </button>
 
                                 <button mat-icon-button [disabled]="item.deleted" matTooltip="View Product"
@@ -1035,7 +1120,14 @@
 
                             <ng-container *ngIf="item.type === 'VARIANT'">
 
-                                <button mat-icon-button matTooltip="View Product"
+                                <button mat-icon-button matTooltip="Create Sale"
+                                    (click)="createSale(item); $event.stopPropagation()">
+                                    <mat-icon>
+                                        point_of_sale
+                                    </mat-icon>
+                                </button>
+
+                                <button mat-icon-button matTooltip="View Variant Details"
                                     (click)="viewVariant(item); $event.stopPropagation()">
                                     <mat-icon>visibility</mat-icon>
                                 </button>
@@ -1055,9 +1147,16 @@
                                     <mat-icon>qr_code</mat-icon>
                                 </button>
 
-                                <button mat-icon-button color="warn" matTooltip="Delete Variant"
-                                    (click)="deleteVariant(item); $event.stopPropagation()">
-                                    <mat-icon>delete</mat-icon>
+                                <button mat-icon-button
+                                    [matTooltip]="item.deleted ? 'Restore Variant' : 'Disable Variant'"
+                                    (click)=" toggleVariantStatus(item); $event.stopPropagation()">
+                                    <mat-icon>
+                                        {{
+                                        item.deleted
+                                        ? 'toggle_off'
+                                        : 'toggle_on'
+                                        }}
+                                    </mat-icon>
                                 </button>
 
                             </ng-container>

@@ -1,4 +1,5 @@
 import { EntityImageAdapter } from '../../../../../../shared/components/entity-image-manager/entity-image-manager.component';
+import { USER_DOCUMENT_DELETE_REASONS, USER_DOCUMENT_PERMANENT_DELETE_REASONS, USER_DOCUMENT_RESTORE_REASONS } from './user-reasons.constants';
 import { UserService } from './user.service';
 
 
@@ -64,7 +65,22 @@ export const UserImageAdapter = (
       fileName,
       reason
     ),
-  
+
   onThumbnailUpdated,
-  onChange
+  onChange,
+
+  deleteReasons:
+    USER_DOCUMENT_DELETE_REASONS,
+
+  restoreReasons:
+    USER_DOCUMENT_RESTORE_REASONS,
+
+  hardDeleteReasons:
+    USER_DOCUMENT_PERMANENT_DELETE_REASONS,
+
+  supportsDescription: true,
+
+  entityLabel: 'Document',
+
+  uploadMode: 'document',
 });

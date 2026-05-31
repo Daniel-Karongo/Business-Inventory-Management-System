@@ -34,7 +34,7 @@ import { PageWrapper } from '../../../../../../core/models/page-wrapper.model';
 import {
     StockTransactionDTO
 } from '../../models/stock-transaction.model';
-import { InventoryResponse } from '../../models/inventory-response.model';
+import { InventoryResponse, InventoryWorkspaceResponse } from '../../models/inventory-response.model';
 import { BatchConsumptionDTO, InventoryBatchDTO } from '../../models/inventory-batch.model';
 import { AllocationPreviewDTO } from '../../models/allocation.model';
 import { PreviewAllocationRequest } from '../../models/reservation.model';
@@ -122,7 +122,7 @@ export class InventoryService {
     getVariantStock(
         variantId: string,
         branchId: string
-    ): Observable<InventoryResponse | null> {
+    ): Observable<InventoryWorkspaceResponse | null> {
 
         return this.http
             .get<ApiResponse>(

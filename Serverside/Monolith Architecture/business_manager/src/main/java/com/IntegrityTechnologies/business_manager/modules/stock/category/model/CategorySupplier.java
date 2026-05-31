@@ -20,12 +20,23 @@ import java.time.LocalDateTime;
 )
 @Getter
 @Setter
+@EqualsAndHashCode(
+        callSuper = true,
+        onlyExplicitlyIncluded = true
+)
+@ToString(
+        exclude = {
+                "category",
+                "supplier"
+        }
+)
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
 public class CategorySupplier extends BranchAwareEntity {
 
     @EmbeddedId
+    @EqualsAndHashCode.Include
     private CategorySupplierId id;
 
     @ManyToOne(fetch = FetchType.LAZY)

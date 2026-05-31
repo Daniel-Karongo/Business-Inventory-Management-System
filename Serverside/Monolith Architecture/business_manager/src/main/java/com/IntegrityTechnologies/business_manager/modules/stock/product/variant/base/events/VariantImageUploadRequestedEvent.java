@@ -10,11 +10,14 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 public class VariantImageUploadRequestedEvent {
+    private UUID uploadId;
 
     private UUID variantId;
     private UUID tenantId;
     private UUID branchId;
 
     private String fileName;
+    private String contentType;
+
     private String tempFilePath;
 }

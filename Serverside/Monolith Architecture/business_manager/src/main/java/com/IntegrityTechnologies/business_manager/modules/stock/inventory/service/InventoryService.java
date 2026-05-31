@@ -9,6 +9,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountRole;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.PeriodGuardService;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto.BatchSelectionDto;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineBatchSelection;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.dto.AllocationResult;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
@@ -41,11 +42,14 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.repository.ProductVariantPackagingRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.ProductPrice;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.repository.ProductPriceRepository;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.persistence.OptimisticLockException;
+import java.util.Collections;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -229,10 +233,10 @@ public class InventoryService {
 
                 boolean exists =
                         inventoryItemRepository.existsByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
-                                        variant.getId(),
-                                        tenantId(),
-                                        branch.getId()
-                                );
+                                variant.getId(),
+                                tenantId(),
+                                branch.getId()
+                        );
 
                 if (!exists) {
 
@@ -253,10 +257,10 @@ public class InventoryService {
 
                 boolean exists =
                         inventoryItemRepository.existsByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
-                                        variant.getId(),
-                                        tenantId(),
-                                        branch.getId()
-                                );
+                                variant.getId(),
+                                tenantId(),
+                                branch.getId()
+                        );
 
                 if (!exists) {
                     throw ex;
@@ -1062,71 +1066,365 @@ public class InventoryService {
      * Return InventoryResponse for variant+branch.
      * If branchId == null, return list across branches for the variant.
      */
-    public ApiResponse getInventoryForVariantBranch(UUID productVariantId, UUID branchId) {
+    @Transactional(readOnly = true)
+    public ApiResponse getInventoryForVariantBranch(
+            UUID productVariantId,
+            UUID branchId
+    ) {
 
-        if (branchId != null) {
+        if (branchId == null) {
 
-            Optional<InventoryItem> opt =
-                    inventoryItemRepository
-                            .findByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
-                                    productVariantId,
-                                    tenantId(),
-                                    branchId
-                            );
+            List<InventoryItem> items =
+                    inventoryItemRepository.findByVariantScoped(
+                            tenantId(),
+                            productVariantId
+                    );
 
-            if (opt.isEmpty()) {
-                return new ApiResponse("success", "No inventory", null);
+            if (items.isEmpty()) {
+                return new ApiResponse(
+                        "success",
+                        "No inventory",
+                        List.of()
+                );
             }
 
-            InventoryItem item = opt.get();
+            List<UUID> variantIds =
+                    items.stream()
+                            .map(InventoryItem::getProductVariantId)
+                            .toList();
 
             Map<String, Long> reservedMap =
-                    computeReservedBulkMultiBranch(List.of(productVariantId));
+                    computeReservedBulkMultiBranch(
+                            variantIds
+                    );
 
-            long reserved = reservedMap.getOrDefault(
-                    buildKey(productVariantId, item.getBranchId()),
-                    0L
-            );
+            List<InventoryResponse> responses =
+                    items.stream()
+                            .map(i -> buildResponse(
+                                    i,
+                                    reservedMap.getOrDefault(
+                                            buildKey(
+                                                    i.getProductVariantId(),
+                                                    i.getBranchId()
+                                            ),
+                                            0L
+                                    )
+                            ))
+                            .toList();
 
             return new ApiResponse(
                     "success",
-                    "Inventory found",
-                    buildResponse(item, reserved)
+                    "Inventory across branches",
+                    responses
             );
         }
 
-        // 🔥 MULTI-BRANCH (FIXED N+1)
-        List<InventoryItem> items =
-                inventoryItemRepository.findByProductScoped(
-                        tenantId(),
+        InventoryItem item =
+                inventoryItemRepository.findByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
+                                productVariantId,
+                                tenantId(),
+                                branchId
+                        )
+                        .orElse(null);
+
+        if (item == null) {
+            return new ApiResponse(
+                    "success",
+                    "No inventory",
+                    null
+            );
+        }
+
+        ProductVariant variant =
+                requireVariant(
                         productVariantId
                 );
 
-        if (items.isEmpty()) {
-            return new ApiResponse("success", "No inventory", List.of());
+        Product product =
+                variant.getProduct();
+
+        long reserved =
+                stockEngine.reservedQuantity(
+                        productVariantId,
+                        branchId
+                );
+
+        long available =
+                stockEngine.availableQuantity(
+                        productVariantId,
+                        branchId
+                );
+
+        Object[] batchStats =
+                batchRepository
+                        .aggregateWorkspaceStats(
+                                productVariantId,
+                                tenantId(),
+                                branchId
+                        )
+                        .stream()
+                        .findFirst()
+                        .orElse(null);
+
+        int batchCount = 0;
+
+        BigDecimal totalBatchValue =
+                BigDecimal.ZERO;
+
+        LocalDateTime oldestBatchDate =
+                null;
+
+        if (batchStats != null) {
+
+            batchCount =
+                    ((Number) batchStats[0])
+                            .intValue();
+
+            totalBatchValue =
+                    batchStats[1] != null
+                            ? (BigDecimal) batchStats[1]
+                            : BigDecimal.ZERO;
+
+            oldestBatchDate =
+                    (LocalDateTime) batchStats[2];
         }
 
-        List<UUID> variantIds = items.stream()
-                .map(InventoryItem::getProductVariantId)
-                .toList();
+        ProductVariantPackaging basePackaging =
+                packagingRepository
+                        .findByProductVariantIdAndIsBaseUnitTrueAndDeletedFalse(
+                                productVariantId
+                        );
 
-        Map<String, Long> reservedMap = computeReservedBulkMultiBranch(variantIds);
+        BigDecimal sellingPrice =
+                null;
 
+        if (basePackaging != null) {
 
-        List<InventoryResponse> responses = items.stream()
-                .map(i -> buildResponse(
-                        i,
-                        reservedMap.getOrDefault(
-                                buildKey(i.getProductVariantId(), i.getBranchId()), 0L
+            List<ProductPrice> prices =
+                    productPriceRepository
+                            .findByProductVariantIdAndPackagingIdAndDeletedFalse(
+                                    productVariantId,
+                                    basePackaging.getId()
+                            );
+
+            sellingPrice =
+                    prices.stream()
+                            .filter(p -> p.getMinQuantity() == 1)
+                            .map(ProductPrice::getPrice)
+                            .findFirst()
+                            .orElse(null);
+        }
+
+        BigDecimal inventoryValue =
+                totalBatchValue;
+
+        BigDecimal marginAmount =
+                null;
+
+        BigDecimal marginPercent =
+                null;
+
+        if (
+                sellingPrice != null
+                        && sellingPrice.compareTo(BigDecimal.ZERO) > 0
+        ) {
+
+            marginAmount =
+                    sellingPrice.subtract(
+                            item.getAverageCost()
+                    );
+
+            marginPercent =
+                    marginAmount
+                            .divide(
+                                    sellingPrice,
+                                    4,
+                                    RoundingMode.HALF_UP
+                            )
+                            .multiply(
+                                    BigDecimal.valueOf(
+                                            100
+                                    )
+                            );
+        }
+
+        StockTransaction lastReceipt =
+                latestTransaction(
+                        productVariantId,
+                        branchId,
+                        StockTransaction.TransactionType.RECEIPT
+                );
+
+        StockTransaction lastSale =
+                latestTransaction(
+                        productVariantId,
+                        branchId,
+                        StockTransaction.TransactionType.SALE
+                );
+
+        StockTransaction lastTransferIn =
+                latestTransaction(
+                        productVariantId,
+                        branchId,
+                        StockTransaction.TransactionType.TRANSFER_IN
+                );
+
+        StockTransaction lastTransferOut =
+                latestTransaction(
+                        productVariantId,
+                        branchId,
+                        StockTransaction.TransactionType.TRANSFER_OUT
+                );
+
+        InventoryWorkspaceResponse response =
+                InventoryWorkspaceResponse.builder()
+
+                        .productId(
+                                product.getId()
                         )
-                ))
-                .toList();
+                        .productName(
+                                product.getName()
+                        )
+                        .productSku(
+                                product.getSku()
+                        )
+
+                        .productVariantId(
+                                variant.getId()
+                        )
+                        .productVariantSku(
+                                variant.getSku()
+                        )
+                        .productClassification(
+                                variant.getClassification()
+                        )
+
+                        .branchId(
+                                branchId
+                        )
+
+                        .quantityOnHand(
+                                item.getQuantityOnHand()
+                        )
+                        .quantityReserved(
+                                reserved
+                        )
+                        .quantityAvailable(
+                                available
+                        )
+
+                        .averageCost(
+                                item.getAverageCost()
+                        )
+                        .inventoryValue(
+                                inventoryValue
+                        )
+
+                        .sellingPrice(
+                                sellingPrice
+                        )
+                        .marginAmount(
+                                marginAmount
+                        )
+                        .marginPercent(
+                                marginPercent
+                        )
+
+                        .batchCount(
+                                batchCount
+                        )
+                        .totalRemainingBatchValue(
+                                totalBatchValue
+                        )
+
+                        .oldestBatchDate(
+                                oldestBatchDate
+                        )
+
+                        .lastReceiptDate(
+                                lastReceipt != null
+                                        ? lastReceipt.getTimestamp()
+                                        : null
+                        )
+                        .lastReceiptQuantity(
+                                lastReceipt != null
+                                        ? Math.abs(
+                                        lastReceipt.getQuantityDelta()
+                                )
+                                        : null
+                        )
+
+                        .lastSaleDate(
+                                lastSale != null
+                                        ? lastSale.getTimestamp()
+                                        : null
+                        )
+                        .lastSaleQuantity(
+                                lastSale != null
+                                        ? Math.abs(
+                                        lastSale.getQuantityDelta()
+                                )
+                                        : null
+                        )
+
+                        .lastTransferInDate(
+                                lastTransferIn != null
+                                        ? lastTransferIn.getTimestamp()
+                                        : null
+                        )
+                        .lastTransferInQuantity(
+                                lastTransferIn != null
+                                        ? Math.abs(
+                                        lastTransferIn.getQuantityDelta()
+                                )
+                                        : null
+                        )
+
+                        .lastTransferOutDate(
+                                lastTransferOut != null
+                                        ? lastTransferOut.getTimestamp()
+                                        : null
+                        )
+                        .lastTransferOutQuantity(
+                                lastTransferOut != null
+                                        ? Math.abs(
+                                        lastTransferOut.getQuantityDelta()
+                                )
+                                        : null
+                        )
+
+                        .createdAt(
+                                item.getCreatedAt()
+                        )
+                        .updatedAt(
+                                item.getUpdatedAt()
+                        )
+
+                        .build();
 
         return new ApiResponse(
                 "success",
-                "Inventory across branches",
-                responses
+                "Inventory workspace",
+                response
         );
+    }
+
+    private StockTransaction latestTransaction(
+            UUID variantId,
+            UUID branchId,
+            StockTransaction.TransactionType type
+    ) {
+
+        return stockTransactionRepository
+                .findByProductVariantIdAndBranchIdAndTenantIdOrderByTimestampDesc(
+                        variantId,
+                        branchId,
+                        tenantId()
+                )
+                .stream()
+                .filter(t -> t.getType() == type)
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -1562,7 +1860,7 @@ public class InventoryService {
             long baseUnits,
             long requestedQuantity,
             String reference,
-            List<SaleLineBatchSelection> selections
+            List<BatchSelectionDto> selections
     ) {
         if (baseUnits <= 0) {
             throw new IllegalArgumentException("baseUnits must be > 0");
@@ -1574,6 +1872,22 @@ public class InventoryService {
 
         UUID refId = requireReferenceId(reference, "Reservation");
 
+        List<SaleLineBatchSelection> mappedSelections = new ArrayList<>();
+
+        if (selections != null) {
+
+            for (BatchSelectionDto dto : selections) {
+
+                SaleLineBatchSelection selection =
+                        new SaleLineBatchSelection();
+
+                selection.setBatchId(dto.getBatchId());
+                selection.setQuantity(dto.getQuantity());
+
+                mappedSelections.add(selection);
+            }
+        }
+
         stockEngine.reserveWithSelection(
                 refId,
                 variantId,
@@ -1581,7 +1895,7 @@ public class InventoryService {
                 branchId,
                 baseUnits,
                 requestedQuantity,
-                selections
+                mappedSelections
         );
     }
 
@@ -1642,9 +1956,11 @@ public class InventoryService {
             InventoryItem item,
             long reserved
     ) {
-
         long available =
-                item.getQuantityOnHand() - reserved;
+                stockEngine.availableQuantity(
+                        item.getProductVariantId(),
+                        item.getBranchId()
+                );
 
         return InventoryResponse.builder()
                 .productId(item.getProductId())
@@ -1868,7 +2184,7 @@ public class InventoryService {
         }
     }
 
-    private void validateInventoryInvariant(UUID variantId, UUID branchId) {
+    public void validateInventoryInvariant(UUID variantId, UUID branchId) {
 
         InventoryItem item = getItemOrThrow(variantId, branchId);
 

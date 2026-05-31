@@ -14,6 +14,11 @@ import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import net.coobird.thumbnailator.Thumbnails;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -197,6 +202,60 @@ public class ProductImageService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public ResponseEntity<Resource> getSharedImage(
+            UUID branchId,
+            String fileName
+    ) {
+
+        Path path =
+                fileStorageService
+                        .productSharedRoot(branchId)
+                        .resolve(fileName);
+
+        if (!Files.exists(path)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Resource resource =
+                new FileSystemResource(
+                        path.toFile()
+                );
+
+        MediaType mediaType =
+                MediaType.APPLICATION_OCTET_STREAM;
+
+        try {
+
+            String detected =
+                    Files.probeContentType(
+                            path
+                    );
+
+            if (detected != null) {
+
+                mediaType =
+                        MediaType.parseMediaType(
+                                detected
+                        );
+            }
+
+        } catch (Exception ignored) {
+        }
+
+        return ResponseEntity.ok()
+                .contentType(
+                        mediaType
+                )
+                .header(
+                        HttpHeaders.CACHE_CONTROL,
+                        "public, max-age=86400"
+                )
+                .body(
+                        resource
+                );
+    }
+
     private String getExtension(String filename) {
         if (filename == null || !filename.contains(".")) return ".bin";
         return filename.substring(filename.lastIndexOf("."));
@@ -236,11 +295,15 @@ public class ProductImageService {
         }
     }
 
-    private ProductImageAudit imageAudit(Product product,
-                                         ProductImage img,
-                                         String action) {
+    private ProductImageAudit imageAudit(
+            Product product,
+            ProductImage img,
+            String action
+    ) {
+        ProductImageAudit ia =new ProductImageAudit();
 
-        ProductImageAudit ia = new ProductImageAudit();
+        ia.setTenantId(product.getTenantId());
+        ia.setBranchId(product.getBranchId());
         ia.setAction(action);
         ia.setFileName(img.getFileName());
         ia.setFilePath(img.getFilePath());

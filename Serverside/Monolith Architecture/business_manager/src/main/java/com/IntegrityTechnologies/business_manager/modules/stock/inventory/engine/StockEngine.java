@@ -89,15 +89,41 @@ public class StockEngine {
     @Transactional
     public void reserveWithSelection(
             UUID saleId,
+            Long saleLineItemId,
             UUID variantId,
             UUID packagingId,
             UUID branchId,
             long baseUnits,
             long requestedQuantity,
             List<SaleLineBatchSelection> selections
-    ) {
+    )
+    {
         reservationService.reserveWithSelection(
                 saleId,
+                saleLineItemId,
+                variantId,
+                packagingId,
+                branchId,
+                baseUnits,
+                requestedQuantity,
+                selections
+        );
+    }
+
+    @Transactional
+    public void reserveWithSelection(
+            UUID referenceId,
+            UUID variantId,
+            UUID packagingId,
+            UUID branchId,
+            long baseUnits,
+            long requestedQuantity,
+            List<SaleLineBatchSelection> selections
+    )
+    {
+        reservationService.reserveWithSelection(
+                referenceId,
+                null,
                 variantId,
                 packagingId,
                 branchId,

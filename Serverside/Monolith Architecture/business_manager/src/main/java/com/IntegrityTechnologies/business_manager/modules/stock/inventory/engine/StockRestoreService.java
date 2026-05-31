@@ -37,13 +37,12 @@ public class StockRestoreService {
     ) {
 
         List<BatchConsumption> consumptions =
-                batchConsumptionRepository
-                        .findBySaleIdAndProductVariantIdAndTenantIdAndBranchId(
-                                saleId,
-                                variantId,
-                                tenantId(),
-                                branchId
-                        );
+                batchConsumptionRepository.findBySaleIdAndProductVariantIdAndTenantIdAndBranchIdAndRestoredFalse(
+                        saleId,
+                        variantId,
+                        tenantId(),
+                        branchId
+                );
 
         long totalRestore = 0;
 
@@ -63,6 +62,9 @@ public class StockRestoreService {
             batch.setQuantityRemaining(newQty);
 
             batchRepo.save(batch);
+
+            bc.setRestored(true);
+            batchConsumptionRepository.save(bc);
 
             totalRestore += bc.getQuantity();
 
@@ -92,6 +94,11 @@ public class StockRestoreService {
 
         inventoryItemRepository.save(item);
 
+        validateInvariant(
+                variantId,
+                branchId
+        );
+
         if (totalValue.compareTo(BigDecimal.ZERO) > 0) {
 
             inventoryAccountingPort.recordInventoryReturn(
@@ -100,6 +107,34 @@ public class StockRestoreService {
                     branchId,
                     totalValue,
                     "SALE_REFUND:" + saleId
+            );
+        }
+    }
+
+    private void validateInvariant(
+            UUID variantId,
+            UUID branchId
+    ) {
+
+        InventoryItem item =
+                inventoryItemRepository.findByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
+                                variantId,
+                                tenantId(),
+                                branchId
+                        )
+                        .orElseThrow();
+
+        long batchSum =
+                batchRepo.sumRemainingByVariant(
+                        variantId,
+                        tenantId(),
+                        branchId
+                );
+
+        if (item.getQuantityOnHand() != batchSum) {
+
+            throw new IllegalStateException(
+                    "Inventory invariant violated"
             );
         }
     }

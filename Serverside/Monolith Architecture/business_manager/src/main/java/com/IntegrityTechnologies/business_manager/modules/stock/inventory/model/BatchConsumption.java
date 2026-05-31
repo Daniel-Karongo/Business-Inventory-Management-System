@@ -49,4 +49,8 @@ public class BatchConsumption extends BranchAwareEntity {
 
     @Column(name = "reservation_id")
     private UUID reservationId;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean restored = false;
 }

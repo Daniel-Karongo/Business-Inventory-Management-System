@@ -15,20 +15,16 @@ import { ReasonDialogComponent } from '../reason-dialog/reason-dialog.component'
 
 import * as pdfjsLib from 'pdfjs-dist';
 import { RenameDeviceDialogComponent } from '../rename-device-dialog/rename-device-dialog.component';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 (pdfjsLib as any).GlobalWorkerOptions.workerSrc =
   '/assets/pdf.worker.mjs';
 
-import {
-  USER_DOCUMENT_DELETE_REASONS,
-  USER_DOCUMENT_RESTORE_REASONS,
-  USER_DOCUMENT_PERMANENT_DELETE_REASONS
-} from './reason.constants';
-
 export interface EntityImage {
+  id?: string;
   fileName: string;
-  description?: string;
   deleted?: boolean;
+  description?: string;
   image?: boolean;
   pdf?: boolean;
 }
@@ -74,7 +70,8 @@ export interface EntityImageAdapter {
   getImageBlob(
     id: string,
     fileName: string,
-    deleted?: boolean
+    deleted?: boolean,
+    version?: number
   ): Observable<Blob>;
 
   uploadImages(
@@ -101,7 +98,7 @@ export interface EntityImageAdapter {
 
   restoreImage(
     id: string,
-    fileName: string,
+    imageKey: string,
     reason?: string | null
   ): Observable<any>;
 
@@ -113,6 +110,13 @@ export interface EntityImageAdapter {
 
   onThumbnailUpdated?: () => void;
   onChange?: () => void;
+
+  deleteReasons?: string[];
+  restoreReasons?: string[];
+  hardDeleteReasons?: string[];
+  supportsDescription?: boolean;
+  entityLabel?: string;
+  uploadMode?: 'image' | 'document';
 }
 
 @Component({
@@ -123,7 +127,8 @@ export interface EntityImageAdapter {
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
-    FormsModule
+    FormsModule,
+    MatProgressSpinnerModule
   ],
   templateUrl: './entity-image-manager.component.html',
   styleUrls: ['./entity-image-manager.component.scss']
@@ -154,16 +159,21 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
   ) { }
 
   ngOnInit() {
-    if (this.entityId) {
+    if (
+      this.entityId &&
+      this.adapter
+    ) {
       this.loadAll();
     }
   }
 
-  ngOnChanges(changes: SimpleChanges) {
+  ngOnChanges(
+    changes: SimpleChanges
+  ) {
+
     if (
-      changes['entityId'] &&
-      !changes['entityId'].firstChange &&
-      this.entityId
+      this.entityId &&
+      this.adapter
     ) {
       this.loadAll();
     }
@@ -176,6 +186,14 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
   }
 
   /* ================= LOAD ================= */
+
+  get entityLabel(): string {
+    return this.adapter?.entityLabel ?? 'Image';
+  }
+
+  get entityLabelPlural(): string {
+    return `${this.entityLabel}s`;
+  }
 
   get uniqueFiles(): string[] {
     const auditFiles = this.audits.map(a => a.fileName);
@@ -213,13 +231,26 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
   }
 
   private loadAll() {
+
+    if (!this.adapter) {
+      return;
+    }
+
+    this.imageUrlMap.forEach(
+      url => URL.revokeObjectURL(url)
+    );
+
+    this.imageUrlMap.clear();
+
     this.selectedFile = 'ALL';
     this.selectedAction = 'ALL';
 
     this.loading = true;
     this.loadingAudits = true;
 
-    this.adapter.listImages(this.entityId).subscribe({
+    this.adapter.listImages(
+      this.entityId
+    ).subscribe({
       next: imgs => {
         this.images = this.enrichTypes(imgs || []);
 
@@ -266,10 +297,14 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
 
     this.adapter.listImageAudits(this.entityId).subscribe({
       next: audits => {
-        this.audits = (audits ?? []).map(a => ({
-          ...a,
-          isDeleted: !this.currentFileSet.has(a.fileName)
-        }));
+        this.audits =
+          (audits ?? []).map(a => ({
+            ...a,
+            isDeleted:
+              this.isFileDeleted(
+                a.fileName
+              )
+          }));
 
         this.loadingAudits = false;
       },
@@ -280,11 +315,35 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
   }
 
   private loadBlob(img: EntityImage) {
+
     this.adapter
-      .getImageBlob(this.entityId, img.fileName, img.deleted)
+      .getImageBlob(
+        this.entityId,
+        img.fileName,
+        img.deleted,
+        Date.now()
+      )
       .subscribe(blob => {
-        const url = URL.createObjectURL(blob);
-        this.imageUrlMap.set(img.fileName, url);
+
+        const existing =
+          this.imageUrlMap.get(
+            img.fileName
+          );
+
+        if (existing) {
+          URL.revokeObjectURL(
+            existing
+          );
+        }
+
+        const url =
+          URL.createObjectURL(blob);
+
+        this.imageUrlMap.set(
+          img.fileName,
+          url
+        );
+
       });
   }
 
@@ -386,29 +445,125 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
   /* ================= UPLOAD ================= */
 
   triggerUpload() {
-    this.dialog.open(ImageUploadDialogComponent, { width: '420px' })
+
+    const beforeCount =
+      this.images.length;
+
+    this.dialog.open(
+      ImageUploadDialogComponent,
+      {
+        width: '620px',
+        maxWidth: '95vw',
+        panelClass: 'enterprise-dialog',
+        data: {
+          uploadMode:
+            this.adapter.uploadMode ?? 'image',
+          supportsDescription:
+            this.adapter.supportsDescription ?? false
+        }
+      }
+    )
       .afterClosed()
       .subscribe(result => {
-        if (!result) return;
+
+        if (!result) {
+          return;
+        }
 
         this.uploading = true;
 
-        this.adapter.uploadImages(this.entityId, [result]).subscribe({
-          next: () => {
-            this.uploading = false;
-            this.loadAll();
-            this.snackbar.open('Document uploaded', 'Close', { duration: 2000 });
+        this.adapter
+          .uploadImages(
+            this.entityId,
+            [result]
+          )
+          .subscribe({
 
-            if (this.adapter.onChange) {
-              this.adapter.onChange();
+            next: () => {
+
+              this.uploading = false;
+
+              this.snackbar.open(
+                `${this.entityLabel} uploaded and queued for processing`,
+                'Close',
+                {
+                  duration: 4000
+                }
+              );
+
+              this.startUploadPolling(
+                beforeCount
+              );
+
+            },
+
+            error: () => {
+
+              this.uploading = false;
+
+              this.snackbar.open(
+                'Upload failed',
+                'Close',
+                {
+                  duration: 3000
+                }
+              );
+
             }
-          },
-          error: () => {
-            this.uploading = false;
-            this.snackbar.open('Upload failed', 'Close', { duration: 3000 });
-          }
-        });
+
+          });
+
       });
+
+  }
+
+  private startUploadPolling(
+    previousCount: number
+  ) {
+
+    let attempts = 0;
+
+    const timer =
+      setInterval(() => {
+
+        attempts++;
+
+        this.adapter
+          .listImages(
+            this.entityId
+          )
+          .subscribe(images => {
+
+            const current =
+              images ?? [];
+
+            if (
+              current.length >
+              previousCount
+            ) {
+              clearInterval(
+                timer
+              );
+
+              this.loadAll();
+
+              if (
+                this.adapter.onChange
+              ) {
+                this.adapter.onChange();
+              }
+
+              return;
+            }
+
+          });
+
+        if (attempts >= 30) {
+          clearInterval(timer);
+        }
+
+      }, 2000);
+
   }
 
   editDescription(img: EntityImage) {
@@ -528,9 +683,10 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
 
           cancelText: 'Cancel',
 
-          reasons: restoring
-            ? USER_DOCUMENT_RESTORE_REASONS
-            : USER_DOCUMENT_DELETE_REASONS,
+          reasons:
+            restoring
+              ? this.adapter.restoreReasons ?? []
+              : this.adapter.deleteReasons ?? [],
 
           allowCustomReason: true
         }
@@ -549,7 +705,7 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
         const action$ = restoring
           ? this.adapter.restoreImage(
             this.entityId,
-            img.fileName,
+            img.id ?? img.fileName,
             reason
           )
           : this.adapter.softDeleteImage(
@@ -566,12 +722,16 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
                 ? 'Document restored'
                 : 'Document deleted (recoverable)',
               'Close',
-              { duration: 3000 }
+              {
+                duration: 3000
+              }
             );
 
             this.loadAll();
 
-            if (this.adapter.onChange) {
+            if (
+              this.adapter.onChange
+            ) {
               this.adapter.onChange();
             }
           },
@@ -611,7 +771,8 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
 
           cancelText: 'Cancel',
 
-          reasons: USER_DOCUMENT_PERMANENT_DELETE_REASONS,
+          reasons:
+            this.adapter.hardDeleteReasons ?? [],
 
           allowCustomReason: true
         }
@@ -636,13 +797,16 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
               this.snackbar.open(
                 'Document permanently deleted',
                 'Close',
-                { duration: 4000 }
+                {
+                  duration: 4000
+                }
               );
 
               this.loadAll();
 
-
-              if (this.adapter.onChange) {
+              if (
+                this.adapter.onChange
+              ) {
                 this.adapter.onChange();
               }
             },

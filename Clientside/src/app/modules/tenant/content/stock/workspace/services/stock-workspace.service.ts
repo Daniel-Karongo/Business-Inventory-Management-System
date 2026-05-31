@@ -34,7 +34,8 @@ import {
 } from '../../models/product-variant.model';
 
 import {
-  InventoryResponse
+  InventoryResponse,
+  InventoryWorkspaceResponse
 } from '../../models/inventory-response.model';
 
 import {
@@ -270,18 +271,17 @@ export class StockWorkspaceService {
       !variantRow.variantId ||
       !this.activeBranchId
     ) {
-
-      variantRow.loadingChildren =
-        false;
-
-      variantRow.childrenLoaded =
-        true;
-
-      variantRow.hasChildren =
-        false;
-
+      variantRow.loadingChildren = false;
+      variantRow.childrenLoaded = true;
+      variantRow.hasChildren = false;
       return of(void 0);
     }
+
+    const inventoryRowId =
+      `inventory_${variantRow.variantId}_${this.activeBranchId}`;
+
+    // Remove any stale inventory row previously attached
+    this.rows.delete(inventoryRowId);
 
     return this.inventoryService
       .getVariantStock(
@@ -291,9 +291,7 @@ export class StockWorkspaceService {
       .pipe(
         tap(inventory => {
 
-          if (
-            inventory
-          ) {
+          if (inventory) {
 
             const row =
               this.buildInventoryRow(
@@ -306,20 +304,16 @@ export class StockWorkspaceService {
               row
             );
 
-            variantRow.hasChildren =
-              true;
+            variantRow.hasChildren = true;
 
           } else {
 
-            variantRow.hasChildren =
-              false;
+            variantRow.hasChildren = false;
+
           }
 
-          variantRow.childrenLoaded =
-            true;
-
-          variantRow.loadingChildren =
-            false;
+          variantRow.childrenLoaded = true;
+          variantRow.loadingChildren = false;
         }),
         map(() => void 0)
       );
@@ -446,23 +440,21 @@ export class StockWorkspaceService {
 
   private buildInventoryRow(
     variantRow: StockWorkspaceRow,
-    inventory: InventoryResponse
+    inventory: InventoryWorkspaceResponse
   ): StockWorkspaceRow {
 
     return {
       id:
-        `inventory_${inventory.branchId}_${variantRow.variantId}`,
+        `inventory_${variantRow.variantId}_${inventory.branchId}`,
 
       parentId:
         variantRow.id,
 
-      type:
-        'INVENTORY',
+      type: 'INVENTORY',
 
       level: 2,
 
       expanded: false,
-
       hasChildren: false,
 
       productId:
@@ -478,7 +470,7 @@ export class StockWorkspaceService {
         variantRow.variantName,
 
       sku:
-        inventory.productVariantSKU,
+        inventory.productVariantSku,
 
       barcode:
         variantRow.barcode,
@@ -504,13 +496,13 @@ export class StockWorkspaceService {
         inventory.averageCost,
 
       inventoryValue:
-        inventory.totalRemainingBatchValue,
+        inventory.inventoryValue,
 
       batchCount:
         inventory.batchCount,
 
       updatedAt:
-        inventory.lastUpdatedAt
+        inventory.updatedAt,
     };
   }
 

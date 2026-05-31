@@ -3,16 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 
 import { ProductService } from '../../services/product.service';
-
-interface ProductAudit {
-  action: string;
-  fieldChanged?: string;
-  oldValue?: string;
-  newValue?: string;
-  reason?: string;
-  performedBy?: string;
-  timestamp: string;
-}
+import { ProductAudit } from '../../../../models/product.model';
 
 @Component({
   selector: 'app-product-audits',

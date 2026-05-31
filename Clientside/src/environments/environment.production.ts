@@ -216,9 +216,7 @@ export const environment = {
 
       base: '/payments',
 
-      create: (
-        branchId: string
-      ) =>
+      create: (branchId: string) =>
         `/payments/branch/${branchId}`,
 
       get: (
@@ -227,9 +225,7 @@ export const environment = {
       ) =>
         `/payments/branch/${branchId}/${id}`,
 
-      list: (
-        branchId: string
-      ) =>
+      list: (branchId: string) =>
         `/payments/branch/${branchId}`,
 
       refund: (
@@ -244,9 +240,7 @@ export const environment = {
       ) =>
         `/payments/branch/${branchId}/${id}/reverse`,
 
-      reconcile: (
-        branchId: string
-      ) =>
+      reconcile: (branchId: string) =>
         `/payments/branch/${branchId}/reconcile`,
 
       mpesa: {
@@ -298,7 +292,7 @@ export const environment = {
       audits: (id: string) =>
         `/products/${id}/audits`,
       thumbnail: (id: string) =>
-        `/products/${id}/thumbnail`,
+        `/products/images/${id}/thumbnail`,
       /* =========================================
          SEARCH
       ========================================= */
@@ -338,25 +332,37 @@ export const environment = {
         zip: (productId: string) =>
           `/products/images/${productId}/zip`,
         all: '/products/images',
-        allZip: '/products/images/zip'
+        allZip: '/products/images/zip',
+        auditHistory: (
+          productId: string
+        ) =>
+          `/products/images/${productId}/audits`,
       },
       /* =========================================
          VARIANTS
       ========================================= */
       variants: {
-        base: '/product-variants',
         create: '/product-variants',
+
         get: (id: string) =>
           `/product-variants/${id}`,
+        forProduct: (productId: string) =>
+          `/product-variants/product/${productId}`,
         update: (id: string) =>
           `/product-variants/${id}`,
         delete: (id: string) =>
           `/product-variants/${id}`,
-        forProduct: (productId: string) =>
-          `/product-variants/product/${productId}`,
+        restore: (id: string) =>
+          `/product-variants/${id}/restore`,
+        hardDelete: (id: string) =>
+          `/product-variants/${id}/hard`,
+        audits: (id: string) =>
+          `/product-variants/${id}/audits`,
         images: {
           list: (variantId: string) =>
             `/product-variants/${variantId}/images`,
+          all: (id: string) =>
+            `/product-variants/${id}/images/all`,
           upload: (variantId: string) =>
             `/product-variants/${variantId}/images`,
           image: (
@@ -364,8 +370,15 @@ export const environment = {
             fileName: string
           ) =>
             `/product-variants/${variantId}/images/${fileName}`,
+          thumbnail: (
+            variantId: string,
+            fileName: string
+          ) =>
+            `/product-variants/${variantId}/thumbnails/${fileName}`,
           zip: (variantId: string) =>
-            `/product-variants/${variantId}/images/zip`
+            `/product-variants/${variantId}/images/zip`,
+          auditHistory: (variantId: string) =>
+            `/product-variants/${variantId}/image-audits`,
         },
         barcodePdf: {
           bulk: '/product-variants/barcode/pdf/bulk',

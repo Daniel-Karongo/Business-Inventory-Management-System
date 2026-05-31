@@ -3,10 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.util.UUID;
@@ -23,6 +20,16 @@ import java.util.UUID;
 )
 @Getter
 @Setter
+@EqualsAndHashCode(
+        callSuper = true,
+        onlyExplicitlyIncluded = true
+)
+@ToString(
+        exclude = {
+                "product",
+                "supplier"
+        }
+)
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
@@ -30,6 +37,7 @@ public class ProductSupplier extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)

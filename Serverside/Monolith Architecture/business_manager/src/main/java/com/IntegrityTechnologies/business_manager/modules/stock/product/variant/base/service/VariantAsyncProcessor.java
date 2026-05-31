@@ -10,7 +10,6 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,6 +28,7 @@ public class VariantAsyncProcessor {
     private final ProductVariantImageService imageService;
     private final VariantBarcodePdfService pdfService;
     private final ProcessedKafkaEventRepository processedRepo;
+
     public void processBarcode(VariantBarcodeRequestedEvent event) {
 
         try {
@@ -100,7 +100,7 @@ public class VariantAsyncProcessor {
                     processedRepo.tryClaim(
                             UUID.randomUUID(),
                             event.getTenantId(),
-                            event.getVariantId(),
+                            event.getUploadId(),
                             "VARIANT_IMAGE"
                     );
 
@@ -124,11 +124,14 @@ public class VariantAsyncProcessor {
 
             Path tempFile = Path.of(event.getTempFilePath());
 
+            boolean success = false;
+
             try {
 
                 MultipartFile file =
                         new InMemoryMultipartFile(
                                 event.getFileName(),
+                                event.getContentType(),
                                 Files.readAllBytes(tempFile)
                         );
 
@@ -138,12 +141,17 @@ public class VariantAsyncProcessor {
                         file
                 );
 
+                success = true;
+
             } finally {
 
-                try {
-                    Files.deleteIfExists(tempFile);
-                } catch (Exception ignored) {
+                if (success) {
+                    try {
+                        Files.deleteIfExists(tempFile);
+                    } catch (Exception ignored) {
+                    }
                 }
+
             }
 
             log.info(

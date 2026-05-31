@@ -1,23 +1,88 @@
-<h2 mat-dialog-title>
-    Variant Barcode
-</h2>
+<div class="barcode-dialog">
 
-<mat-dialog-content>
+    <div class="dialog-header">
 
-    <div class="barcode-wrapper">
+        <div>
 
-        <img *ngIf="barcodeUrl" [src]="barcodeUrl">
+            <div class="dialog-title">
+                Variant Barcode
+            </div>
+
+            <div class="dialog-subtitle">
+                {{ data.variantName }}
+            </div>
+
+        </div>
 
     </div>
 
-</mat-dialog-content>
+    <mat-dialog-content>
 
-<mat-dialog-actions align="end">
+        <div *ngIf="loading" class="loading-state">
 
-    <button mat-stroked-button (click)="print()">
+            <mat-spinner diameter="40">
+            </mat-spinner>
 
-        Print
+        </div>
 
-    </button>
+        <div *ngIf="
+                !loading &&
+                !barcodeUrl
+            " class="empty-state">
 
-</mat-dialog-actions>
+            <mat-icon>
+                qr_code_2
+            </mat-icon>
+
+            <h3>
+                Barcode Unavailable
+            </h3>
+
+            <p>
+                This variant does not
+                currently have a generated
+                barcode.
+            </p>
+
+        </div>
+
+        <div *ngIf="
+                !loading &&
+                barcodeUrl
+            " class="barcode-container">
+
+            <div class="barcode-card">
+
+                <img [src]="barcodeUrl" [alt]="data.variantName">
+
+            </div>
+
+        </div>
+
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end">
+
+        <button mat-stroked-button *ngIf="barcodeUrl" (click)="download()">
+
+            <mat-icon>
+                download
+            </mat-icon>
+
+            Download
+
+        </button>
+
+        <button mat-flat-button color="primary" *ngIf="barcodeUrl" (click)="print()">
+
+            <mat-icon>
+                print
+            </mat-icon>
+
+            Print
+
+        </button>
+
+    </mat-dialog-actions>
+
+</div>

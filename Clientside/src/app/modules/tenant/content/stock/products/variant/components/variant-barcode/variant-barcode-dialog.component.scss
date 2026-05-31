@@ -1,14 +1,184 @@
-.barcode-wrapper {
+:host {
+    display: block;
+}
+
+.barcode-dialog {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.dialog-header {
+    padding:
+        24px 28px;
+
+    border-bottom:
+        1px solid var(--surface-border);
+
+    background:
+        linear-gradient(135deg,
+            rgba(59, 130, 246, .10),
+            transparent 55%);
+}
+
+.dialog-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+
+    color:
+        var(--text-primary);
+}
+
+.dialog-subtitle {
+    margin-top: 4px;
+
+    font-size: .9rem;
+
+    color:
+        var(--text-secondary);
+}
+
+/* =========================================================
+   CONTENT
+========================================================= */
+
+mat-dialog-content {
+    padding: 24px !important;
+
+    min-height: 420px;
+
+    max-height: 75vh;
+}
+
+/* =========================================================
+   LOADING
+========================================================= */
+
+.loading-state {
+    min-height: 360px;
+
     display: flex;
 
     justify-content: center;
+    align-items: center;
+}
 
+/* =========================================================
+   EMPTY
+========================================================= */
+
+.empty-state {
+    min-height: 360px;
+
+    display: flex;
+    flex-direction: column;
+
+    justify-content: center;
     align-items: center;
 
-    min-height: 240px;
+    text-align: center;
+}
 
-    img {
-        max-width: 100%;
-        height: auto;
+.empty-state mat-icon {
+    width: 72px;
+    height: 72px;
+
+    font-size: 72px;
+
+    opacity: .55;
+
+    color:
+        var(--text-secondary);
+}
+
+.empty-state h3 {
+    margin:
+        16px 0 8px;
+
+    font-size: 1.25rem;
+
+    font-weight: 600;
+
+    color:
+        var(--text-primary);
+}
+
+.empty-state p {
+    max-width: 340px;
+
+    line-height: 1.5;
+
+    color:
+        var(--text-secondary);
+}
+
+/* =========================================================
+   BARCODE
+========================================================= */
+
+.barcode-container {
+    display: flex;
+
+    justify-content: center;
+    align-items: center;
+
+    min-height: 360px;
+}
+
+.barcode-card {
+    padding: 32px;
+
+    border-radius: 18px;
+
+    border:
+        1px solid var(--surface-border);
+
+    background:
+        var(--surface-bg);
+
+    box-shadow:
+        var(--surface-shadow);
+}
+
+.barcode-card img {
+    display: block;
+
+    max-width: 100%;
+
+    width: 100%;
+
+    max-height: 320px;
+
+    object-fit: contain;
+}
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+mat-dialog-actions {
+    padding:
+        16px 24px !important;
+
+    border-top:
+        1px solid var(--surface-border);
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+    mat-dialog-content {
+        padding: 16px !important;
+    }
+
+    .barcode-card {
+        padding: 16px;
     }
 }

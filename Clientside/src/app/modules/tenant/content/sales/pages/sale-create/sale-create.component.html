@@ -242,18 +242,15 @@
 
         <!-- BRANCH -->
 
-        <mat-form-field appearance="fill">
-
+        <mat-form-field *ngIf="showBranchField" appearance="fill">
           <mat-label>
             Branch
           </mat-label>
 
-          <mat-select [formControl]="controlAt(i,'branchId')">
+          <mat-select [formControl]="controlAt(i, 'branchId')">
 
             <mat-option *ngFor="let branch of branches" [value]="branch.id">
-
               {{ branch.name }}
-
             </mat-option>
 
           </mat-select>

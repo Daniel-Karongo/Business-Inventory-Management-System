@@ -20,7 +20,10 @@ import { BranchContextService }
 import {
   ProductVariant,
   ProductVariantCreateDTO,
-  ProductVariantUpdateDTO
+  ProductVariantUpdateDTO,
+  VariantAudit,
+  VariantImage,
+  VariantImageAudit
 } from '../../../models/product-variant.model';
 
 @Injectable({ providedIn: 'root' })
@@ -116,6 +119,7 @@ export class ProductVariantService
   update(
     id: string,
     payload: ProductVariantUpdateDTO,
+    reason?: string | null,
     overrideBranchId?: string
   ): Observable<ProductVariant> {
     return super.put<ProductVariant>(
@@ -125,7 +129,9 @@ export class ProductVariantService
         branchId:
           this.resolveBranch(
             overrideBranchId
-          )
+          ),
+        reason:
+          reason ?? undefined
       }
     );
   }
@@ -134,13 +140,76 @@ export class ProductVariantService
      DELETE
   ========================================================= */
 
+  restore(
+    id: string,
+    reason?: string | null,
+    overrideBranchId?: string
+  ): Observable<void> {
+
+    return super.post<void>(
+      this.endpoints.restore(id),
+      {},
+      {
+        branchId:
+          this.resolveBranch(
+            overrideBranchId
+          ),
+        reason:
+          reason ?? undefined
+      }
+    );
+  }
+
   remove(
     id: string,
+    reason?: string | null,
+    overrideBranchId?: string
+  ): Observable<void> {
+    return super.delete<void>(
+      this.endpoints.delete(id),
+      {
+        branchId:
+          this.resolveBranch(
+            overrideBranchId
+          ),
+        reason:
+          reason ?? undefined
+      }
+    );
+  }
+
+  hardDelete(
+    id: string,
+    reason?: string | null,
     overrideBranchId?: string
   ): Observable<void> {
 
     return super.delete<void>(
-      this.endpoints.delete(id),
+      this.endpoints.hardDelete(id),
+      {
+        branchId:
+          this.resolveBranch(
+            overrideBranchId
+          ),
+        reason:
+          reason ?? undefined
+      }
+    );
+  }
+
+  /* =========================================================
+     IMAGES
+  ========================================================= */
+
+  getAllImages(
+    variantId: string,
+    overrideBranchId?: string
+  ): Observable<VariantImage[]> {
+
+    return super.get<VariantImage[]>(
+      this.endpoints.images.all(
+        variantId
+      ),
       {
         branchId:
           this.resolveBranch(
@@ -149,10 +218,6 @@ export class ProductVariantService
       }
     );
   }
-
-  /* =========================================================
-     IMAGES
-  ========================================================= */
 
   getImages(
     variantId: string,
@@ -192,6 +257,98 @@ export class ProductVariantService
               overrideBranchId
             )
         })
+      }
+    );
+  }
+
+  getThumbnailBlob(
+    variantId: string,
+    thumbnailFileName: string,
+    overrideBranchId?: string
+  ): Observable<Blob> {
+    return this.http.get(
+      `${this.api}${this.endpoints.images.thumbnail(
+        variantId,
+        thumbnailFileName
+      )}`,
+      {
+        params: this.buildParams({
+          branchId:
+            this.resolveBranch(
+              overrideBranchId
+            )
+        }),
+        responseType: 'blob'
+      }
+    );
+  }
+
+  deleteImage(
+    variantId: string,
+    fileName: string,
+    reason?: string | null,
+    overrideBranchId?: string
+  ) {
+
+    return super.delete<void>(
+      this.endpoints.images.image(
+        variantId,
+        fileName
+      ),
+      {
+        branchId:
+          this.resolveBranch(
+            overrideBranchId
+          ),
+        reason:
+          reason ?? undefined
+      }
+    );
+  }
+
+  restoreImage(
+    variantId: string,
+    fileName: string,
+    reason?: string | null,
+    overrideBranchId?: string
+  ) {
+
+    return super.post<void>(
+      `${this.endpoints.images.image(
+        variantId,
+        fileName
+      )}/restore`,
+      {},
+      {
+        branchId:
+          this.resolveBranch(
+            overrideBranchId
+          ),
+        reason:
+          reason ?? undefined
+      }
+    );
+  }
+
+  hardDeleteImage(
+    variantId: string,
+    fileName: string,
+    reason?: string | null,
+    overrideBranchId?: string
+  ) {
+
+    return super.delete<void>(
+      `${this.endpoints.images.image(
+        variantId,
+        fileName
+      )}/hard`,
+      {
+        branchId:
+          this.resolveBranch(
+            overrideBranchId
+          ),
+        reason:
+          reason ?? undefined
       }
     );
   }
@@ -313,6 +470,40 @@ export class ProductVariantService
             )
         }),
         responseType: 'blob'
+      }
+    );
+  }
+
+  getAuditHistory(
+    variantId: string,
+    overrideBranchId?: string
+  ): Observable<VariantAudit[]> {
+    return super.get<VariantAudit[]>(
+      this.endpoints.audits(
+        variantId
+      ),
+      {
+        branchId:
+          this.resolveBranch(
+            overrideBranchId
+          )
+      }
+    );
+  }
+
+  getImageAuditHistory(
+    variantId: string,
+    overrideBranchId?: string
+  ): Observable<VariantImageAudit[]> {
+    return super.get<VariantImageAudit[]>(
+      this.endpoints.images.auditHistory(
+        variantId
+      ),
+      {
+        branchId:
+          this.resolveBranch(
+            overrideBranchId
+          )
       }
     );
   }

@@ -121,6 +121,23 @@ export class VariantCommercialSummaryComponent implements OnChanges {
             });
     }
 
+    hasMeaningfulPackagingConversions(): boolean {
+
+        return this.packagings.some(
+            p => (p.unitsPerPackaging ?? 1) !== 1
+        ) && this.packagings.length > 4;
+    }
+
+    hasMeaningfulPricingTiers(): boolean {
+        return this.packagings.some(packaging => {
+            const count = this.pricing.filter(
+                p => p.packagingId === packaging.packagingId
+            ).length;
+
+            return count > 1;
+        });
+    }
+
     toggle(expanded: boolean) {
 
         this.expanded = expanded;

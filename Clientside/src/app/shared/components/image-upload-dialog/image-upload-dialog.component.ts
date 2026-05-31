@@ -1,3 +1,14 @@
+export interface ImageUploadDialogData {
+
+  uploadMode:
+  'image'
+  | 'document';
+
+  supportsDescription:
+  boolean;
+
+}
+
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -7,6 +18,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { ReactiveFormsModule, FormBuilder, Validators, FormGroup } from '@angular/forms';
+import { Inject } from '@angular/core';
+import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 
 @Component({
   selector: 'app-image-upload-dialog',
@@ -33,28 +46,65 @@ export class ImageUploadDialogComponent {
 
   fg!: FormGroup;
 
+  readonly supportsDescription: boolean;
+  readonly uploadMode: 'image' | 'document';
+
   constructor(
-    private dialogRef: MatDialogRef<ImageUploadDialogComponent>,
-    private fb: FormBuilder
+    private dialogRef:
+      MatDialogRef<ImageUploadDialogComponent>,
+    private fb: FormBuilder,
+
+    @Inject(MAT_DIALOG_DATA)
+    public data:
+      ImageUploadDialogData
   ) {
-    // ✅ create the form AFTER fb is available
-    this.fg = this.fb.group({
-      type: ['ID', Validators.required],
-      custom: ['']
-    });
 
-    this.fg.get('type')!.valueChanges.subscribe(value => {
-      const custom = this.fg.get('custom');
+    this.supportsDescription =
+      data?.supportsDescription ?? false;
 
-      if (value === 'Other') {
-        custom?.setValidators([Validators.required, Validators.minLength(3)]);
-      } else {
-        custom?.clearValidators();
-        custom?.setValue('');
-      }
+    this.uploadMode =
+      data?.uploadMode ?? 'image';
 
-      custom?.updateValueAndValidity();
-    });
+    this.fg =
+      this.fb.group({
+        type: ['ID'],
+        custom: ['']
+      });
+
+    if (
+      !this.supportsDescription
+    ) {
+      return;
+    }
+
+    this.fg.get('type')!
+      .valueChanges
+      .subscribe(value => {
+
+        const custom =
+          this.fg.get('custom');
+
+        if (
+          value === 'Other'
+        ) {
+
+          custom?.setValidators([
+            Validators.required,
+            Validators.minLength(3)
+          ]);
+
+        } else {
+
+          custom?.clearValidators();
+
+          custom?.setValue('');
+
+        }
+
+        custom?.updateValueAndValidity();
+
+      });
+
   }
 
   onFileSelected(event: Event) {
@@ -70,18 +120,37 @@ export class ImageUploadDialogComponent {
   }
 
   confirm() {
-    if (!this.file || this.fg.invalid) return;
 
-    const type = this.fg.value.type;
-    const description =
-      type === 'Other'
-        ? this.fg.value.custom
-        : type;
+    if (!this.file) {
+      return;
+    }
+
+    let description = '';
+
+    if (
+      this.supportsDescription
+    ) {
+
+      if (
+        this.fg.invalid
+      ) {
+        return;
+      }
+
+      const type =
+        this.fg.value.type;
+
+      description =
+        type === 'Other'
+          ? this.fg.value.custom
+          : type;
+    }
 
     this.dialogRef.close({
       file: this.file,
       description
     });
+
   }
 
   cancel() {

@@ -1,17 +1,182 @@
-.header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 20px;
-}
-
-img {
+:host {
+    display: block;
     width: 100%;
-    max-height: 80vh;
-    object-fit: contain;
-    background: #000;
+    height: 100%;
 }
 
-.pdf-content {
+.file-viewer {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.viewer-header {
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+
+    padding: 20px 24px;
+
+    border-bottom:
+        1px solid var(--surface-border);
+
+    background:
+        linear-gradient(135deg,
+            rgba(59, 130, 246, .08),
+            transparent 70%);
+}
+
+.header-content {
+    min-width: 0;
+}
+
+.header-title {
+
+    font-size: 1.15rem;
+    font-weight: 700;
+
+    color:
+        var(--text-primary);
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.header-subtitle {
+
+    margin-top: 4px;
+
+    font-size: .85rem;
+
+    color:
+        var(--text-secondary);
+}
+
+.header-actions {
+
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* =====================================================
+   IMAGE
+===================================================== */
+
+.viewer-content {
+
+    flex: 1 1 auto;
+
+    min-height: 0;
+    min-width: 0;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+
+    padding: 12px;
+}
+
+.preview-image {
+
+    width: 100%;
+    height: 100%;
+
+    max-width: 100%;
+    max-height: 100%;
+
+    object-fit: contain;
+
+    border-radius: 18px;
+    border: 1px solid var(--surface-border);
+    box-shadow: var(--surface-shadow);
+
+    display: block;
+}
+
+/* =====================================================
+   PDF / EMPTY
+===================================================== */
+
+.empty-state {
+
+    flex: 1;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
     text-align: center;
+
+    padding: 40px;
+}
+
+.empty-icon {
+
+    width: 90px !important;
+    height: 90px !important;
+    font-size: 90px !important;
+
+    color: #ef4444;
+
+    margin-bottom: 16px;
+}
+
+.empty-state h3 {
+
+    margin: 0 0 10px;
+
+    font-size: 1.3rem;
+    font-weight: 700;
+
+    color:
+        var(--text-primary);
+}
+
+.empty-state p {
+
+    margin-bottom: 20px;
+
+    color:
+        var(--text-secondary);
+
+    max-width: 420px;
+
+    line-height: 1.6;
+}
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 768px) {
+
+    .viewer-header {
+
+        padding: 16px;
+    }
+
+    .header-title {
+
+        font-size: 1rem;
+    }
+
+    .viewer-content {
+
+        padding: 12px;
+    }
 }

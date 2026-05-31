@@ -1,10 +1,104 @@
-.variant-form {
+:host {
+  display: block;
+}
+
+.dialog-header {
+  padding: 20px 24px 12px;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.dialog-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.dialog-subtitle {
+  margin-top: 4px;
+  color: var(--text-secondary);
+}
+
+.content-wrapper {
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.summary-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
-  min-width: 320px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.summary-card {
+  padding: 16px;
+  border: 1px solid var(--surface-border);
+  border-radius: 14px;
+  background: var(--surface-bg);
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.value {
+  margin-top: 6px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mono {
+  font-family: monospace;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.section {
+  margin-top: 24px;
+}
+
+.section-title {
+  margin-bottom: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-grid>* {
+  min-width: 0;
 }
 
 mat-form-field {
   width: 100%;
+}
+
+mat-dialog-actions {
+  padding: 16px 24px !important;
+  border-top: 1px solid var(--surface-border);
+}
+
+@media (max-width: 768px) {
+
+  .content-wrapper {
+    padding: 16px;
+  }
+
+  .summary-grid,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
 }

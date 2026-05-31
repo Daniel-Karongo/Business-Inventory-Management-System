@@ -1,6 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineBatchSelection;
+import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto.BatchSelectionDto;
 import lombok.Data;
 
 import java.util.List;
@@ -14,5 +14,5 @@ public class ReserveStockRequest {
     private Long baseUnits;       // ✅ ADD
     private Long quantity;        // sell units
     private String reference;
-    private List<SaleLineBatchSelection> batchSelections;
+    private List<BatchSelectionDto> batchSelections;
 }

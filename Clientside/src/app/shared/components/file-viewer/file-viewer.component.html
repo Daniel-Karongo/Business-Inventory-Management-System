@@ -1,16 +1,83 @@
 <div class="file-viewer">
-    <header class="header">
-        <h3>{{ data.preview?.name }}</h3>
-        <button mat-icon-button (click)="close()"><mat-icon>close</mat-icon></button>
-    </header>
 
-    <div *ngIf="isImage(); else pdfBlock" class="content">
-        <img [src]="data.preview?.src" />
+    <!-- ==========================================
+         HEADER
+    =========================================== -->
+
+    <div class="viewer-header">
+
+        <div class="header-content">
+
+            <div class="header-title">
+                {{ data.preview?.name || 'Preview' }}
+            </div>
+
+            <div class="header-subtitle">
+                {{ isImage() ? 'Image Preview' : 'Document Preview' }}
+            </div>
+
+        </div>
+
+        <div class="header-actions">
+
+            <button mat-icon-button matTooltip="Open in new tab" (click)="openExternal()">
+
+                <mat-icon>
+                    open_in_new
+                </mat-icon>
+
+            </button>
+
+            <button mat-icon-button (click)="close()">
+
+                <mat-icon>
+                    close
+                </mat-icon>
+
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- ==========================================
+         CONTENT
+    =========================================== -->
+
+    <div *ngIf="isImage(); else pdfBlock" class="viewer-content">
+
+        <img [src]="data.preview?.src" alt="preview" class="preview-image" />
+
     </div>
 
     <ng-template #pdfBlock>
-        <div class="pdf-content">
-            <button mat-stroked-button (click)="openPdf()">Open PDF</button>
+
+        <div class="empty-state">
+
+            <mat-icon class="empty-icon">
+                picture_as_pdf
+            </mat-icon>
+
+            <h3>
+                PDF Preview
+            </h3>
+
+            <p>
+                Open this document in a new browser tab.
+            </p>
+
+            <button mat-flat-button color="primary" (click)="openExternal()">
+
+                <mat-icon>
+                    open_in_new
+                </mat-icon>
+
+                Open PDF
+
+            </button>
+
         </div>
+
     </ng-template>
+
 </div>

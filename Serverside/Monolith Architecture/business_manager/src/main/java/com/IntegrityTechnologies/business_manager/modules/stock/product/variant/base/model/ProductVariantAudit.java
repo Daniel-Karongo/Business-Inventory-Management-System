@@ -40,8 +40,8 @@ public class ProductVariantAudit extends BranchAwareEntity {
     private UUID productId;
     private String productName;
 
-    private UUID productVariantId;
-    private String variantClassification;
+    private UUID variantId;
+    private String classification;
 
     private String performedBy;
 }

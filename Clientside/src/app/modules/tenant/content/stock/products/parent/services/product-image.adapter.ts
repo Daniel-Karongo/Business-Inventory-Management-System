@@ -1,56 +1,151 @@
 import { map } from 'rxjs/operators';
-import { of } from 'rxjs';
-
 import { ProductService } from './product.service';
 import {
   EntityImageAdapter,
   EntityImageAudit
 } from '../../../../../../../shared/components/entity-image-manager/entity-image-manager.component';
+import { ProductImageAudit } from '../../../models/product.model';
 
 export const ProductImageAdapter =
-  (service: ProductService): EntityImageAdapter => ({
+  (
+    service: ProductService
+  ): EntityImageAdapter => ({
 
-    listImages: (productId: string) =>
-      service.getImages(productId).pipe(
-        map(urls =>
-          (urls ?? []).map(url => ({
-            fileName: url.split('/').pop()!,
-            image: true
-          }))
+    entityLabel: 'Image',
+
+    uploadMode: 'image',
+
+    supportsDescription: false,
+
+    deleteReasons: [
+      'Incorrect image',
+      'Duplicate image',
+      'Obsolete image',
+      'Quality issue'
+    ],
+
+    restoreReasons: [
+      'Image required again',
+      'Deleted by mistake'
+    ],
+
+    hardDeleteReasons: [
+      'Duplicate image',
+      'Incorrect upload',
+      'Compliance request'
+    ],
+
+    listImages: (
+      productId: string
+    ) =>
+      service.getImages(
+        productId
+      ).pipe(
+        map(images =>
+          (images ?? []).map(
+            img => ({
+              id: img.id,
+              fileName: img.fileName,
+              deleted: img.deleted,
+              image: true
+            })
+          )
         )
       ),
 
-    listImageAudits: (_id: string) =>
-      of([] as EntityImageAudit[]),
+    listImageAudits: (
+      productId: string
+    ) =>
+      service.getImageAudits(
+        productId
+      ).pipe(
+        map(audits =>
+          (audits ?? []).map(
+            (
+              audit: ProductImageAudit
+            ): EntityImageAudit => ({
 
-    getImageBlob: (productId, fileName) =>
-      service.getImageBlob(productId, fileName),
+              fileName:
+                audit.fileName,
 
-    uploadImages: () => {
-      throw new Error('Upload not allowed from selector');
-    },
+              action:
+                audit.action,
 
-    softDeleteImage: () => {
-      throw new Error(
-        'Delete not allowed from selector'
-      );
-    },
+              reason:
+                audit.reason,
 
-    restoreImage: () => {
-      throw new Error(
-        'Restore not allowed from selector'
-      );
-    },
+              performedByUsername:
+                audit.performedBy,
 
-    hardDeleteImage: () => {
-      throw new Error(
-        'Hard delete not allowed from selector'
-      );
-    },
+              timestamp:
+                audit.timestamp
+            })
+          )
+        )
+      ),
 
-    setProfileThumbnail: () => {
-      throw new Error(
-        'Profile thumbnails not supported for products'
-      );
-    }
+    getImageBlob: (
+      productId: string,
+      fileName: string,
+      deleted?: boolean,
+      version?: number
+    ) =>
+      service.getImageBlob(
+        productId,
+        fileName,
+        undefined,
+        version
+      ),
+
+    uploadImages: (
+      productId: string,
+      files: {
+        file: File;
+        description: string;
+      }[]
+    ) =>
+      service.uploadImages(
+        productId,
+        files.map(
+          x => x.file
+        )
+      ),
+
+    softDeleteImage: (
+      productId: string,
+      fileName: string,
+      reason?: string | null
+    ) =>
+      service.deleteImage(
+        productId,
+        fileName,
+        true,
+        reason ?? undefined
+      ),
+
+    restoreImage: (
+      productId,
+      imageId,
+      reason
+    ) =>
+      service.restoreImage(
+        productId,
+        imageId,
+        reason ?? undefined
+      ),
+
+    hardDeleteImage: (
+      productId: string,
+      fileName: string,
+      reason?: string | null
+    ) =>
+      service.deleteImage(
+        productId,
+        fileName,
+        false,
+        reason ?? undefined
+      ),
+
+    onThumbnailUpdated: undefined,
+    onChange: undefined
   });

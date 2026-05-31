@@ -8,10 +8,16 @@ import java.nio.file.Files;
 public class InMemoryMultipartFile implements MultipartFile {
 
     private final String fileName;
+    private final String contentType;
     private final byte[] content;
 
-    public InMemoryMultipartFile(String fileName, byte[] content) {
+    public InMemoryMultipartFile(
+            String fileName,
+            String contentType,
+            byte[] content
+    ) {
         this.fileName = fileName;
+        this.contentType = contentType;
         this.content = content;
     }
 
@@ -27,7 +33,7 @@ public class InMemoryMultipartFile implements MultipartFile {
 
     @Override
     public String getContentType() {
-        return null;
+        return contentType;
     }
 
     @Override

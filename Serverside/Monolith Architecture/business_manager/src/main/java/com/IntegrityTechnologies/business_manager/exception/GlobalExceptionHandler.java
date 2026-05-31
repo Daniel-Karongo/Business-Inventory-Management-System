@@ -353,6 +353,8 @@ public class GlobalExceptionHandler {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
 
+        ex.printStackTrace();
+
         return buildResponse(
                 ex.getMessage(), // ✅ NO WRAPPING
                 HttpStatus.INTERNAL_SERVER_ERROR

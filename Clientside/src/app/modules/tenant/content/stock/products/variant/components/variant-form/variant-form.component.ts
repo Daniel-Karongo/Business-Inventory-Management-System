@@ -16,6 +16,7 @@ import {
 
 import {
   MAT_DIALOG_DATA,
+  MatDialog,
   MatDialogModule,
   MatDialogRef
 } from '@angular/material/dialog';
@@ -43,6 +44,7 @@ import {
 import {
   ProductVariantService
 } from '../../services/product-variant.service';
+import { ReasonDialogComponent } from '../../../../../../../../shared/components/reason-dialog/reason-dialog.component';
 
 @Component({
   selector: 'app-variant-form',
@@ -71,13 +73,11 @@ export class VariantFormComponent
 
   constructor(
     private readonly fb: FormBuilder,
-    private readonly dialogRef:
-      MatDialogRef<VariantFormComponent>,
-    private readonly variantService:
-      ProductVariantService,
+    private readonly dialogRef: MatDialogRef<VariantFormComponent>,
+    private readonly variantService: ProductVariantService,
     @Inject(MAT_DIALOG_DATA)
-    public readonly variant:
-      ProductVariant
+    public readonly variant: ProductVariant,
+    private dialog: MatDialog
   ) { }
 
   ngOnInit(): void {
@@ -115,42 +115,61 @@ export class VariantFormComponent
   }
 
   save(): void {
-
-    if (
-      this.form.invalid ||
-      this.saving
-    ) {
+    if (this.form.invalid || this.saving) {
       return;
     }
 
+    const dialogRef = this.dialog.open(
+      ReasonDialogComponent,
+      {
+        width: '500px',
+        data: {
+          title: 'Update Variant',
+          message:
+            'Provide a reason for this update.',
+          action: 'RESTORE',
+          requireReason: false
+        }
+      }
+    );
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (!result?.confirmed) {
+        return;
+      }
+
+      this.executeSave(result.reason);
+    });
+  }
+
+  private executeSave(
+    reason?: string | null
+  ): void {
     this.saving = true;
 
     const raw =
       this.form.getRawValue();
 
-    this.variantService.update(
-      this.variant.id,
-      {
-        classification:
-          raw.classification ?? undefined,
-
-        sku:
-          raw.sku ?? undefined,
-
-        minimumPercentageProfit:
-          raw.minimumPercentageProfit ?? undefined,
-
-        minimumProfit:
-          raw.minimumProfit ?? undefined
-      }
-    )
+    this.variantService
+      .update(
+        this.variant.id,
+        {
+          classification:
+            raw.classification ?? undefined,
+          sku:
+            raw.sku ?? undefined,
+          minimumPercentageProfit:
+            raw.minimumPercentageProfit ?? undefined,
+          minimumProfit:
+            raw.minimumProfit ?? undefined
+        },
+        reason
+      )
       .subscribe({
         next: updated =>
           this.dialogRef.close(updated),
-
-        error: () => {
-          this.saving = false;
-        }
+        error: () =>
+          this.saving = false
       });
   }
 

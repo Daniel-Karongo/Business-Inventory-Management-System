@@ -9,6 +9,8 @@ import { BulkResult } from '../../../../../../../shared/models/bulk-import.model
 import {
   Product,
   ProductCreateDTO,
+  ProductImage,
+  ProductImageAudit,
   ProductUpdateDTO
 } from '../../../models/product.model';
 
@@ -295,7 +297,7 @@ export class ProductService extends BaseApiService {
     deleted?: boolean,
     overrideBranchId?: string
   ) {
-    return this.get<string[]>(
+    return this.get<ProductImage[]>(
       this.endpoints.images.list(productId),
       {
         branchId: this.resolveBranch(overrideBranchId),
@@ -326,13 +328,21 @@ export class ProductService extends BaseApiService {
     productId: string,
     filename: string,
     soft = true,
+    reason?: string,
     overrideBranchId?: string
   ) {
     return this.delete<void>(
-      this.endpoints.images.deleteOne(productId, filename),
+      this.endpoints.images.deleteOne(
+        productId,
+        filename
+      ),
       {
-        branchId: this.resolveBranch(overrideBranchId),
-        soft
+        branchId:
+          this.resolveBranch(
+            overrideBranchId
+          ),
+        soft,
+        reason
       }
     );
   }
@@ -372,13 +382,19 @@ export class ProductService extends BaseApiService {
   getImageBlob(
     productId: string,
     fileName: string,
-    overrideBranchId?: string
+    overrideBranchId?: string,
+    version?: number
   ) {
+
     return this.http.get(
-      `${this.api}${this.endpoints.images.list(productId)}/${fileName}`,
+      `${this.api}/products/images/shared/${fileName}`,
       {
         params: this.buildParams({
-          branchId: this.resolveBranch(overrideBranchId)
+          branchId:
+            this.resolveBranch(
+              overrideBranchId
+            ),
+          v: version
         }),
         responseType: 'blob'
       }
@@ -430,6 +446,23 @@ export class ProductService extends BaseApiService {
           branchId
         },
         responseType: 'blob'
+      }
+    );
+  }
+
+  getImageAudits(
+    productId: string,
+    overrideBranchId?: string
+  ) {
+    return this.get<ProductImageAudit[]>(
+      this.endpoints.images.auditHistory(
+        productId
+      ),
+      {
+        branchId:
+          this.resolveBranch(
+            overrideBranchId
+          )
       }
     );
   }

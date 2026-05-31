@@ -4,19 +4,22 @@ import com.IntegrityTechnologies.business_manager.config.files.FileStorageServic
 import com.IntegrityTechnologies.business_manager.config.files.TransactionalFileManager;
 import com.IntegrityTechnologies.business_manager.config.kafka.OutboxEventWriter;
 import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.VariantImageAuditDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.VariantImageDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.events.VariantImageUploadRequestedEvent;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariantImage;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariantImageAudit;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantImageAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantImageRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
+import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,12 +33,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
-import java.util.HexFormat;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+
+import static org.aspectj.weaver.tools.cache.SimpleCacheFactory.path;
 
 @Service
 @RequiredArgsConstructor
@@ -46,6 +48,7 @@ public class ProductVariantImageService {
     private final FileStorageService fileStorageService;
     private final TransactionalFileManager transactionalFileManager;
     private final OutboxEventWriter outboxEventWriter;
+    private final ProductVariantImageAuditRepository auditRepo;
 
     private UUID tenantId() { return TenantContext.getTenantId(); }
 
@@ -86,17 +89,23 @@ public class ProductVariantImageService {
             Path tempFile = tempDir.resolve(tempName);
 
             try (InputStream in = file.getInputStream()) {
-                Files.copy(in, tempFile);
+                fileStorageService.saveFile(
+                        tempDir,
+                        tempName,
+                        in
+                );
             }
 
             outboxEventWriter.write(
                     "VARIANT_IMAGE_UPLOAD_REQUESTED",
                     branchId,
                     VariantImageUploadRequestedEvent.builder()
+                            .uploadId(UUID.randomUUID())
                             .variantId(variantId)
                             .tenantId(tenantId())
                             .branchId(branchId)
                             .fileName(file.getOriginalFilename())
+                            .contentType(file.getContentType())
                             .tempFilePath(tempFile.toString())
                             .build()
             );
@@ -150,7 +159,7 @@ public class ProductVariantImageService {
             }
         }
 
-        imageRepo.save(
+        ProductVariantImage savedImage = imageRepo.save(
                 ProductVariantImage.builder()
                         .variant(variant)
                         .fileName(fileName)
@@ -163,11 +172,239 @@ public class ProductVariantImageService {
                         .uploadedAt(LocalDateTime.now())
                         .build()
         );
+
+        audit(savedImage, "UPLOAD", null
+        );
+    }
+
+    @Transactional
+    public void deleteVariantImage(
+            UUID branchId,
+            UUID variantId,
+            String fileName,
+            String reason
+    ) {
+
+        getVariant(
+                branchId,
+                variantId
+        );
+
+        ProductVariantImage image =
+                imageRepo.findByTenantIdAndBranchIdAndVariant_IdAndFileNameAndDeletedFalse(
+                                tenantId(),
+                                branchId,
+                                variantId,
+                                fileName
+                        )
+                        .orElseThrow(
+                                () ->
+                                        new EntityNotFoundException(
+                                                "Image not found"
+                                        )
+                        );
+
+        image.setDeleted(true);
+
+        imageRepo.save(image);
+        audit(image, "SOFT_DELETE", reason);
+    }
+
+    @Transactional
+    public void restoreVariantImage(
+            UUID branchId,
+            UUID variantId,
+            String fileName,
+            String reason
+    ) {
+
+        ProductVariantImage image =
+                imageRepo.findByTenantIdAndBranchIdAndVariant_IdAndFileName(
+                                tenantId(),
+                                branchId,
+                                variantId,
+                                fileName
+                        )
+                        .orElseThrow();
+
+        image.setDeleted(false);
+
+        imageRepo.save(image);
+
+        audit(image, "RESTORE", reason);
+    }
+
+    @Transactional
+    public void hardDeleteVariantImage(
+            UUID branchId,
+            UUID variantId,
+            String fileName,
+            String reason
+    ) {
+
+        ProductVariantImage image =
+                imageRepo
+                        .findByTenantIdAndBranchIdAndVariant_IdAndFileName(
+                                tenantId(),
+                                branchId,
+                                variantId,
+                                fileName
+                        )
+                        .orElseThrow(
+                                () ->
+                                        new EntityNotFoundException(
+                                                "Image not found"
+                                        )
+                        );
+
+        String hash = image.getContentHash();
+
+        imageRepo.delete(image);
+
+        long remaining =
+                imageRepo
+                        .countByTenantIdAndBranchIdAndContentHashAndDeletedFalse(
+                                tenantId(),
+                                branchId,
+                                hash
+                        );
+
+        if (remaining == 0) {
+
+            deletePhysicalFiles(
+                    branchId,
+                    image
+            );
+
+        }
+
+        audit(image, "HARD_DELETE", reason);
+    }
+
+    @Transactional
+    public void hardDeleteAllImagesForVariant(
+            UUID branchId,
+            UUID variantId,
+            String reason
+    ) {
+
+        List<ProductVariantImage> images =
+                imageRepo.findByTenantIdAndBranchIdAndVariant_Id(
+                        tenantId(),
+                        branchId,
+                        variantId
+                );
+
+        for (ProductVariantImage image : images) {
+
+            String hash = image.getContentHash();
+
+            imageRepo.delete(image);
+
+            long remaining =
+                    imageRepo.countByTenantIdAndBranchIdAndContentHashAndDeletedFalse(
+                            tenantId(),
+                            branchId,
+                            hash
+                    );
+
+            if (remaining == 0) {
+
+                deletePhysicalFiles(
+                        branchId,
+                        image
+                );
+
+            }
+
+            audit(
+                    image,
+                    "HARD_DELETE",
+                    reason
+            );
+        }
     }
 
     /* ============================================================
        READ
        ============================================================ */
+
+    @Transactional(readOnly = true)
+    public List<VariantImageDTO> getAllImages(
+            UUID branchId,
+            UUID variantId
+    ) {
+
+        getVariant(
+                branchId,
+                variantId
+        );
+
+        return imageRepo.findByTenantIdAndBranchIdAndVariant_Id(
+                        tenantId(),
+                        branchId,
+                        variantId
+                )
+                .stream()
+                .map(img ->
+                        new VariantImageDTO(
+                                img.getFileName(),
+                                img.getFilePath(),
+                                "/api/product-variants/"
+                                        + variantId
+                                        + "/thumbnails/"
+                                        + img.getThumbnailFileName(),
+                                img.isDeleted()
+                        )
+                )
+                .toList();
+    }
+
+    public ResponseEntity<Resource> getThumbnail(
+            UUID branchId,
+            UUID variantId,
+            String fileName
+    ) {
+
+        ProductVariantImage image =
+                imageRepo
+                        .findByTenantIdAndBranchIdAndVariant_IdAndDeletedFalse(
+                                tenantId(),
+                                branchId,
+                                variantId
+                        )
+                        .stream()
+                        .filter(i ->
+                                fileName.equals(
+                                        i.getThumbnailFileName()
+                                )
+                        )
+                        .findFirst()
+                        .orElseThrow(
+                                () ->
+                                        new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND
+                                        )
+                        );
+
+        Path file =
+                sharedDir(branchId)
+                        .resolve(
+                                image.getThumbnailFileName()
+                        );
+
+        return ResponseEntity.ok()
+                .contentType(
+                        MediaTypeFactory
+                                .getMediaType(file.toString())
+                                .orElse(
+                                        MediaType.APPLICATION_OCTET_STREAM
+                                )
+                )
+                .body(
+                        new FileSystemResource(file)
+                );
+    }
 
     @Transactional(readOnly = true)
     public List<String> getImageUrls(UUID branchId, UUID variantId) {
@@ -184,7 +421,11 @@ public class ProductVariantImageService {
                 .toList();
     }
 
-    public ResponseEntity<Resource> getProductVariantImage(UUID branchId, UUID variantId, String fileName) {
+    public ResponseEntity<Resource> getProductVariantImage(
+            UUID branchId,
+            UUID variantId,
+            String fileName
+    ) {
 
         getVariant(branchId, variantId);
 
@@ -195,15 +436,34 @@ public class ProductVariantImageService {
                         variantId,
                         fileName
                 )
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND
+                        ));
 
-        Path path = sharedDir(branchId).resolve(img.getFileName());
+        Path path =
+                sharedDir(branchId)
+                        .resolve(img.getFileName());
 
         if (!Files.exists(path)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND
+            );
         }
 
-        return ResponseEntity.ok(new FileSystemResource(path));
+        return ResponseEntity.ok()
+                .contentType(
+                        MediaTypeFactory
+                                .getMediaType(
+                                        path.toString()
+                                )
+                                .orElse(
+                                        MediaType.APPLICATION_OCTET_STREAM
+                                )
+                )
+                .body(
+                        new FileSystemResource(path)
+                );
     }
 
     public ResponseEntity<Resource> downloadZipResponse(UUID branchId, UUID variantId) throws IOException {
@@ -291,5 +551,120 @@ public class ProductVariantImageService {
         fileStorageService.secure(path);
 
         return path;
+    }
+
+    private void deletePhysicalFiles(
+            UUID branchId,
+            ProductVariantImage image
+    ) {
+        try {
+
+            Path shared = sharedDir(branchId);
+
+            Path original =
+                    shared.resolve(
+                            image.getFileName()
+                    );
+
+            Path thumbnail =
+                    shared.resolve(
+                            image.getThumbnailFileName()
+                    );
+
+            fileStorageService.deleteFile(original);
+            fileStorageService.deleteFile(thumbnail);
+
+        } catch (Exception e) {
+
+            throw new RuntimeException(
+                    "Failed deleting image files",
+                    e
+            );
+
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<VariantImageAuditDTO> getImageAuditHistory(
+            UUID branchId,
+            UUID variantId
+    ) {
+        getVariant(
+                branchId,
+                variantId
+        );
+
+        return auditRepo
+                .findByTenantIdAndBranchIdAndProductVariantIdIn(
+                        tenantId(),
+                        branchId,
+                        List.of(variantId)
+                )
+                .stream()
+                .sorted(
+                        Comparator.comparing(
+                                ProductVariantImageAudit::getTimestamp
+                        ).reversed()
+                )
+                .map(a ->
+                        VariantImageAuditDTO.builder()
+                                .id(a.getId())
+                                .productVariantId(a.getProductVariantId())
+                                .productName(a.getProductName())
+                                .classification(a.getClassification())
+                                .fileName(a.getFileName())
+                                .filePath(a.getFilePath())
+                                .action(a.getAction())
+                                .reason(a.getReason())
+                                .timestamp(a.getTimestamp())
+                                .performedBy(a.getPerformedBy())
+                                .build()
+                )
+                .toList();
+    }
+
+    private void audit(
+            ProductVariantImage image,
+            String action,
+            String reason
+    ) {
+
+        ProductVariant variant =
+                image.getVariant();
+
+        auditRepo.save(
+                ProductVariantImageAudit
+                        .builder()
+                        .tenantId(tenantId())
+                        .branchId(
+                                image.getBranchId()
+                        )
+                        .productVariantId(
+                                variant.getId()
+                        )
+                        .productName(
+                                variant
+                                        .getProduct()
+                                        .getName()
+                        )
+                        .classification(
+                                variant.getClassification()
+                        )
+                        .fileName(
+                                image.getFileName()
+                        )
+                        .filePath(
+                                image.getFilePath()
+                        )
+                        .action(action)
+                        .reason(reason)
+                        .timestamp(
+                                LocalDateTime.now()
+                        )
+                        .performedBy(
+                                SecurityUtils.currentUsername()
+                        )
+                        .build()
+        );
     }
 }

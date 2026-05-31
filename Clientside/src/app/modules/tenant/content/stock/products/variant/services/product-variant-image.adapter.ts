@@ -1,41 +1,119 @@
-import { map } from 'rxjs/operators';
-import { ProductVariantService } from './product-variant.service';
-import { EntityImageAdapter, EntityImageAudit } from '../../../../../../../shared/components/entity-image-manager/entity-image-manager.component';
-import { of } from 'rxjs';
+import { map } from 'rxjs';
 
+import {
+    EntityImageAdapter
+} from '../../../../../../../shared/components/entity-image-manager/entity-image-manager.component';
+
+import { ProductVariantService } from '../services/product-variant.service';
+import { VARIANT_IMAGE_DELETE_REASONS, VARIANT_IMAGE_HARD_DELETE_REASONS, VARIANT_IMAGE_RESTORE_REASONS } from './variant-image-reasons.constants';
 
 export const ProductVariantImageAdapter =
-    (service: ProductVariantService): EntityImageAdapter => ({
+    (
+        service: ProductVariantService
+    ): EntityImageAdapter => ({
 
         listImages: (variantId: string) =>
-            service.getImages(variantId).pipe(
-                map(urls =>
-                    (urls ?? []).map(url => ({
-                        fileName: url.split('/').pop()!,
+            service.getAllImages(
+                variantId
+            ).pipe(
+                map(images =>
+                    (images ?? []).map(img => ({
+                        fileName:
+                            img.fileName,
+                        deleted:
+                            img.deleted,
                         image: true
                     }))
                 )
             ),
 
-        listImageAudits: (_id: string) =>
-            of([] as EntityImageAudit[]),
+        listImageAudits: (
+            variantId: string
+        ) =>
+            service
+                .getImageAuditHistory(
+                    variantId
+                )
+                .pipe(
+                    map(audits =>
+                        (audits ?? []).map(a => ({
+                            fileName:
+                                a.fileName,
+                            action:
+                                a.action,
+                            reason:
+                                a.reason,
+                            performedByUsername:
+                                a.performedBy,
+                            timestamp:
+                                a.timestamp
+                        }))
+                    )
+                ),
 
-        getImageBlob: (variantId, fileName) =>
-            service.getImageBlob(variantId, fileName),
+        getImageBlob: (
+            variantId,
+            fileName
+        ) =>
+            service.getImageBlob(
+                variantId,
+                fileName
+            ),
 
-        uploadImages: () => {
-            throw new Error('Upload not allowed from sales');
-        },
+        uploadImages: (
+            variantId,
+            files
+        ) =>
+            service.uploadImages(
+                variantId,
+                files.map(x => x.file)
+            ),
 
-        softDeleteImage: () => {
-            throw new Error('Delete not allowed from sales');
-        },
+        softDeleteImage: (
+            variantId,
+            fileName,
+            reason
+        ) =>
+            service.deleteImage(
+                variantId,
+                fileName,
+                reason
+            ),
 
-        restoreImage: () => {
-            throw new Error('Restore not allowed from sales');
-        },
+        restoreImage: (
+            variantId,
+            fileName,
+            reason
+        ) =>
+            service.restoreImage(
+                variantId,
+                fileName,
+                reason
+            ),
 
-        hardDeleteImage: () => {
-            throw new Error('Hard delete not allowed from sales');
-        }
+        hardDeleteImage: (
+            variantId,
+            fileName,
+            reason
+        ) =>
+            service.hardDeleteImage(
+                variantId,
+                fileName,
+                reason
+            ),
+
+        deleteReasons:
+            VARIANT_IMAGE_DELETE_REASONS,
+
+        restoreReasons:
+            VARIANT_IMAGE_RESTORE_REASONS,
+
+        hardDeleteReasons:
+            VARIANT_IMAGE_HARD_DELETE_REASONS,
+
+        supportsDescription: false,
+
+        entityLabel: 'Image',
+
+        uploadMode: 'image',
     });

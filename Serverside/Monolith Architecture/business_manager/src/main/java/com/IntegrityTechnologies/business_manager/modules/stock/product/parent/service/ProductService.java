@@ -19,6 +19,8 @@ import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.StockTransactionRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.*;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.mapper.ProductImageAuditMapper;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.mapper.ProductImageMapper;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.mapper.ProductMapper;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductAuditRepository;
@@ -92,9 +94,11 @@ public class ProductService {
     private final ProductVariantAuditRepository productVariantAuditRepository;
     private final ProductVariantImageRepository productVariantImageRepository;
     private final ProductVariantImageAuditRepository productVariantImageAuditRepository;
+    private final ProductImageAuditMapper productImageAuditMapper;
 
     @PersistenceContext
     private EntityManager em;
+    private final ProductImageMapper productImageMapper;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -867,6 +871,18 @@ public class ProductService {
         productRepository.save(product);
     }
 
+    @Transactional(readOnly = true)
+    public ResponseEntity<Resource> getSharedProductImage(
+            UUID branchId,
+            String fileName
+    ) {
+        return productImageService
+                .getSharedImage(
+                        branchId,
+                        fileName
+                );
+    }
+
     public void restoreProductImage(UUID branchId, UUID productId, UUID productImageId, String reason) {
 
         Product product = productRepository
@@ -900,39 +916,69 @@ public class ProductService {
 
         for (ProductImage img : new ArrayList<>(product.getImages())) {
 
-            if (!img.getProduct().getId().equals(productId)) continue;
+            if (!img.getProduct().getId().equals(productId)) {
+                continue;
+            }
 
             if (Boolean.TRUE.equals(soft)) {
 
+                if (!filename.equals(img.getFileName())) {
+                    continue;
+                }
+
                 img.setDeleted(true);
+
                 productImageRepository.save(img);
 
                 productImageAuditRepository.save(
-                        imageAuditForAction(product, img,
+                        imageAuditForAction(
+                                product,
+                                img,
                                 "IMAGE_SOFT_DELETED_INDEPENDENTLY",
-                                "Deleted by user")
+                                "Deleted by user"
+                        )
                 );
 
+                break;
             } else {
 
                 if (filename.equals(img.getFileName())) {
 
-                    Path physical = resolveProductFile(branchId, img.getFileName());
+                    Path physical =
+                            resolveProductFile(
+                                    branchId,
+                                    img.getFileName()
+                            );
 
-                    boolean usedElsewhere = isFileUsedElsewhere(branchId, img, productId);
+                    boolean usedElsewhere =
+                            isFileUsedElsewhere(
+                                    branchId,
+                                    img,
+                                    productId
+                            );
 
-                    product.getImages().remove(img);
-                    productImageRepository.delete(img);
+                    product.getImages()
+                            .remove(img);
+
+                    productImageRepository
+                            .delete(img);
 
                     if (!usedElsewhere) {
-                        Files.deleteIfExists(physical);
+                        Files.deleteIfExists(
+                                physical
+                        );
                     }
 
                     productImageAuditRepository.save(
-                            imageAuditForAction(product, img,
+                            imageAuditForAction(
+                                    product,
+                                    img,
                                     "IMAGE_HARD_DELETED_INDEPENDENTLY",
-                                    "Deleted by user")
+                                    "Deleted by user"
+                            )
                     );
+
+                    break;
                 }
             }
         }
@@ -952,7 +998,8 @@ public class ProductService {
 
         if (Boolean.FALSE.equals(soft)) {
 
-            product.setImages(new HashSet<>());;
+            product.setImages(new HashSet<>());
+            ;
             productRepository.save(product);
 
             productImageAuditRepository.save(
@@ -965,7 +1012,7 @@ public class ProductService {
 
     public void deleteProductImages(UUID branchId, Product product, Boolean soft, String reason) {
         for (ProductImage img : new ArrayList<>(product.getImages())) {
-            if(Boolean.TRUE.equals(soft)) {
+            if (Boolean.TRUE.equals(soft)) {
                 img.setDeleted(true);
                 productImageRepository.save(img);
                 productImageAuditRepository.save(imageAuditForAction(product, img, "IMAGE_SOFT_DELETED_INDEPENDENTLY", reason));
@@ -1350,8 +1397,8 @@ public class ProductService {
                                 .branchId(v.getBranchId())
                                 .productId(product.getId())
                                 .productName(product.getName())
-                                .productVariantId(v.getId())
-                                .variantClassification(v.getClassification())
+                                .variantId(v.getId())
+                                .classification(v.getClassification())
                                 .timestamp(now)
                                 .performedBy(username)
                                 .reason(reason)
@@ -1668,7 +1715,11 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public List<String> getProductImageUrls(UUID branchId, UUID id, Boolean deleted) {
+    public List<ProductImageDTO> getProductImages(
+            UUID branchId,
+            UUID id,
+            Boolean deleted
+    ) {
 
         Product product = getProduct(branchId, id);
 
@@ -1676,8 +1727,16 @@ public class ProductService {
 
         return product.getImages()
                 .stream()
-                .filter(image -> matchesDeleted(deleted, image.isDeleted()))
-                .map(ProductImage::getFilePath)
+                .filter(
+                        image ->
+                                matchesDeleted(
+                                        deleted,
+                                        image.isDeleted()
+                                )
+                )
+                .map(
+                        productImageMapper::toDto
+                )
                 .toList();
     }
 
@@ -1823,26 +1882,26 @@ public class ProductService {
                 );
     }
 
-    public List<ProductImageAudit> getProductImagesAudits(UUID branchId, UUID productId) {
-
-        return productImageAuditRepository
-                .findByTenantIdAndBranchIdAndProductId(
-                        tenantId(),
-                        branchId,
-                        productId
-                )
-                .stream()
-                .sorted(Comparator.comparing(ProductImageAudit::getTimestamp).reversed())
-                .toList();
-    }
-
-    public Map<UUID, List<ProductImageAudit>> getAllProductImagesAudits(UUID branchId) {
-
-        return productImageAuditRepository
-                .findByTenantIdAndBranchId(tenantId(), branchId)
-                .stream()
-                .sorted(Comparator.comparing(ProductImageAudit::getTimestamp).reversed())
-                .collect(Collectors.groupingBy(ProductImageAudit::getProductId));
+    @Transactional(readOnly = true)
+    public List<ProductImageAuditDTO> getProductImageAudits(
+            UUID branchId,
+            UUID productId
+    ) {
+        return productImageAuditMapper.toDtos(
+                productImageAuditRepository
+                        .findByTenantIdAndBranchIdAndProductId(
+                                tenantId(),
+                                branchId,
+                                productId
+                        )
+                        .stream()
+                        .sorted(
+                                Comparator.comparing(
+                                        ProductImageAudit::getTimestamp
+                                ).reversed()
+                        )
+                        .toList()
+        );
     }
 
 
@@ -1936,6 +1995,9 @@ public class ProductService {
         ia.setProductName(product.getName());
         ia.setTimestamp(LocalDateTime.now());
         ia.setPerformedBy(SecurityUtils.currentUsername());
+        ia.setTenantId(product.getTenantId());
+
+        ia.setBranchId(product.getBranchId());
         if (img != null) {
             ia.setFileName(img.getFileName());
             ia.setFilePath(img.getFilePath());

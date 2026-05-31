@@ -2,6 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.variant
 
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.Lock;
@@ -37,5 +38,16 @@ public interface ProductVariantPackagingRepository extends JpaRepository<Product
             """)
     ProductVariantPackaging lockBasePackaging(
             @Param("variantId") UUID variantId
+    );
+
+    @Modifying
+    @Query("""
+            delete
+            from ProductVariantPackaging p
+            where p.productVariant.id = :variantId
+            """)
+    void deleteByProductVariantId(
+            @Param("variantId")
+            UUID variantId
     );
 }

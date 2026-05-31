@@ -1,3 +1,14 @@
+interface SaleSeed {
+  productId: string;
+  productName: string;
+  variantId?: string | null;
+  branchId?: string | null;
+  rowType?:
+  | 'PRODUCT'
+  | 'VARIANT'
+  | 'INVENTORY';
+}
+
 import {
   CommonModule,
   CurrencyPipe
@@ -110,6 +121,22 @@ import {
 import {
   SellableVariantDTO
 } from '../../../stock/models/sellable.model';
+
+import {
+  Navigation
+} from '@angular/router';
+
+import {
+  ProductVariantService
+} from '../../../stock/products/variant/services/product-variant.service';
+
+import {
+  ProductVariantPackagingService
+} from '../../../stock/products/variant/services/product-variant-packaging.service';
+
+import {
+  ProductVariant
+} from '../../../stock/models/product-variant.model';
 
 import {
   BranchService
@@ -261,6 +288,11 @@ export class SaleCreateComponent implements OnInit {
   private readonly branchContext =
     inject(BranchContextService);
 
+  private readonly variantService =
+    inject(ProductVariantService);
+
+  private readonly packagingService =
+    inject(ProductVariantPackagingService);
 
   barcodeCtrl =
     new FormControl('');
@@ -306,11 +338,13 @@ export class SaleCreateComponent implements OnInit {
     this.defaultBranchId =
       me?.branchId ?? null;
 
+    this.addLine();
+
+    this.processIncomingSeed();
+
     this.loadInitialDependencies();
 
     this.setupCustomerLookup();
-
-    this.addLine();
   }
 
   get customerGroup() {
@@ -321,19 +355,287 @@ export class SaleCreateComponent implements OnInit {
     return this.form.controls.items;
   }
 
+  get showBranchField(): boolean {
+
+    return this.branches.length > 1;
+  }
+
   private loadInitialDependencies(): void {
 
     forkJoin({
-      products: this.productService.getAll(),
-      branches: this.branchService.getAllLegacy()
+
+      products:
+        this.productService.getAll(),
+
+      branches:
+        this.branchService.getAllLegacy()
+
     })
       .pipe(
-        takeUntilDestroyed(this.destroyRef)
+        takeUntilDestroyed(
+          this.destroyRef
+        )
       )
       .subscribe({
+
         next: result => {
-          this.products = result.products;
-          this.branches = result.branches;
+
+          this.products =
+            result.products;
+
+          this.branches =
+            result.branches;
+
+          if (
+            result.branches.length === 1
+          ) {
+
+            this.defaultBranchId =
+              result.branches[0].id;
+
+            this.items.controls
+              .forEach(control =>
+                control.patchValue({
+                  branchId:
+                    this.defaultBranchId
+                })
+              );
+          }
+
+          this.processIncomingSeed();
+        }
+      });
+  }
+
+  private processIncomingSeed(): void {
+
+    const navigation =
+      this.router.getCurrentNavigation();
+
+    const seed =
+      (
+        navigation?.extras?.state?.[
+        'inventorySeed'
+        ]
+        ??
+        history.state?.inventorySeed
+      ) as SaleSeed | undefined;
+
+    if (!seed) {
+      return;
+    }
+
+    const row =
+      this.items.at(0);
+
+    row.patchValue({
+      productId:
+        seed.productId,
+      productName:
+        seed.productName,
+      branchId:
+        seed.branchId
+        ?? this.defaultBranchId
+    });
+
+    if (seed.variantId) {
+
+      this.seedVariant(
+        0,
+        seed.variantId
+      );
+
+      return;
+    }
+
+    this.seedProduct(
+      0,
+      seed.productId
+    );
+  }
+
+  private seedProduct(
+    index: number,
+    productId: string
+  ): void {
+
+    const row =
+      this.items.at(index);
+
+    const branchId =
+      row.value.branchId
+      ?? this.defaultBranchId;
+
+    if (!branchId) {
+      return;
+    }
+
+    this.sellableService
+      .search({
+        branchId,
+        search:
+          row.value.productName
+          ?? undefined,
+        includePricing: true,
+        includeAllocation: true,
+        includeBatches: true
+      })
+      .pipe(
+        takeUntilDestroyed(
+          this.destroyRef
+        )
+      )
+      .subscribe({
+
+        next: response => {
+
+          const variants =
+            response.variants.content
+              .filter(
+                v =>
+                  v.productId
+                  === productId
+              );
+
+          this.variantMap[index] =
+            variants;
+
+          if (
+            variants.length !== 1
+          ) {
+            return;
+          }
+
+          const variant =
+            variants[0];
+
+          row.patchValue({
+
+            productVariantId:
+              variant.variantId
+          });
+
+          this.packagingMap[index] =
+            variant.packagings;
+
+          if (
+            variant.packagings
+              ?.length === 1
+          ) {
+
+            row.patchValue({
+
+              packagingId:
+                variant.packagings[0]
+                  .packagingId
+            });
+          }
+        }
+      });
+  }
+
+  private seedVariant(
+    index: number,
+    variantId: string
+  ): void {
+
+    const row =
+      this.items.at(index);
+
+    const branchId =
+      row.value.branchId
+      ?? this.defaultBranchId;
+
+    if (!branchId) {
+      return;
+    }
+
+    row.patchValue({
+      productVariantId:
+        variantId
+    });
+
+    this.sellableService
+      .search({
+        branchId,
+        includePricing: true,
+        includeAllocation: true,
+        includeBatches: true
+      })
+      .pipe(
+        takeUntilDestroyed(
+          this.destroyRef
+        )
+      )
+      .subscribe({
+        next: response => {
+
+          const variant =
+            response.variants.content
+              .find(
+                x =>
+                  x.variantId
+                  === variantId
+              );
+
+          if (!variant) {
+
+            this.variantMap[
+              index
+            ] = [];
+
+            this.packagingMap[
+              index
+            ] = [];
+
+            return;
+          }
+
+          this.variantMap[
+            index
+          ] = [
+              variant
+            ];
+
+          this.packagingMap[
+            index
+          ] =
+            variant.packagings
+            ?? [];
+
+          row.patchValue({
+            productId:
+              variant.productId,
+
+            productName:
+              variant.productName,
+
+            productVariantId:
+              variant.variantId
+          });
+
+          if (
+            variant.packagings
+              ?.length === 1
+          ) {
+
+            row.patchValue({
+              packagingId:
+                variant.packagings[0]
+                  .packagingId
+            });
+          }
+        },
+
+        error: () => {
+
+          this.variantMap[
+            index
+          ] = [];
+
+          this.packagingMap[
+            index
+          ] = [];
         }
       });
   }
@@ -387,7 +689,19 @@ export class SaleCreateComponent implements OnInit {
       this.items.length - 1;
 
     this.variantMap[index] = [];
+
     this.packagingMap[index] = [];
+
+    if (
+      this.defaultBranchId
+    ) {
+
+      row.patchValue({
+
+        branchId:
+          this.defaultBranchId
+      });
+    }
 
     this.setupPreviewPipeline(index);
   }
@@ -640,7 +954,14 @@ export class SaleCreateComponent implements OnInit {
       packagingId: null
     });
 
-    this.resolveSellables(index);
+    this.resolveSellables(
+      index
+    );
+
+    this.seedProduct(
+      index,
+      product.id
+    );
   }
 
   private resolveSellables(
@@ -713,25 +1034,38 @@ export class SaleCreateComponent implements OnInit {
 
     const variant =
       this.variantMap[index]
-        ?.find(v =>
-          v.variantId === variantId
+        ?.find(
+          x =>
+            x.variantId
+            === variantId
         );
 
-    this.packagingMap[index] =
-      variant?.packagings ?? [];
+    this.packagingMap[
+      index
+    ] =
+      variant?.packagings
+      ?? [];
 
-    this.items.at(index).patchValue({
-      packagingId: null
-    });
+    this.items.at(index)
+      .patchValue({
+
+        packagingId:
+          null
+      });
 
     if (
-      variant?.packagings?.length === 1
+      variant?.packagings
+        ?.length === 1
     ) {
-      this.items.at(index).patchValue({
-        packagingId:
-          variant.packagings[0]
-            .packagingId
-      });
+
+      this.items.at(index)
+        .patchValue({
+
+          packagingId:
+            variant
+              .packagings[0]
+              .packagingId
+        });
     }
   }
 

@@ -40,22 +40,24 @@ public class StockAdjustmentService {
 
             long qty = Math.abs(delta);
 
-            reservationService.reserve(referenceId, null, variantId, null, branchId, qty);
-            consumptionService.consume(branchId, referenceId);
+            reservationService.reserve(
+                    referenceId,
+                    null,
+                    variantId,
+                    null,
+                    branchId,
+                    qty
+            );
 
-            BigDecimal totalCost =
-                    batchConsumptionRepository.sumCostBySaleId(referenceId, tenantId());
+            consumptionService.consume(
+                    branchId,
+                    referenceId
+            );
 
-            InventoryItem item = inventoryItemRepository.lockByVariant(
-                            variantId,
-                            tenantId(),
-                            branchId
-                    )
-                    .orElseThrow();
-
-            updateItem(item, -qty);
-
-            return totalCost;
+            return batchConsumptionRepository.sumCostBySaleId(
+                    referenceId,
+                    tenantId()
+            );
         }
 
         long qty = delta;
@@ -73,11 +75,11 @@ public class StockAdjustmentService {
         );
 
         InventoryItem item = inventoryItemRepository.lockByVariant(
-                                variantId,
-                                tenantId(),
-                                branchId
-                        )
-                        .orElseThrow();
+                        variantId,
+                        tenantId(),
+                        branchId
+                )
+                .orElseThrow();
 
         updateItem(item, qty);
 

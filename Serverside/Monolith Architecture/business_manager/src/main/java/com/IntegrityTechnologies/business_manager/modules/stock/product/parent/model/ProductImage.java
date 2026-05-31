@@ -22,14 +22,25 @@ import java.util.UUID;
                 @Index(name = "idx_product_image_product", columnList = "product_id")
         }
 )
-@Data
+@Getter
+@Setter
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(
+        callSuper = true,
+        onlyExplicitlyIncluded = true
+)
+@ToString(
+        exclude = {
+                "product"
+        }
+)
 public class ProductImage extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private UUID id;
 
     private String fileName;

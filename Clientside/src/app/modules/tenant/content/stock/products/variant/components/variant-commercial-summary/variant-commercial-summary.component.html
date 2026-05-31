@@ -86,7 +86,8 @@
                                 [packagings]="packagings" (refreshRequested)="load()">
                             </app-variant-packaging-manager>
 
-                            <app-packaging-conversion-table [packaging]="packagings">
+                            <app-packaging-conversion-table *ngIf="hasMeaningfulPackagingConversions()"
+                                [packaging]="packagings">
                             </app-packaging-conversion-table>
 
                         </div>
@@ -99,7 +100,8 @@
                                 [pricing]="pricing" (refreshRequested)="load()">
                             </app-variant-pricing-manager>
 
-                            <app-pricing-tier-table [pricing]="pricing" [packaging]="packagings">
+                            <app-pricing-tier-table *ngIf="hasMeaningfulPricingTiers()" [pricing]="pricing"
+                                [packaging]="packagings">
                             </app-pricing-tier-table>
 
                         </div>
@@ -121,7 +123,8 @@
                         [packagings]="packagings" (refreshRequested)="load()">
                     </app-variant-packaging-manager>
 
-                    <app-packaging-conversion-table [packaging]="packagings">
+                    <app-packaging-conversion-table *ngIf="hasMeaningfulPackagingConversions()"
+                        [packaging]="packagings">
                     </app-packaging-conversion-table>
 
                 </div>
@@ -136,7 +139,8 @@
                         (refreshRequested)="load()">
                     </app-variant-pricing-manager>
 
-                    <app-pricing-tier-table [pricing]="pricing" [packaging]="packagings">
+                    <app-pricing-tier-table *ngIf="hasMeaningfulPricingTiers()" [pricing]="pricing"
+                        [packaging]="packagings">
                     </app-pricing-tier-table>
 
                 </div>

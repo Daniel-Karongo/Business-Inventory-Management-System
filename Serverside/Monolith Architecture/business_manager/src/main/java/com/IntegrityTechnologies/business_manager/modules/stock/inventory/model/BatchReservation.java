@@ -12,12 +12,16 @@ import java.util.UUID;
 @Entity
 @Table(
         name = "batch_reservations",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_reservation_sale_batch",
-                        columnNames = {"reference_id", "batch_id"}
-                )
-        },
+//        uniqueConstraints = {
+//                @UniqueConstraint(
+//                        name = "uk_reservation_sale_batch",
+//                        columnNames = {
+//                                "reference_id",
+//                                "batch_id",
+//                                "sale_line_item_id"
+//                        }
+//                )
+//        },
         indexes = {
                 @Index(
                         name = "idx_reservation_active_lookup",

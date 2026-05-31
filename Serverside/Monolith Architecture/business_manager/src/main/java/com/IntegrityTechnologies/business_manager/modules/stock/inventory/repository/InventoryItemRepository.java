@@ -268,4 +268,16 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
             @Param("tenantId") UUID tenantId,
             @Param("productId") UUID productId
     );
+
+    @Query("""
+            SELECT i
+            FROM InventoryItem i
+            WHERE i.tenantId = :tenantId
+              AND i.productVariantId = :variantId
+              AND i.deleted = false
+            """)
+    List<InventoryItem> findByVariantScoped(
+            @Param("tenantId") UUID tenantId,
+            @Param("variantId") UUID variantId
+    );
 }

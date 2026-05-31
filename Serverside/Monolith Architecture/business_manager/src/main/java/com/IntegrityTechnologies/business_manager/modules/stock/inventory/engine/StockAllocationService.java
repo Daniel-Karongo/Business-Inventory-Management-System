@@ -35,7 +35,11 @@ public class StockAllocationService {
     ) {
 
         List<InventoryBatch> batches =
-                batchRepo.findAvailableBatches(variantId, tenantId(), branchId);
+                batchRepo.lockAvailableBatchesFIFO(
+                        variantId,
+                        tenantId(),
+                        branchId
+                );
 
         Map<UUID, Long> reservedMap = reservedPerBatch(variantId, branchId);
 

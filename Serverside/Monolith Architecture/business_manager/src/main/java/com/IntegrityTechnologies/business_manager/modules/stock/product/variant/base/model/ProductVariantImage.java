@@ -22,7 +22,17 @@ import java.util.UUID;
                 )
         }
 )
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(
+        callSuper = true,
+        onlyExplicitlyIncluded = true
+)
+@ToString(
+        exclude = {
+                "variant"
+        }
+)
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -30,6 +40,7 @@ public class ProductVariantImage extends BranchAwareEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

@@ -182,7 +182,7 @@ public class ProductController {
         return new ApiResponse(
                 "success",
                 "Image URLs",
-                productService.getProductImageUrls(branchId, id, deleted)
+                productService.getProductImages(branchId, id, deleted)
         );
     }
 

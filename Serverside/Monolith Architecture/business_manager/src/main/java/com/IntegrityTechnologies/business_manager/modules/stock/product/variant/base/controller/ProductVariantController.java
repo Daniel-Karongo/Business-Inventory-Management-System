@@ -6,6 +6,7 @@ import com.IntegrityTechnologies.business_manager.modules.platform.security.anno
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantCreateDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantUpdateDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.VariantAuditDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.service.ProductVariantImageService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.service.ProductVariantService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.service.VariantPdfOrchestrationService;
@@ -125,20 +126,74 @@ public class ProductVariantController {
     public ResponseEntity<ProductVariantDTO> update(
             @RequestParam UUID branchId,
             @PathVariable UUID id,
+            @RequestParam(required = false) String reason,
             @RequestBody ProductVariantUpdateDTO dto
     ) {
         return ResponseEntity.ok(
-                service.updateVariant(branchId, id, dto)
+                service.updateVariant(branchId, id, dto, reason)
         );
+    }
+
+    @TenantAdminOnly
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<Void> restore(
+            @RequestParam UUID branchId,
+            @RequestParam(required = false) String reason,
+            @PathVariable UUID id
+    ) {
+        service.restoreVariant(
+                branchId,
+                id,
+                reason
+        );
+
+        return ResponseEntity.noContent().build();
     }
 
     @TenantAdminOnly
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
             @RequestParam UUID branchId,
+            @RequestParam(required = false) String reason,
             @PathVariable UUID id
     ) {
-        service.deleteVariant(branchId, id);
+
+        service.deleteVariant(
+                branchId,
+                id,
+                reason
+        );
+
         return ResponseEntity.noContent().build();
+    }
+
+    @TenantAdminOnly
+    @DeleteMapping("/{id}/hard")
+    public ResponseEntity<Void> hardDelete(
+            @RequestParam UUID branchId,
+            @RequestParam(required = false) String reason,
+            @PathVariable UUID id
+    ) {
+
+        service.hardDeleteVariant(
+                branchId,
+                id,
+                reason
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/audits")
+    public ResponseEntity<List<VariantAuditDTO>> getAuditHistory(
+            @RequestParam UUID branchId,
+            @PathVariable UUID id
+    ) {
+        return ResponseEntity.ok(
+                service.getAuditHistory(
+                        branchId,
+                        id
+                )
+        );
     }
 }

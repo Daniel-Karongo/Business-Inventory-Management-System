@@ -84,17 +84,6 @@ public class StockTransferService {
                             .build()
             );
 
-            batchConsumptionRepository.save(
-                    BatchConsumption.builder()
-                            .batch(batch)
-                            .productVariantId(variantId)
-                            .quantity(move)
-                            .unitCost(batch.getUnitCost())
-                            .tenantId(tenantId())
-                            .branchId(fromBranch)
-                            .build()
-            );
-
             remaining -= move;
         }
 
@@ -137,6 +126,16 @@ public class StockTransferService {
                 +quantity
         );
 
+        validateInvariant(
+                variantId,
+                fromBranch
+        );
+
+        validateInvariant(
+                variantId,
+                toBranch
+        );
+
         inventoryAccountingPort.recordInventoryTransferOut(
                 tenantId(),
                 transferId,
@@ -165,5 +164,33 @@ public class StockTransferService {
         item.setQuantityOnHand(item.getQuantityOnHand() + delta);
 
         inventoryItemRepository.save(item);
+    }
+
+    private void validateInvariant(
+            UUID variantId,
+            UUID branchId
+    ) {
+
+        InventoryItem item =
+                inventoryItemRepository.findByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
+                                variantId,
+                                tenantId(),
+                                branchId
+                        )
+                        .orElseThrow();
+
+        long batchSum =
+                batchRepo.sumRemainingByVariant(
+                        variantId,
+                        tenantId(),
+                        branchId
+                );
+
+        if (item.getQuantityOnHand() != batchSum) {
+
+            throw new IllegalStateException(
+                    "Inventory invariant violated"
+            );
+        }
     }
 }

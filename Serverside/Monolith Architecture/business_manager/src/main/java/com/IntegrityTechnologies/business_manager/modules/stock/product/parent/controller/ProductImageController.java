@@ -1,6 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.controller;
 
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.*;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductImageAuditDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductImageDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -24,12 +26,18 @@ public class ProductImageController {
     /* ===================== READ ===================== */
 
     @GetMapping("/{productId}")
-    public List<String> getImages(
+    public List<ProductImageDTO> getImages(
+            @RequestParam UUID branchId,
             @PathVariable UUID productId,
-            @RequestParam(required = false) UUID branchId,
-            @RequestParam(required = false) Boolean deleted
+            @RequestParam(required = false)
+            Boolean deleted
     ) {
-        return productService.getProductImageUrls(branchId, productId, deleted);
+
+        return productService.getProductImages(
+                        branchId,
+                        productId,
+                        deleted
+                );
     }
 
     @GetMapping("/{id}/thumbnail")
@@ -58,6 +66,17 @@ public class ProductImageController {
             @RequestParam(required = false) UUID branchId
     ) {
         return productService.getAllProductImageUrls(branchId);
+    }
+
+    @GetMapping("/shared/{fileName:.+}")
+    public ResponseEntity<Resource> getSharedImage(
+            @RequestParam(required = false) UUID branchId,
+            @PathVariable String fileName
+    ) {
+        return productService.getSharedProductImage(
+                branchId,
+                fileName
+        );
     }
 
     @TenantManagerOnly
@@ -113,5 +132,16 @@ public class ProductImageController {
             @RequestParam(required = false) String reason
     ) {
         productService.restoreProductImage(branchId, productId, imageId, reason);
+    }
+
+    @GetMapping("/{productId}/audits")
+    public List<ProductImageAuditDTO> getImageAudits(
+            @RequestParam UUID branchId,
+            @PathVariable UUID productId
+    ) {
+        return productService.getProductImageAudits(
+                branchId,
+                productId
+        );
     }
 }

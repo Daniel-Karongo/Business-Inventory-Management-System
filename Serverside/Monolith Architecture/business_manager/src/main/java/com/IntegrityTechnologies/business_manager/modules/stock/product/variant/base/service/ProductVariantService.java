@@ -9,21 +9,28 @@ import com.IntegrityTechnologies.business_manager.modules.stock.inventory.reposi
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantCreateDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantUpdateDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.VariantAuditDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.events.VariantBarcodeRequestedEvent;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.mapper.ProductVariantMapper;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariantAudit;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.repository.ProductVariantPackagingRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
+import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -50,6 +57,8 @@ public class ProductVariantService {
     private final BatchReservationRepository batchReservationRepository;
     private final BatchConsumptionRepository batchConsumptionRepository;
     private final OutboxEventWriter outboxEventWriter;
+    private final ProductVariantImageService imageService;
+    private final ProductVariantAuditRepository auditRepo;
 
     private UUID tenantId() { return TenantContext.getTenantId(); }
 
@@ -113,6 +122,7 @@ public class ProductVariantService {
 
         v = variantRepo.save(v);
 
+        audit(v, "CREATE", null);
 
         boolean autoCreateBasePackaging =
                 dto.getAutoCreateBasePackaging() == null
@@ -204,7 +214,7 @@ public class ProductVariantService {
     // PricingEngine is the source of truth for actual selling price.
     @Transactional
     @CacheEvict(value = "pricing-preview", allEntries = true)
-    public ProductVariantDTO updateVariant(UUID branchId, UUID id, ProductVariantUpdateDTO dto) {
+    public ProductVariantDTO updateVariant(UUID branchId, UUID id, ProductVariantUpdateDTO dto, String reason) {
 
         ProductVariant v = getEntity(branchId, id);
 
@@ -220,7 +230,20 @@ public class ProductVariantService {
                 throw new IllegalArgumentException("Variant classification already exists");
             }
 
-            v.setClassification(dto.getClassification());
+            String oldClassification =
+                    v.getClassification();
+
+            v.setClassification(
+                    dto.getClassification()
+            );
+
+            auditFieldChange(
+                    v,
+                    "classification",
+                    oldClassification,
+                    dto.getClassification(),
+                    reason
+            );
         }
 
         if (dto.getSku() != null && !dto.getSku().equals(v.getSku())) {
@@ -233,11 +256,60 @@ public class ProductVariantService {
                 throw new IllegalArgumentException("SKU already exists: " + dto.getSku());
             }
 
+            String oldSku =
+                    v.getSku();
+
             v.setSku(dto.getSku());
+
+            auditFieldChange(
+                    v,
+                    "sku",
+                    oldSku,
+                    dto.getSku(),
+                    reason
+            );
         }
 
-        v.setMinimumPercentageProfit(dto.getMinimumPercentageProfit());
-        v.setMinimumProfit(dto.getMinimumProfit());
+        Double oldValue =
+                v.getMinimumPercentageProfit();
+
+        v.setMinimumPercentageProfit(
+                dto.getMinimumPercentageProfit()
+        );
+
+        if (!Objects.equals(
+                oldValue,
+                dto.getMinimumPercentageProfit()
+        )) {
+            auditFieldChange(
+                    v,
+                    "minimumPercentageProfit",
+                    String.valueOf(oldValue),
+                    String.valueOf(
+                            dto.getMinimumPercentageProfit()
+                    ),
+                    reason
+            );
+        }
+
+        v.setMinimumProfit(
+                dto.getMinimumProfit()
+        );
+
+        if (!Objects.equals(
+                oldValue,
+                dto.getMinimumProfit()
+        )) {
+            auditFieldChange(
+                    v,
+                    "minimumProfit",
+                    String.valueOf(oldValue),
+                    String.valueOf(
+                            dto.getMinimumProfit()
+                    ),
+                    reason
+            );
+        }
 
         cacheInvalidationService.evictVariantSearch(tenantId(), branchId);
         cacheInvalidationService.evictPricingByVariant(
@@ -250,7 +322,38 @@ public class ProductVariantService {
     }
 
     @Transactional
-    public void deleteVariant(UUID branchId, UUID variantId) {
+    public void restoreVariant(
+            UUID branchId,
+            UUID variantId,
+            String reason
+    ) {
+        ProductVariant variant =
+                variantRepo.findByIdSafe(
+                        variantId,
+                        true,
+                        tenantId(),
+                        branchId
+                ).orElseThrow(
+                        () -> new EntityNotFoundException(
+                                "Variant not found"
+                        )
+                );
+
+        variant.setDeleted(false);
+
+        variantRepo.save(
+                variant
+        );
+
+        audit(
+                variant,
+                "RESTORE",
+                reason
+        );
+    }
+
+    @Transactional
+    public void deleteVariant(UUID branchId, UUID variantId, String reason) {
 
         ProductVariant variant = getEntity(branchId, variantId);
 
@@ -312,6 +415,12 @@ public class ProductVariantService {
         variant.setDeleted(true);
         variantRepo.save(variant);
 
+        audit(
+                variant,
+                "SOFT_DELETE",
+                reason
+        );
+
         cacheInvalidationService.evictVariantSearch(
                 tenantId(),
                 branchId
@@ -326,6 +435,55 @@ public class ProductVariantService {
         );
     }
 
+    @Transactional
+    public void hardDeleteVariant(
+            UUID branchId,
+            UUID variantId,
+            String reason
+    ) {
+
+        ProductVariant variant =
+                getEntity(
+                        branchId,
+                        variantId
+                );
+
+        audit(
+                variant,
+                "HARD_DELETE",
+                reason
+        );
+
+        imageService.hardDeleteAllImagesForVariant(
+                branchId,
+                variantId,
+                reason
+        );
+
+        packagingRepo.deleteByProductVariantId(
+                variantId
+        );
+
+        variantRepo.delete(
+                variant
+        );
+
+        cacheInvalidationService.evictVariantSearch(
+                tenantId(),
+                branchId
+        );
+
+        cacheInvalidationService.evictPricingByVariant(
+                tenantId(),
+                variantId
+        );
+
+        cacheInvalidationService.evictPackaging(
+                tenantId(),
+                variantId
+        );
+    }
+
     // SKU is immutable once created unless explicitly overridden
     private String normalize(String input) {
         return input == null ? "" :
@@ -333,7 +491,97 @@ public class ProductVariantService {
                         .toUpperCase();
     }
 
-    public boolean isSellable(UUID variantId) {
-        return packagingRepo.existsByProductVariantIdAndDeletedFalse(variantId);
+    @Transactional(readOnly = true)
+    public List<VariantAuditDTO> getAuditHistory(
+            UUID branchId,
+            UUID variantId
+    ) {
+        getEntity(
+                branchId,
+                variantId
+        );
+
+        return auditRepo
+                .findByTenantIdAndBranchIdAndVariantIdOrderByTimestampDesc(
+                        tenantId(),
+                        branchId,
+                        variantId
+                )
+                .stream()
+                .map(a ->
+                        VariantAuditDTO.builder()
+                                .id(a.getId())
+                                .action(a.getAction())
+                                .fieldChanged(a.getFieldChanged())
+                                .oldValue(a.getOldValue())
+                                .newValue(a.getNewValue())
+                                .reason(a.getReason())
+                                .timestamp(a.getTimestamp())
+                                .productId(a.getProductId())
+                                .productName(a.getProductName())
+                                .variantId(a.getVariantId())
+                                .classification(a.getClassification())
+                                .performedBy(a.getPerformedBy())
+                                .build()
+                )
+                .toList();
+    }
+
+    private void auditFieldChange(
+            ProductVariant variant,
+            String field,
+            String oldValue,
+            String newValue,
+            String reason
+    ) {
+        auditRepo.save(
+                ProductVariantAudit.builder()
+                        .tenantId(tenantId())
+                        .branchId(variant.getBranchId())
+                        .variantId(variant.getId())
+                        .productId(variant.getProduct().getId())
+                        .productName(variant.getProduct().getName())
+                        .classification(variant.getClassification())
+                        .action("UPDATE")
+                        .fieldChanged(field)
+                        .oldValue(oldValue)
+                        .newValue(newValue)
+                        .reason(reason)
+                        .timestamp(LocalDateTime.now())
+                        .performedBy(SecurityUtils.currentUsername())
+                        .build()
+        );
+    }
+
+    private void audit(
+            ProductVariant variant,
+            String action,
+            String reason
+    ) {
+
+        auditRepo.save(
+                ProductVariantAudit.builder()
+                        .tenantId(tenantId())
+                        .branchId(variant.getBranchId())
+                        .variantId(variant.getId())
+                        .productId(
+                                variant.getProduct().getId()
+                        )
+                        .productName(
+                                variant.getProduct().getName()
+                        )
+                        .classification(
+                                variant.getClassification()
+                        )
+                        .action(action)
+                        .reason(reason)
+                        .timestamp(
+                                LocalDateTime.now()
+                        )
+                        .performedBy(
+                                SecurityUtils.currentUsername()
+                        )
+                        .build()
+        );
     }
 }

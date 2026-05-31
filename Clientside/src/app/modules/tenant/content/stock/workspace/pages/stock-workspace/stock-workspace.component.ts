@@ -133,8 +133,7 @@ import {
     FileViewerDialog
 } from '../../../../../../../shared/components/file-viewer/file-viewer.component';
 
-
-
+import { EntityImageManagerComponent } from '../../../../../../../shared/components/entity-image-manager/entity-image-manager.component';
 import { ProductSelectorDialogComponent } from '../../../../sales/dialogs/product-selector-dialog/product-selector-dialog.component';
 import { AdjustStockDialogComponent } from '../../../inventory/components/adjust-stock-dialog/adjust-stock-dialog.component';
 import { InventoryBulkImportDialogComponent } from '../../../inventory/components/inventory-bulk-import-dialog/inventory-bulk-import-dialog.component';
@@ -142,12 +141,13 @@ import { ReceiveNewProductDialogComponent } from '../../../inventory/components/
 import { ReceiveStockDialogComponent } from '../../../inventory/components/receive-stock-dialog/receive-stock-dialog.component';
 import { TransferStockDialogComponent } from '../../../inventory/components/transfer-stock-dialog/transfer-stock-dialog.component';
 import { Product } from '../../../models/product.model';
-import { ProductVariantService } from '../../../products/variant/services/product-variant.service';
-import { ProductVariant } from '../../../models/product-variant.model';
-import { VariantFormComponent } from '../../../products/variant/components/variant-form/variant-form.component';
-import { VariantImagesDialogComponent } from '../../../products/variant/components/variant-images/variant-images-dialog.component';
 import { VariantBarcodeDialogComponent } from '../../../products/variant/components/variant-barcode/variant-barcode-dialog.component';
 import { VariantDetailsDialogComponent } from '../../../products/variant/components/variant-details/variant-details-dialog.component';
+import { VariantFormComponent } from '../../../products/variant/components/variant-form/variant-form.component';
+import { ProductVariantImageAdapter } from '../../../products/variant/services/product-variant-image.adapter';
+import { ProductImageAdapter } from '../../../products/parent/services/product-image.adapter';
+import { ProductVariantService } from '../../../products/variant/services/product-variant.service';
+import { ReasonDialogComponent } from '../../../../../../../shared/components/reason-dialog/reason-dialog.component';
 
 @Component({
     selector: 'app-stock-workspace',
@@ -247,11 +247,29 @@ export class StockWorkspaceComponent
     suppliers:
         SupplierMinimalDTO[] = [];
 
-    thumbnails =
-        new Map<
-            string,
-            SafeUrl
-        >();
+    private variantThumbnails =
+        new Map<string, string>();
+
+    private variantImages =
+        new Map<string, string>();
+
+    private thumbnails =
+        new Map<string, string>();
+
+    private productImages =
+        new Map<string, string>();
+
+    private variantThumbnailLoading =
+        new Set<string>();
+
+    private productThumbnailLoading =
+        new Set<string>();
+
+    private productImageLoading =
+        new Set<string>();
+
+    private variantImageLoading =
+        new Set<string>();
 
     /* =========================================================
        FILTERS
@@ -442,6 +460,9 @@ export class StockWorkspaceComponent
 
                 tap(() => {
                     this.loading = true;
+
+                    this.rows = [];
+                    this.total = 0;
                 }),
 
                 switchMap(([
@@ -613,7 +634,6 @@ export class StockWorkspaceComponent
             row.type === 'VARIANT' &&
             !this.branchId$.value
         ) {
-
             this.snackBar.open(
                 'Select a branch to load inventory.',
                 'OK',
@@ -621,20 +641,36 @@ export class StockWorkspaceComponent
                     duration: 3000
                 }
             );
-
             return;
         }
 
         this.workspace
-            .toggleExpanded(
-                row
-            )
+            .toggleExpanded(row)
             .subscribe(() => {
 
                 this.rows = [
-                    ...this.workspace
-                        .getVisibleRows()
+                    ...this.workspace.getVisibleRows()
                 ];
+
+                /*
+                 * Product expanded:
+                 * hydrate thumbnails only for newly visible variants.
+                 */
+                if (row.type === 'PRODUCT') {
+
+                    for (const visibleRow of this.rows) {
+
+                        if (
+                            visibleRow.parentId === row.id &&
+                            visibleRow.type === 'VARIANT' &&
+                            visibleRow.variantId
+                        ) {
+                            this.loadVariantThumbnail(
+                                visibleRow.variantId
+                            );
+                        }
+                    }
+                }
             });
     };
 
@@ -1135,9 +1171,8 @@ export class StockWorkspaceComponent
     }
 
     createSale(
-        row:
-            StockWorkspaceRow
-    ) {
+        row: StockWorkspaceRow
+    ): void {
 
         this.router.navigate(
             [
@@ -1146,18 +1181,19 @@ export class StockWorkspaceComponent
             {
                 state: {
                     inventorySeed: {
-
                         productId:
                             row.productId,
-
                         productName:
                             row.productName,
 
                         variantId:
-                            row.variantId,
+                            row.variantId ?? null,
 
                         branchId:
-                            row.branchId
+                            row.branchId ?? null,
+
+                        rowType:
+                            row.type
                     }
                 }
             }
@@ -1279,6 +1315,18 @@ export class StockWorkspaceComponent
         }
     }
 
+    toggleVariantStatus(
+        row: StockWorkspaceRow
+    ): void {
+
+        if (row.deleted) {
+            this.restoreVariant(row);
+            return;
+        }
+
+        this.deleteVariant(row);
+    }
+
     viewVariant(
         row: StockWorkspaceRow
     ) {
@@ -1370,7 +1418,10 @@ export class StockWorkspaceComponent
                         this.dialog.open(
                             VariantFormComponent,
                             {
-                                width: '420px',
+                                panelClass: 'enterprise-dialog',
+                                width: '700px',
+                                maxWidth: '95vw',
+                                maxHeight: '90vh',
                                 data: variant
                             }
                         );
@@ -1416,28 +1467,139 @@ export class StockWorkspaceComponent
             this.snackBar.open(
                 'Variant information is missing.',
                 'Close',
-                {
-                    duration: 3000
-                }
+                { duration: 3000 }
             );
 
             return;
         }
 
-        this.dialog.open(
-            VariantImagesDialogComponent,
-            {
-                panelClass: 'enterprise-dialog',
-                width: '1000px',
-                maxWidth: '95vw',
-                data: {
-                    variantId:
-                        row.variantId,
-                    variantName:
-                        row.variantName
+        const ref =
+            this.dialog.open(
+                EntityImageManagerComponent,
+                {
+                    panelClass:
+                        'enterprise-dialog',
+                    width:
+                        '1200px',
+                    maxWidth:
+                        '95vw',
+                    maxHeight:
+                        '92vh'
                 }
+            );
+
+        const adapter =
+            ProductVariantImageAdapter(
+                this.variantService
+            );
+
+        ref.componentInstance.entityId =
+            row.variantId;
+
+        ref.componentInstance.adapter =
+            adapter;
+
+        adapter.onChange = () => {
+
+            const thumb =
+                this.variantThumbnails.get(
+                    row.variantId!
+                );
+
+            if (thumb) {
+                URL.revokeObjectURL(
+                    thumb
+                );
             }
-        );
+
+            const image =
+                this.variantImages.get(
+                    row.variantId!
+                );
+
+            if (image) {
+                URL.revokeObjectURL(
+                    image
+                );
+            }
+
+            this.variantThumbnails.delete(
+                row.variantId!
+            );
+
+            this.variantImages.delete(
+                row.variantId!
+            );
+
+            this.variantThumbnailLoading.delete(
+                row.variantId!
+            );
+
+            this.variantImageLoading.delete(
+                row.variantId!
+            );
+
+            this.loadVariantThumbnail(
+                row.variantId!
+            );
+
+            this.rows = [...this.rows];
+        };
+
+        adapter.onThumbnailUpdated =
+            adapter.onChange;
+
+        ref.componentInstance.allowHardDelete =
+            true;
+    }
+
+    manageProductImages(
+        row: StockWorkspaceRow
+    ): void {
+
+        const ref =
+            this.dialog.open(
+                EntityImageManagerComponent,
+                {
+                    panelClass:
+                        'enterprise-dialog',
+                    width: '1200px',
+                    maxWidth: '95vw',
+                    maxHeight: '92vh'
+                }
+            );
+
+        ref.componentInstance.entityId =
+            row.productId;
+
+        const adapter =
+            ProductImageAdapter(
+                this.productService
+            );
+
+        adapter.onChange = () => {
+
+            this.invalidateProductImageCache(
+                row.productId
+            );
+
+            this.reload();
+        };
+
+        adapter.onThumbnailUpdated = () => {
+
+            this.invalidateProductImageCache(
+                row.productId
+            );
+
+            this.reload();
+        };
+
+        ref.componentInstance.adapter =
+            adapter;
+
+        ref.componentInstance.allowHardDelete =
+            true;
     }
 
     showVariantBarcode(
@@ -1460,6 +1622,7 @@ export class StockWorkspaceComponent
         this.dialog.open(
             VariantBarcodeDialogComponent,
             {
+                panelClass: 'enterprise-dialog',
                 width: '700px',
                 maxWidth: '95vw',
                 data: {
@@ -1489,47 +1652,133 @@ export class StockWorkspaceComponent
             return;
         }
 
-        const ok = confirm(
-            `Delete variant "${row.variantName}"?`
-        );
+        const variantId =
+            row.variantId;
 
-        if (!ok) {
+        const ref =
+            this.dialog.open(
+                ReasonDialogComponent,
+                {
+                    width: '500px',
+                    data: {
+                        title: 'Delete Variant',
+                        message:
+                            `Delete variant "${row.variantName}"?`,
+                        action: 'DELETE',
+                        requireReason: false,
+                        allowCustomReason: true,
+                        reasons: [
+                            'Duplicate variant',
+                            'Obsolete variant',
+                            'Incorrect creation',
+                            'Discontinued'
+                        ]
+                    }
+                }
+            );
+
+        ref.afterClosed()
+            .subscribe(result => {
+
+                if (!result?.confirmed) {
+                    return;
+                }
+
+                this.variantService
+                    .remove(
+                        variantId,
+                        result.reason
+                    )
+                    .subscribe({
+
+                        next: () => {
+
+                            this.snackBar.open(
+                                'Variant deleted',
+                                'Close',
+                                {
+                                    duration: 2000
+                                }
+                            );
+
+                            this.reload();
+                        },
+
+                        error: err => {
+
+                            const msg =
+                                err?.error
+                                || 'Delete failed';
+
+                            this.snackBar.open(
+                                msg,
+                                'Close',
+                                {
+                                    duration: 4000
+                                }
+                            );
+                        }
+                    });
+
+            });
+    }
+
+    restoreVariant(
+        row: StockWorkspaceRow
+    ) {
+
+        if (!row.variantId) {
             return;
         }
 
-        this.variantService
-            .remove(
-                row.variantId
-            )
-            .subscribe({
+        const variantId =
+            row.variantId;
 
-                next: () => {
-
-                    this.snackBar.open(
-                        'Variant deleted',
-                        'Close',
-                        {
-                            duration: 2000
-                        }
-                    );
-
-                    this.reload();
-                },
-
-                error: err => {
-
-                    const msg =
-                        err?.error
-                        || 'Delete failed';
-
-                    this.snackBar.open(
-                        msg,
-                        'Close',
-                        {
-                            duration: 4000
-                        }
-                    );
+        const ref =
+            this.dialog.open(
+                ReasonDialogComponent,
+                {
+                    width: '500px',
+                    data: {
+                        title: 'Restore Variant',
+                        message:
+                            `Restore variant "${row.variantName}"?`,
+                        action: 'RESTORE',
+                        requireReason: false,
+                        allowCustomReason: true
+                    }
                 }
+            );
+
+        ref.afterClosed()
+            .subscribe(result => {
+
+                if (!result?.confirmed) {
+                    return;
+                }
+
+                this.variantService
+                    .restore(
+                        variantId,
+                        result.reason
+                    )
+                    .subscribe({
+
+                        next: () => {
+
+                            this.snackBar.open(
+                                'Variant restored',
+                                'Close',
+                                {
+                                    duration: 2000
+                                }
+                            );
+
+                            this.reload();
+                        }
+
+                    });
+
             });
     }
 
@@ -1773,39 +2022,69 @@ export class StockWorkspaceComponent
        THUMBNAILS
     ========================================================= */
 
+    thumbnailForRow(
+        row: StockWorkspaceRow
+    ): SafeUrl | null {
+
+        if (
+            row.variantId &&
+            this.variantThumbnails.has(
+                row.variantId
+            )
+        ) {
+            return (
+                this.variantThumbnails.get(
+                    row.variantId
+                ) ?? null
+            );
+        }
+
+        return (
+            this.thumbnails.get(
+                row.productId
+            ) ?? null
+        );
+    }
+
     private loadThumbnails() {
 
         const productIds =
             new Set<string>();
 
+        const variantIds =
+            new Set<string>();
+
         for (
-            const row
-            of this.rows
+            const row of this.rows
         ) {
 
-            if (
-                !row.productId
-            ) {
-                continue;
+            if (row.productId) {
+                productIds.add(
+                    row.productId
+                );
             }
 
-            productIds.add(
-                row.productId
-            );
+            if (row.variantId) {
+                variantIds.add(
+                    row.variantId
+                );
+            }
         }
 
-        for (
-            const productId
-            of productIds
-        ) {
+        /* =====================================
+           PRODUCT THUMBNAILS
+        ===================================== */
+
+        for (const productId of productIds) {
 
             if (
-                this.thumbnails.has(
-                    productId
-                )
+                this.thumbnails.has(productId) ||
+                this.productThumbnailLoading.has(productId)
             ) {
                 continue;
             }
+
+            this.productThumbnailLoading.add(productId);
 
             this.productService
                 .getThumbnailBlob(
@@ -1813,26 +2092,340 @@ export class StockWorkspaceComponent
                     this.branchServiceBranchId()
                 )
                 .subscribe({
-
                     next: blob => {
 
-                        const url =
-                            URL.createObjectURL(
-                                blob
+                        this.thumbnails.set(
+                            productId,
+                            URL.createObjectURL(blob)
+                        );
+
+                        this.productThumbnailLoading.delete(
+                            productId
+                        );
+                    },
+                    error: () => {
+
+                        const existing =
+                            this.thumbnails.get(
+                                productId
                             );
 
-                        this.thumbnails.set(
+                        if (existing) {
+                            URL.revokeObjectURL(
+                                existing
+                            );
+                        }
 
-                            productId,
-
-                            this.sanitizer
-                                .bypassSecurityTrustUrl(
-                                    url
-                                )
+                        this.thumbnails.delete(
+                            productId
                         );
+
+                        this.productThumbnailLoading.delete(
+                            productId
+                        );
+
+                        this.rows = [...this.rows];
                     }
                 });
+
+            if (
+                this.productImages.has(productId) ||
+                this.productImageLoading.has(productId)
+            ) {
+                continue;
+            }
+
+            this.productImageLoading.add(productId);
+
+            this.productService
+                .getImages(
+                    productId,
+                    false,
+                    this.branchServiceBranchId()
+                )
+                .subscribe({
+
+                    next: images => {
+
+                        const image =
+                            images?.find(
+                                img => img.primaryImage
+                            )
+                            ??
+                            images?.find(
+                                img => !img.deleted
+                            );
+
+                        if (!image) {
+
+                            const existingImage =
+                                this.productImages.get(
+                                    productId
+                                );
+
+                            if (existingImage) {
+                                URL.revokeObjectURL(
+                                    existingImage
+                                );
+                            }
+
+                            const existingThumb =
+                                this.thumbnails.get(
+                                    productId
+                                );
+
+                            if (existingThumb) {
+                                URL.revokeObjectURL(
+                                    existingThumb
+                                );
+                            }
+
+                            this.productImages.delete(
+                                productId
+                            );
+
+                            this.thumbnails.delete(
+                                productId
+                            );
+
+                            this.productImageLoading.delete(
+                                productId
+                            );
+
+                            this.productThumbnailLoading.delete(
+                                productId
+                            );
+
+                            this.rows = [...this.rows];
+
+                            return;
+                        }
+
+                        this.productService
+                            .getImageBlob(
+                                productId,
+                                image.fileName,
+                                this.branchServiceBranchId(),
+                                Date.now()
+                            )
+                            .subscribe({
+
+                                next: blob => {
+
+                                    const existing =
+                                        this.productImages.get(
+                                            productId
+                                        );
+
+                                    if (existing) {
+                                        URL.revokeObjectURL(
+                                            existing
+                                        );
+                                    }
+
+                                    this.productImages.set(
+                                        productId,
+                                        URL.createObjectURL(
+                                            blob
+                                        )
+                                    );
+
+                                    this.productImageLoading.delete(
+                                        productId
+                                    );
+                                },
+
+                                error: () => {
+
+                                    this.productImageLoading.delete(
+                                        productId
+                                    );
+                                }
+                            });
+                    },
+
+                    error: () => {
+
+                        this.productImageLoading.delete(
+                            productId
+                        );
+                    }
+
+                });
         }
+
+        /* =====================================
+           VARIANT THUMBNAILS
+        ===================================== */
+
+        for (const variantId of variantIds) {
+
+            this.loadVariantThumbnail(
+                variantId
+            );
+        }
+    }
+
+    private loadVariantThumbnail(
+        variantId: string
+    ): void {
+
+        if (
+            this.variantThumbnails.has(
+                variantId
+            ) ||
+            this.variantThumbnailLoading.has(
+                variantId
+            )
+        ) {
+            return;
+        }
+
+        this.variantThumbnailLoading.add(
+            variantId
+        );
+
+        this.variantService
+            .getAllImages(
+                variantId
+            )
+            .subscribe({
+                next: images => {
+
+                    const img =
+                        images?.find(
+                            x => !x.deleted
+                        );
+
+                    if (!img) {
+
+                        const thumb =
+                            this.variantThumbnails.get(
+                                variantId
+                            );
+
+                        if (thumb) {
+                            URL.revokeObjectURL(
+                                thumb
+                            );
+                        }
+
+                        const image =
+                            this.variantImages.get(
+                                variantId
+                            );
+
+                        if (image) {
+                            URL.revokeObjectURL(
+                                image
+                            );
+                        }
+
+                        this.variantThumbnails.delete(
+                            variantId
+                        );
+
+                        this.variantImages.delete(
+                            variantId
+                        );
+
+                        this.variantThumbnailLoading.delete(
+                            variantId
+                        );
+
+                        this.variantImageLoading.delete(
+                            variantId
+                        );
+
+                        this.rows = [...this.rows];
+
+                        return;
+                    }
+
+                    const thumbnailFileName =
+                        img.thumbnailUrl
+                            .split('/')
+                            .pop();
+
+                    if (
+                        thumbnailFileName
+                    ) {
+
+                        this.variantService
+                            .getThumbnailBlob(
+                                variantId,
+                                thumbnailFileName
+                            )
+                            .subscribe({
+                                next: blob => {
+
+                                    const existing =
+                                        this.variantThumbnails.get(
+                                            variantId
+                                        );
+
+                                    if (existing) {
+                                        URL.revokeObjectURL(
+                                            existing
+                                        );
+                                    }
+
+                                    this.variantThumbnails.set(
+                                        variantId,
+                                        URL.createObjectURL(
+                                            blob
+                                        )
+                                    );
+
+                                    this.variantThumbnailLoading.delete(
+                                        variantId
+                                    );
+
+                                    this.rows =
+                                        [...this.rows];
+                                },
+                                error: () => {
+                                    this.variantThumbnailLoading.delete(
+                                        variantId
+                                    );
+                                }
+                            });
+                    }
+
+                    this.variantService
+                        .getImageBlob(
+                            variantId,
+                            img.fileName
+                        )
+                        .subscribe({
+                            next: blob => {
+
+                                const existing =
+                                    this.variantImages.get(
+                                        variantId
+                                    );
+
+                                if (existing) {
+                                    URL.revokeObjectURL(
+                                        existing
+                                    );
+                                }
+
+                                this.variantImages.set(
+                                    variantId,
+                                    URL.createObjectURL(
+                                        blob
+                                    )
+                                );
+                            }
+                        });
+                },
+                error: () => {
+                    this.variantThumbnailLoading.delete(
+                        variantId
+                    );
+                }
+            });
     }
 
     private branchServiceBranchId():
@@ -1860,47 +2453,99 @@ export class StockWorkspaceComponent
     }
 
     openThumbnail(
-        productId: string
+        row: StockWorkspaceRow
     ) {
 
-        const thumbnail =
-            this.thumbnails.get(
-                productId
-            );
+        let image: string | null = null;
 
         if (
-            !thumbnail
+            row.variantId &&
+            this.variantImages.has(row.variantId)
         ) {
+            image =
+                this.variantImages.get(
+                    row.variantId
+                ) ?? null;
+        }
+
+        if (
+            !image &&
+            this.productImages.has(
+                row.productId
+            )
+        ) {
+            image =
+                this.productImages.get(
+                    row.productId
+                ) ?? null;
+        }
+
+        if (!image) {
             return;
         }
 
         this.dialog.open(
             FileViewerDialog,
             {
-
                 panelClass:
                     'file-viewer-dialog',
-
-                maxWidth:
-                    '95vw',
-
-                maxHeight:
-                    '95vh',
-
+                width: '95vw',
+                maxWidth: '95vw',
+                height: '95vh',
+                maxHeight: '95vh',
                 data: {
                     preview: {
-
-                        src:
-                            thumbnail as string,
-
+                        src: image,
                         name:
-                            'Product Thumbnail',
-
-                        type:
-                            'image'
+                            row.variantName
+                            ?? row.productName,
+                        type: 'image'
                     }
                 }
             }
+        );
+    }
+
+    public invalidateProductImageCache(
+        productId: string
+    ): void {
+
+        const thumb =
+            this.thumbnails.get(
+                productId
+            );
+
+        if (thumb) {
+            URL.revokeObjectURL(
+                thumb as string
+            );
+        }
+
+        const image =
+            this.productImages.get(
+                productId
+            );
+
+        if (image) {
+            URL.revokeObjectURL(
+                image
+            );
+        }
+
+        this.thumbnails.delete(
+            productId
+        );
+
+        this.productImages.delete(
+            productId
+        );
+
+        this.productThumbnailLoading.delete(
+            productId
+        );
+
+        this.productImageLoading.delete(
+            productId
         );
     }
 }

@@ -1,21 +1,252 @@
-.content {
+:host {
+  display: block;
+}
+
+/* =========================================================
+   ROOT
+========================================================= */
+
+.upload-dialog {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
 }
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.dialog-header {
+  padding: 24px 28px;
+
+  border-bottom:
+    1px solid var(--surface-border);
+
+  background:
+    linear-gradient(135deg,
+      rgba(59, 130, 246, .10),
+      transparent 55%);
+}
+
+.dialog-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+
+  color: var(--text-primary);
+}
+
+.dialog-subtitle {
+  margin-top: 6px;
+
+  font-size: .9rem;
+
+  color: var(--text-secondary);
+}
+
+/* =========================================================
+   CONTENT
+========================================================= */
+
+.dialog-content {
+  display: flex;
+  flex-direction: column;
+
+  gap: 20px;
+
+  padding: 24px !important;
+}
+
+/* =========================================================
+   UPLOAD ZONE
+========================================================= */
+
+.upload-zone {
+  position: relative;
+
+  display: block;
+
+  border-radius: 18px;
+
+  border:
+    2px dashed var(--surface-border);
+
+  background:
+    linear-gradient(180deg,
+      rgba(59, 130, 246, .03),
+      transparent);
+
+  overflow: hidden;
+
+  cursor: pointer;
+
+  transition:
+    border-color .18s ease,
+    background .18s ease,
+    transform .18s ease;
+}
+
+.upload-zone:hover {
+  border-color:
+    rgba(59, 130, 246, .35);
+
+  transform:
+    translateY(-2px);
+}
+
+.upload-zone input[type="file"] {
+  display: none;
+}
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+.upload-placeholder {
+  min-height: 220px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+
+  padding: 24px;
+}
+
+.upload-placeholder mat-icon {
+  width: 72px;
+  height: 72px;
+  font-size: 72px;
+
+  color: #3b82f6;
+
+  margin-bottom: 12px;
+}
+
+.upload-placeholder h3 {
+  margin: 0 0 8px;
+
+  font-size: 1.1rem;
+  font-weight: 700;
+
+  color: var(--text-primary);
+}
+
+.upload-placeholder p {
+  margin: 0;
+
+  color: var(--text-secondary);
+
+  line-height: 1.5;
+}
+
+/* =========================================================
+   IMAGE PREVIEW
+========================================================= */
 
 .preview {
   display: flex;
   justify-content: center;
 
-  img {
-    max-width: 100%;
-    max-height: 250px;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-  }
+  padding: 16px;
 }
+
+.preview img {
+  width: 100%;
+
+  max-height: 340px;
+
+  object-fit: contain;
+
+  border-radius: 14px;
+
+  border:
+    1px solid var(--surface-border);
+}
+
+/* =========================================================
+   PDF PREVIEW
+========================================================= */
+
+.pdf-preview {
+  min-height: 220px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 10px;
+
+  text-align: center;
+
+  padding: 24px;
+}
+
+.pdf-preview mat-icon {
+  width: 72px;
+  height: 72px;
+  font-size: 72px;
+
+  color: #ef4444;
+}
+
+.pdf-preview span {
+  font-weight: 600;
+
+  color: var(--text-primary);
+
+  word-break: break-word;
+}
+
+/* =========================================================
+   FORM
+========================================================= */
 
 .full {
   width: 100%;
+}
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.dialog-actions {
+  padding: 18px 24px !important;
+
+  border-top:
+    1px solid var(--surface-border);
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+  .dialog-header {
+    padding: 20px;
+  }
+
+  .dialog-content {
+    padding: 18px !important;
+  }
+
+  .upload-placeholder,
+  .pdf-preview {
+    min-height: 180px;
+  }
+
+  .upload-placeholder mat-icon,
+  .pdf-preview mat-icon {
+    width: 56px;
+    height: 56px;
+    font-size: 56px;
+  }
+
+  .dialog-actions {
+    padding: 16px !important;
+  }
 }

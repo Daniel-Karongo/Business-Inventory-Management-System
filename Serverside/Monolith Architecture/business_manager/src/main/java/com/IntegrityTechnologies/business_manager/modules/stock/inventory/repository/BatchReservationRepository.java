@@ -27,11 +27,11 @@ public interface BatchReservationRepository
 
     @Modifying
     @Query("""
-        DELETE FROM BatchReservation r
-        WHERE r.referenceId = :referenceId
-          AND r.tenantId = :tenantId
-          AND r.branchId = :branchId
-    """)
+                DELETE FROM BatchReservation r
+                WHERE r.referenceId = :referenceId
+                  AND r.tenantId = :tenantId
+                  AND r.branchId = :branchId
+            """)
     void deleteByReferenceId(
             UUID referenceId,
             UUID tenantId,
@@ -39,14 +39,14 @@ public interface BatchReservationRepository
     );
 
     @Query("""
-        SELECT COALESCE(SUM(r.quantity), 0)
-        FROM BatchReservation r
-        WHERE r.productVariantId = :variantId
-          AND r.tenantId = :tenantId
-          AND r.branchId = :branchId
-          AND r.status = 'ACTIVE'
-          AND (r.expiresAt IS NULL OR r.expiresAt > CURRENT_TIMESTAMP)
-    """)
+                SELECT COALESCE(SUM(r.quantity), 0)
+                FROM BatchReservation r
+                WHERE r.productVariantId = :variantId
+                  AND r.tenantId = :tenantId
+                  AND r.branchId = :branchId
+                  AND r.status = 'ACTIVE'
+                  AND (r.expiresAt IS NULL OR r.expiresAt > CURRENT_TIMESTAMP)
+            """)
     long sumReservedByVariantAndTenantAndBranch(
             UUID variantId,
             UUID tenantId,
@@ -55,11 +55,11 @@ public interface BatchReservationRepository
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-        SELECT r FROM BatchReservation r
-        WHERE r.referenceId = :referenceId
-          AND r.tenantId = :tenantId
-          AND r.branchId = :branchId
-    """)
+                SELECT r FROM BatchReservation r
+                WHERE r.referenceId = :referenceId
+                  AND r.tenantId = :tenantId
+                  AND r.branchId = :branchId
+            """)
     List<BatchReservation> lockByReferenceIdAndTenantIdAndBranchId(
             UUID referenceId,
             UUID tenantId,
@@ -73,31 +73,38 @@ public interface BatchReservationRepository
             UUID branchId
     );
 
+    boolean existsByReferenceIdAndSaleLineItemIdAndTenantIdAndBranchId(
+            UUID referenceId,
+            Long saleLineItemId,
+            UUID tenantId,
+            UUID branchId
+    );
+
     @Query("""
-        SELECT 
-            r.productVariantId AS productVariantId,
-            r.batch.branchId AS branchId,
-            SUM(r.quantity) AS totalReserved
-        FROM BatchReservation r
-        WHERE r.tenantId = :tenantId
-          AND r.productVariantId IN :variantIds
-        GROUP BY r.productVariantId, r.batch.branchId
-    """)
+                SELECT 
+                    r.productVariantId AS productVariantId,
+                    r.batch.branchId AS branchId,
+                    SUM(r.quantity) AS totalReserved
+                FROM BatchReservation r
+                WHERE r.tenantId = :tenantId
+                  AND r.productVariantId IN :variantIds
+                GROUP BY r.productVariantId, r.batch.branchId
+            """)
     List<VariantReservationSummary> sumReservedBulk(
             @Param("variantIds") List<UUID> variantIds,
             @Param("tenantId") UUID tenantId
     );
 
     @Query("""
-        SELECT r.batch.id AS batchId, SUM(r.quantity) AS totalReserved
-        FROM BatchReservation r
-        WHERE r.tenantId = :tenantId
-          AND r.branchId = :branchId
-          AND r.productVariantId = :variantId
-          AND r.status = 'ACTIVE'
-          AND (r.expiresAt IS NULL OR r.expiresAt > CURRENT_TIMESTAMP)
-        GROUP BY r.batch.id
-    """)
+                SELECT r.batch.id AS batchId, SUM(r.quantity) AS totalReserved
+                FROM BatchReservation r
+                WHERE r.tenantId = :tenantId
+                  AND r.branchId = :branchId
+                  AND r.productVariantId = :variantId
+                  AND r.status = 'ACTIVE'
+                  AND (r.expiresAt IS NULL OR r.expiresAt > CURRENT_TIMESTAMP)
+                GROUP BY r.batch.id
+            """)
     List<BatchReservationSummary> sumReservedByBatch(
             @Param("variantId") UUID variantId,
             @Param("tenantId") UUID tenantId,

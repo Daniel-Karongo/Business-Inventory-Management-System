@@ -14,6 +14,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.LocalDateTime;
 
@@ -82,8 +84,16 @@ public class OutboxEventExecutor {
 
         if (e.getRetryCount() > 10) {
 
+            cleanupFailedEventResources(
+                    e
+            );
+
             e.setFailed(true);
-            e.setFailureReason(ex.getMessage());
+
+            e.setFailureReason(
+                    ex.getMessage()
+            );
+
             e.setProcessed(true);
 
             log.error(
@@ -91,7 +101,6 @@ public class OutboxEventExecutor {
                     e.getId(),
                     ex
             );
-
         } else {
 
             if (e.getRetryCount() <= 3
@@ -137,6 +146,45 @@ public class OutboxEventExecutor {
                     "Failed to deserialize outbox event " + e.getId(),
                     ex
             );
+        }
+    }
+
+    private void cleanupFailedEventResources(
+            EventOutbox e
+    ) {
+
+        try {
+
+            if (!"VARIANT_IMAGE_UPLOAD_REQUESTED".equals(
+                    e.getEventType()
+            )) {
+                return;
+            }
+
+            VariantImageUploadRequestedEvent event =
+                    mapper.readValue(
+                            e.getPayload(),
+                            VariantImageUploadRequestedEvent.class
+                    );
+
+            if (event.getTempFilePath() == null) {
+                return;
+            }
+
+            Files.deleteIfExists(
+                    Path.of(
+                            event.getTempFilePath()
+                    )
+            );
+
+        } catch (Exception cleanupError) {
+
+            log.warn(
+                    "Failed cleaning resources for event {}",
+                    e.getId(),
+                    cleanupError
+            );
+
         }
     }
 }

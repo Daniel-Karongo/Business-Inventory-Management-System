@@ -9,6 +9,7 @@ import com.IntegrityTechnologies.business_manager.modules.stock.inventory.model.
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.BatchReservationRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryBatchRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.TenantInventorySettingsRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.projection.BatchReservationSummary;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.repository.ProductVariantPackagingRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
@@ -17,10 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -50,6 +48,16 @@ public class StockReservationService {
             UUID branchId,
             long baseUnits
     ) {
+
+        if (reservationRepo.existsByReferenceIdAndProductVariantIdAndTenantIdAndBranchId(
+                        saleId,
+                        variantId,
+                        tenantId(),
+                        branchId
+                )
+        ) {
+            return Collections.emptyList();
+        }
 
         ProductVariantPackaging packaging =
                 packagingId != null
@@ -106,6 +114,7 @@ public class StockReservationService {
     @Transactional
     public List<BatchReservation> reserveWithSelection(
             UUID saleId,
+            Long saleLineItemId,
             UUID variantId,
             UUID packagingId,
             UUID branchId,
@@ -113,6 +122,16 @@ public class StockReservationService {
             long requestedQuantity,
             List<SaleLineBatchSelection> selections
     ) {
+
+        if (saleLineItemId != null && reservationRepo.existsByReferenceIdAndSaleLineItemIdAndTenantIdAndBranchId(
+                saleId,
+                saleLineItemId,
+                tenantId(),
+                branchId
+        ))
+        {
+            return Collections.emptyList();
+        }
 
         ProductVariantPackaging packaging =
                 packagingId != null
@@ -126,7 +145,11 @@ public class StockReservationService {
         enforcePackaging(packaging, settings, baseUnits);
 
         List<InventoryBatch> batches =
-                batchRepo.findAvailableBatches(variantId, tenantId(), branchId);
+                batchRepo.lockAvailableBatchesFIFO(
+                        variantId,
+                        tenantId(),
+                        branchId
+                );
 
         Map<UUID, InventoryBatch> batchMap =
                 batches.stream().collect(Collectors.toMap(InventoryBatch::getId, b -> b));
@@ -153,7 +176,7 @@ public class StockReservationService {
                                 batch,
                                 variantId,
                                 saleId,
-                                sel.getSaleLineItem().getId(),
+                                saleLineItemId,
                                 packagingId,
                                 baseUnits,
                                 packaging,
@@ -184,7 +207,7 @@ public class StockReservationService {
                                 batch,
                                 variantId,
                                 saleId,
-                                null,
+                                saleLineItemId,
                                 packagingId,
                                 baseUnits,
                                 packaging,
@@ -238,7 +261,7 @@ public class StockReservationService {
     public void release(UUID branchId, UUID saleId) {
 
         List<BatchReservation> reservations =
-                reservationRepo.findByReferenceIdAndTenantIdAndBranchId(
+                reservationRepo.lockByReferenceIdAndTenantIdAndBranchId(
                         saleId,
                         tenantId(),
                         branchId
@@ -299,6 +322,11 @@ public class StockReservationService {
             long take
     ) {
 
+        validateReservation(
+                batch,
+                take
+        );
+
         return reservationRepo.save(
                 BatchReservation.builder()
                         .batch(batch)
@@ -323,5 +351,33 @@ public class StockReservationService {
                         .branchId(batch.getBranchId())
                         .build()
         );
+    }
+
+    private void validateReservation(
+            InventoryBatch batch,
+            long requested
+    ) {
+
+        long activeReserved =
+                reservationRepo.sumReservedByBatch(
+                                batch.getProductVariantId(),
+                                tenantId(),
+                                batch.getBranchId()
+                        )
+                        .stream()
+                        .filter(r -> r.getBatchId().equals(batch.getId()))
+                        .mapToLong(BatchReservationSummary::getTotalReserved)
+                        .sum();
+
+        long available =
+                batch.getQuantityRemaining()
+                        - activeReserved;
+
+        if (requested > available) {
+
+            throw new OutOfStockException(
+                    "Reservation exceeds available stock"
+            );
+        }
     }
 }

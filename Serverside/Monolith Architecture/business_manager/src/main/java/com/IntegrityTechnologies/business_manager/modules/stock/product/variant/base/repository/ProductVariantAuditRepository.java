@@ -7,15 +7,9 @@ import java.util.List;
 import java.util.UUID;
 
 public interface ProductVariantAuditRepository extends JpaRepository<ProductVariantAudit, UUID> {
-
-    List<ProductVariantAudit> findByTenantIdAndBranchIdAndProductVariantIdOrderByTimestampDesc(
+    List<ProductVariantAudit> findByTenantIdAndBranchIdAndVariantIdOrderByTimestampDesc(
             UUID tenantId,
             UUID branchId,
             UUID variantId
-    );
-
-    List<ProductVariantAudit> findTop10ByTenantIdAndBranchIdOrderByTimestampDesc(
-            UUID tenantId,
-            UUID branchId
     );
 }

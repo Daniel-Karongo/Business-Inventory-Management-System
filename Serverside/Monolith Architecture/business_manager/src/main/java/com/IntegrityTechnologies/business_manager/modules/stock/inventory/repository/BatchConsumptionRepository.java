@@ -32,21 +32,29 @@ public interface BatchConsumptionRepository extends JpaRepository<BatchConsumpti
             UUID branchId
     );
 
+    List<BatchConsumption>
+    findBySaleIdAndProductVariantIdAndTenantIdAndBranchIdAndRestoredFalse(
+            UUID saleId,
+            UUID variantId,
+            UUID tenantId,
+            UUID branchId
+    );
+
     @Query("""
-        SELECT 
-            bc.batch.id,
-            SUM(li.lineTotal * (bc.quantity * 1.0 / li.quantity)),
-            SUM(bc.quantity * bc.unitCost)
-        FROM BatchConsumption bc
-        JOIN Sale s ON s.id = bc.saleId
-        JOIN s.lineItems li
-        WHERE s.status = 'COMPLETED'
-          AND bc.tenantId = :tenantId
-          AND bc.branchId = :branchId
-          AND s.branchId = :branchId
-          AND li.productVariantId = bc.productVariantId
-        GROUP BY bc.batch.id
-    """)
+                SELECT 
+                    bc.batch.id,
+                    SUM(li.lineTotal * (bc.quantity * 1.0 / li.quantity)),
+                    SUM(bc.quantity * bc.unitCost)
+                FROM BatchConsumption bc
+                JOIN Sale s ON s.id = bc.saleId
+                JOIN s.lineItems li
+                WHERE s.status = 'COMPLETED'
+                  AND bc.tenantId = :tenantId
+                  AND bc.branchId = :branchId
+                  AND s.branchId = :branchId
+                  AND li.productVariantId = bc.productVariantId
+                GROUP BY bc.batch.id
+            """)
     List<Object[]> topBatchProfitRaw(
             UUID tenantId,
             UUID branchId
@@ -59,19 +67,19 @@ public interface BatchConsumptionRepository extends JpaRepository<BatchConsumpti
     );
 
     @Query("""
-        SELECT COALESCE(SUM(bc.unitCost * bc.quantity), 0)
-        FROM BatchConsumption bc
-        WHERE bc.saleId = :saleId
-        AND bc.tenantId = :tenantId
-    """)
+                SELECT COALESCE(SUM(bc.unitCost * bc.quantity), 0)
+                FROM BatchConsumption bc
+                WHERE bc.saleId = :saleId
+                AND bc.tenantId = :tenantId
+            """)
     BigDecimal sumCostBySaleId(UUID saleId, UUID tenantId);
 
     @Query("""
-        SELECT COALESCE(SUM(bc.quantity), 0)
-        FROM BatchConsumption bc
-        WHERE bc.saleId = :saleId
-          AND bc.tenantId = :tenantId
-    """)
+                SELECT COALESCE(SUM(bc.quantity), 0)
+                FROM BatchConsumption bc
+                WHERE bc.saleId = :saleId
+                  AND bc.tenantId = :tenantId
+            """)
     long sumQuantityBySaleId(
             @Param("saleId") UUID saleId,
             @Param("tenantId") UUID tenantId

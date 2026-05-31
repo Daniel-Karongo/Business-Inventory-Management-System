@@ -39,12 +39,12 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
     );
 
     @Query("""
-        SELECT s FROM StockTransaction s
-        WHERE s.tenantId = :tenantId
-          AND s.timestamp BETWEEN :from AND :to
-          AND s.deleted = false
-        ORDER BY s.timestamp DESC
-    """)
+                SELECT s FROM StockTransaction s
+                WHERE s.tenantId = :tenantId
+                  AND s.timestamp BETWEEN :from AND :to
+                  AND s.deleted = false
+                ORDER BY s.timestamp DESC
+            """)
     List<StockTransaction> findByDateRange(
             UUID tenantId,
             LocalDateTime from,
@@ -72,12 +72,12 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
        PAGINATED READS (STRICT)
     ===================================================== */
     @Query("""
-        SELECT s FROM StockTransaction s
-        WHERE s.tenantId = :tenantId
-          AND s.branchId = :branchId
-          AND s.deleted = false
-        ORDER BY s.timestamp DESC
-    """)
+                SELECT s FROM StockTransaction s
+                WHERE s.tenantId = :tenantId
+                  AND s.branchId = :branchId
+                  AND s.deleted = false
+                ORDER BY s.timestamp DESC
+            """)
     Page<StockTransaction> findAllScoped(
             UUID tenantId,
             UUID branchId,
@@ -85,13 +85,13 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
     );
 
     @Query("""
-        SELECT s FROM StockTransaction s
-        WHERE s.tenantId = :tenantId
-          AND s.branchId = :branchId
-          AND s.productVariantId = :variantId
-          AND s.deleted = false
-        ORDER BY s.timestamp DESC
-    """)
+                SELECT s FROM StockTransaction s
+                WHERE s.tenantId = :tenantId
+                  AND s.branchId = :branchId
+                  AND s.productVariantId = :variantId
+                  AND s.deleted = false
+                ORDER BY s.timestamp DESC
+            """)
     Page<StockTransaction> findByVariantScoped(
             UUID tenantId,
             UUID branchId,
@@ -100,12 +100,12 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
     );
 
     @Query("""
-        SELECT s FROM StockTransaction s
-        WHERE s.productId = :productId
-          AND s.tenantId = :tenantId
-          AND s.branchId = :branchId
-          AND s.deleted = false
-    """)
+                SELECT s FROM StockTransaction s
+                WHERE s.productId = :productId
+                  AND s.tenantId = :tenantId
+                  AND s.branchId = :branchId
+                  AND s.deleted = false
+            """)
     List<StockTransaction> findByProductScoped(
             UUID productId,
             UUID tenantId,
@@ -117,24 +117,24 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
     ===================================================== */
 
     @Query("""
-    SELECT s FROM StockTransaction s
-    WHERE s.productVariantId = :variantId
-      AND s.branchId = :branchId
-      AND s.tenantId = :tenantId
-      AND s.type = 'RECEIPT'
-      AND s.deleted = false
-""")
+                SELECT s FROM StockTransaction s
+                WHERE s.productVariantId = :variantId
+                  AND s.branchId = :branchId
+                  AND s.tenantId = :tenantId
+                  AND s.type = 'RECEIPT'
+                  AND s.deleted = false
+            """)
     List<StockTransaction> findReceipts(UUID variantId, UUID branchId, UUID tenantId);
 
     @Query("""
-    SELECT s FROM StockTransaction s
-    WHERE s.productVariantId = :variantId
-      AND s.branchId = :branchId
-      AND s.tenantId = :tenantId
-      AND s.timestamp BETWEEN :from AND :to
-      AND s.deleted = false
-    ORDER BY s.timestamp ASC
-""")
+                SELECT s FROM StockTransaction s
+                WHERE s.productVariantId = :variantId
+                  AND s.branchId = :branchId
+                  AND s.tenantId = :tenantId
+                  AND s.timestamp BETWEEN :from AND :to
+                  AND s.deleted = false
+                ORDER BY s.timestamp ASC
+            """)
     List<StockTransaction> findBetweenVariant(
             UUID variantId,
             UUID branchId,
@@ -150,11 +150,11 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
     @Transactional
     @Modifying
     @Query("""
-        update StockTransaction s
-        set s.deleted = true
-        where s.productVariantId in :variantIds
-          AND s.tenantId = :tenantId
-    """)
+                update StockTransaction s
+                set s.deleted = true
+                where s.productVariantId in :variantIds
+                  AND s.tenantId = :tenantId
+            """)
     void softDeleteByVariantIds(
             List<UUID> variantIds,
             UUID tenantId
@@ -163,12 +163,12 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
     @Transactional
     @Modifying
     @Query("""
-    update StockTransaction s
-    set s.deleted = false
-    where s.productVariantId in :variantIds
-      AND s.tenantId = :tenantId
-      AND s.branchId = :branchId
-""")
+                update StockTransaction s
+                set s.deleted = false
+                where s.productVariantId in :variantIds
+                  AND s.tenantId = :tenantId
+                  AND s.branchId = :branchId
+            """)
     void restoreByVariantIds(
             @Param("variantIds") List<UUID> variantIds,
             @Param("tenantId") UUID tenantId,
@@ -176,93 +176,93 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
     );
 
     @Query("""
-    SELECT new com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.StockTransactionDTO(
-        s.id,
-        s.productId,
-        p.name,
-        s.productVariantId,
-        v.classification,
-        s.branchId,
-        b.name,
-        s.type,
-        s.quantityDelta,
-        s.unitCost,
-        s.reference,
-        s.supplierId,
-        s.note,
-        s.timestamp,
-        s.performedBy
-    )
-    FROM StockTransaction s
-    JOIN ProductVariant v ON v.id = s.productVariantId
-    JOIN Product p ON p.id = v.product.id
-    JOIN Branch b ON b.id = s.branchId
-    WHERE s.tenantId = :tenantId
-      AND s.branchId = :branchId
-      AND s.deleted = false
-    ORDER BY s.timestamp DESC
-""")
+                SELECT new com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.StockTransactionDTO(
+                    s.id,
+                    s.productId,
+                    p.name,
+                    s.productVariantId,
+                    v.classification,
+                    s.branchId,
+                    b.name,
+                    s.type,
+                    s.quantityDelta,
+                    s.unitCost,
+                    s.reference,
+                    s.supplierId,
+                    s.note,
+                    s.timestamp,
+                    s.performedBy
+                )
+                FROM StockTransaction s
+                JOIN ProductVariant v ON v.id = s.productVariantId
+                JOIN Product p ON p.id = v.product.id
+                JOIN Branch b ON b.id = s.branchId
+                WHERE s.tenantId = :tenantId
+                  AND s.branchId = :branchId
+                  AND s.deleted = false
+                ORDER BY s.timestamp DESC
+            """)
     List<StockTransactionDTO> findAllDTO(UUID tenantId, UUID branchId);
 
 
     @Query("""
-    SELECT new com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.StockTransactionDTO(
-        s.id,
-        s.productId,
-        p.name,
-        s.productVariantId,
-        v.classification,
-        s.branchId,
-        b.name,
-        s.type,
-        s.quantityDelta,
-        s.unitCost,
-        s.reference,
-        s.supplierId,
-        s.note,
-        s.timestamp,
-        s.performedBy
-    )
-    FROM StockTransaction s
-    JOIN ProductVariant v ON v.id = s.productVariantId
-    JOIN Product p ON p.id = v.product.id
-    JOIN Branch b ON b.id = s.branchId
-    WHERE s.tenantId = :tenantId
-      AND s.branchId = :branchId
-      AND s.productVariantId = :variantId
-      AND s.deleted = false
-    ORDER BY s.timestamp DESC
-""")
+                SELECT new com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.StockTransactionDTO(
+                    s.id,
+                    s.productId,
+                    p.name,
+                    s.productVariantId,
+                    v.classification,
+                    s.branchId,
+                    b.name,
+                    s.type,
+                    s.quantityDelta,
+                    s.unitCost,
+                    s.reference,
+                    s.supplierId,
+                    s.note,
+                    s.timestamp,
+                    s.performedBy
+                )
+                FROM StockTransaction s
+                JOIN ProductVariant v ON v.id = s.productVariantId
+                JOIN Product p ON p.id = v.product.id
+                JOIN Branch b ON b.id = s.branchId
+                WHERE s.tenantId = :tenantId
+                  AND s.branchId = :branchId
+                  AND s.productVariantId = :variantId
+                  AND s.deleted = false
+                ORDER BY s.timestamp DESC
+            """)
     List<StockTransactionDTO> findByVariantDTO(UUID tenantId, UUID branchId, UUID variantId);
 
 
     @Query("""
-    SELECT new com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.StockTransactionDTO(
-        s.id,
-        s.productId,
-        p.name,
-        s.productVariantId,
-        v.classification,
-        s.branchId,
-        b.name,
-        s.type,
-        s.quantityDelta,
-        s.unitCost,
-        s.reference,
-        s.supplierId,
-        s.note,
-        s.timestamp,
-        s.performedBy
-    )
-    FROM StockTransaction s
-    JOIN ProductVariant v ON v.id = s.productVariantId
-    JOIN Product p ON p.id = v.product.id
-    JOIN Branch b ON b.id = s.branchId
-    WHERE s.tenantId = :tenantId
-      AND s.branchId = :branchId
-      AND s.productId = :productId
-      AND s.deleted = false
-    ORDER BY s.timestamp DESC
-""")
+                SELECT new com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.StockTransactionDTO(
+                    s.id,
+                    s.productId,
+                    p.name,
+                    s.productVariantId,
+                    v.classification,
+                    s.branchId,
+                    b.name,
+                    s.type,
+                    s.quantityDelta,
+                    s.unitCost,
+                    s.reference,
+                    s.supplierId,
+                    s.note,
+                    s.timestamp,
+                    s.performedBy
+                )
+                FROM StockTransaction s
+                JOIN ProductVariant v ON v.id = s.productVariantId
+                JOIN Product p ON p.id = v.product.id
+                JOIN Branch b ON b.id = s.branchId
+                WHERE s.tenantId = :tenantId
+                  AND s.branchId = :branchId
+                  AND s.productId = :productId
+                  AND s.deleted = false
+                ORDER BY s.timestamp DESC
+            """)
     List<StockTransactionDTO> findByProductDTO(UUID tenantId, UUID branchId, UUID productId);
 }
