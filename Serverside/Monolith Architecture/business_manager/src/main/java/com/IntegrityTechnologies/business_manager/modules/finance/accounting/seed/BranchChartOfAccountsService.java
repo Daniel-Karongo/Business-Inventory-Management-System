@@ -40,6 +40,7 @@ public class BranchChartOfAccountsService {
 
         seed(tenantId, branchId,"5000","Cost Of Goods Sold",AccountType.EXPENSE,AccountRole.COGS);
         seed(tenantId, branchId,"5100","Corporate Tax Expense",AccountType.EXPENSE,AccountRole.CORPORATE_TAX_EXPENSE);
+        seed(tenantId, branchId, "5200", "Operating Expenses", AccountType.EXPENSE, AccountRole.OPERATING_EXPENSE);
     }
 
     private void seed(

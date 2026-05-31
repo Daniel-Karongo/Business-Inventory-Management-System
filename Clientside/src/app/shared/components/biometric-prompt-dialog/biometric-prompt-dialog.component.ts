@@ -101,27 +101,15 @@ import { MatIconModule } from '@angular/material/icon';
     }
 
     .biometric-dialog {
-
       width: 100%;
-
       max-width: 440px;
-
       color: var(--text-primary);
-
-      background:
-        linear-gradient(
-          180deg,
-          #161a22,
-          #131720
-        );
-
+      color: var(--text-primary);
+      background: transparent;
       border-radius: inherit;
-
       overflow-x: hidden;
       overflow-y: auto;
-
       max-height: calc(90vh - 2px);
-
       box-sizing: border-box;
     }
 
@@ -135,12 +123,8 @@ import { MatIconModule } from '@angular/material/icon';
 
       padding: 22px 22px 16px 22px;
 
-      background:
-        linear-gradient(
-          180deg,
-          rgba(0, 122, 255, 0.045),
-          transparent
-        );
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
     }
 
     body.dark .dialog-header {
@@ -186,10 +170,6 @@ import { MatIconModule } from '@angular/material/icon';
       height: 30px;
 
       color: #007aff;
-    }
-
-    body.dark .icon-shell mat-icon {
-      color: #60a5fa;
     }
 
     .header-copy {
@@ -245,27 +225,14 @@ import { MatIconModule } from '@angular/material/icon';
 
       border-radius: 12px;
 
-      background:
-        linear-gradient(
-          180deg,
-          rgba(255,255,255,0.02),
-          rgba(255,255,255,0.01)
-        );
-
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,0.03);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: none;
 
       transition:
         background-color 160ms ease,
         transform 140ms ease,
         box-shadow 160ms ease;
-    }
-
-    body.light .feature-item {
-      background: rgba(0,0,0,0.018);
-
-      box-shadow:
-        inset 0 0 0 1px rgba(0,0,0,0.04);
     }
 
     .feature-item:hover {
@@ -284,8 +251,9 @@ import { MatIconModule } from '@angular/material/icon';
       flex-shrink: 0;
     }
 
-    body.dark .feature-item mat-icon {
-      color: #60a5fa;
+    .icon-shell mat-icon,
+    .feature-item mat-icon {
+      color: var(--active);
     }
 
     .feature-item span {
@@ -307,9 +275,8 @@ import { MatIconModule } from '@angular/material/icon';
 
       border-radius: 10px;
 
-      background: rgba(34, 197, 94, 0.045);
-
-      border: 1px solid rgba(34, 197, 94, 0.06);
+      background: var(--surface-hover);
+      border: 1px solid var(--border);
 
       color: var(--text-secondary);
 
