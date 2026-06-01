@@ -757,7 +757,8 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
     const ref = this.dialog.open(
       ReasonDialogComponent,
       {
-        width: '480px',
+        width: '500px',
+        panelClass: 'enterprise-dialog',
         data: {
           title: restoring
             ? 'Restore Document'
@@ -782,6 +783,7 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
               ? this.adapter.restoreReasons ?? []
               : this.adapter.deleteReasons ?? [],
 
+          requireReason: false,
           allowCustomReason: true
         }
       }
@@ -830,14 +832,24 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
             }
           },
 
-          error: () => {
+          error: (err) => {
+
+            const message =
+              err?.error?.message ||
+              err?.error ||
+              err?.message ||
+              (
+                restoring
+                  ? 'Restore failed'
+                  : 'Delete failed'
+              );
 
             this.snackbar.open(
-              restoring
-                ? 'Restore failed'
-                : 'Delete failed',
+              message,
               'Close',
-              { duration: 4000 }
+              {
+                duration: 5000
+              }
             );
 
           }
@@ -853,6 +865,7 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
       ReasonDialogComponent,
       {
         width: '500px',
+        panelClass: 'enterprise-dialog',
         data: {
           title: 'Permanent Delete',
 
@@ -867,6 +880,8 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
 
           reasons:
             this.adapter.hardDeleteReasons ?? [],
+
+          requireReason: false,
 
           allowCustomReason: true
         }
@@ -905,12 +920,20 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
               }
             },
 
-            error: () => {
+            error: (err) => {
+
+              const message =
+                err?.error?.message ||
+                err?.error ||
+                err?.message ||
+                'Permanent delete failed';
 
               this.snackbar.open(
-                'Permanent delete failed',
+                message,
                 'Close',
-                { duration: 4000 }
+                {
+                  duration: 5000
+                }
               );
 
             }

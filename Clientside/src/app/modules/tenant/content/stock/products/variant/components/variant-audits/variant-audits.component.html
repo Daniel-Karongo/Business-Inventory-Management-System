@@ -1,0 +1,319 @@
+<div *ngIf="loading" class="audit-loading">
+
+    <mat-spinner diameter="40">
+    </mat-spinner>
+
+</div>
+
+<div *ngIf="
+    !loading &&
+    !filteredAudits.length
+  " class="audit-empty">
+
+    <mat-icon>
+        history
+    </mat-icon>
+
+    <div>
+        No audit records found.
+    </div>
+
+</div>
+
+<ng-container *ngIf="
+    !loading &&
+    filteredAudits.length
+  ">
+
+    <!-- FILTERS -->
+
+    <div class="audit-toolbar">
+
+        <div class="audit-filter">
+
+            <label>
+                Action
+            </label>
+
+            <select [(ngModel)]="selectedAction">
+
+                <option value="ALL">
+                    All Actions
+                </option>
+
+                <option *ngFor="
+            let action
+            of uniqueActions
+          " [value]="action">
+
+                    {{
+                    displayAction(
+                    action
+                    )
+                    }}
+
+                </option>
+
+            </select>
+
+        </div>
+
+        <div class="audit-filter">
+
+            <label>
+                Field
+            </label>
+
+            <select [(ngModel)]="selectedField">
+
+                <option value="ALL">
+                    All Fields
+                </option>
+
+                <option *ngFor="
+            let field
+            of uniqueFields
+          " [value]="field">
+
+                    {{ field }}
+
+                </option>
+
+            </select>
+
+        </div>
+
+    </div>
+
+    <!-- TIMELINE -->
+
+    <div class="audit-list">
+
+        <div *ngFor="
+        let audit
+        of filteredAudits;
+        trackBy: trackAudit
+      " class="audit-item" [class.create]="
+        getActionClass(
+          audit.action
+        ) === 'create'
+      " [class.update]="
+        getActionClass(
+          audit.action
+        ) === 'update'
+      " [class.delete]="
+        getActionClass(
+          audit.action
+        ) === 'delete'
+      " [class.restore]="
+        getActionClass(
+          audit.action
+        ) === 'restore'
+      ">
+
+            <!-- TIMELINE -->
+
+            <div class="audit-line">
+
+                <div class="audit-dot">
+                </div>
+
+            </div>
+
+            <!-- CARD -->
+
+            <div class="audit-card">
+
+                <div class="audit-top">
+
+                    <div class="audit-badge" [class.create]="
+              getActionClass(
+                audit.action
+              ) === 'create'
+            " [class.update]="
+              getActionClass(
+                audit.action
+              ) === 'update'
+            " [class.delete]="
+              getActionClass(
+                audit.action
+              ) === 'delete'
+            " [class.restore]="
+              getActionClass(
+                audit.action
+              ) === 'restore'
+            ">
+
+                        <mat-icon>
+
+                            {{
+                            getActionIcon(
+                            audit.action
+                            )
+                            }}
+
+                        </mat-icon>
+
+                        {{
+                        displayAction(
+                        audit.action
+                        )
+                        }}
+
+                    </div>
+
+                    <div class="audit-time">
+
+                        {{
+                        audit.timestamp
+                        | date:'medium'
+                        }}
+
+                    </div>
+
+                </div>
+
+                <!-- META -->
+
+                <div class="audit-meta">
+
+                    <div class="meta-item">
+
+                        <mat-icon>
+                            person
+                        </mat-icon>
+
+                        {{
+                        audit.performedBy
+                        || 'System'
+                        }}
+
+                    </div>
+
+                    <div *ngIf="
+              audit.fieldChanged
+            " class="meta-item">
+
+                        <mat-icon>
+                            tune
+                        </mat-icon>
+
+                        {{
+                        audit.fieldChanged
+                        }}
+
+                    </div>
+
+                    <div class="meta-item">
+
+                        <mat-icon>
+                            category
+                        </mat-icon>
+
+                        {{
+                        audit.classification
+                        }}
+
+                    </div>
+
+                </div>
+
+                <!-- DIFF -->
+
+                <div *ngIf="
+            hasDiff(audit)
+          " class="audit-diff">
+
+                    <div class="
+              diff-box
+              diff-old
+            ">
+
+                        <div class="
+                diff-label
+              ">
+
+                            From
+
+                        </div>
+
+                        <div class="
+                diff-value
+              ">
+
+                            {{
+                            audit.oldValue
+                            || '—'
+                            }}
+
+                        </div>
+
+                    </div>
+
+                    <div class="
+              diff-arrow
+            ">
+
+                        <mat-icon>
+                            arrow_forward
+                        </mat-icon>
+
+                    </div>
+
+                    <div class="
+              diff-box
+              diff-new
+            ">
+
+                        <div class="
+                diff-label
+              ">
+
+                            To
+
+                        </div>
+
+                        <div class="
+                diff-value
+              ">
+
+                            {{
+                            audit.newValue
+                            || '—'
+                            }}
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- REASON -->
+
+                <div *ngIf="
+            audit.reason
+          " class="
+            audit-reason
+          ">
+
+                    <mat-icon>
+                        info
+                    </mat-icon>
+
+                    <span>
+
+                        {{
+                        audit.reason
+                        }}
+
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</ng-container>

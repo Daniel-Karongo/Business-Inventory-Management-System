@@ -15,10 +15,16 @@ public class ProductVariantDTO {
     private UUID productId;
     private String productName;
     private String classification;
+
     private Double minimumPercentageProfit;
     private BigDecimal minimumProfit;
+
     private String sku;
     private String barcode;
+
     private String barcodeImagePath;
+
     private List<String> imageUrls;
+
+    private Boolean deleted;
 }

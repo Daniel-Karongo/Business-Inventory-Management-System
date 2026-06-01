@@ -12,6 +12,30 @@
       </div>
     </div>
 
+    <div class="filter-group">
+
+      <button type="button" class="filter-btn" [class.active]="currentFilter === 'ACTIVE'"
+        (click)="setFilter('ACTIVE')">
+
+        Active
+
+      </button>
+
+      <button type="button" class="filter-btn" [class.active]="currentFilter === 'DELETED'"
+        (click)="setFilter('DELETED')">
+
+        Deleted
+
+      </button>
+
+      <button type="button" class="filter-btn" [class.active]="currentFilter === 'ALL'" (click)="setFilter('ALL')">
+
+        All
+
+      </button>
+
+    </div>
+
     <div *ngIf="!loading" class="variant-count">
       {{ variants.length }}
       {{ variants.length === 1 ? 'Variant' : 'Variants' }}
@@ -155,7 +179,7 @@
 
       <div class="action-bar">
 
-        <button mat-icon-button matTooltip="Create Sale" (click)="createSale(variant)">
+        <button *ngIf="!variant.deleted" mat-icon-button matTooltip="Create Sale" (click)="createSale(variant)">
 
           <mat-icon>
             point_of_sale
@@ -171,7 +195,7 @@
 
         </button>
 
-        <button mat-icon-button matTooltip="Edit Variant" (click)="edit(variant)">
+        <button *ngIf="!variant.deleted" mat-icon-button matTooltip="Edit Variant" (click)="edit(variant)">
 
           <mat-icon>
             edit

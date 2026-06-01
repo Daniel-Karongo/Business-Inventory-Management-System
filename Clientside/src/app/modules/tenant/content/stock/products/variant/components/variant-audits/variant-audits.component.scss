@@ -1,0 +1,564 @@
+:host {
+    display: block;
+    width: 100%;
+    min-width: 0;
+}
+
+/* =========================================================
+   TOOLBAR
+========================================================= */
+
+.audit-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.audit-filter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.audit-filter label {
+    flex-shrink: 0;
+
+    font-size: 0.78rem;
+    font-weight: 600;
+
+    color: var(--text-secondary);
+}
+
+.audit-filter select {
+    min-width: 180px;
+    max-width: 260px;
+
+    padding: 8px 12px;
+
+    border-radius: 10px;
+    border: 1px solid var(--border);
+
+    background: var(--surface);
+
+    color: var(--text-primary);
+
+    font-size: 0.82rem;
+
+    outline: none;
+
+    transition:
+        border-color 120ms ease,
+        box-shadow 120ms ease;
+}
+
+.audit-filter select:focus {
+    border-color: var(--active);
+
+    box-shadow:
+        0 0 0 3px rgba(37,
+            99,
+            235,
+            0.12);
+}
+
+/* =========================================================
+   STATES
+========================================================= */
+
+.audit-loading,
+.audit-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    gap: 14px;
+
+    min-height: 240px;
+
+    color: var(--text-secondary);
+}
+
+.audit-empty mat-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 48px;
+
+    opacity: 0.7;
+}
+
+/* =========================================================
+   TIMELINE
+========================================================= */
+
+.audit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.audit-item {
+    display: flex;
+    gap: 14px;
+
+    min-width: 0;
+}
+
+/* =========================================================
+   TIMELINE LINE
+========================================================= */
+
+.audit-line {
+    position: relative;
+
+    width: 18px;
+
+    flex-shrink: 0;
+}
+
+.audit-line::after {
+    content: '';
+
+    position: absolute;
+
+    top: 18px;
+    bottom: -18px;
+
+    left: 8px;
+
+    width: 2px;
+
+    background: var(--border);
+}
+
+.audit-item:last-child .audit-line::after {
+    display: none;
+}
+
+/* =========================================================
+   DOT
+========================================================= */
+
+.audit-dot {
+    width: 18px;
+    height: 18px;
+
+    border-radius: 999px;
+
+    background: #64748b;
+
+    border: 4px solid rgba(100,
+            116,
+            139,
+            0.16);
+
+    transition:
+        transform 120ms ease,
+        background 120ms ease;
+}
+
+.audit-item:hover .audit-dot {
+    transform: scale(1.08);
+}
+
+/* =========================================================
+   DOT COLORS
+========================================================= */
+
+.audit-item.create .audit-dot {
+    background: #22c55e;
+
+    border-color: rgba(34,
+            197,
+            94,
+            0.18);
+}
+
+.audit-item.update .audit-dot {
+    background: #3b82f6;
+
+    border-color: rgba(59,
+            130,
+            246,
+            0.18);
+}
+
+.audit-item.delete .audit-dot {
+    background: #ef4444;
+
+    border-color: rgba(239,
+            68,
+            68,
+            0.18);
+}
+
+.audit-item.restore .audit-dot {
+    background: #10b981;
+
+    border-color: rgba(16,
+            185,
+            129,
+            0.18);
+}
+
+/* =========================================================
+   CARD
+========================================================= */
+
+.audit-card {
+    flex: 1;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 14px;
+
+    min-width: 0;
+
+    padding: 16px;
+
+    border-radius: 18px;
+
+    border: 1px solid var(--border);
+
+    background: var(--surface-bg);
+
+    transition:
+        border-color 120ms ease,
+        transform 120ms ease,
+        box-shadow 120ms ease;
+}
+
+.audit-card:hover {
+    transform: translateY(-2px);
+
+    border-color: var(--active);
+
+    box-shadow:
+        0 10px 24px rgba(0,
+            0,
+            0,
+            0.06);
+}
+
+body.dark .audit-card:hover {
+    box-shadow:
+        0 12px 28px rgba(0,
+            0,
+            0,
+            0.28);
+}
+
+/* =========================================================
+   TOP
+========================================================= */
+
+.audit-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    gap: 12px;
+}
+
+/* =========================================================
+   BADGE
+========================================================= */
+
+.audit-badge {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 8px;
+
+    width: fit-content;
+
+    padding: 8px 12px;
+
+    border-radius: 999px;
+
+    font-size: 0.82rem;
+    font-weight: 700;
+
+    background:
+        rgba(100,
+            116,
+            139,
+            0.08);
+
+    color: #64748b;
+}
+
+.audit-badge mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+}
+
+/* =========================================================
+   BADGE COLORS
+========================================================= */
+
+.audit-badge.create {
+    background:
+        rgba(34,
+            197,
+            94,
+            0.12);
+
+    color: #16a34a;
+}
+
+.audit-badge.update {
+    background:
+        rgba(59,
+            130,
+            246,
+            0.12);
+
+    color: #2563eb;
+}
+
+.audit-badge.delete {
+    background:
+        rgba(239,
+            68,
+            68,
+            0.12);
+
+    color: #dc2626;
+}
+
+.audit-badge.restore {
+    background:
+        rgba(16,
+            185,
+            129,
+            0.12);
+
+    color: #059669;
+}
+
+/* =========================================================
+   TIME
+========================================================= */
+
+.audit-time {
+    flex-shrink: 0;
+
+    font-size: 0.8rem;
+
+    color: var(--text-secondary);
+
+    white-space: nowrap;
+}
+
+/* =========================================================
+   META
+========================================================= */
+
+.audit-meta {
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 12px;
+}
+
+.meta-item {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 6px;
+
+    color: var(--text-secondary);
+
+    font-size: 0.8rem;
+}
+
+.meta-item mat-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+}
+
+/* =========================================================
+   DIFF
+========================================================= */
+
+.audit-diff {
+    display: flex;
+    align-items: stretch;
+
+    gap: 12px;
+
+    min-width: 0;
+}
+
+.diff-box {
+    flex: 1;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 6px;
+
+    min-width: 0;
+
+    padding: 12px;
+
+    border-radius: 12px;
+
+    border: 1px solid var(--border);
+}
+
+.diff-old {
+    background:
+        rgba(239,
+            68,
+            68,
+            0.06);
+}
+
+.diff-new {
+    background:
+        rgba(34,
+            197,
+            94,
+            0.06);
+}
+
+.diff-label {
+    font-size: 11px;
+    font-weight: 700;
+
+    letter-spacing: 0.3px;
+
+    text-transform: uppercase;
+
+    color: var(--text-secondary);
+}
+
+.diff-value {
+    color: var(--text-primary);
+
+    font-size: 0.84rem;
+
+    line-height: 1.5;
+
+    word-break: break-word;
+}
+
+.diff-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: var(--text-secondary);
+
+    flex-shrink: 0;
+}
+
+.diff-arrow mat-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 20px;
+}
+
+/* =========================================================
+   REASON
+========================================================= */
+
+.audit-reason {
+    display: inline-flex;
+    align-items: flex-start;
+
+    gap: 8px;
+
+    padding: 12px;
+
+    border-radius: 12px;
+
+    background:
+        rgba(59,
+            130,
+            246,
+            0.08);
+
+    color: var(--text-secondary);
+
+    font-size: 0.82rem;
+
+    line-height: 1.5;
+}
+
+.audit-reason mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+
+    flex-shrink: 0;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+    .audit-toolbar {
+        flex-direction: column;
+    }
+
+    .audit-filter {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .audit-filter select {
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+    }
+
+    .audit-top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .audit-diff {
+        flex-direction: column;
+    }
+
+    .diff-arrow {
+        justify-content: flex-start;
+    }
+
+    .diff-arrow mat-icon {
+        transform: rotate(90deg);
+    }
+
+    .audit-card {
+        padding: 14px;
+    }
+}
+
+@media (max-width: 560px) {
+
+    .audit-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .audit-badge {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .audit-time {
+        white-space: normal;
+    }
+}

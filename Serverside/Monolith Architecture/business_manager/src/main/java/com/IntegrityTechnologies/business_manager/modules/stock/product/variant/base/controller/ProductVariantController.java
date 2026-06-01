@@ -3,10 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.variant
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantUserOnly;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantCreateDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantUpdateDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.VariantAuditDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.service.ProductVariantImageService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.service.ProductVariantService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.service.VariantPdfOrchestrationService;
@@ -55,10 +52,18 @@ public class ProductVariantController {
     @GetMapping("/product/{productId}")
     public ResponseEntity<List<ProductVariantDTO>> findForProduct(
             @RequestParam UUID branchId,
-            @PathVariable UUID productId
+            @PathVariable UUID productId,
+            @RequestParam(
+                    defaultValue = "ACTIVE"
+            ) VariantFilterType filter
     ) {
+
         return ResponseEntity.ok(
-                service.getVariantsForProduct(branchId, productId)
+                service.getVariantsForProduct(
+                        branchId,
+                        productId,
+                        filter
+                )
         );
     }
 

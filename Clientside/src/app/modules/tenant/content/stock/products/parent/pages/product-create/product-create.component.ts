@@ -6,12 +6,14 @@ import {
   MatSnackBarModule
 } from '@angular/material/snack-bar';
 
+
 import { ProductFormComponent }
   from '../../../components/product-form/product-form.component';
 
 import { ProductService }
   from '../../services/product.service';
 import { PageShellComponent } from '../../../../../../../../shared/layout/page-shell/page-shell.component';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'app-product-create',
@@ -20,24 +22,50 @@ import { PageShellComponent } from '../../../../../../../../shared/layout/page-s
     CommonModule,
     PageShellComponent,
     ProductFormComponent,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatProgressSpinnerModule
   ],
   template: `
-<app-page-shell>
+    <app-page-shell>
+      <div page-content>
 
-  <div page-content>
+        <div
+          *ngIf="saving"
+          class="save-overlay">
+          <mat-spinner diameter="56"></mat-spinner>
+          <div class="save-text">
+            Creating product...
+          </div>
+        </div>
 
-    <app-product-form
-      [editMode]="false"
-      (submitForm)="handleSubmit($event)"
-      (cancel)="cancel()">
+        <app-product-form
+          [editMode]="false"
+          (submitForm)="handleSubmit($event)"
+          (cancel)="cancel()">
+        </app-product-form>
 
-    </app-product-form>
-
-  </div>
-
-</app-page-shell>
-`
+      </div>
+    </app-page-shell>
+    `,
+  styles: [`
+    .save-overlay{
+      position:fixed;
+      inset:0;
+      z-index:9999;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:16px;
+      background:rgba(0,0,0,.35);
+      backdrop-filter:blur(4px);
+    }
+    .save-text{
+      color:white;
+      font-weight:600;
+      font-size:.95rem;
+    }
+    `]
 })
 export class ProductCreateComponent {
 

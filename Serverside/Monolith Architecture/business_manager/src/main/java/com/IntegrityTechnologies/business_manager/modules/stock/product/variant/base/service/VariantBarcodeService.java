@@ -110,11 +110,12 @@ public class VariantBarcodeService {
        SAFE FILE SERVING
        ============================= */
 
-    public ResponseEntity<Resource> getBarcodeImage(UUID branchId, UUID variantId) {
-
-        ProductVariant variant = variantRepository.findByIdSafe(
+    public ResponseEntity<Resource> getBarcodeImage(
+            UUID branchId,
+            UUID variantId
+    ) {
+        ProductVariant variant = variantRepository.findByIdIncludingDeleted(
                 variantId,
-                false,
                 tenantId(),
                 branchId
         ).orElseThrow(() -> new EntityNotFoundException("Variant not found"));

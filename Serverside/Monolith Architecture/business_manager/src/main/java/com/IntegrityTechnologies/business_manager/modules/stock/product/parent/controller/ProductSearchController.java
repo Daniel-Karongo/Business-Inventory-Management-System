@@ -5,6 +5,7 @@ import com.IntegrityTechnologies.business_manager.modules.platform.security.anno
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.dto.ProductDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.service.ProductService;
 import lombok.RequiredArgsConstructor;
+import org.apache.coyote.BadRequestException;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -21,7 +22,7 @@ public class ProductSearchController {
 
     @GetMapping
     public PageWrapper<ProductDTO> search(
-            @RequestParam(required = false) UUID branchId,
+            @RequestParam UUID branchId,
             @RequestParam(required = false) List<Long> categoryIds,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String name,
@@ -38,7 +39,7 @@ public class ProductSearchController {
             @RequestParam(required = false) Integer minSuppliers,
             @RequestParam(required = false) Integer maxSuppliers,
             @RequestParam(required = false) UUID supplierId
-    ) {
+    ) throws BadRequestException {
 
         if (categoryId != null) categoryIds = List.of(categoryId);
 

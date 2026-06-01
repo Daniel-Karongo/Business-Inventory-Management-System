@@ -79,11 +79,13 @@ export class EntityActionService {
 
     const ref = this.dialog.open(ReasonDialogComponent, {
       width: '420px',
+      panelClass: 'enterprise-dialog',
       data: {
         title,
         message,
         confirmText: 'Confirm',
         reasons,
+        requireReason: false,
         allowCustomReason: true
       }
     });

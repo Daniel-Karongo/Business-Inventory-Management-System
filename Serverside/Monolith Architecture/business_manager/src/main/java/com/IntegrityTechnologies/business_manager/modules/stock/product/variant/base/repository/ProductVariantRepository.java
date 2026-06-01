@@ -56,6 +56,36 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     );
 
     @Query("""
+            SELECT v
+            FROM ProductVariant v
+            JOIN FETCH v.product p
+            WHERE v.id = :id
+              AND v.tenantId = :tenantId
+              AND v.branchId = :branchId
+            """)
+    Optional<ProductVariant> findByIdIncludingDeleted(
+            @Param("id") UUID id,
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId
+    );
+
+    @Query("""
+            SELECT v
+            FROM ProductVariant v
+            JOIN FETCH v.product p
+            WHERE v.id = :id
+              AND v.deleted = :deleted
+              AND v.tenantId = :tenantId
+              AND v.branchId = :branchId
+            """)
+    Optional<ProductVariant> findByIdSafeWithProduct(
+            @Param("id") UUID id,
+            @Param("deleted") boolean deleted,
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId
+    );
+
+    @Query("""
                 SELECT v FROM ProductVariant v
                 WHERE v.product.id = :productId
                   AND v.deleted = :deleted
@@ -67,6 +97,50 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
             @Param("deleted") boolean deleted,
             @Param("tenantId") UUID tenantId,
             @Param("branchId") UUID branchId
+    );
+
+    @Query("""
+            SELECT v
+            FROM ProductVariant v
+            JOIN FETCH v.product p
+            WHERE v.tenantId = :tenantId
+              AND v.branchId = :branchId
+              AND v.product.id = :productId
+              AND v.deleted = false
+            """)
+    List<ProductVariant> findActiveForProduct(
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId,
+            @Param("productId") UUID productId
+    );
+
+    @Query("""
+            SELECT v
+            FROM ProductVariant v
+            JOIN FETCH v.product p
+            WHERE v.tenantId = :tenantId
+              AND v.branchId = :branchId
+              AND v.product.id = :productId
+              AND v.deleted = true
+            """)
+    List<ProductVariant> findDeletedForProduct(
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId,
+            @Param("productId") UUID productId
+    );
+
+    @Query("""
+            SELECT v
+            FROM ProductVariant v
+            JOIN FETCH v.product p
+            WHERE v.tenantId = :tenantId
+              AND v.branchId = :branchId
+              AND v.product.id = :productId
+            """)
+    List<ProductVariant> findAllForProduct(
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId,
+            @Param("productId") UUID productId
     );
 
     // ✅ SAFE SCAN QUERY (fetch join for performance)
@@ -91,6 +165,18 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     );
 
     List<ProductVariant> findByTenantIdAndBranchIdAndProduct_Id(
+            UUID tenantId,
+            UUID branchId,
+            UUID productId
+    );
+
+    List<ProductVariant> findByTenantIdAndBranchIdAndProduct_IdAndDeletedFalse(
+            UUID tenantId,
+            UUID branchId,
+            UUID productId
+    );
+
+    List<ProductVariant> findByTenantIdAndBranchIdAndProduct_IdAndDeletedTrue(
             UUID tenantId,
             UUID branchId,
             UUID productId

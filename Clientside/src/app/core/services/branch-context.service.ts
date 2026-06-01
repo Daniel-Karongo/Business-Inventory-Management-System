@@ -51,6 +51,10 @@ export class BranchContextService {
     return this.branchSubject.value;
   }
 
+  currentBranchId(): string | null {
+    return this.branchSubject.value;
+  }
+
   setBranch(branchId: string | null) {
 
     const role = this.auth.getSnapshot()?.role;

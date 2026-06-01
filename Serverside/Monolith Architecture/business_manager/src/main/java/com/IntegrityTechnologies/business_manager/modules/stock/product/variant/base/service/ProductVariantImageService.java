@@ -52,13 +52,19 @@ public class ProductVariantImageService {
 
     private UUID tenantId() { return TenantContext.getTenantId(); }
 
-    private ProductVariant getVariant(UUID branchId, UUID variantId) {
-        return variantRepo.findByIdSafe(
+    private ProductVariant getVariant(
+            UUID branchId,
+            UUID variantId
+    ) {
+        return variantRepo.findByIdIncludingDeleted(
                 variantId,
-                false,
                 tenantId(),
                 branchId
-        ).orElseThrow(() -> new EntityNotFoundException("Variant not found"));
+        ).orElseThrow(
+                () -> new EntityNotFoundException(
+                        "Variant not found"
+                )
+        );
     }
 
     private Path sharedDir(UUID branchId) {
@@ -217,6 +223,17 @@ public class ProductVariantImageService {
             String fileName,
             String reason
     ) {
+        ProductVariant variant =
+                getVariant(
+                        branchId,
+                        variantId
+                );
+
+        if (Boolean.TRUE.equals(variant.isDeleted())) {
+            throw new IllegalStateException(
+                    "Cannot restore image of a deleted variant"
+            );
+        }
 
         ProductVariantImage image =
                 imageRepo.findByTenantIdAndBranchIdAndVariant_IdAndFileName(
@@ -231,7 +248,11 @@ public class ProductVariantImageService {
 
         imageRepo.save(image);
 
-        audit(image, "RESTORE", reason);
+        audit(
+                image,
+                "RESTORE",
+                reason
+        );
     }
 
     @Transactional
@@ -430,7 +451,7 @@ public class ProductVariantImageService {
         getVariant(branchId, variantId);
 
         ProductVariantImage img = imageRepo
-                .findByTenantIdAndBranchIdAndVariant_IdAndFileNameAndDeletedFalse(
+                .findByTenantIdAndBranchIdAndVariant_IdAndFileName(
                         tenantId(),
                         branchId,
                         variantId,
@@ -471,7 +492,7 @@ public class ProductVariantImageService {
         getVariant(branchId, variantId);
 
         List<ProductVariantImage> images =
-                imageRepo.findByTenantIdAndBranchIdAndVariant_IdAndDeletedFalse(
+                imageRepo.findByTenantIdAndBranchIdAndVariant_Id(
                         tenantId(),
                         branchId,
                         variantId

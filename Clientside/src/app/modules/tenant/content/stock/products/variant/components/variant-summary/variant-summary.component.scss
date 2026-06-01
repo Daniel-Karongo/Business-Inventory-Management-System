@@ -51,6 +51,29 @@
   font-weight: 600;
 }
 
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.filter-btn.active {
+  border-color: var(--active);
+  color: var(--active);
+}
+
 /* =========================================================
    GRID
 ========================================================= */
@@ -87,6 +110,9 @@
     transform 140ms ease,
     border-color 140ms ease,
     box-shadow 140ms ease;
+
+  position: relative;
+  overflow: hidden;
 }
 
 .variant-card:hover {
@@ -96,7 +122,31 @@
 }
 
 .variant-card.deleted {
-  opacity: 0.9;
+  opacity: 0.82;
+
+  border: 1px solid rgba(239, 68, 68, 0.35);
+
+  box-shadow:
+    0 0 0 1px rgba(239, 68, 68, 0.08);
+
+  background:
+    linear-gradient(to bottom,
+      rgba(239, 68, 68, 0.03),
+      transparent 120px);
+}
+
+.variant-card.deleted::before {
+  content: '';
+
+  position: absolute;
+
+  left: 0;
+  top: 0;
+  bottom: 0;
+
+  width: 4px;
+
+  background: #dc2626;
 }
 
 /* =========================================================

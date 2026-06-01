@@ -49,6 +49,7 @@ import {
 import {
   StockWorkspaceRow
 } from '../models/stock-item.model';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Injectable({
   providedIn: 'root'
@@ -63,6 +64,9 @@ export class StockWorkspaceService {
 
   private inventoryService =
     inject(InventoryService);
+
+  private snackBar =
+    inject(MatSnackBar);
 
   /* =========================================================
      STATE
@@ -90,22 +94,37 @@ export class StockWorkspaceService {
     query: StockWorkspaceQuery
   ): Observable<StockWorkspaceResult> {
 
+    if (!query.branchId) {
+      throw new Error(
+        'Branch is required'
+      );
+    }
+
     this.activeBranchId =
       query.branchId;
 
-    return this.productService
-      .search({
-        page: query.page,
-        size: query.size,
-        keyword: query.keyword,
-        categoryId: query.categoryId,
-        supplierId: query.supplierId,
-        deleted: query.deleted,
-        sortBy: query.sortBy,
-        direction: query.direction
-      })
+    return this.productService.search({
+      branchId: query.branchId,
+      page: query.page,
+      size: query.size,
+      keyword: query.keyword,
+      categoryId: query.categoryId,
+      supplierId: query.supplierId,
+      deleted: query.deleted,
+      sortBy: query.sortBy,
+      direction: query.direction
+    })
       .pipe(
         map(page => {
+
+          if (!page) {
+            return {
+              content: [],
+              totalElements: 0,
+              page: query.page,
+              size: query.size
+            };
+          }
 
           this.rows.clear();
           this.rootIds = [];
@@ -176,6 +195,22 @@ export class StockWorkspaceService {
     if (
       row.childrenLoaded
     ) {
+
+      if (
+        row.type === 'PRODUCT' &&
+        !row.hasChildren
+      ) {
+
+        this.snackBar.open(
+          'No variants exist for this product in the selected branch.',
+          'Close',
+          {
+            duration: 4000
+          }
+        );
+
+      }
+
       return of(void 0);
     }
 
@@ -184,16 +219,56 @@ export class StockWorkspaceService {
     if (
       row.type === 'PRODUCT'
     ) {
+
       return this.loadVariants(
         row
+      ).pipe(
+        tap(() => {
+
+          if (
+            row.childrenLoaded &&
+            !row.hasChildren
+          ) {
+
+            this.snackBar.open(
+              'No variants exist for this product in the selected branch.',
+              'Close',
+              {
+                duration: 4000
+              }
+            );
+
+          }
+
+        })
       );
     }
 
     if (
       row.type === 'VARIANT'
     ) {
+
       return this.loadInventory(
         row
+      ).pipe(
+        tap(() => {
+
+          if (
+            row.childrenLoaded &&
+            !row.hasChildren
+          ) {
+
+            this.snackBar.open(
+              'No inventory exists for this variant in the selected branch.',
+              'Close',
+              {
+                duration: 4000
+              }
+            );
+
+          }
+
+        })
       );
     }
 
@@ -210,7 +285,9 @@ export class StockWorkspaceService {
 
     return this.variantService
       .forProduct(
-        productRow.productId
+        productRow.productId,
+        'ACTIVE',
+        this.activeBranchId
       )
       .pipe(
         tap(variants => {
@@ -252,8 +329,19 @@ export class StockWorkspaceService {
           productRow.loadingChildren =
             false;
 
-          productRow.hasChildren =
-            variants.length > 0;
+          if (variants.length === 0) {
+
+            productRow.hasChildren = false;
+
+            console.warn(
+              `No variants found for product ${productRow.productId} in branch ${this.activeBranchId}`
+            );
+
+          } else {
+
+            productRow.hasChildren = true;
+
+          }
         }),
         map(() => void 0)
       );

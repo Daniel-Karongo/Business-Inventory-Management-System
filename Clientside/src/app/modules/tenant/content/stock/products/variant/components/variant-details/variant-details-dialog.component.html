@@ -1,93 +1,219 @@
-<ng-container *ngIf="data.variant as variant">
+<ng-container *ngIf="!loading && variant">
 
     <div class="dialog-shell">
 
-        <div class="dialog-header">
+        <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+        <div class="dialog-header" [class.deleted]="variant.deleted">
 
             <div class="header-content">
 
-                <div class="header-title">
-                    {{ variant.classification }}
-                </div>
+                <div class="header-top">
 
-                <div class="header-subtitle">
-                    Product Variant Details
+                    <div>
+
+                        <div class="header-title">
+
+                            {{ variant.classification }}
+
+                        </div>
+
+                        <div class="header-subtitle">
+
+                            Product Variant Details
+
+                        </div>
+
+                    </div>
+
+                    <div class="status-chip" [class.deleted]="variant.deleted">
+
+                        {{ statusLabel }}
+
+                    </div>
+
                 </div>
 
             </div>
 
         </div>
 
+        <!-- =====================================================
+         BODY
+    ====================================================== -->
+
         <mat-dialog-content>
 
-            <div class="overview-grid">
+            <mat-tab-group animationDuration="150ms">
 
-                <div class="overview-card primary">
+                <!-- =====================================================
+             OVERVIEW
+        ====================================================== -->
 
-                    <div class="overview-label">
-                        PRODUCT
+                <mat-tab label="Overview">
+
+                    <div class="tab-content">
+
+                        <div class="overview-grid">
+
+                            <div class="
+                  overview-card
+                  primary
+                ">
+
+                                <div class="overview-label">
+                                    PRODUCT
+                                </div>
+
+                                <div class="overview-value">
+
+                                    {{ variant.productName }}
+
+                                </div>
+
+                            </div>
+
+                            <div class="overview-card">
+
+                                <div class="overview-label">
+                                    STATUS
+                                </div>
+
+                                <div class="overview-value" [class.deleted-text]="variant.deleted">
+
+                                    {{ statusLabel }}
+
+                                </div>
+
+                            </div>
+
+                            <div class="overview-card">
+
+                                <div class="overview-label">
+                                    SKU
+                                </div>
+
+                                <div class="
+                    overview-value
+                    mono
+                  ">
+
+                                    {{ variant.sku || '-' }}
+
+                                </div>
+
+                            </div>
+
+                            <div class="overview-card">
+
+                                <div class="overview-label">
+                                    BARCODE
+                                </div>
+
+                                <div class="
+                    overview-value
+                    mono
+                  ">
+
+                                    {{ variant.barcode || '-' }}
+
+                                </div>
+
+                            </div>
+
+                            <div class="
+                  overview-card
+                  metric
+                ">
+
+                                <div class="metric-value">
+
+                                    {{ variant.minimumProfit ?? 0 }}
+
+                                </div>
+
+                                <div class="metric-label">
+                                    Minimum Profit
+                                </div>
+
+                            </div>
+
+                            <div class="
+                  overview-card
+                  metric
+                ">
+
+                                <div class="metric-value">
+
+                                    {{
+                                    variant.minimumPercentageProfit ?? 0
+                                    }}%
+
+                                </div>
+
+                                <div class="metric-label">
+                                    Minimum Margin
+                                </div>
+
+                            </div>
+
+                        </div>
+
                     </div>
 
-                    <div class="overview-value">
-                        {{ variant.productName }}
+                </mat-tab>
+
+                <!-- =====================================================
+             COMMERCIAL
+        ====================================================== -->
+
+                <mat-tab label="Commercial">
+
+                    <div class="tab-content">
+
+                        <app-variant-commercial-summary [variant]="variant" [branchId]="data.branchId">
+                        </app-variant-commercial-summary>
+
                     </div>
 
-                </div>
+                </mat-tab>
 
-                <div class="overview-card">
+                <!-- =====================================================
+             AUDITS
+        ====================================================== -->
 
-                    <div class="overview-label">
-                        SKU
+                <mat-tab>
+
+                    <ng-template mat-tab-label>
+
+                        Audits
+
+                        <span class="audit-count">
+
+                            {{ auditCount }}
+
+                        </span>
+
+                    </ng-template>
+
+                    <div class="tab-content">
+
+                        <app-variant-audits [variantId]="variant.id" [branchId]="data.branchId">
+                        </app-variant-audits>
+
                     </div>
 
-                    <div class="overview-value mono">
-                        {{ variant.sku || '-' }}
-                    </div>
+                </mat-tab>
 
-                </div>
-
-                <div class="overview-card">
-
-                    <div class="overview-label">
-                        BARCODE
-                    </div>
-
-                    <div class="overview-value mono">
-                        {{ variant.barcode || '-' }}
-                    </div>
-
-                </div>
-
-                <div class="overview-card metric">
-
-                    <div class="metric-value">
-                        {{ variant.minimumProfit ?? 0 }}
-                    </div>
-
-                    <div class="metric-label">
-                        Minimum Profit
-                    </div>
-
-                </div>
-
-                <div class="overview-card metric">
-
-                    <div class="metric-value">
-                        {{ variant.minimumPercentageProfit ?? 0 }}%
-                    </div>
-
-                    <div class="metric-label">
-                        Minimum Margin
-                    </div>
-
-                </div>
-
-            </div>
-
-            <app-variant-commercial-summary [variant]="variant" [branchId]="data.branchId">
-            </app-variant-commercial-summary>
+            </mat-tab-group>
 
         </mat-dialog-content>
+
+        <!-- =====================================================
+         FOOTER
+    ====================================================== -->
 
         <mat-dialog-actions align="end">
 
@@ -102,3 +228,10 @@
     </div>
 
 </ng-container>
+
+<div *ngIf="loading" class="dialog-loading">
+
+    <mat-spinner diameter="44">
+    </mat-spinner>
+
+</div>

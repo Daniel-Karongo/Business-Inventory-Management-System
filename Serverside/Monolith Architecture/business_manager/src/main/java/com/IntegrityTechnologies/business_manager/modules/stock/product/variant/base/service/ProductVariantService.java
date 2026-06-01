@@ -6,10 +6,7 @@ import com.IntegrityTechnologies.business_manager.config.caffeine.CacheInvalidat
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.BatchConsumptionRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.BatchReservationRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.InventoryItemRepository;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantCreateDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.ProductVariantUpdateDTO;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.VariantAuditDTO;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.events.VariantBarcodeRequestedEvent;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.mapper.ProductVariantMapper;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
@@ -61,6 +58,22 @@ public class ProductVariantService {
     private final ProductVariantAuditRepository auditRepo;
 
     private UUID tenantId() { return TenantContext.getTenantId(); }
+
+    @Transactional(readOnly = true)
+    public ProductVariant getEntityIncludingDeleted(
+            UUID branchId,
+            UUID id
+    ) {
+        return variantRepo.findByIdIncludingDeleted(
+                id,
+                tenantId(),
+                branchId
+        ).orElseThrow(
+                () -> new EntityNotFoundException(
+                        "Variant not found"
+                )
+        );
+    }
 
     @Transactional
     public ProductVariantDTO createVariant(
@@ -196,15 +209,63 @@ public class ProductVariantService {
     }
 
     @Transactional(readOnly = true)
-    public ProductVariantDTO getVariant(UUID branchId, UUID id) {
-        return mapper.toDTO(getEntity(branchId, id));
+    public ProductVariantDTO getVariant(
+            UUID branchId,
+            UUID id
+    ) {
+        return mapper.toDTO(
+                getEntityIncludingDeleted(
+                        branchId,
+                        id
+                )
+        );
     }
 
-
     @Transactional(readOnly = true)
-    public List<ProductVariantDTO> getVariantsForProduct(UUID branchId, UUID productId) {
-        return getEntitiesForProduct(branchId, productId)
-                .stream()
+    public List<ProductVariantDTO> getVariantsForProduct(
+            UUID branchId,
+            UUID productId,
+            VariantFilterType filter
+    ) {
+
+        List<ProductVariant> variants;
+
+        switch (filter) {
+
+            case DELETED ->
+                    variants =
+                            variantRepo.findByTenantIdAndBranchIdAndProduct_IdAndDeletedTrue(
+                                    tenantId(),
+                                    branchId,
+                                    productId
+                            );
+
+            case ALL ->
+                    variants =
+                            variantRepo.findAllForProduct(
+                                    tenantId(),
+                                    branchId,
+                                    productId
+                            );
+
+            case ACTIVE ->
+                    variants =
+                            variantRepo.findActiveForProduct(
+                                    tenantId(),
+                                    branchId,
+                                    productId
+                            );
+
+            default ->
+                    variants =
+                            variantRepo.findDeletedForProduct(
+                                    tenantId(),
+                                    branchId,
+                                    productId
+                            );
+        }
+
+        return variants.stream()
                 .map(mapper::toDTO)
                 .toList();
     }
@@ -270,44 +331,53 @@ public class ProductVariantService {
             );
         }
 
-        Double oldValue =
+        Double oldMinimumPercentageProfit =
                 v.getMinimumPercentageProfit();
 
-        v.setMinimumPercentageProfit(
-                dto.getMinimumPercentageProfit()
-        );
-
         if (!Objects.equals(
-                oldValue,
+                oldMinimumPercentageProfit,
                 dto.getMinimumPercentageProfit()
         )) {
+
             auditFieldChange(
                     v,
                     "minimumPercentageProfit",
-                    String.valueOf(oldValue),
-                    String.valueOf(
-                            dto.getMinimumPercentageProfit()
-                    ),
+                    oldMinimumPercentageProfit == null
+                            ? null
+                            : oldMinimumPercentageProfit.toString(),
+                    dto.getMinimumPercentageProfit() == null
+                            ? null
+                            : dto.getMinimumPercentageProfit().toString(),
                     reason
+            );
+
+            v.setMinimumPercentageProfit(
+                    dto.getMinimumPercentageProfit()
             );
         }
 
-        v.setMinimumProfit(
-                dto.getMinimumProfit()
-        );
+        BigDecimal oldMinimumProfit =
+                v.getMinimumProfit();
 
         if (!Objects.equals(
-                oldValue,
+                oldMinimumProfit,
                 dto.getMinimumProfit()
         )) {
+
             auditFieldChange(
                     v,
                     "minimumProfit",
-                    String.valueOf(oldValue),
-                    String.valueOf(
-                            dto.getMinimumProfit()
-                    ),
+                    oldMinimumProfit == null
+                            ? null
+                            : oldMinimumProfit.toString(),
+                    dto.getMinimumProfit() == null
+                            ? null
+                            : dto.getMinimumProfit().toString(),
                     reason
+            );
+
+            v.setMinimumProfit(
+                    dto.getMinimumProfit()
             );
         }
 
@@ -344,6 +414,25 @@ public class ProductVariantService {
         variantRepo.save(
                 variant
         );
+
+        List<VariantImageDTO> images =
+                imageService.getAllImages(
+                        branchId,
+                        variantId
+                );
+
+        for (VariantImageDTO image : images) {
+            if (image.deleted()) {
+                imageService.restoreVariantImage(
+                        branchId,
+                        variantId,
+                        image.fileName(),
+                        reason == null
+                                ? "Variant restored"
+                                : reason
+                );
+            }
+        }
 
         audit(
                 variant,
@@ -415,6 +504,25 @@ public class ProductVariantService {
         variant.setDeleted(true);
         variantRepo.save(variant);
 
+        List<VariantImageDTO> images =
+                imageService.getAllImages(
+                        branchId,
+                        variantId
+                );
+
+        for (VariantImageDTO image : images) {
+            if (!image.deleted()) {
+                imageService.deleteVariantImage(
+                        branchId,
+                        variantId,
+                        image.fileName(),
+                        reason == null
+                                ? "Variant soft deleted"
+                                : reason
+                );
+            }
+        }
+
         audit(
                 variant,
                 "SOFT_DELETE",
@@ -443,7 +551,7 @@ public class ProductVariantService {
     ) {
 
         ProductVariant variant =
-                getEntity(
+                getEntityIncludingDeleted(
                         branchId,
                         variantId
                 );
@@ -496,7 +604,7 @@ public class ProductVariantService {
             UUID branchId,
             UUID variantId
     ) {
-        getEntity(
+        getEntityIncludingDeleted(
                 branchId,
                 variantId
         );

@@ -45,6 +45,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.coyote.BadRequestException;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
@@ -156,10 +157,16 @@ public class ProductService {
             boolean includeDeleted,
             Integer minSuppliers,
             Integer maxSuppliers,
-            UUID supplierId) {
+            UUID supplierId) throws BadRequestException {
 
         if (sortBy == null || sortBy.isBlank()) {
             sortBy = "id";
+        }
+
+        if (branchId == null) {
+            throw new BadRequestException(
+                    "Branch is required"
+            );
         }
 
         Pageable pageable = PageRequest.of(page, size);
@@ -630,7 +637,7 @@ public class ProductService {
         updateBasicFields(product, dto, audits);
         updateCategory(product, dto, audits);
         updateSuppliers(product, dto, audits);
-        syncVariants(product, dto);
+        syncVariants(product, dto, audits);
         updatePricing(product, dto, audits);
 
         product.setUpdatedAt(LocalDateTime.now());
@@ -705,11 +712,15 @@ public class ProductService {
         product.setCategory(newCat);
     }
 
-    private void updateSuppliers(Product product,
-                                 ProductUpdateDTO dto,
-                                 List<ProductAudit> audits) {
+    private void updateSuppliers(
+            Product product,
+            ProductUpdateDTO dto,
+            List<ProductAudit> audits
+    ) {
 
-        if (dto.getSupplierIds() == null) return;
+        if (dto.getSupplierIds() == null) {
+            return;
+        }
 
         List<Supplier> suppliers =
                 supplierRepository.findAllByIdsSafe(
@@ -718,41 +729,69 @@ public class ProductService {
                         dto.getBranchId()
                 );
 
-        String oldSuppliers = product.getSuppliers() == null
-                ? ""
-                : product.getSuppliers().stream()
-                .map(ps -> ps.getSupplier().getId().toString())
-                .collect(Collectors.joining(","));
+        String oldSuppliers =
+                product.getSuppliers() == null
+                        ? ""
+                        : product.getSuppliers()
+                        .stream()
+                        .map(ps -> ps.getSupplier().getId().toString())
+                        .sorted()
+                        .collect(Collectors.joining(","));
 
-        String newSuppliers = suppliers.stream()
-                .map(s -> s.getId().toString())
-                .collect(Collectors.joining(","));
+        String newSuppliers =
+                suppliers.stream()
+                        .map(s -> s.getId().toString())
+                        .sorted()
+                        .collect(Collectors.joining(","));
 
-        if (Objects.equals(oldSuppliers, newSuppliers)) return;
+        if (Objects.equals(oldSuppliers, newSuppliers)) {
+            return;
+        }
 
-        audits.add(auditForField(product, "supplierIds", oldSuppliers, newSuppliers));
+        audits.add(
+                auditForField(
+                        product,
+                        "supplierIds",
+                        oldSuppliers,
+                        newSuppliers
+                )
+        );
 
+        /*
+         * IMPORTANT:
+         * Force orphan removal before recreating rows.
+         */
         product.getSuppliers().clear();
+
+        productRepository.saveAndFlush(product);
 
         UUID branchId = product.getBranchId();
 
-        for (Supplier supplier : suppliers) {
-            product.getSuppliers().add(
-                    ProductSupplier.builder()
-                            .product(product)
-                            .supplier(supplier)
-                            .tenantId(tenantId())
-                            .branchId(branchId)
-                            .build()
-            );
-        }
+        Set<ProductSupplier> replacements =
+                suppliers.stream()
+                        .map(supplier ->
+                                ProductSupplier.builder()
+                                        .product(product)
+                                        .supplier(supplier)
+                                        .tenantId(tenantId())
+                                        .branchId(branchId)
+                                        .build()
+                        )
+                        .collect(Collectors.toSet());
 
-        syncCategorySuppliers(branchId, product.getCategory(), new HashSet<>(suppliers));
+        product.getSuppliers().addAll(replacements);
+
+        syncCategorySuppliers(
+                branchId,
+                product.getCategory(),
+                new HashSet<>(suppliers)
+        );
     }
 
     private void syncVariants(
             Product product,
-            ProductUpdateDTO dto
+            ProductUpdateDTO dto,
+            List<ProductAudit> audits
     ) {
 
         if (dto.getVariants() == null) {
@@ -805,6 +844,15 @@ public class ProductService {
                         createDto
                 );
 
+                audits.add(
+                        auditForField(
+                                product,
+                                "variant",
+                                null,
+                                "CREATED:" + incoming.getClassification()
+                        )
+                );
+
                 continue;
             }
 
@@ -822,13 +870,32 @@ public class ProductService {
 
             if (Boolean.TRUE.equals(incoming.getDeleted())) {
 
-                existing.setDeleted(true);
-                existing.setDeletedAt(LocalDateTime.now());
+                productVariantService.deleteVariant(
+                        branchId,
+                        existing.getId(),
+                        "Deleted through product update"
+                );
 
-                productVariantRepository.save(existing);
+                audits.add(
+                        auditForField(
+                                product,
+                                "variant",
+                                existing.getClassification(),
+                                "SOFT_DELETED"
+                        )
+                );
 
                 continue;
             }
+
+            audits.add(
+                    auditForField(
+                            product,
+                            "variant",
+                            existing.getClassification(),
+                            "UPDATED:" + incoming.getClassification()
+                    )
+            );
 
             productVariantService.updateVariant(
                     branchId,
@@ -983,6 +1050,12 @@ public class ProductService {
         Product product = productRepository
                 .findByIdAndTenantIdAndBranchId(productId, tenantId(), branchId)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+
+        if (Boolean.TRUE.equals(product.isDeleted())) {
+            throw new IllegalStateException(
+                    "Cannot restore image of a deleted product"
+            );
+        }
 
         ProductImage img = productImageRepository.findById(productImageId)
                 .orElseThrow(() -> new EntityNotFoundException("Product image not found"));
@@ -2097,9 +2170,17 @@ public class ProductService {
         return audit;
     }
 
-    private ProductAudit auditForField(Product product, String field, String oldVal, String newVal) {
+    private ProductAudit auditForField(
+            Product product,
+            String field,
+            String oldVal,
+            String newVal
+    ) {
+
         ProductAudit a = new ProductAudit();
         a.setAction("UPDATE");
+        a.setTenantId(product.getTenantId());
+        a.setBranchId(product.getBranchId());
         a.setFieldChanged(field);
         a.setOldValue(oldVal);
         a.setNewValue(newVal);
@@ -2107,6 +2188,7 @@ public class ProductService {
         a.setProductName(product.getName());
         a.setTimestamp(LocalDateTime.now());
         a.setPerformedBy(SecurityUtils.currentUsername());
+
         return a;
     }
 

@@ -1,23 +1,47 @@
-<div class="reason-dialog">
+<div class="reason-dialog" [ngClass]="actionClass">
 
-  <div class="reason-header">
+  <div class="dialog-header">
 
-    <h2>
-      {{ data.title }}
-    </h2>
+    <div class="header-icon">
 
-    <p>
-      {{ data.message }}
-    </p>
+      <mat-icon *ngIf="data.action === 'DELETE'">
+        delete_forever
+      </mat-icon>
+
+      <mat-icon *ngIf="data.action === 'DISABLE'">
+        block
+      </mat-icon>
+
+      <mat-icon *ngIf="data.action === 'RESTORE'">
+        restore
+      </mat-icon>
+
+      <mat-icon *ngIf="!data.action">
+        help_outline
+      </mat-icon>
+
+    </div>
+
+    <div class="header-content">
+
+      <h2>
+        {{ data.title }}
+      </h2>
+
+      <p>
+        {{ data.message }}
+      </p>
+
+    </div>
 
   </div>
 
-  <div class="reason-body">
+  <div class="dialog-body">
 
-    <mat-form-field appearance="outline" class="w-full">
+    <mat-form-field appearance="fill">
 
       <mat-label>
-        Reason
+        Select Reason
       </mat-label>
 
       <mat-select [(ngModel)]="selectedReason">
@@ -38,56 +62,48 @@
 
     </mat-form-field>
 
-    <mat-form-field *ngIf="selectedReason === 'OTHER'" appearance="outline" class="w-full">
+    <mat-form-field *ngIf="
+        selectedReason === 'OTHER'
+      " appearance="fill">
 
       <mat-label>
-        Custom Reason
+        Additional Notes
       </mat-label>
 
-      <textarea matInput rows="4" [(ngModel)]="customReason">
+      <textarea matInput rows="5" maxlength="500" [(ngModel)]="customReason">
       </textarea>
 
     </mat-form-field>
 
-  </div>
+    <div *ngIf="invalid" class="validation-banner">
 
-  <div *ngIf="
-      data.requireReason &&
-      (
-        !selectedReason ||
-        (
-          selectedReason === 'OTHER'
-          &&
-          !customReason.trim()
-        )
-      )
-    " class="reason-error">
+      <mat-icon>
+        error
+      </mat-icon>
 
-    Reason is required
+      Reason is required.
+
+    </div>
 
   </div>
 
-  <div class="reason-actions">
+  <div class="dialog-footer">
 
-    <button mat-stroked-button (click)="cancel()">
+    <button mat-stroked-button type="button" (click)="cancel()">
 
-      {{ data.cancelText || 'Cancel' }}
+      {{
+      data.cancelText ||
+      'Cancel'
+      }}
 
     </button>
 
-    <button mat-flat-button color="primary" (click)="confirm()" [disabled]="
-        data.requireReason &&
-        (
-          !selectedReason ||
-          (
-            selectedReason === 'OTHER'
-            &&
-            !customReason.trim()
-          )
-        )
-      ">
+    <button mat-flat-button type="button" (click)="confirm()" [disabled]="invalid">
 
-      {{ data.confirmText || 'Confirm' }}
+      {{
+      data.confirmText ||
+      'Confirm'
+      }}
 
     </button>
 

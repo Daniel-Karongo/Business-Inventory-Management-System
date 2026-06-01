@@ -1,3 +1,8 @@
+export type VariantFilterType =
+  | 'ACTIVE'
+  | 'DELETED'
+  | 'ALL';
+
 import { Injectable, inject } from '@angular/core';
 
 import {
@@ -78,6 +83,7 @@ export class ProductVariantService
 
   forProduct(
     productId: string,
+    filter: VariantFilterType = 'ACTIVE',
     overrideBranchId?: string
   ): Observable<ProductVariant[]> {
 
@@ -87,7 +93,9 @@ export class ProductVariantService
         branchId:
           this.resolveBranch(
             overrideBranchId
-          )
+          ),
+
+        filter
       }
     );
   }

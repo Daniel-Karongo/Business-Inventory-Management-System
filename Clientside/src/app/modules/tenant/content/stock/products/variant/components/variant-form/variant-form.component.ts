@@ -123,12 +123,13 @@ export class VariantFormComponent
       ReasonDialogComponent,
       {
         width: '500px',
+        panelClass: 'enterprise-dialog',
         data: {
           title: 'Update Variant',
-          message:
-            'Provide a reason for this update.',
+          message: 'Provide a reason for this update.',
           action: 'RESTORE',
-          requireReason: false
+          requireReason: false,
+          allowCustomReason: true
         }
       }
     );

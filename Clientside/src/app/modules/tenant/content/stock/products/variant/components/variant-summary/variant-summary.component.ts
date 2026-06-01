@@ -41,7 +41,8 @@ import {
 } from '../../../../models/product-variant.model';
 
 import {
-  ProductVariantService
+  ProductVariantService,
+  VariantFilterType
 } from '../../services/product-variant.service';
 
 import {
@@ -89,6 +90,7 @@ export class VariantSummaryComponent
   loading = true;
 
   variants: ProductVariant[] = [];
+  currentFilter: VariantFilterType = 'ACTIVE';
 
   constructor(
     private router: Router,
@@ -106,7 +108,10 @@ export class VariantSummaryComponent
     this.loading = true;
 
     this.variantService
-      .forProduct(this.product.id)
+      .forProduct(
+        this.product.id,
+        this.currentFilter
+      )
       .subscribe({
         next: variants => {
 
@@ -115,10 +120,36 @@ export class VariantSummaryComponent
 
           this.loading = false;
         },
-        error: () => {
+        error: (err) => {
+
           this.loading = false;
+
+          this.snackBar.open(
+            this.getErrorMessage(err),
+            'Close',
+            {
+              duration: 5000
+            }
+          );
+
         }
       });
+  }
+
+  setFilter(
+    filter: VariantFilterType
+  ): void {
+
+    if (
+      this.currentFilter === filter
+    ) {
+      return;
+    }
+
+    this.currentFilter =
+      filter;
+
+    this.load();
   }
 
   createSale(
@@ -285,6 +316,7 @@ export class VariantSummaryComponent
         ReasonDialogComponent,
         {
           width: '500px',
+          panelClass: 'enterprise-dialog',
           data: {
             title:
               'Delete Variant',
@@ -330,6 +362,18 @@ export class VariantSummaryComponent
               );
 
               this.load();
+            },
+
+            error: (err) => {
+
+              this.snackBar.open(
+                this.getErrorMessage(err),
+                'Close',
+                {
+                  duration: 5000
+                }
+              );
+
             }
           });
       });
@@ -344,6 +388,7 @@ export class VariantSummaryComponent
         ReasonDialogComponent,
         {
           width: '500px',
+          panelClass: 'enterprise-dialog',
           data: {
             title:
               'Restore Variant',
@@ -383,6 +428,18 @@ export class VariantSummaryComponent
               );
 
               this.load();
+            },
+
+            error: (err) => {
+
+              this.snackBar.open(
+                this.getErrorMessage(err),
+                'Close',
+                {
+                  duration: 5000
+                }
+              );
+
             }
           });
       });
@@ -397,6 +454,7 @@ export class VariantSummaryComponent
         ReasonDialogComponent,
         {
           width: '500px',
+          panelClass: 'enterprise-dialog',
           data: {
             title:
               'Permanent Delete',
@@ -436,8 +494,33 @@ export class VariantSummaryComponent
               );
 
               this.load();
+            },
+
+            error: (err) => {
+
+              this.snackBar.open(
+                this.getErrorMessage(err),
+                'Close',
+                {
+                  duration: 5000
+                }
+              );
+
             }
           });
       });
+  }
+
+  private getErrorMessage(err: any): string {
+
+    return (
+      err?.error?.message ||
+      err?.error?.error ||
+      err?.error?.text ||
+      err?.error ||
+      err?.message ||
+      'Operation failed'
+    );
+
   }
 }

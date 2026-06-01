@@ -157,6 +157,7 @@ export class JournalDetailsComponent
         ReasonDialogComponent,
         {
           width: '420px',
+          panelClass: 'enterprise-dialog',
           data: {
             title:
               'Reverse Transaction?',

@@ -31,6 +31,7 @@ import { EntityImageManagerComponent }
 
 import { PageShellComponent }
   from '../../../../../../../../shared/layout/page-shell/page-shell.component';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'app-product-edit',
@@ -41,13 +42,22 @@ import { PageShellComponent }
     ProductFormComponent,
     EntityImageManagerComponent,
     MatTabsModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatProgressSpinnerModule
   ],
   template: `
 <app-page-shell>
 
   <div page-content>
 
+    <div
+      *ngIf="saving"
+      class="save-overlay">
+      <mat-spinner diameter="56"></mat-spinner>
+      <div class="save-text">
+        Saving product changes...
+      </div>
+    </div>
     <section
       class="edit-workspace"
       *ngIf="!loading">
@@ -141,111 +151,130 @@ import { PageShellComponent }
 `,
   styles: [`
 
-:host {
-  display:block;
-}
+  .save-overlay{
+      position:fixed;
+      inset:0;
+      z-index:9999;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:16px;
+      background:rgba(0,0,0,.35);
+      backdrop-filter:blur(4px);
+    }
 
-[page-content] {
-  padding-bottom:40px;
-}
+    .save-text{
+      color:white;
+      font-weight:600;
+      font-size:.95rem;
+    }
 
-.edit-workspace {
-  margin-top:8px;
-}
+    :host {
+      display:block;
+    }
 
-.product-tabs {
-  background:transparent;
-}
+    [page-content] {
+      padding-bottom:40px;
+    }
 
-.tab-pane {
-  padding:20px 0 8px;
-}
+    .edit-workspace {
+      margin-top:8px;
+    }
 
-.documents-panel {
+    .product-tabs {
+      background:transparent;
+    }
 
-  padding:24px;
+    .tab-pane {
+      padding:20px 0 8px;
+    }
 
-  border-radius:16px;
+    .documents-panel {
 
-  border:1px solid var(--border);
+      padding:24px;
 
-  background:var(--surface);
-}
+      border-radius:16px;
 
-.documents-header {
-  margin-bottom:20px;
-}
+      border:1px solid var(--border);
 
-.documents-header h3 {
-  margin:0;
-  font-size:.95rem;
-  font-weight:600;
-}
+      background:var(--surface);
+    }
 
-.documents-header p {
-  margin:6px 0 0;
-  color:var(--text-secondary);
-  font-size:.82rem;
-}
+    .documents-header {
+      margin-bottom:20px;
+    }
 
-.warning-banner {
+    .documents-header h3 {
+      margin:0;
+      font-size:.95rem;
+      font-weight:600;
+    }
 
-  margin-bottom:16px;
+    .documents-header p {
+      margin:6px 0 0;
+      color:var(--text-secondary);
+      font-size:.82rem;
+    }
 
-  padding:14px;
+    .warning-banner {
 
-  border-radius:10px;
+      margin-bottom:16px;
 
-  background:rgba(245,158,11,.10);
+      padding:14px;
 
-  border:1px solid rgba(245,158,11,.25);
+      border-radius:10px;
 
-  color:#b45309;
-}
+      background:rgba(245,158,11,.10);
 
-.loading-state {
+      border:1px solid rgba(245,158,11,.25);
 
-  display:flex;
+      color:#b45309;
+    }
 
-  justify-content:center;
+    .loading-state {
 
-  align-items:center;
+      display:flex;
 
-  min-height:300px;
+      justify-content:center;
 
-  color:var(--text-secondary);
-}
+      align-items:center;
 
-::ng-deep .mat-mdc-tab-header {
+      min-height:300px;
 
-  border-bottom:1px solid var(--border);
+      color:var(--text-secondary);
+    }
 
-  margin-bottom:8px;
-}
+    ::ng-deep .mat-mdc-tab-header {
 
-::ng-deep .mat-mdc-tab {
-  min-width:120px;
-}
+      border-bottom:1px solid var(--border);
 
-::ng-deep .mdc-tab__text-label {
+      margin-bottom:8px;
+    }
 
-  font-size:.88rem;
+    ::ng-deep .mat-mdc-tab {
+      min-width:120px;
+    }
 
-  font-weight:500;
-}
+    ::ng-deep .mdc-tab__text-label {
 
-@media(max-width:700px){
+      font-size:.88rem;
 
-  .documents-panel {
-    padding:16px;
-  }
+      font-weight:500;
+    }
 
-  .tab-pane {
-    padding-top:14px;
-  }
+    @media(max-width:700px){
 
-}
-`]
+      .documents-panel {
+        padding:16px;
+      }
+
+      .tab-pane {
+        padding-top:14px;
+      }
+
+    }
+    `]
 })
 export class ProductEditComponent
   implements OnInit {

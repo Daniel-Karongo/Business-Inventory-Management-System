@@ -84,11 +84,7 @@
                 Branch
             </mat-label>
 
-            <mat-select (selectionChange)="setBranch($event.value)">
-
-                <mat-option [value]="null">
-                    All
-                </mat-option>
+            <mat-select [value]="selectedBranchId" (selectionChange)="setBranch($event.value)">
 
                 <mat-option *ngFor="let branch of branches" [value]="branch.id">
 
@@ -110,7 +106,7 @@
             <mat-select (selectionChange)="setCategory($event.value)">
 
                 <mat-option [value]="null">
-                    All
+                    All Categories
                 </mat-option>
 
                 <mat-option *ngFor="let category of categories" [value]="category.id">
@@ -133,7 +129,7 @@
             <mat-select (selectionChange)="setSupplier($event.value)">
 
                 <mat-option [value]="null">
-                    All
+                    All suppliers
                 </mat-option>
 
                 <mat-option *ngFor="let supplier of suppliers" [value]="supplier.id">
@@ -1179,7 +1175,7 @@
                 !rows.length
             " class="empty-state">
 
-            No records found
+            {{ emptyStateMessage }}
 
         </div>
 

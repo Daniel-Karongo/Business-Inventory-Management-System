@@ -394,11 +394,10 @@ export class ProductDetailsComponent
         width: '500px',
         data: {
           title: 'Delete Product',
-          message:
-            'Select a reason for deleting this product.',
+          message: 'Select a reason for deleting this product.',
           action: 'DELETE',
           confirmText: 'Delete',
-          requireReason: true,
+          requireReason: false,
           reasons: [
             'Discontinued',
             'Supplier no longer available',
@@ -465,7 +464,7 @@ export class ProductDetailsComponent
             'Select a reason for restoring this product.',
           action: 'RESTORE',
           confirmText: 'Restore',
-          requireReason: true,
+          requireReason: false,
           reasons: [
             'Product reintroduced',
             'Deletion was accidental',
@@ -531,7 +530,7 @@ export class ProductDetailsComponent
             'This action cannot be undone.',
           action: 'DELETE',
           confirmText: 'Delete Forever',
-          requireReason: true,
+          requireReason: false,
           reasons: [
             'Duplicate record',
             'Corrupt product data',

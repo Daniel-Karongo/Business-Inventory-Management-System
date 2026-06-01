@@ -2,8 +2,8 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.parent.
 
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.Product;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.model.ProductSupplier;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
-import com.IntegrityTechnologies.business_manager.modules.person.supplier.model.Supplier;
 import jakarta.persistence.criteria.*;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -34,83 +34,211 @@ public class ProductSpecification {
 
         return (root, query, cb) -> {
 
-            query.distinct(true); // 🔒 prevent duplication from joins
+            query.distinct(true);
 
-            List<Predicate> predicates = new ArrayList<>();
+            List<Predicate> predicates =
+                    new ArrayList<>();
 
-            /* =============================
-               🔴 TENANT + BRANCH ISOLATION (MANDATORY)
-               ============================= */
+            /* =====================================================
+               TENANT + BRANCH ISOLATION
+            ===================================================== */
 
-            predicates.add(cb.equal(root.get("tenantId"), tenantId));
-            predicates.add(cb.equal(root.get("branchId"), branchId));
+            predicates.add(
+                    cb.equal(
+                            root.get("tenantId"),
+                            tenantId
+                    )
+            );
+
+            predicates.add(
+                    cb.equal(
+                            root.get("branchId"),
+                            branchId
+                    )
+            );
 
             Join<Product, Category> categoryJoin =
-                    root.join("category", JoinType.LEFT);
+                    root.join(
+                            "category",
+                            JoinType.LEFT
+                    );
 
-            /* =============================
-               BASIC FILTERS
-               ============================= */
+            /* =====================================================
+               CATEGORY
+            ===================================================== */
 
-            if (categoryIds != null && !categoryIds.isEmpty()) {
-                predicates.add(categoryJoin.get("id").in(categoryIds));
-            }
-
-            if (name != null && !name.isBlank()) {
-                predicates.add(cb.like(
-                        cb.lower(root.get("name")),
-                        "%" + name.toLowerCase() + "%"
-                ));
-            }
-
-            if (description != null && !description.isBlank()) {
-                predicates.add(cb.like(
-                        cb.lower(root.get("description")),
-                        "%" + description.toLowerCase() + "%"
-                ));
-            }
-
-            if (keyword != null && !keyword.isBlank()) {
-                String kw = "%" + keyword.toLowerCase() + "%";
-                predicates.add(cb.or(
-                        cb.like(cb.lower(root.get("name")), kw),
-                        cb.like(cb.lower(root.get("sku")), kw),
-                        cb.like(cb.lower(categoryJoin.get("name")), kw)
-                ));
-            }
-
-            if (deleted != null) {
-                predicates.add(cb.equal(root.get("deleted"), deleted));
-            }
-
-            if (!includeDeleted && deleted == null) {
-                predicates.add(cb.isFalse(root.get("deleted")));
-            }
-
-            if (supplierId != null) {
-                Join<Product, Supplier> supplierJoin =
-                        root.join("suppliers", JoinType.LEFT);
+            if (
+                    categoryIds != null &&
+                            !categoryIds.isEmpty()
+            ) {
 
                 predicates.add(
-                        cb.equal(supplierJoin.get("id"), supplierId)
+                        categoryJoin
+                                .get("id")
+                                .in(categoryIds)
                 );
             }
 
-            /* =============================
-               🔥 SUPPLIER COUNT FILTER (ISOLATED)
-               ============================= */
+            /* =====================================================
+               NAME
+            ===================================================== */
 
-            if (minSuppliers != null || maxSuppliers != null) {
+            if (
+                    name != null &&
+                            !name.isBlank()
+            ) {
 
-                Subquery<Long> supplierCountSub = query.subquery(Long.class);
-                Root<Product> subRoot = supplierCountSub.correlate(root);
+                predicates.add(
+                        cb.like(
+                                cb.lower(
+                                        root.get("name")
+                                ),
+                                "%"
+                                        + name.toLowerCase()
+                                        + "%"
+                        )
+                );
+            }
 
-                Join<Product, Supplier> supplierJoin =
-                        subRoot.join("suppliers", JoinType.LEFT);
+            /* =====================================================
+               DESCRIPTION
+            ===================================================== */
 
-                supplierCountSub.select(cb.count(supplierJoin.get("id")));
+            if (
+                    description != null &&
+                            !description.isBlank()
+            ) {
+
+                predicates.add(
+                        cb.like(
+                                cb.lower(
+                                        root.get("description")
+                                ),
+                                "%"
+                                        + description.toLowerCase()
+                                        + "%"
+                        )
+                );
+            }
+
+            /* =====================================================
+               KEYWORD
+            ===================================================== */
+
+            if (
+                    keyword != null &&
+                            !keyword.isBlank()
+            ) {
+
+                String kw =
+                        "%"
+                                + keyword.toLowerCase()
+                                + "%";
+
+                predicates.add(
+                        cb.or(
+                                cb.like(
+                                        cb.lower(
+                                                root.get("name")
+                                        ),
+                                        kw
+                                ),
+                                cb.like(
+                                        cb.lower(
+                                                root.get("sku")
+                                        ),
+                                        kw
+                                ),
+                                cb.like(
+                                        cb.lower(
+                                                categoryJoin.get("name")
+                                        ),
+                                        kw
+                                )
+                        )
+                );
+            }
+
+            /* =====================================================
+               DELETED
+            ===================================================== */
+
+            if (deleted != null) {
+
+                predicates.add(
+                        cb.equal(
+                                root.get("deleted"),
+                                deleted
+                        )
+                );
+            }
+
+            if (
+                    !includeDeleted &&
+                            deleted == null
+            ) {
+
+                predicates.add(
+                        cb.isFalse(
+                                root.get("deleted")
+                        )
+                );
+            }
+
+            /* =====================================================
+               SUPPLIER FILTER
+               Product -> ProductSupplier -> Supplier
+            ===================================================== */
+
+            if (supplierId != null) {
+
+                Join<Product, ProductSupplier> productSupplierJoin =
+                        root.join(
+                                "suppliers",
+                                JoinType.INNER
+                        );
+
+                predicates.add(
+                        cb.equal(
+                                productSupplierJoin
+                                        .get("supplier")
+                                        .get("id"),
+                                supplierId
+                        )
+                );
+            }
+
+            /* =====================================================
+               SUPPLIER COUNT FILTER
+            ===================================================== */
+
+            if (
+                    minSuppliers != null ||
+                            maxSuppliers != null
+            ) {
+
+                Subquery<Long> supplierCountSub =
+                        query.subquery(Long.class);
+
+                Root<Product> subRoot =
+                        supplierCountSub.correlate(root);
+
+                Join<Product, ProductSupplier> productSupplierJoin =
+                        subRoot.join(
+                                "suppliers",
+                                JoinType.LEFT
+                        );
+
+                supplierCountSub.select(
+                        cb.countDistinct(
+                                productSupplierJoin
+                                        .get("supplier")
+                                        .get("id")
+                        )
+                );
 
                 if (minSuppliers != null) {
+
                     predicates.add(
                             cb.greaterThanOrEqualTo(
                                     supplierCountSub,
@@ -120,6 +248,7 @@ public class ProductSpecification {
                 }
 
                 if (maxSuppliers != null) {
+
                     predicates.add(
                             cb.lessThanOrEqualTo(
                                     supplierCountSub,
@@ -129,83 +258,195 @@ public class ProductSpecification {
                 }
             }
 
-            /* =============================
-               SORTING (ISOLATED)
-               ============================= */
+            /* =====================================================
+               SORTING
+            ===================================================== */
 
             if (sortBy != null) {
 
-                boolean desc = "desc".equalsIgnoreCase(direction);
+                boolean desc =
+                        "desc".equalsIgnoreCase(
+                                direction
+                        );
 
-                // Variant Count (🔒 ISOLATED)
-                if ("variantCount".equals(sortBy)) {
+                /* =========================================
+                   VARIANT COUNT
+                ========================================= */
 
-                    Subquery<Long> variantSub = query.subquery(Long.class);
-                    Root<ProductVariant> v = variantSub.from(ProductVariant.class);
+                if (
+                        "variantCount".equals(
+                                sortBy
+                        )
+                ) {
 
-                    variantSub.select(cb.count(v.get("id")))
-                            .where(
-                                    cb.equal(v.get("product"), root),
-                                    cb.equal(v.get("tenantId"), tenantId),
-                                    cb.equal(v.get("branchId"), branchId)
+                    Subquery<Long> variantSub =
+                            query.subquery(
+                                    Long.class
                             );
 
-                    query.orderBy(desc
-                            ? cb.desc(variantSub)
-                            : cb.asc(variantSub)
+                    Root<ProductVariant> v =
+                            variantSub.from(
+                                    ProductVariant.class
+                            );
+
+                    variantSub.select(
+                                    cb.count(
+                                            v.get("id")
+                                    )
+                            )
+                            .where(
+                                    cb.equal(
+                                            v.get("product"),
+                                            root
+                                    ),
+                                    cb.equal(
+                                            v.get("tenantId"),
+                                            tenantId
+                                    ),
+                                    cb.equal(
+                                            v.get("branchId"),
+                                            branchId
+                                    )
+                            );
+
+                    query.orderBy(
+                            desc
+                                    ? cb.desc(
+                                    variantSub
+                            )
+                                    : cb.asc(
+                                    variantSub
+                            )
                     );
                 }
 
-                // Supplier Count
-                else if ("supplierCount".equals(sortBy)) {
+                /* =========================================
+                   SUPPLIER COUNT
+                ========================================= */
 
-                    Subquery<Long> supplierSub = query.subquery(Long.class);
-                    Root<Product> subRoot = supplierSub.correlate(root);
+                else if (
+                        "supplierCount".equals(
+                                sortBy
+                        )
+                ) {
 
-                    Join<Product, Supplier> s =
-                            subRoot.join("suppliers", JoinType.LEFT);
+                    Subquery<Long> supplierSub =
+                            query.subquery(
+                                    Long.class
+                            );
 
-                    supplierSub.select(cb.count(s.get("id")));
+                    Root<Product> subRoot =
+                            supplierSub.correlate(
+                                    root
+                            );
 
-                    query.orderBy(desc
-                            ? cb.desc(supplierSub)
-                            : cb.asc(supplierSub)
+                    Join<Product, ProductSupplier> ps =
+                            subRoot.join(
+                                    "suppliers",
+                                    JoinType.LEFT
+                            );
+
+                    supplierSub.select(
+                            cb.countDistinct(
+                                    ps.get("supplier")
+                                            .get("id")
+                            )
+                    );
+
+                    query.orderBy(
+                            desc
+                                    ? cb.desc(
+                                    supplierSub
+                            )
+                                    : cb.asc(
+                                    supplierSub
+                            )
                     );
                 }
 
-                // Category Name
-                else if ("category.name".equals(sortBy)) {
+                /* =========================================
+                   CATEGORY NAME
+                ========================================= */
 
-                    query.orderBy(desc
-                            ? cb.desc(categoryJoin.get("name"))
-                            : cb.asc(categoryJoin.get("name"))
+                else if (
+                        "category.name".equals(
+                                sortBy
+                        )
+                ) {
+
+                    query.orderBy(
+                            desc
+                                    ? cb.desc(
+                                    categoryJoin.get(
+                                            "name"
+                                    )
+                            )
+                                    : cb.asc(
+                                    categoryJoin.get(
+                                            "name"
+                                    )
+                            )
                     );
                 }
 
-                // Hybrid Date
-                else if ("updatedAt".equals(sortBy)) {
+                /* =========================================
+                   UPDATED AT
+                ========================================= */
+
+                else if (
+                        "updatedAt".equals(
+                                sortBy
+                        )
+                ) {
 
                     Expression<?> hybrid =
                             cb.coalesce(
-                                    root.get("updatedAt"),
-                                    root.get("createdAt")
+                                    root.get(
+                                            "updatedAt"
+                                    ),
+                                    root.get(
+                                            "createdAt"
+                                    )
                             );
 
-                    query.orderBy(desc
-                            ? cb.desc(hybrid)
-                            : cb.asc(hybrid)
+                    query.orderBy(
+                            desc
+                                    ? cb.desc(
+                                    hybrid
+                            )
+                                    : cb.asc(
+                                    hybrid
+                            )
                     );
                 }
 
+                /* =========================================
+                   DEFAULT
+                ========================================= */
+
                 else {
-                    query.orderBy(desc
-                            ? cb.desc(root.get(sortBy))
-                            : cb.asc(root.get(sortBy))
+
+                    query.orderBy(
+                            desc
+                                    ? cb.desc(
+                                    root.get(
+                                            sortBy
+                                    )
+                            )
+                                    : cb.asc(
+                                    root.get(
+                                            sortBy
+                                    )
+                            )
                     );
                 }
             }
 
-            return cb.and(predicates.toArray(new Predicate[0]));
+            return cb.and(
+                    predicates.toArray(
+                            new Predicate[0]
+                    )
+            );
         };
     }
 }

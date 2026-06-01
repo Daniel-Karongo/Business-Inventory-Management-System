@@ -72,9 +72,12 @@ import {
 
 import {
     BehaviorSubject,
+    catchError,
     combineLatest,
     debounceTime,
     distinctUntilChanged,
+    filter,
+    of,
     switchMap,
     tap
 } from 'rxjs';
@@ -148,6 +151,7 @@ import { ProductVariantImageAdapter } from '../../../products/variant/services/p
 import { ProductImageAdapter } from '../../../products/parent/services/product-image.adapter';
 import { ProductVariantService } from '../../../products/variant/services/product-variant.service';
 import { ReasonDialogComponent } from '../../../../../../../shared/components/reason-dialog/reason-dialog.component';
+import { BranchContextService } from '../../../../../../../core/services/branch-context.service';
 
 @Component({
     selector: 'app-stock-list',
@@ -211,6 +215,8 @@ export class StockListComponent
     private variantService =
         inject(ProductVariantService);
 
+    private branchContext = inject(BranchContextService);
+
     /* =========================================================
        UI
     ========================================================= */
@@ -228,6 +234,10 @@ export class StockListComponent
     density:
         StockWorkspaceDensity =
         'compact';
+
+    selectedBranchId: string | null = null;
+
+    private lastEmptySearchKey = '';
 
     /* =========================================================
        DATA
@@ -285,9 +295,9 @@ export class StockListComponent
         new BehaviorSubject<string>('');
 
     private branchId$ =
-        new BehaviorSubject<
-            string | null
-        >(null);
+        new BehaviorSubject<string>(
+            ''
+        );
 
     private categoryId$ =
         new BehaviorSubject<
@@ -430,11 +440,8 @@ export class StockListComponent
                 this.isMobile =
                     result.matches;
 
-                if (
-                    this.isMobile
-                ) {
-                    this.viewMode =
-                        'grid';
+                if (this.isMobile) {
+                    this.viewMode = 'grid';
                 }
             });
 
@@ -443,13 +450,11 @@ export class StockListComponent
         combineLatest([
             this.page$,
             this.size$,
-
             this.keyword$
                 .pipe(
                     debounceTime(350),
                     distinctUntilChanged()
                 ),
-
             this.branchId$,
             this.categoryId$,
             this.supplierId$,
@@ -458,11 +463,20 @@ export class StockListComponent
         ])
             .pipe(
 
-                tap(() => {
-                    this.loading = true;
+                // Branch is mandatory
+                filter(([
+                    ,
+                    ,
+                    ,
+                    branchId
+                ]) => !!branchId),
 
+                tap(() => {
+
+                    this.loading = true;
                     this.rows = [];
                     this.total = 0;
+
                 }),
 
                 switchMap(([
@@ -475,48 +489,80 @@ export class StockListComponent
                     sortBy,
                     direction
                 ]) => {
-
                     return this.workspace.search({
                         page,
                         size,
                         keyword,
-
                         branchId:
-                            branchId
-                            ?? undefined,
-
+                            branchId!,
                         categoryId:
                             categoryId
                             ?? undefined,
-
                         supplierId:
                             supplierId
                             ?? undefined,
-
                         sortBy,
                         direction
-                    });
+                    }).pipe(
+                        catchError(err => {
+                            const message =
+                                err?.error?.message
+                                || err?.error
+                                || 'Failed to load stock workspace';
+
+                            this.snackBar.open(
+                                message,
+                                'Close',
+                                {
+                                    duration: 5000
+                                }
+                            );
+
+                            return of({
+                                content: [],
+                                totalElements: 0,
+                                page,
+                                size
+                            });
+                        })
+                    );
                 })
             )
-            .subscribe({
+            .subscribe(result => {
 
-                next: result => {
+                this.rows =
+                    result.content;
 
-                    this.rows =
-                        result.content;
+                this.total =
+                    result.totalElements;
 
-                    this.total =
-                        result.totalElements;
+                this.loadThumbnails();
 
-                    this.loadThumbnails();
+                this.loading =
+                    false;
 
-                    this.loading =
-                        false;
-                },
+                /*
+                 * Only show a snackbar when a filter/search
+                 * produced no results.
+                 *
+                 * Don't annoy users when a branch is simply empty.
+                 */
+                if (
+                    result.totalElements === 0 &&
+                    (
+                        !!this.keyword$.value?.trim()
+                        || !!this.categoryId$.value
+                        || !!this.supplierId$.value
+                    )
+                ) {
 
-                error: () => {
-                    this.loading =
-                        false;
+                    this.snackBar.open(
+                        this.emptyStateMessage,
+                        'Close',
+                        {
+                            duration: 5000
+                        }
+                    );
                 }
             });
     }
@@ -524,6 +570,48 @@ export class StockListComponent
     /* =========================================================
        DISPLAYED COLUMNS
     ========================================================= */
+
+    get emptyStateMessage(): string {
+
+        const branchName =
+            this.branches.find(
+                b => b.id === this.branchId$.value
+            )?.name
+            ?? 'selected branch';
+
+        const supplierName =
+            this.suppliers.find(
+                s => s.id === this.supplierId$.value
+            )?.name;
+
+        const categoryName =
+            this.categories.find(
+                c => c.id === this.categoryId$.value
+            )?.name;
+
+        const keyword =
+            this.keyword$.value?.trim();
+
+        if (keyword) {
+
+            return `No products match "${keyword}" in ${branchName}.`;
+
+        }
+
+        if (supplierName) {
+
+            return `No products found for supplier "${supplierName}" in ${branchName}.`;
+
+        }
+
+        if (categoryName) {
+
+            return `No products found in category "${categoryName}" for ${branchName}.`;
+
+        }
+
+        return `No products currently exist in ${branchName}.`;
+    }
 
     get displayedColumns(): string[] {
         const cols: string[] = [];
@@ -582,11 +670,11 @@ export class StockListComponent
     }
 
     get showCategoryFilter(): boolean {
-        return this.categories.length > 1;
+        return (this.categories ?? []).length > 1;
     }
 
     get showSupplierFilter(): boolean {
-        return this.suppliers.length > 1;
+        return (this.suppliers ?? []).length > 1;
     }
 
     /* =========================================================
@@ -733,15 +821,90 @@ export class StockListComponent
     }
 
     setBranch(
-        value:
-            string | null
+        value: string
     ) {
 
+        this.selectedBranchId =
+            value;
+
         this.page$.next(0);
+
+        this.loadBranchFilters(
+            value
+        );
 
         this.branchId$.next(
             value
         );
+    }
+
+    private loadBranchFilters(
+        branchId: string
+    ): void {
+
+        this.categories = [];
+        this.suppliers = [];
+
+        this.categoryId$.next(
+            null
+        );
+
+        this.supplierId$.next(
+            null
+        );
+
+        this.categoryService
+            .getAll(
+                'flat',
+                false,
+                branchId
+            )
+            .subscribe({
+                next: categories => {
+
+                    this.categories =
+                        categories ?? [];
+
+                    if (
+                        this.categories.length === 1
+                    ) {
+
+                        this.categoryId$.next(
+                            this.categories[0].id
+                        );
+                    }
+                },
+                error: () => {
+
+                    this.categories = [];
+                }
+            });
+
+        this.supplierService
+            .getAll(
+                false,
+                branchId
+            )
+            .subscribe({
+                next: suppliers => {
+
+                    this.suppliers =
+                        suppliers ?? [];
+
+                    if (
+                        this.suppliers.length === 1
+                    ) {
+
+                        this.supplierId$.next(
+                            this.suppliers[0].id
+                        );
+                    }
+                },
+                error: () => {
+
+                    this.suppliers = [];
+                }
+            });
     }
 
     setCategory(
@@ -757,14 +920,14 @@ export class StockListComponent
     }
 
     setSupplier(
-        value:
-            string | null
+        value: string | null
     ) {
-
         this.page$.next(0);
 
         this.supplierId$.next(
-            value
+            value === 'ALL'
+                ? null
+                : value
         );
     }
 
@@ -1670,6 +1833,7 @@ export class StockListComponent
                 ReasonDialogComponent,
                 {
                     width: '500px',
+                    panelClass: 'enterprise-dialog',
                     data: {
                         title: 'Delete Variant',
                         message:
@@ -1749,10 +1913,10 @@ export class StockListComponent
                 ReasonDialogComponent,
                 {
                     width: '500px',
+                    panelClass: 'enterprise-dialog',
                     data: {
                         title: 'Restore Variant',
-                        message:
-                            `Restore variant "${row.variantName}"?`,
+                        message: `Restore variant "${row.variantName}"?`,
                         action: 'RESTORE',
                         requireReason: false,
                         allowCustomReason: true
@@ -1955,68 +2119,60 @@ export class StockListComponent
         this.branchService
             .getAllLegacy()
             .subscribe({
+                next: branches => {
 
-                next: x => {
+                    this.branches =
+                        branches;
 
-                    this.branches = x;
+                    let selectedBranchId:
+                        string | null = null;
 
-                    if (x.length === 1) {
+                    const currentBranch =
+                        this.branchContext.currentBranchId();
+
+                    if (currentBranch) {
+
+                        selectedBranchId =
+                            currentBranch;
+
+                    } else if (
+                        branches.length === 1
+                    ) {
+
+                        selectedBranchId =
+                            branches[0].id;
+                    }
+
+                    if (selectedBranchId) {
+
+                        this.selectedBranchId =
+                            selectedBranchId;
+
+                        /*
+                         * Load branch-specific
+                         * categories + suppliers
+                         * BEFORE triggering search.
+                         */
+                        this.loadBranchFilters(
+                            selectedBranchId
+                        );
 
                         this.branchId$.next(
-                            x[0].id
+                            selectedBranchId
                         );
                     }
 
                     this.workspace
                         .setBranches(
-
-                            x.map(
+                            branches.map(
                                 branch => ({
                                     id:
                                         branch.id,
-
                                     name:
                                         branch.name
                                 })
                             )
                         );
-                }
-            });
-
-        this.categoryService
-            .getAll(
-                'flat',
-                false
-            )
-            .subscribe({
-
-                next: x => {
-
-                    this.categories = x;
-
-                    if (x.length === 1) {
-
-                        this.categoryId$.next(
-                            x[0].id
-                        );
-                    }
-                }
-            });
-
-        this.supplierService
-            .getAll(false)
-            .subscribe({
-
-                next: x => {
-
-                    this.suppliers = x;
-
-                    if (x.length === 1) {
-
-                        this.supplierId$.next(
-                            x[0].id
-                        );
-                    }
                 }
             });
     }
