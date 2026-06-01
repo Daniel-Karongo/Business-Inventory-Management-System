@@ -119,7 +119,8 @@ import {
 } from '../../../stock/models/sale.model';
 
 import {
-  SellableVariantDTO
+  SellableVariantDTO,
+  SellableVariantRequest
 } from '../../../stock/models/sellable.model';
 
 import {
@@ -552,73 +553,41 @@ export class SaleCreateComponent implements OnInit {
       return;
     }
 
-    console.log('SEED VARIANT', variantId, branchId);
+    console.log(
+      'SEED VARIANT',
+      variantId,
+      branchId
+    );
 
     row.patchValue({
       productVariantId:
         variantId
     });
 
+    const request: SellableVariantRequest = {
+      branchId,
+      variantId,
+      includePricing: true,
+      includeAllocation: true,
+      includeBatches: true,
+      quantity: row.value.quantity ?? 1
+    };
+
     this.sellableService
-      .search({
-        branchId,
-        includePricing: true,
-        includeAllocation: true,
-        includeBatches: true
-      })
+      .getVariant(request)
       .pipe(
         takeUntilDestroyed(
           this.destroyRef
         )
       )
       .subscribe({
-        next: response => {
+        next: variant => {
 
-          console.log(
-            'TOTAL VARIANTS RETURNED',
-            response.variants.totalElements
-          );
+          this.variantMap[index] = [
+            variant
+          ];
 
-          console.log(
-            'PAGE SIZE',
-            response.variants.content.length
-          );
-
-          console.log(
-            'LOOKING FOR',
-            variantId
-          );
-
-          const variant =
-            response.variants.content
-              .find(
-                x =>
-                  x.variantId
-                  === variantId
-              );
-
-          if (!variant) {
-
-            this.variantMap[
-              index
-            ] = [];
-
-            this.packagingMap[
-              index
-            ] = [];
-
-            return;
-          }
-
-          this.variantMap[
-            index
-          ] = [
-              variant
-            ];
-
-          this.packagingMap[
-            index
-          ] =
+          this.packagingMap[index] =
             variant.packagings
             ?? [];
 
@@ -637,7 +606,6 @@ export class SaleCreateComponent implements OnInit {
             variant.packagings
               ?.length === 1
           ) {
-
             row.patchValue({
               packagingId:
                 variant.packagings[0]
@@ -648,13 +616,12 @@ export class SaleCreateComponent implements OnInit {
 
         error: () => {
 
-          this.variantMap[
-            index
-          ] = [];
+          this.variantMap[index] =
+            [];
 
-          this.packagingMap[
-            index
-          ] = [];
+          this.packagingMap[index] =
+            [];
+
         }
       });
   }

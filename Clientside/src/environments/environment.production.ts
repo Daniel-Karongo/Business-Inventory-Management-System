@@ -430,7 +430,8 @@ export const environment = {
     sellable: {
       base: '/sellable',
       resolve: '/sellable/resolve',
-      search: '/sellable/search'
+      search: '/sellable/search',
+      variant: '/sellable/variant'
     },
 
     /* =====================================================

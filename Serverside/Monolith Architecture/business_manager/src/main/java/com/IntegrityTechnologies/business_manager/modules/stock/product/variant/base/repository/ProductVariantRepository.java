@@ -19,6 +19,21 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
             UUID id
     );
 
+    @Query("""
+            SELECT v
+            FROM ProductVariant v
+            JOIN FETCH v.product p
+            WHERE v.tenantId = :tenantId
+              AND v.branchId = :branchId
+              AND v.deleted = false
+              AND v.id = :variantId
+            """)
+    Optional<ProductVariant> findSellableVariant(
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId,
+            @Param("variantId") UUID variantId
+    );
+
     boolean existsByTenantIdAndBranchIdAndSkuAndIdNot(
             UUID tenantId,
             UUID branchId,

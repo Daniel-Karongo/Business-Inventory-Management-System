@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.service;
 
 import com.IntegrityTechnologies.business_manager.config.response.PageWrapper;
+import com.IntegrityTechnologies.business_manager.exception.EntityNotFoundException;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.ResolutionMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableContext;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableSnapshot;
@@ -21,6 +22,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -103,6 +105,57 @@ public class SellableProductService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public SellableVariantDTO getVariant(
+            SellableVariantRequest request
+    ) {
+        UUID tenantId = TenantContext.getTenantId();
+
+        ProductVariant variant =
+                variantRepository
+                        .findSellableVariant(
+                                tenantId,
+                                request.getBranchId(),
+                                request.getVariantId()
+                        )
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Variant not found"
+                                )
+                        );
+
+        long quantity =
+                request.getQuantity() != null
+                        ? request.getQuantity()
+                        : 1L;
+
+        Map<UUID, InventoryItem> inventoryMap =
+                inventoryItemRepository
+                        .findAllByVariants(
+                                List.of(variant.getId()),
+                                tenantId,
+                                request.getBranchId()
+                        )
+                        .stream()
+                        .collect(Collectors.toMap(
+                                InventoryItem::getProductVariantId,
+                                i -> i
+                        ));
+
+        Map<UUID, List<PackagingDTO>> packagingMap =
+                packagingService.getPackagingsBulk(
+                        List.of(variant.getId())
+                );
+
+        return buildVariantDTOOptimized(
+                variant,
+                request,
+                quantity,
+                inventoryMap,
+                packagingMap
+        );
+    }
+
     @Cacheable(
             value = "variant-search",
             key = "T(com.IntegrityTechnologies.business_manager.config.caffeine.CacheKeys)" +
@@ -127,7 +180,7 @@ public class SellableProductService {
     // =========================
     private SellableVariantDTO buildVariantDTOOptimized(
             ProductVariant variant,
-            SellableProductRequest request,
+            SellableRequestOptions request,
             long quantity,
             Map<UUID, InventoryItem> inventoryMap,
             Map<UUID, List<PackagingDTO>> packagingMap

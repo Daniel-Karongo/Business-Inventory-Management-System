@@ -57,6 +57,20 @@ export interface SellableProductRequest {
   size?: number;
 }
 
+export interface SellableVariantRequest {
+  branchId: string;
+  variantId: string;
+
+  customerId?: string;
+  customerGroupId?: string;
+
+  quantity?: number;
+
+  includePricing?: boolean;
+  includeBatches?: boolean;
+  includeAllocation?: boolean;
+}
+
 export interface SellableProductResponse {
   variants: PageWrapper<SellableVariantDTO>;
 }

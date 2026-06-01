@@ -5,23 +5,21 @@ import lombok.Data;
 import java.util.UUID;
 
 @Data
-public class SellableProductRequest implements SellableRequestOptions {
+public class SellableVariantRequest implements SellableRequestOptions {
 
     private UUID branchId;
 
-    private String search;
+    private UUID variantId;
 
     private UUID customerId;
+
     private UUID customerGroupId;
 
-    private Long quantity;
+    private Long quantity = 1L;
 
-    // flags
     private boolean includePricing = true;
-    private boolean includeBatches = false;
-    private boolean includeAllocation = false;
 
-    // 🔥 NEW
-    private Integer page = 0;
-    private Integer size = 20;
+    private boolean includeBatches = false;
+
+    private boolean includeAllocation = false;
 }

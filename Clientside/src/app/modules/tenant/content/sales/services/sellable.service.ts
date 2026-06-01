@@ -9,6 +9,8 @@ import { BaseApiService } from '../../../../../core/services/api/base-api.servic
 import {
     SellableProductRequest,
     SellableProductResponse,
+    SellableVariantDTO,
+    SellableVariantRequest,
 } from '../../stock/models/sellable.model';
 
 @Injectable({
@@ -31,6 +33,23 @@ export class SellableService extends BaseApiService {
         ).pipe(
             map(response =>
                 this.unwrap<SellableProductResponse>(
+                    response
+                )
+            )
+        );
+    }
+
+    getVariant(
+        request: SellableVariantRequest
+    ): Observable<SellableVariantDTO> {
+        return this.post<
+            ApiResponse<SellableVariantDTO>
+        >(
+            this.endpoints.variant,
+            request
+        ).pipe(
+            map(response =>
+                this.unwrap<SellableVariantDTO>(
                     response
                 )
             )
