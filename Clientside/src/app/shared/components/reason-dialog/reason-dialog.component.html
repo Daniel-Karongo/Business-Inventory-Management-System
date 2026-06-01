@@ -1,69 +1,96 @@
-<div class="p-4 bg-[var(--surface)]">
-  <h2 class="text-lg font-semibold mb-2">{{ data.title }}</h2>
+<div class="reason-dialog">
 
-  <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">
-    {{ data.message }}
-  </p>
+  <div class="reason-header">
 
-  <mat-form-field appearance="fill" class="w-full" *ngIf="reasonOptions.length">
-    <mat-label>Select a reason (optional)</mat-label>
+    <h2>
+      {{ data.title }}
+    </h2>
 
-    <mat-select [(ngModel)]="selectedReason">
+    <p>
+      {{ data.message }}
+    </p>
 
-      <mat-option *ngFor="let r of reasonOptions" [value]="r">
-        {{ r }}
-      </mat-option>
-
-      <mat-option *ngIf="allowCustom" value="OTHER">
-        Other...
-      </mat-option>
-
-    </mat-select>
-  </mat-form-field>
-
-  <mat-form-field appearance="fill" class="w-full" *ngIf="selectedReason === 'OTHER'">
-
-    <mat-label>Custom reason</mat-label>
-
-    <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="1" cdkAutosizeMaxRows="6" [(ngModel)]="customReason"
-      placeholder="Enter custom reason">
-    </textarea>
-
-  </mat-form-field>
-
-  <div class="text-red-500 text-xs mb-2" *ngIf="
-    data.requireReason
-    &&
-    (
-      !selectedReason
-      ||
-      (
-        selectedReason === 'OTHER'
-        &&
-        !customReason.trim()
-      )
-    )
-  ">
-    Reason is required
   </div>
 
-  <div class="flex justify-end gap-2 mt-4">
+  <div class="reason-body">
+
+    <mat-form-field appearance="outline" class="w-full">
+
+      <mat-label>
+        Reason
+      </mat-label>
+
+      <mat-select [(ngModel)]="selectedReason">
+
+        <mat-option *ngFor="let r of reasonOptions" [value]="r">
+
+          {{ r }}
+
+        </mat-option>
+
+        <mat-option *ngIf="allowCustom" value="OTHER">
+
+          Other
+
+        </mat-option>
+
+      </mat-select>
+
+    </mat-form-field>
+
+    <mat-form-field *ngIf="selectedReason === 'OTHER'" appearance="outline" class="w-full">
+
+      <mat-label>
+        Custom Reason
+      </mat-label>
+
+      <textarea matInput rows="4" [(ngModel)]="customReason">
+      </textarea>
+
+    </mat-form-field>
+
+  </div>
+
+  <div *ngIf="
+      data.requireReason &&
+      (
+        !selectedReason ||
+        (
+          selectedReason === 'OTHER'
+          &&
+          !customReason.trim()
+        )
+      )
+    " class="reason-error">
+
+    Reason is required
+
+  </div>
+
+  <div class="reason-actions">
 
     <button mat-stroked-button (click)="cancel()">
+
       {{ data.cancelText || 'Cancel' }}
+
     </button>
 
-    <button mat-flat-button color="warn" (click)="confirm()" [disabled]="
-    data.requireReason && (
-      !selectedReason || (
-        selectedReason === 'OTHER'
-        &&
-        !customReason.trim()
-      )
-    )
-  ">
+    <button mat-flat-button color="primary" (click)="confirm()" [disabled]="
+        data.requireReason &&
+        (
+          !selectedReason ||
+          (
+            selectedReason === 'OTHER'
+            &&
+            !customReason.trim()
+          )
+        )
+      ">
+
       {{ data.confirmText || 'Confirm' }}
+
     </button>
 
   </div>
+
 </div>

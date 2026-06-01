@@ -1,33 +1,716 @@
 :host {
   display: block;
+  width: 100%;
+  min-width: 0;
 }
 
-.section-title {
-  font-size: 1.1rem;
-  font-weight: var(--font-semibold);
-  margin-bottom: 0.5rem;
+/* =========================================================
+   CONTENT
+========================================================= */
+
+.workspace-content {
+  width: 100%;
+  min-width: 0;
 }
 
-.info-grid {
+.workspace-panel {
+  width: 100%;
+  min-width: 0;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.workspace-header {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
-  background: var(--surface);
-  padding: 1rem;
-  border-radius: 6px;
+  grid-template-columns:
+    minmax(0, 1fr) auto;
+
+  gap: 24px;
+
+  width: 100%;
+  min-width: 0;
+
+  align-items: start;
 }
 
-.info-grid label {
-  font-size: var(--text-xs);
+.workspace-header-main {
+  min-width: 0;
+  width: 100%;
+}
+
+/* =========================================================
+   BREADCRUMB
+========================================================= */
+
+.workspace-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+
+  margin-bottom: 10px;
+
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+
   color: var(--text-secondary);
 }
 
-.commercial-section {
+/* =========================================================
+   TOP ROW
+========================================================= */
+
+.workspace-top-row {
   display: flex;
-  flex-direction: column;
-  gap: 2rem;
+  align-items: flex-start;
+  gap: 20px;
 }
 
-::ng-deep .mat-expansion-panel-body {
-  padding-top: 1rem !important;
+/* =========================================================
+   THUMBNAIL
+========================================================= */
+
+.product-thumbnail {
+  width: 112px;
+  height: 112px;
+  flex-shrink: 0;
+}
+
+.product-thumbnail img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+
+  border-radius: 18px;
+
+  border: 1px solid var(--border);
+
+  background: var(--surface);
+}
+
+.thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 18px;
+
+  border: 1px solid var(--border);
+
+  background: var(--surface);
+}
+
+.thumbnail-placeholder mat-icon {
+  width: 42px;
+  height: 42px;
+  font-size: 42px;
+  color: var(--text-secondary);
+}
+
+.product-thumbnail.clickable {
+  cursor: pointer;
+}
+
+.product-thumbnail.clickable:hover {
+  transform: translateY(-2px);
+}
+
+.product-thumbnail img {
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.product-thumbnail.clickable:hover img {
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, .15);
+}
+
+.product-thumbnail {
+  position: relative;
+  cursor: pointer;
+}
+
+.thumbnail-upload-overlay {
+
+  position: absolute;
+  inset: 0;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  opacity: 0;
+
+  border-radius: 18px;
+
+  background:
+    rgba(15, 23, 42, 0.72);
+
+  color: white;
+
+  transition:
+    opacity 180ms ease;
+}
+
+.product-thumbnail:hover
+.thumbnail-upload-overlay {
+
+  opacity: 1;
+}
+
+.thumbnail-upload-overlay mat-icon {
+
+  width: 28px;
+  height: 28px;
+  font-size: 28px;
+}
+
+.thumbnail-upload-overlay span {
+
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+}
+
+/* =========================================================
+   TITLE SECTION
+========================================================= */
+
+.workspace-title-section {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+
+/* =========================================================
+   TITLE ROW
+========================================================= */
+
+.workspace-title-row {
+  display: flex;
+
+  align-items: center;
+
+  flex-wrap: wrap;
+
+  gap: 12px;
+
+  width: 100%;
+
+  min-width: 0;
+}
+
+/* =========================================================
+   TITLE
+========================================================= */
+
+.workspace-title {
+  margin: 0;
+
+  font-size: 2.15rem;
+
+  font-weight: 700;
+
+  line-height: 1.05;
+
+  color: var(--text-primary);
+
+  white-space: normal;
+
+  overflow-wrap: anywhere;
+
+  word-break: normal;
+
+  min-width: 0;
+}
+
+/* =========================================================
+   SUBTITLE
+========================================================= */
+
+.workspace-subtitle {
+  margin-top: 12px;
+
+  font-size: 0.92rem;
+  font-weight: 500;
+
+  color: var(--text-secondary);
+}
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+.workspace-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 30px;
+
+  padding: 0 12px;
+
+  border-radius: 999px;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  border: 1px solid transparent;
+}
+
+.workspace-status.active {
+  background: rgba(34, 197, 94, 0.14);
+  color: #16a34a;
+  border-color: rgba(34, 197, 94, 0.18);
+}
+
+.workspace-status.deleted {
+  background: rgba(239, 68, 68, 0.14);
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.18);
+}
+
+/* =========================================================
+   META
+========================================================= */
+
+.workspace-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  margin-top: 16px;
+}
+
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  min-height: 36px;
+
+  padding: 0 14px;
+
+  border-radius: 999px;
+
+  background: var(--surface);
+
+  border: 1px solid var(--border);
+
+  color: var(--text-secondary);
+
+  font-size: 0.84rem;
+  font-weight: 600;
+
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease,
+    background 120ms ease;
+}
+
+.meta-chip:hover {
+  transform: translateY(-1px);
+  border-color: var(--active);
+  background: var(--surface-hover);
+}
+
+.meta-chip mat-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+}
+
+/* =========================================================
+   ACTIONS
+========================================================= */
+
+.workspace-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   TABS
+========================================================= */
+
+.workspace-tabs {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  width: 100%;
+  min-width: 0;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  scrollbar-width: none;
+
+  -webkit-overflow-scrolling: touch;
+
+  padding-bottom: 4px;
+}
+
+.workspace-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* =========================================================
+   TAB
+========================================================= */
+
+.workspace-tab {
+  position: relative;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  flex: 0 0 auto;
+
+  min-height: 42px;
+
+  padding: 0 16px;
+
+  border-radius: 12px;
+
+  border: 1px solid transparent;
+
+  background: transparent;
+
+  cursor: pointer;
+
+  color: var(--text-secondary);
+
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease,
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.workspace-tab:hover {
+  background: var(--surface-hover);
+
+  color: var(--text-primary);
+
+  transform: translateY(-1px);
+}
+
+.workspace-tab.active {
+  background: rgba(59, 130, 246, 0.12);
+
+  color: #2563eb;
+
+  border-color: rgba(59, 130, 246, 0.16);
+
+  box-shadow:
+    inset 0 -2px 0 #2563eb;
+
+  font-weight: 700;
+}
+
+.workspace-tab mat-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+}
+
+.workspace-tab span {
+  white-space: nowrap;
+}
+
+/* =========================================================
+   OVERVIEW CARD
+========================================================= */
+
+.panel-card {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+
+  padding: 24px;
+
+  border-radius: 18px;
+
+  border: 1px solid var(--border);
+
+  background: var(--surface-bg);
+}
+
+.images-panel-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.panel-header h2 {
+  margin: 0;
+
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.panel-header div {
+  margin-top: 4px;
+  color: var(--text-secondary);
+}
+
+/* =========================================================
+   OVERVIEW GRID
+========================================================= */
+
+.overview-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(auto-fit,
+      minmax(220px, 1fr));
+
+  gap: 16px;
+}
+
+.overview-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  padding: 14px;
+
+  border-radius: 12px;
+
+  border: 1px solid var(--border);
+
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.overview-item:hover {
+  border-color: var(--active);
+}
+
+.overview-label {
+  font-size: 11px;
+  font-weight: 700;
+
+  letter-spacing: 0.4px;
+
+  text-transform: uppercase;
+
+  color: var(--text-secondary);
+}
+
+.overview-value {
+  font-size: 15px;
+  font-weight: 600;
+
+  color: var(--text-primary);
+
+  word-break: break-word;
+}
+
+/* =========================================================
+   SUPPLIERS
+========================================================= */
+
+.suppliers-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.empty-value {
+  color: var(--text-secondary);
+}
+
+/* =========================================================
+   VARIANTS
+========================================================= */
+
+/* =========================================================
+   LOADING
+========================================================= */
+
+.loading-state {
+  min-height: 320px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: var(--text-secondary);
+}
+
+/* =========================================================
+   MATERIAL
+========================================================= */
+
+::ng-deep .mat-mdc-chip {
+  border-radius: 999px !important;
+}
+
+/* =========================================================
+   TABLET / SMALL DESKTOP
+   769px -> 1250px
+========================================================= */
+@media (max-width: 1250px) and (min-width: 769px) {
+
+  .workspace-header {
+    display: block;
+  }
+
+  .workspace-top-row {
+    display: grid;
+    grid-template-columns: 140px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  .product-thumbnail {
+    width: 140px;
+    height: 140px;
+  }
+
+  .workspace-title-section {
+    min-width: 0;
+  }
+
+  .workspace-title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .workspace-title {
+    font-size: 2.25rem;
+    line-height: 1.05;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .workspace-subtitle {
+    margin-top: 12px;
+  }
+
+  .workspace-meta {
+    margin-top: 16px;
+  }
+
+  .workspace-actions {
+
+    margin-top: 24px;
+
+    padding-top: 20px;
+
+    border-top: 1px solid var(--border);
+
+    display: grid;
+
+    grid-template-columns:
+      repeat(auto-fit, minmax(180px, 1fr));
+
+    gap: 12px;
+
+    width: 100%;
+  }
+
+  .workspace-actions button {
+    width: 100%;
+    margin: 0;
+  }
+
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+  .workspace-header {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .workspace-top-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .workspace-title-section {
+    width: 100%;
+  }
+
+  .workspace-title {
+    font-size: 1.9rem;
+  }
+
+  .product-thumbnail {
+    width: 96px;
+    height: 96px;
+  }
+
+  .workspace-actions {
+    width: 100%;
+  }
+
+  .workspace-actions button {
+    width: 100%;
+  }
+
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-card {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+
+  .workspace-title {
+    font-size: 1.65rem;
+  }
+
+  .workspace-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .workspace-actions button {
+    width: 100%;
+  }
+
+  .workspace-meta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .meta-chip {
+    width: 100%;
+  }
+
+  .workspace-tab {
+    min-height: 38px;
+    padding: 0 12px;
+  }
 }

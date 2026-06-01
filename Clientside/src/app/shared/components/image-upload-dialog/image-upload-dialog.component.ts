@@ -46,6 +46,8 @@ export class ImageUploadDialogComponent {
 
   fg!: FormGroup;
 
+  uploading = false;
+
   readonly supportsDescription: boolean;
   readonly uploadMode: 'image' | 'document';
 
@@ -127,13 +129,9 @@ export class ImageUploadDialogComponent {
 
     let description = '';
 
-    if (
-      this.supportsDescription
-    ) {
+    if (this.supportsDescription) {
 
-      if (
-        this.fg.invalid
-      ) {
+      if (this.fg.invalid) {
         return;
       }
 
@@ -146,11 +144,13 @@ export class ImageUploadDialogComponent {
           : type;
     }
 
+    this.uploading = true;
+
     this.dialogRef.close({
       file: this.file,
-      description
+      description,
+      uploading: true
     });
-
   }
 
   cancel() {

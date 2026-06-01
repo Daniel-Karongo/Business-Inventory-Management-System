@@ -1,20 +1,23 @@
-<section class="inventory-section">
+<section class="inventory-workspace">
 
     <div class="section-header">
 
         <div>
+
             <div class="section-title">
-                Inventory Snapshot
+                Inventory Workspace
             </div>
 
             <div class="section-subtitle">
-                Operational stock visibility across branches
+                Operational stock visibility across all branches
             </div>
+
         </div>
 
-        <div class="summary-metrics">
+        <div *ngIf="!loading" class="summary-metrics">
 
             <div class="metric-card">
+
                 <div class="metric-label">
                     Available
                 </div>
@@ -22,9 +25,11 @@
                 <div class="metric-value">
                     {{ totalAvailable() }}
                 </div>
+
             </div>
 
             <div class="metric-card">
+
                 <div class="metric-label">
                     Reserved
                 </div>
@@ -32,113 +37,214 @@
                 <div class="metric-value">
                     {{ totalReserved() }}
                 </div>
+
             </div>
 
             <div class="metric-card">
+
                 <div class="metric-label">
-                    Total Value
+                    Inventory Value
                 </div>
 
                 <div class="metric-value">
                     {{ totalValue() | number:'1.2-2' }}
                 </div>
+
             </div>
 
         </div>
 
     </div>
 
-    <div *ngIf="loading" class="loading">
+    <!-- LOADING -->
+
+    <div *ngIf="loading" class="panel-card">
+
         Loading inventory...
+
     </div>
 
-    <div *ngIf="!loading && !rows.length" class="empty-state">
-        No inventory records found for this product.
+    <!-- EMPTY -->
+
+    <div *ngIf="!loading && !rows.length" class="empty-card">
+
+        <mat-icon>
+            inventory
+        </mat-icon>
+
+        <div class="empty-title">
+            No Inventory Found
+        </div>
+
+        <div class="empty-description">
+            This product currently has no inventory records.
+        </div>
+
     </div>
+
+    <!-- INVENTORY -->
 
     <div *ngIf="!loading && rows.length" class="inventory-grid">
 
         <div *ngFor="let row of rows" class="inventory-card">
 
-            <div class="top-row">
+            <!-- HEADER -->
+
+            <div class="card-header">
 
                 <div>
+
                     <div class="variant-name">
                         {{ row.productClassification }}
                     </div>
 
                     <div class="variant-sku">
-                        SKU: {{ row.productVariantSKU }}
+                        SKU: {{ row.productVariantSKU || '—' }}
                     </div>
+
                 </div>
 
-                <div class="stock-badge" [class.low]="available(row) <= 5">
-                    {{ available(row) }} Available
+                <div class="availability-chip" [class.low]="available(row) <= 5" [class.out]="available(row) <= 0">
+
+                    <ng-container *ngIf="available(row) > 0">
+                        {{ available(row) }} Available
+                    </ng-container>
+
+                    <ng-container *ngIf="available(row) <= 0">
+                        Out Of Stock
+                    </ng-container>
+
                 </div>
 
             </div>
+
+            <!-- BRANCH -->
+
+            <div class="branch-row">
+
+                <mat-icon>
+                    store
+                </mat-icon>
+
+                <span>
+                    {{ row.branchId }}
+                </span>
+
+            </div>
+
+            <!-- METRICS -->
 
             <div class="metrics-grid">
 
-                <div>
-                    <div class="label">
+                <div class="metric-tile">
+
+                    <div class="tile-label">
                         On Hand
                     </div>
 
-                    <div class="value">
+                    <div class="tile-value">
                         {{ row.quantityOnHand }}
                     </div>
+
                 </div>
 
-                <div>
-                    <div class="label">
+                <div class="metric-tile">
+
+                    <div class="tile-label">
                         Reserved
                     </div>
 
-                    <div class="value">
+                    <div class="tile-value">
                         {{ row.quantityReserved }}
                     </div>
+
                 </div>
 
-                <div>
-                    <div class="label">
+                <div class="metric-tile">
+
+                    <div class="tile-label">
+                        Available
+                    </div>
+
+                    <div class="tile-value">
+                        {{ row.quantityAvailable }}
+                    </div>
+
+                </div>
+
+                <div class="metric-tile">
+
+                    <div class="tile-label">
                         Batches
                     </div>
 
-                    <div class="value">
+                    <div class="tile-value">
                         {{ row.batchCount || 0 }}
                     </div>
+
                 </div>
 
-                <div>
-                    <div class="label">
+                <div class="metric-tile">
+
+                    <div class="tile-label">
+                        Avg Cost
+                    </div>
+
+                    <div class="tile-value">
+                        {{ row.averageCost || 0 | number:'1.2-2' }}
+                    </div>
+
+                </div>
+
+                <div class="metric-tile">
+
+                    <div class="tile-label">
                         Value
                     </div>
 
-                    <div class="value">
-                        {{ row.totalRemainingBatchValue | number:'1.2-2' }}
+                    <div class="tile-value">
+                        {{ row.totalRemainingBatchValue || 0 | number:'1.2-2' }}
                     </div>
+
                 </div>
 
             </div>
 
-            <div class="actions">
+            <!-- FOOTER -->
 
-                <button mat-stroked-button (click)="createSale(row)">
-                    <mat-icon>
-                        point_of_sale
-                    </mat-icon>
+            <div class="card-footer">
 
-                    Sell
-                </button>
+                <div class="last-updated" *ngIf="row.lastUpdatedAt">
 
-                <button mat-stroked-button (click)="openTransactions(row)">
-                    <mat-icon>
-                        history
-                    </mat-icon>
+                    Updated
 
-                    Transactions
-                </button>
+                    {{ row.lastUpdatedAt | date:'medium' }}
+
+                </div>
+
+                <div class="actions">
+
+                    <button mat-stroked-button (click)="createSale(row)">
+
+                        <mat-icon>
+                            point_of_sale
+                        </mat-icon>
+
+                        Sell
+
+                    </button>
+
+                    <button mat-stroked-button (click)="openTransactions(row)">
+
+                        <mat-icon>
+                            history
+                        </mat-icon>
+
+                        Transactions
+
+                    </button>
+
+                </div>
 
             </div>
 

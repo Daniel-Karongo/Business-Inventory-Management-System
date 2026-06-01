@@ -450,6 +450,10 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
 
   /* ================= UPLOAD ================= */
 
+  public openUploadDialog(): void {
+    this.triggerUpload();
+  }
+
   triggerUpload() {
 
     const beforeCount =
@@ -478,6 +482,14 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
 
         this.uploading = true;
 
+        this.snackbar.open(
+          'Uploading image...',
+          undefined,
+          {
+            duration: 100000
+          }
+        );
+
         this.adapter
           .uploadImages(
             this.entityId,
@@ -487,10 +499,10 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
 
             next: () => {
 
-              this.uploading = false;
+              this.snackbar.dismiss();
 
               this.snackbar.open(
-                `${this.entityLabel} uploaded and queued for processing`,
+                `${this.entityLabel} uploaded and being processed`,
                 'Close',
                 {
                   duration: 4000
@@ -500,12 +512,13 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
               this.startUploadPolling(
                 beforeCount
               );
-
             },
 
             error: () => {
 
               this.uploading = false;
+
+              this.snackbar.dismiss();
 
               this.snackbar.open(
                 'Upload failed',
@@ -607,17 +620,32 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
               current.length >
               previousCount
             ) {
-              clearInterval(
-                timer
-              );
+
+              clearInterval(timer);
+
+              this.uploading = false;
 
               this.loadAll();
+
+              if (
+                this.adapter.onThumbnailUpdated
+              ) {
+                this.adapter.onThumbnailUpdated();
+              }
 
               if (
                 this.adapter.onChange
               ) {
                 this.adapter.onChange();
               }
+
+              this.snackbar.open(
+                `${this.entityLabel} processing completed`,
+                'Close',
+                {
+                  duration: 3000
+                }
+              );
 
               return;
             }

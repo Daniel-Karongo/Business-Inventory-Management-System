@@ -9,6 +9,7 @@ export interface ProductVariant {
   barcode?: string;
   barcodeImagePath?: string;
   imageUrls?: string[];
+  deleted?: boolean;
 }
 
 export interface ProductVariantCreateDTO {

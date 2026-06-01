@@ -1,0 +1,232 @@
+<section class="variant-workspace">
+
+  <div class="section-header">
+
+    <div>
+      <div class="section-title">
+        Product Variants
+      </div>
+
+      <div class="section-subtitle">
+        Variant configuration, barcode management, images and lifecycle controls.
+      </div>
+    </div>
+
+    <div *ngIf="!loading" class="variant-count">
+      {{ variants.length }}
+      {{ variants.length === 1 ? 'Variant' : 'Variants' }}
+    </div>
+
+  </div>
+
+  <!-- LOADING -->
+
+  <div *ngIf="loading" class="loading-state">
+
+    <div class="panel-card">
+
+      <div class="loading-row">
+        Loading variants...
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- EMPTY -->
+
+  <div *ngIf="!loading && !variants.length" class="empty-state">
+
+    <div class="empty-card">
+
+      <mat-icon>
+        inventory_2
+      </mat-icon>
+
+      <div class="empty-title">
+        No Variants Found
+      </div>
+
+      <div class="empty-description">
+        This product currently has no variants configured.
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- GRID -->
+
+  <div *ngIf="!loading && variants.length" class="variant-grid">
+
+    <div *ngFor="let variant of variants" class="variant-card" [class.deleted]="variant.deleted">
+
+      <!-- HEADER -->
+
+      <div class="variant-card-header">
+
+        <div class="variant-main">
+
+          <div class="variant-title-row">
+
+            <div class="variant-title">
+              {{ variant.classification }}
+            </div>
+
+            <div class="status-chip active" *ngIf="!variant.deleted">
+
+              Active
+
+            </div>
+
+            <div class="status-chip deleted" *ngIf="variant.deleted">
+
+              Deleted
+
+            </div>
+
+          </div>
+
+          <div class="variant-product">
+
+            {{ product.name }}
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- DETAILS -->
+
+      <div class="details-grid">
+
+        <div class="detail-item">
+
+          <div class="detail-label">
+            SKU
+          </div>
+
+          <div class="detail-value mono">
+            {{ variant.sku || '—' }}
+          </div>
+
+        </div>
+
+        <div class="detail-item">
+
+          <div class="detail-label">
+            Barcode
+          </div>
+
+          <div class="detail-value mono">
+            {{ variant.barcode || '—' }}
+          </div>
+
+        </div>
+
+        <div class="detail-item">
+
+          <div class="detail-label">
+            Minimum Profit
+          </div>
+
+          <div class="detail-value">
+            {{ variant.minimumProfit ?? '—' }}
+          </div>
+
+        </div>
+
+        <div class="detail-item">
+
+          <div class="detail-label">
+            Minimum Margin %
+          </div>
+
+          <div class="detail-value">
+            {{ variant.minimumPercentageProfit ?? '—' }}
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ACTIONS -->
+
+      <div class="action-bar">
+
+        <button mat-icon-button matTooltip="Create Sale" (click)="createSale(variant)">
+
+          <mat-icon>
+            point_of_sale
+          </mat-icon>
+
+        </button>
+
+        <button mat-icon-button matTooltip="View Variant Details" (click)="view(variant)">
+
+          <mat-icon>
+            visibility
+          </mat-icon>
+
+        </button>
+
+        <button mat-icon-button matTooltip="Edit Variant" (click)="edit(variant)">
+
+          <mat-icon>
+            edit
+          </mat-icon>
+
+        </button>
+
+        <button mat-icon-button matTooltip="Images" (click)="manageImages(variant)">
+
+          <mat-icon>
+            image
+          </mat-icon>
+
+        </button>
+
+        <button mat-icon-button matTooltip="Barcode" (click)="showBarcode(variant)">
+
+          <mat-icon>
+            qr_code
+          </mat-icon>
+
+        </button>
+
+        <!-- ACTIVE -->
+
+        <button *ngIf="!variant.deleted" mat-icon-button matTooltip="Delete Variant" (click)="delete(variant)">
+
+          <mat-icon>
+            delete
+          </mat-icon>
+
+        </button>
+
+        <!-- DELETED -->
+
+        <button *ngIf="variant.deleted" mat-icon-button matTooltip="Restore Variant" (click)="restore(variant)">
+
+          <mat-icon>
+            restore
+          </mat-icon>
+
+        </button>
+
+        <button *ngIf="variant.deleted" mat-icon-button matTooltip="Permanent Delete" (click)="hardDelete(variant)">
+
+          <mat-icon>
+            delete_forever
+          </mat-icon>
+
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>

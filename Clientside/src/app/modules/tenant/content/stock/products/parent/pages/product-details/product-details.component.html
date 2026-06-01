@@ -1,93 +1,469 @@
-<div class="flex flex-col gap-6" *ngIf="!loading && product">
+<app-workflow-shell *ngIf="!loading && product">
 
-  <!-- HEADER -->
-  <div class="flex justify-between items-start">
-    <div>
-      <h1 class="text-2xl font-semibold">{{ product.name }}</h1>
+  <!-- =====================================================
+         HEADER
+    ====================================================== -->
 
-      <div class="flex items-center gap-3 mt-2">
-        <span class="status-pill" [ngClass]="product.deleted ? 'status-deleted' : 'status-active'">
-          {{ product.deleted ? 'Deleted' : 'Active' }}
-        </span>
+  <div workflow-header>
 
-        <span class="text-sm text-gray-500">
-          SKU: {{ product.sku || '—' }}
-        </span>
+    <div class="workspace-header">
 
-        <span class="text-sm text-gray-500">
-          Barcode: {{ product.barcode || '—' }}
-        </span>
+      <!-- =====================================================
+                 LEFT
+            ====================================================== -->
+
+      <div class="workspace-header-main">
+
+        <div class="workspace-breadcrumb">
+          Product Workspace
+        </div>
+
+        <div class="workspace-top-row">
+
+          <!-- THUMBNAIL -->
+
+          <div class="product-thumbnail clickable" [matTooltip]="thumbnailUrl ? 'View image' : 'Upload product image'"
+            (click)="openThumbnailOrUpload()">
+
+            <img *ngIf="thumbnailUrl" [src]="thumbnailUrl" alt="Product Thumbnail">
+
+            <div *ngIf="!thumbnailUrl" class="thumbnail-placeholder">
+
+              <div class="thumbnail-upload-overlay">
+                <mat-icon>
+                  add_a_photo
+                </mat-icon>
+
+                <span>
+                  Upload Image
+                </span>
+              </div>
+
+              <mat-icon>
+                inventory_2
+              </mat-icon>
+
+            </div>
+
+          </div>
+
+          <!-- TITLE AREA -->
+
+          <div class="workspace-title-section">
+
+            <div class="workspace-title-row">
+
+              <h1 class="workspace-title">
+                {{ product.name }}
+              </h1>
+
+              <span class="workspace-status" [class.active]="
+                                    statusClass === 'active'
+                                " [class.deleted]="
+                                    statusClass === 'deleted'
+                                ">
+                {{ statusLabel }}
+              </span>
+
+            </div>
+
+            <div class="workspace-subtitle">
+              Product Management Workspace
+            </div>
+
+            <div class="workspace-meta">
+
+              <div class="meta-chip">
+
+                <mat-icon>
+                  badge
+                </mat-icon>
+
+                <span>
+                  {{ product.sku || 'No SKU' }}
+                </span>
+
+              </div>
+
+              <div *ngIf="
+                                    product.categoryName
+                                " class="meta-chip">
+
+                <mat-icon>
+                  category
+                </mat-icon>
+
+                <span>
+                  {{ product.categoryName }}
+                </span>
+
+              </div>
+
+              <div *ngIf="
+                                    product.deletedAt
+                                " class="meta-chip">
+
+                <mat-icon>
+                  delete
+                </mat-icon>
+
+                <span>
+                  {{
+                  product.deletedAt
+                  | date:'medium'
+                  }}
+                </span>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
       </div>
+
+      <!-- =====================================================
+                 ACTIONS
+            ====================================================== -->
+
+      <div class="workspace-actions">
+
+        <button mat-stroked-button routerLink="/app/stock">
+
+          <mat-icon>
+            arrow_back
+          </mat-icon>
+
+          Back
+
+        </button>
+
+        <button mat-flat-button [routerLink]="[
+                        '/app/stock',
+                        product.id,
+                        'edit'
+                    ]" [state]="{
+                        deleted: product.deleted
+                    }">
+
+          <mat-icon>
+            edit
+          </mat-icon>
+
+          Edit Product
+
+        </button>
+
+        <!-- ACTIVE PRODUCT -->
+
+        <button *ngIf="
+                        !product.deleted
+                    " mat-stroked-button (click)="softDeleteProduct()">
+
+          <mat-icon>
+            delete
+          </mat-icon>
+
+          Delete
+
+        </button>
+
+        <!-- DELETED PRODUCT -->
+
+        <button *ngIf="
+                        product.deleted
+                    " mat-stroked-button (click)="restoreProduct()">
+
+          <mat-icon>
+            restore
+          </mat-icon>
+
+          Restore
+
+        </button>
+
+        <button *ngIf="
+                        product.deleted
+                    " mat-stroked-button (click)="hardDeleteProduct()">
+
+          <mat-icon>
+            delete_forever
+          </mat-icon>
+
+          Hard Delete
+
+        </button>
+
+      </div>
+
     </div>
 
-    <button mat-stroked-button matTooltip="Edit Product" matTooltipPosition="above"
-      [routerLink]="['/app/stock', product.id, 'edit']" [state]="{ deleted: product.deleted }">
-      Edit
-    </button>
   </div>
 
-  <!-- CORE INFO -->
-  <div class="info-grid">
+  <!-- =====================================================
+         TABS
+    ====================================================== -->
 
-    <div>
-      <label>Category</label>
-      <div>{{ product.categoryName || '—' }}</div>
-    </div>
+  <div workflow-toolbar>
 
-    <div>
-      <label>Minimum % Profit</label>
-      <div>{{ product.minimumPercentageProfit ?? '—' }}</div>
-    </div>
+    <div class="workspace-tabs">
 
-    <div>
-      <label>Suppliers</label>
-      <mat-chip-set *ngIf="product.suppliers.length; else noSuppliers">
-        <mat-chip *ngFor="let s of product.suppliers">
-          {{ s.name }}
-        </mat-chip>
-      </mat-chip-set>
-      <ng-template #noSuppliers>—</ng-template>
-    </div>
+      <button *ngFor="
+                    let tab of tabs
+                " type="button" class="workspace-tab" [class.active]="
+                    activeTab === tab.key
+                " (click)="
+                    selectTab(
+                        tab.key
+                    )
+                ">
 
-    <div>
-      <label>Created</label>
-      <div>{{ product.createdAt | date:'medium' }}</div>
-    </div>
+        <mat-icon>
+          {{ tab.icon }}
+        </mat-icon>
 
-    <div>
-      <label>Last Updated</label>
-      <div>{{ product.updatedAt | date:'medium' }}</div>
+        <span>
+          {{ tab.label }}
+        </span>
+
+      </button>
+
     </div>
 
   </div>
 
-  <app-product-inventory-summary [product]="product">
-  </app-product-inventory-summary>
+  <!-- =====================================================
+         CONTENT
+    ====================================================== -->
 
-  <!-- IMAGES -->
-  <app-product-images [product]="product">
-  </app-product-images>
+  <div workflow-content class="workspace-content">
 
-  <!-- VARIANTS -->
-  <app-variant-summary *ngIf="product" [product]="product">
-  </app-variant-summary>
+    <!-- =====================================================
+             OVERVIEW
+        ====================================================== -->
 
-  <section class="commercial-section" *ngIf="product.variants.length">
+    <div *ngIf="
+                activeTab === 'overview'
+            " class="workspace-panel">
 
-    <app-variant-commercial-summary *ngFor="let variant of product.variants" [variant]="variant"
-      [branchId]="product.branchId">
-    </app-variant-commercial-summary>
+      <div class="panel-card">
 
-  </section>
+        <div class="panel-header">
 
-  <!-- AUDITS -->
-  <app-product-audits *ngIf="product" [productId]="product.id">
-  </app-product-audits>
+          <h2>
+            Product Overview
+          </h2>
 
+          <div>
+            Product information and metadata
+          </div>
 
-</div>
+        </div>
 
-<!-- LOADING -->
-<div *ngIf="loading" class="text-center py-10 text-gray-500">
-  Loading product…
+        <div class="overview-grid">
+
+          <div class="overview-item">
+
+            <div class="overview-label">
+              Name
+            </div>
+
+            <div class="overview-value">
+              {{ product.name }}
+            </div>
+
+          </div>
+
+          <div class="overview-item">
+
+            <div class="overview-label">
+              Category
+            </div>
+
+            <div class="overview-value">
+              {{
+              product.categoryName
+              || '—'
+              }}
+            </div>
+
+          </div>
+
+          <div class="overview-item">
+
+            <div class="overview-label">
+              SKU
+            </div>
+
+            <div class="overview-value">
+              {{
+              product.sku
+              || '—'
+              }}
+            </div>
+
+          </div>
+
+          <div class="overview-item">
+
+            <div class="overview-label">
+              Status
+            </div>
+
+            <div class="overview-value">
+              {{ statusLabel }}
+            </div>
+
+          </div>
+
+          <div class="overview-item">
+
+            <div class="overview-label">
+              Minimum Profit %
+            </div>
+
+            <div class="overview-value">
+              {{
+              product.minimumPercentageProfit
+              ?? '—'
+              }}
+            </div>
+
+          </div>
+
+          <div class="overview-item">
+
+            <div class="overview-label">
+              Created
+            </div>
+
+            <div class="overview-value">
+              {{
+              product.createdAt
+              | date:'medium'
+              }}
+            </div>
+
+          </div>
+
+          <div class="overview-item">
+
+            <div class="overview-label">
+              Updated
+            </div>
+
+            <div class="overview-value">
+              {{
+              product.updatedAt
+              | date:'medium'
+              }}
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="suppliers-section">
+
+          <div class="overview-label">
+
+            Suppliers
+
+          </div>
+
+          <mat-chip-set *ngIf="
+                            product.suppliers.length
+                        ">
+
+            <mat-chip *ngFor="
+                                let supplier
+                                of product.suppliers
+                            ">
+
+              {{ supplier.name }}
+
+            </mat-chip>
+
+          </mat-chip-set>
+
+          <div *ngIf="
+                            !product.suppliers.length
+                        " class="empty-value">
+
+            No suppliers assigned
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- =====================================================
+             INVENTORY
+        ====================================================== -->
+
+    <div *ngIf="
+                activeTab === 'inventory'
+            " class="workspace-panel">
+
+      <app-product-inventory-summary [product]="product">
+      </app-product-inventory-summary>
+
+    </div>
+
+    <!-- =====================================================
+             VARIANTS
+        ====================================================== -->
+
+    <div *ngIf="
+                activeTab === 'variants'
+            " class="workspace-panel">
+
+      <app-variant-summary [product]="product" [branchId]="product.branchId">
+      </app-variant-summary>
+
+    </div>
+
+    <!-- =====================================================
+             IMAGES
+        ====================================================== -->
+
+    <div *ngIf="
+            activeTab === 'images'
+        " class="workspace-panel">
+
+      <div class="panel-card images-panel-card">
+
+        <app-entity-image-manager [entityId]="product.id" [adapter]="imageAdapter">
+        </app-entity-image-manager>
+
+      </div>
+
+    </div>
+
+    <!-- =====================================================
+             AUDITS
+        ====================================================== -->
+
+    <div *ngIf="
+                activeTab === 'audits'
+            " class="workspace-panel">
+
+      <app-product-audits [productId]="product.id">
+      </app-product-audits>
+
+    </div>
+
+  </div>
+
+</app-workflow-shell>
+
+<div *ngIf="loading" class="loading-state">
+
+  Loading product...
+
 </div>

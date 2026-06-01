@@ -1,128 +1,399 @@
 :host {
     display: block;
+    width: 100%;
 }
 
-.inventory-section {
+/* =========================================================
+   ROOT
+========================================================= */
+
+.inventory-workspace {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 24px;
 }
+
+/* =========================================================
+   HEADER
+========================================================= */
 
 .section-header {
     display: flex;
     justify-content: space-between;
-    gap: 1rem;
+    align-items: flex-start;
+    gap: 20px;
     flex-wrap: wrap;
 }
 
 .section-title {
-    font-size: 1.15rem;
-    font-weight: 600;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
 }
 
 .section-subtitle {
+    margin-top: 4px;
     color: var(--text-secondary);
-    font-size: 0.85rem;
-    margin-top: 0.25rem;
+    font-size: 0.9rem;
 }
+
+/* =========================================================
+   SUMMARY
+========================================================= */
 
 .summary-metrics {
     display: flex;
-    gap: 0.75rem;
+    gap: 12px;
     flex-wrap: wrap;
 }
 
 .metric-card {
-    min-width: 120px;
-    background: var(--surface);
+    min-width: 140px;
+    padding: 14px 16px;
+    border-radius: 14px;
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 0.85rem 1rem;
+    background: var(--surface-bg);
 }
 
 .metric-label {
-    font-size: 0.72rem;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .4px;
+    text-transform: uppercase;
     color: var(--text-secondary);
 }
 
 .metric-value {
-    font-size: 1.05rem;
-    font-weight: 600;
-    margin-top: 0.35rem;
+    margin-top: 6px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
 }
+
+/* =========================================================
+   GRID
+========================================================= */
 
 .inventory-grid {
     display: grid;
-    gap: 1rem;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+
+    grid-template-columns:
+        repeat(auto-fit,
+            minmax(420px, 1fr));
 }
+
+/* =========================================================
+   CARD
+========================================================= */
 
 .inventory-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1rem;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 18px;
+
+    padding: 22px;
+
+    border-radius: 18px;
+
+    background: var(--surface-bg);
+
+    border: 1px solid var(--border);
+
+    box-shadow:
+        var(--surface-shadow);
+
+    transition:
+        transform 150ms ease,
+        border-color 150ms ease;
 }
 
-.top-row {
+.inventory-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--active);
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.card-header {
     display: flex;
     justify-content: space-between;
-    gap: 1rem;
+    align-items: flex-start;
+    gap: 16px;
 }
 
 .variant-name {
-    font-weight: 600;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
 }
 
 .variant-sku {
-    margin-top: 0.3rem;
+    margin-top: 4px;
     color: var(--text-secondary);
-    font-size: 0.82rem;
+    font-size: .84rem;
 }
 
-.stock-badge {
-    align-self: flex-start;
-    background: rgba(34, 197, 94, 0.12);
-    color: #15803d;
+/* =========================================================
+   AVAILABILITY
+========================================================= */
+
+.availability-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 34px;
+
+    padding: 0 12px;
+
     border-radius: 999px;
-    padding: 0.35rem 0.75rem;
-    font-size: 0.75rem;
+
+    background:
+        rgba(34, 197, 94, 0.14);
+
+    color:
+        #16a34a;
+
+    border:
+        1px solid rgba(34, 197, 94, 0.18);
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.availability-chip.low {
+    background:
+        rgba(245, 158, 11, 0.14);
+
+    color:
+        #d97706;
+
+    border:
+        1px solid rgba(245, 158, 11, 0.18);
+}
+
+.availability-chip.out {
+    background:
+        rgba(239, 68, 68, 0.14);
+
+    color:
+        #dc2626;
+
+    border:
+        1px solid rgba(239, 68, 68, 0.18);
+}
+
+/* =========================================================
+   BRANCH
+========================================================= */
+
+.branch-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    width: fit-content;
+
+    min-height: 34px;
+
+    padding: 0 12px;
+
+    border-radius: 999px;
+
+    background: var(--surface);
+
+    border: 1px solid var(--border);
+
+    color: var(--text-secondary);
+
+    font-size: .84rem;
     font-weight: 600;
 }
 
-.stock-badge.low {
-    background: rgba(239, 68, 68, 0.12);
-    color: #dc2626;
+.branch-row mat-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
 }
+
+/* =========================================================
+   METRICS
+========================================================= */
 
 .metrics-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 12px;
 }
 
-.label {
-    font-size: 0.72rem;
+.metric-tile {
+    padding: 12px;
+
+    border-radius: 12px;
+
+    border: 1px solid var(--border);
+
+    background:
+        rgba(255, 255, 255, .02);
+}
+
+.tile-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .4px;
     color: var(--text-secondary);
 }
 
-.value {
-    margin-top: 0.3rem;
-    font-weight: 600;
+.tile-value {
+    margin-top: 6px;
+    font-size: .95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.card-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    padding-top: 16px;
+
+    border-top: 1px solid var(--border);
+}
+
+.last-updated {
+    font-size: .82rem;
+    color: var(--text-secondary);
 }
 
 .actions {
     display: flex;
-    gap: 0.75rem;
+    gap: 10px;
     flex-wrap: wrap;
-    border-top: 1px solid var(--border);
-    padding-top: 1rem;
 }
 
-.loading,
-.empty-state {
+/* =========================================================
+   EMPTY
+========================================================= */
+
+.empty-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 56px 24px;
+
+    border-radius: 18px;
+
+    border: 1px dashed var(--border);
+
+    background: var(--surface-bg);
+}
+
+.empty-card mat-icon {
+    width: 56px;
+    height: 56px;
+    font-size: 56px;
     color: var(--text-secondary);
+}
+
+.empty-title {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.empty-description {
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+/* =========================================================
+   LOADING
+========================================================= */
+
+.panel-card {
+    padding: 24px;
+
+    border-radius: 18px;
+
+    border: 1px solid var(--border);
+
+    background: var(--surface-bg);
+
+    color: var(--text-secondary);
+}
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 1024px) {
+
+    .inventory-grid {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+    .metrics-grid {
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+    .inventory-card {
+        padding: 18px;
+    }
+
+    .card-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+}
+
+/* =========================================================
+   SMALL MOBILE
+========================================================= */
+
+@media (max-width: 480px) {
+
+    .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .summary-metrics {
+        width: 100%;
+    }
+
+    .metric-card {
+        width: 100%;
+    }
+
+    .actions {
+        flex-direction: column;
+    }
+
+    .actions button {
+        width: 100%;
+    }
+
 }

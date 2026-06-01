@@ -378,4 +378,23 @@
 
     </details>
 
+    <div *ngIf="uploading" class="upload-processing-overlay">
+
+        <div class="upload-processing-card">
+
+            <mat-spinner diameter="48">
+            </mat-spinner>
+
+            <h3>
+                Processing Upload
+            </h3>
+
+            <p>
+                Please wait while the file is uploaded and thumbnails are generated.
+            </p>
+
+        </div>
+
+    </div>
+
 </div>

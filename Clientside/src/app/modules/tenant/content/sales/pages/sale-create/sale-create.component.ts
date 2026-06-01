@@ -425,6 +425,8 @@ export class SaleCreateComponent implements OnInit {
       return;
     }
 
+    console.log('SALE SEED', seed);
+
     const row =
       this.items.at(0);
 
@@ -550,6 +552,8 @@ export class SaleCreateComponent implements OnInit {
       return;
     }
 
+    console.log('SEED VARIANT', variantId, branchId);
+
     row.patchValue({
       productVariantId:
         variantId
@@ -569,6 +573,21 @@ export class SaleCreateComponent implements OnInit {
       )
       .subscribe({
         next: response => {
+
+          console.log(
+            'TOTAL VARIANTS RETURNED',
+            response.variants.totalElements
+          );
+
+          console.log(
+            'PAGE SIZE',
+            response.variants.content.length
+          );
+
+          console.log(
+            'LOOKING FOR',
+            variantId
+          );
 
           const variant =
             response.variants.content

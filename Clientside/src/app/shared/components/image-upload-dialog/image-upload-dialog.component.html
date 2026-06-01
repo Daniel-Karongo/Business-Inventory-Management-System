@@ -140,14 +140,17 @@
 
     </button>
 
-    <button mat-flat-button color="primary" [disabled]="!file || fg.invalid" (click)="confirm()">
+    <button mat-flat-button color="primary" [disabled]="!file || fg.invalid || uploading" (click)="confirm()">
 
-      <mat-icon>
+      <mat-icon *ngIf="!uploading">
         upload
       </mat-icon>
 
-      Upload
+      <mat-icon *ngIf="uploading">
+        hourglass_top
+      </mat-icon>
 
+      {{ uploading ? 'Starting Upload...' : 'Upload' }}
     </button>
 
   </div>

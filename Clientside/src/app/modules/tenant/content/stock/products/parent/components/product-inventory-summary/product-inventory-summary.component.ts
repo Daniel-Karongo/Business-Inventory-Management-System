@@ -85,7 +85,7 @@ export class ProductInventorySummaryComponent implements OnChanges {
 
     openTransactions(row: InventoryResponse) {
         this.router.navigate(
-            ['/app/inventory', row.productVariantId],
+            ['/app/stock/inventory', row.productVariantId],
             {
                 state: {
                     branchId: row.branchId
