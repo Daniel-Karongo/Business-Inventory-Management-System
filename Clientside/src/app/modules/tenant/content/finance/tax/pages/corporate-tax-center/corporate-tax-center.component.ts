@@ -54,7 +54,7 @@ import {
 import {
   CorporateTaxFiling,
   PageResponse,
-  TaxPeriod,
+  AccountingPeriod,
   TaxStatus
 } from '../../models/tax.models';
 import { FundingAccount } from '../../../ap/debts/models/funding-account.model';
@@ -111,7 +111,7 @@ export class CorporateTaxCenterComponent
     CorporateTaxFiling[] = [];
 
   periods:
-    TaxPeriod[] = [];
+    AccountingPeriod[] = [];
 
   fundingAccounts: FundingAccount[] = [];
 
@@ -278,7 +278,7 @@ export class CorporateTaxCenterComponent
         .pipe(
           catchError(() =>
             of(
-              this.createEmptyPageResponse<TaxPeriod>()
+              this.createEmptyPageResponse<AccountingPeriod>()
             )
           )
         ),

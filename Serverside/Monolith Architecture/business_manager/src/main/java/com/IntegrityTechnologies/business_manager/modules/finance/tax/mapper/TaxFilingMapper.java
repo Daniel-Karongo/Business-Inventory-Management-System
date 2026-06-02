@@ -20,7 +20,7 @@ public class TaxFilingMapper {
     public static CorporateTaxFilingDTO toDto(CorporateTaxFiling f) {
         return CorporateTaxFilingDTO.builder()
                 .id(f.getId())
-                .periodId(f.getPeriodId())
+                .periodId(f.getPeriod().getId())
                 .taxableProfit(f.getTaxableProfit())
                 .taxRate(f.getTaxRate())
                 .taxAmount(f.getTaxAmount())

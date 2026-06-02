@@ -34,6 +34,12 @@ public interface AccountingPeriodRepository
     );
 
     List<AccountingPeriod>
+    findByTenantIdAndBranchIdOrderByStartDateAsc(
+            UUID tenantId,
+            UUID branchId
+    );
+
+    List<AccountingPeriod>
     findByTenantIdAndBranchId(UUID tenantId, UUID branchId);
 
     Page<AccountingPeriod>
@@ -43,5 +49,7 @@ public interface AccountingPeriodRepository
             Pageable pageable
     );
 
-    Optional<AccountingPeriod> findByTenantIdAndId(UUID tenantId, UUID id);
+    Optional<AccountingPeriod> findByTenantIdAndBranchIdAndId(UUID tenantId, UUID branchId, UUID periodId);
+
+    Optional<AccountingPeriod> findByTenantIdAndId(UUID tenantId, UUID periodId);
 }

@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.tax.domain;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -29,7 +30,7 @@ public class VatFiling extends BranchAwareEntity {
     private UUID id;
 
     @ManyToOne(optional = false)
-    private TaxPeriod period;
+    private AccountingPeriod period;
 
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal outputVat;

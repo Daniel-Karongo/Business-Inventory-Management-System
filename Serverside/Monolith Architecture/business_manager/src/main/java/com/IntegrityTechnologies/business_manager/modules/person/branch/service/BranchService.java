@@ -616,7 +616,7 @@ public class BranchService {
                 branch.getId()
         );
 
-        accountingPeriodBootstrapService.ensureCurrentPeriod(
+        accountingPeriodBootstrapService.ensurePeriods(
                 tenantId(),
                 branch.getId()
         );

@@ -89,8 +89,8 @@ public class VatLedgerProjectionConsumer {
                             "VAT_INPUT"
                     );
 
-            int year = LocalDate.now().getYear();
-            int month = LocalDate.now().getMonthValue();
+            int year = event.accountingDate().getYear();
+            int month = event.accountingDate().getMonthValue();
 
             VatLedgerProjection projection =
                     repo.findByTenantIdAndBranchIdAndFiscalYearAndMonthNumber(

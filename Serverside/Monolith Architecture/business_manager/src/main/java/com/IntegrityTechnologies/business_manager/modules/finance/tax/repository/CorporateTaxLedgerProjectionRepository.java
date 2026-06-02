@@ -16,4 +16,9 @@ public interface CorporateTaxLedgerProjectionRepository
             int fiscalYear,
             int monthNumber
     );
+
+    void deleteByTenantIdAndBranchId(
+            UUID tenantId,
+            UUID branchId
+    );
 }

@@ -26,8 +26,6 @@ public class VatLedgerProjection extends BranchAwareEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    private UUID periodId;
-
     private int fiscalYear;
     private int monthNumber;
 

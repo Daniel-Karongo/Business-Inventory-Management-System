@@ -23,7 +23,7 @@ import {
 import {
   CorporateTaxFiling,
   PageResponse,
-  TaxPeriod,
+  AccountingPeriod,
   TaxStatus,
   TaxSystemState,
   VatFiling
@@ -51,7 +51,7 @@ export class TaxService {
     `${environment.apiUrl}/tax/system`;
 
   private readonly periodsBase =
-    `${environment.apiUrl}/tax/periods`;
+    `${environment.apiUrl}/accounting/periods`;
 
   private resolveBranchId(
     override?: string
@@ -164,10 +164,9 @@ export class TaxService {
     page = 0,
     size = 25,
     branchId?: string
-  ): Observable<PageResponse<TaxPeriod>> {
-
+  ): Observable<PageResponse<AccountingPeriod>> {
     return this.http.get<
-      PageResponse<TaxPeriod>
+      PageResponse<AccountingPeriod>
     >(
       this.periodsBase,
       {
@@ -183,12 +182,13 @@ export class TaxService {
     );
   }
 
-  getCurrentPeriod(
+  getEligibleVatPeriods(
     branchId?: string
-  ): Observable<TaxPeriod | null> {
-
-    return this.http.get<TaxPeriod | null>(
-      `${this.periodsBase}/current`,
+  ): Observable<AccountingPeriod[]> {
+    return this.http.get<
+      AccountingPeriod[]
+    >(
+      `${this.periodsBase}/eligible-vat-periods`,
       {
         params: {
           branchId:
@@ -200,23 +200,17 @@ export class TaxService {
     );
   }
 
-  createPeriod(
-    startDate: string,
-    endDate: string,
+  getCurrentPeriod(
     branchId?: string
-  ) {
-
-    return this.http.post<TaxPeriod>(
-      this.periodsBase,
-      {},
+  ): Observable<AccountingPeriod | null> {
+    return this.http.get<AccountingPeriod>(
+      `${this.periodsBase}/current`,
       {
         params: {
           branchId:
             this.resolveBranchId(
               branchId
-            ),
-          startDate,
-          endDate
+            )
         }
       }
     );

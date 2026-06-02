@@ -7,6 +7,7 @@ import com.IntegrityTechnologies.business_manager.config.kafka.OutboxEventWriter
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.AccountingSystemStateService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountingPeriodRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.seed.AccountingPeriodBootstrapService;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.enums.BusinessTaxMode;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.CorporateTaxService;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
@@ -34,6 +35,7 @@ public class PeriodClosingService {
     private final TaxSystemStateService taxSystemStateService;
     private final BranchTenantGuard branchTenantGuard;
     private final OutboxEventWriter outboxWriter;
+    private final AccountingPeriodBootstrapService accountingPeriodBootstrapService;
 
     @Transactional
     public void closePeriod(UUID periodId, String user) {
@@ -166,6 +168,11 @@ public class PeriodClosingService {
 
         period.setClosed(true);
         periodRepository.save(period);
+
+        accountingPeriodBootstrapService.ensurePeriods(
+                tenantId,
+                period.getBranchId()
+        );
 
         auditService.log(
                 period.getBranchId(),

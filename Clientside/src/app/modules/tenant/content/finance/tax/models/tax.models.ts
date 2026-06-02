@@ -48,12 +48,12 @@ export interface CorporateTaxFiling {
     paidAt?: string | null;
 }
 
-export interface TaxPeriod {
-  id: string;
-  startDate: string;
-  endDate: string;
-  closed: boolean;
-  closedBy?: string | null;
+export interface AccountingPeriod {
+    id: string;
+    branchId: string;
+    startDate: string;
+    endDate: string;
+    closed: boolean;
 }
 
 export interface PageResponse<T> {

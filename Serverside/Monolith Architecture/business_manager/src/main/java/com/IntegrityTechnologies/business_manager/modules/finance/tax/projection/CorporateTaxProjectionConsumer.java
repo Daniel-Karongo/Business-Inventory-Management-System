@@ -82,8 +82,8 @@ public class CorporateTaxProjectionConsumer {
             UUID tenantId = event.tenantId();
             UUID branchId = event.branchId();
 
-            int year = LocalDate.now().getYear();
-            int month = LocalDate.now().getMonthValue();
+            int year = event.accountingDate().getYear();
+            int month = event.accountingDate().getMonthValue();
 
             CorporateTaxLedgerProjection projection =
                     repo.findByTenantIdAndBranchIdAndFiscalYearAndMonthNumber(

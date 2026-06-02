@@ -3,8 +3,8 @@ package com.IntegrityTechnologies.business_manager.modules.finance.tax.service;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.TaxPeriod;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.VatFiling;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.VatFilingRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
@@ -32,7 +32,7 @@ public class VatFilingService {
     }
 
     @Transactional
-    public VatFiling file(TaxPeriod period, UUID branchId, String user) {
+    public VatFiling file(AccountingPeriod period, UUID branchId, String user) {
 
         if (branchId == null) {
             throw new IllegalArgumentException("BranchId required for VAT filing.");

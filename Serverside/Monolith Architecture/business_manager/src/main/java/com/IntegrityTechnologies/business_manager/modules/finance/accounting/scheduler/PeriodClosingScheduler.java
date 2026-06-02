@@ -6,6 +6,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.ser
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -37,6 +38,7 @@ public class PeriodClosingScheduler {
     }
 
     @EventListener(ApplicationReadyEvent.class)
+    @Order(2)
     public void recoverMissedClosures() {
 
         tenantExecutionService.forEachTenant(tenantId -> {

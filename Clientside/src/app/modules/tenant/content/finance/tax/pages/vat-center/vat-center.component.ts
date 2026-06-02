@@ -44,7 +44,7 @@ import {
 } from '../../services/tax.service';
 import {
   PageResponse,
-  TaxPeriod,
+  AccountingPeriod,
   TaxStatus,
   VatFiling
 } from '../../models/tax.models';
@@ -104,7 +104,7 @@ export class VatCenterComponent
     TaxStatus | null = null;
 
   currentPeriod:
-    TaxPeriod | null = null;
+    AccountingPeriod | null = null;
 
   filings:
     VatFiling[] = [];
@@ -113,6 +113,10 @@ export class VatCenterComponent
     BranchListItemDTO[] = [];
 
   fundingAccounts: FundingAccount[] = [];
+
+  periods: AccountingPeriod[] = [];
+  selectedPeriodId = '';
+  eligibleVatPeriods: AccountingPeriod[] = [];
 
   selectedBranchId = '';
 
@@ -248,10 +252,34 @@ export class VatCenterComponent
           catchError(() => of(null))
         ),
 
-      period: this.taxService
+      periods: this.taxService
+        .listPeriods(
+          0,
+          100,
+          branchId
+        )
+        .pipe(
+          catchError(() =>
+            of(
+              this.createEmptyPageResponse<AccountingPeriod>()
+            )
+          )
+        ),
+
+      currentPeriod: this.taxService
         .getCurrentPeriod(branchId)
         .pipe(
           catchError(() => of(null))
+        ),
+
+      eligiblePeriods: this.taxService
+        .getEligibleVatPeriods(
+          branchId
+        )
+        .pipe(
+          catchError(() =>
+            of([])
+          )
         ),
 
       filings: this.taxService
@@ -289,11 +317,34 @@ export class VatCenterComponent
           this.status =
             result?.status ?? null;
 
+          this.periods =
+            result?.periods?.content ?? [];
+
           this.currentPeriod =
-            result?.period ?? null;
+            result?.currentPeriod ?? null;
+
+          this.eligibleVatPeriods =
+            result?.eligiblePeriods ?? [];
 
           this.filings =
             result?.filings?.content ?? [];
+
+          if (
+            this.selectedPeriodId &&
+            !this.eligibleVatPeriods.some(
+              p => p.id === this.selectedPeriodId
+            )
+          ) {
+            this.selectedPeriodId = '';
+          }
+
+          if (
+            !this.selectedPeriodId &&
+            this.eligibleVatPeriods.length > 0
+          ) {
+            this.selectedPeriodId =
+              this.eligibleVatPeriods[0].id;
+          }
 
           const fundingAccounts =
             result?.fundingAccounts ?? [];
@@ -327,6 +378,10 @@ export class VatCenterComponent
 
           this.status = null;
           this.currentPeriod = null;
+
+          this.periods = [];
+          this.eligibleVatPeriods = [];
+
           this.filings = [];
           this.fundingAccounts = [];
           this.accountId = '';
@@ -361,7 +416,7 @@ export class VatCenterComponent
   fileVat() {
 
     if (
-      !this.currentPeriod ||
+      !this.selectedPeriodId ||
       !this.selectedBranchId
     ) {
 
@@ -380,7 +435,7 @@ export class VatCenterComponent
 
     this.taxService
       .fileVat(
-        this.currentPeriod.id,
+        this.selectedPeriodId,
         this.selectedBranchId
       )
       .subscribe({
@@ -401,15 +456,16 @@ export class VatCenterComponent
           );
         },
 
-        error: () => {
+        error: err => {
 
           this.filing = false;
 
           this.snackbar.open(
+            err?.error?.message ??
             'Failed to file VAT',
             'Close',
             {
-              duration: 3000
+              duration: 5000
             }
           );
         }
@@ -462,15 +518,16 @@ export class VatCenterComponent
           );
         },
 
-        error: () => {
+        error: err => {
 
           this.paying = false;
 
           this.snackbar.open(
+            err?.error?.message ??
             'Failed to record payment',
             'Close',
             {
-              duration: 3000
+              duration: 5000
             }
           );
         }
@@ -515,10 +572,8 @@ export class VatCenterComponent
   }
 
   get canFileVat() {
-
     return (
-      !!this.currentPeriod &&
-      !this.status?.locked &&
+      !!this.selectedPeriodId &&
       !this.filing
     );
   }
@@ -526,6 +581,12 @@ export class VatCenterComponent
   get selectedAccount() {
     return this.fundingAccounts.find(
       x => x.id === this.accountId
+    );
+  }
+
+  get hasEligibleVatPeriods() {
+    return (
+      this.eligibleVatPeriods.length > 0
     );
   }
 }

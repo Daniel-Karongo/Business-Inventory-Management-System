@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.controller;
 
+import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.repository.EmailMessageRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.control.CloseChecklistService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.control.CloseChecklistService.CloseChecklistResult;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
@@ -7,6 +8,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountingPeriodRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.PeriodClosingService;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.VatFilingRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
@@ -18,8 +20,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/accounting/periods")
@@ -32,6 +39,75 @@ public class AccountingPeriodController {
     private final GovernanceAuditService auditService;
     private final CloseChecklistService checklistService;
     private final BranchTenantGuard branchTenantGuard;
+    private final VatFilingRepository vatFilingRepository;
+
+    @GetMapping("/eligible-vat-periods")
+    public List<AccountingPeriodResponse> eligibleVatPeriods(
+            @RequestParam UUID branchId
+    ) {
+        branchTenantGuard.validate(branchId);
+
+        UUID tenantId =
+                TenantContext.getTenantId();
+
+        Set<UUID> filedPeriodIds =
+                vatFilingRepository
+                        .findByTenantIdAndBranchId(
+                                tenantId,
+                                branchId
+                        )
+                        .stream()
+                        .map(f -> f.getPeriod().getId())
+                        .collect(Collectors.toSet());
+
+        return repository
+                .findByTenantIdAndBranchId(
+                        tenantId,
+                        branchId
+                )
+                .stream()
+                .filter(AccountingPeriod::isClosed)
+                .filter(p ->
+                        !filedPeriodIds.contains(
+                                p.getId()
+                        )
+                )
+                .sorted(
+                        Comparator.comparing(
+                                AccountingPeriod::getStartDate
+                        ).reversed()
+                )
+                .map(AccountingPeriodResponse::from)
+                .toList();
+    }
+
+    @GetMapping("/current")
+    public AccountingPeriodResponse current(
+            @RequestParam UUID branchId
+    ) {
+        branchTenantGuard.validate(branchId);
+
+        UUID tenantId =
+                TenantContext.getTenantId();
+
+        LocalDate today =
+                LocalDate.now();
+
+        AccountingPeriod period =
+                repository.findByTenantIdAndBranchIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                                tenantId,
+                                branchId,
+                                today,
+                                today
+                        )
+                        .filter(p -> !p.isClosed())
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "No active accounting period found"
+                                ));
+
+        return AccountingPeriodResponse.from(period);
+    }
 
     @TenantManagerOnly
     @GetMapping

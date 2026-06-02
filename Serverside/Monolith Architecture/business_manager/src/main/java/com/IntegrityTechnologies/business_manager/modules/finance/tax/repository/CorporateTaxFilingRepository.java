@@ -11,7 +11,7 @@ import java.util.UUID;
 public interface CorporateTaxFilingRepository
         extends JpaRepository<CorporateTaxFiling, UUID> {
 
-    boolean existsByTenantIdAndPeriodIdAndBranchId(
+    boolean existsByTenantIdAndPeriod_IdAndBranchId(
             UUID tenantId,
             UUID periodId,
             UUID branchId

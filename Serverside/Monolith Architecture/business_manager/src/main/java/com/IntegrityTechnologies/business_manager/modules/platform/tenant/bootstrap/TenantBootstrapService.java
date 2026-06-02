@@ -119,7 +119,7 @@ public class TenantBootstrapService {
                 branch.getId()
         );
 
-        accountingPeriodBootstrapService.ensureCurrentPeriod(
+        accountingPeriodBootstrapService.ensurePeriods(
                 tenantId,
                 branch.getId()
         );

@@ -4,6 +4,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.CorporateTaxLedgerProjectionRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.VatLedgerProjectionRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,8 @@ public class FinancialProjectionReplayService {
     private final LedgerEntryRepository ledgerRepo;
     private final ApplicationEventPublisher publisher;
     private final BranchTenantGuard branchTenantGuard;
+    private final VatLedgerProjectionRepository vatProjectionRepository;
+    private final CorporateTaxLedgerProjectionRepository corporateProjectionRepository;
 
     @Transactional
     public void replayBranch(UUID branchId) {
@@ -31,6 +35,16 @@ public class FinancialProjectionReplayService {
         branchTenantGuard.validate(branchId);
 
         UUID tenantId = TenantContext.getTenantId();
+
+        vatProjectionRepository.deleteByTenantIdAndBranchId(
+                tenantId,
+                branchId
+        );
+
+        corporateProjectionRepository.deleteByTenantIdAndBranchId(
+                tenantId,
+                branchId
+        );
 
         int page = 0;
         int size = 500;
@@ -73,6 +87,9 @@ public class FinancialProjectionReplayService {
                                 tenantId,
                                 branchId,
                                 journalId,
+                                group.get(0).getJournalEntry().getPeriodId(),
+                                group.get(0).getJournalEntry().getAccountingDate(),
+                                group.get(0).getJournalEntry().getPostedAt(),
                                 payload
                         )
                 );

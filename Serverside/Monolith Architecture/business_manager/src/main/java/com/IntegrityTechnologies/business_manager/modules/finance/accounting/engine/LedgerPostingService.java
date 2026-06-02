@@ -104,6 +104,9 @@ public class LedgerPostingService {
                         tenantId,
                         saved.getBranchId(),
                         saved.getId(),
+                        saved.getPeriodId(),
+                        saved.getAccountingDate(),
+                        saved.getPostedAt(),
                         payloadEntries
                 );
 

@@ -1,21 +1,20 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.tax.controller;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountingPeriodRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.CorporateTaxFiling;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.TaxPeriod;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.CorporateTaxFilingRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.TaxPeriodRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.CorporateTaxService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
-
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
-
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @RestController
@@ -27,7 +26,7 @@ public class CorporateTaxController {
     private final CorporateTaxService service;
     private final CorporateTaxFilingRepository repository;
     private final BranchTenantGuard branchTenantGuard;
-    private final TaxPeriodRepository taxPeriodRepository;
+    private final AccountingPeriodRepository accountingPeriodRepository;
 
     @GetMapping
     public Page<CorporateTaxFiling> list(
@@ -55,8 +54,8 @@ public class CorporateTaxController {
 
         branchTenantGuard.validate(branchId);
 
-        TaxPeriod period =
-                taxPeriodRepository
+        AccountingPeriod period =
+                accountingPeriodRepository
                         .findByTenantIdAndId(
                                 TenantContext.getTenantId(),
                                 periodId

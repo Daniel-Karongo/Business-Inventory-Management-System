@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.tax.domain;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -14,7 +15,7 @@ import java.util.UUID;
         name = "corporate_tax_filing",
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_corp_tax_period_branch",
-                columnNames = {"tenant_id","branch_id","periodId"}
+                columnNames = {"tenant_id","branch_id","period_id"}
         ),
         indexes = {
                 @Index(name = "idx_corptax_tenant", columnList = "tenant_id"),
@@ -32,7 +33,8 @@ public class CorporateTaxFiling extends BranchAwareEntity {
     @GeneratedValue
     private UUID id;
 
-    private UUID periodId;
+    @ManyToOne(optional = false)
+    private AccountingPeriod period;
 
     private BigDecimal taxableProfit;
     private BigDecimal taxRate;

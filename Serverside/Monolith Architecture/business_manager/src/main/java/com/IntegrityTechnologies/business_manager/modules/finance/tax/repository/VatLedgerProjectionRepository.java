@@ -16,4 +16,9 @@ public interface VatLedgerProjectionRepository
             int fiscalYear,
             int monthNumber
     );
+
+    void deleteByTenantIdAndBranchId(
+            UUID tenantId,
+            UUID branchId
+    );
 }

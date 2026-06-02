@@ -3,8 +3,10 @@ package com.IntegrityTechnologies.business_manager.modules.finance.tax.service;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountingPeriodRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.PeriodGuardService;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
@@ -36,6 +38,7 @@ public class CorporateTaxService {
     private final GovernanceAuditService auditService;
     private final CorporateTaxLedgerProjectionRepository projectionRepository;
     private final BranchTenantGuard branchTenantGuard;
+    private final AccountingPeriodRepository accountingPeriodRepository;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -62,9 +65,7 @@ public class CorporateTaxService {
             );
         }
 
-        periodGuardService.validateOpenPeriod(from.toLocalDate(), branchId);
-
-        if (filingRepository.existsByTenantIdAndPeriodIdAndBranchId(
+        if (filingRepository.existsByTenantIdAndPeriod_IdAndBranchId(
                 tenantId(),
                 periodId,
                 branchId
@@ -107,13 +108,13 @@ public class CorporateTaxService {
                             .entries(
                                     List.of(
                                             AccountingEvent.Entry.builder()
-                                                    .accountId(accounts.get(tenantId(), branchId, ".CORPORATE_TAX_EXPENSE"))
+                                                    .accountId(accounts.get(tenantId(), branchId, "CORPORATE_TAX_EXPENSE"))
                                                     .direction(EntryDirection.DEBIT)
                                                     .amount(taxAmount)
                                                     .build(),
 
                                             AccountingEvent.Entry.builder()
-                                                    .accountId(accounts.get(tenantId(), branchId, ".CORPORATE_TAX_PAYABLE"))
+                                                    .accountId(accounts.get(tenantId(), branchId, "CORPORATE_TAX_PAYABLE"))
                                                     .direction(EntryDirection.CREDIT)
                                                     .amount(taxAmount)
                                                     .build()
@@ -123,10 +124,22 @@ public class CorporateTaxService {
             );
         }
 
+        AccountingPeriod period =
+                accountingPeriodRepository
+                        .findByTenantIdAndBranchIdAndId(
+                                tenantId(),
+                                branchId,
+                                periodId
+                        )
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Accounting period not found"
+                                ));
+
         CorporateTaxFiling filing = CorporateTaxFiling.builder()
                 .tenantId(tenantId())
                 .branchId(branchId)
-                .periodId(periodId)
+                .period(period)
                 .taxableProfit(profit)
                 .taxRate(taxRate)
                 .taxAmount(taxAmount)

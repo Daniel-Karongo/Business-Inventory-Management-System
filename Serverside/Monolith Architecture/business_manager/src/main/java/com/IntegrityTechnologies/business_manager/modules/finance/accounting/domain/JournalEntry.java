@@ -143,8 +143,17 @@ public class JournalEntry extends BranchAwareEntity {
     public String getDescription() { return description; }
     public String getPostedBy() { return postedBy; }
     public LocalDateTime getPostedAt() { return postedAt; }
-    public LocalDate getAccountingDate() { return accountingDate; }
-    public UUID getAccountingEventId() { return accountingEventId; }
+    public LocalDate getAccountingDate() {
+        return accountingDate;
+    }
+
+    public UUID getPeriodId() {
+        return periodId;
+    }
+
+    public UUID getAccountingEventId() {
+        return accountingEventId;
+    }
     public boolean isPosted() { return posted; }
     public boolean isReversed() { return reversed; }
     public UUID getReversalJournalId() { return reversalJournalId; }

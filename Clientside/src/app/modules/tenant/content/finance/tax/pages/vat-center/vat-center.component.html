@@ -14,80 +14,75 @@
           Finance / Tax / VAT
         </div>
 
-        <div class="workspace-title-row">
+        <div class="workspace-title-section">
 
-          <div class="workspace-title-section">
+          <div class="workspace-title-row">
 
-            <div class="workspace-title-row">
+            <h1 class="workspace-title">
+              VAT Center
+            </h1>
 
-              <h1 class="workspace-title">
-                VAT Center
-              </h1>
+            <span class="workspace-status" [class.active]="!status?.locked" [class.locked]="status?.locked">
 
-              <span class="workspace-status" [class.active]="!status?.locked" [class.locked]="status?.locked">
+              {{ status?.locked ? 'Locked' : 'Active' }}
 
-                {{ status?.locked ? 'Locked' : 'Active' }}
+            </span>
 
+          </div>
+
+          <div class="workspace-subtitle">
+            VAT filing, payment and compliance workspace
+          </div>
+
+          <div class="workspace-meta">
+
+            <div class="meta-chip" *ngIf="currentBranch">
+
+              <mat-icon>
+                account_tree
+              </mat-icon>
+
+              <span>
+                {{ currentBranch.branchCode }}
+                -
+                {{ currentBranch.name }}
               </span>
 
             </div>
 
-            <div class="workspace-subtitle">
-              VAT filing, payment and compliance workspace
+            <div class="meta-chip">
+
+              <mat-icon>
+                receipt_long
+              </mat-icon>
+
+              <span>
+                VAT {{ status?.vatEnabled ? 'Enabled' : 'Disabled' }}
+              </span>
+
             </div>
 
-            <div class="workspace-meta">
+            <div class="meta-chip">
 
-              <div class="meta-chip" *ngIf="currentBranch">
+              <mat-icon>
+                percent
+              </mat-icon>
 
-                <mat-icon>
-                  account_tree
-                </mat-icon>
+              <span>
+                {{ (status?.vatRate ?? 0) * 100 }}%
+              </span>
 
-                <span>
-                  {{ currentBranch.branchCode }}
-                  -
-                  {{ currentBranch.name }}
-                </span>
+            </div>
 
-              </div>
+            <div class="meta-chip">
 
-              <div class="meta-chip">
+              <mat-icon>
+                lock
+              </mat-icon>
 
-                <mat-icon>
-                  receipt_long
-                </mat-icon>
-
-                <span>
-                  VAT
-                  {{ status?.vatEnabled ? 'Enabled' : 'Disabled' }}
-                </span>
-
-              </div>
-
-              <div class="meta-chip">
-
-                <mat-icon>
-                  percent
-                </mat-icon>
-
-                <span>
-                  {{ status?.vatRate ?? 0 }}%
-                </span>
-
-              </div>
-
-              <div class="meta-chip">
-
-                <mat-icon>
-                  lock
-                </mat-icon>
-
-                <span>
-                  {{ status?.locked ? 'Locked' : 'Unlocked' }}
-                </span>
-
-              </div>
+              <span>
+                {{ status?.locked ? 'Locked' : 'Unlocked' }}
+              </span>
 
             </div>
 
@@ -99,7 +94,7 @@
 
       <div class="workspace-actions">
 
-        <button mat-stroked-button (click)="loadWorkspace(selectedBranchId)">
+        <button mat-stroked-button class="refresh-btn" (click)="loadWorkspace(selectedBranchId)">
 
           <mat-icon>
             refresh
@@ -109,7 +104,51 @@
 
         </button>
 
-        <button mat-flat-button color="primary" (click)="fileVat()" [disabled]="!canFileVat">
+      </div>
+
+    </div>
+
+    <!-- =====================================================
+       PRIMARY ACTION BAR
+  ====================================================== -->
+
+    <div class="vat-action-bar">
+
+      <div class="vat-action-bar-left">
+
+        <div class="action-bar-label">
+          VAT Return Filing
+        </div>
+
+        <div class="action-bar-description">
+          Select an accounting period and submit the VAT return.
+        </div>
+
+      </div>
+
+      <div class="vat-action-bar-right">
+
+        <mat-form-field appearance="fill" subscriptSizing="dynamic">
+
+          <mat-label>
+            Accounting Period
+          </mat-label>
+
+          <mat-select [(ngModel)]="selectedPeriodId">
+
+            <mat-option *ngFor="let period of eligibleVatPeriods" [value]="period.id">
+
+              {{ period.startDate }}
+              -
+              {{ period.endDate }}
+
+            </mat-option>
+
+          </mat-select>
+
+        </mat-form-field>
+
+        <button mat-flat-button color="primary" class="file-vat-btn" (click)="fileVat()" [disabled]="!canFileVat">
 
           <mat-icon>
             receipt_long
@@ -247,7 +286,7 @@
               </div>
 
               <div class="overview-value">
-                {{ status?.vatRate ?? 0 }}%
+                {{ (status?.vatRate ?? 0) * 100 }}%
               </div>
 
             </div>
