@@ -1,0 +1,158 @@
+<app-workflow-shell>
+
+    <div workflow-header>
+
+        <div class="workspace-header">
+
+            <div class="workspace-header-main">
+
+                <div class="workspace-breadcrumb">
+                    Tax Administration
+                </div>
+
+                <h1 class="workspace-title">
+                    Tax System Configuration
+                </h1>
+
+                <div class="workspace-subtitle">
+                    Configure VAT and corporate tax settings for the selected branch
+                </div>
+
+                <div class="workspace-meta" *ngIf="status">
+
+                    <div class="meta-chip">
+                        <mat-icon>account_balance</mat-icon>
+                        <span>
+                            {{ status?.locked ? 'Locked' : 'Active' }}
+                        </span>
+                    </div>
+
+                    <div class="meta-chip">
+                        <mat-icon>receipt_long</mat-icon>
+                        <span>
+                            VAT {{ status?.vatEnabled ? 'Enabled' : 'Disabled' }}
+                        </span>
+                    </div>
+
+                    <div class="meta-chip" *ngIf="status?.lastAccrualDate">
+
+                        <mat-icon>schedule</mat-icon>
+
+                        <span>
+                            {{ status.lastAccrualDate | date:'medium' }}
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="workspace-actions">
+
+                <button mat-stroked-button (click)="loadStatus(selectedBranchId)" [disabled]="!selectedBranchId">
+
+                    <mat-icon>refresh</mat-icon>
+                    Refresh
+
+                </button>
+
+                <button mat-flat-button (click)="save()" [disabled]="saving || status?.locked">
+
+                    <mat-icon>save</mat-icon>
+                    Save
+
+                </button>
+
+                <button mat-flat-button (click)="lockSystem()" [disabled]="locking || status?.locked">
+
+                    <mat-icon>lock</mat-icon>
+                    Lock System
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div workflow-content>
+
+        <app-workflow-card>
+
+            <div workflow-card-header>
+
+                <h2>
+                    Configuration
+                </h2>
+
+            </div>
+
+            <div class="config-grid">
+
+                <mat-form-field>
+
+                    <mat-label>
+                        Branch
+                    </mat-label>
+
+                    <mat-select [(ngModel)]="selectedBranchId" (selectionChange)="onBranchChanged($event.value)">
+
+                        <mat-option *ngFor="let branch of branches" [value]="branch.id">
+
+                            {{ branch.branchCode }} - {{ branch.name }}
+
+                        </mat-option>
+
+                    </mat-select>
+
+                </mat-form-field>
+
+                <mat-form-field>
+
+                    <mat-label>
+                        VAT Rate (%)
+                    </mat-label>
+
+                    <input matInput type="number" [(ngModel)]="vatRate">
+
+                </mat-form-field>
+
+                <mat-form-field>
+
+                    <mat-label>
+                        Corporate Tax Rate (%)
+                    </mat-label>
+
+                    <input matInput type="number" [(ngModel)]="corporateTaxRate">
+
+                </mat-form-field>
+
+                <mat-form-field>
+
+                    <mat-label>
+                        VAT Enabled
+                    </mat-label>
+
+                    <mat-select [(ngModel)]="vatEnabled">
+
+                        <mat-option [value]="true">
+                            Enabled
+                        </mat-option>
+
+                        <mat-option [value]="false">
+                            Disabled
+                        </mat-option>
+
+                    </mat-select>
+
+                </mat-form-field>
+
+            </div>
+
+        </app-workflow-card>
+
+    </div>
+
+</app-workflow-shell>

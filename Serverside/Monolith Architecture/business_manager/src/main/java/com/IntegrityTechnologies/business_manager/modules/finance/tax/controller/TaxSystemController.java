@@ -3,14 +3,12 @@ package com.IntegrityTechnologies.business_manager.modules.finance.tax.controlle
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.TaxSystemState;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.TaxSystemStateRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -24,6 +22,7 @@ public class TaxSystemController {
 
     private final TaxSystemStateRepository repository;
     private final GovernanceAuditService auditService;
+    private final TaxSystemStateService stateService;
 
     @PostMapping("/configure")
     public TaxSystemState configure(
@@ -87,5 +86,12 @@ public class TaxSystemController {
                 SecurityUtils.currentUsername(),
                 "Tax system locked"
         );
+    }
+
+    @GetMapping("/configuration")
+    public TaxSystemState configuration(
+            @RequestParam UUID branchId
+    ) {
+        return stateService.get(branchId);
     }
 }

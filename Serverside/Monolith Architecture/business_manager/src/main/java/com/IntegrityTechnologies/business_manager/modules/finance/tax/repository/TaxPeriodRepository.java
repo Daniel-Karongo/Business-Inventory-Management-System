@@ -1,19 +1,29 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.tax.repository;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.TaxPeriod;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface TaxPeriodRepository extends JpaRepository<TaxPeriod, UUID> {
+public interface TaxPeriodRepository
+        extends JpaRepository<TaxPeriod, UUID> {
 
-    Optional<TaxPeriod>
-    findByTenantIdAndBranchIdAndClosedTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+    Page<TaxPeriod> findByTenantIdAndBranchId(
             UUID tenantId,
             UUID branchId,
-            LocalDate date1,
-            LocalDate date2
+            Pageable pageable
+    );
+
+    Optional<TaxPeriod> findByTenantIdAndBranchIdAndClosedFalse(
+            UUID tenantId,
+            UUID branchId
+    );
+
+    Optional<TaxPeriod> findByTenantIdAndId(
+            UUID tenantId,
+            UUID id
     );
 }

@@ -1,54 +1,390 @@
-import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
-import { environment } from '../../../../../../../environments/environment';
+import {
+  Injectable,
+  inject
+} from '@angular/core';
 
-@Injectable({ providedIn: 'root' })
+import {
+  HttpClient,
+  HttpParams
+} from '@angular/common/http';
+
+import {
+  Observable
+} from 'rxjs';
+
+import {
+  environment
+} from '../../../../../../../environments/environment';
+
+import {
+  BranchContextService
+} from '../../../../../../core/services/branch-context.service';
+
+import {
+  CorporateTaxFiling,
+  PageResponse,
+  TaxPeriod,
+  TaxStatus,
+  TaxSystemState,
+  VatFiling
+} from '../models/tax.models';
+import { FundingAccount } from '../../ap/debts/models/funding-account.model';
+
+@Injectable({
+  providedIn: 'root'
+})
 export class TaxService {
 
-  private vatBase = `${environment.apiUrl}/tax/vat`;
-  private corporateBase = `${environment.apiUrl}/tax/corporate`;
+  private readonly http =
+    inject(HttpClient);
 
-  constructor(private http: HttpClient) { }
+  private readonly branchContext =
+    inject(BranchContextService);
 
-  /* ================= VAT ================= */
+  private readonly vatBase =
+    `${environment.apiUrl}/tax/vat`;
 
-  listVat() {
-    return this.http.get<any[]>(this.vatBase);
+  private readonly corporateBase =
+    `${environment.apiUrl}/tax/corporate`;
+
+  private readonly systemBase =
+    `${environment.apiUrl}/tax/system`;
+
+  private readonly periodsBase =
+    `${environment.apiUrl}/tax/periods`;
+
+  private resolveBranchId(
+    override?: string
+  ): string {
+
+    const branchId =
+      override ??
+      this.branchContext.currentBranch;
+
+    if (!branchId) {
+      throw new Error(
+        'Branch not selected'
+      );
+    }
+
+    return branchId;
   }
 
-  fileVat(periodId: string) {
-    return this.http.post(`${this.vatBase}/file/${periodId}`, {});
+  /* ============================================
+     STATUS
+  ============================================ */
+
+  getStatus(
+    branchId?: string
+  ): Observable<TaxStatus> {
+
+    return this.http.get<TaxStatus>(
+      `${environment.apiUrl}/tax/system/status`,
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(
+              branchId
+            )
+        }
+      }
+    );
   }
 
-  payVat(filingId: string, accountId: string) {
+  getConfiguration(
+    branchId?: string
+  ): Observable<TaxSystemState> {
+
+    return this.http.get<TaxSystemState>(
+      `${this.systemBase}/configuration`,
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(
+              branchId
+            )
+        }
+      }
+    );
+  }
+
+  configure(
+    payload: {
+      branchId: string;
+      vatEnabled: boolean;
+      vatRate: number;
+      corporateTaxRate: number;
+    }
+  ) {
+
+    return this.http.post(
+      `${this.systemBase}/configure`,
+      {},
+      {
+        params: {
+          branchId:
+            payload.branchId,
+
+          vatEnabled:
+            payload.vatEnabled,
+
+          vatRate:
+            payload.vatRate,
+
+          corporateTaxRate:
+            payload.corporateTaxRate
+        }
+      }
+    );
+  }
+
+  lock(
+    branchId?: string
+  ) {
+
+    return this.http.post(
+      `${this.systemBase}/lock`,
+      {},
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(
+              branchId
+            )
+        }
+      }
+    );
+  }
+
+  /* ============================================
+   TAX PERIODS
+============================================ */
+
+  listPeriods(
+    page = 0,
+    size = 25,
+    branchId?: string
+  ): Observable<PageResponse<TaxPeriod>> {
+
+    return this.http.get<
+      PageResponse<TaxPeriod>
+    >(
+      this.periodsBase,
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(
+              branchId
+            ),
+          page,
+          size
+        }
+      }
+    );
+  }
+
+  getCurrentPeriod(
+    branchId?: string
+  ): Observable<TaxPeriod | null> {
+
+    return this.http.get<TaxPeriod | null>(
+      `${this.periodsBase}/current`,
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(
+              branchId
+            )
+        }
+      }
+    );
+  }
+
+  createPeriod(
+    startDate: string,
+    endDate: string,
+    branchId?: string
+  ) {
+
+    return this.http.post<TaxPeriod>(
+      this.periodsBase,
+      {},
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(
+              branchId
+            ),
+          startDate,
+          endDate
+        }
+      }
+    );
+  }
+
+  closePeriod(
+    periodId: string
+  ) {
+
+    return this.http.post(
+      `${this.periodsBase}/${periodId}/close`,
+      {}
+    );
+  }
+
+  /* ============================================
+     VAT
+  ============================================ */
+
+  listVat(
+    page = 0,
+    size = 25,
+    branchId?: string
+  ): Observable<
+    PageResponse<VatFiling>
+  > {
+
+    return this.http.get<
+      PageResponse<VatFiling>
+    >(
+      this.vatBase,
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(
+              branchId
+            ),
+          page,
+          size
+        }
+      }
+    );
+  }
+
+  fileVat(
+    periodId: string,
+    branchId?: string
+  ) {
+
+    return this.http.post(
+      `${this.vatBase}/file/${periodId}`,
+      {},
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(
+              branchId
+            )
+        }
+      }
+    );
+  }
+
+  payVat(
+    filingId: string,
+    accountId: string,
+    branchId?: string
+  ) {
+
     return this.http.post(
       `${this.vatBase}/pay/${filingId}`,
       {},
-      { params: { accountId } }
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(
+              branchId
+            ),
+          accountId
+        }
+      }
     );
   }
 
-  /* ================= CORPORATE ================= */
+  /* ============================================
+     CORPORATE
+  ============================================ */
 
-  accrueCorporate(periodId: string, from: string, to: string) {
+  listCorporate(
+    page = 0,
+    size = 25,
+    branchId?: string
+  ): Observable<
+    PageResponse<
+      CorporateTaxFiling
+    >
+  > {
+
+    return this.http.get<
+      PageResponse<
+        CorporateTaxFiling
+      >
+    >(
+      this.corporateBase,
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(
+              branchId
+            ),
+          page,
+          size
+        }
+      }
+    );
+  }
+
+  accrueCorporate(
+    periodId: string,
+    branchId?: string
+  ) {
     return this.http.post(
       `${this.corporateBase}/accrue/${periodId}`,
       {},
-      { params: { from, to } }
+      {
+        params: {
+          branchId: this.resolveBranchId(
+            branchId
+          )
+        }
+      }
     );
   }
 
-  payCorporate(filingId: string, accountId: string) {
+  payCorporate(
+    filingId: string,
+    accountId: string,
+    branchId?: string
+  ) {
     return this.http.post(
       `${this.corporateBase}/pay/${filingId}`,
       {},
-      { params: { accountId } }
+      {
+        params: {
+          accountId,
+          branchId: this.resolveBranchId(
+            branchId
+          )
+        }
+      }
     );
   }
 
-  listCorporate() {
-    return this.http.get<any[]>(
-      `${environment.apiUrl}/tax/corporate`
+  getFundingAccounts(
+    branchId?: string
+  ) {
+    return this.http.get<
+      FundingAccount[]
+    >(
+      `${environment.apiUrl}/finance/supplier-payments/funding-accounts`,
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(
+              branchId
+            )
+        }
+      }
     );
   }
 }

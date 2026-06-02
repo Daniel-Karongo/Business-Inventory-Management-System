@@ -1,7 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.tax.controller;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.CorporateTaxFiling;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.TaxPeriod;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.CorporateTaxFilingRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.TaxPeriodRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.CorporateTaxService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
@@ -25,6 +27,7 @@ public class CorporateTaxController {
     private final CorporateTaxService service;
     private final CorporateTaxFilingRepository repository;
     private final BranchTenantGuard branchTenantGuard;
+    private final TaxPeriodRepository taxPeriodRepository;
 
     @GetMapping
     public Page<CorporateTaxFiling> list(
@@ -47,18 +50,24 @@ public class CorporateTaxController {
     @PostMapping("/accrue/{periodId}")
     public CorporateTaxFiling accrue(
             @PathVariable UUID periodId,
-            @RequestParam UUID branchId,
-            @RequestParam String from,
-            @RequestParam String to
+            @RequestParam UUID branchId
     ) {
 
         branchTenantGuard.validate(branchId);
 
+        TaxPeriod period =
+                taxPeriodRepository
+                        .findByTenantIdAndId(
+                                TenantContext.getTenantId(),
+                                periodId
+                        )
+                        .orElseThrow();
+
         return service.accrueCorporateTax(
                 periodId,
                 branchId,
-                LocalDateTime.parse(from),
-                LocalDateTime.parse(to),
+                period.getStartDate().atStartOfDay(),
+                period.getEndDate().plusDays(1).atStartOfDay(),
                 SecurityUtils.currentUsername()
         );
     }
@@ -66,8 +75,11 @@ public class CorporateTaxController {
     @PostMapping("/pay/{filingId}")
     public void pay(
             @PathVariable UUID filingId,
-            @RequestParam UUID accountId
+            @RequestParam UUID accountId,
+            @RequestParam UUID branchId
     ) {
+
+        branchTenantGuard.validate(branchId);
 
         service.markPaid(
                 filingId,

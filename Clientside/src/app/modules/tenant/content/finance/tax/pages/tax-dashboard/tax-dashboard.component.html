@@ -1,23 +1,328 @@
-<div class="page-container p-4">
+<app-workflow-shell *ngIf="!loading">
 
-  <h2 class="text-xl font-semibold mb-6">
-    Tax Center
-  </h2>
+    <!-- ========================================= -->
+    <!-- HEADER -->
+    <!-- ========================================= -->
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div workflow-header>
 
-    <mat-card class="tax-card" (click)="goVat()">
-      <h3>VAT</h3>
-      <p>File VAT returns and process payments</p>
-    </mat-card>
+        <div class="workspace-header">
 
-    <mat-card class="tax-card" (click)="goCorporate()">
-      <h3>Corporate Tax</h3>
-      <p>Accrue and pay corporate income tax</p>
-    </mat-card>
+            <div class="workspace-header-main">
 
-  </div>
+                <div class="workspace-breadcrumb">
 
-</div>
+                    Finance / Tax
 
+                </div>
 
+                <div class="workspace-title-row">
+
+                    <div>
+
+                        <h1 class="workspace-title">
+
+                            Tax Center
+
+                        </h1>
+
+                        <div class="workspace-subtitle">
+
+                            Tax Management Workspace
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="workspace-meta">
+
+                    <div class="meta-chip" *ngIf="currentBranch">
+
+                        <mat-icon>
+                            account_tree
+                        </mat-icon>
+
+                        <span>
+                            {{
+                            currentBranch.branchCode
+                            }}
+                            -
+                            {{
+                            currentBranch.name
+                            }}
+                        </span>
+
+                    </div>
+
+                    <div class="meta-chip">
+
+                        <mat-icon>
+                            receipt_long
+                        </mat-icon>
+
+                        <span>
+
+                            VAT
+
+                            {{ status?.vatEnabled ? 'Enabled' : 'Disabled' }}
+
+                        </span>
+
+                    </div>
+
+                    <div class="meta-chip" [class.active-chip]="!status?.locked" [class.locked-chip]="status?.locked">
+
+                        <mat-icon>
+                            lock
+                        </mat-icon>
+
+                        <span>
+
+                            {{
+                            status?.locked
+                            ? 'Locked'
+                            : 'Unlocked'
+                            }}
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="workspace-actions">
+
+                <button mat-stroked-button (click)="openVat()">
+
+                    <mat-icon>
+                        receipt_long
+                    </mat-icon>
+
+                    VAT
+
+                </button>
+
+                <button mat-stroked-button (click)="openCorporate()">
+
+                    <mat-icon>
+                        account_balance
+                    </mat-icon>
+
+                    Corporate
+
+                </button>
+
+                <button mat-flat-button (click)="openAdministration()">
+
+                    <mat-icon>
+                        admin_panel_settings
+                    </mat-icon>
+
+                    Administration
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ========================================= -->
+    <!-- TOOLBAR -->
+    <!-- ========================================= -->
+
+    <div workflow-toolbar>
+
+        <div class="toolbar-container">
+
+            <mat-form-field *ngIf="
+          branchSelectorVisible
+        " appearance="fill">
+
+                <mat-label>
+                    Branch
+                </mat-label>
+
+                <mat-select [(ngModel)]="selectedBranchId" (selectionChange)="onBranchChanged($event.value)">
+
+                    <mat-option *ngFor="let branch of branches" [value]="branch.id">
+
+                        {{ branch.branchCode }}
+                        -
+                        {{ branch.name }}
+
+                    </mat-option>
+
+                </mat-select>
+
+            </mat-form-field>
+
+            <div class="workspace-tabs">
+
+                <button *ngFor="let tab of tabs" class="workspace-tab" [class.active]=" activeTab === tab.key"
+                    (click)="selectTab(tab.key)">
+
+                    <mat-icon>
+                        {{ tab.icon }}
+                    </mat-icon>
+
+                    <span>
+                        {{ tab.label }}
+                    </span>
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ========================================= -->
+    <!-- CONTENT -->
+    <!-- ========================================= -->
+
+    <div workflow-content>
+
+        <!-- OVERVIEW -->
+
+        <div *ngIf="activeTab === 'overview'" class="cards-grid">
+
+            <div class="metric-card">
+
+                <div class="metric-label">
+                    VAT Enabled
+                </div>
+
+                <div class="metric-value">
+
+                    {{ status?.vatEnabled ? 'Yes' : 'No' }}
+
+                </div>
+
+            </div>
+
+            <div class="metric-card">
+
+                <div class="metric-label">
+                    VAT Rate
+                </div>
+
+                <div class="metric-value">
+
+                    {{ status?.vatRate }}
+
+                </div>
+
+            </div>
+
+            <div class="metric-card">
+
+                <div class="metric-label">
+                    Corporate Tax
+                </div>
+
+                <div class="metric-value">
+
+                    {{ status?.corporateTaxRate }}
+
+                </div>
+
+            </div>
+
+            <div class="metric-card" [class.locked-card]="status?.locked" [class.active-card]="!status?.locked">
+
+                <div class="metric-label">
+                    Status
+                </div>
+
+                <div class="metric-value">
+
+                    {{ status?.locked ? 'Locked' : 'Active' }}
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- VAT -->
+
+        <div *ngIf="activeTab === 'vat'" class="cards-grid">
+            <div class="metric-card">
+                <div class="metric-label">VAT Status</div>
+                <div class="metric-value">
+                    {{ status?.vatEnabled ? 'Enabled' : 'Disabled' }}
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">VAT Rate</div>
+                <div class="metric-value">
+                    {{ status?.vatRate ?? 0 }}%
+                </div>
+            </div>
+
+            <div class="metric-card action-card">
+                <button mat-flat-button (click)="openVat()">
+                    Open VAT Center
+                </button>
+            </div>
+        </div>
+
+        <!-- Corporate Tax -->
+
+        <div *ngIf="activeTab === 'corporate'" class="cards-grid">
+            <div class="metric-card">
+                <div class="metric-label">Corporate Tax Rate</div>
+                <div class="metric-value">
+                    {{ status?.corporateTaxRate ?? 0 }}%
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">System Status</div>
+                <div class="metric-value">
+                    {{ status?.locked ? 'Locked' : 'Active' }}
+                </div>
+            </div>
+
+            <div class="metric-card action-card">
+                <button mat-flat-button (click)="openCorporate()">
+                    Open Corporate Tax Center
+                </button>
+            </div>
+        </div>
+
+        <!-- Administration -->
+
+        <div *ngIf="activeTab === 'administration'" class="cards-grid">
+            <div class="metric-card">
+                <div class="metric-label">VAT Enabled</div>
+                <div class="metric-value">
+                    {{ status?.vatEnabled ? 'Yes' : 'No' }}
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Lock Status</div>
+                <div class="metric-value">
+                    {{ status?.locked ? 'Locked' : 'Unlocked' }}
+                </div>
+            </div>
+
+            <div class="metric-card action-card">
+                <button mat-flat-button (click)="openAdministration()">
+                    Open Administration
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+</app-workflow-shell>

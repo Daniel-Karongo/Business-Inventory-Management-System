@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { AuthService } from '../../modules/auth/services/auth.service';
+import { BranchListItemDTO } from '../../modules/tenant/content/branches/models/branch.model';
 
 @Injectable({ providedIn: 'root' })
 export class BranchContextService {
@@ -13,13 +14,15 @@ export class BranchContextService {
   branch$ = this.branchSubject.asObservable();
 
   private readonly branchesSubject =
-    new BehaviorSubject<any[]>([]);
+    new BehaviorSubject<
+      BranchListItemDTO[]
+    >([]);
 
   readonly branches$ =
     this.branchesSubject.asObservable();
 
   setBranches(
-    branches: any[]
+    branches: BranchListItemDTO[]
   ): void {
 
     this.branchesSubject.next(

@@ -47,17 +47,26 @@ public class VatController {
     @PostMapping("/pay/{filingId}")
     public void pay(
             @PathVariable UUID filingId,
-            @RequestParam UUID accountId
+            @RequestParam UUID accountId,
+            @RequestParam UUID branchId
     ) {
+
+        branchTenantGuard.validate(branchId);
 
         VatFiling filing =
                 filingRepo.findByTenantIdAndId(
                         TenantContext.getTenantId(),
                         filingId
                 ).orElseThrow(() ->
-                        new IllegalArgumentException("Filing not found"));
+                        new IllegalArgumentException(
+                                "Filing not found"
+                        ));
 
-        filingService.markPaid(filing, currentUser(), accountId);
+        filingService.markPaid(
+                filing,
+                currentUser(),
+                accountId
+        );
     }
 
     @GetMapping

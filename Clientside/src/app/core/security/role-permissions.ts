@@ -56,7 +56,8 @@ export const ROLE_PERMISSIONS: Record<string, Feature[]> = {
     'branches',
     'departments',
     'accounts',
-    'ap'
+    'ap',
+    'finance'
   ],
 
   ADMIN: [

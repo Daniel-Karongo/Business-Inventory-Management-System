@@ -1,14 +1,157 @@
-.page-container {
-  max-width: 1200px;
-  margin: auto;
+:host {
+    display: block;
 }
 
-.tax-card {
-  padding: 24px;
-  cursor: pointer;
-  transition: 0.2s;
+.workspace-header {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1fr) auto;
+    gap: 24px;
 }
 
-.tax-card:hover {
-  transform: translateY(-3px);
+.workspace-breadcrumb {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.workspace-title {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.workspace-subtitle {
+    margin-top: 8px;
+    color: var(--text-secondary);
+}
+
+.workspace-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.meta-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+}
+
+.workspace-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.toolbar-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.workspace-tabs {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+}
+
+.workspace-tab {
+    border: none;
+    background: transparent;
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.workspace-tab.active {
+    background:
+        rgba(59, 130, 246, .12);
+    color:
+        #2563eb;
+}
+
+.cards-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit,
+            minmax(240px, 1fr));
+    gap: 16px;
+}
+
+.metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+}
+
+.metric-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.metric-value {
+    margin-top: 8px;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.active-card {
+    border-left: 5px solid #16a34a;
+}
+
+.locked-card {
+    border-left: 5px solid #dc2626;
+}
+
+.active-chip {
+    background: rgba(34, 197, 94, .12);
+    color: #16a34a;
+    border-color: rgba(34, 197, 94, .2);
+}
+
+.locked-chip {
+    background: rgba(239, 68, 68, .12);
+    color: #dc2626;
+    border-color: rgba(239, 68, 68, .2);
+}
+
+@media (max-width: 768px) {
+
+    .workspace-header {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
+    .workspace-actions {
+
+        flex-direction:
+            column;
+
+    }
+
+    .workspace-actions button {
+
+        width: 100%;
+
+    }
+
 }

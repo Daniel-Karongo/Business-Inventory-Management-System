@@ -1,96 +1,502 @@
-<div class="page-container p-4">
+<app-workflow-shell *ngIf="!loading">
 
-  <h2 class="text-xl font-semibold mb-6">
-    Corporate Tax Center (Consolidated)
-  </h2>
+  <!-- =====================================================
+       HEADER
+  ====================================================== -->
 
-  <!-- ================= ACCRUAL WIZARD ================= -->
+  <div workflow-header>
 
-  <mat-card class="accrual-card">
+    <div class="workspace-header">
 
-    <h3>Accrue Corporate Tax</h3>
+      <div class="workspace-header-main">
 
-    <div class="accrual-grid">
+        <div class="workspace-breadcrumb">
+          Finance / Tax
+        </div>
 
-      <mat-form-field appearance="fill">
-        <mat-label>Period ID</mat-label>
-        <input matInput [(ngModel)]="periodId" />
-      </mat-form-field>
+        <div class="workspace-title-row">
 
-      <mat-form-field appearance="fill">
-        <mat-label>From</mat-label>
-        <input matInput type="date" [(ngModel)]="fromDate" />
-      </mat-form-field>
+          <div class="workspace-title-section">
 
-      <mat-form-field appearance="fill">
-        <mat-label>To</mat-label>
-        <input matInput type="date" [(ngModel)]="toDate" />
-      </mat-form-field>
+            <div class="workspace-title-row">
 
-      <button
-        mat-flat-button
-        color="primary"
-        (click)="accrue()">
-        Accrue
-      </button>
+              <h1 class="workspace-title">
+                Corporate Tax Center
+              </h1>
+
+              <span class="workspace-status" [class.active]="!status?.locked" [class.locked]="status?.locked">
+
+                {{ status?.locked ? 'Locked' : 'Active' }}
+
+              </span>
+
+            </div>
+
+            <div class="workspace-subtitle">
+              Corporate tax accruals, filings and payment management
+            </div>
+
+            <div class="workspace-meta">
+
+              <div class="meta-chip" *ngIf="currentBranch">
+
+                <mat-icon>
+                  account_tree
+                </mat-icon>
+
+                <span>
+                  {{ currentBranch.branchCode }}
+                  -
+                  {{ currentBranch.name }}
+                </span>
+
+              </div>
+
+              <div class="meta-chip">
+
+                <mat-icon>
+                  account_balance
+                </mat-icon>
+
+                <span>
+                  Corporate Tax
+                  {{ status?.corporateTaxRate ?? 0 }}%
+                </span>
+
+              </div>
+
+              <div class="meta-chip">
+
+                <mat-icon>
+                  description
+                </mat-icon>
+
+                <span>
+                  {{ filings.length }}
+                  Filing{{ filings.length === 1 ? '' : 's' }}
+                </span>
+
+              </div>
+
+              <div class="meta-chip">
+
+                <mat-icon>
+                  schedule
+                </mat-icon>
+
+                <span>
+                  {{ periods.length }}
+                  Period{{ periods.length === 1 ? '' : 's' }}
+                </span>
+
+              </div>
+
+              <div class="meta-chip">
+
+                <mat-icon>
+                  lock
+                </mat-icon>
+
+                <span>
+                  {{ status?.locked ? 'Locked' : 'Unlocked' }}
+                </span>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="workspace-actions">
+
+        <button mat-stroked-button (click)="loadWorkspace(selectedBranchId)">
+
+          <mat-icon>
+            refresh
+          </mat-icon>
+
+          Refresh
+
+        </button>
+
+        <button mat-flat-button color="primary" (click)="accrueCorporate()" [disabled]="!canAccrueCorporate">
+
+          <mat-icon>
+            calculate
+          </mat-icon>
+
+          Accrue Tax
+
+        </button>
+
+      </div>
 
     </div>
 
-  </mat-card>
-
-  <!-- ================= HISTORY ================= -->
-
-  <div *ngIf="loading" class="loading-hint mt-4">
-    Loading filings...
   </div>
 
-  <div *ngFor="let f of filings" class="filing-card">
+  <!-- =====================================================
+       TOOLBAR
+  ====================================================== -->
 
-    <div class="header-row">
-      <div>
-        <div class="title">
-          Period ID: {{ f.periodId }}
-        </div>
-        <div class="meta">
-          Filed: {{ f.filedAt | date:'medium' }}
-        </div>
-      </div>
+  <div workflow-toolbar>
 
-      <div
-        class="status"
-        [class.paid]="f.paid"
-        [class.unpaid]="!f.paid">
-        {{ f.paid ? 'PAID' : 'UNPAID' }}
-      </div>
-    </div>
+    <div class="toolbar-container">
 
-    <div class="amount">
-      Tax Amount: {{ f.taxAmount | number:'1.2-2' }}
-    </div>
+      <mat-form-field appearance="fill" *ngIf="branchSelectorVisible">
 
-    <div *ngIf="!f.paid" class="payment-row">
+        <mat-label>
+          Branch
+        </mat-label>
 
-      <mat-form-field appearance="fill">
-        <mat-label>Payment Account</mat-label>
-        <mat-select [(ngModel)]="selectedAccountId">
-          <mat-option *ngFor="let a of accounts" [value]="a.id">
-            {{ a.code }} — {{ a.name }}
+        <mat-select [(ngModel)]="selectedBranchId" (selectionChange)="onBranchChanged($event.value)">
+
+          <mat-option *ngFor="let branch of branches" [value]="branch.id">
+
+            {{ branch.branchCode }}
+            -
+            {{ branch.name }}
+
           </mat-option>
+
         </mat-select>
+
       </mat-form-field>
 
-      <button
-        mat-flat-button
-        color="primary"
-        [disabled]="!selectedAccountId"
-        (click)="pay(f)">
-        Pay
-      </button>
+      <div class="workspace-tabs">
+
+        <button *ngFor="let tab of tabs" class="workspace-tab" [class.active]="activeTab === tab.key"
+          (click)="selectTab(tab.key)">
+
+          <mat-icon>
+            {{ tab.icon }}
+          </mat-icon>
+
+          <span>
+            {{ tab.label }}
+          </span>
+
+        </button>
+
+      </div>
 
     </div>
 
+  </div>
+
+  <!-- =====================================================
+       CONTENT
+  ====================================================== -->
+
+  <div workflow-content class="workspace-content">
+
+    <!-- =====================================================
+         OVERVIEW
+    ====================================================== -->
+
+    <div *ngIf="activeTab === 'overview'" class="workspace-panel">
+
+      <!-- =====================================================
+           EMPTY STATE
+      ====================================================== -->
+
+      <div *ngIf="showEmptyState" class="empty-state-card">
+
+        <mat-icon>
+          account_balance
+        </mat-icon>
+
+        <h3>
+          Corporate tax workspace not initialized
+        </h3>
+
+        <p>
+          No tax periods, corporate tax filings or accrual activity exist for this branch yet.
+        </p>
+
+      </div>
+
+      <!-- =====================================================
+           WORKSPACE CONTENT
+      ====================================================== -->
+
+      <ng-container *ngIf="!showEmptyState">
+
+        <div class="panel-card">
+
+          <div class="panel-header">
+
+            <h2>
+              Corporate Tax Overview
+            </h2>
+
+            <div>
+              Current corporate tax configuration and filing status
+            </div>
+
+          </div>
+
+          <div class="overview-grid">
+
+            <div class="overview-item">
+
+              <div class="overview-label">
+                Tax Rate
+              </div>
+
+              <div class="overview-value">
+                {{ status?.corporateTaxRate ?? 0 }}%
+              </div>
+
+            </div>
+
+            <div class="overview-item">
+
+              <div class="overview-label">
+                System Status
+              </div>
+
+              <div class="overview-value">
+                {{ status?.locked ? 'Locked' : 'Active' }}
+              </div>
+
+            </div>
+
+            <div class="overview-item">
+
+              <div class="overview-label">
+                Tax Periods
+              </div>
+
+              <div class="overview-value">
+                {{ periods.length }}
+              </div>
+
+            </div>
+
+            <div class="overview-item">
+
+              <div class="overview-label">
+                Corporate Filings
+              </div>
+
+              <div class="overview-value">
+                {{ filings.length }}
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="panel-card">
+
+          <div class="panel-header">
+
+            <h2>
+              Accrue Corporate Tax
+            </h2>
+
+            <div>
+              Generate a corporate tax filing from an available tax period
+            </div>
+
+          </div>
+
+          <ng-container *ngIf="hasPeriods; else noPeriodsAvailable">
+
+            <div class="form-grid">
+
+              <mat-form-field appearance="fill">
+
+                <mat-label>
+                  Tax Period
+                </mat-label>
+
+                <mat-select [(ngModel)]="periodId">
+
+                  <mat-option *ngFor="let period of periods" [value]="period.id">
+
+                    {{ period.startDate | date }}
+                    -
+                    {{ period.endDate | date }}
+
+                  </mat-option>
+
+                </mat-select>
+
+              </mat-form-field>
+
+            </div>
+
+          </ng-container>
+
+          <ng-template #noPeriodsAvailable>
+
+            <div class="empty-state">
+
+              No tax periods available.
+
+            </div>
+
+          </ng-template>
+
+        </div>
+
+      </ng-container>
+
+    </div>
+
+    <!-- =====================================================
+         FILINGS
+    ====================================================== -->
+
+    <div *ngIf="activeTab === 'filings'" class="workspace-panel">
+
+      <div class="panel-card">
+
+        <div class="panel-header">
+
+          <h2>
+            Corporate Tax Filings
+          </h2>
+
+          <div>
+            Recorded corporate tax filings and payments
+          </div>
+
+        </div>
+
+        <div *ngIf="!filings.length" class="empty-state">
+
+          No corporate tax filings found.
+
+        </div>
+
+        <div *ngFor="let filing of filings" class="filing-card">
+
+          <div class="filing-main">
+
+            <div class="filing-title">
+
+              {{ filing.taxAmount | number:'1.2-2' }}
+
+            </div>
+
+            <div class="filing-subtitle">
+
+              Filed
+              {{ filing.filedAt | date:'medium' }}
+
+            </div>
+
+          </div>
+
+          <div class="filing-actions">
+
+            <span class="workspace-status" [class.active]="filing.paid" [class.locked]="!filing.paid">
+
+              {{ filing.paid ? 'Paid' : 'Unpaid' }}
+
+            </span>
+
+            <ng-container *ngIf="!filing.paid">
+
+              <div class="empty-state" *ngIf="!fundingAccounts.length">
+
+                No funding accounts available for tax payments.
+
+              </div>
+
+              <mat-form-field *ngIf="fundingAccounts.length" appearance="fill">
+
+                <mat-label>
+                  Funding Account
+                </mat-label>
+
+                <mat-select [(ngModel)]="accountId">
+
+                  <mat-select-trigger>
+
+                    {{ selectedAccount?.code }}
+                    —
+                    {{ selectedAccount?.name }}
+                    —
+                    KES
+                    {{ selectedAccount?.balance | number:'1.2-2' }}
+
+                  </mat-select-trigger>
+
+                  <mat-option *ngFor="let account of fundingAccounts" [value]="account.id">
+
+                    <div class="account-option">
+
+                      <div class="account-code-row">
+                        {{ account.code }}
+                      </div>
+
+                      <div class="account-name-balance-row">
+
+                        <span class="account-name">
+                          {{ account.name }}
+                        </span>
+
+                        <span class="account-balance">
+                          {{
+                          account.balance
+                          | number:'1.2-2'
+                          }}
+                        </span>
+
+                      </div>
+
+                    </div>
+
+                  </mat-option>
+
+                </mat-select>
+
+              </mat-form-field>
+
+              <button mat-flat-button color="primary" (click)="payCorporate(filing.id)" [disabled]="!accountId || !fundingAccounts.length">
+
+                <mat-icon>
+                  payments
+                </mat-icon>
+
+                Pay
+
+              </button>
+
+            </ng-container>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</app-workflow-shell>
+
+<div *ngIf="loading" class="enterprise-loading">
+
+  <div class="progress-block">
+
+    <div class="progress-inline"></div>
+
+  </div>
+
+  <div class="loading-message">
+    Loading corporate tax workspace...
   </div>
 
 </div>
-
-

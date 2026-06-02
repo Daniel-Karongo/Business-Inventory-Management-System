@@ -1,0 +1,84 @@
+:host {
+    display: block;
+    width: 100%;
+}
+
+.workspace-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 24px;
+    align-items: start;
+}
+
+.workspace-breadcrumb {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .4px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.workspace-title {
+    margin: 12px 0 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.workspace-subtitle {
+    margin-top: 8px;
+    color: var(--text-secondary);
+}
+
+.workspace-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    min-height: 36px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.workspace-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.config-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit, minmax(280px, 1fr));
+    gap: 18px;
+}
+
+mat-form-field {
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+
+    .workspace-header {
+        grid-template-columns: 1fr;
+    }
+
+    .workspace-actions {
+        width: 100%;
+    }
+
+    .workspace-actions button {
+        width: 100%;
+    }
+
+    .workspace-title {
+        font-size: 1.6rem;
+    }
+}

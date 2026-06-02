@@ -1,72 +1,526 @@
-<div class="page-container p-4">
+<app-workflow-shell *ngIf="!loading">
 
-  <h2 class="text-xl font-semibold mb-4">
-    VAT Center (Consolidated)
-  </h2>
+  <!-- =====================================================
+       HEADER
+  ====================================================== -->
 
-  <div class="mb-4">
-    <input
-      type="text"
-      placeholder="Search by period ID..."
-      [(ngModel)]="search"
-      class="search-input"
-    />
-  </div>
+  <div workflow-header>
 
-  <div *ngIf="loading" class="loading-hint">
-    Loading VAT filings...
-  </div>
+    <div class="workspace-header">
 
-  <div *ngFor="let f of filtered()" class="vat-card">
+      <div class="workspace-header-main">
 
-    <div class="header-row">
-      <div>
-        <div class="title">
-          Period:
-          {{ f.period?.startDate }} → {{ f.period?.endDate }}
+        <div class="workspace-breadcrumb">
+          Finance / Tax / VAT
         </div>
 
-        <div class="meta">
-          Filed: {{ f.filedAt | date:'medium' }}
+        <div class="workspace-title-row">
+
+          <div class="workspace-title-section">
+
+            <div class="workspace-title-row">
+
+              <h1 class="workspace-title">
+                VAT Center
+              </h1>
+
+              <span class="workspace-status" [class.active]="!status?.locked" [class.locked]="status?.locked">
+
+                {{ status?.locked ? 'Locked' : 'Active' }}
+
+              </span>
+
+            </div>
+
+            <div class="workspace-subtitle">
+              VAT filing, payment and compliance workspace
+            </div>
+
+            <div class="workspace-meta">
+
+              <div class="meta-chip" *ngIf="currentBranch">
+
+                <mat-icon>
+                  account_tree
+                </mat-icon>
+
+                <span>
+                  {{ currentBranch.branchCode }}
+                  -
+                  {{ currentBranch.name }}
+                </span>
+
+              </div>
+
+              <div class="meta-chip">
+
+                <mat-icon>
+                  receipt_long
+                </mat-icon>
+
+                <span>
+                  VAT
+                  {{ status?.vatEnabled ? 'Enabled' : 'Disabled' }}
+                </span>
+
+              </div>
+
+              <div class="meta-chip">
+
+                <mat-icon>
+                  percent
+                </mat-icon>
+
+                <span>
+                  {{ status?.vatRate ?? 0 }}%
+                </span>
+
+              </div>
+
+              <div class="meta-chip">
+
+                <mat-icon>
+                  lock
+                </mat-icon>
+
+                <span>
+                  {{ status?.locked ? 'Locked' : 'Unlocked' }}
+                </span>
+
+              </div>
+
+            </div>
+
+          </div>
+
         </div>
+
       </div>
 
-      <div
-        class="status"
-        [class.paid]="f.paid"
-        [class.unpaid]="!f.paid">
-        {{ f.paid ? 'PAID' : 'UNPAID' }}
+      <div class="workspace-actions">
+
+        <button mat-stroked-button (click)="loadWorkspace(selectedBranchId)">
+
+          <mat-icon>
+            refresh
+          </mat-icon>
+
+          Refresh
+
+        </button>
+
+        <button mat-flat-button color="primary" (click)="fileVat()" [disabled]="!canFileVat">
+
+          <mat-icon>
+            receipt_long
+          </mat-icon>
+
+          File VAT Return
+
+        </button>
+
       </div>
+
     </div>
 
-    <div class="amount">
-      VAT Payable:
-      {{ f.vatPayable | number:'1.2-2' }}
-    </div>
+  </div>
 
-    <div *ngIf="!f.paid" class="payment-row">
+  <!-- =====================================================
+       TOOLBAR
+  ====================================================== -->
 
-      <mat-form-field appearance="fill">
-        <mat-label>Payment Account</mat-label>
-        <mat-select [(ngModel)]="selectedAccountId">
-          <mat-option *ngFor="let a of accounts" [value]="a.id">
-            {{ a.code }} — {{ a.name }}
+  <div workflow-toolbar>
+
+    <div class="toolbar-container">
+
+      <mat-form-field *ngIf="branchSelectorVisible" appearance="fill">
+
+        <mat-label>
+          Branch
+        </mat-label>
+
+        <mat-select [(ngModel)]="selectedBranchId" (selectionChange)="onBranchChanged($event.value)">
+
+          <mat-option *ngFor="let branch of branches" [value]="branch.id">
+
+            {{ branch.branchCode }}
+            -
+            {{ branch.name }}
+
           </mat-option>
+
         </mat-select>
+
       </mat-form-field>
 
-      <button
-        mat-flat-button
-        color="primary"
-        [disabled]="!selectedAccountId"
-        (click)="pay(f)">
-        Pay VAT
-      </button>
+      <div class="workspace-tabs">
+
+        <button *ngFor="let tab of tabs" class="workspace-tab" [class.active]="activeTab === tab.key"
+          (click)="selectTab(tab.key)">
+
+          <mat-icon>
+            {{ tab.icon }}
+          </mat-icon>
+
+          <span>
+            {{ tab.label }}
+          </span>
+
+        </button>
+
+      </div>
 
     </div>
 
+  </div>
+
+  <!-- =====================================================
+       CONTENT
+  ====================================================== -->
+
+  <div workflow-content class="workspace-content">
+
+    <!-- =====================================================
+         OVERVIEW
+    ====================================================== -->
+
+    <div *ngIf="activeTab === 'overview'" class="workspace-panel">
+
+      <!-- =====================================================
+           EMPTY STATE
+      ====================================================== -->
+
+      <div *ngIf="showEmptyState" class="empty-state-card">
+
+        <mat-icon>
+          receipt_long
+        </mat-icon>
+
+        <h3>
+          VAT workspace not initialized
+        </h3>
+
+        <p>
+          No tax periods, VAT filings or VAT activity exist for this branch yet.
+        </p>
+
+      </div>
+
+      <!-- =====================================================
+           WORKSPACE CONTENT
+      ====================================================== -->
+
+      <ng-container *ngIf="!showEmptyState">
+
+        <div class="panel-card">
+
+          <div class="panel-header">
+
+            <h2>
+              VAT Overview
+            </h2>
+
+            <div>
+              Current VAT configuration and filing status
+            </div>
+
+          </div>
+
+          <div class="overview-grid">
+
+            <div class="overview-item">
+
+              <div class="overview-label">
+                VAT Enabled
+              </div>
+
+              <div class="overview-value">
+                {{ status?.vatEnabled ? 'Yes' : 'No' }}
+              </div>
+
+            </div>
+
+            <div class="overview-item">
+
+              <div class="overview-label">
+                VAT Rate
+              </div>
+
+              <div class="overview-value">
+                {{ status?.vatRate ?? 0 }}%
+              </div>
+
+            </div>
+
+            <div class="overview-item">
+
+              <div class="overview-label">
+                System Status
+              </div>
+
+              <div class="overview-value">
+                {{ status?.locked ? 'Locked' : 'Active' }}
+              </div>
+
+            </div>
+
+            <div class="overview-item">
+
+              <div class="overview-label">
+                VAT Filings
+              </div>
+
+              <div class="overview-value">
+                {{ filings.length }}
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="panel-card">
+
+          <div class="panel-header">
+
+            <h2>
+              Current Tax Period
+            </h2>
+
+            <div>
+              Open tax period available for filing
+            </div>
+
+          </div>
+
+          <div *ngIf="currentPeriod; else noCurrentPeriod" class="overview-grid">
+
+            <div class="overview-item">
+
+              <div class="overview-label">
+                Start Date
+              </div>
+
+              <div class="overview-value">
+                {{ currentPeriod.startDate | date }}
+              </div>
+
+            </div>
+
+            <div class="overview-item">
+
+              <div class="overview-label">
+                End Date
+              </div>
+
+              <div class="overview-value">
+                {{ currentPeriod.endDate | date }}
+              </div>
+
+            </div>
+
+            <div class="overview-item">
+
+              <div class="overview-label">
+                Status
+              </div>
+
+              <div class="overview-value">
+                {{ currentPeriod.closed ? 'Closed' : 'Open' }}
+              </div>
+
+            </div>
+
+          </div>
+
+          <ng-template #noCurrentPeriod>
+
+            <div class="empty-state">
+
+              No active tax period available.
+
+            </div>
+
+          </ng-template>
+
+        </div>
+
+      </ng-container>
+
+    </div>
+
+    <!-- =====================================================
+         FILINGS
+    ====================================================== -->
+
+    <div *ngIf="activeTab === 'filings'" class="workspace-panel">
+
+      <div class="panel-card">
+
+        <div class="panel-header">
+
+          <h2>
+            VAT Filing History
+          </h2>
+
+          <div>
+            Filed VAT returns and payments
+          </div>
+
+        </div>
+
+        <div *ngIf="filings.length; else emptyFilings" class="filings-grid">
+
+          <div *ngFor="let filing of filings" class="filing-card">
+
+            <div class="filing-header">
+
+              <span class="filing-title">
+                VAT Filing
+              </span>
+
+              <span class="workspace-status" [class.active]="filing.paid" [class.locked]="!filing.paid">
+
+                {{ filing.paid ? 'Paid' : 'Pending' }}
+
+              </span>
+
+            </div>
+
+            <div class="filing-body">
+
+              <div>
+                Output VAT:
+                <strong>
+                  {{ filing.outputVat | number:'1.2-2' }}
+                </strong>
+              </div>
+
+              <div>
+                Input VAT:
+                <strong>
+                  {{ filing.inputVat | number:'1.2-2' }}
+                </strong>
+              </div>
+
+              <div>
+                VAT Payable:
+                <strong>
+                  {{ filing.vatPayable | number:'1.2-2' }}
+                </strong>
+              </div>
+
+              <div>
+                Filed:
+                <strong>
+                  {{ filing.filedAt | date:'medium' }}
+                </strong>
+              </div>
+
+            </div>
+
+            <div class="filing-actions" *ngIf="!filing.paid">
+
+              <div class="empty-state" *ngIf="!fundingAccounts.length">
+
+                No funding accounts available for VAT payments.
+
+              </div>
+
+              <mat-form-field *ngIf="fundingAccounts.length" appearance="fill">
+
+                <mat-label>
+                  Funding Account
+                </mat-label>
+
+                <mat-select [(ngModel)]="accountId">
+
+                  <mat-select-trigger>
+
+                    {{ selectedAccount?.code }}
+                    —
+                    {{ selectedAccount?.name }}
+                    —
+                    KES
+                    {{ selectedAccount?.balance | number:'1.2-2' }}
+
+                  </mat-select-trigger>
+
+                  <mat-option *ngFor="let account of fundingAccounts" [value]="account.id">
+
+                    <div class="account-option">
+
+                      <div class="account-code-row">
+                        {{ account.code }}
+                      </div>
+
+                      <div class="account-name-balance-row">
+
+                        <span class="account-name">
+                          {{ account.name }}
+                        </span>
+
+                        <span class="account-balance">
+                          {{
+                          account.balance
+                          | number:'1.2-2'
+                          }}
+                        </span>
+
+                      </div>
+
+                    </div>
+
+                  </mat-option>
+
+                </mat-select>
+
+              </mat-form-field>
+
+              <button mat-flat-button color="primary" (click)="payVat(filing.id)"
+                [disabled]="!accountId || !fundingAccounts.length || paying">
+
+                <mat-icon>
+                  payments
+                </mat-icon>
+
+                Pay VAT
+
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <ng-template #emptyFilings>
+
+          <div class="empty-state">
+
+            No VAT filings found.
+
+          </div>
+
+        </ng-template>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</app-workflow-shell>
+
+<div *ngIf="loading" class="enterprise-loading">
+
+  <div class="progress-block">
+    <div class="progress-inline"></div>
+  </div>
+
+  <div class="loading-message">
+    Loading VAT workspace...
   </div>
 
 </div>
-
-
