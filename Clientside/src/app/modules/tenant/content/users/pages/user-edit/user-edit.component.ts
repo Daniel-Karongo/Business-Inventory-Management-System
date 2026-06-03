@@ -26,9 +26,6 @@ import { RoleService }
 import { BranchService }
   from '../../../branches/services/branch.service';
 
-import { DepartmentService }
-  from '../../../departments/services/department.service';
-
 import { AuthService }
   from '../../../../../auth/services/auth.service';
 
@@ -61,15 +58,14 @@ import { AuthService }
 <div class="tab-pane profile-pane">
 
 <app-user-form
-[currentUserId]="currentUserId"
-mode="edit"
-[value]="user"
-[loading]="loading"
-[roles]="roles"
-[branches]="branches"
-[departments]="departments"
-(save)="save($event)"
-(cancel)="cancel()">
+  [currentUserId]="currentUserId"
+  mode="edit"
+  [value]="user"
+  [loading]="loading"
+  [roles]="roles"
+  [branches]="branches"
+  (save)="save($event)"
+  (cancel)="cancel()">
 </app-user-form>
 
 </div>
@@ -225,7 +221,6 @@ export class UserEditComponent {
   private api = inject(UserService);
   private rolesApi = inject(RoleService);
   private branchService = inject(BranchService);
-  private deptApi = inject(DepartmentService);
   private auth = inject(AuthService);
 
   private route = inject(ActivatedRoute);
@@ -243,7 +238,6 @@ export class UserEditComponent {
 
   roles: string[] = [];
   branches: any[] = [];
-  departments: any[] = [];
 
   currentUserId = '';
 
@@ -265,11 +259,6 @@ export class UserEditComponent {
     this.branchService.getAllLegacy()
       .subscribe(v => {
         this.branches = v;
-      });
-
-    this.deptApi.getAll()
-      .subscribe(v => {
-        this.departments = v;
       });
 
     this.api.get(this.id)

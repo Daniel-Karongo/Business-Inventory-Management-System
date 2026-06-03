@@ -4,9 +4,7 @@ public enum AuditEntityType {
     TENANT,
     USER,
     BRANCH,
-    DEPARTMENT,
     PRODUCT,
     SALE,
     PAYMENT
-
 }

@@ -12,6 +12,10 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class BranchHierarchyDTO {
+
     private UUID branchId;
+
     private String branchName;
+
+    private boolean primaryBranch;
 }

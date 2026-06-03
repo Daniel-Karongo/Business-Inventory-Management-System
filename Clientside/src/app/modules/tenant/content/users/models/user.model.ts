@@ -1,6 +1,5 @@
 import { FileUploadDTO } from "../../../../../core/models/file-upload.model";
 import { BranchHierarchyDTO } from "../../branches/models/branch.model";
-import { DepartmentAssignmentDTO, DepartmentMinimalDTO } from "../../departments/models/department.model";
 
 export interface User {
   id: string; // read only
@@ -14,10 +13,10 @@ export interface User {
 
   // read-only
   branchHierarchy?: BranchHierarchyDTO[];
-  departments?: DepartmentMinimalDTO[];
 
-  // write-only
-  departmentsAndPositions?: DepartmentAssignmentDTO[];
+  branchIds?: string[];
+
+  primaryBranchId?: string;
 
   createdBy?: string;
   lastModifiedBy?: string;

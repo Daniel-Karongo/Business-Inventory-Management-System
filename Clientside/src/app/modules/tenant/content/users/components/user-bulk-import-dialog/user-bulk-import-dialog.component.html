@@ -68,15 +68,6 @@
             </mat-form-field>
 
             <mat-form-field>
-              <mat-select formControlName="departmentName">
-                <mat-option value="">Auto</mat-option>
-                <mat-option *ngFor="let d of departments" [value]="d.name">
-                  {{ d.name }}
-                </mat-option>
-              </mat-select>
-            </mat-form-field>
-
-            <mat-form-field>
               <mat-select formControlName="position">
                 <mat-option value="member">Member</mat-option>
                 <mat-option value="head">Head</mat-option>

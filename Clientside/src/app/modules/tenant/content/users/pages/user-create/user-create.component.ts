@@ -8,7 +8,6 @@ import { UserFormComponent } from '../shared/user-form/user-form.component';
 import { UserService } from '../../services/user/user.service';
 import { RoleService } from '../../services/role/role.service';
 import { BranchService } from '../../../branches/services/branch.service';
-import { DepartmentService } from '../../../departments/services/department.service';
 
 @Component({
   standalone: true,
@@ -24,7 +23,6 @@ import { DepartmentService } from '../../../departments/services/department.serv
         [loading]="loading"
         [roles]="roles"
         [branches]="branches"
-        [departments]="departments"
         (save)="submit($event)"
         (cancel)="cancel()">
       </app-user-form>
@@ -37,7 +35,6 @@ export class UserCreateComponent {
   private api = inject(UserService);
   private rolesApi = inject(RoleService);
   private branchService = inject(BranchService);
-  private deptApi = inject(DepartmentService);
   private router = inject(Router);
   private snack = inject(MatSnackBar);
 
@@ -45,14 +42,12 @@ export class UserCreateComponent {
 
   roles: string[] = [];
   branches: any[] = [];
-  departments: any[] = [];
 
   constructor() {
     this.rolesApi.list().subscribe(r => {
       this.roles = r.map(x => x.name);
     });
     this.branchService.getAllLegacy().subscribe(v => this.branches = v);
-    this.deptApi.getAll().subscribe(v => this.departments = v);
   }
 
   private toFormData(payload: any): FormData {
@@ -99,27 +94,6 @@ export class UserCreateComponent {
         );
       });
 
-    /* departmentsAndPositions[] */
-    (payload.departmentsAndPositions || [])
-      .forEach((a: any, i: number) => {
-
-        fd.append(
-          `departmentsAndPositions[${i}].branchId`,
-          a.branchId
-        );
-
-        fd.append(
-          `departmentsAndPositions[${i}].departmentId`,
-          a.departmentId
-        );
-
-        fd.append(
-          `departmentsAndPositions[${i}].position`,
-          a.position
-        );
-
-      });
-
     (payload.userFiles || [])
       .forEach((f: any, i: number) => {
 
@@ -134,6 +108,18 @@ export class UserCreateComponent {
         );
 
       });
+
+    (payload.branchIds || [])
+      .forEach((id: string, i: number) => {
+        fd.append(`branchIds[${i}]`, id);
+      });
+
+    if (payload.primaryBranchId) {
+      fd.append(
+        'primaryBranchId',
+        payload.primaryBranchId
+      );
+    }
 
     return fd;
 

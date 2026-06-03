@@ -139,17 +139,6 @@ export class UserDetailsComponent implements OnInit {
       : `/api${this.user.profileThumbnailUrl}`;
   }
 
-  departmentCount(): number {
-
-    return (this.user?.branchHierarchy || [])
-      .reduce(
-        (sum: number, b: any) =>
-          sum + (b?.departments?.length || 0),
-        0
-      );
-
-  }
-
   /* ================= ACTION CONFIG ================= */
 
   private initializeActionConfig() {
@@ -288,6 +277,27 @@ export class UserDetailsComponent implements OnInit {
 
   status(): string {
     return this.user.deleted ? "DISABLED" : "ACTIVE";
+  }
+
+  primaryBranch(): any {
+
+    const branches =
+      this.user?.branchHierarchy ?? [];
+
+    return branches.find(
+      (b: any) => b.primaryBranch
+    ) ?? branches[0];
+  }
+
+  additionalBranchesCount(): number {
+
+    const branches =
+      this.user?.branchHierarchy ?? [];
+
+    return Math.max(
+      0,
+      branches.length - 1
+    );
   }
 
   editUser() {

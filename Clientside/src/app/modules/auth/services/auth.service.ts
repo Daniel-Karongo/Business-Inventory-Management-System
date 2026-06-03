@@ -206,6 +206,5 @@ export interface MeResponse {
   username: string;
   role: string;
   branchId: string;
-  departmentIds: string[];
   userType: 'PLATFORM' | 'TENANT';
 }

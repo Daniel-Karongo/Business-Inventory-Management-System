@@ -14,7 +14,7 @@ export class UserRollcallsComponent implements OnInit {
 
   @Input() userId!: string;
 
-  displayedColumns = ['time', 'branch', 'department', 'status', 'method'];
+  displayedColumns = ['time', 'branch', 'status', 'method'];
   rollcalls: any[] = [];
   DATE_FORMAT = 'dd/MM/yy, hh:mm a';
 

@@ -1,8 +1,4 @@
 import {
-  DepartmentMinimalDTO,
-  DepartmentPositionDTO
-} from '../../departments/models/department.model';
-import {
   MinimalUserDTO
 } from '../../users/models/user.model';
 
@@ -49,7 +45,6 @@ export interface BranchDetailsDTO {
   deleted?: boolean;
   createdAt?: string;
   users?: MinimalUserDTO[];
-  departments?: DepartmentMinimalDTO[];
 }
 
 /* =========================================================
@@ -71,7 +66,6 @@ export interface BranchFormDTO {
   rollcallGraceMinutes?: number | null;
   logoutTime?: string | null;
   userIds?: string[];
-  departmentIds?: string[];
 }
 
 /* =========================================================
@@ -213,7 +207,7 @@ export interface BranchTableState {
 export interface BranchHierarchyDTO {
   branchId: string;
   branchName: string;
-  departments: DepartmentPositionDTO[];
+  primaryBranch: boolean;
 }
 
 /* =========================================================

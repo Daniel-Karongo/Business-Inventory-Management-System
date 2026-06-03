@@ -139,39 +139,6 @@ export const environment = {
     },
 
     /* ============================================================
-       DEPARTMENTS
-    ============================================================ */
-    departments: {
-      base: '/departments',
-
-      create: '/departments',
-      bulkCreate: '/departments/bulk',
-
-      update: (id: string) => `/departments/${id}`,
-
-      get: (id: string) => `/departments/${id}`,
-      getAll: (deleted?: boolean) => `/departments?deleted=${deleted}`,
-
-      getForUser: (userId: string) => `/departments/user/${userId}`,
-
-      audits: {
-        forDepartment: (id: string) => `/departments/${id}/audits`,
-        all: '/departments/all/audits',
-        performedBy: (userId: string) =>
-          `/departments/audits/performer/${userId}`
-      },
-
-      delete: (id: string, soft: boolean = true) =>
-        `/departments/delete/${id}?soft=${soft}`,
-
-      deleteBulk: (soft: boolean = true) =>
-        `/departments/delete/bulk?soft=${soft}`,
-
-      restore: (id: string) => `/departments/restore/${id}`,
-      restoreBulk: '/departments/restore/bulk'
-    },
-
-    /* ============================================================
        CATEGORIES
     ============================================================ */
     categories: {

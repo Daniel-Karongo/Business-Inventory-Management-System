@@ -66,8 +66,7 @@
 
                 <mat-form-field appearance="fill">
                     <mat-label>Confirm Password</mat-label>
-                    <input matInput [type]="showPassword ? 'text':'password'" formControlName="confirmPassword"
-                        >
+                    <input matInput [type]="showPassword ? 'text':'password'" formControlName="confirmPassword">
                     <mat-error *ngIf="passwordMismatch()">
                         Passwords do not match
                     </mat-error>
@@ -137,69 +136,39 @@
 
         <section class="panel">
 
-            <h3>Assignments</h3>
+            <h3>Branch Access</h3>
 
-            <div formArrayName="departmentsAndPositions">
+            <app-searchable-assign label="Branches" [items]="branches"
+                [selectedIds]="form.get('branchIds')?.value || []" [display]="branchDisplay" [id]="branchId"
+                (selectedIdsChange)="onBranchesChanged($event)">
+            </app-searchable-assign>
 
-                <div *ngFor="let g of assignments.controls;let i=index" [formGroupName]="i" class="assignment-row">
+            <mat-form-field appearance="fill" *ngIf="selectedBranches().length">
 
-                    <mat-form-field appearance="fill">
-                        <mat-label>Branch</mat-label>
-                        <mat-select formControlName="branchId">
-                            <mat-option *ngFor="let b of branches" [value]="b.id">
-                                {{b.name}}
-                            </mat-option>
-                        </mat-select>
-                    </mat-form-field>
+                <mat-label>Primary Branch</mat-label>
 
-                    <mat-form-field appearance="fill">
-                        <mat-label>Department</mat-label>
-                        <mat-select formControlName="departmentId">
-                            <mat-option *ngFor="let d of departmentsForBranch(g.get('branchId')?.value)" [value]="d.id">
-                                {{d.name}}
-                            </mat-option>
-                        </mat-select>
-                    </mat-form-field>
+                <mat-select formControlName="primaryBranchId">
 
-                    <mat-form-field appearance="fill">
-                        <mat-label>Position</mat-label>
-                        <mat-select formControlName="position">
-                            <mat-option value="member">Member</mat-option>
-                            <mat-option value="head">Head</mat-option>
-                        </mat-select>
-                    </mat-form-field>
+                    <mat-option *ngFor="let b of selectedBranches()" [value]="b.id">
 
-                    <button mat-icon-button type="button" (click)="removeAssignment(i)">
-                        <mat-icon>delete</mat-icon>
-                    </button>
+                        {{ b.name }}
 
-                </div>
+                    </mat-option>
 
-            </div>
+                </mat-select>
 
-            <button mat-stroked-button type="button" (click)="addAssignment()">
-                Add Assignment
-            </button>
+            </mat-form-field>
 
-            <div class="info-banner" *ngIf="
-                mode==='create' &&
-                (
-                assignments.length === 0 ||
-                (
-                    assignments.length === 1 &&
-                    !assignments.at(0).get('branchId')?.value &&
-                    !assignments.at(0).get('departmentId')?.value
-                )
-                )
-            ">
+            <div class="info-banner" *ngIf="!selectedBranchIds().length">
 
                 <mat-icon>info</mat-icon>
 
-                No assignment selected.
+                No branch selected.
                 User will automatically be assigned
-                MAIN / GENERAL on creation.
+                MAIN.
 
             </div>
+
         </section>
 
         <section class="panel" *ngIf="mode === 'create'">

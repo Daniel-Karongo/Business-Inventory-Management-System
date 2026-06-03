@@ -1,19 +1,26 @@
-import {
-    Component, Input, Output, EventEmitter, inject, OnInit
-} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
-    ReactiveFormsModule, FormBuilder, Validators, FormArray, FormGroup
+    Component,
+    EventEmitter, inject,
+    Input,
+    OnInit,
+    Output
+} from '@angular/core';
+import {
+    FormArray,
+    FormBuilder,
+    ReactiveFormsModule,
+    Validators
 } from '@angular/forms';
 
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ImageUploadDialogComponent } from '../../../../../../../shared/components/image-upload-dialog/image-upload-dialog.component';
+import { SearchableAssignComponent } from '../../../../../../../shared/components/searchable-assign/searchable-assign.component';
 
 @Component({
     standalone: true,
@@ -26,8 +33,8 @@ import { ImageUploadDialogComponent } from '../../../../../../../shared/componen
         MatSelectModule,
         MatButtonModule,
         MatIconModule,
-        MatSlideToggleModule,
-        MatDialogModule
+        MatDialogModule,
+        SearchableAssignComponent
     ],
     templateUrl: './user-form.component.html',
     styleUrls: ['./user-form.component.scss']
@@ -43,7 +50,9 @@ export class UserFormComponent implements OnInit {
     @Input() currentUserId?: string;
     @Input() roles: string[] = [];
     @Input() branches: any[] = [];
-    @Input() departments: any[] = [];
+
+    branchDisplay = (b: any) => b.name;
+    branchId = (b: any) => b.id;
 
     originalRole?: string;
     targetUserId?: string;
@@ -79,18 +88,17 @@ export class UserFormComponent implements OnInit {
                     this.fb.control(x)
                 ));
 
-        this.assignments.clear();
+        const branchIds =
+            (v.branchHierarchy || [])
+                .map((b: any) => b.branchId);
 
-        (v.branchHierarchy || []).forEach((b: any) => {
-            (b.departments || []).forEach((d: any) => {
-                this.assignments.push(
-                    this.newAssignment({
-                        branchId: b.branchId,
-                        departmentId: d.departmentId,
-                        position: (d.position || 'member').toLowerCase()
-                    })
-                );
-            });
+        const primaryBranch =
+            (v.branchHierarchy || [])
+                .find((b: any) => b.primaryBranch);
+
+        this.form.patchValue({
+            branchIds,
+            primaryBranchId: primaryBranch?.branchId ?? ''
         });
 
         this.syncDisabledStates();
@@ -110,14 +118,14 @@ export class UserFormComponent implements OnInit {
         confirmPassword: [''],
         emailAddresses: this.fb.array([]),
         phoneNumbers: this.fb.array([]),
-        departmentsAndPositions: this.fb.array([])
+        branchIds: [[] as string[]],
+        primaryBranchId: ['']
     });
 
     ngOnInit() {
 
         if (!this.emails.length) this.addEmail();
         if (!this.phones.length) this.addPhone();
-        if (!this.assignments.length) this.addAssignment();
 
         this.syncDisabledStates();
     }
@@ -130,8 +138,35 @@ export class UserFormComponent implements OnInit {
         return this.form.get('phoneNumbers') as FormArray;
     }
 
-    get assignments() {
-        return this.form.get('departmentsAndPositions') as FormArray<FormGroup>;
+    selectedBranchIds(): string[] {
+        return this.form.get('branchIds')?.value ?? [];
+    }
+
+    selectedBranches(): any[] {
+
+        const ids = this.selectedBranchIds();
+
+        return this.branches.filter(
+            b => ids.includes(b.id)
+        );
+    }
+
+    private clearArray(arr: FormArray) {
+        while (arr.length) {
+            arr.removeAt(0);
+        }
+    }
+
+    onBranchesChanged(ids: string[]) {
+
+        this.form.get('branchIds')?.setValue(ids);
+
+        const primary =
+            this.form.get('primaryBranchId')?.value;
+
+        if (primary && !ids.includes(primary)) {
+            this.form.get('primaryBranchId')?.setValue('');
+        }
     }
 
     private syncDisabledStates(): void {
@@ -185,29 +220,6 @@ export class UserFormComponent implements OnInit {
         this.phones.removeAt(i);
     }
 
-    newAssignment(v?: any) {
-
-        const g = this.fb.group({
-            branchId: [v?.branchId || '', Validators.required],
-            departmentId: [v?.departmentId || '', Validators.required],
-            position: [v?.position || 'member', Validators.required]
-        });
-
-        g.get('branchId')?.valueChanges.subscribe(() => {
-            g.get('departmentId')?.setValue('');
-        });
-
-        return g;
-    }
-
-    addAssignment() {
-        this.assignments.push(this.newAssignment());
-    }
-
-    removeAssignment(i: number) {
-        this.assignments.removeAt(i);
-    }
-
     openFilePicker() {
 
         this.dialog.open(
@@ -230,12 +242,6 @@ export class UserFormComponent implements OnInit {
         this.pendingFiles.splice(i, 1);
     }
 
-    departmentsForBranch(branchId: string) {
-        return this.departments.filter(
-            (d: any) => d?.branch?.id === branchId
-        );
-    }
-
     passwordMismatch() {
         const p = this.form.get('password')?.value;
         const c = this.form.get('confirmPassword')?.value;
@@ -256,12 +262,6 @@ export class UserFormComponent implements OnInit {
 
         return usernameChanged || passwordChanged;
 
-    }
-
-    private clearArray(arr: FormArray) {
-        while (arr.length) {
-            arr.removeAt(0);
-        }
     }
 
     submit() {
@@ -320,6 +320,13 @@ export class UserFormComponent implements OnInit {
 
         if (selfEdit) {
             delete raw.role;
+        }
+
+        if (
+            raw.branchIds?.length &&
+            !raw.primaryBranchId
+        ) {
+            return;
         }
 
         this.save.emit(raw);

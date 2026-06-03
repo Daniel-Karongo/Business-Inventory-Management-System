@@ -27,10 +27,6 @@ import {
 } from '../../../../../../shared/components/searchable-assign/searchable-assign.component';
 
 import {
-    DepartmentDTO
-} from '../../../departments/models/department.model';
-
-import {
     MinimalUserDTO
 } from '../../../users/models/user.model';
 
@@ -69,20 +65,10 @@ export class BranchFormComponent implements OnInit {
     users: MinimalUserDTO[] = [];
 
     @Input()
-    departments: DepartmentDTO[] = [];
-
-    @Input()
     userIds: string[] = [];
-
-    @Input()
-    departmentIds: string[] = [];
 
     @Output()
     userIdsChange =
-        new EventEmitter<string[]>();
-
-    @Output()
-    departmentIdsChange =
         new EventEmitter<string[]>();
 
     readonly userDisplay =
@@ -90,12 +76,6 @@ export class BranchFormComponent implements OnInit {
 
     readonly userId =
         (u: MinimalUserDTO) => u.id;
-
-    readonly deptDisplay =
-        (d: DepartmentDTO) => d.name;
-
-    readonly deptId =
-        (d: DepartmentDTO) => d.id!;
 
     @Output()
     submitted =

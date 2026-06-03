@@ -156,6 +156,15 @@ public class UserService {
 
         boolean assignedDefaults = applyDefaultBranchIfMissing(dto, user);
 
+        if (dto.getBranchIds() != null
+                && !dto.getBranchIds().isEmpty()
+                && dto.getPrimaryBranchId() == null) {
+
+            throw new InvalidUserDataException(
+                    "Primary branch is required"
+            );
+        }
+
         if (!assignedDefaults) {
             // Only apply admin assignments when defaults were NOT used
             applyBranchAssignments(dto, user, authentication);
@@ -369,6 +378,15 @@ public class UserService {
                             .performedByUsername(updaterUsername)
                             .timestamp(LocalDateTime.now())
                             .build()
+            );
+        }
+
+        if (updatedData.getBranchIds() != null
+                && !updatedData.getBranchIds().isEmpty()
+                && updatedData.getPrimaryBranchId() == null) {
+
+            throw new InvalidUserDataException(
+                    "Primary branch is required"
             );
         }
 
@@ -1250,6 +1268,12 @@ public class UserService {
             return;
         }
 
+        UUID primaryBranchId = dto.getPrimaryBranchId();
+
+        userBranchRepository
+                .findByUserId(tenantId(), user.getId())
+                .forEach(userBranchRepository::delete);
+
         for (UUID branchId : dto.getBranchIds()) {
 
             Branch branch =
@@ -1258,21 +1282,27 @@ public class UserService {
                                     tenantId(),
                                     branchId
                             )
-                            .orElseThrow(() -> new EntityNotFoundException("Branch not found"));
+                            .orElseThrow(() ->
+                                    new EntityNotFoundException(
+                                            "Branch not found"
+                                    ));
 
-            if (!userBranchRepository
-                    .existsByUser_IdAndBranch_Id(user.getId(), branchId)) {
-
-                userBranchRepository.save(
-                        UserBranch.builder()
-                                .id(new UserBranchId(user.getId(), branchId))
-                                .user(user)
-                                .tenantId(tenantId())
-                                .branch(branch)
-                                .primaryBranch(false)
-                                .build()
-                );
-            }
+            userBranchRepository.save(
+                    UserBranch.builder()
+                            .id(
+                                    new UserBranchId(
+                                            user.getId(),
+                                            branchId
+                                    )
+                            )
+                            .user(user)
+                            .branch(branch)
+                            .tenantId(tenantId())
+                            .primaryBranch(
+                                    branchId.equals(primaryBranchId)
+                            )
+                            .build()
+            );
         }
     }
 
@@ -1436,10 +1466,11 @@ public class UserService {
                 Branch branch = userBranch.getBranch();
 
                 hierarchy.add(
-                    BranchHierarchyDTO.builder()
-                        .branchId(branch.getId())
-                        .branchName(branch.getName())
-                        .build()
+                        BranchHierarchyDTO.builder()
+                                .branchId(branch.getId())
+                                .branchName(branch.getName())
+                                .primaryBranch(userBranch.isPrimaryBranch())
+                                .build()
                 );
             }
         }

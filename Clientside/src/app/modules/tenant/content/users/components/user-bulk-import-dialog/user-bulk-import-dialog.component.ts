@@ -5,7 +5,6 @@ import { MatDialogRef } from '@angular/material/dialog';
 
 import { UserService } from '../../services/user/user.service';
 import { BranchService } from '../../../branches/services/branch.service';
-import { DepartmentService } from '../../../departments/services/department.service';
 
 import { BulkImportFormComponent } from
   '../../../../../../shared/bulk-import/base/bulk-import-form.component';
@@ -47,13 +46,11 @@ export class UserBulkImportDialogComponent
   config = USER_BULK_IMPORT_CONFIG;
 
   branches: any[] = [];
-  departments: any[] = [];
   hideOrgFields = false;
 
   constructor(
     private userService: UserService,
     private branchService: BranchService,
-    private departmentService: DepartmentService,
     private submitEngine: BulkImportSubmitEngineService,
     private dialogRef: MatDialogRef<UserBulkImportDialogComponent>
   ) {
@@ -68,24 +65,19 @@ export class UserBulkImportDialogComponent
   private loadOrgMeta() {
     Promise.all([
       this.branchService.getAllLegacy().toPromise(),
-      this.departmentService.getAll(false).toPromise()
-    ]).then(([b, d]) => {
+    ]).then(([b]) => {
       this.branches = b || [];
-      this.departments = d || [];
 
       this.hideOrgFields =
-        this.branches.length === 1 &&
-        this.departments.length === 1;
+        this.branches.length === 1;
 
       // AUTO-DEFAULT SINGLE VALUES
       if (this.hideOrgFields) {
         const branchCode = this.branches[0]?.branchCode ?? null;
-        const departmentName = this.departments[0]?.name ?? null;
 
         this.rows.controls.forEach(row => {
           row.patchValue({
             branchCode,
-            departmentName
           });
         });
       }
@@ -99,8 +91,7 @@ export class UserBulkImportDialogComponent
       const row = this.rows.at(this.rows.length - 1);
 
       row.patchValue({
-        branchCode: this.branches[0]?.branchCode ?? null,
-        departmentName: this.departments[0]?.name ?? null
+        branchCode: this.branches[0]?.branchCode ?? null
       });
     }
   }

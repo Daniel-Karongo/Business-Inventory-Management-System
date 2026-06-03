@@ -33,7 +33,6 @@ import { User } from '../../models/user.model';
 import { UserService } from '../../services/user/user.service';
 
 import { BranchService } from '../../../branches/services/branch.service';
-import { DepartmentService } from '../../../departments/services/department.service';
 import { RoleService } from '../../services/role/role.service';
 
 import { EntityActionConfig, EntityActionService } from '../../../../../../shared/services/entity-action.service';
@@ -90,7 +89,6 @@ export class UserListComponent implements OnInit {
   private search$ = new BehaviorSubject<string>('');
   private roleFilter$ = new BehaviorSubject<string | null>(null);
   private branchFilter$ = new BehaviorSubject<string | null>(null);
-  private departmentFilter$ = new BehaviorSubject<string | null>(null);
 
   private statusFilter$ = new BehaviorSubject<'all' | 'active' | 'deleted'>('all');
   private showDeleted$ = new BehaviorSubject<boolean>(false);
@@ -122,7 +120,7 @@ export class UserListComponent implements OnInit {
     'username',
     'emails',
     'phones',
-    'branches_depts',
+    'branches',
     'role',
     'status',
     'created',
@@ -130,7 +128,6 @@ export class UserListComponent implements OnInit {
   ];
 
   branches: any[] = [];
-  departments: any[] = [];
   roles: any[] = [];
 
   viewMode: 'table' | 'grid' = 'table';
@@ -174,7 +171,6 @@ export class UserListComponent implements OnInit {
   constructor(
     private userService: UserService,
     private branchService: BranchService,
-    private departmentService: DepartmentService,
     private roleService: RoleService,
     private entityAction: EntityActionService,
     private auth: AuthService,
@@ -211,7 +207,6 @@ export class UserListComponent implements OnInit {
       this.search$.pipe(debounceTime(800), distinctUntilChanged()),
       this.roleFilter$,
       this.branchFilter$,
-      this.departmentFilter$,
       this.statusFilter$,
       this.showDeleted$,
       this.sortField$,
@@ -219,14 +214,13 @@ export class UserListComponent implements OnInit {
       this.refresh$
     ]).pipe(
       tap(() => this.loading = true),
-      switchMap(([page, size, search, role, branch, dept, status, showDeleted, sortField, sortDir]) => {
+      switchMap(([page, size, search, role, branch, status, showDeleted, sortField, sortDir]) => {
 
         const filter: any = {};
 
         if (search) filter.q = search;
         if (role) filter.role = role;
         if (branch) filter.branch = branch;
-        if (dept) filter.department = dept;
 
         // ✅ Correct logic
         if (showDeleted) {
@@ -263,11 +257,6 @@ export class UserListComponent implements OnInit {
     );
 
     data$.subscribe();
-  }
-
-  getDepartmentCount(u: UserVM): number {
-    return (u.branchHierarchy || [])
-      .reduce((sum, b) => sum + (b.departments?.length || 0), 0);
   }
 
   /* =========================
@@ -331,12 +320,6 @@ export class UserListComponent implements OnInit {
     this.resetAccumulation();
     this.page$.next(0);
     this.branchFilter$.next(v);
-  }
-
-  onDepartment(v: string | null) {
-    this.resetAccumulation();
-    this.page$.next(0);
-    this.departmentFilter$.next(v);
   }
 
   onStatus(v: 'all' | 'active' | 'deleted') {
@@ -414,6 +397,26 @@ export class UserListComponent implements OnInit {
     return states.has(true) ? 'deleted' : 'active';
   }
 
+  getBranchSummary(user: User): string {
+
+    const branches =
+      user.branchHierarchy ?? [];
+
+    if (!branches.length) {
+      return 'No Branch';
+    }
+
+    const primary =
+      branches.find(b => b.primaryBranch)
+      ?? branches[0];
+
+    const extras =
+      branches.length - 1;
+
+    return extras > 0
+      ? `${primary.branchName} (+${extras})`
+      : primary.branchName;
+  }
   /* =========================
      ACTIONS
   ========================= */
@@ -519,7 +522,6 @@ export class UserListComponent implements OnInit {
 
   loadFilters() {
     this.branchService.getAllLegacy().subscribe(b => this.branches = b || []);
-    this.departmentService.getAll().subscribe(d => this.departments = d || []);
     this.roleService.list().subscribe(r => this.roles = r || []);
   }
 

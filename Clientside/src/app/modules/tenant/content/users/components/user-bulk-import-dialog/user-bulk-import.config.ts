@@ -10,7 +10,6 @@ export interface UserBulkRow {
   emails?: string;
   phones?: string;
   branchCode?: string;
-  departmentName?: string;
   position?: string;
 }
 
@@ -36,7 +35,6 @@ export const USER_BULK_IMPORT_CONFIG: BulkImportConfig<
     'emails',
     'phones',
     'branchCode',
-    'departmentName',
     'position'
   ],
 
@@ -47,7 +45,6 @@ export const USER_BULK_IMPORT_CONFIG: BulkImportConfig<
     { name: 'emails' },
     { name: 'phones' },
     { name: 'branchCode' },
-    { name: 'departmentName' },
     { name: 'position', defaultValue: 'member' }
   ],
 
@@ -57,7 +54,6 @@ export const USER_BULK_IMPORT_CONFIG: BulkImportConfig<
     { key: 'emails', label: 'Emails' },
     { key: 'phones', label: 'Phones' },
     { key: 'branchCode', label: 'Branch' },
-    { key: 'departmentName', label: 'Department' }
   ],
 
   excelSheetName: 'Users',
@@ -68,7 +64,6 @@ export const USER_BULK_IMPORT_CONFIG: BulkImportConfig<
     { header: 'emails', key: 'emails', width: 32 },
     { header: 'phones', key: 'phones', width: 22, format: 'text' },
     { header: 'branchCode', key: 'branchCode', width: 14 },
-    { header: 'departmentName', key: 'departmentName', width: 18 },
     { header: 'position', key: 'position', width: 12 }
   ],
 
@@ -79,7 +74,6 @@ export const USER_BULK_IMPORT_CONFIG: BulkImportConfig<
     emails: 'jdoe@company.com',
     phones: '0712345678',
     branchCode: 'MAIN',
-    departmentName: 'GENERAL',
     position: 'member'
   },
 
@@ -104,7 +98,6 @@ export const USER_BULK_IMPORT_CONFIG: BulkImportConfig<
       emailAddresses: row.emails ? [row.emails] : [],
       phoneNumbers: row.phones ? [row.phones] : [],
       branchCode: row.branchCode || null,
-      departmentName: row.departmentName || null,
       position: row.position
     };
   },

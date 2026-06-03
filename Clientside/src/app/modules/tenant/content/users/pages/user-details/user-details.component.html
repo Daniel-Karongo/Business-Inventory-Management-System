@@ -49,16 +49,28 @@
           </div>
 
           <!-- Stats -->
-          <div class="identity-stats">
-            <div class="stat">
-              <span>Branches</span>
-              <strong>{{ user.branchHierarchy?.length || 0 }}</strong>
+          <div class="identity-stats" *ngIf="user.branchHierarchy?.length">
+
+            <div class="stat primary-branch-stat">
+
+              <span>Primary Branch</span>
+
+              <strong>
+                {{ primaryBranch()?.branchName }}
+              </strong>
+
             </div>
 
-            <div class="stat">
-              <span>Departments</span>
-              <strong>{{ departmentCount() }}</strong>
+            <div class="stat" *ngIf="additionalBranchesCount()">
+
+              <span>Additional</span>
+
+              <strong>
+                +{{ additionalBranchesCount() }}
+              </strong>
+
             </div>
+
           </div>
 
         </div>
@@ -153,24 +165,24 @@
 
             <!-- SECTION: ACCESS -->
             <div class="section">
-              <h3>Branch & Department Access</h3>
+              <h3>Branch Access</h3>
 
               <div class="assignment-grid">
 
                 <div class="assignment-card" *ngFor="let b of user.branchHierarchy">
 
                   <div class="branch-header">
-                    <h4>{{ b.branchName }}</h4>
-                    <span class="branch-count">
-                      {{ b.departments.length }} dept
-                    </span>
-                  </div>
 
-                  <div class="dept-chip-row">
-                    <span class="dept-chip" *ngFor="let d of b.departments">
-                      {{ d.departmentName }}
-                      <small>{{ d.position }}</small>
+                    <h4>
+                      {{ b.branchName }}
+                    </h4>
+
+                    <span *ngIf="b.primaryBranch" class="primary-branch-badge">
+
+                      Primary
+
                     </span>
+
                   </div>
 
                 </div>

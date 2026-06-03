@@ -32,16 +32,8 @@ import {
 } from '../../models/branch.model';
 
 import {
-  DepartmentDTO
-} from '../../../departments/models/department.model';
-
-import {
   MinimalUserDTO
 } from '../../../users/models/user.model';
-
-import {
-  DepartmentService
-} from '../../../departments/services/department.service';
 
 import {
   UserService
@@ -72,17 +64,12 @@ export class BranchEditComponent implements OnInit {
 
   users: MinimalUserDTO[] = [];
 
-  departments: DepartmentDTO[] = [];
-
   userIds: string[] = [];
-
-  departmentIds: string[] = [];
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private branchService: BranchService,
-    private departmentService: DepartmentService,
     private userService: UserService,
     private snackbar: MatSnackBar
   ) { }
@@ -98,9 +85,6 @@ export class BranchEditComponent implements OnInit {
 
       users:
         this.userService.list(0, 500),
-
-      departments:
-        this.departmentService.getAll(false)
     })
       .subscribe({
         next: result => {
@@ -111,14 +95,8 @@ export class BranchEditComponent implements OnInit {
           this.users =
             result.users.data;
 
-          this.departments =
-            result.departments;
-
           this.userIds =
             result.branch.users?.map(u => u.id) ?? [];
-
-          this.departmentIds =
-            result.branch.departments?.map(d => d.id!) ?? [];
 
           this.loading = false;
         },
@@ -138,8 +116,7 @@ export class BranchEditComponent implements OnInit {
         this.id,
         {
           ...dto,
-          userIds: this.userIds,
-          departmentIds: this.departmentIds
+          userIds: this.userIds
         }
       )
       .pipe(

@@ -114,17 +114,6 @@ export const TENANT_ROUTES: Routes = [
       },
 
       /* ============================================================
-         DEPARTMENTS
-      ============================================================ */
-
-      {
-        path: 'departments',
-        loadChildren: () =>
-          import('./content/departments/departments.routes')
-            .then(m => m.DEPARTMENT_ROUTES)
-      },
-
-      /* ============================================================
          REPORTS
       ============================================================ */
 

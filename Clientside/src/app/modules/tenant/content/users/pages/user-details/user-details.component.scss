@@ -32,8 +32,10 @@ HEADER
 }
 
 .page-header h2 {
-  margin: 0;
-  font-size: clamp(1.15rem, 2vw, 1.6rem);
+    margin: 0 0 6px;
+    font-size: clamp(1.08rem, 2vw, 1.3rem);
+    font-weight: 650;
+    line-height: 1.25;
 }
 
 .breadcrumb {
@@ -375,26 +377,6 @@ PROFILE
   font-size: .95rem;
 }
 
-.dept-chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.dept-chip {
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(37, 99, 235, .08);
-  border: 1px solid rgba(37, 99, 235, .18);
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.dept-chip small {
-  opacity: .7;
-}
-
 .info-card {
   background-color: var(--surface-bg);
   padding: 20px;
@@ -414,32 +396,28 @@ PROFILE
   color: var(--text-secondary);
 }
 
+.primary-branch-badge {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 4px 10px;
+
+  border-radius: 999px;
+
+  font-size: .72rem;
+  font-weight: 600;
+
+  color: #166534;
+  background: #dcfce7;
+
+  border: 1px solid #bbf7d0;
+}
+
 .branch-block {
   padding: 14px;
   border-radius: 12px;
   background: var(--surface-hover);
   border: 1px solid var(--border);
-}
-
-.department-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.department-list li {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 6px 0;
-  flex-wrap: wrap;
-}
-
-.dept-role {
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: .7rem;
-  background: rgba(26, 115, 232, .12);
 }
 
 /* =========================
@@ -559,10 +537,6 @@ RESPONSIVE
 
   .username-row {
     justify-content: center;
-  }
-
-  .department-list li {
-    flex-direction: column;
   }
 
 }

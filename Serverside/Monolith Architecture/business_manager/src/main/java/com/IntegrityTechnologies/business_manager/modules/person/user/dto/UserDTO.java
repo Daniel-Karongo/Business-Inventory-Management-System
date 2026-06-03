@@ -37,8 +37,12 @@ public class UserDTO {
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private List<BranchHierarchyDTO> branchHierarchy;
+
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private List<UUID> branchIds;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private UUID primaryBranchId;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private LocalDateTime createdAt;

@@ -93,15 +93,6 @@
     margin-bottom: 8px;
 }
 
-.assignment-row {
-    display: grid;
-    grid-template-columns:
-        minmax(180px, 1fr) minmax(180px, 1fr) minmax(160px, .8fr) auto;
-    gap: 12px;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
 mat-form-field {
     width: 100%;
 }
@@ -167,18 +158,6 @@ mat-form-field {
 
 .actions button {
     min-height: 44px;
-}
-
-@media(max-width:1100px) {
-    .assignment-row {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-@media(max-width:900px) {
-    .assignment-row {
-        grid-template-columns: 1fr;
-    }
 }
 
 @media(max-width:640px) {

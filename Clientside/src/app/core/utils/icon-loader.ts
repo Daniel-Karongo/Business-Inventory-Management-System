@@ -25,7 +25,6 @@ export class IconLoader {
       'accounts',
       'users',
       'branches',
-      'departments',
       'access-control',
       'budget',
       'tax',

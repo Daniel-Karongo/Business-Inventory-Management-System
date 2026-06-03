@@ -76,20 +76,6 @@
 
         </mat-expansion-panel>
 
-        <!-- DEPARTMENTS -->
-
-        <mat-expansion-panel class="full-width">
-
-            <mat-expansion-panel-header>
-                Assign Departments
-            </mat-expansion-panel-header>
-
-            <app-searchable-assign label="Departments" [items]="departments" [display]="deptDisplay" [id]="deptId"
-                [selectedIds]="departmentIds" (selectedIdsChange)="departmentIdsChange.emit($event)">
-            </app-searchable-assign>
-
-        </mat-expansion-panel>
-
     </div>
 
     <div class="form-actions">

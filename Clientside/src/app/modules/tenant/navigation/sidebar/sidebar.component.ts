@@ -118,7 +118,6 @@ export class SidebarComponent implements OnInit {
 
       { title: 'Users', route: '/app/users', icon: 'users', feature: 'users' },
       { title: 'Branches', route: '/app/branches', icon: 'branches', feature: 'branches' },
-      { title: 'Departments', route: '/app/departments', icon: 'departments', feature: 'departments' },
 
       {
         title: 'Finance',

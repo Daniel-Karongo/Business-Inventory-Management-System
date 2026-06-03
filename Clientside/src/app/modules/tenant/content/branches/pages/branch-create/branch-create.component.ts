@@ -28,14 +28,8 @@ import {
 } from '../../models/branch.model';
 
 import {
-  DepartmentDTO
-} from '../../../departments/models/department.model';
-
-import {
   MinimalUserDTO
 } from '../../../users/models/user.model';
-
-import { DepartmentService } from '../../../departments/services/department.service';
 
 import { UserService } from '../../../users/services/user/user.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -58,16 +52,11 @@ export class BranchCreateComponent implements OnInit {
 
   users: MinimalUserDTO[] = [];
 
-  departments: DepartmentDTO[] = [];
-
   userIds: string[] = [];
-
-  departmentIds: string[] = [];
 
   constructor(
     private router: Router,
     private branchService: BranchService,
-    private departmentService: DepartmentService,
     private userService: UserService,
     private snackbar: MatSnackBar
   ) { }
@@ -76,19 +65,13 @@ export class BranchCreateComponent implements OnInit {
 
     forkJoin({
       users:
-        this.userService.list(0, 500),
-
-      departments:
-        this.departmentService.getAll(false)
+        this.userService.list(0, 500)
     })
       .subscribe({
         next: result => {
 
           this.users =
             result.users.data;
-
-          this.departments =
-            result.departments;
         }
       });
   }
@@ -100,8 +83,7 @@ export class BranchCreateComponent implements OnInit {
     this.branchService
       .create({
         ...dto,
-        userIds: this.userIds,
-        departmentIds: this.departmentIds
+        userIds: this.userIds
       })
       .pipe(
         finalize(() => {

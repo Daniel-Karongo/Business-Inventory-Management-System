@@ -11,7 +11,6 @@ export type Feature =
   | 'customers'
   | 'users'
   | 'branches'
-  | 'departments'
   | 'accounts'
   | 'ap'
   | 'finance'
@@ -38,7 +37,6 @@ export const ROLE_PERMISSIONS: Record<string, Feature[]> = {
     'sales',
     'suppliers',
     'users',
-    'departments'
   ],
 
   MANAGER: [
@@ -54,7 +52,6 @@ export const ROLE_PERMISSIONS: Record<string, Feature[]> = {
     'customers',
     'users',
     'branches',
-    'departments',
     'accounts',
     'ap',
     'finance'
@@ -73,7 +70,6 @@ export const ROLE_PERMISSIONS: Record<string, Feature[]> = {
     'customers',
     'users',
     'branches',
-    'departments',
     'finance'
   ],
 

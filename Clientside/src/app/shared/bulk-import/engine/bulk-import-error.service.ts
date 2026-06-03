@@ -150,16 +150,6 @@ export class BulkImportErrorService {
 
         if (
             message.includes(
-                'Unknown department'
-            )
-        ) {
-            return this.toast(
-                'One or more departments do not exist.'
-            );
-        }
-
-        if (
-            message.includes(
                 'Invalid role'
             )
         ) {
