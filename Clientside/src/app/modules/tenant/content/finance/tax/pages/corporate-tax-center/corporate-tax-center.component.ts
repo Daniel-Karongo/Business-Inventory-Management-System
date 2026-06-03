@@ -436,15 +436,14 @@ export class CorporateTaxCenterComponent
           );
         },
 
-        error: () => {
-
-          this.accruing = false;
+        error: (err) => {
 
           this.snackbar.open(
-            'Failed to accrue corporate tax',
+            err?.error?.message ??
+            'Failed to accrue corporate VAT',
             'Close',
             {
-              duration: 3000
+              duration: 5000
             }
           );
         }
@@ -489,13 +488,14 @@ export class CorporateTaxCenterComponent
           );
         },
 
-        error: () => {
+        error: (err) => {
 
           this.snackbar.open(
-            'Failed to record payment',
+            err?.error?.message ??
+            'Failed to file VAT',
             'Close',
             {
-              duration: 3000
+              duration: 5000
             }
           );
         }

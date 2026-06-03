@@ -8,9 +8,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.BranchAccountingSettingsRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.seed.AccountingPeriodBootstrapService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.seed.BranchChartOfAccountsService;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.TaxSystemState;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.TaxSystemStateRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.config.TaxProperties;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.model.TaxSystemState;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.repository.TaxSystemStateRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.mapper.BranchMapper;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;

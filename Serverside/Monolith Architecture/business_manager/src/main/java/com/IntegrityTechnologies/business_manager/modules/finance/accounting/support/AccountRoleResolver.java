@@ -25,15 +25,14 @@ public class AccountRoleResolver {
     }
 
     public Set<String> resolveCashAccounts(UUID tenantId, UUID branchId) {
-
         return getTenantAccounts(tenantId)
                 .stream()
                 .filter(a ->
                         branchId.equals(a.getBranchId()) &&
                                 (
-                                        a.getRole() == "CASH" ||
-                                                a.getRole() == "BANK" ||
-                                                a.getRole() == "MPESA"
+                                        "CASH".equals(a.getRole()) ||
+                                                "BANK".equals(a.getRole()) ||
+                                                "MPESA".equals(a.getRole())
                                 )
                 )
                 .map(Account::getCode)
@@ -41,11 +40,10 @@ public class AccountRoleResolver {
     }
 
     public String resolveReceivableAccount(UUID tenantId, UUID branchId) {
-
         return getTenantAccounts(tenantId)
                 .stream()
                 .filter(a ->
-                        a.getRole() == "ACCOUNTS_RECEIVABLE" &&
+                        "ACCOUNTS_RECEIVABLE".equals(a.getRole()) &&
                                 branchId.equals(a.getBranchId())
                 )
                 .findFirst()
@@ -54,11 +52,10 @@ public class AccountRoleResolver {
     }
 
     public String resolvePayableAccount(UUID tenantId, UUID branchId) {
-
         return getTenantAccounts(tenantId)
                 .stream()
                 .filter(a ->
-                        a.getRole() == "ACCOUNTS_PAYABLE" &&
+                        "ACCOUNTS_PAYABLE".equals(a.getRole()) &&
                                 branchId.equals(a.getBranchId())
                 )
                 .findFirst()
@@ -67,33 +64,34 @@ public class AccountRoleResolver {
     }
 
     public Set<String> resolveReceivableAccountsMultiBranch(UUID tenantId) {
-
         return getTenantAccounts(tenantId)
                 .stream()
-                .filter(a -> a.getRole() == "ACCOUNTS_RECEIVABLE")
+                .filter(a ->
+                        "ACCOUNTS_RECEIVABLE".equals(a.getRole())
+                )
                 .map(Account::getCode)
                 .collect(Collectors.toSet());
     }
 
     public Set<String> resolvePayableAccountsMultiBranch(UUID tenantId) {
-
         return getTenantAccounts(tenantId)
                 .stream()
-                .filter(a -> a.getRole() == "ACCOUNTS_PAYABLE")
+                .filter(a ->
+                        "ACCOUNTS_PAYABLE".equals(a.getRole())
+                )
                 .map(Account::getCode)
                 .collect(Collectors.toSet());
     }
 
     public Set<String> resolveCashAccountsMultiBranch(UUID tenantId) {
-
         return getTenantAccounts(tenantId)
                 .stream()
                 .filter(a ->
                         a.getType() == AccountType.ASSET &&
                                 (
-                                        a.getRole() == "CASH" ||
-                                                a.getRole() == "BANK" ||
-                                                a.getRole() == "MPESA"
+                                        "CASH".equals(a.getRole()) ||
+                                                "BANK".equals(a.getRole()) ||
+                                                "MPESA".equals(a.getRole())
                                 )
                 )
                 .map(Account::getCode)

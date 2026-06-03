@@ -5,8 +5,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.gov
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.ReconciliationStateRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.security.JournalIntegrityAudit;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.security.JournalIntegrityAuditRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.model.BusinessTaxMode;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.service.TaxSystemStateService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -80,7 +80,7 @@ public class CloseChecklistService {
         var taxState = taxStateService.getOrCreate(branchId);
 
         if (taxState.getTaxMode() !=
-                com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.enums.BusinessTaxMode.CORPORATE) {
+                BusinessTaxMode.CORPORATE) {
             return true;
         }
 

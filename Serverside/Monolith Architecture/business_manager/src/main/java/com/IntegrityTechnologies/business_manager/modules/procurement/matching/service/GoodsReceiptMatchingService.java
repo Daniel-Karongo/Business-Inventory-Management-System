@@ -124,25 +124,6 @@ public class GoodsReceiptMatchingService {
             receipts.add(receipt);
         }
 
-        System.out.println(
-                "GRNI receiptInventoryTotal: "
-                        + receiptInventoryTotal
-        );
-
-        System.out.println(
-                "Invoice subtotal: "
-                        + invoice.getSubtotal()
-        );
-
-        System.out.println(
-                "Variance: "
-                        + receiptInventoryTotal
-                        .subtract(
-                                invoice.getSubtotal()
-                        )
-                        .abs()
-        );
-
         BigDecimal variance =
                 receiptInventoryTotal
                         .setScale(2, HALF_UP)

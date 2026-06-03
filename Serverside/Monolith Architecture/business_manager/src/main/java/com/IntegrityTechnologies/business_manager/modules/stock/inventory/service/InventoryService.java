@@ -11,9 +11,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.ser
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto.BatchSelectionDto;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.base.model.SaleLineBatchSelection;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.dto.AllocationResult;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.dto.VatBreakdown;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.VatCalculationService;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.config.TaxProperties;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.dto.VatBreakdown;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.service.VatCalculationService;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.model.Supplier;

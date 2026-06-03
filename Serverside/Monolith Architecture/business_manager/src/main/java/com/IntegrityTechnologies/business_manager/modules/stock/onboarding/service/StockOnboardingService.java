@@ -1,9 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.onboarding.service;
 
 import com.IntegrityTechnologies.business_manager.config.caffeine.CacheInvalidationService;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.dto.VatBreakdown;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.VatCalculationService;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.config.TaxProperties;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.dto.VatBreakdown;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.service.VatCalculationService;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.model.Supplier;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.service.SupplierService;

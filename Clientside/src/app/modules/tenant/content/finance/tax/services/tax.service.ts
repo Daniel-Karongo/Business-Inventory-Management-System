@@ -114,9 +114,13 @@ export class TaxService {
       vatEnabled: boolean;
       vatRate: number;
       corporateTaxRate: number;
+
+      vatCreditTreatment:
+      | 'CARRY_FORWARD'
+      | 'REFUND'
+      | 'BOTH';
     }
   ) {
-
     return this.http.post(
       `${this.systemBase}/configure`,
       {},
@@ -132,7 +136,10 @@ export class TaxService {
             payload.vatRate,
 
           corporateTaxRate:
-            payload.corporateTaxRate
+            payload.corporateTaxRate,
+
+          vatCreditTreatment:
+            payload.vatCreditTreatment
         }
       }
     );
@@ -289,6 +296,30 @@ export class TaxService {
             this.resolveBranchId(
               branchId
             ),
+          accountId
+        }
+      }
+    );
+  }
+
+  requestVatRefund(
+    filingId: string
+  ) {
+    return this.http.post(
+      `${this.vatBase}/refund/request/${filingId}`,
+      {}
+    );
+  }
+
+  completeVatRefund(
+    filingId: string,
+    accountId: string
+  ) {
+    return this.http.post(
+      `${this.vatBase}/refund/complete/${filingId}`,
+      {},
+      {
+        params: {
           accountId
         }
       }

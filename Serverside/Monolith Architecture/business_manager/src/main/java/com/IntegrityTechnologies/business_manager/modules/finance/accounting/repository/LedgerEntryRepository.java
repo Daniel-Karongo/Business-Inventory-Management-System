@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -26,22 +27,44 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, UUID> 
             Pageable pageable
     );
 
-    List<LedgerEntry> findByTenantIdAndPostedAtBetween(
+    @Query("""
+                SELECT COALESCE(SUM(
+                    CASE
+                        WHEN a.type IN (:debitNormalTypes)
+                             AND l.direction = :debitDirection
+                            THEN l.amount
+                        WHEN a.type IN (:debitNormalTypes)
+                             AND l.direction = :creditDirection
+                            THEN -l.amount
+                        WHEN a.type IN (:creditNormalTypes)
+                             AND l.direction = :creditDirection
+                            THEN l.amount
+                        WHEN a.type IN (:creditNormalTypes)
+                             AND l.direction = :debitDirection
+                            THEN -l.amount
+                        ELSE 0
+                    END
+                ), 0)
+                FROM LedgerEntry l
+                JOIN l.account a
+                JOIN l.journalEntry je
+                WHERE je.tenantId = :tenantId
+                  AND a.id = :accountId
+                  AND je.accountingDate BETWEEN :startDate AND :endDate
+                  AND je.posted = true
+                  AND je.reversed = false
+                  AND (:branchId IS NULL OR je.branchId = :branchId)
+            """)
+    BigDecimal netMovementForAccountByAccountingDate(
             UUID tenantId,
-            LocalDateTime from,
-            LocalDateTime to
-    );
-
-    List<LedgerEntry> findByTenantIdAndAccount_IdOrderByPostedAtAsc(
-            UUID tenantId,
-            UUID accountId
-    );
-
-    List<LedgerEntry> findByTenantIdAndPostedAtBetweenAndJournalEntry_Branch_Id(
-            UUID tenantId,
-            LocalDateTime from,
-            LocalDateTime to,
-            UUID branchId
+            UUID accountId,
+            LocalDate startDate,
+            LocalDate endDate,
+            UUID branchId,
+            Set<AccountType> debitNormalTypes,
+            Set<AccountType> creditNormalTypes,
+            EntryDirection debitDirection,
+            EntryDirection creditDirection
     );
 
     /*

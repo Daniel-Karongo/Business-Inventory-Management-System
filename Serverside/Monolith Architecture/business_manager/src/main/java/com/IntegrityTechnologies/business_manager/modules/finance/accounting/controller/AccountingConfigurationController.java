@@ -4,7 +4,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.AccountingLockService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.BranchAccountingSettingsService;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.service.TaxSystemStateService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;

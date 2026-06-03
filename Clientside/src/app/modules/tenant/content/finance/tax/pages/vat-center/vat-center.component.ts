@@ -118,6 +118,9 @@ export class VatCenterComponent
   selectedPeriodId = '';
   eligibleVatPeriods: AccountingPeriod[] = [];
 
+  requestingRefund = false;
+  completingRefund = false;
+
   selectedBranchId = '';
 
   accountId = '';
@@ -472,6 +475,98 @@ export class VatCenterComponent
       });
   }
 
+  requestRefund(
+    filingId: string
+  ) {
+    this.requestingRefund = true;
+
+    this.taxService
+      .requestVatRefund(
+        filingId
+      )
+      .subscribe({
+        next: () => {
+          this.requestingRefund = false;
+
+          this.snackbar.open(
+            'VAT refund requested',
+            'Close',
+            {
+              duration: 3000
+            }
+          );
+
+          this.loadWorkspace(
+            this.selectedBranchId
+          );
+        },
+        error: err => {
+          this.requestingRefund = false;
+
+          this.snackbar.open(
+            err?.error?.message ??
+            'Failed to request refund',
+            'Close',
+            {
+              duration: 5000
+            }
+          );
+        }
+      });
+  }
+
+  completeRefund(
+    filingId: string
+  ) {
+    if (!this.accountId) {
+      this.snackbar.open(
+        'Receiving account required',
+        'Close',
+        {
+          duration: 3000
+        }
+      );
+      return;
+    }
+
+    this.completingRefund = true;
+
+    this.taxService
+      .completeVatRefund(
+        filingId,
+        this.accountId
+      )
+      .subscribe({
+        next: () => {
+          this.completingRefund = false;
+
+          this.snackbar.open(
+            'VAT refund recorded',
+            'Close',
+            {
+              duration: 3000
+            }
+          );
+
+          this.loadWorkspace(
+            this.selectedBranchId
+          );
+        },
+        error: err => {
+          this.completingRefund = false;
+
+          this.snackbar.open(
+            err?.error?.message ??
+            'Failed to complete refund',
+            'Close',
+            {
+              duration: 5000
+            }
+          );
+        }
+      });
+  }
+
   payVat(
     filingId: string
   ) {
@@ -588,5 +683,73 @@ export class VatCenterComponent
     return (
       this.eligibleVatPeriods.length > 0
     );
+  }
+
+  isPayable(
+    filing: VatFiling
+  ) {
+    return (
+      filing.status ===
+      'VAT_PAYABLE'
+    );
+  }
+
+  isCredit(
+    filing: VatFiling
+  ) {
+    return (
+      filing.status ===
+      'VAT_CREDIT_AVAILABLE' ||
+
+      filing.status ===
+      'VAT_CREDIT_CARRIED_FORWARD'
+    );
+  }
+
+  isRefundPending(
+    filing: VatFiling
+  ) {
+    return (
+      filing.status ===
+      'VAT_REFUND_PENDING'
+    );
+  }
+
+  isRefunded(
+    filing: VatFiling
+  ) {
+    return (
+      filing.status ===
+      'VAT_REFUNDED'
+    );
+  }
+
+  statusLabel(
+    filing: VatFiling
+  ): string {
+
+    switch (filing.status) {
+
+      case 'VAT_PAYABLE':
+        return 'VAT Payable';
+
+      case 'PAID':
+        return 'Paid';
+
+      case 'VAT_CREDIT_AVAILABLE':
+        return 'Credit Available';
+
+      case 'VAT_CREDIT_CARRIED_FORWARD':
+        return 'Credit Carried Forward';
+
+      case 'VAT_REFUND_PENDING':
+        return 'Refund Pending';
+
+      case 'VAT_REFUNDED':
+        return 'Refunded';
+
+      default:
+        return filing.status;
+    }
   }
 }

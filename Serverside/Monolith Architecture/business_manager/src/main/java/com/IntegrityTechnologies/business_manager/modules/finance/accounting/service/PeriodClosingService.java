@@ -8,9 +8,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.gov
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountingPeriodRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.seed.AccountingPeriodBootstrapService;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.domain.enums.BusinessTaxMode;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.CorporateTaxService;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.model.BusinessTaxMode;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.corporate_tax.service.CorporateTaxService;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.service.TaxSystemStateService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;

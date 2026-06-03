@@ -4,7 +4,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableContext;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.domain.SellableSnapshot;
 import com.IntegrityTechnologies.business_manager.modules.finance.sales.sellable.dto.AllocationResult;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.TaxSystemStateService;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.service.TaxSystemStateService;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.engine.StockEngine;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.service.ProductVariantPackagingService;

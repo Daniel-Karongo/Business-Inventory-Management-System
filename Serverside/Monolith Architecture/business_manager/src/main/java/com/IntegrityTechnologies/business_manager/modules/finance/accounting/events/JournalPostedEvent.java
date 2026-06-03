@@ -14,5 +14,7 @@ public record JournalPostedEvent(
         UUID periodId,
         LocalDate accountingDate,
         LocalDateTime postedAt,
+
+        String sourceModule,
         List<LedgerEntryDTO> entries
 ) {}

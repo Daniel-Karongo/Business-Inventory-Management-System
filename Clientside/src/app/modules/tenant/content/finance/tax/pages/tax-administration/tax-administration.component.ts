@@ -99,6 +99,12 @@ export class TaxAdministrationComponent
     vatRate = 16;
     corporateTaxRate = 30;
 
+    vatCreditTreatment:
+        'CARRY_FORWARD'
+        | 'REFUND'
+        | 'BOTH'
+        = 'CARRY_FORWARD';
+
     constructor(
         private readonly taxService: TaxService,
         private readonly branchService: BranchService,
@@ -185,6 +191,10 @@ export class TaxAdministrationComponent
                     this.corporateTaxRate =
                         status?.corporateTaxRate ?? 30;
 
+                    this.vatCreditTreatment =
+                        status?.vatCreditTreatment
+                        ?? 'CARRY_FORWARD';
+
                     this.loading = false;
                 },
                 error: () => {
@@ -210,11 +220,20 @@ export class TaxAdministrationComponent
 
         this.taxService
             .configure({
-                branchId: this.selectedBranchId,
-                vatEnabled: this.vatEnabled,
-                vatRate: this.vatRate,
+                branchId:
+                    this.selectedBranchId,
+
+                vatEnabled:
+                    this.vatEnabled,
+
+                vatRate:
+                    this.vatRate,
+
                 corporateTaxRate:
-                    this.corporateTaxRate
+                    this.corporateTaxRate,
+
+                vatCreditTreatment:
+                    this.vatCreditTreatment
             })
             .subscribe({
                 next: () => {

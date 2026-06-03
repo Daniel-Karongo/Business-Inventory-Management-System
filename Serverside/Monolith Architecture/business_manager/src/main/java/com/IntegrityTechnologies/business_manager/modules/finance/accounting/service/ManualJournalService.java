@@ -1,15 +1,18 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.service;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.ManualJournalRequest;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -17,7 +20,7 @@ import java.util.UUID;
 public class ManualJournalService {
 
     private final AccountingFacade accountingFacade;
-    private final AccountRepository accountRepository;
+    private final AccountingAccounts accountingAccounts;
     private final PeriodGuardService periodGuardService;
     private final BranchTenantGuard branchTenantGuard;
 
@@ -36,6 +39,11 @@ public class ManualJournalService {
         periodGuardService.validateOpenPeriod(
                 request.accountingDate(),
                 request.branchId()
+        );
+
+        validateProtectedAccounts(
+                request.branchId(),
+                request.lines()
         );
 
         accountingFacade.post(
@@ -59,5 +67,43 @@ public class ManualJournalService {
                         )
                         .build()
         );
+    }
+
+    private void validateProtectedAccounts(
+            UUID branchId,
+            List<ManualJournalRequest.Line> lines
+    ) {
+        UUID tenantId = TenantContext.getTenantId();
+
+        Set<UUID> protectedAccounts = Set.of(
+                accountingAccounts.get(
+                        tenantId,
+                        branchId,
+                        "VAT_PAYABLE"
+                ),
+                accountingAccounts.get(
+                        tenantId,
+                        branchId,
+                        "VAT_RECEIVABLE"
+                ),
+                accountingAccounts.get(
+                        tenantId,
+                        branchId,
+                        "VAT_CARRY_FORWARD"
+                ),
+                accountingAccounts.get(
+                        tenantId,
+                        branchId,
+                        "CORPORATE_TAX_PAYABLE"
+                )
+        );
+
+        for (ManualJournalRequest.Line line : lines) {
+            if (protectedAccounts.contains(line.accountId())) {
+                throw new IllegalStateException(
+                        "Manual journals cannot post to protected tax control accounts."
+                );
+            }
+        }
     }
 }

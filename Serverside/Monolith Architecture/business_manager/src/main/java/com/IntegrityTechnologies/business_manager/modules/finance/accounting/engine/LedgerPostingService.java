@@ -107,6 +107,7 @@ public class LedgerPostingService {
                         saved.getPeriodId(),
                         saved.getAccountingDate(),
                         saved.getPostedAt(),
+                        saved.getSourceModule(),
                         payloadEntries
                 );
 

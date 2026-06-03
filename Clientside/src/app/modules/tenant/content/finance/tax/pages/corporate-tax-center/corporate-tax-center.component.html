@@ -393,6 +393,13 @@
               Filed
               {{ filing.filedAt | date:'medium' }}
 
+              <span *ngIf="filing.paidAt">
+
+                • Paid
+                {{ filing.paidAt | date:'medium' }}
+
+              </span>
+
             </div>
 
           </div>
@@ -463,7 +470,8 @@
 
               </mat-form-field>
 
-              <button mat-flat-button color="primary" (click)="payCorporate(filing.id)" [disabled]="!accountId || !fundingAccounts.length">
+              <button mat-flat-button color="primary" (click)="payCorporate(filing.id)"
+                [disabled]="!accountId || !fundingAccounts.length">
 
                 <mat-icon>
                   payments

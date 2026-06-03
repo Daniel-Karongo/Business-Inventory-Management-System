@@ -4,8 +4,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.CorporateTaxLedgerProjectionRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.VatLedgerProjectionRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.corporate_tax.repository.CorporateTaxLedgerProjectionRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.repository.VatLedgerProjectionRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import lombok.RequiredArgsConstructor;
@@ -90,6 +90,7 @@ public class FinancialProjectionReplayService {
                                 group.get(0).getJournalEntry().getPeriodId(),
                                 group.get(0).getJournalEntry().getAccountingDate(),
                                 group.get(0).getJournalEntry().getPostedAt(),
+                                group.get(0).getJournalEntry().getSourceModule(),
                                 payload
                         )
                 );

@@ -315,6 +315,66 @@
 
             </div>
 
+            <div class="overview-item">
+
+              <div class="overview-label">
+                Latest VAT Status
+              </div>
+
+              <div class="overview-value">
+
+                {{
+                filings.length
+                ? filings[0].status
+                : 'N/A'
+                }}
+
+              </div>
+
+            </div>
+
+            <div class="overview-item">
+
+              <div class="overview-label">
+                Latest Credit Balance
+              </div>
+
+              <div class="overview-value">
+
+                {{
+                filings.length
+                ? (
+                filings[0].closingCredit
+                | number:'1.2-2'
+                )
+                : '0.00'
+                }}
+
+              </div>
+
+            </div>
+
+            <div class="overview-item">
+
+              <div class="overview-label">
+                Latest VAT Receivable
+              </div>
+
+              <div class="overview-value">
+
+                {{
+                filings.length
+                ? (
+                filings[0].vatReceivableCreated
+                | number:'1.2-2'
+                )
+                : '0.00'
+                }}
+
+              </div>
+
+            </div>
+
           </div>
 
         </div>
@@ -419,10 +479,12 @@
                 VAT Filing
               </span>
 
-              <span class="workspace-status" [class.active]="filing.paid" [class.locked]="!filing.paid">
-
-                {{ filing.paid ? 'Paid' : 'Pending' }}
-
+              <span class="workspace-status" [class.status-payable]="filing.status === 'VAT_PAYABLE' "
+                [class.status-paid]=" filing.status === 'PAID' "
+                [class.status-credit]=" filing.status === 'VAT_CREDIT_CARRIED_FORWARD' || filing.status === 'VAT_CREDIT_AVAILABLE' "
+                [class.status-refund-pending]=" filing.status === 'VAT_REFUND_PENDING' "
+                [class.status-refunded]=" filing.status === 'VAT_REFUNDED' ">
+                {{ statusLabel(filing) }}
               </span>
 
             </div>
@@ -444,9 +506,58 @@
               </div>
 
               <div>
-                VAT Payable:
+                Opening Credit:
+                <strong>
+                  {{ filing.openingCredit | number:'1.2-2' }}
+                </strong>
+              </div>
+
+              <div>
+                Credit Applied:
+                <strong>
+                  {{ filing.creditApplied | number:'1.2-2' }}
+                </strong>
+              </div>
+
+              <div>
+                Closing Credit:
+                <strong>
+                  {{ filing.closingCredit | number:'1.2-2' }}
+                </strong>
+              </div>
+
+              <div *ngIf="filing.closingCredit > 0" class="credit-banner">
+
+                VAT Credit Available:
+                <strong>
+
+                  {{
+                  filing.closingCredit
+                  | number:'1.2-2'
+                  }}
+
+                </strong>
+
+              </div>
+
+              <div>
+                VAT Receivable Created:
+                <strong>
+                  {{ filing.vatReceivableCreated | number:'1.2-2' }}
+                </strong>
+              </div>
+
+              <div>
+                VAT Position:
                 <strong>
                   {{ filing.vatPayable | number:'1.2-2' }}
+                </strong>
+              </div>
+
+              <div>
+                Filing Status:
+                <strong>
+                  {{ statusLabel(filing) }}
                 </strong>
               </div>
 
@@ -457,9 +568,16 @@
                 </strong>
               </div>
 
+              <div *ngIf="filing.paidAt">
+                Paid:
+                <strong>
+                  {{ filing.paidAt | date:'medium' }}
+                </strong>
+              </div>
+
             </div>
 
-            <div class="filing-actions" *ngIf="!filing.paid">
+            <div class="filing-actions" *ngIf="filing.status === 'VAT_PAYABLE'">
 
               <div class="empty-state" *ngIf="!fundingAccounts.length">
 
@@ -525,6 +643,61 @@
                 </mat-icon>
 
                 Pay VAT
+
+              </button>
+
+            </div>
+
+            <div class="filing-actions" *ngIf="filing.status === 'VAT_CREDIT_AVAILABLE' || filing.status === 'VAT_CREDIT_CARRIED_FORWARD'">
+
+              <button mat-flat-button color="accent" (click)="requestRefund(filing.id)" [disabled]="requestingRefund">
+
+                <mat-icon>
+                  request_quote
+                </mat-icon>
+
+                Request Refund
+
+              </button>
+
+            </div>
+
+            <div class="filing-actions" *ngIf="
+    filing.status ===
+    'VAT_REFUND_PENDING'
+  ">
+
+              <mat-form-field appearance="fill">
+
+                <mat-label>
+                  Receiving Account
+                </mat-label>
+
+                <mat-select [(ngModel)]="accountId">
+
+                  <mat-option *ngFor="
+          let account
+          of fundingAccounts
+        " [value]="account.id">
+
+                    {{ account.code }}
+                    -
+                    {{ account.name }}
+
+                  </mat-option>
+
+                </mat-select>
+
+              </mat-form-field>
+
+              <button mat-flat-button color="primary" (click)="completeRefund(filing.id)"
+                [disabled]="!accountId || completingRefund">
+
+                <mat-icon>
+                  account_balance
+                </mat-icon>
+
+                Complete Refund
 
               </button>
 

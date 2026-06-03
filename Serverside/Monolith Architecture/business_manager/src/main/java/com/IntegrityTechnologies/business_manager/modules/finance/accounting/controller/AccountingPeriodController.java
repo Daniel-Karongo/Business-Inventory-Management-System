@@ -1,6 +1,5 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.controller;
 
-import com.IntegrityTechnologies.business_manager.modules.communication.notification.email.repository.EmailMessageRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.control.CloseChecklistService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.control.CloseChecklistService.CloseChecklistResult;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
@@ -8,7 +7,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.GovernanceAuditService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountingPeriodRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.PeriodClosingService;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.repository.VatFilingRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.repository.VatFilingRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;

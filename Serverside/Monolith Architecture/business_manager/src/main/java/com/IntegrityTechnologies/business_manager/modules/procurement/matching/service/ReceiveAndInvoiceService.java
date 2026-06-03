@@ -7,9 +7,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.rep
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.service.PurchaseInvoicePostingService;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.service.PurchaseInvoiceService;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.shared.mapper.PurchaseInvoiceMapper;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.config.TaxProperties;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.dto.VatBreakdown;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.service.VatCalculationService;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.config.TaxProperties;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.dto.VatBreakdown;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.service.VatCalculationService;
 import com.IntegrityTechnologies.business_manager.modules.procurement.matching.dto.MatchInvoiceToReceiptsRequest;
 import com.IntegrityTechnologies.business_manager.modules.procurement.matching.dto.ReceiveAndInvoiceRequest;
 import com.IntegrityTechnologies.business_manager.modules.procurement.receipt.repository.GoodsReceiptRepository;
