@@ -2,8 +2,6 @@
 //
 //import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
 //import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
-//import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
-//import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentRepository;
 //import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model.UserSession;
 //import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
 //import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.service.RollcallService;
@@ -12,7 +10,6 @@
 //import org.springframework.beans.factory.annotation.Value;
 //import org.springframework.scheduling.annotation.Scheduled;
 //import org.springframework.stereotype.Component;
-//import org.springframework.transaction.annotation.Transactional;
 //
 //import java.time.LocalDateTime;
 //import java.time.LocalTime;
@@ -27,7 +24,6 @@
 //    private final LogoutCronProvider cronProvider;
 //    private final LogoutRunTracker runTracker;
 //    private final UserSessionRepository userSessionRepository;
-//    private final DepartmentRepository departmentRepository;
 //    private final BranchRepository branchRepository;
 //    private final RollcallService rollcallService;
 //    private final TenantExecutionService tenantExecutionService;
@@ -65,30 +61,12 @@
 //                        .findByTenantIdAndIdAndDeletedFalse(tenantId, branchId)
 //                        .orElseThrow();
 //
-//                Set<Department> departments =
-//                        departmentRepository.findDepartmentsByUserId(tenantId, userId);
-//
 //                boolean shouldLogout = false;
 //
-//                if (departments.isEmpty()) {
+//                LocalTime logoutTime = resolveLogoutTime(branch);
 //
-//                    LocalTime logoutTime = resolveLogoutTime(branch, null);
-//
-//                    if (!nowTime.isBefore(logoutTime)) {
-//                        shouldLogout = true;
-//                    }
-//
-//                } else {
-//
-//                    for (Department dept : departments) {
-//
-//                        LocalTime logoutTime = resolveLogoutTime(branch, dept);
-//
-//                        if (!nowTime.isBefore(logoutTime)) {
-//                            shouldLogout = true;
-//                            break;
-//                        }
-//                    }
+//                if (!nowTime.isBefore(logoutTime)) {
+//                    shouldLogout = true;
 //                }
 //
 //                if (!shouldLogout) continue;
@@ -100,25 +78,14 @@
 //                session.setAutoLoggedOut(true);
 //                userSessionRepository.save(session);
 //
-//                // ✅ rollcall per department
-//                if (departments.isEmpty()) {
-//                    rollcallService.recordLogoutRollcall(userId, null, branchId);
-//                } else {
-//                    for (Department dept : departments) {
-//                        rollcallService.recordLogoutRollcall(userId, dept.getId(), branchId);
-//                    }
-//                }
+//                rollcallService.recordLogoutRollcall(userId, branchId);
 //            }
 //        });
 //
 //        runTracker.markRunToday();
 //    }
 //
-//    private LocalTime resolveLogoutTime(Branch branch, Department dept) {
-//
-//        if (dept != null && dept.getLogoutTime() != null) {
-//            return dept.getLogoutTime();
-//        }
+//    private LocalTime resolveLogoutTime(Branch branch) {
 //
 //        if (branch.getLogoutTime() != null) {
 //            return branch.getLogoutTime();

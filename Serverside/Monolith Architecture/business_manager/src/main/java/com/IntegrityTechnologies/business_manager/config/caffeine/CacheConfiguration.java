@@ -38,7 +38,7 @@ public class CacheConfiguration {
         );
 
         /* =========================
-           ROLES / DEPARTMENTS (rarely change)
+           ROLES  (rarely change)
         ========================= */
         manager.registerCustomCache("roles",
                 Caffeine.newBuilder()
@@ -48,13 +48,6 @@ public class CacheConfiguration {
                         .build()
         );
 
-        manager.registerCustomCache("departments",
-                Caffeine.newBuilder()
-                        .maximumSize(5_000)
-                        .expireAfterWrite(Duration.ofHours(1))
-                        .recordStats()
-                        .build()
-        );
 
         /* =========================
            TENANTS (very stable)

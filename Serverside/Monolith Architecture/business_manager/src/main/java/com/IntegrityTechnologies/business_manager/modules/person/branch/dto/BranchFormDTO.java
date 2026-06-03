@@ -36,6 +36,4 @@ public class BranchFormDTO {
     private LocalTime logoutTime;
 
     private List<UUID> userIds;
-
-    private List<UUID> departmentIds;
 }

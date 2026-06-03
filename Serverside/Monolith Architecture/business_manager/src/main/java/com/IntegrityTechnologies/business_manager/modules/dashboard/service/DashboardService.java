@@ -8,7 +8,6 @@ import com.IntegrityTechnologies.business_manager.modules.dashboard.repository.D
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchAuditRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.repository.SupplierAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.repository.BatchConsumptionRepository;
@@ -43,7 +42,6 @@ public class DashboardService {
     private final ProductAuditRepository productAuditRepository;
     private final SupplierAuditRepository supplierAuditRepository;
     private final BranchAuditRepository branchAuditRepository;
-    private final DepartmentAuditRepository departmentAuditRepository;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -335,17 +333,6 @@ public class DashboardService {
                         out.add(new ActivityDTO(
                                 "BRANCH",
                                 a.getAction() + " branch " + a.getBranchName(),
-                                a.getPerformedByUsername(),
-                                a.getTimestamp()
-                        ))
-                );
-
-        departmentAuditRepository
-                .findTop10ByTenantIdAndBranchIdOrderByTimestampDesc(tenantId, branchId)
-                .forEach(a ->
-                        out.add(new ActivityDTO(
-                                "DEPARTMENT",
-                                a.getAction() + " department " + a.getDepartmentName(),
                                 a.getPerformedByUsername(),
                                 a.getTimestamp()
                         ))

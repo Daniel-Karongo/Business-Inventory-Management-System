@@ -17,6 +17,4 @@ public class UserBulkRow {
 
     /** Hybrid org placement */
     private String branchCode;
-    private String departmentName;
-    private String position;            // head | member
 }

@@ -6,9 +6,6 @@ import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.config.util.PhoneAndEmailNormalizer;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.department.dto.DepartmentAssignmentDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
-import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.user.dto.UserBulkRow;
 import com.IntegrityTechnologies.business_manager.modules.person.user.dto.UserDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.Role;
@@ -20,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
 import java.io.IOException;
 import java.util.*;
@@ -32,7 +28,6 @@ public class UserBulkService {
     private final UserService userService;
     private final UserRepository userRepository;
     private final BranchRepository branchRepository;
-    private final DepartmentRepository departmentRepository;
 
     private static final String DEFAULT_PASSWORD = "1234";
     private final TenantMetadataCache tenantMetadataCache;
@@ -227,11 +222,6 @@ public class UserBulkService {
                                 ? row.getBranchCode().trim()
                                 : "MAIN";
 
-                String departmentName =
-                        row.getDepartmentName() != null
-                                ? row.getDepartmentName().trim()
-                                : "GENERAL";
-
                 Branch branch =
                         branchRepository
                                 .findByTenantIdAndBranchCodeIgnoreCaseAndDeletedFalse(
@@ -244,35 +234,9 @@ public class UserBulkService {
                                         )
                                 );
 
-                Department department =
-                        departmentRepository
-                                .findByTenantIdAndNameIgnoreCaseAndBranch_Id(
-                                        TenantContext.getTenantId(),
-                                        departmentName,
-                                        branch.getId()
-                                )
-                                .orElseThrow(() ->
-                                        new IllegalArgumentException(
-                                                "Unknown department: "
-                                                        + departmentName
-                                        )
-                                );
-
             /* =========================
                BUILD DTO
             ========================= */
-
-                String normalizedPosition =
-                        row.getPosition() != null
-                                ? normalizePosition(row.getPosition())
-                                : "member";
-
-                DepartmentAssignmentDTO assignment =
-                        DepartmentAssignmentDTO.builder()
-                                .branchId(branch.getId())
-                                .departmentId(department.getId())
-                                .position(normalizedPosition)
-                                .build();
 
                 UserDTO dto =
                         UserDTO.builder()
@@ -286,11 +250,7 @@ public class UserBulkService {
                                 .emailAddresses(emails)
                                 .phoneNumbers(phones)
                                 .branchCode(branchCode)
-                                .departmentName(departmentName)
-                                .position(normalizedPosition)
-                                .departmentsAndPositions(
-                                        List.of(assignment)
-                                )
+                                .branchIds(List.of(branch.getId()))
                                 .build();
 
                 prepared.add(dto);
@@ -374,16 +334,5 @@ public class UserBulkService {
                 .map(String::toLowerCase)
                 .distinct()
                 .toList();
-    }
-
-    private String normalizePosition(String position) {
-        if (position == null) return "member";
-        String p = position.toLowerCase();
-        if (!p.equals("head") && !p.equals("member")) {
-            throw new IllegalArgumentException(
-                    "position must be 'head' or 'member'"
-            );
-        }
-        return p;
     }
 }

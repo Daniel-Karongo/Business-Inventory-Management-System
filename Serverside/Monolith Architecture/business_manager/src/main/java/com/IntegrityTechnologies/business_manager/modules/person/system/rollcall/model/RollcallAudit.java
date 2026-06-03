@@ -24,7 +24,6 @@ public class RollcallAudit extends BranchAwareEntity {
 
     private UUID rollcallId;
     private UUID userId;
-    private UUID departmentId;
 
     @Enumerated(EnumType.STRING)
     private RollcallMethod authMethod;

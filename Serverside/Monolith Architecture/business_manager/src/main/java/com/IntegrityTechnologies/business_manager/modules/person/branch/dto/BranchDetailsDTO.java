@@ -1,6 +1,5 @@
 package com.IntegrityTechnologies.business_manager.modules.person.branch.dto;
 
-import com.IntegrityTechnologies.business_manager.modules.person.department.dto.DepartmentMinimalDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.user.dto.MinimalUserDTO;
 import lombok.Builder;
 import lombok.Data;
@@ -47,6 +46,4 @@ public class BranchDetailsDTO {
     private LocalDateTime createdAt;
 
     private Set<MinimalUserDTO> users;
-
-    private Set<DepartmentMinimalDTO> departments;
 }

@@ -15,40 +15,24 @@ import java.util.UUID;
 @Repository
 public interface RollcallRepository extends JpaRepository<Rollcall, UUID> {
     List<Rollcall> findByUserIdAndTimestampBetweenOrderByTimestampDesc(UUID userId, LocalDateTime from, LocalDateTime to);
-    List<Rollcall> findByDepartmentIdAndTimestampBetweenOrderByTimestampDesc(UUID departmentId, LocalDateTime from, LocalDateTime to);
-    List<Rollcall> findByDepartmentIdAndTimestampBetweenAndStatusOrderByTimestampDesc(UUID departmentId, LocalDateTime from, LocalDateTime to, RollcallStatus status);
     List<Rollcall> findByBranchIdAndTimestampBetweenOrderByTimestampDesc(UUID branchId, LocalDateTime from, LocalDateTime to);
-    List<Rollcall> findByBranchIdAndTimestampBetweenAndStatusOrderByTimestampDesc(UUID branchId, LocalDateTime from, LocalDateTime to, RollcallStatus status);
 
-    Optional<Rollcall> findByUserIdAndDepartmentIdAndBranchIdAndRollcallDateAndMethodNot(
+    Optional<Rollcall> findByUserIdAndBranchIdAndRollcallDateAndMethodNot(
             UUID userId,
-            UUID departmentId,
             UUID branchId,
             LocalDate rollcallDate,
             RollcallMethod excludedMethod
     );
 
-    Optional<Rollcall> findByUserIdAndDepartmentIdAndBranchIdAndRollcallDateAndMethod(
+    Optional<Rollcall> findByUserIdAndBranchIdAndRollcallDateAndMethod(
             UUID userId,
-            UUID departmentId,
             UUID branchId,
             LocalDate rollcallDate,
             RollcallMethod method
     );
 
-    boolean existsByUserIdAndDepartmentIdAndBranchIdAndRollcallDateAndMethod(
+    Optional<Rollcall> findByUserIdAndBranchIdAndRollcallDateAndStatus(
             UUID userId,
-            UUID departmentId,
-            UUID branchId,
-            LocalDate rollcallDate,
-            RollcallMethod method
-    );
-
-    boolean existsByUserIdAndDepartmentIdAndBranchIdAndRollcallDate(UUID id, UUID id1, UUID id2, LocalDate today);
-
-    Optional<Rollcall> findByUserIdAndDepartmentIdAndBranchIdAndRollcallDateAndStatus(
-            UUID userId,
-            UUID departmentId,
             UUID branchId,
             LocalDate rollcallDate,
             RollcallStatus status

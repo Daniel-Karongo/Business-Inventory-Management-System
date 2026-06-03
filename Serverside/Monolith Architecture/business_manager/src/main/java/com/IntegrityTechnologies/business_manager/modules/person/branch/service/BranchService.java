@@ -18,13 +18,10 @@ import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Br
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.specification.BranchSpecification;
-import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
-import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.User;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.UserBranch;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.UserBranchId;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserBranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserDepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.subscription.service.SubscriptionGuard;
 import com.IntegrityTechnologies.business_manager.security.cache.TenantMetadataCache;
@@ -55,11 +52,7 @@ public class BranchService {
     private final BranchAuditRepository branchAuditRepository;
 
     private final UserRepository userRepository;
-    private final DepartmentRepository departmentRepository;
-
     private final UserBranchRepository userBranchRepository;
-    private final UserDepartmentRepository userDepartmentRepository;
-
     private final BranchAccountingSettingsRepository branchAccountingSettingsRepository;
 
     private final BranchChartOfAccountsService coaService;
@@ -137,11 +130,6 @@ public class BranchService {
         );
 
         assignUsers(branch, request.getUserIds());
-
-        updateDepartments(
-                branch,
-                request.getDepartmentIds()
-        );
 
         recordAudit(
                 branch,
@@ -227,19 +215,9 @@ public class BranchService {
                         .map(UserBranch::getUser)
                         .collect(Collectors.toSet());
 
-        Set<Department> departments =
-                departmentRepository
-                        .findByTenantIdAndBranch_Id(
-                                tenantId(),
-                                branch.getId()
-                        )
-                        .stream()
-                        .collect(Collectors.toSet());
-
         return BranchMapper.toDetailsDTO(
                 branch,
-                users,
-                departments
+                users
         );
     }
 
@@ -333,11 +311,6 @@ public class BranchService {
         updateUsers(
                 branch,
                 request.getUserIds()
-        );
-
-        updateDepartments(
-                branch,
-                request.getDepartmentIds()
         );
 
         branchRepository.save(branch);
@@ -526,19 +499,6 @@ public class BranchService {
                     id
             );
 
-            departmentRepository
-                    .findByTenantIdAndBranch_Id(
-                            tenantId(),
-                            id
-                    )
-                    .forEach(
-                            d -> userDepartmentRepository
-                                    .deleteByDepartmentId(
-                                            tenantId(),
-                                            d.getId()
-                                    )
-                    );
-
             branchRepository.delete(branch);
 
             recordAudit(
@@ -701,36 +661,6 @@ public class BranchService {
         );
 
         assignUsers(branch, userIds);
-    }
-
-    private void updateDepartments(
-            Branch branch,
-            List<UUID> departmentIds
-    ) {
-
-        if (departmentIds == null) {
-            return;
-        }
-
-        Set<Department> departments =
-                departmentIds.stream()
-                        .map(
-                                id ->
-                                        departmentRepository
-                                                .findByTenantIdAndIdAndDeletedFalse(
-                                                        tenantId(),
-                                                        id
-                                                )
-                                                .orElseThrow(
-                                                        () ->
-                                                                new EntityNotFoundException(
-                                                                        "Department not found: " + id
-                                                                )
-                                                )
-                        )
-                        .collect(Collectors.toSet());
-
-        branch.setDepartments(departments);
     }
 
     private void updateField(

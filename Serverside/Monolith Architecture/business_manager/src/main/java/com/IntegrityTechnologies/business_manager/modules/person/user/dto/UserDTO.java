@@ -2,17 +2,19 @@ package com.IntegrityTechnologies.business_manager.modules.person.user.dto;
 
 import com.IntegrityTechnologies.business_manager.config.files.FIleUploadDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.dto.BranchHierarchyDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.department.dto.DepartmentMinimalDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.department.dto.DepartmentAssignmentDTO;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import lombok.*;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -36,10 +38,7 @@ public class UserDTO {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private List<BranchHierarchyDTO> branchHierarchy;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private List<DepartmentAssignmentDTO> departmentsAndPositions;
-
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private Set<DepartmentMinimalDTO> departments = new HashSet<>();
+    private List<UUID> branchIds;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private LocalDateTime createdAt;
@@ -59,8 +58,4 @@ public class UserDTO {
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private String branchCode;
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private String departmentName;
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    private String position;
 }

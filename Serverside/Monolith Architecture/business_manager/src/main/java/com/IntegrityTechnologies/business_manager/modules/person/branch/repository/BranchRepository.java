@@ -44,6 +44,7 @@ public interface BranchRepository extends JpaRepository<Branch, UUID>,
     ========================================================= */
 
     List<Branch> findByTenantIdAndDeletedFalse(UUID tenantId);
+
     Page<Branch> findByTenantIdAndDeletedFalse(UUID tenantId, Pageable pageable);
 
     List<Branch> findByTenantIdAndDeletedTrue(UUID tenantId);
@@ -58,78 +59,31 @@ public interface BranchRepository extends JpaRepository<Branch, UUID>,
     ========================================================= */
 
     @Query("""
-    SELECT DISTINCT u
-    FROM UserBranch ub
-    JOIN ub.user u
-    LEFT JOIN FETCH u.emailAddresses
-    LEFT JOIN FETCH u.phoneNumbers
-    WHERE ub.branch.id = :branchId
-      AND ub.branch.tenantId = :tenantId
-      AND u.deleted = false
-""")
+                SELECT DISTINCT u
+                FROM UserBranch ub
+                JOIN ub.user u
+                LEFT JOIN FETCH u.emailAddresses
+                LEFT JOIN FETCH u.phoneNumbers
+                WHERE ub.branch.id = :branchId
+                  AND ub.branch.tenantId = :tenantId
+                  AND u.deleted = false
+            """)
     List<User> findUsersByBranchId(
             @Param("tenantId") UUID tenantId,
             @Param("branchId") UUID branchId
     );
 
     @Query("""
-        SELECT CASE WHEN COUNT(ub) > 0 THEN TRUE ELSE FALSE END
-        FROM UserBranch ub
-        WHERE ub.user.id = :userId
-        AND ub.branch.id = :branchId
-        AND ub.branch.tenantId = :tenantId
-        AND ub.branch.deleted = false
-    """)
+                SELECT CASE WHEN COUNT(ub) > 0 THEN TRUE ELSE FALSE END
+                FROM UserBranch ub
+                WHERE ub.user.id = :userId
+                AND ub.branch.id = :branchId
+                AND ub.branch.tenantId = :tenantId
+                AND ub.branch.deleted = false
+            """)
     boolean userBelongsToBranch(
             @Param("tenantId") UUID tenantId,
             @Param("userId") UUID userId,
             @Param("branchId") UUID branchId
-    );
-
-    @Query("""
-        SELECT DISTINCT ub.branch
-        FROM UserBranch ub
-        JOIN UserDepartment ud ON ud.user.id = ub.user.id
-        WHERE ub.user.id = :userId
-          AND ud.department.id = :deptId
-          AND ub.branch.id = ud.department.branch.id
-          AND ub.branch.tenantId = :tenantId
-          AND ub.branch.deleted = false
-          AND ud.department.deleted = false
-    """)
-    List<Branch> findBranchesForUserAndDepartment(
-            @Param("tenantId") UUID tenantId,
-            @Param("userId") UUID userId,
-            @Param("deptId") UUID deptId
-    );
-
-    @Query("""
-        SELECT CASE WHEN COUNT(d) > 0 THEN TRUE ELSE FALSE END
-        FROM Department d
-        WHERE d.branch.id = :branchId
-          AND d.branch.tenantId = :tenantId
-          AND d.id = :departmentId
-          AND d.deleted = false
-    """)
-    boolean branchContainsDepartment(
-            @Param("tenantId") UUID tenantId,
-            @Param("branchId") UUID branchId,
-            @Param("departmentId") UUID departmentId
-    );
-
-    /* =========================================================
-       BULK
-    ========================================================= */
-
-    @Modifying
-    @Query("""
-        UPDATE Branch b
-        SET b.deleted = true
-        WHERE b.tenantId = :tenantId
-          AND b.id IN :ids
-    """)
-    void softDeleteBulk(
-            @Param("tenantId") UUID tenantId,
-            @Param("ids") List<UUID> ids
     );
 }

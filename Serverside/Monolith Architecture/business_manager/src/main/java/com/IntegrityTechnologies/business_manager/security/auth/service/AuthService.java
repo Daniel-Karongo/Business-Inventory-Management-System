@@ -1,9 +1,6 @@
 package com.IntegrityTechnologies.business_manager.security.auth.service;
 
 import com.IntegrityTechnologies.business_manager.exception.AppSecurityException;
-import com.IntegrityTechnologies.business_manager.exception.UserNotFoundException;
-import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
-import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model.UserSession;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.service.RollcallService;
@@ -36,7 +33,6 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final RollcallService rollcallService;
-    private final DepartmentRepository departmentRepository;
     private final UserSessionRepository userSessionRepository;
     private final TokenBlacklistService tokenBlacklistService;
     private final PlatformUserRepository platformUserRepository;
@@ -128,20 +124,8 @@ public class AuthService {
         UUID userId = session.getUserId();
         UUID branchId = session.getBranchId();
 
-        List<Department> departments =
-                departmentRepository.findDepartmentsForUserInBranch(
-                        tenantId(),
-                        userId,
-                        branchId
-                );
+        rollcallService.recordLogoutRollcall(userId, branchId);
 
-        if (departments.isEmpty()) {
-            rollcallService.recordLogoutRollcall(userId, null, branchId);
-        } else {
-            for (Department d : departments) {
-                rollcallService.recordLogoutRollcall(userId, d.getId(), branchId);
-            }
-        }
     }
 
     /* =====================================================
@@ -198,27 +182,8 @@ public class AuthService {
 
             UUID branchId = s.getBranchId();
 
-            List<Department> departments =
-                    departmentRepository
-                            .findDepartmentsForUserInBranch(
-                                    tenantId(),
-                                    userId,
-                                    branchId
-                            );
+            rollcallService.recordLogoutRollcall(userId, branchId);
 
-            if (departments.isEmpty()) {
-                rollcallService.recordLogoutRollcall(
-                        userId, null, branchId
-                );
-            } else {
-                for (Department d : departments) {
-                    rollcallService.recordLogoutRollcall(
-                            userId,
-                            d.getId(),
-                            branchId
-                    );
-                }
-            }
         }
     }
 
@@ -250,7 +215,6 @@ public class AuthService {
                     user.getUsername(),
                     user.getRole().name(),
                     null,
-                    List.of(),
                     UserType.PLATFORM
             );
         }
@@ -282,19 +246,11 @@ public class AuthService {
                                 "Session expired"
                         ));
 
-        List<Department> departments =
-                departmentRepository.findDepartmentsForUserInBranch(
-                        tenantId(),
-                        userId,
-                        session.getBranchId()
-                );
-
         return new AuthResponse(
                 userId,
                 user.getUsername(),
                 user.getRole().name(),
                 session.getBranchId(),
-                departments.stream().map(Department::getId).toList(),
                 UserType.TENANT
         );
     }

@@ -20,7 +20,6 @@ public class AuthResponseFactory {
                 username,
                 role,
                 null,
-                List.of(),
                 UserType.PLATFORM
         );
     }
@@ -29,15 +28,13 @@ public class AuthResponseFactory {
             UUID userId,
             String username,
             String role,
-            UUID branchId,
-            List<UUID> departmentIds
+            UUID branchId
     ) {
         return new AuthResponse(
                 userId,
                 username,
                 role,
                 branchId,
-                departmentIds,
                 UserType.TENANT
         );
     }

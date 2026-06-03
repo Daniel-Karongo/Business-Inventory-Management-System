@@ -21,7 +21,6 @@ public final class CacheKeys {
             Boolean deleted,
             String role,
             UUID branchId,
-            UUID departmentId,
             String q,
             int page,
             int size,
@@ -31,7 +30,6 @@ public final class CacheKeys {
                 + (deleted != null ? deleted : "ALL") + "::"
                 + (role != null ? role : "ALL") + "::"
                 + (branchId != null ? branchId : "ALL") + "::"
-                + (departmentId != null ? departmentId : "ALL") + "::"
                 + (q != null ? q.trim().toLowerCase() : "") + "::"
                 + page + "::"
                 + size + "::"

@@ -1,6 +1,5 @@
 package com.IntegrityTechnologies.business_manager.modules.person.branch.model;
 
-import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.UserBranch;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.TenantAwareEntity;
 import jakarta.persistence.*;
@@ -74,10 +73,6 @@ public class Branch extends TenantAwareEntity {
     @OneToMany(mappedBy = "branch", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<UserBranch> userBranches = new HashSet<>();
-
-    @OneToMany(mappedBy = "branch")
-    @Builder.Default
-    private Set<Department> departments = new HashSet<>();
 
     @Column(name = "rollcall_start_time")
     private LocalTime rollcallStartTime;

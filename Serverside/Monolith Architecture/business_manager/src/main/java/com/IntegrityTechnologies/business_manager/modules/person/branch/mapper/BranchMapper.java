@@ -1,9 +1,8 @@
 package com.IntegrityTechnologies.business_manager.modules.person.branch.mapper;
 
-import com.IntegrityTechnologies.business_manager.modules.person.branch.dto.*;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.dto.BranchDetailsDTO;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.dto.BranchListItemDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
-import com.IntegrityTechnologies.business_manager.modules.person.department.dto.DepartmentMinimalDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
 import com.IntegrityTechnologies.business_manager.modules.person.user.dto.MinimalUserDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.User;
 import lombok.experimental.UtilityClass;
@@ -31,8 +30,7 @@ public class BranchMapper {
 
     public BranchDetailsDTO toDetailsDTO(
             Branch branch,
-            Set<User> users,
-            Set<Department> departments
+            Set<User> users
     ) {
 
         return BranchDetailsDTO.builder()
@@ -55,11 +53,6 @@ public class BranchMapper {
                 .users(
                         users.stream()
                                 .map(MinimalUserDTO::from)
-                                .collect(Collectors.toSet())
-                )
-                .departments(
-                        departments.stream()
-                                .map(DepartmentMinimalDTO::from)
                                 .collect(Collectors.toSet())
                 )
                 .build();

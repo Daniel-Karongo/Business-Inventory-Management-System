@@ -2,8 +2,6 @@ package com.IntegrityTechnologies.business_manager.security.auth.tenant;
 
 import com.IntegrityTechnologies.business_manager.exception.AppSecurityException;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
-import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model.RollcallMethod;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.service.RollcallService;
@@ -26,7 +24,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -38,7 +35,6 @@ public class TenantAuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RollcallService rollcallService;
-    private final DepartmentRepository departmentRepository;
     private final BranchRepository branchRepository;
     private final UserSessionRepository userSessionRepository;
     private final LoginAuditService loginAuditService;
@@ -187,37 +183,18 @@ public class TenantAuthService {
         }
         sessionService.create(tenantId, branchId, userId, tokenId);
 
-        List<Department> departments =
-                departmentRepository.findDepartmentsForUserInBranch(
-                        tenantId,
-                        userId,
-                        branchId
-                );
+        rollcallService.recordLoginRollcall(
+                userId,
+                branchId,
+                RollcallMethod.LOGIN_PASSWORD
+        );
 
-        if (departments.isEmpty()) {
-            rollcallService.recordLoginRollcall(
-                    userId,
-                    null,
-                    branchId,
-                    RollcallMethod.LOGIN_PASSWORD
-            );
-        } else {
-            for (Department d : departments) {
-                rollcallService.recordLoginRollcall(
-                        userId,
-                        d.getId(),
-                        branchId,
-                        RollcallMethod.LOGIN_PASSWORD
-                );
-            }
-        }
 
         AuthResponse response = responseFactory.tenant(
                 userId,
                 user.getUsername(),
                 user.getRole().name(),
-                branchId,
-                departments.stream().map(Department::getId).toList()
+                branchId
         );
 
         loginAuditService.log(
@@ -374,37 +351,18 @@ public class TenantAuthService {
 
         sessionService.create(tenantId, branchId, userId, tokenId);
 
-        List<Department> departments =
-                departmentRepository.findDepartmentsForUserInBranch(
-                        tenantId,
-                        userId,
-                        branchId
-                );
 
-        if (departments.isEmpty()) {
-            rollcallService.recordLoginRollcall(
-                    userId,
-                    null,
-                    branchId,
-                    RollcallMethod.LOGIN_BIOMETRIC
-            );
-        } else {
-            for (Department d : departments) {
-                rollcallService.recordLoginRollcall(
-                        userId,
-                        d.getId(),
-                        branchId,
-                        RollcallMethod.LOGIN_BIOMETRIC
-                );
-            }
-        }
+        rollcallService.recordLoginRollcall(
+                userId,
+                branchId,
+                RollcallMethod.LOGIN_BIOMETRIC
+        );
 
         AuthResponse response = responseFactory.tenant(
                 userId,
                 user.getUsername(),
                 user.getRole().name(),
-                branchId,
-                departments.stream().map(Department::getId).toList()
+                branchId
         );
 
         loginAuditService.log(

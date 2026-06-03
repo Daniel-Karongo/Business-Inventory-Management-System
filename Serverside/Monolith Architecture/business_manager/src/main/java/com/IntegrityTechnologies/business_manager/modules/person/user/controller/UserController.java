@@ -156,12 +156,11 @@ public class UserController {
             @RequestParam(required = false) Boolean deleted,
             @RequestParam(required = false) String role,
             @RequestParam(required = false) UUID branch,
-            @RequestParam(required = false) UUID department,
             @RequestParam(required = false) String q,
             Pageable pageable
     ) {
         return ResponseEntity.ok(
-                userService.getUsersFiltered(deleted, role, branch, department, q, pageable)
+                userService.getUsersFiltered(deleted, role, branch, q, pageable)
         );
     }
 

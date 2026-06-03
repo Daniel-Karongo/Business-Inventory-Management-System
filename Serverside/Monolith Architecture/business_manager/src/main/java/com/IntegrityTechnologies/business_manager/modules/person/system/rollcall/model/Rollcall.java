@@ -16,7 +16,6 @@ import java.util.UUID;
                 columnNames = {
                         "tenant_id",
                         "user_id",
-                        "department_id",
                         "branch_id",
                         "rollcall_date",
                         "method"
@@ -39,11 +38,6 @@ public class Rollcall extends BranchAwareEntity {
     private UUID userId;
 
     private String username;
-
-    @Column(name = "department_id", columnDefinition = "BINARY(16)")
-    private UUID departmentId;
-
-    private String departmentName;
 
     private String branchName;
 

@@ -134,11 +134,6 @@ public class User extends TenantAwareEntity {
     private Set<UserBranch> branches = new HashSet<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @BatchSize(size = 50)
-    @Builder.Default
-    private Set<UserDepartment> departments = new HashSet<>();
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @BatchSize(size = 25)
     @Builder.Default
     private List<UserImage> images = new ArrayList<>();

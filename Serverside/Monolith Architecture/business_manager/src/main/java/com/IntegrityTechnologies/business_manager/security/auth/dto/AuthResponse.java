@@ -21,8 +21,6 @@ public class AuthResponse {
 
     private UUID branchId;
 
-    private List<UUID> departmentIds;
-
     private UserType userType;
 
 }

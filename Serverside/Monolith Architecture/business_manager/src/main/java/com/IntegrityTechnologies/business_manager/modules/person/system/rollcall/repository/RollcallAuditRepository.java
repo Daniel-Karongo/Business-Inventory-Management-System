@@ -9,7 +9,6 @@ import java.util.UUID;
 
 @Repository
 public interface RollcallAuditRepository extends JpaRepository<RollcallAudit, UUID> {
-    List<RollcallAudit> findByDepartmentIdOrderByTimestampDesc(UUID departmentId);
-    List<RollcallAudit> findByBranchIdOrderByTimestampDesc(UUID departmentId);
+    List<RollcallAudit> findByBranchIdOrderByTimestampDesc(UUID branchId);
     List<RollcallAudit> findByUserIdOrderByTimestampDesc(UUID userId);
 }

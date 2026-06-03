@@ -13,15 +13,9 @@ import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Br
 import com.IntegrityTechnologies.business_manager.modules.person.branch.model.BranchAudit;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
-import com.IntegrityTechnologies.business_manager.modules.person.department.model.DepartmentAudit;
-import com.IntegrityTechnologies.business_manager.modules.person.department.model.DepartmentMembershipRole;
-import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentAuditRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.*;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserBranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserDepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,14 +29,11 @@ import java.util.UUID;
 public class TenantBootstrapService {
 
     private final BranchRepository branchRepository;
-    private final DepartmentRepository departmentRepository;
     private final UserRepository userRepository;
 
     private final BranchAuditRepository branchAuditRepository;
-    private final DepartmentAuditRepository departmentAuditRepository;
     private final UserAuditRepository userAuditRepository;
 
-    private final UserDepartmentRepository userDepartmentRepository;
     private final UserBranchRepository userBranchRepository;
 
     private final BranchAccountingSettingsRepository accountingSettingsRepository;
@@ -146,44 +137,6 @@ public class TenantBootstrapService {
                             .build()
             );
         }
-        /* =====================================
-           3️⃣ ENSURE GENERAL DEPARTMENT
-        ===================================== */
-
-        Department department = departmentRepository.findByTenantIdAndNameIgnoreCaseAndBranch_Id(
-                        tenantId,
-                        "GENERAL",
-                        branch.getId()
-                )
-                .orElseGet(() -> {
-
-                    Department d = Department.builder()
-                            .tenantId(tenantId)
-                            .branchId(branch.getId())
-                            .branch(branch)
-                            .name("GENERAL")
-                            .description("Default general department")
-                            .rollcallStartTime(LocalTime.of(9, 0))
-                            .gracePeriodMinutes(15)
-                            .deleted(false)
-                            .build();
-
-                    departmentRepository.save(d);
-
-                    departmentAuditRepository.save(
-                            DepartmentAudit.builder()
-                                    .tenantId(tenantId)
-                                    .branchId(branch.getId())
-                                    .departmentId(d.getId())
-                                    .departmentName(d.getName())
-                                    .action("CREATE")
-                                    .reason("Tenant bootstrap")
-                                    .performedByUsername("system")
-                                    .build()
-                    );
-
-                    return d;
-                });
 
         /* =====================================
         4️⃣ ENSURE ADMIN USER
@@ -253,29 +206,6 @@ public class TenantBootstrapService {
                     .build();
 
             userBranchRepository.save(userBranch);
-        }
-
-
-        /* =====================================
-           6️⃣ ENSURE USER ↔ DEPARTMENT
-        ===================================== */
-
-        boolean deptAssigned = userDepartmentRepository
-                .existsByUser_IdAndDepartment_Id(
-                        admin.getId(),
-                        department.getId()
-                );
-
-        if (!deptAssigned) {
-
-            UserDepartment userDepartment = UserDepartment.builder()
-                    .user(admin)
-                    .department(department)
-                    .role(DepartmentMembershipRole.HEAD)
-                    .primaryDepartment(true)
-                    .build();
-
-            userDepartmentRepository.save(userDepartment);
         }
 
         return adminCreated;

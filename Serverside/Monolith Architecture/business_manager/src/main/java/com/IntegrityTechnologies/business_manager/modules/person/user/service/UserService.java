@@ -13,11 +13,6 @@ import com.IntegrityTechnologies.business_manager.exception.UserNotFoundExceptio
 import com.IntegrityTechnologies.business_manager.modules.person.branch.dto.BranchHierarchyDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.department.dto.DepartmentAssignmentDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.department.dto.DepartmentPositionDTO;
-import com.IntegrityTechnologies.business_manager.modules.person.department.model.Department;
-import com.IntegrityTechnologies.business_manager.modules.person.department.model.DepartmentMembershipRole;
-import com.IntegrityTechnologies.business_manager.modules.person.department.repository.DepartmentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.user.dto.UserDTO;
 import com.IntegrityTechnologies.business_manager.modules.person.user.mapper.UserImageMapper;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.*;
@@ -64,9 +59,7 @@ public class UserService {
     private final PrivilegesChecker privilegesChecker;
     private final FileStorageService fileStorageService;
     private final TransactionalFileManager transactionalFileManager;
-    private final DepartmentRepository departmentRepository;
     private final BranchRepository branchRepository;
-    private final UserDepartmentRepository userDepartmentRepository;
     private final UserBranchRepository userBranchRepository;
     private final SubscriptionGuard subscriptionGuard;
     private final AuthService authService;
@@ -161,11 +154,11 @@ public class UserService {
             throw ex;
         }
 
-        boolean assignedDefaults = applyDefaultBranchAndDepartmentIfMissing(dto, user);
+        boolean assignedDefaults = applyDefaultBranchIfMissing(dto, user);
 
         if (!assignedDefaults) {
             // Only apply admin assignments when defaults were NOT used
-            applyDepartmentAndBranchAssignments(dto, user, authentication);
+            applyBranchAssignments(dto, user, authentication);
         }
 
         // 5️⃣ Create actual folder on disk
@@ -221,7 +214,7 @@ public class UserService {
                 .orElseThrow(() -> new UserNotFoundException("Updater not found"));
 
         // 3️⃣ Validate access using centralized method
-        if (!privilegesChecker.isAuthorizedWithinDepartment(updater, user)) {
+        if (!privilegesChecker.isAuthorized(updater, user)) {
             throw new UnauthorizedAccessException(
                     "You are not authorized to update user: " + user.getUsername()
             );
@@ -379,7 +372,7 @@ public class UserService {
             );
         }
 
-        applyDepartmentAndBranchAssignments(updatedData, user, authentication);
+        applyBranchAssignments(updatedData, user, authentication);
 
         auditChanges(user, changes, updaterUsername);
 
@@ -434,7 +427,7 @@ public class UserService {
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         User requester = privilegesChecker.getAuthenticatedUser(auth);
-        if (!privilegesChecker.isAuthorizedWithinDepartment(requester, target)) {
+        if (!privilegesChecker.isAuthorized(requester, target)) {
             throw new UnauthorizedAccessException("You are not authorized to " + action + " for user: " + target.getUsername());
         }
         return target;
@@ -495,7 +488,7 @@ public class UserService {
             key = "T(com.IntegrityTechnologies.business_manager.config.caffeine.CacheKeys)" +
                     ".usersPage(" +
                     "T(com.IntegrityTechnologies.business_manager.security.util.TenantContext).getTenantId(), " +
-                    "#deleted, #role, #branchId, #departmentId, #q, " +
+                    "#deleted, #role, #branchId, #q, " +
                     "#pageable.pageNumber, #pageable.pageSize, #pageable.sort.toString())"
     )
     @Transactional(readOnly = true)
@@ -503,7 +496,6 @@ public class UserService {
             Boolean deleted,
             String role,
             UUID branchId,
-            UUID departmentId,
             String q,
             Pageable pageable
     ) {
@@ -520,7 +512,6 @@ public class UserService {
                 deleted,
                 parsedRole,
                 branchId,
-                departmentId,
                 q,
                 unsortedPageable
         );
@@ -530,7 +521,7 @@ public class UserService {
         }
 
         // STEP 2: fetch full users
-        List<User> users = userRepository.findUsersWithDepartments(pageIds.getContent());
+        List<User> users = userRepository.findUsersWithBranches(pageIds.getContent());
 
         // 🔥 STEP 3: preserve DB pagination order
         Map<UUID, Integer> orderMap = new HashMap<>();
@@ -672,7 +663,7 @@ public class UserService {
 
         User actor = privilegesChecker.getAuthenticatedUser(authentication);
 
-        if (!privilegesChecker.isAuthorizedWithinDepartment(actor, user)) {
+        if (!privilegesChecker.isAuthorized(actor, user)) {
             throw new UnauthorizedAccessException("Not authorized to modify this user");
         }
 
@@ -806,7 +797,7 @@ public class UserService {
         User actor =
                 privilegesChecker.getAuthenticatedUser(authentication);
 
-        if (!privilegesChecker.isAuthorizedWithinDepartment(actor, user)) {
+        if (!privilegesChecker.isAuthorized(actor, user)) {
             throw new UnauthorizedAccessException(
                     "Not authorized to modify this user"
             );
@@ -939,7 +930,7 @@ public class UserService {
         User actor =
                 privilegesChecker.getAuthenticatedUser(authentication);
 
-        if (!privilegesChecker.isAuthorizedWithinDepartment(actor, user)) {
+        if (!privilegesChecker.isAuthorized(actor, user)) {
             throw new UnauthorizedAccessException(
                     "Not authorized to modify this user"
             );
@@ -1057,7 +1048,6 @@ public class UserService {
                 .normalize();
 
         // Delete the user
-        userDepartmentRepository.deleteByUserId(tenantId(), user.getId());
         userBranchRepository.deleteByUserId(tenantId(), user.getId());
         userRepository.delete(user);
 
@@ -1089,7 +1079,7 @@ public class UserService {
             User target,
             boolean allowSelf
     ) {
-        if (!privilegesChecker.isAuthorizedWithinDepartment(actor, target)) {
+        if (!privilegesChecker.isAuthorized(actor, target)) {
             throw new UnauthorizedAccessException(
                     "Not authorized to manage user: " + target.getUsername()
             );
@@ -1144,13 +1134,6 @@ public class UserService {
         );
 
         for (String url : uploadedUrls.keySet()) {
-            UUID imageBranchId =
-                    target.getBranches()
-                            .stream()
-                            .filter(UserBranch::isPrimaryBranch)
-                            .map(ub -> ub.getBranch().getId())
-                            .findFirst()
-                            .orElseThrow();
             String description =
                     uploadedUrls.get(url);
 
@@ -1228,22 +1211,11 @@ public class UserService {
         }
     }
 
-    /**
-     * Apply default MAIN branch + GENERAL department if the user was created without assignments.
-     */
-    /**
-     * Applies MAIN + GENERAL ONLY if the DTO contains NO assignments.
-     */
-    private boolean applyDefaultBranchAndDepartmentIfMissing(
+    private boolean applyDefaultBranchIfMissing(
             UserDTO dto,
             User user
     ) {
-
-        boolean noAssignments =
-                dto.getDepartmentsAndPositions() == null ||
-                        dto.getDepartmentsAndPositions().isEmpty();
-
-        if (!noAssignments) {
+        if (dto.getBranchIds() != null && !dto.getBranchIds().isEmpty()) {
             return false;
         }
 
@@ -1252,125 +1224,41 @@ public class UserService {
                         tenantId(),
                         "MAIN"
                 )
-                .orElseThrow(() -> new RuntimeException("Default MAIN branch missing"));
+                .orElseThrow(() ->
+                        new RuntimeException("Default MAIN branch missing"));
 
-        Department general = departmentRepository
-                .findByTenantIdAndNameIgnoreCaseAndBranch_Id(
-                        tenantId(),
-                        "GENERAL",
-                        main.getId()
-                )
-                .orElseThrow(() -> new RuntimeException("Default GENERAL department missing"));
-
-        if (!general.getBranch().getId().equals(main.getId())) {
-            throw new IllegalStateException("GENERAL department must belong to MAIN branch");
-        }
-
-        /* ---------- enforce single primary branch ---------- */
-
-        userBranchRepository.findByUserId(tenantId(), user.getId())
-                .forEach(rel -> rel.setPrimaryBranch(false));
-
-        /* ---------- branch relation ---------- */
-
-        if (!userBranchRepository.existsByUser_IdAndBranch_Id(user.getId(), main.getId())) {
-
-            userBranchRepository.save(
-                    UserBranch.builder()
-                            .id(new UserBranchId(user.getId(), main.getId()))
-                            .user(user)
-                            .branch(main)
-                            .tenantId(tenantId())
-                            .primaryBranch(true)
-                            .build()
-            );
-        }
-
-        /* ---------- enforce single primary department ---------- */
-
-        userDepartmentRepository.findByUserId(tenantId(), user.getId())
-                .forEach(rel -> rel.setPrimaryDepartment(false));
-
-        /* ---------- department relation ---------- */
-
-        if (!userDepartmentRepository
-                .existsByUser_IdAndDepartment_Id(user.getId(), general.getId())) {
-
-            userDepartmentRepository.save(
-                    UserDepartment.builder()
-                            .id(new UserDepartmentId(user.getId(), general.getId()))
-                            .user(user)
-                            .tenantId(tenantId())
-                            .branchId(main.getId())
-                            .department(general)
-                            .role(DepartmentMembershipRole.MEMBER)
-                            .primaryDepartment(true)
-                            .build()
-            );
-        }
-
-        log.info(
-                "User '{}' automatically assigned to MAIN → GENERAL",
-                user.getUsername()
+        userBranchRepository.save(
+                UserBranch.builder()
+                        .id(new UserBranchId(user.getId(), main.getId()))
+                        .user(user)
+                        .branch(main)
+                        .tenantId(tenantId())
+                        .primaryBranch(true)
+                        .build()
         );
 
         return true;
     }
 
-    private void applyDepartmentAndBranchAssignments(
+    private void applyBranchAssignments(
             UserDTO dto,
             User user,
             Authentication authentication
     ) {
 
-        if (dto.getDepartmentsAndPositions() == null ||
-                dto.getDepartmentsAndPositions().isEmpty()) {
+        if (dto.getBranchIds() == null || dto.getBranchIds().isEmpty()) {
             return;
         }
 
-        for (DepartmentAssignmentDTO assignment : dto.getDepartmentsAndPositions()) {
+        for (UUID branchId : dto.getBranchIds()) {
 
-            UUID branchId = assignment.getBranchId();
-            UUID departmentId = assignment.getDepartmentId();
-
-            Department department =
-                    departmentRepository
+            Branch branch =
+                    branchRepository
                             .findByTenantIdAndIdAndDeletedFalse(
                                     tenantId(),
-                                    departmentId
+                                    branchId
                             )
-                            .orElseThrow(() -> new EntityNotFoundException("Department not found"));
-
-            if (!department.getBranch().getId().equals(branchId)) {
-                throw new IllegalArgumentException(
-                        "Department does not belong to selected branch"
-                );
-            }
-
-            DepartmentMembershipRole role =
-                    assignment.getPosition().equalsIgnoreCase("head")
-                            ? DepartmentMembershipRole.HEAD
-                            : DepartmentMembershipRole.MEMBER;
-
-            /* ---------- department relation ---------- */
-
-            if (!userDepartmentRepository
-                    .existsByUser_IdAndDepartment_Id(user.getId(), departmentId)) {
-
-                userDepartmentRepository.save(
-                        UserDepartment.builder()
-                                .id(new UserDepartmentId(user.getId(), departmentId))
-                                .user(user)
-                                .tenantId(tenantId())
-                                .branchId(branchId)
-                                .department(department)
-                                .role(role)
-                                .primaryDepartment(false)
-                                .build()
-                );
-            }
-
-            /* ---------- branch relation ---------- */
+                            .orElseThrow(() -> new EntityNotFoundException("Branch not found"));
 
             if (!userBranchRepository
                     .existsByUser_IdAndBranch_Id(user.getId(), branchId)) {
@@ -1380,7 +1268,7 @@ public class UserService {
                                 .id(new UserBranchId(user.getId(), branchId))
                                 .user(user)
                                 .tenantId(tenantId())
-                                .branch(department.getBranch())
+                                .branch(branch)
                                 .primaryBranch(false)
                                 .build()
                 );
@@ -1405,17 +1293,6 @@ public class UserService {
             Path physicalFile = userUploadDir.resolve(fileName);
 
             // Persist UserImage in DB with API-friendly URL
-            UUID imageBranchId =
-                    userBranchRepository
-                            .findByUserId(tenantId(), user.getId())
-                            .stream()
-                            .filter(UserBranch::isPrimaryBranch)
-                            .map(ub -> ub.getBranch().getId())
-                            .findFirst()
-                            .orElseThrow(() ->
-                                    new IllegalStateException("User has no primary branch assigned")
-                            );
-
             String description = apiUrls.get(apiUrl);
 
             UserImage image = UserImage.builder()
@@ -1550,36 +1427,22 @@ public class UserService {
                 )
                 .build();
 
-        Map<Branch, List<DepartmentPositionDTO>> grouped = new HashMap<>();
+        List<BranchHierarchyDTO> hierarchy = new ArrayList<>();
 
-        if (user.getDepartments() != null) {
+        if (user.getBranches() != null) {
 
-            for (UserDepartment rel : user.getDepartments()) {
+            for (UserBranch userBranch : user.getBranches()) {
 
-                Department dept = rel.getDepartment();
-                Branch branch = dept.getBranch();
+                Branch branch = userBranch.getBranch();
 
-                grouped.computeIfAbsent(branch, b -> new ArrayList<>())
-                        .add(
-                                DepartmentPositionDTO.builder()
-                                        .departmentId(dept.getId())
-                                        .departmentName(dept.getName())
-                                        .position(rel.getRole().name().toLowerCase())
-                                        .build()
-                        );
+                hierarchy.add(
+                    BranchHierarchyDTO.builder()
+                        .branchId(branch.getId())
+                        .branchName(branch.getName())
+                        .build()
+                );
             }
         }
-
-        List<BranchHierarchyDTO> hierarchy =
-                grouped.entrySet().stream()
-                        .map(entry ->
-                                BranchHierarchyDTO.builder()
-                                        .branchId(entry.getKey().getId())
-                                        .branchName(entry.getKey().getName())
-                                        .departments(entry.getValue())
-                                        .build()
-                        )
-                        .toList();
 
         dto.setBranchHierarchy(hierarchy);
 
