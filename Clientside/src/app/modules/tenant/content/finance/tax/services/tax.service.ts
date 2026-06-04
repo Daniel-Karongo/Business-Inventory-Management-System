@@ -26,7 +26,9 @@ import {
   AccountingPeriod,
   TaxStatus,
   TaxSystemState,
-  VatFiling
+  VatFiling,
+  CorporateTaxAccrualPreview,
+  CorporateTaxOverview
 } from '../models/tax.models';
 import { FundingAccount } from '../../ap/debts/models/funding-account.model';
 
@@ -207,6 +209,25 @@ export class TaxService {
     );
   }
 
+  getEligibleCorporateTaxPeriods(
+    branchId?: string
+  ): Observable<AccountingPeriod[]> {
+
+    return this.http.get<
+      AccountingPeriod[]
+    >(
+      `${this.periodsBase}/eligible-corporate-tax-periods`,
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(
+              branchId
+            )
+        }
+      }
+    );
+  }
+
   getCurrentPeriod(
     branchId?: string
   ): Observable<AccountingPeriod | null> {
@@ -330,6 +351,39 @@ export class TaxService {
      CORPORATE
   ============================================ */
 
+
+  getCorporateOverview(
+    branchId?: string
+  ): Observable<CorporateTaxOverview> {
+    return this.http.get<CorporateTaxOverview>(
+      `${this.corporateBase}/overview`,
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(
+              branchId
+            )
+        }
+      }
+    );
+  }
+
+  getCorporatePreview(
+    periodId: string,
+    branchId?: string
+  ): Observable<CorporateTaxAccrualPreview> {
+    return this.http.get<CorporateTaxAccrualPreview>(
+      `${this.corporateBase}/accrual-preview/${periodId}`,
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(
+              branchId
+            )
+        }
+      }
+    );
+  }
   listCorporate(
     page = 0,
     size = 25,
@@ -378,6 +432,7 @@ export class TaxService {
 
   payCorporate(
     filingId: string,
+    amount: number,
     accountId: string,
     branchId?: string
   ) {
@@ -386,10 +441,12 @@ export class TaxService {
       {},
       {
         params: {
+          amount,
           accountId,
-          branchId: this.resolveBranchId(
-            branchId
-          )
+          branchId:
+            this.resolveBranchId(
+              branchId
+            )
         }
       }
     );

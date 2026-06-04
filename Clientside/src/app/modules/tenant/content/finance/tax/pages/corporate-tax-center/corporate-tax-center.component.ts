@@ -55,7 +55,9 @@ import {
   CorporateTaxFiling,
   PageResponse,
   AccountingPeriod,
-  TaxStatus
+  TaxStatus,
+  CorporateTaxOverview,
+  CorporateTaxAccrualPreview
 } from '../../models/tax.models';
 import { FundingAccount } from '../../../ap/debts/models/funding-account.model';
 
@@ -114,6 +116,17 @@ export class CorporateTaxCenterComponent
     AccountingPeriod[] = [];
 
   fundingAccounts: FundingAccount[] = [];
+
+  overview:
+    CorporateTaxOverview | null = null;
+
+  preview:
+    CorporateTaxAccrualPreview | null = null;
+
+  paymentAmounts:
+    Record<string, number> = {};
+
+  previewLoading = false;
 
   accountId = '';
 
@@ -270,16 +283,12 @@ export class CorporateTaxCenterComponent
         ),
 
       periods: this.taxService
-        .listPeriods(
-          0,
-          100,
+        .getEligibleCorporateTaxPeriods(
           branchId
         )
         .pipe(
           catchError(() =>
-            of(
-              this.createEmptyPageResponse<AccountingPeriod>()
-            )
+            of([])
           )
         ),
 
@@ -295,6 +304,14 @@ export class CorporateTaxCenterComponent
               this.createEmptyPageResponse<CorporateTaxFiling>()
             )
           )
+        ),
+
+      overview: this.taxService
+        .getCorporateOverview(
+          branchId
+        )
+        .pipe(
+          catchError(() => of(null))
         ),
 
       fundingAccounts: this.taxService
@@ -319,13 +336,26 @@ export class CorporateTaxCenterComponent
             result?.status ?? null;
 
           this.periods =
-            result?.periods?.content ?? [];
+            result?.periods ?? [];
+
+          if (
+            !this.periodId &&
+            this.periods.length === 1
+          ) {
+            this.periodId =
+              this.periods[0].id;
+
+            this.loadPreview();
+          }
 
           this.filings =
             result?.filings?.content ?? [];
 
           const fundingAccounts =
             result?.fundingAccounts ?? [];
+
+          this.overview =
+            result?.overview ?? null;
 
           if (
             this.accountId &&
@@ -396,6 +426,40 @@ export class CorporateTaxCenterComponent
       key;
   }
 
+  loadPreview() {
+
+    if (!this.periodId) {
+      this.preview = null;
+      return;
+    }
+
+    this.previewLoading = true;
+
+    this.taxService
+      .getCorporatePreview(
+        this.periodId,
+        this.selectedBranchId ??
+        undefined
+      )
+      .subscribe({
+        next: preview => {
+
+          this.preview =
+            preview;
+
+          this.previewLoading =
+            false;
+        },
+        error: () => {
+
+          this.preview = null;
+
+          this.previewLoading =
+            false;
+        }
+      });
+  }
+
   accrueCorporate() {
 
     if (!this.periodId) {
@@ -451,17 +515,34 @@ export class CorporateTaxCenterComponent
   }
 
   payCorporate(
-    filingId: string
+    filing: CorporateTaxFiling
   ) {
+
+    const amount =
+      this.paymentAmounts[
+      filing.id
+      ];
+
+    if (
+      !amount ||
+      amount <= 0
+    ) {
+
+      this.snackbar.open(
+        'Enter payment amount',
+        'Close',
+        { duration: 3000 }
+      );
+
+      return;
+    }
 
     if (!this.accountId) {
 
       this.snackbar.open(
-        'Account ID is required',
+        'Select funding account',
         'Close',
-        {
-          duration: 3000
-        }
+        { duration: 3000 }
       );
 
       return;
@@ -469,14 +550,15 @@ export class CorporateTaxCenterComponent
 
     this.taxService
       .payCorporate(
-        filingId,
+        filing.id,
+        amount,
         this.accountId
       )
       .subscribe({
         next: () => {
 
           this.snackbar.open(
-            'Corporate tax payment recorded',
+            'Payment recorded',
             'Close',
             {
               duration: 2500
@@ -487,12 +569,11 @@ export class CorporateTaxCenterComponent
             this.selectedBranchId
           );
         },
-
-        error: (err) => {
+        error: err => {
 
           this.snackbar.open(
             err?.error?.message ??
-            'Failed to file VAT',
+            'Payment failed',
             'Close',
             {
               duration: 5000
@@ -542,9 +623,15 @@ export class CorporateTaxCenterComponent
   get canAccrueCorporate() {
 
     return (
+
       !!this.periodId &&
-      this.hasPeriods &&
+
+      !!this.preview &&
+
+      this.preview.taxableProfit > 0 &&
+
       !this.accruing &&
+
       !this.status?.locked
     );
   }
@@ -553,5 +640,61 @@ export class CorporateTaxCenterComponent
     return this.fundingAccounts.find(
       x => x.id === this.accountId
     );
+  }
+
+  statusLabel(
+    status:
+      | 'ACCRUED'
+      | 'FILED'
+      | 'PARTIALLY_PAID'
+      | 'PAID'
+      | 'OVERDUE'
+  ): string {
+
+    switch (status) {
+
+      case 'ACCRUED':
+        return 'Payment Required';
+
+      case 'FILED':
+        return 'Filed';
+
+      case 'PARTIALLY_PAID':
+        return 'Partially Paid';
+
+      case 'PAID':
+        return 'Fully Paid';
+
+      case 'OVERDUE':
+        return 'Overdue';
+
+      default:
+        return status;
+    }
+  }
+
+  statusClass(
+    status:
+      | 'ACCRUED'
+      | 'FILED'
+      | 'PARTIALLY_PAID'
+      | 'PAID'
+      | 'OVERDUE'
+  ): string {
+
+    switch (status) {
+
+      case 'PAID':
+        return 'status-paid';
+
+      case 'PARTIALLY_PAID':
+        return 'status-partial';
+
+      case 'OVERDUE':
+        return 'status-overdue';
+
+      default:
+        return 'status-due';
+    }
   }
 }

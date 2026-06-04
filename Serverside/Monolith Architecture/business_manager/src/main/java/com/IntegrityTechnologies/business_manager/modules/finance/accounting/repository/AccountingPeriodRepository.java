@@ -1,8 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -52,4 +54,23 @@ public interface AccountingPeriodRepository
     Optional<AccountingPeriod> findByTenantIdAndBranchIdAndId(UUID tenantId, UUID branchId, UUID periodId);
 
     Optional<AccountingPeriod> findByTenantIdAndId(UUID tenantId, UUID periodId);
+
+    long countByTenantIdAndBranchIdAndClosedTrueAndTaxAccruedFalse(
+            UUID tenantId,
+            UUID branchId
+    );
+
+    @Query("""
+            SELECT p
+            FROM AccountingPeriod p
+            WHERE p.tenantId = :tenantId
+              AND p.branchId = :branchId
+              AND p.closed = true
+              AND p.taxAccrued = false
+            ORDER BY p.startDate DESC
+            """)
+    List<AccountingPeriod> findEligibleCorporateTaxPeriods(
+            UUID tenantId,
+            UUID branchId
+    );
 }

@@ -1,20 +1,22 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.tax.corporate_tax.controller;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountingPeriodRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.mapper.TaxFilingMapper;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.corporate_tax.dto.CorporateTaxAccrualPreviewDTO;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.corporate_tax.dto.CorporateTaxFilingDTO;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.corporate_tax.dto.CorporateTaxOverviewDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.corporate_tax.model.CorporateTaxFiling;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.corporate_tax.repository.CorporateTaxFilingRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.corporate_tax.service.CorporateTaxService;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
-import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
-import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @RestController
@@ -23,67 +25,72 @@ import java.util.UUID;
 @TenantManagerOnly
 public class CorporateTaxController {
 
-    private final CorporateTaxService service;
-    private final CorporateTaxFilingRepository repository;
-    private final BranchTenantGuard branchTenantGuard;
-    private final AccountingPeriodRepository accountingPeriodRepository;
+    private final CorporateTaxService corporateTaxService;
+    private final CorporateTaxFilingRepository filingRepository;
 
     @GetMapping
-    public Page<CorporateTaxFiling> list(
+    public Page<CorporateTaxFilingDTO> list(
             @RequestParam UUID branchId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "50") int size
     ) {
 
-        branchTenantGuard.validate(branchId);
+        return filingRepository
+                .findByTenantIdAndBranchId(
+                        TenantContext.getTenantId(),
+                        branchId,
+                        PageRequest.of(page,size)
+                )
+                .map(TaxFilingMapper::toDto);
+    }
 
-        Pageable pageable = PageRequest.of(page, size);
+    @GetMapping("/overview")
+    public CorporateTaxOverviewDTO overview(
+            @RequestParam UUID branchId
+    ) {
+        return corporateTaxService.overview(
+                branchId
+        );
+    }
 
-        return repository.findByTenantIdAndBranchId(
-                TenantContext.getTenantId(),
-                branchId,
-                pageable
+    @GetMapping("/accrual-preview/{periodId}")
+    public CorporateTaxAccrualPreviewDTO preview(
+            @PathVariable UUID periodId,
+            @RequestParam UUID branchId
+    ) {
+        return corporateTaxService.previewAccrual(
+                periodId,
+                branchId
         );
     }
 
     @PostMapping("/accrue/{periodId}")
     public CorporateTaxFiling accrue(
             @PathVariable UUID periodId,
-            @RequestParam UUID branchId
+            @RequestParam UUID branchId,
+            Authentication authentication
     ) {
-
-        branchTenantGuard.validate(branchId);
-
-        AccountingPeriod period =
-                accountingPeriodRepository
-                        .findByTenantIdAndId(
-                                TenantContext.getTenantId(),
-                                periodId
-                        )
-                        .orElseThrow();
-
-        return service.accrueCorporateTax(
+        return corporateTaxService.accrueCorporateTax(
                 periodId,
                 branchId,
-                period.getStartDate().atStartOfDay(),
-                period.getEndDate().plusDays(1).atStartOfDay(),
-                SecurityUtils.currentUsername()
+                null,
+                null,
+                authentication.getName()
         );
     }
 
     @PostMapping("/pay/{filingId}")
     public void pay(
             @PathVariable UUID filingId,
+            @RequestParam BigDecimal amount,
             @RequestParam UUID accountId,
-            @RequestParam UUID branchId
+            Authentication authentication
     ) {
-
-        branchTenantGuard.validate(branchId);
-
-        service.markPaid(
+        corporateTaxService.recordPayment(
                 filingId,
-                SecurityUtils.currentUsername(),
-                accountId
+                amount,
+                accountId,
+                authentication.getName()
         );
     }
 }

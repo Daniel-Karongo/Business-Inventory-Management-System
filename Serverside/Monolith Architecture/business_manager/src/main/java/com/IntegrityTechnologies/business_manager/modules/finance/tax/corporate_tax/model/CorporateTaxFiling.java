@@ -40,7 +40,15 @@ public class CorporateTaxFiling extends BranchAwareEntity {
     private BigDecimal taxRate;
     private BigDecimal taxAmount;
 
-    private boolean paid;
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal paidAmount = BigDecimal.ZERO;
+
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal outstandingAmount = BigDecimal.ZERO;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private CorporateTaxFilingStatus status;
 
     private String filedBy;
     private LocalDateTime filedAt;

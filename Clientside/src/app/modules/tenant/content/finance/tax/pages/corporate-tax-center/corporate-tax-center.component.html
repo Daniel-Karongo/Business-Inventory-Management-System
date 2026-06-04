@@ -123,16 +123,6 @@
 
         </button>
 
-        <button mat-flat-button color="primary" (click)="accrueCorporate()" [disabled]="!canAccrueCorporate">
-
-          <mat-icon>
-            calculate
-          </mat-icon>
-
-          Accrue Tax
-
-        </button>
-
       </div>
 
     </div>
@@ -211,11 +201,17 @@
         </mat-icon>
 
         <h3>
-          Corporate tax workspace not initialized
+
+          No Corporate Tax Activity Yet
+
         </h3>
 
         <p>
-          No tax periods, corporate tax filings or accrual activity exist for this branch yet.
+
+          Corporate tax will appear here automatically
+          once accounting periods are closed and tax
+          accruals are generated.
+
         </p>
 
       </div>
@@ -225,6 +221,59 @@
       ====================================================== -->
 
       <ng-container *ngIf="!showEmptyState">
+
+        <div *ngIf="overview?.pendingAccruals" class="action-banner warning">
+
+          <mat-icon>
+            schedule
+          </mat-icon>
+
+          <div>
+
+            <strong>
+
+              {{
+              overview?.pendingAccruals
+              }}
+
+              accounting period(s)
+
+            </strong>
+
+            are awaiting corporate tax accrual.
+
+          </div>
+
+        </div>
+
+        <div *ngIf="
+    (overview?.outstandingTax ?? 0) > 0
+  " class="action-banner danger">
+
+          <mat-icon>
+            warning
+          </mat-icon>
+
+          <div>
+
+            Outstanding corporate tax of
+
+            <strong>
+
+              KES
+
+              {{
+              overview?.outstandingTax
+              | number:'1.2-2'
+              }}
+
+            </strong>
+
+            requires payment.
+
+          </div>
+
+        </div>
 
         <div class="panel-card">
 
@@ -245,11 +294,15 @@
             <div class="overview-item">
 
               <div class="overview-label">
-                Tax Rate
+                Outstanding Tax
               </div>
 
               <div class="overview-value">
-                {{ status?.corporateTaxRate ?? 0 }}%
+                KES
+                {{
+                overview?.outstandingTax
+                | number:'1.2-2'
+                }}
               </div>
 
             </div>
@@ -257,11 +310,15 @@
             <div class="overview-item">
 
               <div class="overview-label">
-                System Status
+                Estimated Tax
               </div>
 
               <div class="overview-value">
-                {{ status?.locked ? 'Locked' : 'Active' }}
+                KES
+                {{
+                overview?.estimatedTax
+                | number:'1.2-2'
+                }}
               </div>
 
             </div>
@@ -269,11 +326,15 @@
             <div class="overview-item">
 
               <div class="overview-label">
-                Tax Periods
+                Taxable Profit
               </div>
 
               <div class="overview-value">
-                {{ periods.length }}
+                KES
+                {{
+                overview?.taxableProfit
+                | number:'1.2-2'
+                }}
               </div>
 
             </div>
@@ -281,11 +342,43 @@
             <div class="overview-item">
 
               <div class="overview-label">
-                Corporate Filings
+                Awaiting Accrual
               </div>
 
               <div class="overview-value">
-                {{ filings.length }}
+                {{
+                overview?.pendingAccruals
+                }}
+              </div>
+
+            </div>
+
+            <div class="overview-item">
+
+              <div class="overview-label">
+                Awaiting Payment
+              </div>
+
+              <div class="overview-value">
+                {{
+                overview?.pendingPayments
+                }}
+              </div>
+
+            </div>
+
+            <div class="overview-item">
+
+              <div class="overview-label">
+                Total Tax Paid
+              </div>
+
+              <div class="overview-value">
+                KES
+                {{
+                overview?.totalPaidTax
+                | number:'1.2-2'
+                }}
               </div>
 
             </div>
@@ -310,7 +403,7 @@
 
           <ng-container *ngIf="hasPeriods; else noPeriodsAvailable">
 
-            <div class="form-grid">
+            <div class="accrual-workflow">
 
               <mat-form-field appearance="fill">
 
@@ -318,7 +411,7 @@
                   Tax Period
                 </mat-label>
 
-                <mat-select [(ngModel)]="periodId">
+                <mat-select [(ngModel)]="periodId" (selectionChange)="loadPreview()">
 
                   <mat-option *ngFor="let period of periods" [value]="period.id">
 
@@ -331,6 +424,134 @@
                 </mat-select>
 
               </mat-form-field>
+
+            </div>
+
+            <div class="preview-card" *ngIf="preview">
+
+              <div class="preview-title">
+                Tax Accrual Preview
+              </div>
+
+              <div class="preview-grid">
+
+                <div class="preview-item">
+
+                  <div class="preview-label">
+                    Revenue
+                  </div>
+
+                  <div class="preview-value">
+                    KES
+                    {{
+                    preview.revenue
+                    | number:'1.2-2'
+                    }}
+                  </div>
+
+                </div>
+
+                <div class="preview-item">
+
+                  <div class="preview-label">
+                    Expenses
+                  </div>
+
+                  <div class="preview-value">
+                    KES
+                    {{
+                    preview.expenses
+                    | number:'1.2-2'
+                    }}
+                  </div>
+
+                </div>
+
+                <div class="preview-item">
+
+                  <div class="preview-label">
+                    Taxable Profit
+                  </div>
+
+                  <div class="preview-value">
+                    KES
+                    {{
+                    preview.taxableProfit
+                    | number:'1.2-2'
+                    }}
+                  </div>
+
+                </div>
+
+                <div class="preview-item">
+
+                  <div class="preview-label">
+                    Estimated Tax
+                  </div>
+
+                  <div class="preview-value">
+                    KES
+                    {{
+                    preview.estimatedTax
+                    | number:'1.2-2'
+                    }}
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+            <div *ngIf="preview && preview.taxableProfit <= 0" class="action-banner success">
+
+              <mat-icon>
+                check_circle
+              </mat-icon>
+
+              <div>
+
+                This period has no taxable profit.
+                No corporate tax will be accrued.
+
+              </div>
+
+            </div>
+
+            <div *ngIf="preview && preview.taxableProfit > 0" class="action-banner info">
+
+              <mat-icon>
+                calculate
+              </mat-icon>
+
+              <div>
+
+                Accruing this period will create a
+                corporate tax obligation of
+
+                <strong>
+
+                  KES
+
+                  {{ preview.estimatedTax | number:'1.2-2' }}
+
+                </strong>
+
+              </div>
+
+            </div>
+
+            <div class="accrual-actions">
+
+              <button mat-flat-button color="primary" (click)="accrueCorporate()" [disabled]="!canAccrueCorporate">
+
+                <mat-icon>
+                  calculate
+                </mat-icon>
+
+                Create Tax Obligation
+
+              </button>
 
             </div>
 
@@ -378,110 +599,196 @@
 
         </div>
 
-        <div *ngFor="let filing of filings" class="filing-card">
+        <div *ngFor="let filing of filings" class="tax-obligation-card">
 
-          <div class="filing-main">
+          <div class="obligation-header">
 
-            <div class="filing-title">
+            <div>
 
-              {{ filing.taxAmount | number:'1.2-2' }}
+              <div class="obligation-period">
+
+                {{
+                filing.periodStart
+                | date
+                }}
+
+                -
+
+                {{
+                filing.periodEnd
+                | date
+                }}
+
+              </div>
+
+              <div class="obligation-status">
+
+                <span class="filing-status" [ngClass]="statusClass(filing.status)">
+
+                  {{ statusLabel(filing.status) }}
+
+                </span>
+
+              </div>
 
             </div>
 
-            <div class="filing-subtitle">
+            <div>
+              <div class="label">
+                Outstanding
+              </div>
+              <div class="obligation-tax">
+                KES
+                {{ filing.outstandingAmount | number:'1.2-2' }}
+              </div>
+            </div>
 
-              Filed
-              {{ filing.filedAt | date:'medium' }}
+          </div>
 
-              <span *ngIf="filing.paidAt">
+          <div class="obligation-grid">
 
-                • Paid
-                {{ filing.paidAt | date:'medium' }}
+            <div>
 
-              </span>
+              <div class="label">
+                Taxable Profit
+              </div>
+
+              <div class="value">
+
+                KES
+
+                {{
+                filing.taxableProfit
+                | number:'1.2-2'
+                }}
+
+              </div>
+
+            </div>
+
+            <div>
+
+              <div class="label">
+                Corporate Tax Due
+              </div>
+
+              <div class="value">
+
+                KES
+
+                {{
+                filing.taxAmount
+                | number:'1.2-2'
+                }}
+
+              </div>
+
+            </div>
+
+            <div>
+
+              <div class="label">
+                Paid
+              </div>
+
+              <div class="value">
+
+                KES
+
+                {{
+                filing.paidAmount
+                | number:'1.2-2'
+                }}
+
+              </div>
+
+            </div>
+
+            <div>
+
+              <div class="label">
+                Remaining
+              </div>
+
+              <div class="value">
+
+                KES
+
+                {{
+                filing.outstandingAmount
+                | number:'1.2-2'
+                }}
+
+              </div>
 
             </div>
 
           </div>
 
-          <div class="filing-actions">
+          <div *ngIf="filing.outstandingAmount > 0" class="payment-section">
 
-            <span class="workspace-status" [class.active]="filing.paid" [class.locked]="!filing.paid">
+            <mat-form-field appearance="fill">
 
-              {{ filing.paid ? 'Paid' : 'Unpaid' }}
+              <mat-label>
+                Payment Amount
+              </mat-label>
 
-            </span>
+              <input matInput type="number" min="0" [max]="filing.outstandingAmount"
+                [(ngModel)]="paymentAmounts[filing.id]">
 
-            <ng-container *ngIf="!filing.paid">
+            </mat-form-field>
 
-              <div class="empty-state" *ngIf="!fundingAccounts.length">
+            <mat-form-field appearance="fill">
 
-                No funding accounts available for tax payments.
+              <mat-label>
+                Funding Account
+              </mat-label>
 
-              </div>
+              <mat-select [(ngModel)]="accountId">
 
-              <mat-form-field *ngIf="fundingAccounts.length" appearance="fill">
+                <mat-option *ngFor="let account of fundingAccounts" [value]="account.id">
 
-                <mat-label>
-                  Funding Account
-                </mat-label>
+                  <div class="account-option">
 
-                <mat-select [(ngModel)]="accountId">
+                    <div class="account-code-row">
+                      {{ account.code }}
+                    </div>
 
-                  <mat-select-trigger>
+                    <div class="account-name-balance-row">
 
-                    {{ selectedAccount?.code }}
-                    —
-                    {{ selectedAccount?.name }}
-                    —
-                    KES
-                    {{ selectedAccount?.balance | number:'1.2-2' }}
+                      <span class="account-name">
+                        {{ account.name }}
+                      </span>
 
-                  </mat-select-trigger>
+                      <span class="account-balance">
 
-                  <mat-option *ngFor="let account of fundingAccounts" [value]="account.id">
+                        KES
 
-                    <div class="account-option">
+                        {{
+                        account.balance
+                        | number:'1.2-2'
+                        }}
 
-                      <div class="account-code-row">
-                        {{ account.code }}
-                      </div>
-
-                      <div class="account-name-balance-row">
-
-                        <span class="account-name">
-                          {{ account.name }}
-                        </span>
-
-                        <span class="account-balance">
-                          {{
-                          account.balance
-                          | number:'1.2-2'
-                          }}
-                        </span>
-
-                      </div>
+                      </span>
 
                     </div>
 
-                  </mat-option>
+                  </div>
 
-                </mat-select>
+                </mat-option>
 
-              </mat-form-field>
+              </mat-select>
 
-              <button mat-flat-button color="primary" (click)="payCorporate(filing.id)"
-                [disabled]="!accountId || !fundingAccounts.length">
+            </mat-form-field>
 
-                <mat-icon>
-                  payments
-                </mat-icon>
+            <button mat-flat-button color="primary" (click)="payCorporate(filing)" [disabled]="!paymentAmounts[filing.id] || 
+                          paymentAmounts[filing.id] <= 0 || 
+                          paymentAmounts[filing.id] > filing.outstandingAmount || 
+                          !accountId ">
 
-                Pay
+              Record Payment
 
-              </button>
-
-            </ng-container>
+            </button>
 
           </div>
 

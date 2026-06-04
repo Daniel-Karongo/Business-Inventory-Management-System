@@ -80,6 +80,25 @@ public class AccountingPeriodController {
                 .toList();
     }
 
+    @GetMapping("/eligible-corporate-tax-periods")
+    public List<AccountingPeriodResponse> eligibleCorporateTaxPeriods(
+            @RequestParam UUID branchId
+    ) {
+        branchTenantGuard.validate(branchId);
+
+        UUID tenantId =
+                TenantContext.getTenantId();
+
+        return repository
+                .findEligibleCorporateTaxPeriods(
+                        tenantId,
+                        branchId
+                )
+                .stream()
+                .map(AccountingPeriodResponse::from)
+                .toList();
+    }
+
     @GetMapping("/current")
     public AccountingPeriodResponse current(
             @RequestParam UUID branchId

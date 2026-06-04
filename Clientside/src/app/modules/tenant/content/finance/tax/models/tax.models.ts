@@ -1,64 +1,44 @@
 export interface TaxStatus {
-
     vatEnabled: boolean;
-
     vatRate: number;
-
     corporateTaxRate: number;
-
     vatCreditTreatment:
     | 'CARRY_FORWARD'
     | 'REFUND'
     | 'BOTH';
-
     lastAccrualDate: string | null;
-
     locked: boolean;
 }
 
 export interface TaxSystemState {
     id?: string;
-
     taxMode:
     | 'CORPORATE'
     | 'PERSONAL'
     | 'NONE';
-
     vatEnabled: boolean;
-
     pricesVatInclusive: boolean;
-
     vatRate: number;
-
     corporateTaxRate: number;
-
     vatCreditTreatment:
     | 'CARRY_FORWARD'
     | 'REFUND'
     | 'BOTH';
-
     locked: boolean;
-
     lockedAt?: string | null;
-
     branchId: string;
 }
 
 export interface VatFiling {
     id: string;
     periodId: string;
-
     outputVat: number;
     inputVat: number;
-
     vatPayable: number;
-
     openingCredit: number;
     creditApplied: number;
     closingCredit: number;
-
     vatReceivableCreated: number;
-
     status:
     | 'VAT_PAYABLE'
     | 'PAID'
@@ -66,24 +46,28 @@ export interface VatFiling {
     | 'VAT_CREDIT_CARRIED_FORWARD'
     | 'VAT_REFUND_PENDING'
     | 'VAT_REFUNDED';
-
     paid: boolean;
-
     filedAt: string;
-
     paidAt?: string | null;
 }
 
 export interface CorporateTaxFiling {
-    id: string;
-    periodId: string;
-    taxableProfit: number;
-    taxRate: number;
-    taxAmount: number;
-    paid: boolean;
-    filedBy?: string;
-    filedAt: string;
-    paidAt?: string | null;
+  id: string;
+  periodId: string;
+  periodStart: string;
+  periodEnd: string;
+  taxableProfit: number;
+  taxRate: number;
+  taxAmount: number;
+  paidAmount: number;
+  outstandingAmount: number;
+  status:
+    | 'ACCRUED'
+    | 'PARTIALLY_PAID'
+    | 'PAID';
+  paid: boolean;
+  filedAt: string;
+  paidAt?: string | null;
 }
 
 export interface AccountingPeriod {
@@ -92,6 +76,9 @@ export interface AccountingPeriod {
     startDate: string;
     endDate: string;
     closed: boolean;
+
+    taxAccrued: boolean;
+    taxAccruedAt?: string | null;
 }
 
 export interface PageResponse<T> {
@@ -102,4 +89,25 @@ export interface PageResponse<T> {
     size: number;
     first: boolean;
     last: boolean;
+}
+
+export interface CorporateTaxOverview {
+    outstandingTax: number;
+    estimatedTax: number;
+    taxableProfit: number;
+    pendingAccruals: number;
+    pendingPayments: number;
+    totalPaidTax: number;
+    totalAccruedTax: number;
+}
+
+export interface CorporateTaxAccrualPreview {
+    periodId: string;
+    startDate: string;
+    endDate: string;
+    revenue: number;
+    expenses: number;
+    taxableProfit: number;
+    taxRate: number;
+    estimatedTax: number;
 }
