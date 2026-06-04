@@ -2,14 +2,14 @@ package com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.contr
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountingPeriodRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.model.VatFiling;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.dto.VatFilingDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.mapper.TaxFilingMapper;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.repository.VatFilingRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.service.VatFilingService;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.service.*;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -18,6 +18,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -30,6 +31,176 @@ public class VatController {
     private final VatFilingRepository filingRepo;
     private final BranchTenantGuard branchTenantGuard;
     private final AccountingPeriodRepository periodRepository;
+    private final VatQueryService vatQueryService;
+    private final VatPreviewService vatPreviewService;
+    private final VatReadinessService vatReadinessService;
+    private final VatHistoryService vatHistoryService;
+    private final VatPaymentQueryService vatPaymentQueryService;
+    private final VatRefundQueryService vatRefundQueryService;
+    private final VatCreditMovementQueryService vatCreditMovementQueryService;
+
+    @GetMapping("/overview")
+    public VatOverviewResponse overview(
+            @RequestParam UUID branchId
+    ) {
+
+        branchTenantGuard.validate(
+                branchId
+        );
+
+        return vatQueryService.overview(
+                branchId
+        );
+    }
+
+    @GetMapping("/refunds")
+    public List<VatRefundResponse> refunds(
+            @RequestParam UUID branchId
+    ) {
+
+        branchTenantGuard.validate(
+                branchId
+        );
+
+        return vatRefundQueryService.list(
+                branchId
+        );
+    }
+
+    @GetMapping("/credit-history")
+    public List<VatCreditMovementResponse> creditHistory(
+            @RequestParam UUID branchId
+    ) {
+
+        branchTenantGuard.validate(
+                branchId
+        );
+
+        return vatCreditMovementQueryService.list(
+                branchId
+        );
+    }
+
+    @GetMapping("/current-credit")
+    public BigDecimal currentCredit(
+            @RequestParam UUID branchId
+    ) {
+        branchTenantGuard.validate(
+                branchId
+        );
+
+        return vatQueryService.currentCredit(
+                branchId
+        );
+    }
+
+    @GetMapping("/history")
+    public List<VatFilingSummaryResponse> history(
+            @RequestParam UUID branchId
+    ) {
+
+        branchTenantGuard.validate(
+                branchId
+        );
+
+        return vatHistoryService.history(
+                branchId
+        );
+    }
+
+    @GetMapping("/detail/{filingId}")
+    public VatFilingDetailResponse detail(
+            @PathVariable UUID filingId
+    ) {
+
+        return vatHistoryService.detail(
+                filingId
+        );
+    }
+
+    @GetMapping("/payments/{filingId}")
+    public List<VatPaymentResponse> payments(
+            @PathVariable UUID filingId
+    ) {
+
+        return vatPaymentQueryService.list(
+                filingId
+        );
+    }
+
+    @GetMapping("/dashboard")
+    public VatDashboardResponse dashboard(
+            @RequestParam UUID branchId
+    ) {
+
+        branchTenantGuard.validate(
+                branchId
+        );
+
+        return vatQueryService.dashboard(
+                branchId
+        );
+    }
+
+    @GetMapping("/preview/{periodId}")
+    public VatFilingPreviewResponse preview(
+            @PathVariable UUID periodId,
+            @RequestParam UUID branchId
+    ) {
+
+        branchTenantGuard.validate(
+                branchId
+        );
+
+        AccountingPeriod period =
+                periodRepository
+                        .findByTenantIdAndBranchIdAndId(
+                                TenantContext.getTenantId(),
+                                branchId,
+                                periodId
+                        )
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Accounting period not found"
+                                        )
+                        );
+
+        return vatPreviewService.preview(
+                period,
+                branchId
+        );
+    }
+
+    @GetMapping("/readiness/{periodId}")
+    public VatFilingReadinessResponse readiness(
+            @PathVariable UUID periodId,
+            @RequestParam UUID branchId
+    ) {
+
+        branchTenantGuard.validate(
+                branchId
+        );
+
+        AccountingPeriod period =
+                periodRepository
+                        .findByTenantIdAndBranchIdAndId(
+                                TenantContext.getTenantId(),
+                                branchId,
+                                periodId
+                        )
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Accounting period not found"
+                                        )
+                        );
+
+        return vatReadinessService.check(
+                period,
+                branchId
+        );
+    }
 
     @PostMapping("/file/{periodId}")
     public VatFilingDTO file(
@@ -59,28 +230,18 @@ public class VatController {
         );
     }
 
-    @PostMapping("/pay/{filingId}")
-    public void pay(
+    @PostMapping("/payment/{filingId}")
+    public void recordPayment(
             @PathVariable UUID filingId,
-            @RequestParam UUID accountId,
-            @RequestParam UUID branchId
+            @Valid
+            @RequestBody RecordVatPaymentRequest request
     ) {
 
-        branchTenantGuard.validate(branchId);
-
-        VatFiling filing =
-                filingRepo.findByTenantIdAndId(
-                        TenantContext.getTenantId(),
-                        filingId
-                ).orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "Filing not found"
-                        ));
-
-        filingService.markPaid(
-                filing,
-                currentUser(),
-                accountId
+        filingService.recordPayment(
+                filingId,
+                request.amount(),
+                request.fundingAccountId(),
+                currentUser()
         );
     }
 

@@ -4,9 +4,9 @@ public enum VatFilingStatus {
 
     VAT_PAYABLE,
 
-    PAID,
+    PARTIALLY_PAID,
 
-    VAT_CREDIT_AVAILABLE,
+    PAID,
 
     VAT_CREDIT_CARRIED_FORWARD,
 

@@ -1,8 +1,8 @@
 <app-workflow-shell *ngIf="!loading">
 
-  <!-- =====================================================
-       HEADER
-  ====================================================== -->
+  <!-- ========================================================= -->
+  <!-- HEADER -->
+  <!-- ========================================================= -->
 
   <div workflow-header>
 
@@ -24,68 +24,18 @@
 
             <span class="workspace-status" [class.active]="!status?.locked" [class.locked]="status?.locked">
 
-              {{ status?.locked ? 'Locked' : 'Active' }}
+              {{
+              status?.locked
+              ? 'Locked'
+              : 'Active'
+              }}
 
             </span>
 
           </div>
 
           <div class="workspace-subtitle">
-            VAT filing, payment and compliance workspace
-          </div>
-
-          <div class="workspace-meta">
-
-            <div class="meta-chip" *ngIf="currentBranch">
-
-              <mat-icon>
-                account_tree
-              </mat-icon>
-
-              <span>
-                {{ currentBranch.branchCode }}
-                -
-                {{ currentBranch.name }}
-              </span>
-
-            </div>
-
-            <div class="meta-chip">
-
-              <mat-icon>
-                receipt_long
-              </mat-icon>
-
-              <span>
-                VAT {{ status?.vatEnabled ? 'Enabled' : 'Disabled' }}
-              </span>
-
-            </div>
-
-            <div class="meta-chip">
-
-              <mat-icon>
-                percent
-              </mat-icon>
-
-              <span>
-                {{ (status?.vatRate ?? 0) * 100 }}%
-              </span>
-
-            </div>
-
-            <div class="meta-chip">
-
-              <mat-icon>
-                lock
-              </mat-icon>
-
-              <span>
-                {{ status?.locked ? 'Locked' : 'Unlocked' }}
-              </span>
-
-            </div>
-
+            VAT returns, payments, credits and refunds.
           </div>
 
         </div>
@@ -94,67 +44,21 @@
 
       <div class="workspace-actions">
 
-        <button mat-stroked-button class="refresh-btn" (click)="loadWorkspace(selectedBranchId)">
+        <button mat-stroked-button [disabled]="loading" (click)="loadWorkspace(selectedBranchId)">
 
-          <mat-icon>
-            refresh
+          <ng-container *ngIf="!loading">
+
+            <mat-icon>
+              refresh
+            </mat-icon>
+
+            Refresh
+
+          </ng-container>
+
+          <mat-icon *ngIf="loading" class="spin">
+            autorenew
           </mat-icon>
-
-          Refresh
-
-        </button>
-
-      </div>
-
-    </div>
-
-    <!-- =====================================================
-       PRIMARY ACTION BAR
-  ====================================================== -->
-
-    <div class="vat-action-bar">
-
-      <div class="vat-action-bar-left">
-
-        <div class="action-bar-label">
-          VAT Return Filing
-        </div>
-
-        <div class="action-bar-description">
-          Select an accounting period and submit the VAT return.
-        </div>
-
-      </div>
-
-      <div class="vat-action-bar-right">
-
-        <mat-form-field appearance="fill" subscriptSizing="dynamic">
-
-          <mat-label>
-            Accounting Period
-          </mat-label>
-
-          <mat-select [(ngModel)]="selectedPeriodId">
-
-            <mat-option *ngFor="let period of eligibleVatPeriods" [value]="period.id">
-
-              {{ period.startDate }}
-              -
-              {{ period.endDate }}
-
-            </mat-option>
-
-          </mat-select>
-
-        </mat-form-field>
-
-        <button mat-flat-button color="primary" class="file-vat-btn" (click)="fileVat()" [disabled]="!canFileVat">
-
-          <mat-icon>
-            receipt_long
-          </mat-icon>
-
-          File VAT Return
 
         </button>
 
@@ -164,9 +68,9 @@
 
   </div>
 
-  <!-- =====================================================
-       TOOLBAR
-  ====================================================== -->
+  <!-- ========================================================= -->
+  <!-- TOOLBAR -->
+  <!-- ========================================================= -->
 
   <div workflow-toolbar>
 
@@ -201,9 +105,7 @@
             {{ tab.icon }}
           </mat-icon>
 
-          <span>
-            {{ tab.label }}
-          </span>
+          {{ tab.label }}
 
         </button>
 
@@ -213,472 +115,500 @@
 
   </div>
 
-  <!-- =====================================================
-       CONTENT
-  ====================================================== -->
+  <!-- ========================================================= -->
+  <!-- CONTENT -->
+  <!-- ========================================================= -->
 
   <div workflow-content class="workspace-content">
 
-    <!-- =====================================================
-         OVERVIEW
-    ====================================================== -->
+    <!-- ========================================================= -->
+    <!-- OVERVIEW -->
+    <!-- ========================================================= -->
 
-    <div *ngIf="activeTab === 'overview'" class="workspace-panel">
+    <ng-container *ngIf="activeTab === 'overview'">
 
-      <!-- =====================================================
-           EMPTY STATE
-      ====================================================== -->
+      <!-- SUMMARY CARDS -->
 
-      <div *ngIf="showEmptyState" class="empty-state-card">
+      <div class="overview-cards">
 
-        <mat-icon>
-          receipt_long
-        </mat-icon>
+        <div class="summary-card payable">
 
-        <h3>
-          VAT workspace not initialized
-        </h3>
+          <div class="summary-label">
+            VAT TO PAY
+          </div>
 
-        <p>
-          No tax periods, VAT filings or VAT activity exist for this branch yet.
-        </p>
+          <div class="summary-value">
+
+            {{
+            dashboard?.outstandingVat
+            | number:'1.2-2'
+            }}
+
+          </div>
+
+          <div class="summary-description">
+
+            {{
+            (dashboard?.outstandingVat ?? 0) > 0
+            ? 'Payment required'
+            : 'No payment due'
+            }}
+
+          </div>
+
+        </div>
+
+        <div class="summary-card credit">
+
+          <div class="summary-label">
+            AVAILABLE CREDIT
+          </div>
+
+          <div class="summary-value">
+
+            {{
+            dashboard?.availableCredit
+            | number:'1.2-2'
+            }}
+
+          </div>
+
+          <div class="summary-description">
+            VAT credit available
+          </div>
+
+        </div>
+
+        <div class="summary-card refund">
+
+          <div class="summary-label">
+            PENDING REFUNDS
+          </div>
+
+          <div class="summary-value">
+
+            {{
+            dashboard?.pendingRefundAmount
+            | number:'1.2-2'
+            }}
+
+          </div>
+
+          <div class="summary-description">
+            Awaiting processing
+          </div>
+
+        </div>
+
+        <div class="summary-card paid">
+
+          <div class="summary-label">
+            TOTAL VAT PAID
+          </div>
+
+          <div class="summary-value">
+
+            {{
+            dashboard?.totalVatPaid
+            | number:'1.2-2'
+            }}
+
+          </div>
+
+          <div class="summary-description">
+            Historical payments
+          </div>
+
+        </div>
+
+        <div class="summary-card neutral">
+
+          <div class="summary-label">
+
+            LAST RETURN
+
+          </div>
+
+          <div class="summary-value small">
+
+            {{
+            dashboard?.latestFiledPeriodStart
+            | date:'MMM yyyy'
+            }}
+
+          </div>
+
+          <div class="summary-description">
+
+            {{
+            dashboard?.latestFilingStatus
+            }}
+
+          </div>
+
+        </div>
+
+        <div class="summary-card neutral">
+
+          <div class="summary-label">
+
+            NEXT RETURN
+
+          </div>
+
+          <div class="summary-value small">
+
+            {{
+            dashboard?.nextUnfiledPeriodStart
+            | date:'MMM yyyy'
+            }}
+
+          </div>
+
+          <div class="summary-description">
+
+            {{
+            dashboard?.filingRequired
+            ? 'Ready to File'
+            : 'No Return Due'
+            }}
+
+          </div>
+
+        </div>
 
       </div>
 
-      <!-- =====================================================
-           WORKSPACE CONTENT
-      ====================================================== -->
-
-      <ng-container *ngIf="!showEmptyState">
-
-        <div class="panel-card">
-
-          <div class="panel-header">
-
-            <h2>
-              VAT Overview
-            </h2>
-
-            <div>
-              Current VAT configuration and filing status
-            </div>
-
-          </div>
-
-          <div class="overview-grid">
-
-            <div class="overview-item">
-
-              <div class="overview-label">
-                VAT Enabled
-              </div>
-
-              <div class="overview-value">
-                {{ status?.vatEnabled ? 'Yes' : 'No' }}
-              </div>
-
-            </div>
-
-            <div class="overview-item">
-
-              <div class="overview-label">
-                VAT Rate
-              </div>
-
-              <div class="overview-value">
-                {{ (status?.vatRate ?? 0) * 100 }}%
-              </div>
-
-            </div>
-
-            <div class="overview-item">
-
-              <div class="overview-label">
-                System Status
-              </div>
-
-              <div class="overview-value">
-                {{ status?.locked ? 'Locked' : 'Active' }}
-              </div>
-
-            </div>
-
-            <div class="overview-item">
-
-              <div class="overview-label">
-                VAT Filings
-              </div>
-
-              <div class="overview-value">
-                {{ filings.length }}
-              </div>
-
-            </div>
-
-            <div class="overview-item">
-
-              <div class="overview-label">
-                Latest VAT Status
-              </div>
-
-              <div class="overview-value">
-
-                {{
-                filings.length
-                ? filings[0].status
-                : 'N/A'
-                }}
-
-              </div>
-
-            </div>
-
-            <div class="overview-item">
-
-              <div class="overview-label">
-                Latest Credit Balance
-              </div>
-
-              <div class="overview-value">
-
-                {{
-                filings.length
-                ? (
-                filings[0].closingCredit
-                | number:'1.2-2'
-                )
-                : '0.00'
-                }}
-
-              </div>
-
-            </div>
-
-            <div class="overview-item">
-
-              <div class="overview-label">
-                Latest VAT Receivable
-              </div>
-
-              <div class="overview-value">
-
-                {{
-                filings.length
-                ? (
-                filings[0].vatReceivableCreated
-                | number:'1.2-2'
-                )
-                : '0.00'
-                }}
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-        <div class="panel-card">
-
-          <div class="panel-header">
-
-            <h2>
-              Current Tax Period
-            </h2>
-
-            <div>
-              Open tax period available for filing
-            </div>
-
-          </div>
-
-          <div *ngIf="currentPeriod; else noCurrentPeriod" class="overview-grid">
-
-            <div class="overview-item">
-
-              <div class="overview-label">
-                Start Date
-              </div>
-
-              <div class="overview-value">
-                {{ currentPeriod.startDate | date }}
-              </div>
-
-            </div>
-
-            <div class="overview-item">
-
-              <div class="overview-label">
-                End Date
-              </div>
-
-              <div class="overview-value">
-                {{ currentPeriod.endDate | date }}
-              </div>
-
-            </div>
-
-            <div class="overview-item">
-
-              <div class="overview-label">
-                Status
-              </div>
-
-              <div class="overview-value">
-                {{ currentPeriod.closed ? 'Closed' : 'Open' }}
-              </div>
-
-            </div>
-
-          </div>
-
-          <ng-template #noCurrentPeriod>
-
-            <div class="empty-state">
-
-              No active tax period available.
-
-            </div>
-
-          </ng-template>
-
-        </div>
-
-      </ng-container>
-
-    </div>
-
-    <!-- =====================================================
-         FILINGS
-    ====================================================== -->
-
-    <div *ngIf="activeTab === 'filings'" class="workspace-panel">
+      <!-- NEXT RETURN -->
 
       <div class="panel-card">
 
         <div class="panel-header">
 
           <h2>
-            VAT Filing History
+            Next VAT Return
           </h2>
 
           <div>
-            Filed VAT returns and payments
+            Review before filing
           </div>
 
         </div>
 
-        <div *ngIf="filings.length; else emptyFilings" class="filings-grid">
+        <div *ngIf="eligibleVatPeriods.length;
+          else noReturns">
+
+          <div class="filing-workflow">
+
+            <mat-form-field appearance="fill">
+
+              <mat-label>
+                Accounting Period
+              </mat-label>
+
+              <mat-select [(ngModel)]="selectedPeriodId" (selectionChange)="loadPreview()">
+
+                <mat-option *ngFor="let p of eligibleVatPeriods" [value]="p.id">
+
+                  {{ p.startDate }}
+                  -
+                  {{ p.endDate }}
+
+                </mat-option>
+
+              </mat-select>
+
+            </mat-form-field>
+
+          </div>
+
+          <!-- READINESS -->
+
+          <div *ngIf="readiness" class="readiness-card">
+
+            <div>
+
+              <strong>
+                {{ readiness.message }}
+              </strong>
+
+            </div>
+
+            <ul *ngIf="readiness.warnings.length">
+
+              <li *ngFor="let warning of readiness.warnings">
+
+                {{ warning }}
+
+              </li>
+
+            </ul>
+
+          </div>
+
+          <!-- PREVIEW -->
+
+          <div *ngIf="preview" class="preview-grid">
+
+            <div class="preview-item">
+
+              <span>
+                Output VAT
+              </span>
+
+              <strong>
+                {{
+                preview.outputVat
+                | number:'1.2-2'
+                }}
+              </strong>
+
+            </div>
+
+            <div class="preview-item">
+
+              <span>
+                Input VAT
+              </span>
+
+              <strong>
+                {{
+                preview.inputVat
+                | number:'1.2-2'
+                }}
+              </strong>
+
+            </div>
+
+            <div class="preview-item">
+
+              <span>
+                Opening Credit
+              </span>
+
+              <strong>
+                {{
+                preview.openingCredit
+                | number:'1.2-2'
+                }}
+              </strong>
+
+            </div>
+
+            <div class="preview-item">
+
+              <span>
+                Credit Applied
+              </span>
+
+              <strong>
+                {{
+                preview.creditApplied
+                | number:'1.2-2'
+                }}
+              </strong>
+
+            </div>
+
+            <div class="preview-item">
+
+              <span>
+                VAT Due
+              </span>
+
+              <strong>
+                {{
+                preview.netVatDue
+                | number:'1.2-2'
+                }}
+              </strong>
+
+            </div>
+
+            <div class="preview-item">
+
+              <span>
+                Credit Generated
+              </span>
+
+              <strong>
+                {{
+                preview.generatedCredit
+                | number:'1.2-2'
+                }}
+              </strong>
+
+            </div>
+
+          </div>
+
+          <div *ngIf="preview" class="outcome-card">
+
+            <div class="outcome-title">
+
+              {{ preview.outcome }}
+
+            </div>
+
+            <div>
+
+              Recommended Action:
+
+              <strong>
+                {{
+                preview.recommendedAction
+                }}
+              </strong>
+
+            </div>
+
+          </div>
+
+          <button mat-flat-button color="primary" (click)="fileVat()" [disabled]="
+              !readiness?.ready ||
+              filing">
+
+            <ng-container *ngIf="!filing">
+
+              <mat-icon>
+                receipt_long
+              </mat-icon>
+
+              File VAT Return
+
+            </ng-container>
+
+            <mat-icon *ngIf="filing" class="spin">
+              autorenew
+            </mat-icon>
+
+          </button>
+
+        </div>
+
+      </div>
+
+      <ng-template #noReturns>
+
+        <div class="empty-state">
+
+          There are currently no closed accounting periods awaiting VAT filing.
+
+        </div>
+
+      </ng-template>
+
+    </ng-container>
+
+    <!-- ========================================================= -->
+    <!-- FILINGS -->
+    <!-- ========================================================= -->
+
+    <ng-container *ngIf="activeTab === 'filings'">
+
+      <div class="panel-card">
+
+        <div class="panel-header">
+
+          <h2>
+            VAT Return History
+          </h2>
+
+          <div>
+            Business-focused return history
+          </div>
+
+        </div>
+
+        <div *ngIf="filings.length;
+          else noFilings">
 
           <div *ngFor="let filing of filings" class="filing-card">
 
             <div class="filing-header">
 
-              <span class="filing-title">
-                VAT Filing
-              </span>
-
-              <span class="workspace-status" [class.status-payable]="filing.status === 'VAT_PAYABLE' "
-                [class.status-paid]=" filing.status === 'PAID' "
-                [class.status-credit]=" filing.status === 'VAT_CREDIT_CARRIED_FORWARD' || filing.status === 'VAT_CREDIT_AVAILABLE' "
-                [class.status-refund-pending]=" filing.status === 'VAT_REFUND_PENDING' "
-                [class.status-refunded]=" filing.status === 'VAT_REFUNDED' ">
-                {{ statusLabel(filing) }}
-              </span>
-
-            </div>
-
-            <div class="filing-body">
-
               <div>
-                Output VAT:
-                <strong>
-                  {{ filing.outputVat | number:'1.2-2' }}
-                </strong>
-              </div>
 
-              <div>
-                Input VAT:
-                <strong>
-                  {{ filing.inputVat | number:'1.2-2' }}
-                </strong>
-              </div>
+                <div class="filing-period">
 
-              <div>
-                Opening Credit:
-                <strong>
-                  {{ filing.openingCredit | number:'1.2-2' }}
-                </strong>
-              </div>
+                  {{ filing.periodLabel }}
 
-              <div>
-                Credit Applied:
-                <strong>
-                  {{ filing.creditApplied | number:'1.2-2' }}
-                </strong>
-              </div>
+                </div>
 
-              <div>
-                Closing Credit:
-                <strong>
-                  {{ filing.closingCredit | number:'1.2-2' }}
-                </strong>
-              </div>
+                <div class="filing-date">
 
-              <div *ngIf="filing.closingCredit > 0" class="credit-banner">
+                  {{ filing.filedAt | date:'mediumDate' }}
 
-                VAT Credit Available:
-                <strong>
-
-                  {{
-                  filing.closingCredit
-                  | number:'1.2-2'
-                  }}
-
-                </strong>
+                </div>
 
               </div>
 
-              <div>
-                VAT Receivable Created:
-                <strong>
-                  {{ filing.vatReceivableCreated | number:'1.2-2' }}
-                </strong>
-              </div>
+              <div class="filing-header-actions">
 
-              <div>
-                VAT Position:
-                <strong>
-                  {{ filing.vatPayable | number:'1.2-2' }}
-                </strong>
-              </div>
+                <span class="workspace-status" [ngClass]="statusClass(filing.displayStatus)">
 
-              <div>
-                Filing Status:
-                <strong>
-                  {{ statusLabel(filing) }}
-                </strong>
-              </div>
+                  {{ filing.displayStatus }}
 
-              <div>
-                Filed:
-                <strong>
-                  {{ filing.filedAt | date:'medium' }}
-                </strong>
-              </div>
+                </span>
 
-              <div *ngIf="filing.paidAt">
-                Paid:
-                <strong>
-                  {{ filing.paidAt | date:'medium' }}
-                </strong>
+                <button mat-stroked-button (click)="openFiling(filing.filingId)">
+
+                  View Details
+
+                </button>
+
               </div>
 
             </div>
 
-            <div class="filing-actions" *ngIf="filing.status === 'VAT_PAYABLE'">
+            <div class="preview-grid">
 
-              <div class="empty-state" *ngIf="!fundingAccounts.length">
-
-                No funding accounts available for VAT payments.
-
+              <div class="preview-item">
+                <span>VAT Due</span>
+                <strong>
+                  {{ filing.vatDue | number:'1.2-2' }}
+                </strong>
               </div>
 
-              <mat-form-field *ngIf="fundingAccounts.length" appearance="fill">
+              <div class="preview-item">
+                <span>VAT Credit</span>
+                <strong>
+                  {{ filing.vatCredit | number:'1.2-2' }}
+                </strong>
+              </div>
+
+              <div class="preview-item">
+                <span>Paid</span>
+                <strong>
+                  {{ filing.paidAmount | number:'1.2-2' }}
+                </strong>
+              </div>
+
+              <div class="preview-item">
+                <span>Outstanding</span>
+                <strong>
+                  {{ filing.outstandingAmount | number:'1.2-2' }}
+                </strong>
+              </div>
+            </div>
+
+            <!-- PAYMENT -->
+
+            <div *ngIf="
+                filing.displayStatus === 'Payment Due'
+                ||
+                filing.displayStatus === 'Partially Paid'
+              " class="filing-actions">
+
+              <mat-form-field appearance="fill">
 
                 <mat-label>
                   Funding Account
                 </mat-label>
 
-                <mat-select [(ngModel)]="accountId">
-
-                  <mat-select-trigger>
-
-                    {{ selectedAccount?.code }}
-                    —
-                    {{ selectedAccount?.name }}
-                    —
-                    KES
-                    {{ selectedAccount?.balance | number:'1.2-2' }}
-
-                  </mat-select-trigger>
+                <mat-select [(ngModel)]="selectedAccountId">
 
                   <mat-option *ngFor="let account of fundingAccounts" [value]="account.id">
-
-                    <div class="account-option">
-
-                      <div class="account-code-row">
-                        {{ account.code }}
-                      </div>
-
-                      <div class="account-name-balance-row">
-
-                        <span class="account-name">
-                          {{ account.name }}
-                        </span>
-
-                        <span class="account-balance">
-                          {{
-                          account.balance
-                          | number:'1.2-2'
-                          }}
-                        </span>
-
-                      </div>
-
-                    </div>
-
-                  </mat-option>
-
-                </mat-select>
-
-              </mat-form-field>
-
-              <button mat-flat-button color="primary" (click)="payVat(filing.id)"
-                [disabled]="!accountId || !fundingAccounts.length || paying">
-
-                <mat-icon>
-                  payments
-                </mat-icon>
-
-                Pay VAT
-
-              </button>
-
-            </div>
-
-            <div class="filing-actions" *ngIf="filing.status === 'VAT_CREDIT_AVAILABLE' || filing.status === 'VAT_CREDIT_CARRIED_FORWARD'">
-
-              <button mat-flat-button color="accent" (click)="requestRefund(filing.id)" [disabled]="requestingRefund">
-
-                <mat-icon>
-                  request_quote
-                </mat-icon>
-
-                Request Refund
-
-              </button>
-
-            </div>
-
-            <div class="filing-actions" *ngIf="
-    filing.status ===
-    'VAT_REFUND_PENDING'
-  ">
-
-              <mat-form-field appearance="fill">
-
-                <mat-label>
-                  Receiving Account
-                </mat-label>
-
-                <mat-select [(ngModel)]="accountId">
-
-                  <mat-option *ngFor="
-          let account
-          of fundingAccounts
-        " [value]="account.id">
 
                     {{ account.code }}
                     -
@@ -690,14 +620,47 @@
 
               </mat-form-field>
 
-              <button mat-flat-button color="primary" (click)="completeRefund(filing.id)"
-                [disabled]="!accountId || completingRefund">
+              <mat-form-field appearance="fill">
 
-                <mat-icon>
-                  account_balance
+                <mat-label>
+                  Amount
+                </mat-label>
+
+                <input matInput type="number" [(ngModel)]="paymentAmount">
+
+              </mat-form-field>
+
+              <button mat-flat-button color="primary" [disabled]="paying"
+                (click)="payVat(filing.filingId, filing.outstandingAmount)">
+
+                <ng-container *ngIf="!paying">
+                  Record Payment
+                </ng-container>
+
+                <mat-icon *ngIf="paying" class="spin">
+                  autorenew
                 </mat-icon>
 
-                Complete Refund
+              </button>
+
+            </div>
+
+            <!-- REFUND -->
+
+            <div *ngIf="
+                filing.displayStatus === 'Credit Available'
+              " class="filing-actions">
+
+              <button mat-flat-button color="accent" [disabled]="requestingRefund"
+                (click)="requestRefund(filing.filingId)">
+
+                <ng-container *ngIf="!requestingRefund">
+                  Request Refund
+                </ng-container>
+
+                <mat-icon *ngIf="requestingRefund" class="spin">
+                  autorenew
+                </mat-icon>
 
               </button>
 
@@ -705,34 +668,330 @@
 
           </div>
 
-        </div>
+          <div *ngIf="showFilingDetail && selectedFiling" class="detail-panel">
 
-        <ng-template #emptyFilings>
+            <div class="detail-header">
 
-          <div class="empty-state">
+              <h2>
 
-            No VAT filings found.
+                VAT Return Details
+
+              </h2>
+
+            </div>
+
+            <div class="detail-summary">
+
+              {{ selectedFiling.summaryMessage }}
+
+            </div>
+
+            <div class="detail-grid">
+
+              <div>
+
+                Output VAT
+
+                <strong>
+
+                  {{
+                  selectedFiling.outputVat
+                  | number:'1.2-2'
+                  }}
+
+                </strong>
+
+              </div>
+
+              <div>
+
+                Input VAT
+
+                <strong>
+
+                  {{
+                  selectedFiling.inputVat
+                  | number:'1.2-2'
+                  }}
+
+                </strong>
+
+              </div>
+
+              <div>
+
+                Opening Credit
+
+                <strong>
+
+                  {{
+                  selectedFiling.openingCredit
+                  | number:'1.2-2'
+                  }}
+
+                </strong>
+
+              </div>
+
+              <div>
+
+                Credit Applied
+
+                <strong>
+
+                  {{
+                  selectedFiling.creditApplied
+                  | number:'1.2-2'
+                  }}
+
+                </strong>
+
+              </div>
+
+              <div>
+
+                Outstanding VAT
+
+                <strong>
+
+                  {{
+                  selectedFiling.outstandingAmount
+                  | number:'1.2-2'
+                  }}
+
+                </strong>
+
+              </div>
+
+              <div>
+
+                Paid Amount
+
+                <strong>
+
+                  {{
+                  selectedFiling.paidAmount
+                  | number:'1.2-2'
+                  }}
+
+                </strong>
+
+              </div>
+
+            </div>
+
+            <div *ngIf="filingPayments.length" class="payments-section">
+
+              <h3>
+
+                Payment History
+
+              </h3>
+
+              <div *ngFor="let payment of filingPayments" class="history-row">
+
+                <div>
+
+                  {{
+                  payment.amount
+                  | number:'1.2-2'
+                  }}
+
+                </div>
+
+                <div>
+
+                  {{
+                  payment.recordedAt
+                  | date:'medium'
+                  }}
+
+                </div>
+
+                <div>
+
+                  {{
+                  payment.recordedBy
+                  }}
+
+                </div>
+
+              </div>
+
+            </div>
 
           </div>
 
-        </ng-template>
+        </div>
 
       </div>
 
-    </div>
+    </ng-container>
+
+    <ng-template #noFilings>
+
+      <div class="empty-state">
+
+        No VAT returns have been filed yet.
+
+      </div>
+
+    </ng-template>
+
+    <!-- ========================================================= -->
+    <!-- REFUNDS -->
+    <!-- ========================================================= -->
+
+    <ng-container *ngIf="activeTab === 'refunds'">
+
+      <div class="panel-card">
+
+        <div class="panel-header">
+
+          <h2>
+            Refund History
+          </h2>
+
+        </div>
+
+        <div *ngIf="refunds.length;
+          else noRefunds">
+
+          <div *ngFor="let refund of refunds" class="history-row">
+
+            <div>
+
+              {{
+              refund.amount
+              | number:'1.2-2'
+              }}
+
+            </div>
+
+            <div>
+
+              {{
+              refund.status === 'REQUESTED'
+              ? 'Refund Requested'
+              : 'Refund Completed'
+              }}
+
+            </div>
+
+            <div>
+
+              {{
+              refund.requestedAt
+              | date:'medium'
+              }}
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </ng-container>
+
+    <ng-template #noRefunds>
+
+      <div class="empty-state">
+
+        No VAT refund requests found.
+
+      </div>
+
+    </ng-template>
+
+    <!-- ========================================================= -->
+    <!-- CREDIT HISTORY -->
+    <!-- ========================================================= -->
+
+    <ng-container *ngIf="activeTab === 'credits'">
+
+      <div class="panel-card">
+
+        <div class="panel-header">
+
+          <h2>
+            VAT Credit Activity
+          </h2>
+
+        </div>
+
+        <div *ngIf="creditHistory.length;
+          else noCredits">
+
+          <div *ngFor="let item of creditHistory" class="history-row">
+
+            <div>
+
+              {{
+              item.type === 'GENERATED'
+              ? 'Credit Generated'
+              : item.type === 'CONSUMED'
+              ? 'Credit Used'
+              : 'Credit Refunded'
+              }}
+
+            </div>
+
+            <div>
+
+              {{
+              item.amount
+              | number:'1.2-2'
+              }}
+
+            </div>
+
+            <div>
+
+              {{
+              item.createdAt
+              | date:'medium'
+              }}
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </ng-container>
+
+    <ng-template #noCredits>
+
+      <div class="empty-state">
+
+        No VAT credit activity found.
+
+      </div>
+
+    </ng-template>
 
   </div>
 
 </app-workflow-shell>
 
-<div *ngIf="loading" class="enterprise-loading">
+<div *ngIf="loading" class="workspace-loading">
 
   <div class="progress-block">
-    <div class="progress-inline"></div>
+
+    <mat-icon class="spin">
+      autorenew
+    </mat-icon>
+
+    <span>
+      Loading VAT workspace...
+    </span>
+
   </div>
 
-  <div class="loading-message">
-    Loading VAT workspace...
-  </div>
+  <div class="progress-inline"></div>
 
 </div>

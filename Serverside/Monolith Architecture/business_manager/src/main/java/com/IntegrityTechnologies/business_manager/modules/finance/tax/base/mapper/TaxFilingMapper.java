@@ -8,8 +8,9 @@ import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.model.
 
 public class TaxFilingMapper {
 
-    public static VatFilingDTO toDto(VatFiling f) {
-
+    public static VatFilingDTO toDto(
+            VatFiling f
+    ) {
         return VatFilingDTO.builder()
                 .id(f.getId())
                 .periodId(f.getPeriod().getId())
@@ -20,8 +21,9 @@ public class TaxFilingMapper {
                 .creditApplied(f.getCreditApplied())
                 .closingCredit(f.getClosingCredit())
                 .vatReceivableCreated(f.getVatReceivableCreated())
+                .paidAmount(f.getPaidAmount())
+                .outstandingAmount(f.getOutstandingAmount())
                 .status(f.getStatus())
-                .paid(f.isPaid())
                 .filedAt(f.getFiledAt())
                 .paidAt(f.getPaidAt())
                 .build();

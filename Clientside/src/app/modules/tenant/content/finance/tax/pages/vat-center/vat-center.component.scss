@@ -5,19 +5,21 @@
 }
 
 /* =========================================================
-   CONTENT
+   LAYOUT
 ========================================================= */
 
-.workspace-content,
-.workspace-panel {
+.workspace-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
   width: 100%;
   min-width: 0;
 }
 
-.workspace-panel {
+.toolbar-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 /* =========================================================
@@ -28,152 +30,56 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 24px;
-  width: 100%;
+  gap: 32px;
 }
 
 .workspace-header-main {
   min-width: 0;
+  flex: 1;
 }
 
 .workspace-breadcrumb {
   display: inline-flex;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .45px;
+  font-weight: 600;
+  letter-spacing: .55px;
   text-transform: uppercase;
+
   color: var(--text-secondary);
 }
 
 .workspace-title-section {
-  width: 100%;
   min-width: 0;
 }
 
 .workspace-title-row {
   display: flex;
   align-items: center;
+  gap: 14px;
   flex-wrap: wrap;
-  gap: 12px;
 }
 
 .workspace-title {
   margin: 0;
-  font-size: 2.15rem;
-  font-weight: 700;
+
+  font-size: 2.4rem;
   line-height: 1.05;
+  font-weight: 700;
+
   color: var(--text-primary);
 }
 
 .workspace-subtitle {
   margin-top: 12px;
-  font-size: .92rem;
-  font-weight: 500;
+
+  font-size: .95rem;
+  line-height: 1.6;
+
   color: var(--text-secondary);
 }
-
-/* =========================================================
-   STATUS
-========================================================= */
-
-.workspace-status {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 30px;
-  padding: 0 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  border: 1px solid transparent;
-}
-
-.workspace-status.active {
-  background: rgba(34, 197, 94, .14);
-  color: #16a34a;
-  border-color: rgba(34, 197, 94, .18);
-}
-
-.workspace-status.locked {
-  background: rgba(239, 68, 68, .14);
-  color: #dc2626;
-  border-color: rgba(239, 68, 68, .18);
-}
-
-.workspace-status.status-payable {
-  background: rgba(239, 68, 68, .15);
-  color: #dc2626;
-}
-
-.workspace-status.status-paid {
-  background: rgba(34, 197, 94, .15);
-  color: #16a34a;
-}
-
-.workspace-status.status-credit {
-  background: rgba(59, 130, 246, .15);
-  color: #2563eb;
-}
-
-.workspace-status.status-refund-pending {
-  background: rgba(245, 158, 11, .15);
-  color: #d97706;
-}
-
-.workspace-status.status-refunded {
-  background: rgba(16, 185, 129, .15);
-  color: #059669;
-}
-
-.credit-banner {
-  padding: 12px;
-  border-radius: 10px;
-
-  background: rgba(59,130,246,.08);
-
-  border: 1px solid rgba(59,130,246,.18);
-
-  color: #2563eb;
-
-  font-weight: 600;
-}
-
-/* =========================================================
-   META
-========================================================= */
-
-.workspace-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.meta-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-  font-size: .84rem;
-  font-weight: 600;
-}
-
-.meta-chip mat-icon {
-  width: 18px;
-  height: 18px;
-  font-size: 18px;
-}
-
-/* =========================================================
-   ACTIONS
-========================================================= */
 
 .workspace-actions {
   display: flex;
@@ -181,65 +87,62 @@
   justify-content: flex-end;
 }
 
-.refresh-btn {
-  height: 40px;
-}
-
-.vat-action-bar {
-  margin-top: 24px;
-
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 24px;
-
-  padding: 20px 24px;
-
-  border: 1px solid var(--border);
-  border-radius: 18px;
-
-  background: var(--surface-bg);
-}
-
-.vat-action-bar-left {
-  min-width: 0;
-}
-
-.action-bar-label {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.action-bar-description {
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.vat-action-bar-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.vat-action-bar-right mat-form-field {
-  width: 340px;
-}
-
-.file-vat-btn {
-  height: 56px;
-  white-space: nowrap;
-}
-
 /* =========================================================
-   TOOLBAR
+   STATUS BADGES
 ========================================================= */
 
-.toolbar-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.workspace-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 32px;
+
+  padding: 0 14px;
+
+  border-radius: 999px;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  border: 1px solid transparent;
+}
+
+.workspace-status.active {
+  background: rgba(34, 197, 94, .12);
+  border-color: rgba(34, 197, 94, .18);
+  color: #16a34a;
+}
+
+.workspace-status.locked {
+  background: rgba(239, 68, 68, .12);
+  border-color: rgba(239, 68, 68, .18);
+  color: #dc2626;
+}
+
+.workspace-status.status-payable {
+  background: rgba(239, 68, 68, .14);
+  color: #dc2626;
+}
+
+.workspace-status.status-paid {
+  background: rgba(34, 197, 94, .14);
+  color: #16a34a;
+}
+
+.workspace-status.status-credit {
+  background: rgba(59, 130, 246, .14);
+  color: #2563eb;
+}
+
+.workspace-status.status-refund-pending {
+  background: rgba(245, 158, 11, .14);
+  color: #d97706;
+}
+
+.workspace-status.status-refunded {
+  background: rgba(16, 185, 129, .14);
+  color: #059669;
 }
 
 /* =========================================================
@@ -250,6 +153,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -259,19 +163,25 @@
 }
 
 .workspace-tab {
-  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 42px;
-  padding: 0 16px;
+
+  min-height: 44px;
+
+  padding: 0 18px;
+
   border-radius: 12px;
   border: 1px solid transparent;
+
   background: transparent;
-  cursor: pointer;
+
   color: var(--text-secondary);
-  transition: all .12s ease;
+
+  cursor: pointer;
+
+  transition: .15s ease;
 }
 
 .workspace-tab:hover {
@@ -281,10 +191,13 @@
 
 .workspace-tab.active {
   background: rgba(59, 130, 246, .12);
+  border-color: rgba(59, 130, 246, .18);
+
   color: #2563eb;
-  border-color: rgba(59, 130, 246, .16);
+
   box-shadow: inset 0 -2px 0 #2563eb;
-  font-weight: 700;
+
+  font-weight: 600;
 }
 
 .workspace-tab mat-icon {
@@ -294,109 +207,414 @@
 }
 
 /* =========================================================
+   KPI CARDS
+========================================================= */
+
+.overview-cards {
+  display: grid;
+
+  grid-template-columns:
+    repeat(auto-fit,
+      minmax(240px, 1fr));
+
+  gap: 18px;
+}
+
+.summary-card {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 10px;
+
+  min-height: 150px;
+
+  padding: 24px;
+
+  border-radius: 20px;
+
+  background: var(--surface-bg);
+
+  border: 1px solid var(--border);
+
+  overflow: hidden;
+}
+
+.summary-card::before {
+  content: '';
+
+  position: absolute;
+
+  left: 0;
+  top: 0;
+  bottom: 0;
+
+  width: 4px;
+}
+
+.summary-card.payable::before {
+  background: #dc2626;
+}
+
+.summary-card.credit::before {
+  background: #2563eb;
+}
+
+.summary-card.refund::before {
+  background: #d97706;
+}
+
+.summary-card.paid::before {
+  background: #16a34a;
+}
+
+.summary-card.neutral::before {
+  background: var(--active);
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, .08);
+}
+
+.summary-label {
+  font-size: 11px;
+  font-weight: 700;
+
+  letter-spacing: .6px;
+  text-transform: uppercase;
+
+  color: var(--text-secondary);
+}
+
+.summary-value {
+  font-size: 2rem;
+  font-weight: 700;
+
+  line-height: 1;
+}
+
+.summary-value.small {
+  font-size: 1.25rem;
+}
+
+.summary-description {
+  margin-top: auto;
+
+  font-size: .86rem;
+
+  color: var(--text-secondary);
+}
+
+/* =========================================================
    PANELS
 ========================================================= */
 
 .panel-card {
   display: flex;
   flex-direction: column;
+
   gap: 24px;
-  padding: 24px;
-  border-radius: 18px;
+
+  padding: 28px;
+
+  border-radius: 20px;
+
   border: 1px solid var(--border);
+
   background: var(--surface-bg);
+
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, .04);
 }
 
 .panel-header h2 {
   margin: 0;
-  font-size: 1.25rem;
+
+  font-size: 1.3rem;
   font-weight: 700;
 }
 
 .panel-header div {
-  margin-top: 4px;
+  margin-top: 6px;
+
   color: var(--text-secondary);
 }
 
 /* =========================================================
-   OVERVIEW
+   FILING WORKFLOW
 ========================================================= */
 
-.overview-grid {
+.filing-workflow {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.filing-workflow mat-form-field {
+  max-width: 420px;
+}
+
+.readiness-card {
+  padding: 18px;
+
+  border-radius: 16px;
+
+  border: 1px solid rgba(245, 158, 11, .20);
+
+  background: rgba(245, 158, 11, .08);
+}
+
+.readiness-card strong {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.readiness-card ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.readiness-card li {
+  margin-bottom: 4px;
+}
+
+/* =========================================================
+   PREVIEW GRID
+========================================================= */
+
+.preview-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+
+  grid-template-columns:
+    repeat(auto-fit,
+      minmax(220px, 1fr));
+
   gap: 16px;
 }
 
-.overview-item {
+.preview-item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 14px;
-  border-radius: 12px;
+
+  gap: 8px;
+
+  padding: 16px;
+
+  border-radius: 14px;
+
   border: 1px solid var(--border);
+
+  background: rgba(0, 0, 0, .02);
 }
 
-.overview-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .4px;
-  text-transform: uppercase;
+body.dark .preview-item {
+  background: rgba(255, 255, 255, .02);
+}
+
+.preview-item span {
   color: var(--text-secondary);
+  font-size: .8rem;
 }
 
-.overview-value {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary);
+.preview-item strong {
+  font-size: 1.05rem;
+}
+
+.outcome-card {
+  padding: 22px;
+
+  border-radius: 16px;
+
+  border: 1px solid rgba(59, 130, 246, .18);
+
+  background: rgba(59, 130, 246, .08);
+}
+
+.outcome-title {
+  margin-bottom: 8px;
+
+  font-size: 1.05rem;
+  font-weight: 700;
 }
 
 /* =========================================================
    FILINGS
 ========================================================= */
 
-.filings-grid {
-  display: grid;
-  gap: 18px;
-}
-
 .filing-card {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 18px;
-  border-radius: 14px;
+
+  gap: 20px;
+
+  padding: 24px;
+
+  margin-bottom: 18px;
+
+  border-radius: 18px;
+
   border: 1px solid var(--border);
+
+  background: var(--surface);
 }
 
 .filing-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
+
+  gap: 20px;
+}
+
+.filing-header-actions {
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
-.filing-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-primary);
+.filing-period {
+  font-size: 1rem;
+  font-weight: 600;
 }
 
-.filing-body {
-  display: grid;
-  gap: 8px;
+.filing-date {
+  margin-top: 4px;
+
+  color: var(--text-secondary);
+
+  font-size: .85rem;
 }
 
 .filing-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
+
   flex-wrap: wrap;
+
+  padding-top: 10px;
+
+  border-top: 1px solid var(--border);
 }
 
 .filing-actions mat-form-field {
-  flex: 1;
   min-width: 240px;
+  flex: 1;
+}
+
+/* =========================================================
+   DETAIL PANEL
+========================================================= */
+
+.detail-panel {
+  margin-top: 20px;
+
+  padding: 28px;
+
+  border-radius: 20px;
+
+  border: 1px solid var(--border);
+
+  background: rgba(59, 130, 246, .04);
+}
+
+.detail-header h2 {
+  margin: 0 0 12px;
+  font-weight: 500;
+}
+
+.detail-summary {
+  padding: 18px;
+
+  margin-bottom: 22px;
+
+  border-radius: 14px;
+
+  background: var(--surface);
+
+  border: 1px solid var(--border);
+
+  line-height: 1.6;
+}
+
+.detail-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(auto-fit,
+      minmax(240px, 1fr));
+
+  gap: 16px;
+}
+
+.detail-grid>div {
+  display: flex;
+  flex-direction: column;
+
+  gap: 8px;
+
+  padding: 16px;
+
+  border-radius: 14px;
+
+  border: 1px solid var(--border);
+
+  background: var(--surface);
+}
+
+/* =========================================================
+   PAYMENTS
+========================================================= */
+
+.payments-section {
+  margin-top: 28px;
+}
+
+.payments-section h3 {
+  margin-bottom: 16px;
+}
+
+.history-row {
+  display: grid;
+
+  grid-template-columns:
+    1fr 1fr 1fr;
+
+  gap: 16px;
+
+  padding: 16px;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.history-row:hover {
+  background: var(--surface-hover);
+}
+
+/* =========================================================
+   EMPTY STATES
+========================================================= */
+
+.empty-state {
+  padding: 60px 24px;
+
+  text-align: center;
+
+  border: 1px dashed var(--border);
+
+  border-radius: 18px;
+
+  color: var(--text-secondary);
+
+  background: rgba(0, 0, 0, .015);
+}
+
+body.dark .empty-state {
+  background: rgba(255, 255, 255, .015);
 }
 
 /* =========================================================
@@ -407,109 +625,52 @@ mat-form-field {
   width: 100%;
 }
 
-.account-option {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 100%;
-  padding: 4px 0;
-}
-
-.account-code-row {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  line-height: 1;
-}
-
-.account-name-balance-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  width: 100%;
-  column-gap: 16px;
-}
-
-.account-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.account-balance {
-  text-align: right;
-  white-space: nowrap;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-}
-
-/* =========================================================
-   EMPTY STATES
-========================================================= */
-
-.empty-state {
-  padding: 40px;
-  text-align: center;
-  color: var(--text-secondary);
-}
-
-.empty-state-card {
-  padding: 48px;
-  border: 1px dashed var(--border);
-  border-radius: 16px;
-  text-align: center;
-  color: var(--text-secondary);
-}
-
-.empty-state-card mat-icon {
-  width: 40px;
-  height: 40px;
-  font-size: 40px;
-  margin-bottom: 12px;
-}
-
-.empty-state-card h3 {
-  margin: 0 0 12px;
-  font-size: 1.2rem;
-  font-weight: 700;
-}
-
-.empty-state-card p {
-  margin: 0;
-  max-width: 520px;
-  margin-inline: auto;
-  line-height: 1.6;
-}
-
 /* =========================================================
    LOADING
 ========================================================= */
 
-.loading-state {
-  min-height: 320px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-}
+.workspace-loading {
+  min-height: 420px;
 
-.enterprise-loading {
-  min-height: 320px;
   display: flex;
   flex-direction: column;
+
   justify-content: center;
-  gap: 18px;
+  gap: 20px;
+
+  padding: 40px;
 }
 
-.loading-message {
-  text-align: center;
-  color: var(--text-secondary);
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* =========================================================
-   RESPONSIVE
+   RESPONSIVE 1200
+========================================================= */
+
+@media (max-width: 1200px) {
+
+  .overview-cards {
+    grid-template-columns:
+      repeat(2,
+        minmax(0, 1fr));
+  }
+
+}
+
+/* =========================================================
+   RESPONSIVE 768
 ========================================================= */
 
 @media (max-width: 768px) {
@@ -518,42 +679,30 @@ mat-form-field {
     flex-direction: column;
   }
 
-  .vat-action-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .vat-action-bar-right {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .vat-action-bar-right mat-form-field,
-  .file-vat-btn {
-    width: 100%;
-  }
-
   .workspace-title {
     font-size: 1.8rem;
   }
 
-  .workspace-actions {
-    width: 100%;
-    align-items: stretch;
+  .overview-cards {
+    grid-template-columns: 1fr;
   }
 
-  .vat-filing-panel {
+  .preview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filing-header {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .vat-filing-panel mat-form-field,
-  .vat-filing-panel button {
-    width: 100%;
-  }
-
-  .overview-grid {
-    grid-template-columns: 1fr;
+  .filing-header-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .filing-actions {
@@ -561,18 +710,11 @@ mat-form-field {
     align-items: stretch;
   }
 
-  .filing-actions button,
-  .filing-actions mat-form-field {
-    width: 100%;
-    min-width: 0;
+  .history-row {
+    grid-template-columns: 1fr;
   }
 
-  .workspace-meta {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .meta-chip {
-    width: 100%;
+  .workspace-tabs {
+    flex-wrap: nowrap;
   }
 }

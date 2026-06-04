@@ -30,9 +30,11 @@ public class VatFilingDTO {
 
     private BigDecimal vatReceivableCreated;
 
-    private VatFilingStatus status;
+    private BigDecimal paidAmount;
 
-    private boolean paid;
+    private BigDecimal outstandingAmount;
+
+    private VatFilingStatus status;
 
     private LocalDateTime filedAt;
 

@@ -28,7 +28,17 @@ import {
   TaxSystemState,
   VatFiling,
   CorporateTaxAccrualPreview,
-  CorporateTaxOverview
+  CorporateTaxOverview,
+  VatOverview,
+  VatFilingSummary,
+  VatFilingDetail,
+  VatFilingPreview,
+  RecordVatPaymentRequest,
+  VatPayment,
+  VatRefund,
+  VatCreditMovement,
+  VatFilingReadiness,
+  VatDashboard
 } from '../models/tax.models';
 import { FundingAccount } from '../../ap/debts/models/funding-account.model';
 
@@ -258,26 +268,81 @@ export class TaxService {
      VAT
   ============================================ */
 
-  listVat(
-    page = 0,
-    size = 25,
+  getVatDashboard(
     branchId?: string
-  ): Observable<
-    PageResponse<VatFiling>
-  > {
-
-    return this.http.get<
-      PageResponse<VatFiling>
-    >(
-      this.vatBase,
+  ): Observable<VatDashboard> {
+    return this.http.get<VatDashboard>(
+      `${this.vatBase}/dashboard`,
       {
         params: {
           branchId:
-            this.resolveBranchId(
-              branchId
-            ),
-          page,
-          size
+            this.resolveBranchId(branchId)
+        }
+      }
+    );
+  }
+
+  getVatOverview(
+    branchId?: string
+  ): Observable<VatOverview> {
+    return this.http.get<VatOverview>(
+      `${this.vatBase}/overview`,
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(branchId)
+        }
+      }
+    );
+  }
+
+  getVatHistory(
+    branchId?: string
+  ): Observable<VatFilingSummary[]> {
+    return this.http.get<VatFilingSummary[]>(
+      `${this.vatBase}/history`,
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(branchId)
+        }
+      }
+    );
+  }
+
+  getVatDetail(
+    filingId: string
+  ): Observable<VatFilingDetail> {
+    return this.http.get<VatFilingDetail>(
+      `${this.vatBase}/detail/${filingId}`
+    );
+  }
+
+  getVatPreview(
+    periodId: string,
+    branchId?: string
+  ): Observable<VatFilingPreview> {
+    return this.http.get<VatFilingPreview>(
+      `${this.vatBase}/preview/${periodId}`,
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(branchId)
+        }
+      }
+    );
+  }
+
+  getVatReadiness(
+    periodId: string,
+    branchId?: string
+  ): Observable<VatFilingReadiness> {
+    return this.http.get<VatFilingReadiness>(
+      `${this.vatBase}/readiness/${periodId}`,
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(branchId)
         }
       }
     );
@@ -287,39 +352,33 @@ export class TaxService {
     periodId: string,
     branchId?: string
   ) {
-
     return this.http.post(
       `${this.vatBase}/file/${periodId}`,
       {},
       {
         params: {
           branchId:
-            this.resolveBranchId(
-              branchId
-            )
+            this.resolveBranchId(branchId)
         }
       }
     );
   }
 
-  payVat(
+  recordVatPayment(
     filingId: string,
-    accountId: string,
-    branchId?: string
+    payload: RecordVatPaymentRequest
   ) {
-
     return this.http.post(
-      `${this.vatBase}/pay/${filingId}`,
-      {},
-      {
-        params: {
-          branchId:
-            this.resolveBranchId(
-              branchId
-            ),
-          accountId
-        }
-      }
+      `${this.vatBase}/payment/${filingId}`,
+      payload
+    );
+  }
+
+  getVatPayments(
+    filingId: string
+  ): Observable<VatPayment[]> {
+    return this.http.get<VatPayment[]>(
+      `${this.vatBase}/payments/${filingId}`
     );
   }
 
@@ -342,6 +401,34 @@ export class TaxService {
       {
         params: {
           accountId
+        }
+      }
+    );
+  }
+
+  getVatRefunds(
+    branchId?: string
+  ): Observable<VatRefund[]> {
+    return this.http.get<VatRefund[]>(
+      `${this.vatBase}/refunds`,
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(branchId)
+        }
+      }
+    );
+  }
+
+  getVatCreditHistory(
+    branchId?: string
+  ): Observable<VatCreditMovement[]> {
+    return this.http.get<VatCreditMovement[]>(
+      `${this.vatBase}/credit-history`,
+      {
+        params: {
+          branchId:
+            this.resolveBranchId(branchId)
         }
       }
     );

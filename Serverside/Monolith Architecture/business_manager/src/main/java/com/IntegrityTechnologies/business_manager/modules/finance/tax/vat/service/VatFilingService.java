@@ -7,11 +7,17 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.AccountingPeriod;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.model.TaxSystemState;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.service.TaxSystemStateService;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.model.VatCreditMovement;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.model.VatFiling;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.model.VatPayment;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.model.VatRefund;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.model.enums.VatCreditMovementType;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.model.enums.VatFilingStatus;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.model.enums.VatRefundStatus;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.repository.VatCreditMovementRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.repository.VatFilingRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.repository.VatPaymentRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.repository.VatRefundRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,10 +35,12 @@ public class VatFilingService {
 
     private final VatReportService reportService;
     private final VatFilingRepository filingRepo;
+    private final VatPaymentRepository vatPaymentRepository;
     private final AccountingFacade accountingFacade;
     private final AccountingAccounts accounts;
-    private final TaxSystemStateService taxSystemStateService;
     private final AccountBalanceRepository accountBalanceRepository;
+    private final VatRefundRepository refundRepository;
+    private final VatCreditMovementRepository creditMovementRepository;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -74,11 +82,6 @@ public class VatFilingService {
                     "VAT filing prohibited for reopened periods."
             );
         }
-
-        TaxSystemState state =
-                taxSystemStateService.getOrCreate(
-                        branchId
-                );
 
         var report =
                 reportService.generate(
@@ -146,7 +149,11 @@ public class VatFilingService {
                         )
                 );
 
-        if (creditApplied.compareTo(BigDecimal.ZERO) > 0) {
+        if (
+                creditApplied.compareTo(
+                        BigDecimal.ZERO
+                ) > 0
+        ) {
 
             accountingFacade.post(
                     AccountingEvent.builder()
@@ -186,8 +193,7 @@ public class VatFilingService {
                                                     .accountId(
                                                             accounts.get(
                                                                     tenantId(),
-                                                                    branchId,
-                                                                    "VAT_CARRY_FORWARD"
+                                                                    branchId,"VAT_CARRY_FORWARD"
                                                             )
                                                     )
                                                     .direction(
@@ -239,17 +245,14 @@ public class VatFilingService {
                                     "VAT credit carried forward"
                             )
                             .performedBy(user)
-                            .accountingDate(
-                                    period.getEndDate()
-                            )
+                            .accountingDate(period.getEndDate())
                             .entries(
                                     List.of(
                                             AccountingEvent.Entry.builder()
                                                     .accountId(
                                                             accounts.get(
                                                                     tenantId(),
-                                                                    branchId,
-                                                                    "VAT_CARRY_FORWARD"
+                                                                    branchId,"VAT_CARRY_FORWARD"
                                                             )
                                                     )
                                                     .direction(
@@ -284,27 +287,17 @@ public class VatFilingService {
         VatFilingStatus status;
 
         if (
-                payable.compareTo(
-                        BigDecimal.ZERO
-                ) > 0
+                payable.compareTo(BigDecimal.ZERO) > 0
         ) {
-
-            status =
-                    VatFilingStatus.VAT_PAYABLE;
-
-        } else if (
-                closingCredit.compareTo(
-                        BigDecimal.ZERO
-                ) > 0
+            status = VatFilingStatus.VAT_PAYABLE;
+        }
+        else if (
+                closingCredit.compareTo(BigDecimal.ZERO) > 0
         ) {
-
-            status =
-                    VatFilingStatus.VAT_CREDIT_CARRIED_FORWARD;
-
-        } else {
-
-            status =
-                    VatFilingStatus.PAID;
+            status = VatFilingStatus.VAT_CREDIT_CARRIED_FORWARD;
+        }
+        else {
+            status = VatFilingStatus.PAID;
         }
 
         VatFiling filing =
@@ -319,18 +312,500 @@ public class VatFilingService {
                         .creditApplied(creditApplied)
                         .closingCredit(closingCredit)
                         .vatReceivableCreated(vatReceivableCreated)
+                        .paidAmount(BigDecimal.ZERO)
+                        .outstandingAmount(
+                                payable.compareTo(BigDecimal.ZERO) > 0
+                                        ? payable
+                                        : BigDecimal.ZERO
+                        )
                         .status(status)
                         .filedBy(user)
                         .filedAt(LocalDateTime.now())
-                        .paid(false)
                         .paidAt(null)
                         .build();
+
+        filing = filingRepo.save(
+                filing
+        );
+
+        if (
+                creditApplied.compareTo(
+                        BigDecimal.ZERO
+                ) > 0
+        ) {
+
+            creditMovementRepository.save(
+                    VatCreditMovement.builder()
+                            .tenantId(
+                                    tenantId()
+                            )
+                            .branchId(
+                                    branchId
+                            )
+                            .filing(
+                                    filing
+                            )
+                            .type(
+                                    VatCreditMovementType.CONSUMED
+                            )
+                            .amount(
+                                    creditApplied
+                            )
+                            .createdAt(
+                                    LocalDateTime.now()
+                            )
+                            .build()
+            );
+        }
+
+        if (
+                closingCredit.compareTo(
+                        BigDecimal.ZERO
+                ) > 0
+        ) {
+
+            creditMovementRepository.save(
+                    VatCreditMovement.builder()
+                            .tenantId(
+                                    tenantId()
+                            )
+                            .branchId(
+                                    branchId
+                            )
+                            .filing(
+                                    filing
+                            )
+                            .type(
+                                    VatCreditMovementType.GENERATED
+                            )
+                            .amount(
+                                    closingCredit
+                            )
+                            .createdAt(
+                                    LocalDateTime.now()
+                            )
+                            .build()
+            );
+        }
+
+        return filing;
+    }
+
+
+    @Transactional
+    public void recordPayment(
+            UUID filingId,
+            BigDecimal amount,
+            UUID fundingAccountId,
+            String user
+    ) {
+
+        VatFiling filing =
+                filingRepo
+                        .findByTenantIdAndId(
+                                tenantId(),
+                                filingId
+                        )
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "VAT filing not found"
+                                        )
+                        );
+
+        if (
+                amount == null
+                        || amount.compareTo(BigDecimal.ZERO) <= 0
+        ) {
+            throw new IllegalArgumentException(
+                    "Payment amount must be greater than zero"
+            );
+        }
+
+        if (
+                filing.getOutstandingAmount()
+                        .compareTo(BigDecimal.ZERO) <= 0
+        ) {
+            throw new IllegalStateException(
+                    "VAT already fully paid"
+            );
+        }
+
+        if (
+                amount.compareTo(
+                        filing.getOutstandingAmount()
+                ) > 0
+        ) {
+            throw new IllegalStateException(
+                    "Payment exceeds outstanding balance"
+            );
+        }
+
+        UUID branchId =
+                filing.getBranchId();
+
+        accountingFacade.post(
+                AccountingEvent.builder()
+                        .eventId(UUID.randomUUID())
+                        .sourceId(filing.getId())
+                        .sourceModule("VAT_PAYMENT")
+                        .reference(
+                                "VAT-PAY-"
+                                        + filing.getId()
+                        )
+                        .description(
+                                "VAT payment"
+                        )
+                        .performedBy(user)
+                        .branchId(branchId)
+                        .tenantId(tenantId())
+                        .entries(
+                                List.of(
+                                        AccountingEvent.Entry.builder()
+                                                .accountId(
+                                                        accounts.get(
+                                                                tenantId(),
+                                                                branchId,
+                                                                "VAT_PAYABLE"
+                                                        )
+                                                )
+                                                .direction(
+                                                        EntryDirection.DEBIT
+                                                )
+                                                .amount(
+                                                        amount
+                                                )
+                                                .build(),
+
+                                        AccountingEvent.Entry.builder()
+                                                .accountId(
+                                                        fundingAccountId
+                                                )
+                                                .direction(
+                                                        EntryDirection.CREDIT
+                                                )
+                                                .amount(
+                                                        amount
+                                                )
+                                                .build()
+                                )
+                        )
+                        .build()
+        );
+
+        VatPayment payment =
+                VatPayment.builder()
+                        .tenantId(
+                                tenantId()
+                        )
+                        .branchId(
+                                branchId
+                        )
+                        .filing(
+                                filing
+                        )
+                        .amount(
+                                amount
+                        )
+                        .fundingAccountId(
+                                fundingAccountId
+                        )
+                        .recordedBy(
+                                user
+                        )
+                        .recordedAt(
+                                LocalDateTime.now()
+                        )
+                        .build();
+
+        vatPaymentRepository.save(
+                payment
+        );
+
+        BigDecimal newPaidAmount =
+                filing.getPaidAmount()
+                        .add(amount);
+
+        BigDecimal newOutstanding =
+                filing.getOutstandingAmount()
+                        .subtract(amount);
+
+        filing.setPaidAmount(
+                newPaidAmount
+        );
+
+        filing.setOutstandingAmount(
+                newOutstanding
+        );
+
+        if (
+                newOutstanding.compareTo(
+                        BigDecimal.ZERO
+                ) == 0
+        ) {
+
+            filing.setStatus(
+                    VatFilingStatus.PAID
+            );
+
+            filing.setPaidAt(
+                    LocalDateTime.now()
+            );
+        }
+        else {
+
+            filing.setStatus(
+                    VatFilingStatus.PARTIALLY_PAID
+            );
+        }
 
         filingRepo.save(
                 filing
         );
+    }
 
-        return filing;
+    @Transactional
+    public void requestRefund(
+            UUID filingId,
+            String user
+    ) {
+
+        VatFiling filing =
+                filingRepo
+                        .findByTenantIdAndId(
+                                tenantId(),
+                                filingId
+                        )
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "VAT filing not found"
+                                        )
+                        );
+
+        if (
+                filing.getStatus()
+                        != VatFilingStatus.VAT_CREDIT_CARRIED_FORWARD
+        ) {
+            throw new IllegalStateException(
+                    "Refund request not allowed"
+            );
+        }
+
+        if (
+                filing.getClosingCredit()
+                        .compareTo(BigDecimal.ZERO) <= 0
+        ) {
+            throw new IllegalStateException(
+                    "No refundable credit exists"
+            );
+        }
+
+        filing.setStatus(
+                VatFilingStatus.VAT_REFUND_PENDING
+        );
+
+        refundRepository.save(
+                VatRefund.builder()
+                        .tenantId(
+                                tenantId()
+                        )
+                        .branchId(
+                                filing.getBranchId()
+                        )
+                        .filing(
+                                filing
+                        )
+                        .amount(
+                                filing.getClosingCredit()
+                        )
+                        .status(
+                                VatRefundStatus.REQUESTED
+                        )
+                        .requestedBy(
+                                user
+                        )
+                        .requestedAt(
+                                LocalDateTime.now()
+                        )
+                        .build()
+        );
+
+        filingRepo.save(
+                filing
+        );
+    }
+
+    @Transactional
+    public void completeRefund(
+            UUID filingId,
+            UUID receivingAccountId,
+            String user
+    ) {
+
+        VatFiling filing =
+                filingRepo
+                        .findByTenantIdAndId(
+                                tenantId(),
+                                filingId
+                        )
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "VAT filing not found"
+                                        )
+                        );
+
+        if (
+                filing.getStatus()
+                        != VatFilingStatus.VAT_REFUND_PENDING
+        ) {
+            throw new IllegalStateException(
+                    "VAT refund not pending"
+            );
+        }
+
+        UUID branchId =
+                filing.getBranchId();
+
+        BigDecimal amount =
+                filing.getClosingCredit();
+
+        if (
+                amount == null
+                        || amount.compareTo(BigDecimal.ZERO) <= 0
+        ) {
+            throw new IllegalStateException(
+                    "No refundable VAT credit exists"
+            );
+        }
+
+        UUID carryForwardAccountId =
+                accounts.get(
+                        tenantId(),
+                        branchId,
+                        "VAT_CARRY_FORWARD"
+                );
+
+        BigDecimal carryForwardBalance =
+                accountBalanceRepository
+                        .findByTenantIdAndAccount_IdAndBranch_Id(
+                                tenantId(),
+                                carryForwardAccountId,
+                                branchId
+                        )
+                        .map(AccountBalance::getBalance)
+                        .orElse(BigDecimal.ZERO);
+
+        if (
+                amount.compareTo(
+                        carryForwardBalance
+                ) > 0
+        ) {
+            throw new IllegalStateException(
+                    "Refund exceeds VAT carry-forward balance"
+            );
+        }
+
+        accountingFacade.post(
+                AccountingEvent.builder()
+                        .eventId(UUID.randomUUID())
+                        .sourceId(filing.getId())
+                        .sourceModule("VAT_REFUND")
+                        .reference(
+                                "VAT-REFUND-"
+                                        + filing.getId()
+                        )
+                        .description(
+                                "VAT refund received"
+                        )
+                        .performedBy(user)
+                        .tenantId(tenantId())
+                        .branchId(branchId)
+                        .entries(
+                                List.of(
+                                        AccountingEvent.Entry.builder()
+                                                .accountId(
+                                                        receivingAccountId
+                                                )
+                                                .direction(
+                                                        EntryDirection.DEBIT
+                                                )
+                                                .amount(
+                                                        amount
+                                                )
+                                                .build(),
+
+                                        AccountingEvent.Entry.builder()
+                                                .accountId(
+                                                        carryForwardAccountId
+                                                )
+                                                .direction(
+                                                        EntryDirection.CREDIT
+                                                )
+                                                .amount(
+                                                        amount
+                                                )
+                                                .build()
+                                )
+                        )
+                        .build()
+        );
+
+        VatRefund refund =
+                refundRepository
+                        .findByTenantIdAndFiling_Id(
+                                tenantId(),
+                                filing.getId()
+                        )
+                        .orElseThrow();
+
+        refund.setStatus(
+                VatRefundStatus.COMPLETED
+        );
+
+        refund.setProcessedBy(
+                user
+        );
+
+        refund.setProcessedAt(
+                LocalDateTime.now()
+        );
+
+        refundRepository.save(
+                refund
+        );
+
+        filing.setStatus(
+                VatFilingStatus.VAT_REFUNDED
+        );
+
+        creditMovementRepository.save(
+                VatCreditMovement.builder()
+                        .tenantId(
+                                tenantId()
+                        )
+                        .branchId(
+                                branchId
+                        )
+                        .filing(
+                                filing
+                        )
+                        .type(
+                                VatCreditMovementType.REFUNDED
+                        )
+                        .amount(
+                                amount
+                        )
+                        .createdAt(
+                                LocalDateTime.now()
+                        )
+                        .build()
+        );
+
+        filingRepo.save(
+                filing
+        );
     }
 
     private BigDecimal getCarryForwardBalance(
@@ -437,8 +912,8 @@ public class VatFilingService {
                             )
                             .build()
             );
-
-        } else if (
+        }
+        else if (
                 payable.compareTo(
                         BigDecimal.ZERO
                 ) < 0
@@ -464,265 +939,5 @@ public class VatFilingService {
         }
 
         return entries;
-    }
-
-    @Transactional
-    public void markPaid(
-            VatFiling filing,
-            String user,
-            UUID paymentAccountId
-    ) {
-
-        if (
-                filing.getVatPayable()
-                        .compareTo(
-                                BigDecimal.ZERO
-                        ) <= 0
-        ) {
-            throw new IllegalStateException(
-                    "No VAT payable exists."
-            );
-        }
-
-        if (filing.isPaid()) {
-            throw new IllegalStateException(
-                    "VAT filing already paid and locked."
-            );
-        }
-
-        UUID branchId =
-                filing.getBranchId();
-
-        BigDecimal amount =
-                filing.getVatPayable();
-
-        accountingFacade.post(
-                AccountingEvent.builder()
-                        .eventId(UUID.randomUUID())
-                        .sourceId(filing.getId())
-                        .sourceModule("VAT_PAYMENT")
-                        .reference(
-                                "VAT-PAY-"
-                                        + filing.getId()
-                        )
-                        .description(
-                                "VAT payment for period"
-                        )
-                        .performedBy(user)
-                        .branchId(branchId)
-                        .tenantId(tenantId())
-                        .entries(
-                                List.of(
-                                        AccountingEvent.Entry.builder()
-                                                .accountId(
-                                                        accounts.get(
-                                                                tenantId(),
-                                                                branchId,
-                                                                "VAT_PAYABLE"
-                                                        )
-                                                )
-                                                .direction(
-                                                        EntryDirection.DEBIT
-                                                )
-                                                .amount(
-                                                        amount
-                                                )
-                                                .build(),
-
-                                        AccountingEvent.Entry.builder()
-                                                .accountId(
-                                                        paymentAccountId
-                                                )
-                                                .direction(
-                                                        EntryDirection.CREDIT
-                                                )
-                                                .amount(
-                                                        amount
-                                                )
-                                                .build()
-                                )
-                        )
-                        .build()
-        );
-
-        filing.setPaid(
-                true
-        );
-
-        filing.setPaidAt(
-                LocalDateTime.now()
-        );
-
-        filing.setStatus(
-                VatFilingStatus.PAID
-        );
-
-        filingRepo.save(
-                filing
-        );
-    }
-
-    @Transactional
-    public void requestRefund(
-            UUID filingId,
-            String user
-    ) {
-
-        VatFiling filing =
-                filingRepo.findByTenantIdAndId(
-                        tenantId(),
-                        filingId
-                ).orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "VAT filing not found"
-                        ));
-
-        if (filing.getStatus() != VatFilingStatus.VAT_CREDIT_CARRIED_FORWARD)
-        {
-            throw new IllegalStateException(
-                    "Refund request not allowed"
-            );
-        }
-
-        filing.setStatus(
-                VatFilingStatus.VAT_REFUND_PENDING
-        );
-
-        filingRepo.save(
-                filing
-        );
-    }
-
-    @Transactional
-    public void completeRefund(
-            UUID filingId,
-            UUID receivingAccountId,
-            String user
-    ) {
-
-        VatFiling filing =
-                filingRepo.findByTenantIdAndId(
-                        tenantId(),
-                        filingId
-                ).orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "VAT filing not found"
-                        ));
-
-        if (
-                filing.getStatus()
-                        != VatFilingStatus.VAT_REFUND_PENDING
-        ) {
-            throw new IllegalStateException(
-                    "VAT refund not pending"
-            );
-        }
-
-        UUID branchId = filing.getBranchId();
-
-        BigDecimal amount =
-                filing.getClosingCredit();
-
-        if (
-                filing.getStatus()
-                        != VatFilingStatus.VAT_REFUND_PENDING
-        ) {
-            throw new IllegalStateException(
-                    "VAT refund not pending"
-            );
-        }
-
-        if (
-                filing.getClosingCredit()
-                        .compareTo(BigDecimal.ZERO) <= 0
-        ) {
-            throw new IllegalStateException(
-                    "No refundable credit exists"
-            );
-        }
-
-        if (
-                amount == null
-                        || amount.compareTo(BigDecimal.ZERO) <= 0
-        ) {
-            throw new IllegalStateException(
-                    "No refundable VAT credit exists"
-            );
-        }
-
-        UUID carryForwardAccountId =
-                accounts.get(
-                        tenantId(),
-                        branchId,
-                        "VAT_CARRY_FORWARD"
-                );
-
-        BigDecimal carryForwardBalance =
-                accountBalanceRepository
-                        .findByTenantIdAndAccount_IdAndBranch_Id(
-                                tenantId(),
-                                carryForwardAccountId,
-                                branchId
-                        )
-                        .map(AccountBalance::getBalance)
-                        .orElse(BigDecimal.ZERO);
-
-        if (amount.compareTo(carryForwardBalance) > 0) {
-            throw new IllegalStateException(
-                    "Refund exceeds VAT carry-forward balance"
-            );
-        }
-
-        accountingFacade.post(
-                AccountingEvent.builder()
-                        .eventId(UUID.randomUUID())
-                        .sourceId(filing.getId())
-                        .sourceModule("VAT_REFUND")
-                        .reference(
-                                "VAT-REFUND-" + filing.getId()
-                        )
-                        .description(
-                                "VAT refund received"
-                        )
-                        .performedBy(user)
-                        .tenantId(tenantId())
-                        .branchId(branchId)
-                        .entries(
-                                List.of(
-                                        AccountingEvent.Entry.builder()
-                                                .accountId(
-                                                        receivingAccountId
-                                                )
-                                                .direction(
-                                                        EntryDirection.DEBIT
-                                                )
-                                                .amount(
-                                                        amount
-                                                )
-                                                .build(),
-
-                                        AccountingEvent.Entry.builder()
-                                                .accountId(
-                                                        carryForwardAccountId
-                                                )
-                                                .direction(
-                                                        EntryDirection.CREDIT
-                                                )
-                                                .amount(
-                                                        amount
-                                                )
-                                                .build()
-                                )
-                        )
-                        .build()
-        );
-
-        filing.setStatus(
-                VatFilingStatus.VAT_REFUNDED
-        );
-
-        filingRepo.save(
-                filing
-        );
     }
 }

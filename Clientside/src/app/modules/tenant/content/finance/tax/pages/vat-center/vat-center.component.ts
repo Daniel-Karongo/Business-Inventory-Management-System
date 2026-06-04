@@ -4,60 +4,86 @@ import {
   OnInit,
   inject
 } from '@angular/core';
+
 import {
   CommonModule
 } from '@angular/common';
+
 import {
   FormsModule
 } from '@angular/forms';
+
 import {
-  catchError,
+  Subject,
   forkJoin,
   of,
-  Subject,
-  takeUntil
+  takeUntil,
+  catchError
 } from 'rxjs';
+
 import {
   MatButtonModule
 } from '@angular/material/button';
+
 import {
   MatIconModule
 } from '@angular/material/icon';
+
 import {
   MatSnackBar,
   MatSnackBarModule
 } from '@angular/material/snack-bar';
+
 import {
   MatFormFieldModule
 } from '@angular/material/form-field';
+
 import {
   MatInputModule
 } from '@angular/material/input';
+
 import {
   MatSelectModule
 } from '@angular/material/select';
+
 import {
   WorkflowShellComponent
 } from '../../../../../../../shared/layout/workflow-shell/workflow-shell.component';
+
 import {
   TaxService
 } from '../../services/tax.service';
+
 import {
-  PageResponse,
-  AccountingPeriod,
   TaxStatus,
-  VatFiling
+  AccountingPeriod,
+  VatDashboard,
+  VatOverview,
+  VatFilingSummary,
+  VatFilingPreview,
+  VatFilingReadiness,
+  VatFilingDetail,
+  VatRefund,
+  VatCreditMovement,
+  RecordVatPaymentRequest,
+  VatPayment
 } from '../../models/tax.models';
+
 import {
   BranchService
 } from '../../../../branches/services/branch.service';
+
 import {
   BranchListItemDTO
 } from '../../../../branches/models/branch.model';
+
 import {
   BranchContextService
 } from '../../../../../../../core/services/branch-context.service';
-import { FundingAccount } from '../../../ap/debts/models/funding-account.model';
+
+import {
+  FundingAccount
+} from '../../../ap/debts/models/funding-account.model';
 
 @Component({
   standalone: true,
@@ -100,38 +126,75 @@ export class VatCenterComponent
 
   paying = false;
 
+  requestingRefund = false;
+
+  completingRefund = false;
+
   status:
     TaxStatus | null = null;
 
-  currentPeriod:
-    AccountingPeriod | null = null;
+  dashboard:
+    VatDashboard | null = null;
 
-  filings:
-    VatFiling[] = [];
+  overview:
+    VatOverview | null = null;
 
   branches:
     BranchListItemDTO[] = [];
 
-  fundingAccounts: FundingAccount[] = [];
+  fundingAccounts:
+    FundingAccount[] = [];
 
-  periods: AccountingPeriod[] = [];
-  selectedPeriodId = '';
-  eligibleVatPeriods: AccountingPeriod[] = [];
+  eligibleVatPeriods:
+    AccountingPeriod[] = [];
 
-  requestingRefund = false;
-  completingRefund = false;
+  filings:
+    VatFilingSummary[] = [];
+
+  refunds:
+    VatRefund[] = [];
+
+  creditHistory:
+    VatCreditMovement[] = [];
 
   selectedBranchId = '';
 
-  accountId = '';
+  selectedPeriodId = '';
+
+  selectedAccountId = '';
+
+  paymentAmount: number | null =
+    null;
+
+  preview:
+    VatFilingPreview | null = null;
+
+  readiness:
+    VatFilingReadiness | null =
+    null;
+
+  selectedFiling:
+    VatFilingDetail | null = null;
+
+  activeFilingId = '';
+
+  filingPayments: VatPayment[] = [];
+
+  showFilingDetail = false;
 
   activeTab:
-    'overview'
+    | 'overview'
     | 'filings'
+    | 'refunds'
+    | 'credits'
     = 'overview';
 
   readonly tabs: {
-    key: 'overview' | 'filings';
+    key:
+    | 'overview'
+    | 'filings'
+    | 'refunds'
+    | 'credits';
     label: string;
     icon: string;
   }[] = [
@@ -142,8 +205,18 @@ export class VatCenterComponent
       },
       {
         key: 'filings',
-        label: 'Filings',
+        label: 'VAT Returns',
         icon: 'receipt_long'
+      },
+      {
+        key: 'refunds',
+        label: 'Refunds',
+        icon: 'request_quote'
+      },
+      {
+        key: 'credits',
+        label: 'Credit Activity',
+        icon: 'account_balance_wallet'
       }
     ];
 
@@ -153,21 +226,25 @@ export class VatCenterComponent
 
     this.branchContext.branch$
       .pipe(
-        takeUntil(this.destroy$)
+        takeUntil(
+          this.destroy$
+        )
       )
-      .subscribe(branchId => {
+      .subscribe(
+        branchId => {
 
-        if (!branchId) {
-          return;
+          if (!branchId) {
+            return;
+          }
+
+          this.selectedBranchId =
+            branchId;
+
+          this.loadWorkspace(
+            branchId
+          );
         }
-
-        this.selectedBranchId =
-          branchId;
-
-        this.loadWorkspace(
-          branchId
-        );
-      });
+      );
   }
 
   ngOnDestroy(): void {
@@ -177,26 +254,14 @@ export class VatCenterComponent
     this.destroy$.complete();
   }
 
-  private createEmptyPageResponse<T>():
-    PageResponse<T> {
-
-    return {
-      content: [],
-      totalElements: 0,
-      totalPages: 0,
-      number: 0,
-      size: 100,
-      first: true,
-      last: true
-    };
-  }
-
-  private loadBranches() {
+  loadBranches() {
 
     this.branchService
       .getAllLegacy()
       .pipe(
-        takeUntil(this.destroy$)
+        takeUntil(
+          this.destroy$
+        )
       )
       .subscribe({
         next: branches => {
@@ -219,19 +284,7 @@ export class VatCenterComponent
             this.branchContext.setBranch(
               this.selectedBranchId
             );
-
-            this.loadWorkspace(
-              this.selectedBranchId
-            );
-          } else {
-
-            this.loading = false;
           }
-        },
-        error: () => {
-
-          this.branches = [];
-          this.loading = false;
         }
       });
   }
@@ -240,197 +293,343 @@ export class VatCenterComponent
     branchId: string
   ) {
 
-    if (!branchId) {
-
-      this.loading = false;
-      return;
-    }
-
     this.loading = true;
 
+    this.showFilingDetail = false;
+    this.selectedFiling = null;
+    this.filingPayments = [];
+
     forkJoin({
-      status: this.taxService
-        .getStatus(branchId)
-        .pipe(
-          catchError(() => of(null))
-        ),
 
-      periods: this.taxService
-        .listPeriods(
-          0,
-          100,
-          branchId
-        )
-        .pipe(
-          catchError(() =>
-            of(
-              this.createEmptyPageResponse<AccountingPeriod>()
-            )
+      status:
+        this.taxService
+          .getStatus(branchId)
+          .pipe(
+            catchError(err => {
+
+              this.snackbar.open(
+                err?.error?.message ??
+                'Unable to load VAT status',
+                'Close',
+                { duration: 5000 }
+              );
+
+              return of(null);
+            })
+          ),
+
+      dashboard:
+        this.taxService
+          .getVatDashboard(branchId)
+          .pipe(
+            catchError(err => {
+
+              this.snackbar.open(
+                err?.error?.message ??
+                'Unable to load VAT dashboard',
+                'Close',
+                { duration: 5000 }
+              );
+
+              return of(null);
+            })
+          ),
+
+      overview:
+        this.taxService
+          .getVatOverview(branchId)
+          .pipe(
+            catchError(err => {
+
+              this.snackbar.open(
+                err?.error?.message ??
+                'Unable to load VAT overview',
+                'Close',
+                { duration: 5000 }
+              );
+
+              return of(null);
+            })
+          ),
+
+      periods:
+        this.taxService
+          .getEligibleVatPeriods(branchId)
+          .pipe(
+            catchError(err => {
+
+              this.snackbar.open(
+                err?.error?.message ??
+                'Unable to load VAT periods',
+                'Close',
+                { duration: 5000 }
+              );
+
+              return of([]);
+            })
+          ),
+
+      history:
+        this.taxService
+          .getVatHistory(branchId)
+          .pipe(
+            catchError(err => {
+
+              this.snackbar.open(
+                err?.error?.message ??
+                'Unable to load VAT filing history',
+                'Close',
+                { duration: 5000 }
+              );
+
+              return of([]);
+            })
+          ),
+
+      refunds:
+        this.taxService
+          .getVatRefunds(branchId)
+          .pipe(
+            catchError(err => {
+
+              this.snackbar.open(
+                err?.error?.message ??
+                'Unable to load VAT refunds',
+                'Close',
+                { duration: 5000 }
+              );
+
+              return of([]);
+            })
+          ),
+
+      credits:
+        this.taxService
+          .getVatCreditHistory(branchId)
+          .pipe(
+            catchError(err => {
+
+              this.snackbar.open(
+                err?.error?.message ??
+                'Unable to load VAT credit history',
+                'Close',
+                { duration: 5000 }
+              );
+
+              return of([]);
+            })
+          ),
+
+      fundingAccounts:
+        this.taxService
+          .getFundingAccounts(branchId)
+          .pipe(
+            catchError(err => {
+
+              this.snackbar.open(
+                err?.error?.message ??
+                'Unable to load funding accounts',
+                'Close',
+                { duration: 5000 }
+              );
+
+              return of([]);
+            })
           )
-        ),
 
-      currentPeriod: this.taxService
-        .getCurrentPeriod(branchId)
-        .pipe(
-          catchError(() => of(null))
-        ),
-
-      eligiblePeriods: this.taxService
-        .getEligibleVatPeriods(
-          branchId
-        )
-        .pipe(
-          catchError(() =>
-            of([])
-          )
-        ),
-
-      filings: this.taxService
-        .listVat(
-          0,
-          100,
-          branchId
-        )
-        .pipe(
-          catchError(() =>
-            of(
-              this.createEmptyPageResponse<VatFiling>()
-            )
-          )
-        ),
-
-      fundingAccounts: this.taxService
-        .getFundingAccounts(
-          branchId
-        )
-        .pipe(
-          catchError(() =>
-            of([])
-          )
-        )
     })
       .pipe(
-        takeUntil(
-          this.destroy$
-        )
+        takeUntil(this.destroy$)
       )
       .subscribe({
+
         next: result => {
 
-          this.status =
-            result?.status ?? null;
+          try {
 
-          this.periods =
-            result?.periods?.content ?? [];
+            this.status =
+              result.status;
 
-          this.currentPeriod =
-            result?.currentPeriod ?? null;
+            this.dashboard =
+              result.dashboard;
 
-          this.eligibleVatPeriods =
-            result?.eligiblePeriods ?? [];
+            this.overview =
+              result.overview;
 
-          this.filings =
-            result?.filings?.content ?? [];
+            this.eligibleVatPeriods =
+              result.periods ?? [];
 
-          if (
-            this.selectedPeriodId &&
-            !this.eligibleVatPeriods.some(
-              p => p.id === this.selectedPeriodId
-            )
-          ) {
-            this.selectedPeriodId = '';
+            this.filings =
+              result.history ?? [];
+
+            this.refunds =
+              result.refunds ?? [];
+
+            this.creditHistory =
+              result.credits ?? [];
+
+            this.fundingAccounts =
+              result.fundingAccounts ?? [];
+
+            if (
+              this.selectedPeriodId &&
+              !this.eligibleVatPeriods.some(
+                p => p.id === this.selectedPeriodId
+              )
+            ) {
+              this.selectedPeriodId = '';
+            }
+
+            if (
+              !this.selectedPeriodId &&
+              this.eligibleVatPeriods.length > 0
+            ) {
+
+              this.selectedPeriodId =
+                this.eligibleVatPeriods[0].id;
+
+              this.loadPreview();
+            }
+
+          } catch (error) {
+
+            console.error(error);
+
+            this.snackbar.open(
+              'VAT workspace contains invalid data returned by the server.',
+              'Close',
+              {
+                duration: 7000
+              }
+            );
+
+          } finally {
+
+            this.loading = false;
+
           }
 
-          if (
-            !this.selectedPeriodId &&
-            this.eligibleVatPeriods.length > 0
-          ) {
-            this.selectedPeriodId =
-              this.eligibleVatPeriods[0].id;
-          }
-
-          const fundingAccounts =
-            result?.fundingAccounts ?? [];
-
-          if (
-            this.accountId &&
-            !fundingAccounts.some(
-              x => x.id === this.accountId
-            )
-          ) {
-            this.accountId = '';
-          }
-
-          this.fundingAccounts =
-            fundingAccounts;
-
-          if (
-            this.accountId &&
-            !this.fundingAccounts.some(
-              x => x.id === this.accountId
-            )
-          ) {
-
-            this.accountId = '';
-          }
-
-          this.loading = false;
         },
 
-        error: () => {
-
-          this.status = null;
-          this.currentPeriod = null;
-
-          this.periods = [];
-          this.eligibleVatPeriods = [];
-
-          this.filings = [];
-          this.fundingAccounts = [];
-          this.accountId = '';
+        error: err => {
 
           this.loading = false;
+
+          this.snackbar.open(
+            err?.error?.message ??
+            'Unable to load VAT workspace',
+            'Close',
+            {
+              duration: 7000
+            }
+          );
         }
       });
   }
 
-  onBranchChanged(
-    branchId: string
+  openFiling(
+    filingId: string
   ) {
 
-    if (!branchId) {
+    this.activeFilingId =
+      filingId;
+
+    forkJoin({
+
+      detail:
+        this.taxService
+          .getVatDetail(filingId),
+
+      payments:
+        this.taxService
+          .getVatPayments(filingId)
+
+    })
+      .subscribe({
+
+        next: result => {
+
+          this.selectedFiling =
+            result.detail;
+
+          this.filingPayments =
+            result.payments ?? [];
+
+          this.showFilingDetail =
+            true;
+        },
+
+        error: err => {
+
+          this.snackbar.open(
+            err?.error?.message ??
+            'Unable to load VAT filing details',
+            'Close',
+            {
+              duration: 5000
+            }
+          );
+        }
+      });
+  }
+
+  loadPreview() {
+
+    if (
+      !this.selectedPeriodId
+    ) {
       return;
     }
 
-    this.branchContext.setBranch(
-      branchId
-    );
-  }
+    forkJoin({
 
-  selectTab(
-    key:
-      'overview'
-      | 'filings'
-  ) {
+      readiness:
+        this.taxService
+          .getVatReadiness(
+            this.selectedPeriodId,
+            this.selectedBranchId
+          ),
 
-    this.activeTab = key;
+      preview:
+        this.taxService
+          .getVatPreview(
+            this.selectedPeriodId,
+            this.selectedBranchId
+          )
+
+    }).subscribe({
+      next: result => {
+
+        this.readiness =
+          result.readiness ?? {
+            ready: false,
+            message: 'Preview unavailable',
+            warnings: []
+          };
+
+        this.preview =
+          result.preview;
+      },
+      error: err => {
+
+        this.snackbar.open(
+          err?.error?.message ??
+          'Unable to load VAT preview',
+          'Close',
+          {
+            duration: 5000
+          }
+        );
+
+      }
+    });
   }
 
   fileVat() {
 
     if (
-      !this.selectedPeriodId ||
-      !this.selectedBranchId
+      !this.selectedPeriodId
     ) {
-
-      this.snackbar.open(
-        'No active tax period available.',
-        'Close',
-        {
-          duration: 3000
-        }
-      );
-
       return;
     }
 
@@ -442,15 +641,16 @@ export class VatCenterComponent
         this.selectedBranchId
       )
       .subscribe({
+
         next: () => {
 
           this.filing = false;
 
           this.snackbar.open(
-            'VAT return filed',
+            'VAT return filed successfully',
             'Close',
             {
-              duration: 2500
+              duration: 3000
             }
           );
 
@@ -466,10 +666,80 @@ export class VatCenterComponent
           this.snackbar.open(
             err?.error?.message ??
             'Failed to file VAT',
-            'Close',
-            {
-              duration: 5000
-            }
+            'Close'
+          );
+        }
+      });
+  }
+
+  loadDetail(
+    filingId: string
+  ) {
+
+    this.taxService
+      .getVatDetail(
+        filingId
+      )
+      .subscribe(
+        detail =>
+          this.selectedFiling =
+          detail
+      );
+  }
+
+  payVat(
+    filingId: string,
+    outstandingAmount: number
+  ) {
+
+    if (
+      !this.selectedAccountId
+    ) {
+      return;
+    }
+
+    const amount =
+      this.paymentAmount
+      ?? outstandingAmount;
+
+    const payload:
+      RecordVatPaymentRequest = {
+
+      fundingAccountId:
+        this.selectedAccountId,
+
+      amount
+    };
+
+    this.paying = true;
+
+    this.taxService
+      .recordVatPayment(
+        filingId,
+        payload
+      )
+      .subscribe({
+
+        next: () => {
+
+          this.paying = false;
+
+          this.paymentAmount =
+            null;
+
+          this.loadWorkspace(
+            this.selectedBranchId
+          );
+        },
+
+        error: err => {
+
+          this.paying = false;
+
+          this.snackbar.open(
+            err?.error?.message ??
+            'Failed to record payment',
+            'Close'
           );
         }
       });
@@ -478,21 +748,24 @@ export class VatCenterComponent
   requestRefund(
     filingId: string
   ) {
-    this.requestingRefund = true;
+
+    this.requestingRefund =
+      true;
 
     this.taxService
-      .requestVatRefund(
-        filingId
-      )
+      .requestVatRefund(filingId)
       .subscribe({
+
         next: () => {
-          this.requestingRefund = false;
+
+          this.requestingRefund =
+            false;
 
           this.snackbar.open(
-            'VAT refund requested',
+            'Refund request submitted successfully.',
             'Close',
             {
-              duration: 3000
+              duration: 4000
             }
           );
 
@@ -500,8 +773,11 @@ export class VatCenterComponent
             this.selectedBranchId
           );
         },
+
         error: err => {
-          this.requestingRefund = false;
+
+          this.requestingRefund =
+            false;
 
           this.snackbar.open(
             err?.error?.message ??
@@ -518,33 +794,40 @@ export class VatCenterComponent
   completeRefund(
     filingId: string
   ) {
-    if (!this.accountId) {
+
+    if (!this.selectedAccountId) {
+
       this.snackbar.open(
-        'Receiving account required',
+        'Select a funding account first.',
         'Close',
         {
-          duration: 3000
+          duration: 4000
         }
       );
+
       return;
     }
 
-    this.completingRefund = true;
+    this.completingRefund =
+      true;
 
     this.taxService
       .completeVatRefund(
         filingId,
-        this.accountId
+        this.selectedAccountId
       )
       .subscribe({
+
         next: () => {
-          this.completingRefund = false;
+
+          this.completingRefund =
+            false;
 
           this.snackbar.open(
-            'VAT refund recorded',
+            'Refund completed successfully.',
             'Close',
             {
-              duration: 3000
+              duration: 4000
             }
           );
 
@@ -552,8 +835,11 @@ export class VatCenterComponent
             this.selectedBranchId
           );
         },
+
         error: err => {
-          this.completingRefund = false;
+
+          this.completingRefund =
+            false;
 
           this.snackbar.open(
             err?.error?.message ??
@@ -567,189 +853,69 @@ export class VatCenterComponent
       });
   }
 
-  payVat(
-    filingId: string
+  statusClass(
+    status: string
+  ): string {
+
+    switch (status) {
+
+      case 'Payment Due':
+        return 'status-payable';
+
+      case 'Partially Paid':
+        return 'status-payable';
+
+      case 'Paid':
+        return 'status-paid';
+
+      case 'Credit Available':
+        return 'status-credit';
+
+      case 'Refund Requested':
+        return 'status-refund-pending';
+
+      case 'Refunded':
+        return 'status-refunded';
+
+      default:
+        return '';
+    }
+  }
+
+  onBranchChanged(
+    branchId: string
   ) {
 
-    if (
-      !this.accountId ||
-      !this.selectedBranchId
-    ) {
+    this.branchContext.setBranch(
+      branchId
+    );
+  }
 
-      this.snackbar.open(
-        'Payment account is required.',
-        'Close',
-        {
-          duration: 3000
-        }
-      );
+  selectTab(
+    tab:
+      | 'overview'
+      | 'filings'
+      | 'refunds'
+      | 'credits'
+  ) {
 
-      return;
-    }
-
-    this.paying = true;
-
-    this.taxService
-      .payVat(
-        filingId,
-        this.accountId,
-        this.selectedBranchId
-      )
-      .subscribe({
-        next: () => {
-
-          this.paying = false;
-
-          this.snackbar.open(
-            'VAT payment recorded',
-            'Close',
-            {
-              duration: 2500
-            }
-          );
-
-          this.loadWorkspace(
-            this.selectedBranchId
-          );
-        },
-
-        error: err => {
-
-          this.paying = false;
-
-          this.snackbar.open(
-            err?.error?.message ??
-            'Failed to record payment',
-            'Close',
-            {
-              duration: 5000
-            }
-          );
-        }
-      });
+    this.activeTab =
+      tab;
   }
 
   get branchSelectorVisible() {
 
-    return this.branches.length > 1;
-  }
-
-  get currentBranch() {
-
-    return this.branches.find(
-      x =>
-        x.id ===
-        this.selectedBranchId
-    );
-  }
-
-  get hasFilings() {
-
-    return this.filings.length > 0;
-  }
-
-  get hasCurrentPeriod() {
-
-    return !!this.currentPeriod;
-  }
-
-  get hasTaxActivity() {
-
     return (
-      this.hasFilings ||
-      this.hasCurrentPeriod
-    );
-  }
-
-  get showEmptyState() {
-
-    return !this.hasTaxActivity;
-  }
-
-  get canFileVat() {
-    return (
-      !!this.selectedPeriodId &&
-      !this.filing
+      this.branches.length > 1
     );
   }
 
   get selectedAccount() {
+
     return this.fundingAccounts.find(
-      x => x.id === this.accountId
+      x =>
+        x.id ===
+        this.selectedAccountId
     );
-  }
-
-  get hasEligibleVatPeriods() {
-    return (
-      this.eligibleVatPeriods.length > 0
-    );
-  }
-
-  isPayable(
-    filing: VatFiling
-  ) {
-    return (
-      filing.status ===
-      'VAT_PAYABLE'
-    );
-  }
-
-  isCredit(
-    filing: VatFiling
-  ) {
-    return (
-      filing.status ===
-      'VAT_CREDIT_AVAILABLE' ||
-
-      filing.status ===
-      'VAT_CREDIT_CARRIED_FORWARD'
-    );
-  }
-
-  isRefundPending(
-    filing: VatFiling
-  ) {
-    return (
-      filing.status ===
-      'VAT_REFUND_PENDING'
-    );
-  }
-
-  isRefunded(
-    filing: VatFiling
-  ) {
-    return (
-      filing.status ===
-      'VAT_REFUNDED'
-    );
-  }
-
-  statusLabel(
-    filing: VatFiling
-  ): string {
-
-    switch (filing.status) {
-
-      case 'VAT_PAYABLE':
-        return 'VAT Payable';
-
-      case 'PAID':
-        return 'Paid';
-
-      case 'VAT_CREDIT_AVAILABLE':
-        return 'Credit Available';
-
-      case 'VAT_CREDIT_CARRIED_FORWARD':
-        return 'Credit Carried Forward';
-
-      case 'VAT_REFUND_PENDING':
-        return 'Refund Pending';
-
-      case 'VAT_REFUNDED':
-        return 'Refunded';
-
-      default:
-        return filing.status;
-    }
   }
 }

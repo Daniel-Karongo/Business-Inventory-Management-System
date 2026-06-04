@@ -16,8 +16,22 @@ import java.util.UUID;
         name = "vat_filings",
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_vat_period_branch",
-                columnNames = {"tenant_id","branch_id","period_id"}
-        )
+                columnNames = {
+                        "tenant_id",
+                        "branch_id",
+                        "period_id"
+                }
+        ),
+        indexes = {
+                @Index(
+                        name = "idx_vat_tenant",
+                        columnList = "tenant_id"
+                ),
+                @Index(
+                        name = "idx_vat_branch",
+                        columnList = "branch_id"
+                )
+        }
 )
 @Getter
 @Setter
@@ -54,6 +68,12 @@ public class VatFiling extends BranchAwareEntity {
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal vatReceivableCreated;
 
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal paidAmount = BigDecimal.ZERO;
+
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal outstandingAmount = BigDecimal.ZERO;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private VatFilingStatus status;
@@ -63,6 +83,4 @@ public class VatFiling extends BranchAwareEntity {
     private LocalDateTime filedAt;
 
     private LocalDateTime paidAt;
-
-    private boolean paid;
 }
