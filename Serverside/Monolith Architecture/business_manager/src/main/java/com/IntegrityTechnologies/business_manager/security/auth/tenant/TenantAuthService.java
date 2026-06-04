@@ -23,14 +23,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class TenantAuthService {
 
-    private static final int TENANT_USERS_MAX_SESSIONS_PER_DAY = 5;
+    private static final int MAX_ACTIVE_SESSIONS = 3;
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -45,7 +44,8 @@ public class TenantAuthService {
     private final AuthResponseFactory responseFactory;
     private final TenantSessionService sessionService;
 
-    public record Result(String jwt, AuthResponse response) {}
+    public record Result(String jwt, AuthResponse response) {
+    }
 
     public Result login(AuthRequest request, HttpServletRequest httpRequest) {
 
@@ -75,12 +75,12 @@ public class TenantAuthService {
             if (Boolean.TRUE.equals(branch.getEnforceDevice())) {
 
                 device = deviceSecurityService.validate(
-                    tenantId,
-                    branchId,
-                    request.getDeviceId(),
-                    user.getId(),
-                    request,
-                    ip
+                        tenantId,
+                        branchId,
+                        request.getDeviceId(),
+                        user.getId(),
+                        request,
+                        ip
                 );
             }
             locationSecurityService.validate(
@@ -142,7 +142,6 @@ public class TenantAuthService {
         }
 
         UUID userId = user.getId();
-        LocalDate today = LocalDate.now();
 
         boolean belongs = branchRepository.userBelongsToBranch(
                 tenantId,
@@ -159,11 +158,16 @@ public class TenantAuthService {
 
         int activeCount =
                 userSessionRepository
-                        .findByUserIdAndLoginDateAndLogoutTimeIsNull(userId, today)
+                        .findAllByUserIdAndLogoutTimeIsNull(
+                                userId
+                        )
                         .size();
 
-        if (activeCount >= TENANT_USERS_MAX_SESSIONS_PER_DAY) {
-            throw new AppSecurityException(SecurityErrorCode.DEVICE_LIMIT_REACHED, "Maximum active sessions reached");
+        if (activeCount >= MAX_ACTIVE_SESSIONS) {
+            throw new AppSecurityException(
+                    SecurityErrorCode.DEVICE_LIMIT_REACHED,
+                    "Maximum active sessions reached. Review active sessions and terminate one to continue."
+            );
         }
 
         UUID tokenId = UUID.randomUUID();
@@ -181,7 +185,21 @@ public class TenantAuthService {
         if (device != null) {
             deviceUsageService.record(device.getId(), userId);
         }
-        sessionService.create(tenantId, branchId, userId, tokenId);
+        String deviceName = null;
+
+        if (device != null) {
+            deviceName = device.resolvedName();
+        }
+
+        sessionService.create(
+                tenantId,
+                branchId,
+                userId,
+                tokenId,
+                request,
+                ip,
+                deviceName
+        );
 
         rollcallService.recordLoginRollcall(
                 userId,
@@ -248,12 +266,12 @@ public class TenantAuthService {
         try {
             if (Boolean.TRUE.equals(branch.getEnforceDevice())) {
                 device = deviceSecurityService.validate(
-                    tenantId,
-                    branchId,
-                    request.getDeviceId(),
-                    user.getId(),
-                    request,
-                    ip
+                        tenantId,
+                        branchId,
+                        request.getDeviceId(),
+                        user.getId(),
+                        request,
+                        ip
                 );
             }
 
@@ -309,7 +327,6 @@ public class TenantAuthService {
         }
 
         UUID userId = user.getId();
-        LocalDate today = LocalDate.now();
 
         boolean belongs = branchRepository.userBelongsToBranch(
                 tenantId,
@@ -319,18 +336,23 @@ public class TenantAuthService {
 
         if (!belongs) {
             throw new AppSecurityException(
-                SecurityErrorCode.USER_NOT_IN_BRANCH,
-                "User not assigned to this branch"
+                    SecurityErrorCode.USER_NOT_IN_BRANCH,
+                    "User not assigned to this branch"
             );
         }
 
         int activeCount =
                 userSessionRepository
-                        .findByUserIdAndLoginDateAndLogoutTimeIsNull(userId, today)
+                        .findAllByUserIdAndLogoutTimeIsNull(
+                                userId
+                        )
                         .size();
 
-        if (activeCount >= TENANT_USERS_MAX_SESSIONS_PER_DAY) {
-            throw new AppSecurityException(SecurityErrorCode.DEVICE_LIMIT_REACHED, "Maximum active sessions reached");
+        if (activeCount >= MAX_ACTIVE_SESSIONS) {
+            throw new AppSecurityException(
+                    SecurityErrorCode.DEVICE_LIMIT_REACHED,
+                    "Maximum active sessions reached. Review active sessions and terminate one to continue."
+            );
         }
 
         UUID tokenId = UUID.randomUUID();
@@ -349,7 +371,21 @@ public class TenantAuthService {
             deviceUsageService.record(device.getId(), userId);
         }
 
-        sessionService.create(tenantId, branchId, userId, tokenId);
+        String deviceName = null;
+
+        if (device != null) {
+            deviceName = device.resolvedName();
+        }
+
+        sessionService.create(
+                tenantId,
+                branchId,
+                userId,
+                tokenId,
+                request,
+                ip,
+                deviceName
+        );
 
 
         rollcallService.recordLoginRollcall(
@@ -379,5 +415,39 @@ public class TenantAuthService {
         );
 
         return new Result(token, response);
+    }
+
+    public User validateCredentialsForRecovery(
+            String identifier,
+            String password
+    ) {
+
+        UUID tenantId = TenantContext.getTenantId();
+
+        User user =
+                userRepository
+                        .findAuthUser(
+                                tenantId,
+                                identifier
+                        )
+                        .orElseThrow(() ->
+                                new AppSecurityException(
+                                        SecurityErrorCode.USER_NOT_FOUND,
+                                        "User not found"
+                                )
+                        );
+
+        if (!passwordEncoder.matches(
+                password,
+                user.getPassword()
+        )) {
+
+            throw new AppSecurityException(
+                    SecurityErrorCode.INVALID_CREDENTIALS,
+                    "Invalid username or password"
+            );
+        }
+
+        return user;
     }
 }

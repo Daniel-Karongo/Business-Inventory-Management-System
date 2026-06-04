@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<jasperReport
+        xmlns="http://jasperreports.sourceforge.net/jasperreports"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+http://jasperreports.sourceforge.net/jasperreports
+http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+
+        name="vat_filing_history"
+        pageWidth="842"
+        pageHeight="595"
+        orientation="Landscape"
+        columnWidth="762"
+        leftMargin="40"
+        rightMargin="40"
+        topMargin="30"
+        bottomMargin="30">
+
+    <parameter name="BRANCH_ID" class="java.lang.String"/>
+    <parameter name="TENANT_ID" class="java.lang.String"/>
+    <parameter name="COMPANY_NAME" class="java.lang.String"/>
+    <parameter name="GENERATED_BY" class="java.lang.String"/>
+    <parameter name="GENERATED_AT" class="java.util.Date"/>
+
+    <queryString>
+        <![CDATA[
+
+SELECT
+
+    vf.id                                    AS filing_id,
+
+    ap.start_date                            AS period_start,
+    ap.end_date                              AS period_end,
+
+    vf.output_vat,
+    vf.input_vat,
+
+    vf.opening_credit,
+    vf.credit_applied,
+    vf.closing_credit,
+
+    vf.vat_payable,
+    vf.paid_amount,
+    vf.outstanding_amount,
+
+    vf.status,
+    vf.filed_by,
+    vf.filed_at,
+    vf.paid_at
+
+FROM vat_filings vf
+
+INNER JOIN accounting_periods ap
+    ON ap.id = vf.period_id
+
+WHERE vf.branch_id = $P{BRANCH_ID}
+    AND vf.tenant_id = $P{TENANT_ID}
+
+ORDER BY
+    ap.end_date DESC
+
+        ]]>
+    </queryString>
+
+    <field name="filing_id" class="java.util.UUID"/>
+
+    <field name="period_start" class="java.sql.Date"/>
+    <field name="period_end" class="java.sql.Date"/>
+
+    <field name="output_vat" class="java.math.BigDecimal"/>
+    <field name="input_vat" class="java.math.BigDecimal"/>
+
+    <field name="opening_credit" class="java.math.BigDecimal"/>
+    <field name="credit_applied" class="java.math.BigDecimal"/>
+    <field name="closing_credit" class="java.math.BigDecimal"/>
+
+    <field name="vat_payable" class="java.math.BigDecimal"/>
+    <field name="paid_amount" class="java.math.BigDecimal"/>
+    <field name="outstanding_amount" class="java.math.BigDecimal"/>
+
+    <field name="status" class="java.lang.String"/>
+    <field name="filed_by" class="java.lang.String"/>
+
+    <field name="filed_at" class="java.sql.Timestamp"/>
+    <field name="paid_at" class="java.sql.Timestamp"/>
+
+    <variable name="TOTAL_VAT_DUE"
+              class="java.math.BigDecimal"
+              calculation="Sum">
+        <variableExpression>
+            <![CDATA[$F{vat_payable}]]>
+        </variableExpression>
+    </variable>
+
+    <variable name="TOTAL_PAID"
+              class="java.math.BigDecimal"
+              calculation="Sum">
+        <variableExpression>
+            <![CDATA[$F{paid_amount}]]>
+        </variableExpression>
+    </variable>
+
+    <variable name="TOTAL_OUTSTANDING"
+              class="java.math.BigDecimal"
+              calculation="Sum">
+        <variableExpression>
+            <![CDATA[$F{outstanding_amount}]]>
+        </variableExpression>
+    </variable>
+
+    <variable name="TOTAL_CREDIT"
+              class="java.math.BigDecimal"
+              calculation="Sum">
+        <variableExpression>
+            <![CDATA[$F{closing_credit}]]>
+        </variableExpression>
+    </variable>
+
+    <title>
+        <band height="70">
+
+            <textField>
+                <reportElement x="0" y="0" width="762" height="25"/>
+                <textElement textAlignment="Center">
+                    <font size="18" isBold="true"/>
+                </textElement>
+                <textFieldExpression>
+                    <![CDATA["VAT Filing History"]]>
+                </textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="30" width="762" height="20"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression>
+                    <![CDATA[$P{COMPANY_NAME}]]>
+                </textFieldExpression>
+            </textField>
+
+        </band>
+    </title>
+
+    <columnHeader>
+
+        <band height="25">
+
+            <staticText>
+                <reportElement x="0" y="0" width="90" height="20"/>
+                <text><![CDATA[Period Start]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="90" y="0" width="90" height="20"/>
+                <text><![CDATA[Period End]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="180" y="0" width="80" height="20"/>
+                <text><![CDATA[Output VAT]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="260" y="0" width="80" height="20"/>
+                <text><![CDATA[Input VAT]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="340" y="0" width="80" height="20"/>
+                <text><![CDATA[VAT Due]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="420" y="0" width="80" height="20"/>
+                <text><![CDATA[Paid]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="500" y="0" width="80" height="20"/>
+                <text><![CDATA[Outstanding]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="580" y="0" width="90" height="20"/>
+                <text><![CDATA[Status]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="670" y="0" width="92" height="20"/>
+                <text><![CDATA[Filed By]]></text>
+            </staticText>
+
+        </band>
+
+    </columnHeader>
+
+    <detail>
+
+        <band height="22">
+
+            <textField pattern="yyyy-MM-dd">
+                <reportElement x="0" y="0" width="90" height="20"/>
+                <textFieldExpression><![CDATA[
+                    $F{period_start}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="yyyy-MM-dd">
+                <reportElement x="90" y="0" width="90" height="20"/>
+                <textFieldExpression><![CDATA[
+                    $F{period_end}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="180" y="0" width="80" height="20"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[
+                    $F{output_vat}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="260" y="0" width="80" height="20"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[
+                    $F{input_vat}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="340" y="0" width="80" height="20"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[
+                    $F{vat_payable}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="420" y="0" width="80" height="20"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[
+                    $F{paid_amount}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="500" y="0" width="80" height="20"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[
+                    $F{outstanding_amount}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="580" y="0" width="90" height="20"/>
+                <textFieldExpression><![CDATA[
+                    $F{status}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="670" y="0" width="92" height="20"/>
+                <textFieldExpression><![CDATA[
+                    $F{filed_by}
+                ]]></textFieldExpression>
+            </textField>
+
+        </band>
+
+    </detail>
+
+    <pageFooter>
+
+        <band height="25">
+
+            <textField>
+                <reportElement x="0" y="0" width="220" height="20"/>
+                <textFieldExpression><![CDATA[
+                    "Generated By: " + $P{GENERATED_BY}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="yyyy-MM-dd HH:mm">
+                <reportElement x="250" y="0" width="180" height="20"/>
+                <textFieldExpression><![CDATA[
+                    $P{GENERATED_AT}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="650" y="0" width="112" height="20"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[
+                    "Page " + $V{PAGE_NUMBER}
+                ]]></textFieldExpression>
+            </textField>
+
+        </band>
+
+    </pageFooter>
+
+    <summary>
+
+        <band height="140">
+
+            <staticText>
+                <reportElement x="0" y="10" width="180" height="20"/>
+                <text><![CDATA[Total Filings]]></text>
+            </staticText>
+
+            <textField>
+                <reportElement x="220" y="10" width="120" height="20"/>
+                <textFieldExpression><![CDATA[
+                $V{REPORT_COUNT}
+            ]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="40" width="180" height="20"/>
+                <text><![CDATA[Total VAT Due]]></text>
+            </staticText>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="220" y="40" width="120" height="20"/>
+                <textFieldExpression><![CDATA[
+                $V{TOTAL_VAT_DUE}
+            ]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="70" width="180" height="20"/>
+                <text><![CDATA[Total VAT Paid]]></text>
+            </staticText>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="220" y="70" width="120" height="20"/>
+                <textFieldExpression><![CDATA[
+                $V{TOTAL_PAID}
+            ]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="100" width="180" height="20"/>
+                <text><![CDATA[Total Outstanding]]></text>
+            </staticText>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="220" y="100" width="120" height="20"/>
+                <textFieldExpression><![CDATA[
+                $V{TOTAL_OUTSTANDING}
+            ]]></textFieldExpression>
+            </textField>
+
+        </band>
+
+    </summary>
+
+    <noData>
+
+        <band height="120">
+
+            <staticText>
+                <reportElement x="0" y="40" width="762" height="30"/>
+                <textElement textAlignment="Center">
+                    <font size="14" isBold="true"/>
+                </textElement>
+                <text><![CDATA[No VAT filings found for this branch.]]></text>
+            </staticText>
+
+        </band>
+
+    </noData>
+
+</jasperReport>

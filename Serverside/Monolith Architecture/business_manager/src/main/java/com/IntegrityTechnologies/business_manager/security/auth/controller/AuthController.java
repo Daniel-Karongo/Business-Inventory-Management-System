@@ -1,17 +1,18 @@
 package com.IntegrityTechnologies.business_manager.security.auth.controller;
 
 import com.IntegrityTechnologies.business_manager.exception.AppSecurityException;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model.UserSession;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.repository.UserSessionRepository;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.PublicEndpoint;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
-import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthRequest;
-import com.IntegrityTechnologies.business_manager.security.auth.dto.AuthResponse;
-import com.IntegrityTechnologies.business_manager.security.auth.dto.BulkAuthResponse;
-import com.IntegrityTechnologies.business_manager.security.auth.dto.UserSessionDTO;
+import com.IntegrityTechnologies.business_manager.security.auth.dto.*;
 import com.IntegrityTechnologies.business_manager.security.auth.orchestrator.AuthOrchestratorService;
 import com.IntegrityTechnologies.business_manager.security.auth.service.AuthService;
 import com.IntegrityTechnologies.business_manager.security.auth.service.BiometricAuthFacadeService;
+import com.IntegrityTechnologies.business_manager.security.auth.tenant.TenantAuthService;
 import com.IntegrityTechnologies.business_manager.security.auth.util.JwtUtil;
 import com.IntegrityTechnologies.business_manager.security.biometric.dto.BiometricStartRequest;
 import com.IntegrityTechnologies.business_manager.security.biometric.dto.WebAuthnVerifyRequest;
@@ -30,10 +31,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Tag(name = "Auth")
 @RestController
@@ -50,6 +49,8 @@ public class AuthController {
     private final DeviceSecurityService deviceSecurityService;
     private final BiometricAuthFacadeService biometricAuthFacadeService;
     private final ObjectMapper objectMapper;
+    private final TenantAuthService tenantAuthService;
+    private final BranchRepository branchRepository;
 
     /* =====================================================
        LOGIN (BROWSER – HttpOnly COOKIE)
@@ -308,6 +309,101 @@ public class AuthController {
        LOGOUT (CURRENT SESSION)
        ===================================================== */
 
+    @PostMapping("/sessions/logout")
+    public ResponseEntity<Void> logoutSpecificSession(
+
+            @CookieValue("access_token")
+            String token,
+
+            @RequestBody
+            SessionLogoutRequest request
+    ) {
+
+        UUID userId =
+                jwtUtil.extractUserId(token);
+
+        authService.logoutSession(
+                userId,
+                request.tokenId()
+        );
+
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/session-recovery/logout")
+    public ResponseEntity<Void> recoveryLogout(
+
+            @RequestBody
+            SessionRecoveryRequest request
+    ) {
+
+        authService.logoutSessionForRecovery(
+
+                request.getIdentifier(),
+
+                request.getPassword(),
+
+                request.getTokenId(),
+
+                tenantAuthService
+        );
+
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/sessions/logout-others")
+    public ResponseEntity<Void> logoutOthers(
+
+            @CookieValue("access_token")
+            String token
+    ) {
+
+        UUID userId =
+                jwtUtil.extractUserId(token);
+
+        UUID currentTokenId =
+                jwtUtil.extractTokenId(token);
+
+        authService.logoutAllExcept(
+                userId,
+                currentTokenId
+        );
+
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/sessions/count")
+    public ResponseEntity<Long> sessionCount(
+            @CookieValue("access_token") String token
+    ) {
+
+        UUID userId =
+                jwtUtil.extractUserId(token);
+
+        return ResponseEntity.ok(
+                userSessionRepository
+                        .countByUserIdAndLogoutTimeIsNull(
+                                userId
+                        )
+        );
+    }
+
+    @PostMapping("/session-limit-info")
+    public ResponseEntity<SessionLimitInfoResponse> sessionLimitInfo(
+            @RequestBody SessionLimitInfoRequest request
+    ) {
+
+        UUID tenantId =
+                TenantContext.getTenantId();
+
+        return ResponseEntity.ok(
+                authService.sessionLimitInfo(
+                        tenantId,
+                        request.getIdentifier()
+                )
+        );
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
             @CookieValue(name = "access_token", required = false) String token,
@@ -331,6 +427,19 @@ public class AuthController {
         cookie.setAttribute("SameSite", isSecure ? "None" : "Lax");
 
         response.addCookie(cookie);
+
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/sessions/admin/logout/{tokenId}")
+    @TenantManagerOnly
+    public ResponseEntity<Void> adminLogoutSession(
+            @PathVariable UUID tokenId
+    ) {
+
+        authService.logoutBySessionToken(
+                tokenId
+        );
 
         return ResponseEntity.ok().build();
     }
@@ -360,26 +469,89 @@ public class AuthController {
     /* =====================================================
        ACTIVE SESSIONS (CURRENT USER)
        ===================================================== */
+
     @PostMapping("/sessions")
     public ResponseEntity<List<UserSessionDTO>> mySessions(
             @CookieValue("access_token") String token
     ) {
-        UUID userId = jwtUtil.extractUserId(token);
-        UUID currentTokenId = jwtUtil.extractTokenId(token);
+        UUID userId =
+                jwtUtil.extractUserId(token);
+
+        UUID currentTokenId =
+                jwtUtil.extractTokenId(token);
+
+        String currentDeviceId =
+                jwtUtil.extractDevice(token);
+
+        List<UserSession> activeSessions =
+                userSessionRepository
+                        .findAllByUserIdAndLogoutTimeIsNullOrderByLoginTimeDesc(
+                                userId
+                        );
+
+        Set<UUID> branchIds =
+                activeSessions.stream()
+                        .map(UserSession::getBranchId)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet());
+
+        Map<UUID,String> names =
+                branchRepository
+                        .findNames(branchIds)
+                        .stream()
+                        .collect(
+                                Collectors.toMap(
+                                        r -> (UUID) r[0],
+                                        r -> (String) r[1]
+                                )
+                        );
 
         List<UserSessionDTO> sessions =
-                userSessionRepository.findAllByUserIdAndLogoutTimeIsNull(userId)
+                activeSessions
                         .stream()
-                        .map(s -> new UserSessionDTO(
-                                s.getTokenId(),
-                                s.getBranchId(),
-                                s.getLoginDate(),
-                                s.getLoginTime(),
-                                s.getTokenId().equals(currentTokenId)
-                        ))
+                        .map(s ->
+                                new UserSessionDTO(
+
+                                        s.getTokenId(),
+
+                                        s.getBranchId(),
+
+                                        names.getOrDefault(
+                                                s.getBranchId(),
+                                                "Unknown Branch"
+                                        ),
+
+                                        s.getLoginDate(),
+
+                                        s.getLoginTime(),
+
+                                        s.getDeviceId(),
+
+                                        s.getDeviceName(),
+
+                                        s.getBrowserName(),
+
+                                        s.getOsName(),
+
+                                        s.getPlatform(),
+
+                                        s.getIpAddress(),
+
+                                        s.getTokenId().equals(
+                                                currentTokenId
+                                        ),
+
+                                        Objects.equals(
+                                                currentDeviceId,
+                                                s.getDeviceId()
+                                        )
+                                )
+                        )
                         .toList();
 
-        return ResponseEntity.ok(sessions);
+        return ResponseEntity.ok(
+                sessions
+        );
     }
 
     /* =====================================================

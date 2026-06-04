@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, catchError, map, of, shareReplay, tap } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { UserSessionDto } from '../../../core/models/session.models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -110,11 +111,50 @@ export class AuthService {
   /* =========================
      SESSIONS
      ========================= */
-  getSessions() {
-    return this.http.post<any[]>(
+  getSessions(): Observable<UserSessionDto[]> {
+
+    return this.http.post<UserSessionDto[]>(
       `${environment.apiUrl}/auth/sessions`,
       {},
-      { withCredentials: true }
+      {
+        withCredentials: true
+      }
+    );
+  }
+
+  getSessionCount(): Observable<number> {
+
+    return this.http.get<number>(
+      `${environment.apiUrl}/auth/sessions/count`,
+      {
+        withCredentials: true
+      }
+    );
+  }
+
+  logoutSpecificSession(
+    tokenId: string
+  ): Observable<void> {
+
+    return this.http.post<void>(
+      `${environment.apiUrl}/auth/sessions/logout`,
+      {
+        tokenId
+      },
+      {
+        withCredentials: true
+      }
+    );
+  }
+
+  logoutOtherSessions(): Observable<void> {
+
+    return this.http.post<void>(
+      `${environment.apiUrl}/auth/sessions/logout-others`,
+      {},
+      {
+        withCredentials: true
+      }
     );
   }
 

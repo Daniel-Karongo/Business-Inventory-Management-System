@@ -136,14 +136,39 @@ export const TENANT_ROUTES: Routes = [
       },
 
       /* ============================================================
-         DEVICES
+        SECURITY
       ============================================================ */
 
       {
-        path: 'security/devices',
-        loadComponent: () =>
-          import('./content/security/devices/tenant-devices.component')
-            .then(m => m.TenantDevicesComponent)
+        path: 'security',
+        children: [
+
+          {
+            path: '',
+            pathMatch: 'full',
+            redirectTo: 'sessions'
+          },
+
+          {
+            path: 'sessions',
+            loadComponent: () =>
+              import(
+                './content/security/sessions/tenant-sessions.component'
+              ).then(
+                m => m.TenantSessionsComponent
+              )
+          },
+
+          {
+            path: 'devices',
+            loadComponent: () =>
+              import(
+                './content/security/devices/tenant-devices.component'
+              ).then(
+                m => m.TenantDevicesComponent
+              )
+          }
+        ]
       }
     ]
 

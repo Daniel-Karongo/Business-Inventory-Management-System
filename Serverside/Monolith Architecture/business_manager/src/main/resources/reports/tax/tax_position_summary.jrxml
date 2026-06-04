@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<jasperReport
+        xmlns="http://jasperreports.sourceforge.net/jasperreports"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+http://jasperreports.sourceforge.net/jasperreports
+http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+
+        name="tax_position_summary"
+        pageWidth="595"
+        pageHeight="842"
+        columnWidth="515"
+        leftMargin="40"
+        rightMargin="40"
+        topMargin="30"
+        bottomMargin="30">
+
+    <parameter name="BRANCH_ID" class="java.lang.String"/>
+    <parameter name="TENANT_ID" class="java.lang.String"/>
+    <parameter name="COMPANY_NAME" class="java.lang.String"/>
+    <parameter name="GENERATED_BY" class="java.lang.String"/>
+    <parameter name="GENERATED_AT" class="java.util.Date"/>
+
+    <queryString>
+        <![CDATA[
+
+SELECT
+    'VAT Outstanding' AS metric,
+    COALESCE(
+        (
+            SELECT ab.balance
+            FROM account_balances ab
+            INNER JOIN accounts a
+                ON a.id = ab.account_id
+            WHERE ab.branch_id = $P{BRANCH_ID}
+              AND ab.tenant_id = $P{TENANT_ID}
+              AND a.role = 'VAT_PAYABLE'
+            LIMIT 1
+        ),
+        0
+    ) amount
+
+UNION ALL
+
+SELECT
+    'VAT Credit Available',
+    COALESCE(
+        (
+            SELECT ab.balance
+            FROM account_balances ab
+            INNER JOIN accounts a
+                ON a.id = ab.account_id
+            WHERE ab.branch_id = $P{BRANCH_ID}
+              AND ab.tenant_id = $P{TENANT_ID}
+              AND a.role = 'VAT_CARRY_FORWARD'
+            LIMIT 1
+        ),
+        0
+    )
+
+UNION ALL
+
+SELECT
+    'Pending VAT Refunds',
+    COALESCE(
+        (
+            SELECT SUM(vr.amount)
+            FROM vat_refunds vr
+            WHERE vr.branch_id = $P{BRANCH_ID}
+              AND vr.tenant_id = $P{TENANT_ID}
+              AND vr.status = 'REQUESTED'
+        ),
+        0
+    )
+
+UNION ALL
+
+SELECT
+    'Corporate Tax Outstanding',
+    COALESCE(
+        (
+            SELECT SUM(cf.outstanding_amount)
+            FROM corporate_tax_filing cf
+            WHERE cf.branch_id = $P{BRANCH_ID}
+                AND cf.tenant_id = $P{TENANT_ID}
+        ),
+        0
+    )
+
+UNION ALL
+
+SELECT
+    'Total Tax Liability',
+    COALESCE(
+        (
+            SELECT ab.balance
+            FROM account_balances ab
+            INNER JOIN accounts a
+                ON a.id = ab.account_id
+            WHERE ab.branch_id = $P{BRANCH_ID}
+              AND ab.tenant_id = $P{TENANT_ID}
+              AND a.role = 'VAT_PAYABLE'
+            LIMIT 1
+        ),
+        0
+    )
+    +
+    COALESCE(
+        (
+            SELECT SUM(cf.outstanding_amount)
+            FROM corporate_tax_filing cf
+            WHERE cf.branch_id = $P{BRANCH_ID}
+                AND cf.tenant_id = $P{TENANT_ID}
+        ),
+        0
+    )
+
+UNION ALL
+
+SELECT
+    'Net Tax Position',
+
+    (
+        COALESCE(
+            (
+                SELECT ab.balance
+                FROM account_balances ab
+                INNER JOIN accounts a
+                    ON a.id = ab.account_id
+                WHERE ab.branch_id = $P{BRANCH_ID}
+                  AND ab.tenant_id = $P{TENANT_ID}
+                  AND a.role = 'VAT_PAYABLE'
+                LIMIT 1
+            ),
+            0
+        )
+        +
+        COALESCE(
+            (
+                SELECT SUM(cf.outstanding_amount)
+                FROM corporate_tax_filing cf
+                WHERE cf.branch_id = $P{BRANCH_ID}
+                    AND cf.tenant_id = $P{TENANT_ID}
+            ),
+            0
+        )
+    )
+    -
+    COALESCE(
+        (
+            SELECT ab.balance
+            FROM account_balances ab
+            INNER JOIN accounts a
+                ON a.id = ab.account_id
+            WHERE ab.branch_id = $P{BRANCH_ID}
+              AND ab.tenant_id = $P{TENANT_ID}
+              AND a.role = 'VAT_CARRY_FORWARD'
+            LIMIT 1
+        ),
+        0
+    )
+    -
+    COALESCE(
+        (
+            SELECT SUM(vr.amount)
+            FROM vat_refunds vr
+            WHERE vr.branch_id = $P{BRANCH_ID}
+              AND vr.tenant_id = $P{TENANT_ID}
+              AND vr.status = 'REQUESTED'
+        ),
+        0
+    )
+
+        ]]>
+    </queryString>
+
+    <field name="metric" class="java.lang.String"/>
+    <field name="amount" class="java.math.BigDecimal"/>
+
+    <title>
+        <band height="70">
+
+            <textField>
+                <reportElement x="0" y="0" width="515" height="30"/>
+                <textElement textAlignment="Center">
+                    <font size="18" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Tax Position Summary"]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="35" width="515" height="20"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA[$P{COMPANY_NAME}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </title>
+
+    <columnHeader>
+        <band height="24">
+
+            <staticText>
+                <reportElement x="0" y="0" width="350" height="20"/>
+                <textElement>
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Metric]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="350" y="0" width="165" height="20"/>
+                <textElement textAlignment="Right">
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Amount]]></text>
+            </staticText>
+
+        </band>
+    </columnHeader>
+
+    <detail>
+        <band height="22">
+
+            <textField>
+                <reportElement x="0" y="0" width="350" height="20"/>
+                <textFieldExpression><![CDATA[$F{metric}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="350" y="0" width="165" height="20"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[$F{amount}]]></textFieldExpression>
+            </textField>
+
+        </band>
+    </detail>
+
+    <pageFooter>
+
+        <band height="25">
+
+            <textField>
+                <reportElement x="0" y="0" width="220" height="20"/>
+                <textFieldExpression><![CDATA[
+                    "Generated By: " + $P{GENERATED_BY}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="yyyy-MM-dd HH:mm">
+                <reportElement x="220" y="0" width="170" height="20"/>
+                <textFieldExpression><![CDATA[
+                    $P{GENERATED_AT}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="420" y="0" width="95" height="20"/>
+                <textElement textAlignment="Right"/>
+                <textFieldExpression><![CDATA[
+                    "Page " + $V{PAGE_NUMBER}
+                ]]></textFieldExpression>
+            </textField>
+
+        </band>
+
+    </pageFooter>
+
+    <summary>
+        <band height="40">
+            <line>
+                <reportElement x="0" y="5" width="515" height="1"/>
+            </line>
+        </band>
+    </summary>
+
+</jasperReport>

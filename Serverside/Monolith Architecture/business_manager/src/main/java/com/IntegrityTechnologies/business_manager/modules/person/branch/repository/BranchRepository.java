@@ -9,6 +9,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,6 +27,15 @@ public interface BranchRepository extends JpaRepository<Branch, UUID>,
     Optional<Branch> findByTenantIdAndIdAndDeletedFalse(UUID tenantId, UUID id);
 
     Optional<Branch> findByTenantIdAndIdAndDeletedTrue(UUID tenantId, UUID id);
+
+    @Query("""
+            select b.id,b.name
+            from Branch b
+            where b.id in :ids
+            """)
+    List<Object[]> findNames(
+            Collection<UUID> ids
+    );
 
     boolean existsByTenantIdAndId(UUID tenantId, UUID branchId);
 

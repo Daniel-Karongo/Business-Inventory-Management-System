@@ -30,6 +30,8 @@ export class IconLoader {
       'tax',
       'payments',
       'devices',
+      'security',
+      'sessions',
       'onboarding'
     ];
 

@@ -55,6 +55,25 @@ public class TrustedDevice extends TenantAwareEntity {
     private LocalDateTime firstSeenAt;
     private LocalDateTime lastSeenAt;
 
+    public String resolvedName() {
+
+        if (deviceName != null && !deviceName.isBlank()) {
+            return deviceName;
+        }
+
+        String browser =
+                browserName == null
+                        ? "Unknown Browser"
+                        : browserName;
+
+        String os =
+                osName == null
+                        ? "Unknown OS"
+                        : osName;
+
+        return browser + " / " + os;
+    }
+
     @Override
     public void beforePersist() {
         if (status == null) {

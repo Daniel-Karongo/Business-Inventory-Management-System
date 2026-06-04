@@ -1,0 +1,101 @@
+:host {
+    display: block;
+}
+
+.dialog-shell {
+    width: min(900px, 95vw);
+}
+
+.header {
+    padding: 24px;
+    border-bottom: 1px solid var(--border);
+}
+
+.title {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.subtitle {
+    margin-top: 8px;
+    color: var(--text-secondary);
+}
+
+.sessions {
+    max-height: 60vh;
+    overflow: auto;
+    padding: 20px;
+}
+
+.session-card {
+
+    border: 1px solid var(--border);
+
+    border-radius: 12px;
+
+    padding: 16px;
+
+    margin-bottom: 14px;
+
+    background: var(--surface);
+}
+
+.card-top {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    margin-bottom: 12px;
+}
+
+.device {
+
+    font-weight: 600;
+
+    font-size: 0.95rem;
+}
+
+.details {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(auto-fit, minmax(220px, 1fr));
+
+    gap: 8px;
+
+    font-size: 0.85rem;
+}
+
+.footer {
+
+    border-top: 1px solid var(--border);
+
+    padding: 20px;
+
+    display: flex;
+
+    justify-content: flex-end;
+}
+
+.spin {
+
+    animation:
+        spin .9s linear infinite;
+
+}
+
+@keyframes spin {
+
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+
+}

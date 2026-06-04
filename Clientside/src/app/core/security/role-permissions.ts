@@ -15,6 +15,8 @@ export type Feature =
   | 'ap'
   | 'finance'
   | 'devices'
+  | 'security'
+  | 'sessions'
   | '*';
 
 export const ROLE_PERMISSIONS: Record<string, Feature[]> = {
@@ -37,6 +39,9 @@ export const ROLE_PERMISSIONS: Record<string, Feature[]> = {
     'sales',
     'suppliers',
     'users',
+    'security',
+    'sessions',
+    'devices',
   ],
 
   MANAGER: [
@@ -54,7 +59,10 @@ export const ROLE_PERMISSIONS: Record<string, Feature[]> = {
     'branches',
     'accounts',
     'ap',
-    'finance'
+    'finance',
+    'security',
+    'sessions',
+    'devices',
   ],
 
   ADMIN: [
@@ -70,7 +78,10 @@ export const ROLE_PERMISSIONS: Record<string, Feature[]> = {
     'customers',
     'users',
     'branches',
-    'finance'
+    'finance',
+    'security',
+    'sessions',
+    'devices',
   ],
 
   SUPERUSER: [

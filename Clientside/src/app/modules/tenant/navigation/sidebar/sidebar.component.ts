@@ -131,10 +131,21 @@ export class SidebarComponent implements OnInit {
       },
 
       {
-        title: 'Devices',
-        route: '/app/security/devices',
-        icon: 'devices',
-        feature: 'devices'
+        title: 'Security',
+        icon: 'security',
+        feature: 'security',
+        children: [
+          {
+            title: 'Sessions',
+            route: '/app/security/sessions',
+            icon: 'sessions'
+          },
+          {
+            title: 'Devices',
+            route: '/app/security/devices',
+            icon: 'devices'
+          }
+        ]
       }
 
     ];

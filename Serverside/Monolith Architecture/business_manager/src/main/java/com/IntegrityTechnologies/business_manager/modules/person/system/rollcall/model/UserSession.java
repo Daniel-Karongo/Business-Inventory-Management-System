@@ -50,6 +50,27 @@ public class UserSession extends BranchAwareEntity {
     @Column(name = "token_id", columnDefinition = "BINARY(16)", nullable = false, unique = true)
     private UUID tokenId;
 
+    @Column(name = "device_id", length = 128)
+    private String deviceId;
+
+    @Column(name = "device_name")
+    private String deviceName;
+
+    @Column(name = "browser_name")
+    private String browserName;
+
+    @Column(name = "os_name")
+    private String osName;
+
+    @Column(name = "platform")
+    private String platform;
+
+    @Column(name = "user_agent", length = 1000)
+    private String userAgent;
+
+    @Column(name = "ip_address")
+    private String ipAddress;
+
     /* ===================== HELPERS ===================== */
 
     @Transient

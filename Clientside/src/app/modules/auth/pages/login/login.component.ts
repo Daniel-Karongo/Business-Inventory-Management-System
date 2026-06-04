@@ -25,6 +25,14 @@ import { BiometricPromptDialog } from '../../../../shared/components/biometric-p
 import { BranchService } from '../../../tenant/content/branches/services/branch.service';
 import { EnterNextDirective } from '../../../../shared/directives/enter-next.directive';
 
+import {
+  SessionService
+} from '../../../../core/services/session.service';
+
+import { SessionLimitInfoResponse } from '../../../../core/models/session.models';
+
+import { SessionRecoveryDialogComponent } from '../../dialogs/session-recovery-dialog/session-recovery-dialog.component';
+
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -59,6 +67,7 @@ export class LoginComponent implements OnInit {
   private biometric = inject(BiometricRegistrationService);
   private dialog = inject(MatDialog);
   private errorHandler = inject(AuthErrorService);
+  private sessionService = inject(SessionService);
 
   form = this.fb.nonNullable.group({
     identifier: ['', Validators.required],
@@ -314,11 +323,30 @@ export class LoginComponent implements OnInit {
       },
 
       error: (err) => {
+
+        const code =
+          err?.error?.code;
+
+        if (
+          code ===
+          'DEVICE_LIMIT_REACHED'
+        ) {
+
+          this.handleDeviceLimitReached(
+            payload
+          );
+
+          this.loginLoading = false;
+
+          return;
+        }
+
         this.errorHandler.handle(
           err,
           'login',
           this.form.value.identifier!
         );
+
         this.loginLoading = false;
       }
     });
@@ -342,5 +370,80 @@ export class LoginComponent implements OnInit {
     if (ua.includes('Linux')) return 'Linux';
 
     return 'Unknown';
+  }
+
+  private handleDeviceLimitReached(
+    payload: LoginRequest
+  ) {
+
+    this.sessionService
+      .getSessionLimitInfo({
+        identifier: payload.identifier,
+        branchId: payload.branchId,
+        deviceId: payload.deviceId
+      })
+      .subscribe({
+
+        next: (
+          info: SessionLimitInfoResponse
+        ) => {
+
+          const ref =
+            this.dialog.open(
+              SessionRecoveryDialogComponent,
+              {
+                width: '1000px',
+                maxWidth: '95vw',
+                panelClass: 'enterprise-dialog',
+                disableClose: true,
+                data: {
+                  identifier: payload.identifier,
+                  password: payload.password,
+                  branchId: payload.branchId,
+                  sessions: info.sessions
+                }
+              }
+            );
+
+          ref.afterClosed()
+            .subscribe(result => {
+
+              if (result === true) {
+
+                this.auth.login(payload)
+                  .subscribe({
+
+                    next: (res) => {
+
+                      this.auth.setUser(res);
+
+                      this.idle.start();
+
+                      if (
+                        res.userType === 'PLATFORM'
+                      ) {
+
+                        this.router.navigateByUrl(
+                          '/platform'
+                        );
+
+                      } else {
+
+                        const landing =
+                          resolveTenantLanding(
+                            res.role
+                          );
+
+                        this.router.navigateByUrl(
+                          landing
+                        );
+
+                      }
+                    }
+                  });
+              }
+            });
+        }
+      });
   }
 }

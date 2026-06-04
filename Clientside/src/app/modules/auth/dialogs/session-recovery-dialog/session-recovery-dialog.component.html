@@ -1,0 +1,96 @@
+<div class="dialog-shell">
+
+    <div class="header">
+
+        <div class="title">
+            Session Limit Reached
+        </div>
+
+        <div class="subtitle">
+            Maximum active sessions reached.
+            Select a session to terminate and continue login.
+        </div>
+
+    </div>
+
+    <div class="sessions">
+
+        <div class="session-card" *ngFor="let session of data.sessions">
+
+            <div class="card-top">
+
+                <div class="device">
+
+                    {{ session.deviceName || 'Unknown Device' }}
+
+                </div>
+
+                <button mat-flat-button color="primary" [disabled]="busy" (click)="terminate(session)">
+
+                    <ng-container *ngIf="!busy">
+
+                        Terminate
+
+                    </ng-container>
+
+                    <mat-icon *ngIf="busy" class="spin">
+
+                        autorenew
+
+                    </mat-icon>
+
+                </button>
+
+            </div>
+
+            <div class="details">
+
+                <div>
+                    Branch:
+                    <strong>{{ session.branchName }}</strong>
+                </div>
+
+                <div>
+                    Browser:
+                    <strong>{{ session.browserName || 'Unknown' }}</strong>
+                </div>
+
+                <div>
+                    OS:
+                    <strong>{{ session.osName || 'Unknown' }}</strong>
+                </div>
+
+                <div>
+                    Platform:
+                    <strong>{{ session.platform || 'Unknown' }}</strong>
+                </div>
+
+                <div>
+                    IP:
+                    <strong>{{ session.ipAddress || 'Unknown' }}</strong>
+                </div>
+
+                <div>
+                    Login:
+                    <strong>
+                        {{ session.loginTime | date:'medium' }}
+                    </strong>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="footer">
+
+        <button mat-stroked-button (click)="cancel()">
+
+            Cancel
+
+        </button>
+
+    </div>
+
+</div>

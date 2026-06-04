@@ -80,7 +80,7 @@ export class AuthErrorService {
                 return this.toast('This device is not approved.');
 
             case 'DEVICE_LIMIT_REACHED':
-                return this.toast(msg || 'Device or session limit reached.');
+                return;
 
             case 'SESSION_EXPIRED':
                 return this.toast('Session expired. Please log in again.');

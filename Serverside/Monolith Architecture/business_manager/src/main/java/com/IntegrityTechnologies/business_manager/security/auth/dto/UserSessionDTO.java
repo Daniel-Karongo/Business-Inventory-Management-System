@@ -5,9 +5,29 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record UserSessionDTO(
+
         UUID tokenId,
+
         UUID branchId,
+
+        String branchName,
+
         LocalDate loginDate,
+
         LocalDateTime loginTime,
-        boolean current
+
+        String deviceId,
+
+        String deviceName,
+
+        String browserName,
+
+        String osName,
+
+        String platform,
+
+        String ipAddress,
+
+        boolean current,
+        boolean currentDevice
 ) {}

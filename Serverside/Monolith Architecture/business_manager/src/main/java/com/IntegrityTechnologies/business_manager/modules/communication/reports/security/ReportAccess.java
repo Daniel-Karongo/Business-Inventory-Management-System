@@ -166,7 +166,39 @@ public enum ReportAccess {
     /* ===================== HR ===================== */
     ATTENDANCE_SUMMARY(
             "attendance_summary", Role.MANAGER
-    );
+    ),
+
+    /* ===================== TAX ===================== */
+
+    TAX_POSITION_SUMMARY(
+            "tax_position_summary",
+            Role.MANAGER
+    ),
+
+    VAT_FILING_HISTORY(
+            "vat_filing_history",
+            Role.MANAGER
+    ),
+
+    TAX_AUDIT_TRAIL(
+            "tax_audit_trail",
+            Role.MANAGER
+    ),
+
+    CORPORATE_TAX_LIABILITY_REPORT(
+            "corporate_tax_liability_report",
+            Role.MANAGER
+    ),
+
+    TAX_EXECUTIVE_DASHBOARD(
+            "tax_executive_dashboard",
+            Role.MANAGER
+    ),
+
+    TAX_RECONCILIATION_REPORT(
+            "tax_reconciliation_report",
+            Role.MANAGER
+    ),;
 
     /* ===================== INTERNAL ===================== */
 

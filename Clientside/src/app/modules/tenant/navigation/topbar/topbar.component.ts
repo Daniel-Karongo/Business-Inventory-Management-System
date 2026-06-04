@@ -216,32 +216,42 @@ export class TopbarComponent implements OnInit {
   }
 
   logout() {
+
     this.idle.stop();
 
-    this.auth.getSessions().subscribe({
-      next: sessions => {
-        if (sessions.length <= 1) {
-          this.finalizeLogoutCurrent();
+    const ref =
+      this.dialog.open(
+        LogoutChoiceDialogComponent,
+        {
+          width: '1000px',
+          maxWidth: '95vw',
+          panelClass:
+            'enterprise-dialog'
+        }
+      );
+
+    ref.afterClosed()
+      .subscribe(choice => {
+
+        if (!choice) {
           return;
         }
 
-        const ref = this.dialog.open(LogoutChoiceDialogComponent, {
-          width: '440px',
-          disableClose: false, // ✅ allow outside click / ESC
-          data: { count: sessions.length }
-        });
+        switch (choice) {
 
-        ref.afterClosed().subscribe(choice => {
-          if (choice === 'all') {
-            this.finalizeLogoutAll();
-          } else if (choice === 'current') {
+          case 'current':
             this.finalizeLogoutCurrent();
-          }
-          // ✅ undefined (backdrop / ESC) → DO NOTHING
-        });
-      },
-      error: () => this.finalizeLogoutCurrent()
-    });
+            break;
+
+          case 'others':
+            this.finalizeLogoutOthers();
+            break;
+
+          case 'all':
+            this.finalizeLogoutAll();
+            break;
+        }
+      });
   }
 
   private finalizeLogoutCurrent() {
@@ -253,6 +263,30 @@ export class TopbarComponent implements OnInit {
         { replaceUrl: true }
       );
     });
+  }
+
+  private finalizeLogoutOthers() {
+
+    this.auth
+      .logoutOtherSessions()
+      .subscribe({
+
+        next: () => {
+
+          this.router.navigate(
+            ['/app/security/sessions']
+          );
+
+        },
+
+        error: () => {
+
+          this.router.navigate(
+            ['/app/security/sessions']
+          );
+
+        }
+      });
   }
 
   private finalizeLogoutAll() {

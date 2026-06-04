@@ -1,0 +1,411 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<jasperReport
+        xmlns="http://jasperreports.sourceforge.net/jasperreports"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+http://jasperreports.sourceforge.net/jasperreports
+http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+
+        name="tax_reconciliation_report"
+        pageWidth="595"
+        pageHeight="842"
+        columnWidth="515"
+        leftMargin="40"
+        rightMargin="40"
+        topMargin="30"
+        bottomMargin="30">
+
+    <parameter name="TENANT_ID" class="java.lang.String"/>
+
+    <parameter name="BRANCH_ID" class="java.lang.String"/>
+
+    <parameter name="START_DATE" class="java.sql.Date"/>
+
+    <parameter name="END_DATE" class="java.sql.Date"/>
+
+    <parameter name="COMPANY_NAME" class="java.lang.String"/>
+
+    <parameter name="GENERATED_BY" class="java.lang.String"/>
+
+    <parameter name="GENERATED_AT" class="java.util.Date"/>
+
+    <queryString>
+        <![CDATA[
+
+SELECT
+    metric,
+    amount
+FROM (
+
+    SELECT
+        'VAT LIABILITY GENERATED' AS metric,
+        COALESCE(
+            (
+                SELECT SUM(vf.vat_payable)
+                FROM vat_filings vf
+                INNER JOIN accounting_periods ap
+                        ON ap.id = vf.period_id
+                WHERE vf.tenant_id = $P{TENANT_ID}
+                AND vf.branch_id = $P{BRANCH_ID}
+                AND ap.end_date BETWEEN
+                        $P{START_DATE}
+                        AND
+                        $P{END_DATE}
+            ),
+            0
+        ) AS amount
+
+    UNION ALL
+
+    SELECT
+        'VAT PAYMENTS',
+        COALESCE(
+            (
+                SELECT SUM(vp.amount)
+                FROM vat_payment vp
+                WHERE vp.tenant_id = $P{TENANT_ID}
+                AND vp.branch_id = $P{BRANCH_ID}
+                AND DATE(vp.recorded_at) BETWEEN
+                    $P{START_DATE}
+                    AND
+                    $P{END_DATE}
+            ),
+            0
+        )
+
+    UNION ALL
+
+    SELECT
+        'VAT OUTSTANDING',
+        COALESCE(
+            (
+                SELECT SUM(vf.outstanding_amount)
+                FROM vat_filings vf
+                INNER JOIN accounting_periods ap
+                        ON ap.id = vf.period_id
+                WHERE vf.tenant_id = $P{TENANT_ID}
+                AND vf.branch_id = $P{BRANCH_ID}
+                AND ap.end_date BETWEEN
+                        $P{START_DATE}
+                        AND
+                        $P{END_DATE}
+            ),
+            0
+        )
+
+    UNION ALL
+
+    SELECT
+        'VAT CARRY FORWARD',
+        COALESCE(
+            (
+                SELECT ab.balance
+                FROM account_balances ab
+                INNER JOIN accounts a
+                        ON a.id = ab.account_id
+                WHERE ab.tenant_id = $P{TENANT_ID}
+                AND ab.branch_id = $P{BRANCH_ID}
+                AND a.role = 'VAT_CARRY_FORWARD'
+                LIMIT 1
+            ),
+            0
+        )
+
+    UNION ALL
+
+    SELECT
+        'CORPORATE TAX ACCRUED',
+        COALESCE(
+            (
+                SELECT SUM(ctf.tax_amount)
+                FROM corporate_tax_filing ctf
+                INNER JOIN accounting_periods ap
+                        ON ap.id = ctf.period_id
+                WHERE ctf.tenant_id = $P{TENANT_ID}
+                AND ctf.branch_id = $P{BRANCH_ID}
+                AND ap.end_date BETWEEN
+                        $P{START_DATE}
+                        AND
+                        $P{END_DATE}
+            ),
+            0
+        )
+
+    UNION ALL
+
+    SELECT
+        'CORPORATE TAX PAID',
+        COALESCE(
+            (
+                SELECT SUM(ctp.amount)
+                FROM corporate_tax_payment ctp
+                WHERE ctp.tenant_id = $P{TENANT_ID}
+                AND ctp.branch_id = $P{BRANCH_ID}
+                AND DATE(ctp.recorded_at) BETWEEN
+                    $P{START_DATE}
+                    AND
+                    $P{END_DATE}
+            ),
+            0
+        )
+
+    UNION ALL
+
+    SELECT
+        'CORPORATE TAX OUTSTANDING',
+        COALESCE(
+            (
+                SELECT SUM(ctf.outstanding_amount)
+                FROM corporate_tax_filing ctf
+                INNER JOIN accounting_periods ap
+                        ON ap.id = ctf.period_id
+                WHERE ctf.tenant_id = $P{TENANT_ID}
+                AND ctf.branch_id = $P{BRANCH_ID}
+                AND ap.end_date BETWEEN
+                        $P{START_DATE}
+                        AND
+                        $P{END_DATE}
+            ),
+            0
+        )
+
+) reconciliation_data
+
+        ]]>
+    </queryString>
+
+    <field name="metric"
+           class="java.lang.String"/>
+
+    <field name="amount"
+           class="java.math.BigDecimal"/>
+
+    <variable name="TOTAL_AMOUNT"
+              class="java.math.BigDecimal"
+              calculation="Sum">
+
+        <variableExpression><![CDATA[
+            $F{amount}
+        ]]></variableExpression>
+
+    </variable>
+
+    <title>
+
+        <band height="70">
+
+            <textField>
+                <reportElement x="0"
+                               y="0"
+                               width="515"
+                               height="25"/>
+
+                <textElement textAlignment="Center">
+                    <font size="18"
+                          isBold="true"/>
+                </textElement>
+
+                <textFieldExpression><![CDATA[
+                    "Tax Reconciliation Report"
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0"
+                               y="35"
+                               width="515"
+                               height="20"/>
+
+                <textElement textAlignment="Center"/>
+
+                <textFieldExpression><![CDATA[
+                    $P{COMPANY_NAME}
+                ]]></textFieldExpression>
+            </textField>
+
+        </band>
+
+    </title>
+
+    <columnHeader>
+
+        <band height="25">
+
+            <staticText>
+                <reportElement x="0"
+                               y="0"
+                               width="350"
+                               height="20"/>
+
+                <textElement>
+                    <font isBold="true"/>
+                </textElement>
+
+                <text><![CDATA[Metric]]></text>
+            </staticText>
+
+            <staticText>
+                <reportElement x="350"
+                               y="0"
+                               width="165"
+                               height="20"/>
+
+                <textElement textAlignment="Right">
+                    <font isBold="true"/>
+                </textElement>
+
+                <text><![CDATA[Amount]]></text>
+            </staticText>
+
+        </band>
+
+    </columnHeader>
+
+    <detail>
+
+        <band height="22">
+
+            <textField>
+                <reportElement x="0"
+                               y="0"
+                               width="350"
+                               height="20"/>
+
+                <textFieldExpression><![CDATA[
+                    $F{metric}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="350"
+                               y="0"
+                               width="165"
+                               height="20"/>
+
+                <textElement textAlignment="Right"/>
+
+                <textFieldExpression><![CDATA[
+                    $F{amount}
+                ]]></textFieldExpression>
+            </textField>
+
+        </band>
+
+    </detail>
+
+    <pageFooter>
+
+        <band height="25">
+
+            <textField>
+                <reportElement x="0"
+                               y="0"
+                               width="220"
+                               height="20"/>
+
+                <textFieldExpression><![CDATA[
+                    "Generated By: " + $P{GENERATED_BY}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="yyyy-MM-dd HH:mm">
+                <reportElement x="220"
+                               y="0"
+                               width="170"
+                               height="20"/>
+
+                <textFieldExpression><![CDATA[
+                    $P{GENERATED_AT}
+                ]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="420"
+                               y="0"
+                               width="95"
+                               height="20"/>
+
+                <textElement textAlignment="Right"/>
+
+                <textFieldExpression><![CDATA[
+                    "Page " + $V{PAGE_NUMBER}
+                ]]></textFieldExpression>
+            </textField>
+
+        </band>
+
+    </pageFooter>
+
+    <summary>
+
+        <band height="60">
+
+            <line>
+                <reportElement x="0"
+                               y="5"
+                               width="515"
+                               height="1"/>
+            </line>
+
+            <staticText>
+                <reportElement x="0"
+                               y="20"
+                               width="180"
+                               height="20"/>
+
+                <textElement>
+                    <font isBold="true"/>
+                </textElement>
+
+                <text><![CDATA[
+Reconciliation Total
+                ]]></text>
+            </staticText>
+
+            <textField pattern="#,##0.00">
+                <reportElement x="350"
+                               y="20"
+                               width="165"
+                               height="20"/>
+
+                <textElement textAlignment="Right">
+                    <font isBold="true"/>
+                </textElement>
+
+                <textFieldExpression><![CDATA[
+                    $V{TOTAL_AMOUNT}
+                ]]></textFieldExpression>
+            </textField>
+
+        </band>
+
+    </summary>
+
+    <noData>
+
+        <band height="120">
+
+            <staticText>
+
+                <reportElement x="0"
+                               y="40"
+                               width="515"
+                               height="30"/>
+
+                <textElement textAlignment="Center">
+                    <font size="14"
+                          isBold="true"/>
+                </textElement>
+
+                <text>
+                    <![CDATA[No tax reconciliation data found.]]>
+                </text>
+
+            </staticText>
+
+        </band>
+
+    </noData>
+
+</jasperReport>

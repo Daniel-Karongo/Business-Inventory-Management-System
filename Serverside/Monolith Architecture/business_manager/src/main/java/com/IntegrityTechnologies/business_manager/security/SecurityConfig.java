@@ -150,7 +150,9 @@ public class SecurityConfig {
                                 "/api/auth/biometric/challenge",
                                 "/api/auth/biometric/verify",
                                 "/api/auth/biometric/register/start",
-                                "/api/auth/biometric/register/finish" // ✅ ADD THIS
+                                "/api/auth/biometric/register/finish",
+                                "/api/auth/session-limit-info",
+                                "/api/auth/session-recovery/logout"
                         ).permitAll()
 
                         .requestMatchers(HttpMethod.GET, "/api/branches").permitAll()

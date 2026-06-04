@@ -635,6 +635,92 @@ public class ReportRegistry {
                                 "reports/audit/financial_audit_log.jrxml",
                                 Set.of("FROM_DATE", "TO_DATE")
                         )
+                ),
+
+                /* ===================== TAX ===================== */
+
+                Map.entry(
+                        "tax_position_summary",
+                        new ReportDefinition(
+                                "tax_position_summary",
+                                "Tax Position Summary",
+                                "Current VAT and Corporate Tax position",
+                                "Tax",
+                                "reports/tax/tax_position_summary.jrxml",
+                                Set.of("BRANCH_ID")
+                        )
+                ),
+
+                Map.entry(
+                        "vat_filing_history",
+                        new ReportDefinition(
+                                "vat_filing_history",
+                                "VAT Filing History",
+                                "Historical VAT filings and payment status",
+                                "Tax",
+                                "reports/tax/vat_filing_history.jrxml",
+                                Set.of("BRANCH_ID")
+                        )
+                ),
+
+                Map.entry(
+                        "tax_audit_trail",
+                        new ReportDefinition(
+                                "tax_audit_trail",
+                                "Tax Audit Trail",
+                                "Complete VAT and Corporate Tax audit ledger",
+                                "Tax",
+                                "reports/tax/tax_audit_trail.jrxml",
+                                Set.of(
+                                        "BRANCH_ID",
+                                        "START_DATE",
+                                        "END_DATE"
+                                )
+                        )
+                ),
+
+                Map.entry(
+                        "corporate_tax_liability_report",
+                        new ReportDefinition(
+                                "corporate_tax_liability_report",
+                                "Corporate Tax Liability Report",
+                                "Corporate tax accrued, paid and outstanding balances",
+                                "Tax",
+                                "reports/tax/corporate_tax_liability_report.jrxml",
+                                Set.of(
+                                        "BRANCH_ID"
+                                )
+                        )
+                ),
+
+                Map.entry(
+                        "tax_executive_dashboard",
+                        new ReportDefinition(
+                                "tax_executive_dashboard",
+                                "Tax Executive Dashboard",
+                                "Executive summary of VAT and Corporate Tax position",
+                                "Tax",
+                                "reports/tax/tax_executive_dashboard.jrxml",
+                                Set.of(
+                                        "BRANCH_ID"
+                                )
+                        )
+                ),
+
+                Map.entry(
+                        "tax_reconciliation_report",
+                        new ReportDefinition(
+                                "tax_reconciliation_report",
+                                "Tax Reconciliation Report",
+                                "Reconciles VAT and Corporate Tax liabilities, payments and outstanding balances",
+                                "Tax",
+                                "reports/tax/tax_reconciliation_report.jrxml",
+                                Set.of(
+                                        "BRANCH_ID",
+                                        "START_DATE",
+                                        "END_DATE"
+                                )
+                        )
                 )
         );
 

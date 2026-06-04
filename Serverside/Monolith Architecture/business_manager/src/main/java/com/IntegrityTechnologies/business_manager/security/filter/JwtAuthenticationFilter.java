@@ -275,6 +275,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         return
                 path.startsWith("/api/auth/login")
+                        || path.startsWith("/api/auth/session-limit-info")
+                        || path.startsWith("/api/auth/session-recovery/logout")
                         || path.startsWith("/api/auth/password-reset")
                         || path.equals("/api/payments/mpesa/stk/callback")
                         || path.startsWith("/api/payments/mpesa/c2b")
@@ -290,6 +292,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         return
                 uri.startsWith("/api/auth/login")
+                        || uri.startsWith("/api/auth/session-limit-info")
+                        || uri.startsWith("/api/auth/session-recovery/logout")
                         || uri.startsWith("/api/auth/password-reset")
                         || uri.startsWith("/api/auth/forgot-password")
                         || uri.startsWith("/api/auth/reset-password")
