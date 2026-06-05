@@ -33,7 +33,7 @@ public class AccountBalanceController {
         UUID tenantId = TenantContext.getTenantId();
 
         return repository
-                .findByTenantIdAndBranch_Id(tenantId, branchId, pageable)
+                .findByTenantIdAndBranchId(tenantId, branchId, pageable)
                 .map(AccountBalanceResponse::from);
     }
 
@@ -47,7 +47,7 @@ public class AccountBalanceController {
 
         UUID tenantId = TenantContext.getTenantId();
 
-        return repository.findByTenantIdAndAccount_IdAndBranch_Id(
+        return repository.findByTenantIdAndAccount_IdAndBranchId(
                 tenantId,
                 accountId,
                 branchId,

@@ -73,7 +73,7 @@ public class DashboardSnapshotService {
                 );
 
         BigDecimal vat =
-                balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
+                balanceRepo.findByTenantIdAndAccount_IdAndBranchId(
                                 tenantId,
                                 accounts.get(tenantId, branchId, "VAT_PAYABLE"),
                                 branchId
@@ -82,7 +82,7 @@ public class DashboardSnapshotService {
                         .orElse(BigDecimal.ZERO);
 
         BigDecimal cash =
-                balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
+                balanceRepo.findByTenantIdAndAccount_IdAndBranchId(
                                 tenantId,
                                 accounts.get(tenantId, branchId, "CASH"),
                                 branchId
@@ -90,7 +90,7 @@ public class DashboardSnapshotService {
                         .map(b -> b.getBalance())
                         .orElse(BigDecimal.ZERO)
                         .add(
-                                balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
+                                balanceRepo.findByTenantIdAndAccount_IdAndBranchId(
                                                 tenantId,
                                                 accounts.get(tenantId, branchId, "BANK"),
                                                 branchId
@@ -99,7 +99,7 @@ public class DashboardSnapshotService {
                                         .orElse(BigDecimal.ZERO)
                         )
                         .add(
-                                balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
+                                balanceRepo.findByTenantIdAndAccount_IdAndBranchId(
                                                 tenantId,
                                                 accounts.get(tenantId, branchId, "MPESA"),
                                                 branchId

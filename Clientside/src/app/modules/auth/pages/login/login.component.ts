@@ -32,6 +32,7 @@ import {
 import { SessionLimitInfoResponse } from '../../../../core/models/session.models';
 
 import { SessionRecoveryDialogComponent } from '../../dialogs/session-recovery-dialog/session-recovery-dialog.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-login',
@@ -45,7 +46,8 @@ import { SessionRecoveryDialogComponent } from '../../dialogs/session-recovery-d
     MatButtonModule,
     MatIconModule,
     MatSnackBarModule,
-    EnterNextDirective
+    EnterNextDirective,
+    MatTooltipModule
   ],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
@@ -445,5 +447,25 @@ export class LoginComponent implements OnInit {
             });
         }
       });
+  }
+
+  get loginDisabledReason(): string {
+    if (!this.form.controls.identifier.value?.trim()) {
+      return 'Enter your username';
+    }
+
+    if (!this.form.controls.password.value?.trim()) {
+      return 'Enter your password';
+    }
+
+    if (
+      !this.isPlatform &&
+      this.branches.length > 1 &&
+      !this.form.controls.branchId.value
+    ) {
+      return 'Select a branch';
+    }
+
+    return '';
   }
 }

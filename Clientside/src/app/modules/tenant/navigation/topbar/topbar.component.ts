@@ -140,15 +140,22 @@ export class TopbarComponent implements OnInit {
   }
 
   private updatePageTitle(): void {
-    const segments = this.router.url.split('/').filter(Boolean);
+    const cleanUrl =
+      this.router.url.split('?')[0];
 
-    if (segments.length === 0) {
+    const segments =
+      cleanUrl.split('/').filter(Boolean);
+
+    if (!segments.length) {
       this.currentPage = 'Dashboard';
       return;
     }
 
-    const last = segments[segments.length - 1];
-    this.currentPage = this.formatSegment(last);
+    const last =
+      segments[segments.length - 1];
+
+    this.currentPage =
+      this.formatSegment(last);
   }
 
   private formatSegment(seg: string): string {

@@ -11,6 +11,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.see
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.model.TaxSystemState;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.repository.TaxSystemStateRepository;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.deletion.BranchDeletionMode;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.mapper.BranchMapper;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
@@ -38,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -70,6 +72,7 @@ public class BranchService {
     private final AccountingPeriodBootstrapService accountingPeriodBootstrapService;
 
     private final BranchNotificationSettingsSeeder notificationSettingsSeeder;
+    private final BranchDeletionService branchDeletionService;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -467,7 +470,7 @@ public class BranchService {
     @Transactional
     public void deleteBranch(
             UUID id,
-            Boolean soft,
+            BranchDeletionMode mode,
             Authentication authentication
     ) {
 
@@ -482,9 +485,22 @@ public class BranchService {
                         )
                 );
 
-        if (Boolean.TRUE.equals(soft)) {
+        if (mode != BranchDeletionMode.HARD) {
+
+            branchDeletionService.softDelete(
+                    tenantId(),
+                    branch.getId(),
+                    mode
+            );
 
             branch.setDeleted(true);
+            branch.setDeletedAt(
+                    LocalDateTime.now()
+            );
+
+            branch.setDeletionMode(
+                    mode
+            );
 
             branchRepository.save(branch);
 
@@ -497,15 +513,19 @@ public class BranchService {
                     authentication,
                     "Branch soft deleted"
             );
-
-        } else {
+        }
+        else {
 
             if (!branch.isDeleted()) {
-
                 throw new IllegalStateException(
                         "Branch must be soft deleted before permanent deletion."
                 );
             }
+
+            branchDeletionService.hardDelete(
+                    tenantId(),
+                    branch.getId()
+            );
 
             userBranchRepository.deleteByBranchId(
                     tenantId(),
@@ -549,7 +569,18 @@ public class BranchService {
                         )
                 );
 
+        BranchDeletionMode mode =
+                branch.getDeletionMode();
+
+        branchDeletionService.restore(
+                tenantId(),
+                id,
+                mode
+        );
+
         branch.setDeleted(false);
+        branch.setDeletedAt(null);
+        branch.setDeletionMode(null);
 
         branchRepository.save(branch);
 

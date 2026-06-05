@@ -423,7 +423,7 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
           }
         },
         panelClass:
-          'enterprise-panel',
+          'enterprise-dialog',
         width: '90vw',
         maxWidth: '90vw',
         height: '90vh',

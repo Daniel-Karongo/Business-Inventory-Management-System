@@ -27,7 +27,7 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
                 FROM Account a
                 LEFT JOIN AccountBalance ab
                     ON ab.account.id = a.id
-                    AND ab.branch.id = :branchId
+                    AND ab.branchId = :branchId
                     AND ab.tenantId = :tenantId
                 WHERE a.tenantId = :tenantId
                     AND a.branchId = :branchId

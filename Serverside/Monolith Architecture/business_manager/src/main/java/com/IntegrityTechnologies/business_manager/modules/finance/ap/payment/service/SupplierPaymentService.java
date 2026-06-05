@@ -365,7 +365,7 @@ public class SupplierPaymentService {
 
                     BigDecimal balance =
                             accountBalanceRepository
-                                    .findByTenantIdAndAccount_IdAndBranch_Id(
+                                    .findByTenantIdAndAccount_IdAndBranchId(
                                             tenantId(),
                                             a.getId(),
                                             branchId

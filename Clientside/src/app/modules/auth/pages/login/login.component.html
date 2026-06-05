@@ -111,18 +111,17 @@
 
     <footer class="dialog-footer">
 
-      <button type="submit" mat-flat-button color="primary" class="primary-action primary-login"
-        [disabled]="loginLoading || biometricLoading || form.invalid">
+      <div [matTooltip]="loginDisabledReason" [matTooltipDisabled]="!form.invalid">
+        <button type="submit" mat-flat-button color="primary" class="primary-action primary-login" [disabled]="loginLoading || biometricLoading || form.invalid">
+          <ng-container *ngIf="!loginLoading">
+            Sign in
+          </ng-container>
 
-        <ng-container *ngIf="!loginLoading">
-          Sign in
-        </ng-container>
-
-        <mat-icon *ngIf="loginLoading" class="spin">
-          autorenew
-        </mat-icon>
-
-      </button>
+          <mat-icon *ngIf="loginLoading" class="spin">
+            autorenew
+          </mat-icon>
+        </button>
+      </div>
 
       <div class="divider">
         <span>or continue with</span>

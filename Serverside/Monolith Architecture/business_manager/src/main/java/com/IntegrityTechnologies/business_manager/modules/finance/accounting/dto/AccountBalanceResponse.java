@@ -17,7 +17,7 @@ public record AccountBalanceResponse(
 
         return new AccountBalanceResponse(
                 b.getAccount().getId(),
-                b.getBranch().getId(),
+                b.getBranchId(),
                 b.getBalance(),
                 b.getUpdatedAt()
         );

@@ -304,6 +304,57 @@
 }
 
 /* =========================================================
+   DISABLED BUTTONS
+========================================================= */
+
+.primary-action:disabled,
+.primary-action[disabled] {
+  opacity: 0.65;
+  cursor: not-allowed;
+
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.primary-login:disabled,
+.primary-login[disabled] {
+  background: #cbd5e1 !important;
+  color: #64748b !important;
+}
+
+.biometric-action:disabled,
+.biometric-action[disabled] {
+  border-color: #cbd5e1 !important;
+  color: #94a3b8 !important;
+}
+
+.biometric-action:disabled mat-icon,
+.biometric-action[disabled] mat-icon {
+  color: #94a3b8 !important;
+}
+
+body.dark .primary-login:disabled,
+body.dark .primary-login[disabled] {
+  background: #334155 !important;
+  color: #94a3b8 !important;
+}
+
+body.dark .biometric-action:disabled,
+body.dark .biometric-action[disabled] {
+  border-color: #475569 !important;
+  color: #64748b !important;
+}
+
+body.dark .biometric-action:disabled mat-icon,
+body.dark .biometric-action[disabled] mat-icon {
+  color: #64748b !important;
+}
+
+.primary-login:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+/* =========================================================
    DIVIDER
 ========================================================= */
 

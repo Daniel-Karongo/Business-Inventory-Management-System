@@ -53,6 +53,17 @@ public abstract class TenantAwareEntity {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    /*
+     * Deleted because parent branch was deleted.
+     * Allows restore without resurrecting
+     * independently deleted records.
+     */
+    @Column(name = "branch_deleted", nullable = false)
+    @Builder.Default
+    private boolean branchDeleted = false;
+
+    @Column(name = "branch_deleted_at")
+    private LocalDateTime branchDeletedAt;
     @Version
     @Column(nullable = false)
     private Long version = 0L;
@@ -89,5 +100,33 @@ public abstract class TenantAwareEntity {
     protected void preUpdate() {
         updatedAt = LocalDateTime.now();
         beforeUpdate();
+    }
+
+    public void softDelete() {
+        this.deleted = true;
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    public void restore() {
+        this.deleted = false;
+        this.deletedAt = null;
+    }
+
+    public void branchDelete() {
+        this.deleted = true;
+        this.branchDeleted = true;
+        this.deletedAt = LocalDateTime.now();
+        this.branchDeletedAt = LocalDateTime.now();
+    }
+
+    public void restoreFromBranchDelete() {
+        if (!branchDeleted) {
+            return;
+        }
+
+        this.deleted = false;
+        this.deletedAt = null;
+        this.branchDeleted = false;
+        this.branchDeletedAt = null;
     }
 }

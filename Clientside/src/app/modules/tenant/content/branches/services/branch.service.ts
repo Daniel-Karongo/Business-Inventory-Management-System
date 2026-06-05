@@ -12,6 +12,7 @@ import {
   BranchAttendanceSettingsDTO,
   BranchAuditDTO,
   BranchAuditTableState,
+  BranchDeletionMode,
   BranchDetailsDTO,
   BranchEmailSettingsDTO,
   BranchEmailSettingsResponseDTO,
@@ -331,38 +332,34 @@ export class BranchService {
 
   delete(
     id: string,
-    soft = true
+    mode: BranchDeletionMode
   ): Observable<ApiResponse> {
-
     return this.http.delete<ApiResponse>(
       `${this.base}/${id}`,
       {
         params: {
-          soft
+          mode
         }
       }
     );
   }
 
-  /* =========================================================
-     BULK DELETE
-  ========================================================= */
-
   deleteBulk(
     ids: string[],
-    soft = true
+    mode: BranchDeletionMode
   ): Observable<ApiResponse> {
-
     return this.http.delete<ApiResponse>(
       `${this.base}/bulk`,
       {
         body: ids,
         params: {
-          soft
+          mode
         }
       }
     );
   }
+
+
 
   /* =========================================================
      RESTORE

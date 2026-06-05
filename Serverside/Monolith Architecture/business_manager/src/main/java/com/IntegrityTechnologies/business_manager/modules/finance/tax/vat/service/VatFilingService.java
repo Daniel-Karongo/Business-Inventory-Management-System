@@ -689,7 +689,7 @@ public class VatFilingService {
 
         BigDecimal carryForwardBalance =
                 accountBalanceRepository
-                        .findByTenantIdAndAccount_IdAndBranch_Id(
+                        .findByTenantIdAndAccount_IdAndBranchId(
                                 tenantId(),
                                 carryForwardAccountId,
                                 branchId
@@ -820,7 +820,7 @@ public class VatFilingService {
                 );
 
         return accountBalanceRepository
-                .findByTenantIdAndAccount_IdAndBranch_Id(
+                .findByTenantIdAndAccount_IdAndBranchId(
                         tenantId(),
                         carryForwardAccountId,
                         branchId

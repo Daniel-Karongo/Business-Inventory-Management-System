@@ -4,6 +4,7 @@ import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
 import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
 import com.IntegrityTechnologies.business_manager.config.response.PageWrapper;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.deletion.BranchDeletionMode;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.service.BranchAuditService;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.service.BranchBulkService;
@@ -191,13 +192,13 @@ public class BranchController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse> deleteBranch(
             @PathVariable UUID id,
-            @RequestParam Boolean soft,
+            @RequestParam BranchDeletionMode mode,
             Authentication authentication
     ) {
 
         branchService.deleteBranch(
                 id,
-                soft,
+                mode,
                 authentication
         );
 
@@ -213,7 +214,7 @@ public class BranchController {
     @DeleteMapping("/bulk")
     public ResponseEntity<ApiResponse> deleteBulk(
             @RequestBody List<UUID> ids,
-            @RequestParam Boolean soft,
+            @RequestParam BranchDeletionMode mode,
             Authentication authentication
     ) {
 
@@ -221,7 +222,7 @@ public class BranchController {
 
             branchService.deleteBranch(
                     id,
-                    soft,
+                    mode,
                     authentication
             );
         }

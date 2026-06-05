@@ -557,6 +557,42 @@ ACTION BUTTON
   color: #93c5fd !important;
 }
 
+/* =========================================
+SUCCESS
+========================================= */
+
+.snackbar-success {
+  border-left: 4px solid #16a34a !important;
+}
+
+/* =========================================
+ERROR
+========================================= */
+
+.snackbar-error {
+  border-left: 4px solid #dc2626 !important;
+}
+
+/* =========================================
+WARNING
+========================================= */
+
+.snackbar-warning {
+  border-left: 4px solid #f59e0b !important;
+}
+
+body.dark .snackbar-success {
+  border-left-color: #22c55e !important;
+}
+
+body.dark .snackbar-error {
+  border-left-color: #ef4444 !important;
+}
+
+body.dark .snackbar-warning {
+  border-left-color: #fbbf24 !important;
+}
+
 /* -------------------------------------------------------
    MAT DIALOG
 -------------------------------------------------------- */

@@ -246,4 +246,13 @@ public class FileStorageService {
     private boolean isWindows() {
         return System.getProperty("os.name").toLowerCase().contains("win");
     }
+
+    public void deleteBranchStorage(
+            UUID branchId
+    ) throws IOException {
+
+        deleteDirectory(
+                branchRoot(branchId)
+        );
+    }
 }

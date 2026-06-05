@@ -7,8 +7,6 @@ import {
 import { CommonModule } from '@angular/common';
 
 import {
-  ActivatedRoute,
-  Router,
   RouterModule
 } from '@angular/router';
 
@@ -22,9 +20,6 @@ import {
   Subject
 } from 'rxjs';
 
-import {
-  filter
-} from 'rxjs/operators';
 
 import { MatTableModule } from '@angular/material/table';
 
@@ -49,6 +44,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialog } from '@angular/material/dialog';
 
 import {
+  BranchDeletionMode,
   BranchListItemDTO,
   BranchTableState
 } from '../../models/branch.model';
@@ -61,6 +57,7 @@ import { ConfirmDialogComponent } from '../../../../../../shared/components/conf
 
 import { BranchBulkImportDialogComponent } from '../../components/branch-bulk-import-dialog/branch-bulk-import-dialog.component';
 
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { PageShellComponent } from '../../../../../../shared/layout/page-shell/page-shell.component';
 
 @Component({
@@ -80,7 +77,8 @@ import { PageShellComponent } from '../../../../../../shared/layout/page-shell/p
     MatTooltipModule,
     MatInputModule,
     MatSlideToggleModule,
-    MatCheckboxModule
+    MatCheckboxModule,
+    MatSnackBarModule
   ],
   templateUrl: './branch-list.component.html',
   styleUrls: ['./branch-list.component.scss']
@@ -117,6 +115,15 @@ export class BranchListComponent implements OnInit {
 
   selectedIds = new Set<string>();
 
+  state: BranchTableState = {
+    search: '',
+    includeDeleted: false,
+    sortBy: 'createdAt',
+    sortDirection: 'desc',
+    page: 0,
+    size: 20
+  };
+
   /* =========================================================
      UI
   ========================================================= */
@@ -133,19 +140,6 @@ export class BranchListComponent implements OnInit {
   paginator?: MatPaginator;
 
   /* =========================================================
-     TABLE STATE
-  ========================================================= */
-
-  state: BranchTableState = {
-    search: '',
-    includeDeleted: false,
-    sortBy: 'createdAt',
-    sortDirection: 'desc',
-    page: 0,
-    size: 20
-  };
-
-  /* =========================================================
      SEARCH
   ========================================================= */
 
@@ -154,9 +148,8 @@ export class BranchListComponent implements OnInit {
   constructor(
     private branchService: BranchService,
     private dialog: MatDialog,
-    private route: ActivatedRoute,
-    private router: Router,
-    private breakpoint: BreakpointObserver
+    private breakpoint: BreakpointObserver,
+    private snackBar: MatSnackBar
   ) { }
 
   /* =========================================================
@@ -164,13 +157,11 @@ export class BranchListComponent implements OnInit {
   ========================================================= */
 
   ngOnInit(): void {
-
     this.loadPreferences();
 
     this.breakpoint
       .observe(['(max-width: 768px)'])
       .subscribe(res => {
-
         this.isMobile = res.matches;
 
         if (this.isMobile) {
@@ -180,42 +171,16 @@ export class BranchListComponent implements OnInit {
 
     this.initializeSearch();
 
-    this.route.queryParamMap
-      .pipe(
-        filter(() => !this.loading)
-      )
-      .subscribe(params => {
-
-        this.state = {
-          search:
-            params.get('search') ?? '',
-
-          includeDeleted:
-            params.get('deleted') === 'true',
-
-          sortBy:
-            params.get('sortBy') ?? 'createdAt',
-
-          sortDirection:
-            (params.get('sortDirection') as 'asc' | 'desc')
-            ?? 'desc',
-
-          page:
-            Number(params.get('page') ?? 0),
-
-          size:
-            Number(params.get('size') ?? 20)
-        };
-
-        this.load();
-      });
+    this.load();
   }
 
   /* =========================================================
      LOAD
   ========================================================= */
 
-  load(): void {
+  load(
+    showError = true
+  ): void {
 
     this.loading = true;
 
@@ -232,45 +197,17 @@ export class BranchListComponent implements OnInit {
         },
 
         error: () => {
+
           this.loading = false;
+
+          if (showError) {
+
+            this.showError(
+              'Failed to load branches.'
+            );
+          }
         }
       });
-  }
-
-  /* =========================================================
-     ROUTE STATE
-  ========================================================= */
-
-  private updateRoute(): void {
-
-    this.router.navigate(
-      [],
-      {
-        relativeTo: this.route,
-
-        queryParams: {
-          search:
-            this.state.search || null,
-
-          deleted:
-            this.state.includeDeleted || null,
-
-          sortBy:
-            this.state.sortBy,
-
-          sortDirection:
-            this.state.sortDirection,
-
-          page:
-            this.state.page,
-
-          size:
-            this.state.size
-        },
-
-        queryParamsHandling: 'merge'
-      }
-    );
   }
 
   /* =========================================================
@@ -290,7 +227,7 @@ export class BranchListComponent implements OnInit {
 
         this.state.page = 0;
 
-        this.updateRoute();
+        this.load();
       });
   }
 
@@ -308,7 +245,7 @@ export class BranchListComponent implements OnInit {
 
     this.state.page = 0;
 
-    this.updateRoute();
+    this.load();
   }
 
   /* =========================================================
@@ -321,7 +258,7 @@ export class BranchListComponent implements OnInit {
 
     this.state.size = event.pageSize;
 
-    this.updateRoute();
+    this.load();
   }
 
   /* =========================================================
@@ -346,7 +283,7 @@ export class BranchListComponent implements OnInit {
 
     this.state.page = 0;
 
-    this.updateRoute();
+    this.load();
   }
 
   getSortIcon(field: string): string {
@@ -469,28 +406,127 @@ export class BranchListComponent implements OnInit {
     const ref = this.dialog.open(
       ConfirmDialogComponent,
       {
+        width: '90vw',
+        maxWidth: '1000px',
+        panelClass: 'enterprise-dialog',
+        autoFocus: false,
+        restoreFocus: false,
         data: {
           title: 'Delete Branches',
-          message: `Delete ${ids.length} branches?`
+
+          severity: 'warning',
+
+          message:
+            `Choose how you want to delete ${ids.length} selected branches.`,
+
+          confirmText: 'Delete Branches',
+
+          options: [
+            {
+              value:
+                BranchDeletionMode.SOFT_CONFIGURATION_ONLY,
+
+              label:
+                'Configuration Only',
+
+              description:
+                'Remove branch configuration while preserving operational history.',
+
+              collapsible: true,
+              initiallyExpanded: false,
+
+              deletes: [
+                'Products',
+                'Product Variants',
+                'Categories',
+                'Inventory Structure',
+                'Suppliers',
+                'Customers',
+                'Branch Settings',
+                'Notification Settings'
+              ],
+
+              keeps: [
+                'Sales',
+                'Purchases',
+                'Payments',
+                'Accounting',
+                'Tax Records',
+                'Audit History'
+              ]
+            },
+
+            {
+              value:
+                BranchDeletionMode.SOFT_FULL,
+
+              label:
+                'Full Soft Delete',
+
+              collapsible: true,
+              initiallyExpanded: true,
+
+              description:
+                'Remove operational and configuration data while allowing future restoration.',
+
+              deletes: [
+                'Configuration Data',
+                'Sales',
+                'Purchases',
+                'Inventory',
+                'Accounting',
+                'Tax',
+                'Messaging',
+                'Attendance'
+              ],
+
+              keeps: [
+                'Branch Records For Future Restoration'
+              ]
+            }
+          ],
+
+          selectedOption:
+            BranchDeletionMode.SOFT_FULL,
+
+          requireAcknowledgement: true,
+
+          acknowledgementText:
+            'I understand the consequences of this deletion operation.'
         }
       }
     );
 
     ref.afterClosed()
-      .subscribe(ok => {
+      .subscribe(result => {
 
-        if (!ok) {
+        if (!result?.confirmed) {
           return;
         }
 
         this.branchService
-          .deleteBulk(ids, true)
-          .subscribe(() => {
+          .deleteBulk(
+            ids,
+            result.option
+          )
+          .subscribe({
+            next: () => {
+              this.clearSelection();
 
-            this.clearSelection();
+              this.showSuccess(
+                `${ids.length} branch(es) deleted successfully.`
+              );
 
-            this.load();
+              this.load(false);
+            },
+
+            error: () => {
+              this.showError(
+                'Failed to delete selected branches.'
+              );
+            }
           });
+
       });
   }
 
@@ -506,14 +542,29 @@ export class BranchListComponent implements OnInit {
 
     this.branchService
       .restoreBulk(ids)
-      .subscribe(() => {
+      .subscribe({
+        next: () => {
 
-        this.clearSelection();
+          this.clearSelection();
 
-        this.load();
+          this.showSuccess(
+            `${ids.length} branch(es) restored successfully.`
+          );
+
+          this.load(false);
+        },
+
+        error: () => {
+          this.showError(
+            'Failed to restore selected branches.'
+          );
+        }
       });
   }
 
+  /* =========================================================
+   BULK HARD DELETE
+========================================================= */
   bulkHardDelete(): void {
 
     const ids =
@@ -527,29 +578,73 @@ export class BranchListComponent implements OnInit {
     const ref = this.dialog.open(
       ConfirmDialogComponent,
       {
+        width: '750px',
+        maxWidth: '95vw',
+        panelClass: 'enterprise-dialog',
+        autoFocus: false,
+        restoreFocus: false,
+
         data: {
-          title: 'Permanently Delete Branches',
+          title:
+            'Permanently Delete Branches',
+
+          severity: 'danger',
+
           message:
-            `Permanently delete ${ids.length} branches? This cannot be undone.`
+            `You are about to permanently delete ${ids.length} soft-deleted branches.`,
+
+          collapsible: true,
+          initiallyExpanded: false,
+
+          details: [
+            'All remaining branch records will be permanently deleted.',
+            'Associated filesystem storage will be deleted.',
+            'Deleted branches cannot be restored.',
+            'This operation is irreversible.'
+          ],
+
+          confirmText:
+            'Delete Permanently',
+
+          requireAcknowledgement: true,
+
+          acknowledgementText:
+            'I understand these branches will be permanently removed.'
         }
       }
     );
 
     ref.afterClosed()
-      .subscribe(ok => {
+      .subscribe(result => {
 
-        if (!ok) {
+        if (!result?.confirmed) {
           return;
         }
 
         this.branchService
-          .deleteBulk(ids, false)
-          .subscribe(() => {
+          .deleteBulk(
+            ids,
+            BranchDeletionMode.HARD
+          )
+          .subscribe({
+            next: () => {
 
-            this.clearSelection();
+              this.clearSelection();
 
-            this.load();
+              this.showSuccess(
+                `${ids.length} branch(es) permanently deleted.`
+              );
+
+              this.load(false);
+            },
+
+            error: () => {
+              this.showError(
+                'Failed to permanently delete selected branches.'
+              );
+            }
           });
+
       });
   }
 
@@ -572,7 +667,12 @@ export class BranchListComponent implements OnInit {
       .subscribe(imported => {
 
         if (imported === true) {
-          this.load();
+
+          this.showSuccess(
+            'Branch import completed successfully.'
+          );
+
+          this.load(false);
         }
       });
   }
@@ -581,33 +681,207 @@ export class BranchListComponent implements OnInit {
      DELETE
   ========================================================= */
 
-  delete(branch: BranchListItemDTO): void {
+  delete(
+    branch: BranchListItemDTO
+  ): void {
 
     const ref = this.dialog.open(
       ConfirmDialogComponent,
       {
+        width: '90vw',
+        maxWidth: '1000px',
+        panelClass: 'enterprise-dialog',
+        autoFocus: false,
+        restoreFocus: false,
         data: {
-          title: 'Delete Branch',
-          message: `Delete ${branch.name}?`
+          title: `Delete ${branch.name}`,
+          severity: 'warning',
+
+          message:
+            'Select the deletion strategy that best matches what you want to remove.',
+
+          confirmText: 'Delete Branch',
+
+          options: [
+            {
+              value:
+                BranchDeletionMode.SOFT_CONFIGURATION_ONLY,
+
+              label:
+                'Configuration Only',
+
+              collapsible: true,
+              initiallyExpanded: true,
+
+              description:
+                'Remove branch configuration while preserving operational history.',
+
+              deletes: [
+                'Products',
+                'Product Variants',
+                'Product Images',
+                'Categories',
+                'Suppliers',
+                'Customers',
+                'Inventory Structure',
+                'Branch Settings',
+                'Notification Settings'
+              ],
+
+              keeps: [
+                'Sales',
+                'Purchases',
+                'Payments',
+                'Accounting',
+                'Tax Records',
+                'Attendance',
+                'Audit Logs'
+              ]
+            },
+
+            {
+              value:
+                BranchDeletionMode.SOFT_FULL,
+
+              label:
+                'Full Soft Delete',
+
+              collapsible: true,
+              initiallyExpanded: true,
+
+              description:
+                'Remove branch operational and configuration data while allowing future restoration.',
+
+              deletes: [
+                'Configuration Data',
+                'Sales',
+                'Purchases',
+                'Inventory',
+                'Accounting',
+                'Tax',
+                'Messaging',
+                'Attendance'
+              ],
+
+              keeps: [
+                'Branch Record For Restoration'
+              ]
+            }
+          ],
+
+          selectedOption:
+            BranchDeletionMode.SOFT_FULL,
+
+          requireAcknowledgement: true,
+
+          acknowledgementText:
+            'I understand the selected deletion action.'
         }
       }
     );
 
     ref.afterClosed()
-      .subscribe(ok => {
+      .subscribe(result => {
 
-        if (!ok || !branch.id) {
+        if (!result?.confirmed) {
           return;
         }
 
         this.branchService
-          .delete(branch.id, true)
-          .subscribe(() => {
+          .delete(
+            branch.id,
+            result.option
+          )
+          .subscribe({
+            next: () => {
 
-            this.clearSelection();
+              this.clearSelection();
 
-            this.load();
+              this.showSuccess(
+                `"${branch.name}" deleted successfully.`
+              );
+
+              this.load(false);
+            },
+
+            error: () => {
+              this.showError(
+                `Failed to delete "${branch.name}".`
+              );
+            }
           });
+
+      });
+  }
+
+  hardDelete(
+    branch: BranchListItemDTO
+  ): void {
+
+    const ref = this.dialog.open(
+      ConfirmDialogComponent,
+      {
+        width: '900px',
+        maxWidth: '95vw',
+        panelClass: 'enterprise-dialog',
+        autoFocus: false,
+        restoreFocus: false,
+
+        data: {
+          title:
+            `Permanently Delete ${branch.name}`,
+
+          severity: 'danger',
+
+          message:
+            'This branch has already been soft deleted. Permanent deletion cannot be undone.',
+
+          details: [
+            'All remaining branch data will be permanently removed.',
+            'Associated storage files will be deleted.',
+            'The branch cannot be restored afterwards.'
+          ],
+
+          confirmText:
+            'Delete Permanently',
+
+          requireAcknowledgement: true,
+
+          acknowledgementText:
+            'I understand this operation is irreversible.'
+        }
+      }
+    );
+
+    ref.afterClosed()
+      .subscribe(result => {
+
+        if (!result?.confirmed) {
+          return;
+        }
+
+        this.branchService
+          .delete(
+            branch.id,
+            BranchDeletionMode.HARD
+          )
+          .subscribe({
+            next: () => {
+
+              this.showSuccess(
+                `"${branch.name}" permanently deleted.`
+              );
+
+              this.load(false);
+            },
+
+            error: () => {
+              this.showError(
+                `Failed to permanently delete "${branch.name}".`
+              );
+            }
+          });
+
       });
   }
 
@@ -621,53 +895,25 @@ export class BranchListComponent implements OnInit {
 
     this.branchService
       .restore(branch.id)
-      .subscribe(() => {
+      .subscribe({
+        next: () => {
 
-        this.selectedIds.delete(
-          branch.id
-        );
+          this.selectedIds.delete(
+            branch.id
+          );
 
-        this.load();
-      });
-  }
+          this.showSuccess(
+            `"${branch.name}" restored successfully.`
+          );
 
-  /* =========================================================
-     HARD DELETE
-  ========================================================= */
+          this.load(false);
+        },
 
-  hardDelete(
-    branch: BranchListItemDTO
-  ): void {
-
-    const ref = this.dialog.open(
-      ConfirmDialogComponent,
-      {
-        data: {
-          title: 'Permanent Delete Branch',
-          message:
-            `Permanently delete ${branch.name}? This action cannot be undone.`
+        error: () => {
+          this.showError(
+            `Failed to restore "${branch.name}".`
+          );
         }
-      }
-    );
-
-    ref.afterClosed()
-      .subscribe(ok => {
-
-        if (!ok) {
-          return;
-        }
-
-        this.branchService
-          .delete(
-            branch.id,
-            false
-          )
-          .subscribe(() => {
-
-            this.clearSelection();
-
-            this.load();
-          });
       });
   }
 
@@ -720,5 +966,33 @@ export class BranchListComponent implements OnInit {
     } catch {
       // ignore
     }
+  }
+
+  private showSuccess(
+    message: string
+  ): void {
+
+    this.snackBar.open(
+      message,
+      'Dismiss',
+      {
+        duration: 4000,
+        panelClass: ['snackbar-success']
+      }
+    );
+  }
+
+  private showError(
+    message: string
+  ): void {
+
+    this.snackBar.open(
+      message,
+      'Dismiss',
+      {
+        duration: 6000,
+        panelClass: ['snackbar-error']
+      }
+    );
   }
 }

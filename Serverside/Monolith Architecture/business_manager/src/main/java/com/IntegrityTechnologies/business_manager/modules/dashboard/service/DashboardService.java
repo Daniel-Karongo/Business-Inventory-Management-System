@@ -87,21 +87,21 @@ public class DashboardService {
                         .get("totalValuation");
 
         BigDecimal ar =
-                balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
+                balanceRepo.findByTenantIdAndAccount_IdAndBranchId(
                         tenantId(),
                         accounts.get(tenantId(), branchId, "ACCOUNTS_RECEIVABLE"),
                         branchId)
                 .map(b -> b.getBalance()).orElse(BigDecimal.ZERO);
 
         BigDecimal ap =
-                balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
+                balanceRepo.findByTenantIdAndAccount_IdAndBranchId(
                         tenantId(),
                         accounts.get(tenantId(), branchId, "ACCOUNTS_PAYABLE"),
                         branchId
                 ).map(b -> b.getBalance()).orElse(BigDecimal.ZERO);
 
         BigDecimal vat =
-                balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
+                balanceRepo.findByTenantIdAndAccount_IdAndBranchId(
                         tenantId(),
                         accounts.get(tenantId(), branchId, "VAT_PAYABLE"),
                         branchId

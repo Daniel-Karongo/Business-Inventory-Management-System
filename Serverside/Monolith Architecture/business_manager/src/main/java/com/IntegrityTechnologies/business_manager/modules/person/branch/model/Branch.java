@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.person.branch.model;
 
+import com.IntegrityTechnologies.business_manager.modules.person.branch.deletion.BranchDeletionMode;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.UserBranch;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.TenantAwareEntity;
 import jakarta.persistence.*;
@@ -86,4 +87,8 @@ public class Branch extends TenantAwareEntity {
 
     @Column(name = "logout_time")
     private LocalTime logoutTime;
+
+    @Column(name = "deletion_mode")
+    @Enumerated(EnumType.STRING)
+    private BranchDeletionMode deletionMode;
 }

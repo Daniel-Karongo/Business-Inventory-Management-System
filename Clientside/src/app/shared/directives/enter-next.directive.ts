@@ -1,59 +1,165 @@
-import { Directive, ElementRef, OnDestroy, OnInit } from '@angular/core';
+import {
+  Directive,
+  ElementRef,
+  OnDestroy,
+  OnInit
+} from '@angular/core';
 
 @Directive({
   selector: '[enterNext]',
   standalone: true
 })
-export class EnterNextDirective implements OnInit, OnDestroy {
+export class EnterNextDirective
+  implements OnInit, OnDestroy {
 
-  private handler!: (e: KeyboardEvent) => void;
+  private handler!: (
+    e: KeyboardEvent
+  ) => void;
 
-  constructor(private el: ElementRef<HTMLFormElement>) { }
+  constructor(
+    private el: ElementRef<HTMLFormElement>
+  ) { }
 
-  ngOnInit() {
+  ngOnInit(): void {
 
-    const form = this.el.nativeElement;
+    const form =
+      this.el.nativeElement;
 
-    this.handler = (e: KeyboardEvent) => {
+    this.handler =
+      (e: KeyboardEvent) => {
 
-      if (e.key !== 'Enter') return;
+        if (e.key !== 'Enter') {
+          return;
+        }
 
-      const target = e.target as HTMLElement;
+        const target =
+          e.target as HTMLElement;
 
-      if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) {
-        return;
-      }
+        const formEl =
+          this.el.nativeElement;
 
-      e.preventDefault();
+        const controls =
+          Array.from(
+            formEl.querySelectorAll<HTMLElement>(
+              `
+              input:not([disabled]),
+              textarea:not([disabled]),
+              mat-select,
+              .mat-mdc-select
+              `
+            )
+          );
 
-      const formEl = this.el.nativeElement;
+        const currentIndex =
+          controls.findIndex(
+            el =>
+              el === target ||
+              el.contains(target)
+          );
 
-      const focusables = Array.from(
-        formEl.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
-          'input:not([disabled]), textarea:not([disabled])'
-        )
-      );
+        if (currentIndex === -1) {
+          return;
+        }
 
-      const index = focusables.findIndex(el => el === target);
-      if (index === -1) return;
+        e.preventDefault();
 
-      // 🔥 find next EMPTY field (not just next DOM element)
-      const nextEmpty = focusables.slice(index + 1).find(el => !el.value);
+        const nextEmpty =
+          controls
+            .slice(currentIndex + 1)
+            .find(control =>
+              this.isEmpty(control)
+            );
 
-      if (nextEmpty) {
-        setTimeout(() => nextEmpty.focus(), 0);
-        return;
-      }
+        if (nextEmpty) {
 
-      // 🔥 no empty fields ahead → submit
-      formEl.requestSubmit();
-    };
+          this.focusControl(
+            nextEmpty
+          );
 
-    // 🔥 Attach at native level (bypasses Angular + Material interference)
-    form.addEventListener('keydown', this.handler, true); // use capture phase
+          return;
+        }
+
+        formEl.requestSubmit();
+      };
+
+    form.addEventListener(
+      'keydown',
+      this.handler,
+      true
+    );
   }
 
-  ngOnDestroy() {
-    this.el.nativeElement.removeEventListener('keydown', this.handler, true);
+  ngOnDestroy(): void {
+
+    this.el.nativeElement
+      .removeEventListener(
+        'keydown',
+        this.handler,
+        true
+      );
+  }
+
+  private isEmpty(
+    element: HTMLElement
+  ): boolean {
+
+    if (
+      element instanceof HTMLInputElement ||
+      element instanceof HTMLTextAreaElement
+    ) {
+      return !element.value?.trim();
+    }
+
+    const matSelect =
+      element.closest(
+        'mat-form-field'
+      );
+
+    if (matSelect) {
+
+      const valueText =
+        matSelect.querySelector(
+          '.mat-mdc-select-value-text'
+        )?.textContent?.trim();
+
+      return !valueText;
+    }
+
+    return false;
+  }
+
+  private focusControl(
+    element: HTMLElement
+  ): void {
+
+    if (
+      element instanceof HTMLInputElement ||
+      element instanceof HTMLTextAreaElement
+    ) {
+      setTimeout(
+        () => element.focus(),
+        0
+      );
+      return;
+    }
+
+    const selectTrigger =
+      element.matches('.mat-mdc-select')
+        ? element
+        : element.querySelector(
+          '.mat-mdc-select'
+        );
+
+    if (selectTrigger) {
+
+      setTimeout(() => {
+        selectTrigger.dispatchEvent(
+          new MouseEvent(
+            'mousedown',
+            { bubbles: true }
+          )
+        );
+      }, 0);
+    }
   }
 }

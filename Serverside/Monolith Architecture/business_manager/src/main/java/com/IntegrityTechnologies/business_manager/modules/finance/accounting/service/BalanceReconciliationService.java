@@ -69,7 +69,7 @@ public class BalanceReconciliationService {
         Page<AccountBalance> page;
 
         do {
-            page = balanceRepo.findByTenantIdAndBranch_Id(
+            page = balanceRepo.findByTenantIdAndBranchId(
                     tenantId,
                     branchId,
                     PageRequest.of(pageIndex++, 2000)
@@ -133,9 +133,7 @@ public class BalanceReconciliationService {
                         accountRepository.getReferenceById(accountId)
                 );
 
-                projection.setBranch(
-                        branchRepository.getReferenceById(branchId)
-                );
+                projection.setBranchId(branchId);
 
                 projection.setBalance(ledgerBalance);
                 projection.setUpdatedAt(LocalDateTime.now());
@@ -216,7 +214,7 @@ public class BalanceReconciliationService {
                 );
 
         AccountBalance projection =
-                balanceRepo.findByTenantIdAndAccount_IdAndBranch_Id(
+                balanceRepo.findByTenantIdAndAccount_IdAndBranchId(
                     tenantId,
                     accountId,
                     branchId
@@ -287,7 +285,7 @@ public class BalanceReconciliationService {
             int size
     ) {
         UUID tenantId = TenantContext.getTenantId();
-        return balanceRepo.findByTenantIdAndBranch_Id(
+        return balanceRepo.findByTenantIdAndBranchId(
                 tenantId,
                 branchId,
                 PageRequest.of(page, size)

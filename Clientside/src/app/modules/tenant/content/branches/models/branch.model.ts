@@ -44,6 +44,12 @@ export interface BranchDetailsDTO {
   users?: MinimalUserDTO[];
 }
 
+export enum BranchDeletionMode {
+  SOFT_CONFIGURATION_ONLY = 'SOFT_CONFIGURATION_ONLY',
+  SOFT_FULL = 'SOFT_FULL',
+  HARD = 'HARD'
+}
+
 /* =========================================================
    CREATE / UPDATE
 ========================================================= */

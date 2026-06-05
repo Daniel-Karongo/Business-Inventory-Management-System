@@ -1,17 +1,251 @@
-<div class="p-4 bg-[var(--surface)]">
-  <h2 class="text-lg font-semibold mb-2">{{ data.title }}</h2>
+<div class="confirm-dialog" [class.warning]="data.severity === 'warning'" [class.danger]="data.severity === 'danger'">
 
-  <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+  <!-- =====================================================
+       HEADER
+  ====================================================== -->
+  <div class="dialog-header">
+
+    <mat-icon *ngIf="data.severity === 'danger'">
+      warning
+    </mat-icon>
+
+    <mat-icon *ngIf="data.severity === 'warning'">
+      info
+    </mat-icon>
+
+    <h2>
+      {{ data.title }}
+    </h2>
+
+  </div>
+
+  <!-- =====================================================
+       MESSAGE
+  ====================================================== -->
+  <p class="dialog-message">
     {{ data.message }}
   </p>
 
-  <div class="flex justify-end gap-2 mt-4">
+  <!-- =====================================================
+       DETAILS
+  ====================================================== -->
+  <div *ngIf="data.details?.length" class="dialog-details">
+
+    <ul>
+
+      <li *ngFor="let item of data.details">
+
+        {{ item }}
+
+      </li>
+
+    </ul>
+
+  </div>
+
+  <!-- =====================================================
+       OPTIONS
+  ====================================================== -->
+  <div *ngIf="data.options?.length" class="dialog-options">
+
+    <div *ngFor="let option of data.options" class="option-card" [class.selected]="selectedOption === option.value"
+      (click)="selectOption(option.value)">
+
+      <!-- ==========================================
+           CARD HEADER
+      =========================================== -->
+      <div class="option-header">
+
+        <div class="radio-wrapper">
+
+          <mat-radio-button [checked]="selectedOption === option.value" [value]="option.value"
+            (click)="$event.stopPropagation()">
+          </mat-radio-button>
+
+        </div>
+
+        <div class="option-main">
+
+          <div class="option-label">
+            {{ option.label }}
+          </div>
+
+          <div *ngIf="option.description" class="option-description">
+
+            {{ option.description }}
+
+          </div>
+
+          <!-- ======================================
+               SUMMARY COUNTS
+          ======================================= -->
+          <div *ngIf="option.collapsible && (option.deletes?.length || option.keeps?.length)" class="option-summary">
+
+            <div *ngIf="option.deletes?.length" class="summary-chip delete">
+
+              {{ getDeleteCount(option) }}
+              item{{ getDeleteCount(option) === 1 ? '' : 's' }}
+
+              will be deleted
+            </div>
+
+            <div *ngIf="option.keeps?.length" class="summary-chip keep">
+
+              {{ getKeepCount(option) }}
+              item{{ getKeepCount(option) === 1 ? '' : 's' }}
+
+              will be preserved
+            </div>
+
+          </div>
+
+          <!-- ======================================
+               TOGGLE BUTTON
+          ======================================= -->
+          <button *ngIf="option.collapsible" type="button" class="details-toggle"
+            (click)="toggleDetails(option.value); $event.stopPropagation()">
+
+            <mat-icon>
+
+              {{
+              isExpanded(option.value)
+              ? 'expand_less'
+              : 'expand_more'
+              }}
+
+            </mat-icon>
+
+            <span>
+
+              {{
+              isExpanded(option.value)
+              ? 'Hide Details'
+              : 'Show Details'
+              }}
+
+            </span>
+
+          </button>
+
+        </div>
+
+      </div>
+
+      <!-- ==========================================
+           OPTION DETAILS
+      =========================================== -->
+
+      <ng-container *ngIf="
+          !option.collapsible ||
+          isExpanded(option.value)
+        ">
+
+        <!-- ======================================
+             DELETE / KEEP GRID
+        ======================================= -->
+        <div *ngIf="
+            option.deletes?.length ||
+            option.keeps?.length
+          " class="option-sections">
+
+          <!-- DELETE -->
+          <div *ngIf="option.deletes?.length" class="option-section">
+
+            <span class="option-section-title">
+
+              Will Delete
+
+            </span>
+
+            <ul>
+
+              <li *ngFor="let item of option.deletes">
+
+                {{ item }}
+
+              </li>
+
+            </ul>
+
+          </div>
+
+          <!-- KEEP -->
+          <div *ngIf="option.keeps?.length" class="option-section">
+
+            <span class="option-section-title">
+
+              Will Keep
+
+            </span>
+
+            <ul>
+
+              <li *ngFor="let item of option.keeps">
+
+                {{ item }}
+
+              </li>
+
+            </ul>
+
+          </div>
+
+        </div>
+
+        <!-- ======================================
+             WARNING
+        ======================================= -->
+        <div *ngIf="option.warning" class="option-section warning-section">
+
+          <span class="option-section-title">
+
+            Important
+
+          </span>
+
+          {{ option.warning }}
+
+        </div>
+
+      </ng-container>
+
+    </div>
+
+  </div>
+
+  <!-- =====================================================
+       ACKNOWLEDGEMENT
+  ====================================================== -->
+  <div *ngIf="data.requireAcknowledgement" class="acknowledgement">
+
+    <mat-checkbox [(ngModel)]="acknowledged">
+
+      {{
+      data.acknowledgementText ||
+      'I understand this action cannot be undone'
+      }}
+
+    </mat-checkbox>
+
+  </div>
+
+  <!-- =====================================================
+       ACTIONS
+  ====================================================== -->
+  <div class="dialog-actions">
+
     <button mat-stroked-button (click)="cancel()">
+
       {{ data.cancelText || 'Cancel' }}
+
     </button>
 
-    <button mat-flat-button color="warn" (click)="confirm()">
+    <button mat-flat-button [disabled]="!canConfirm()" (click)="confirm()">
+
       {{ data.confirmText || 'Confirm' }}
+
     </button>
+
   </div>
+
 </div>

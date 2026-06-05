@@ -1,7 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain;
 
-import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
-import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.TenantAwareEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -30,39 +29,48 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @IdClass(AccountBalance.AccountBalanceId.class)
-public class AccountBalance extends BranchAwareEntity {
+public class AccountBalance extends TenantAwareEntity {
 
     @Id
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "account_id", nullable = false)
+    @JoinColumn(
+            name = "account_id",
+            nullable = false
+    )
     private Account account;
 
     @Id
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "branch_id", nullable = false)
-    private Branch branch;
+    @Column(name = "branch_id", nullable = false)
+    private UUID branchId;
 
-    @Column(nullable = false, precision = 19, scale = 2)
+    @Column(
+            nullable = false,
+            precision = 19,
+            scale = 2
+    )
     private BigDecimal balance = BigDecimal.ZERO;
 
-    public static class AccountBalanceId implements Serializable {
+    public static class AccountBalanceId
+            implements Serializable {
 
         private UUID account;
-        private UUID branch;
+        private UUID branchId;
 
-        public AccountBalanceId() {}
+        public AccountBalanceId() {
+        }
 
         public AccountBalanceId(
                 UUID account,
-                UUID branch
+                UUID branchId
         ) {
             this.account = account;
-            this.branch = branch;
+            this.branchId = branchId;
         }
 
         @Override
-        public boolean equals(Object o) {
-
+        public boolean equals(
+                Object o
+        ) {
             if (this == o) {
                 return true;
             }
@@ -71,13 +79,22 @@ public class AccountBalance extends BranchAwareEntity {
                 return false;
             }
 
-            return Objects.equals(account, that.account)
-                    && Objects.equals(branch, that.branch);
+            return Objects.equals(
+                    account,
+                    that.account
+            ) &&
+                    Objects.equals(
+                            branchId,
+                            that.branchId
+                    );
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(account, branch);
+            return Objects.hash(
+                    account,
+                    branchId
+            );
         }
     }
 }

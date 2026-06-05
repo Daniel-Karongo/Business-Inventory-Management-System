@@ -433,7 +433,7 @@ export class UserListComponent implements OnInit {
         }
       },
       panelClass:
-        'enterprise-panel',
+        'enterprise-dialog',
       width: '90vw',
       maxWidth: '90vw',
       height: '90vh',

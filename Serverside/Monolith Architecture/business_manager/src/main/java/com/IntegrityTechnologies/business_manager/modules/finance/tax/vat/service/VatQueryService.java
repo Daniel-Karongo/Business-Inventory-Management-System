@@ -188,7 +188,7 @@ public class VatQueryService {
                 );
 
         return accountBalanceRepository
-                .findByTenantIdAndAccount_IdAndBranch_Id(
+                .findByTenantIdAndAccount_IdAndBranchId(
                         tenantId(),
                         accountId,
                         branchId

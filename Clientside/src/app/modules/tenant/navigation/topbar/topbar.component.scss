@@ -7,6 +7,28 @@
   // background: var(--surface);
   border-bottom: 1px solid var(--border);
   min-height: 60px;
+  display: flex;
+  align-items: center;
+}
+
+.topbar > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.page-title {
+  font-size: 1.125rem;
+  font-weight: 500;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  max-width: 100%;
+}
+
+.topbar-right {
+  flex-shrink: 0;
 }
 
 /* ======================================================

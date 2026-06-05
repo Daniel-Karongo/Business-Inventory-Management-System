@@ -14,19 +14,19 @@ import java.util.UUID;
 public interface AccountBalanceRepository
         extends JpaRepository<AccountBalance, AccountBalance.AccountBalanceId> {
 
-    Optional<AccountBalance> findByTenantIdAndAccount_IdAndBranch_Id(
+    Optional<AccountBalance> findByTenantIdAndAccount_IdAndBranchId(
             UUID tenantId,
             UUID accountId,
             UUID branchId
     );
 
-    Page<AccountBalance> findByTenantIdAndBranch_Id(
+    Page<AccountBalance> findByTenantIdAndBranchId(
             UUID tenantId,
             UUID branchId,
             Pageable pageable
     );
 
-    Page<AccountBalance> findByTenantIdAndAccount_IdAndBranch_Id(
+    Page<AccountBalance> findByTenantIdAndAccount_IdAndBranchId(
             UUID tenantId,
             UUID accountId,
             UUID branchId,
