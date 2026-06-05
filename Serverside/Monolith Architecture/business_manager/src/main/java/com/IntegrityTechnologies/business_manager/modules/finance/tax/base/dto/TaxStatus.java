@@ -1,6 +1,5 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.tax.base.dto;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.model.enums.VatCreditTreatment;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -16,8 +15,6 @@ public class TaxStatus {
     private BigDecimal vatRate;
 
     private BigDecimal corporateTaxRate;
-
-    private VatCreditTreatment vatCreditTreatment;
 
     private LocalDateTime lastFilingDate;
 

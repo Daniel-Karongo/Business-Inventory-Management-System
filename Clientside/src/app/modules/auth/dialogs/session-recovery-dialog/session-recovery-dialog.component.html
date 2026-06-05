@@ -1,36 +1,58 @@
 <div class="dialog-shell">
 
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
     <div class="header">
 
-        <div class="title">
-            Session Limit Reached
+        <div class="header-icon">
+            <mat-icon>
+                devices
+            </mat-icon>
         </div>
 
-        <div class="subtitle">
-            Maximum active sessions reached.
-            Select a session to terminate and continue login.
+        <div class="header-content">
+
+            <div class="title">
+                Session Limit Reached
+            </div>
+
+            <div class="subtitle">
+                Your account has reached the maximum number of active sessions.
+                Terminate an existing session to continue signing in.
+            </div>
+
         </div>
 
     </div>
 
-    <div class="sessions">
+    <!-- =====================================================
+         CONTENT
+    ====================================================== -->
+
+    <div class="content">
 
         <div class="session-card" *ngFor="let session of data.sessions">
 
-            <div class="card-top">
+            <div class="card-header">
 
-                <div class="device">
+                <div class="device-section">
 
-                    {{ session.deviceName || 'Unknown Device' }}
+                    <div class="device-name">
+                        {{ session.deviceName || 'Unknown Device' }}
+                    </div>
+
+                    <div class="device-subtitle">
+                        Active Session
+                    </div>
 
                 </div>
 
-                <button mat-flat-button color="primary" [disabled]="busy" (click)="terminate(session)">
+                <button mat-flat-button [disabled]="busy" (click)="terminate(session)">
 
                     <ng-container *ngIf="!busy">
-
                         Terminate
-
                     </ng-container>
 
                     <mat-icon *ngIf="busy" class="spin">
@@ -43,38 +65,78 @@
 
             </div>
 
-            <div class="details">
+            <div class="session-grid">
 
-                <div>
-                    Branch:
-                    <strong>{{ session.branchName }}</strong>
+                <div class="info">
+
+                    <div class="label">
+                        Branch
+                    </div>
+
+                    <div class="value">
+                        {{ session.branchName }}
+                    </div>
+
                 </div>
 
-                <div>
-                    Browser:
-                    <strong>{{ session.browserName || 'Unknown' }}</strong>
+                <div class="info">
+
+                    <div class="label">
+                        Browser
+                    </div>
+
+                    <div class="value">
+                        {{ session.browserName || 'Unknown' }}
+                    </div>
+
                 </div>
 
-                <div>
-                    OS:
-                    <strong>{{ session.osName || 'Unknown' }}</strong>
+                <div class="info">
+
+                    <div class="label">
+                        Operating System
+                    </div>
+
+                    <div class="value">
+                        {{ session.osName || 'Unknown' }}
+                    </div>
+
                 </div>
 
-                <div>
-                    Platform:
-                    <strong>{{ session.platform || 'Unknown' }}</strong>
+                <div class="info">
+
+                    <div class="label">
+                        Platform
+                    </div>
+
+                    <div class="value">
+                        {{ session.platform || 'Unknown' }}
+                    </div>
+
                 </div>
 
-                <div>
-                    IP:
-                    <strong>{{ session.ipAddress || 'Unknown' }}</strong>
+                <div class="info">
+
+                    <div class="label">
+                        IP Address
+                    </div>
+
+                    <div class="value">
+                        {{ session.ipAddress || 'Unknown' }}
+                    </div>
+
                 </div>
 
-                <div>
-                    Login:
-                    <strong>
+                <div class="info">
+
+                    <div class="label">
+                        Login Time
+                    </div>
+
+                    <div class="value">
                         {{ session.loginTime | date:'medium' }}
-                    </strong>
+                    </div>
+
                 </div>
 
             </div>
@@ -83,11 +145,15 @@
 
     </div>
 
+    <!-- =====================================================
+         FOOTER
+    ====================================================== -->
+
     <div class="footer">
 
         <button mat-stroked-button (click)="cancel()">
 
-            Cancel
+            Cancel Login
 
         </button>
 

@@ -1,80 +1,156 @@
+:host {
+    display: block;
+}
+
+/* =====================================================
+   HEADER
+===================================================== */
+
 .header-row {
-
     display: flex;
-
     justify-content: space-between;
-
     align-items: center;
-
     gap: 20px;
-}
-
-.actions {
-
-    display: flex;
-
-    gap: 10px;
-}
-
-.subtitle {
-
-    color: var(--text-secondary);
-
-    margin-top: 4px;
-}
-
-.device {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 8px;
-
     flex-wrap: wrap;
 }
 
-.badge {
+.header-content {
+    min-width: 0;
+}
 
-    padding: 4px 10px;
-
-    border-radius: 999px;
-
-    font-size: 11px;
-
+.header-content h2 {
     font-weight: 600;
 }
 
-.current {
-
-    background:
-        rgba(34, 197, 94, .12);
-
-    color:
-        #15803d;
+.subtitle {
+    margin-top: 4px;
+    color: var(--text-secondary);
 }
 
-.device.badge,
-.badge.device {
-
-    background:
-        rgba(37, 99, 235, .12);
-
-    color:
-        #2563eb;
+.actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
 }
+
+/* =====================================================
+   STATES
+===================================================== */
 
 .loading-state,
 .empty-state {
-
     text-align: center;
-
-    padding: 40px;
+    padding: 60px 24px;
+    color: var(--text-secondary);
 }
 
+/* =====================================================
+   TABLE SURFACE
+===================================================== */
+
+.table-surface {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--surface-shadow);
+}
+
+.table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* CRITICAL FIX */
+
+table {
+    width: 100%;
+    min-width: 1200px;
+    border-collapse: collapse;
+}
+
+/* =====================================================
+   TABLE CELLS
+===================================================== */
+
+.mat-mdc-header-row {
+    background: var(--surface);
+}
+
+.mat-mdc-header-cell {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.mat-mdc-cell,
+.mat-mdc-header-cell {
+    padding-left: 18px;
+    padding-right: 18px;
+}
+
+.mat-mdc-row {
+    transition:
+        background-color .15s ease,
+        transform .15s ease;
+}
+
+.mat-mdc-row:hover {
+    background: var(--surface-hover);
+}
+
+/* =====================================================
+   DEVICE
+===================================================== */
+
+.device-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.device-name {
+    font-weight: 600;
+}
+
+.device-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.badge {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.badge.current {
+    background: rgba(34, 197, 94, .12);
+    color: #15803d;
+}
+
+.badge.device {
+    background: rgba(37, 99, 235, .12);
+    color: #2563eb;
+}
+
+/* =====================================================
+   PAGINATOR
+===================================================== */
+
+mat-paginator {
+    border-top: 1px solid var(--border);
+}
+
+/* =====================================================
+   SPINNER
+===================================================== */
+
 .spin {
-    animation:
-        spin .9s linear infinite;
+    animation: spin .9s linear infinite;
 }
 
 @keyframes spin {
@@ -86,5 +162,31 @@
     to {
         transform: rotate(360deg);
     }
+}
 
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 768px) {
+
+    .header-row {
+        align-items: stretch;
+    }
+
+    .actions {
+        width: 100%;
+    }
+
+    .actions button {
+        flex: 1;
+    }
+
+    .table-surface {
+        border-radius: 12px;
+    }
+
+    table {
+        min-width: 1050px;
+    }
 }

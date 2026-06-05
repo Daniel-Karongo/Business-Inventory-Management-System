@@ -92,6 +92,7 @@ public class BranchBulkService {
                 dto.setLocation(row.getLocation());
                 dto.setPhone(row.getPhone());
                 dto.setEmail(row.getEmail());
+                dto.setMaxActiveSessionsPerUser(4);
 
                 BranchDetailsDTO created = null;
 

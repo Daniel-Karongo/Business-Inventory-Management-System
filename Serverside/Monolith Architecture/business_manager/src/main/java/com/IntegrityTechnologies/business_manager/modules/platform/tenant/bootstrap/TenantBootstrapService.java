@@ -13,7 +13,10 @@ import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Br
 import com.IntegrityTechnologies.business_manager.modules.person.branch.model.BranchAudit;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.repository.BranchRepository;
-import com.IntegrityTechnologies.business_manager.modules.person.user.model.*;
+import com.IntegrityTechnologies.business_manager.modules.person.user.model.Role;
+import com.IntegrityTechnologies.business_manager.modules.person.user.model.User;
+import com.IntegrityTechnologies.business_manager.modules.person.user.model.UserAudit;
+import com.IntegrityTechnologies.business_manager.modules.person.user.model.UserBranch;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserAuditRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserBranchRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.user.repository.UserRepository;
@@ -127,11 +130,27 @@ public class TenantBootstrapService {
                     TaxSystemState.builder()
                             .tenantId(tenantId)
                             .branchId(branch.getId())
-                            .taxMode(taxProperties.getBusinessTaxMode())
-                            .vatEnabled(taxProperties.isVatEnabled())
-                            .pricesVatInclusive(taxProperties.isPricesVatInclusive())
-                            .vatRate(taxProperties.getVatRate())
-                            .corporateTaxRate(taxProperties.getCorporateTaxRate())
+
+                            .taxMode(
+                                    taxProperties.getBusinessTaxMode()
+                            )
+
+                            .vatEnabled(
+                                    taxProperties.isVatEnabled()
+                            )
+
+                            .pricesVatInclusive(
+                                    taxProperties.isPricesVatInclusive()
+                            )
+
+                            .vatRate(
+                                    taxProperties.getVatRate()
+                            )
+
+                            .corporateTaxRate(
+                                    taxProperties.getCorporateTaxRate()
+                            )
+
                             .locked(false)
                             .build()
             );

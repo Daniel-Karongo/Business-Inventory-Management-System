@@ -14,4 +14,6 @@ public class BranchSecuritySettingsDTO {
     private Boolean enforceGeofence;
 
     private Boolean enforceDevice;
+
+    private Integer maxActiveSessionsPerUser;
 }

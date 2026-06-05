@@ -4,10 +4,8 @@
 
 $basePath = Get-Location
 
-# Phrase to search for
-$searchPhrase = "BranchContext"
+$searchPhrase = "extends BranchAwareEntity"
 
-# File types to scan
 $filePatterns = @(
     "*.java",
     "*.kt",
@@ -17,14 +15,13 @@ $filePatterns = @(
     "*.yaml"
 )
 
-# Output file
 $outputFile = Join-Path $basePath "BranchContext_Full_Files.txt"
 
 # ================================
 # FIND MATCHING FILES
 # ================================
 
-$matchingFiles = New-Object System.Collections.Generic.HashSet[string]
+$matchingFiles = @()
 
 foreach ($pattern in $filePatterns) {
 
@@ -33,74 +30,77 @@ foreach ($pattern in $filePatterns) {
         -Recurse `
         -File `
         -Filter $pattern |
+
     ForEach-Object {
 
-        $match = Select-String `
-            -Path $_.FullName `
-            -Pattern $searchPhrase `
-            -SimpleMatch `
-            -Quiet
+        if (
+            Select-String `
+                -Path $_.FullName `
+                -Pattern $searchPhrase `
+                -SimpleMatch `
+                -Quiet
+        ) {
 
-        if ($match) {
-            $matchingFiles.Add($_.FullName) | Out-Null
+            $matchingFiles += $_.FullName
         }
     }
 }
+
+# Remove duplicates
+
+$matchingFiles =
+    $matchingFiles |
+    Sort-Object -Unique
 
 # ================================
 # BUILD OUTPUT
 # ================================
 
-$builder = New-Object System.Text.StringBuilder
+$output = @()
 
-$builder.AppendLine("SEARCH PHRASE: $searchPhrase") | Out-Null
-$builder.AppendLine("GENERATED: $(Get-Date)") | Out-Null
-$builder.AppendLine("") | Out-Null
+$output += "SEARCH PHRASE: $searchPhrase"
+$output += "GENERATED: $(Get-Date)"
+$output += ""
 
 foreach ($file in $matchingFiles) {
 
     Write-Host "Including: $file"
 
-    $builder.AppendLine("") | Out-Null
-    $builder.AppendLine("============================================================") | Out-Null
-    $builder.AppendLine("FILE: $file") | Out-Null
-    $builder.AppendLine("============================================================") | Out-Null
-    $builder.AppendLine("") | Out-Null
+    $output += ""
+    $output += "============================================================"
+    $output += "FILE: $file"
+    $output += "============================================================"
+    $output += ""
 
-    # Optional: include matching lines first
-    $matches = Select-String `
+    $output += "MATCHES:"
+
+    Select-String `
         -Path $file `
         -Pattern $searchPhrase `
-        -SimpleMatch
+        -SimpleMatch |
+    ForEach-Object {
 
-    $builder.AppendLine("MATCHES:") | Out-Null
-
-    foreach ($m in $matches) {
-        $builder.AppendLine(
-            "[Line $($m.LineNumber)] $($m.Line.Trim())"
-        ) | Out-Null
+        $output += "[Line $($_.LineNumber)] $($_.Line.Trim())"
     }
 
-    $builder.AppendLine("") | Out-Null
-    $builder.AppendLine("FULL FILE CONTENT:") | Out-Null
-    $builder.AppendLine("") | Out-Null
+    $output += ""
+    $output += "FULL FILE CONTENT:"
+    $output += ""
 
-    Get-Content $file | ForEach-Object {
-        $builder.AppendLine($_) | Out-Null
-    }
+    $output += Get-Content $file
 
-    $builder.AppendLine("") | Out-Null
-    $builder.AppendLine("") | Out-Null
+    $output += ""
+    $output += ""
 }
 
 # ================================
-# WRITE OUTPUT FILE
+# WRITE OUTPUT
 # ================================
 
-[System.IO.File]::WriteAllText(
-    $outputFile,
-    $builder.ToString()
-)
+$output |
+    Out-File `
+        -FilePath $outputFile `
+        -Encoding UTF8
 
 Write-Host ""
 Write-Host "Done."

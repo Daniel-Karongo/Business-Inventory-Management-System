@@ -48,10 +48,16 @@ public class BranchSpecification {
             Boolean deleted
     ) {
 
+        if (Boolean.TRUE.equals(deleted)) {
+
+            return (root, cq, cb) ->
+                    cb.conjunction();
+
+        }
+
         return (root, cq, cb) ->
-                cb.equal(
-                        root.get("deleted"),
-                        Boolean.TRUE.equals(deleted)
+                cb.isFalse(
+                        root.get("deleted")
                 );
     }
 

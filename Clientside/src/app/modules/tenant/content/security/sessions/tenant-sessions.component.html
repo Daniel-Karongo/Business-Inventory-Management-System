@@ -1,20 +1,16 @@
 <app-page-shell>
 
     <div page-header>
-
         <div class="header-row">
 
-            <div>
-
+            <div class="header-content">
                 <h2>
                     Active Sessions
                 </h2>
 
                 <div class="subtitle">
-                    Review and manage
-                    all active sessions.
+                    Review and manage all active sessions.
                 </div>
-
             </div>
 
             <div class="actions">
@@ -32,15 +28,11 @@
                 <button mat-flat-button *ngIf="sessions.length > 1" [disabled]="actionBusy" (click)="logoutOthers()">
 
                     <ng-container *ngIf="!actionBusy">
-
                         Logout Other Sessions
-
                     </ng-container>
 
                     <mat-icon *ngIf="actionBusy" class="spin">
-
                         autorenew
-
                     </mat-icon>
 
                 </button>
@@ -48,7 +40,6 @@
             </div>
 
         </div>
-
     </div>
 
     <div page-content>
@@ -65,163 +56,189 @@
 
         </div>
 
-        <div *ngIf="!loading && sessions.length">
+        <div *ngIf="!loading && sessions.length" class="table-surface">
 
-            <table mat-table [dataSource]="paged">
+            <div class="table-scroll">
 
-                <ng-container matColumnDef="device">
+                <table mat-table [dataSource]="paged">
 
-                    <th mat-header-cell *matHeaderCellDef>
-                        Device
-                    </th>
+                    <!-- DEVICE -->
 
-                    <td mat-cell *matCellDef="let s">
+                    <ng-container matColumnDef="device">
 
-                        <div class="device">
+                        <th mat-header-cell *matHeaderCellDef>
+                            Device
+                        </th>
 
-                            {{ s.deviceName || 'Unknown Device' }}
+                        <td mat-cell *matCellDef="let s">
 
-                            <span *ngIf="s.current" class="badge current">
+                            <div class="device-cell">
 
-                                Current Session
+                                <div class="device-name">
+                                    {{ s.deviceName || 'Unknown Device' }}
+                                </div>
 
-                            </span>
+                                <div class="device-badges">
 
-                            <span *ngIf="s.currentDevice" class="badge device">
+                                    <span *ngIf="s.current" class="badge current">
 
-                                Current Device
+                                        Current Session
 
-                            </span>
+                                    </span>
 
-                        </div>
+                                    <span *ngIf="s.currentDevice" class="badge device">
 
-                    </td>
+                                        Current Device
 
-                </ng-container>
+                                    </span>
 
-                <ng-container matColumnDef="branch">
+                                </div>
 
-                    <th mat-header-cell *matHeaderCellDef>
-                        Branch
-                    </th>
+                            </div>
 
-                    <td mat-cell *matCellDef="let s">
-                        {{ s.branchName }}
-                    </td>
+                        </td>
 
-                </ng-container>
+                    </ng-container>
 
-                <ng-container matColumnDef="browser">
+                    <!-- BRANCH -->
 
-                    <th mat-header-cell *matHeaderCellDef>
-                        Browser
-                    </th>
+                    <ng-container matColumnDef="branch">
 
-                    <td mat-cell *matCellDef="let s">
-                        {{ s.browserName }}
-                    </td>
+                        <th mat-header-cell *matHeaderCellDef>
+                            Branch
+                        </th>
 
-                </ng-container>
+                        <td mat-cell *matCellDef="let s">
+                            {{ s.branchName }}
+                        </td>
 
-                <ng-container matColumnDef="os">
+                    </ng-container>
 
-                    <th mat-header-cell *matHeaderCellDef>
-                        OS
-                    </th>
+                    <!-- BROWSER -->
 
-                    <td mat-cell *matCellDef="let s">
-                        {{ s.osName }}
-                    </td>
+                    <ng-container matColumnDef="browser">
 
-                </ng-container>
+                        <th mat-header-cell *matHeaderCellDef>
+                            Browser
+                        </th>
 
-                <ng-container matColumnDef="platform">
+                        <td mat-cell *matCellDef="let s">
+                            {{ s.browserName }}
+                        </td>
 
-                    <th mat-header-cell *matHeaderCellDef>
-                        Platform
-                    </th>
+                    </ng-container>
 
-                    <td mat-cell *matCellDef="let s">
-                        {{ s.platform }}
-                    </td>
+                    <!-- OS -->
 
-                </ng-container>
+                    <ng-container matColumnDef="os">
 
-                <ng-container matColumnDef="ip">
+                        <th mat-header-cell *matHeaderCellDef>
+                            OS
+                        </th>
 
-                    <th mat-header-cell *matHeaderCellDef>
-                        IP
-                    </th>
+                        <td mat-cell *matCellDef="let s">
+                            {{ s.osName }}
+                        </td>
 
-                    <td mat-cell *matCellDef="let s">
-                        {{ s.ipAddress }}
-                    </td>
+                    </ng-container>
 
-                </ng-container>
+                    <!-- PLATFORM -->
 
-                <ng-container matColumnDef="login">
+                    <ng-container matColumnDef="platform">
 
-                    <th mat-header-cell *matHeaderCellDef>
-                        Login
-                    </th>
+                        <th mat-header-cell *matHeaderCellDef>
+                            Platform
+                        </th>
 
-                    <td mat-cell *matCellDef="let s">
+                        <td mat-cell *matCellDef="let s">
+                            {{ s.platform }}
+                        </td>
 
-                        {{ s.loginTime | date:'medium' }}
+                    </ng-container>
 
-                    </td>
+                    <!-- IP -->
 
-                </ng-container>
+                    <ng-container matColumnDef="ip">
 
-                <ng-container matColumnDef="actions">
+                        <th mat-header-cell *matHeaderCellDef>
+                            IP Address
+                        </th>
 
-                    <th mat-header-cell *matHeaderCellDef>
-                        Actions
-                    </th>
+                        <td mat-cell *matCellDef="let s">
+                            {{ s.ipAddress }}
+                        </td>
 
-                    <td mat-cell *matCellDef="let s">
+                    </ng-container>
 
-                        <button *ngIf="!s.current" mat-icon-button matTooltip="Terminate Session"
-                            [disabled]="actionBusy" (click)="logoutSession(s)">
+                    <!-- LOGIN -->
 
-                            <mat-icon *ngIf="busyTokenId !== s.tokenId">
-                                logout
+                    <ng-container matColumnDef="login">
+
+                        <th mat-header-cell *matHeaderCellDef>
+                            Login Time
+                        </th>
+
+                        <td mat-cell *matCellDef="let s">
+                            {{ s.loginTime | date:'medium' }}
+                        </td>
+
+                    </ng-container>
+
+                    <!-- ACTIONS -->
+
+                    <ng-container matColumnDef="actions">
+
+                        <th mat-header-cell *matHeaderCellDef>
+                            Actions
+                        </th>
+
+                        <td mat-cell *matCellDef="let s">
+
+                            <button *ngIf="!s.current" mat-icon-button matTooltip="Terminate Session"
+                                [disabled]="actionBusy" (click)="logoutSession(s)">
+
+                                <mat-icon *ngIf="busyTokenId !== s.tokenId">
+
+                                    logout
+
+                                </mat-icon>
+
+                                <mat-icon *ngIf="busyTokenId === s.tokenId" class="spin">
+
+                                    autorenew
+
+                                </mat-icon>
+
+                            </button>
+
+                            <mat-icon *ngIf="s.current" matTooltip="Current Session">
+
+                                verified_user
+
                             </mat-icon>
 
-                            <mat-icon *ngIf="busyTokenId === s.tokenId" class="spin">
+                        </td>
 
-                                autorenew
+                    </ng-container>
 
-                            </mat-icon>
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns">
+                    </tr>
 
-                        </button>
+                    <tr mat-row *matRowDef="
+                            let row;
+                            columns: displayedColumns
+                        ">
+                    </tr>
 
-                        <mat-icon *ngIf="s.current" matTooltip="Current Session">
+                </table>
 
-                            verified_user
-
-                        </mat-icon>
-
-                    </td>
-
-                </ng-container>
-
-                <tr mat-header-row *matHeaderRowDef="displayedColumns">
-                </tr>
-
-                <tr mat-row *matRowDef="
-            let row;
-            columns: displayedColumns
-          ">
-                </tr>
-
-            </table>
+            </div>
 
             <mat-paginator [length]="total" [pageSize]="size" [pageSizeOptions]="[
-          10,
-          25,
-          50
-        ]" showFirstLastButtons (page)="changePage($event)">
+                    10,
+                    25,
+                    50
+                ]" showFirstLastButtons (page)="changePage($event)">
             </mat-paginator>
 
         </div>

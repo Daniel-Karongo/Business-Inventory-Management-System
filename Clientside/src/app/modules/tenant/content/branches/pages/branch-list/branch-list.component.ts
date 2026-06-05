@@ -424,6 +424,135 @@ export class BranchListComponent implements OnInit {
     this.selectedIds.clear();
   }
 
+  get bulkState(): 'none' | 'active' | 'deleted' | 'mixed' {
+
+    if (this.selectedIds.size === 0) {
+      return 'none';
+    }
+
+    const selected =
+      this.branches.filter(
+        b => this.selectedIds.has(b.id)
+      );
+
+    const deletedCount =
+      selected.filter(b => b.deleted).length;
+
+    if (deletedCount === 0) {
+      return 'active';
+    }
+
+    if (deletedCount === selected.length) {
+      return 'deleted';
+    }
+
+    return 'mixed';
+  }
+
+  private getSelectedBranches(): BranchListItemDTO[] {
+
+    return this.branches.filter(
+      b => this.selectedIds.has(b.id)
+    );
+  }
+
+  bulkDelete(): void {
+
+    const ids =
+      this.getSelectedBranches()
+        .map(b => b.id);
+
+    if (ids.length === 0) {
+      return;
+    }
+
+    const ref = this.dialog.open(
+      ConfirmDialogComponent,
+      {
+        data: {
+          title: 'Delete Branches',
+          message: `Delete ${ids.length} branches?`
+        }
+      }
+    );
+
+    ref.afterClosed()
+      .subscribe(ok => {
+
+        if (!ok) {
+          return;
+        }
+
+        this.branchService
+          .deleteBulk(ids, true)
+          .subscribe(() => {
+
+            this.clearSelection();
+
+            this.load();
+          });
+      });
+  }
+
+  bulkRestore(): void {
+
+    const ids =
+      this.getSelectedBranches()
+        .map(b => b.id);
+
+    if (ids.length === 0) {
+      return;
+    }
+
+    this.branchService
+      .restoreBulk(ids)
+      .subscribe(() => {
+
+        this.clearSelection();
+
+        this.load();
+      });
+  }
+
+  bulkHardDelete(): void {
+
+    const ids =
+      this.getSelectedBranches()
+        .map(b => b.id);
+
+    if (ids.length === 0) {
+      return;
+    }
+
+    const ref = this.dialog.open(
+      ConfirmDialogComponent,
+      {
+        data: {
+          title: 'Permanently Delete Branches',
+          message:
+            `Permanently delete ${ids.length} branches? This cannot be undone.`
+        }
+      }
+    );
+
+    ref.afterClosed()
+      .subscribe(ok => {
+
+        if (!ok) {
+          return;
+        }
+
+        this.branchService
+          .deleteBulk(ids, false)
+          .subscribe(() => {
+
+            this.clearSelection();
+
+            this.load();
+          });
+      });
+  }
+
   /* =========================================================
      BULK IMPORT
   ========================================================= */
@@ -475,7 +604,7 @@ export class BranchListComponent implements OnInit {
           .delete(branch.id, true)
           .subscribe(() => {
 
-            this.selectedIds.delete(branch.id);
+            this.clearSelection();
 
             this.load();
           });
@@ -486,12 +615,59 @@ export class BranchListComponent implements OnInit {
      RESTORE
   ========================================================= */
 
-  restore(branch: BranchListItemDTO): void {
+  restore(
+    branch: BranchListItemDTO
+  ): void {
 
     this.branchService
       .restore(branch.id)
       .subscribe(() => {
+
+        this.selectedIds.delete(
+          branch.id
+        );
+
         this.load();
+      });
+  }
+
+  /* =========================================================
+     HARD DELETE
+  ========================================================= */
+
+  hardDelete(
+    branch: BranchListItemDTO
+  ): void {
+
+    const ref = this.dialog.open(
+      ConfirmDialogComponent,
+      {
+        data: {
+          title: 'Permanent Delete Branch',
+          message:
+            `Permanently delete ${branch.name}? This action cannot be undone.`
+        }
+      }
+    );
+
+    ref.afterClosed()
+      .subscribe(ok => {
+
+        if (!ok) {
+          return;
+        }
+
+        this.branchService
+          .delete(
+            branch.id,
+            false
+          )
+          .subscribe(() => {
+
+            this.clearSelection();
+
+            this.load();
+          });
       });
   }
 
@@ -505,16 +681,6 @@ export class BranchListComponent implements OnInit {
   ): string {
 
     return item.id;
-  }
-
-  getAttendanceState(
-    branch: BranchListItemDTO
-  ): string {
-
-    return branch.enforceGeofence ||
-      branch.enforceDevice
-      ? 'Configured'
-      : 'Basic';
   }
 
   /* =========================================================

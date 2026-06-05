@@ -44,22 +44,6 @@
 
                     </div>
 
-                    <div class="meta-chip">
-
-                        <mat-icon>
-                            account_balance_wallet
-                        </mat-icon>
-
-                        <span>
-
-                            {{
-                            vatCreditTreatment
-                            }}
-
-                        </span>
-
-                    </div>
-
                 </div>
 
             </div>
@@ -163,28 +147,6 @@
 
                     </mat-select>
 
-                </mat-form-field>
-
-                <mat-form-field>
-                    <mat-label>
-                        VAT Credit Treatment
-                    </mat-label>
-
-                    <mat-select [(ngModel)]="vatCreditTreatment">
-
-                        <mat-option value="CARRY_FORWARD">
-                            Carry Forward
-                        </mat-option>
-
-                        <mat-option value="REFUND">
-                            Refund
-                        </mat-option>
-
-                        <mat-option value="BOTH">
-                            Carry Forward And Refund
-                        </mat-option>
-
-                    </mat-select>
                 </mat-form-field>
 
             </div>

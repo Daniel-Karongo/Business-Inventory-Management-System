@@ -123,15 +123,32 @@
     <div *ngIf="selectedIds.size > 0" class="bulk-bar">
 
       <span class="bulk-count">
-
         {{ selectedIds.size }} selected
+      </span>
 
+      <button *ngIf="bulkState === 'active'" mat-stroked-button color="warn" (click)="bulkDelete()">
+
+        Delete
+      </button>
+
+      <button *ngIf="bulkState === 'deleted'" mat-stroked-button color="primary" (click)="bulkRestore()">
+
+        Restore
+      </button>
+
+      <button *ngIf="bulkState === 'deleted'" mat-flat-button color="warn" (click)="bulkHardDelete()">
+
+        Hard Delete
+      </button>
+
+      <span *ngIf="bulkState === 'mixed'" class="bulk-error">
+
+        Bulk actions cannot be performed on branches with different deleted statuses.
       </span>
 
       <button mat-button class="cancel-selection" (click)="clearSelection()">
 
-        Clear Selection
-
+        Cancel Selection
       </button>
 
     </div>
@@ -192,14 +209,6 @@
         <div *ngFor="let branch of branches; trackBy: trackById" class="branch-card"
           [class.selected]="isSelected(branch.id)" [class.deleted]="branch.deleted" (click)="toggleSelection(branch)">
 
-          <!-- STATUS -->
-
-          <div *ngIf="branch.deleted" class="status-overlay">
-
-            DELETED
-
-          </div>
-
           <!-- CONTENT -->
 
           <div class="card-content">
@@ -224,11 +233,7 @@
 
               <span class="status-pill" [class.deleted]="branch.deleted">
 
-                {{
-                branch.deleted
-                ? 'Deleted'
-                : 'Active'
-                }}
+                {{ branch.deleted ? 'DELETED' : 'ACTIVE' }}
 
               </span>
 
@@ -241,37 +246,48 @@
               </mat-icon>
 
               <span>
-                {{ branch.location || 'No location' }}
+                {{ branch.location || 'No location configured' }}
               </span>
 
             </div>
 
-            <div class="card-indicators">
+            <div class="contact-grid">
 
-              <span class="indicator-chip" [class.active]="branch.enforceGeofence">
+              <div class="contact-item">
 
-                Geofence
+                <mat-icon>
+                  email
+                </mat-icon>
 
-              </span>
+                <span class="contact-value" [matTooltip]="branch.email">
 
-              <span class="indicator-chip" [class.active]="branch.enforceDevice">
+                  {{ branch.email || 'No email configured' }}
 
-                Device
+                </span>
 
-              </span>
+              </div>
+
+              <div class="contact-item">
+
+                <mat-icon>
+                  phone
+                </mat-icon>
+
+                <span class="contact-value">
+
+                  {{ branch.phone || 'No phone configured' }}
+
+                </span>
+
+              </div>
 
             </div>
 
             <div class="card-footer">
 
-              <div class="attendance-state">
-
-                {{ getAttendanceState(branch) }}
-
-              </div>
-
               <div class="created-date">
 
+                Created
                 {{
                 branch.createdAt
                 | date:'mediumDate'
@@ -287,37 +303,54 @@
 
           <div class="card-actions" (click)="$event.stopPropagation()">
 
-            <button mat-icon-button [routerLink]="[branch.id, 'overview']" matTooltip="Open Workspace">
+            <button mat-button [routerLink]="[branch.id, 'overview']">
 
               <mat-icon>
                 visibility
               </mat-icon>
 
+              Open
+
             </button>
 
-            <button mat-icon-button [routerLink]="[branch.id, 'edit']" matTooltip="Edit">
+            <button mat-button [routerLink]="[branch.id, 'edit']">
 
               <mat-icon>
                 edit
               </mat-icon>
 
+              Edit
+
             </button>
 
-            <button *ngIf="!branch.deleted" mat-icon-button color="warn" [disabled]="branch.branchCode === 'MAIN'"
-              (click)="delete(branch)" matTooltip="Delete">
+            <button *ngIf="!branch.deleted" mat-button color="warn" [disabled]="branch.branchCode === 'MAIN'"
+              (click)="delete(branch)">
 
               <mat-icon>
                 delete
               </mat-icon>
 
+              Delete
+
             </button>
 
-            <button *ngIf="branch.deleted" mat-icon-button color="primary" (click)="restore(branch)"
-              matTooltip="Restore">
+            <button *ngIf="branch.deleted" mat-button class="restore-btn" (click)="restore(branch)">
 
               <mat-icon>
                 restore
               </mat-icon>
+
+              Restore
+
+            </button>
+
+            <button *ngIf="branch.deleted" mat-button class="hard-delete-btn" (click)="hardDelete(branch)">
+
+              <mat-icon>
+                delete_forever
+              </mat-icon>
+
+              Delete Permanently
 
             </button>
 
@@ -476,27 +509,13 @@
 
             <th mat-header-cell *matHeaderCellDef>
 
-              Security
+              Email address
 
             </th>
 
             <td mat-cell *matCellDef="let branch">
 
-              <div class="indicator-group">
-
-                <span class="indicator-chip" [class.active]="branch.enforceGeofence">
-
-                  Geofence
-
-                </span>
-
-                <span class="indicator-chip" [class.active]="branch.enforceDevice">
-
-                  Device
-
-                </span>
-
-              </div>
+              {{ branch.email || '—' }}
 
             </td>
 
@@ -508,17 +527,13 @@
 
             <th mat-header-cell *matHeaderCellDef>
 
-              Attendance
+              Phone number
 
             </th>
 
             <td mat-cell *matCellDef="let branch">
 
-              <div class="attendance-state">
-
-                {{ getAttendanceState(branch) }}
-
-              </div>
+              {{ branch.phone || '—' }}
 
             </td>
 
@@ -599,7 +614,7 @@
 
             </th>
 
-            <td mat-cell *matCellDef="let branch" class="actions-cell">
+            <td mat-cell *matCellDef="let branch" class="actions-cell" (click)="$event.stopPropagation()">
 
               <button mat-icon-button [routerLink]="[branch.id, 'overview']" matTooltip="Open Workspace">
 
@@ -626,11 +641,20 @@
 
               </button>
 
-              <button *ngIf="branch.deleted" mat-icon-button color="primary" (click)="restore(branch)"
+              <button *ngIf="branch.deleted" mat-icon-button class="restore-icon-btn" (click)="restore(branch)"
                 matTooltip="Restore">
 
                 <mat-icon>
                   restore
+                </mat-icon>
+
+              </button>
+
+              <button *ngIf="branch.deleted" mat-icon-button class="hard-delete-icon-btn" (click)="hardDelete(branch)"
+                matTooltip="Delete Permanently">
+
+                <mat-icon>
+                  delete_forever
                 </mat-icon>
 
               </button>

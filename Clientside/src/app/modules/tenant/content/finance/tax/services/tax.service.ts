@@ -126,11 +126,6 @@ export class TaxService {
       vatEnabled: boolean;
       vatRate: number;
       corporateTaxRate: number;
-
-      vatCreditTreatment:
-      | 'CARRY_FORWARD'
-      | 'REFUND'
-      | 'BOTH';
     }
   ) {
     return this.http.post(
@@ -148,10 +143,7 @@ export class TaxService {
             payload.vatRate,
 
           corporateTaxRate:
-            payload.corporateTaxRate,
-
-          vatCreditTreatment:
-            payload.vatCreditTreatment
+            payload.corporateTaxRate
         }
       }
     );

@@ -35,6 +35,8 @@ public class BranchDetailsDTO {
 
     private Boolean enforceDevice;
 
+    private Integer maxActiveSessionsPerUser;
+
     private LocalTime rollcallStartTime;
 
     private Integer rollcallGraceMinutes;

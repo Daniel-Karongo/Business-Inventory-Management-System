@@ -2,7 +2,6 @@ package com.IntegrityTechnologies.business_manager.modules.finance.tax.base.serv
 
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.model.TaxSystemState;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.model.enums.VatCreditTreatment;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.repository.TaxSystemStateRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
@@ -44,7 +43,6 @@ public class TaxSystemStateService {
                     state.setPricesVatInclusive(defaults.isPricesVatInclusive());
                     state.setVatRate(defaults.getVatRate());
                     state.setCorporateTaxRate(defaults.getCorporateTaxRate());
-                    state.setVatCreditTreatment(VatCreditTreatment.CARRY_FORWARD);
                     state.setLocked(false);
 
                     return repository.save(state);

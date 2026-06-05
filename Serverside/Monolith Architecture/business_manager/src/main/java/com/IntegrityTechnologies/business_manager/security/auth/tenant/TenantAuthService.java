@@ -29,8 +29,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TenantAuthService {
 
-    private static final int MAX_ACTIVE_SESSIONS = 3;
-
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RollcallService rollcallService;
@@ -163,7 +161,9 @@ public class TenantAuthService {
                         )
                         .size();
 
-        if (activeCount >= MAX_ACTIVE_SESSIONS) {
+        int maxSessionsPerUserInBranch = branch.getMaxActiveSessionsPerUser();
+
+        if (activeCount >= maxSessionsPerUserInBranch) {
             throw new AppSecurityException(
                     SecurityErrorCode.DEVICE_LIMIT_REACHED,
                     "Maximum active sessions reached. Review active sessions and terminate one to continue."
@@ -348,7 +348,9 @@ public class TenantAuthService {
                         )
                         .size();
 
-        if (activeCount >= MAX_ACTIVE_SESSIONS) {
+        int maxSessionsPerUserInBranch = branch.getMaxActiveSessionsPerUser();
+
+        if (activeCount >= maxSessionsPerUserInBranch) {
             throw new AppSecurityException(
                     SecurityErrorCode.DEVICE_LIMIT_REACHED,
                     "Maximum active sessions reached. Review active sessions and terminate one to continue."

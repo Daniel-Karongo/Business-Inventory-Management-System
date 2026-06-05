@@ -116,6 +116,7 @@ public class BranchService {
                 .enforceDevice(Boolean.TRUE.equals(request.getEnforceDevice()))
                 .rollcallStartTime(request.getRollcallStartTime())
                 .rollcallGraceMinutes(request.getRollcallGraceMinutes())
+                .maxActiveSessionsPerUser(request.getMaxActiveSessionsPerUser())
                 .logoutTime(request.getLogoutTime())
                 .deleted(false)
                 .build();
@@ -288,13 +289,9 @@ public class BranchService {
         branch.setLongitude(request.getLongitude());
         branch.setRadiusMeters(request.getRadiusMeters());
 
-        branch.setEnforceGeofence(
-                Boolean.TRUE.equals(request.getEnforceGeofence())
-        );
-
-        branch.setEnforceDevice(
-                Boolean.TRUE.equals(request.getEnforceDevice())
-        );
+        branch.setEnforceGeofence(Boolean.TRUE.equals(request.getEnforceGeofence()));
+        branch.setEnforceDevice(Boolean.TRUE.equals(request.getEnforceDevice()));
+        branch.setMaxActiveSessionsPerUser(request.getMaxActiveSessionsPerUser());
 
         branch.setRollcallStartTime(
                 request.getRollcallStartTime()
@@ -447,6 +444,15 @@ public class BranchService {
                 authentication
         );
 
+        updateSecurityField(
+                branch,
+                "maxActiveSessionsPerUser",
+                branch.getMaxActiveSessionsPerUser(),
+                request.getMaxActiveSessionsPerUser(),
+                branch::setMaxActiveSessionsPerUser,
+                authentication
+        );
+
         branchRepository.save(branch);
 
         invalidateBranchCacheAfterCommit();
@@ -493,6 +499,13 @@ public class BranchService {
             );
 
         } else {
+
+            if (!branch.isDeleted()) {
+
+                throw new IllegalStateException(
+                        "Branch must be soft deleted before permanent deletion."
+                );
+            }
 
             userBranchRepository.deleteByBranchId(
                     tenantId(),
@@ -594,18 +607,27 @@ public class BranchService {
                     TaxSystemState.builder()
                             .tenantId(tenantId())
                             .branchId(branch.getId())
+
                             .taxMode(
                                     taxProperties.getBusinessTaxMode()
                             )
+
                             .vatEnabled(
                                     taxProperties.isVatEnabled()
                             )
+
+                            .pricesVatInclusive(
+                                    taxProperties.isPricesVatInclusive()
+                            )
+
                             .vatRate(
                                     taxProperties.getVatRate()
                             )
+
                             .corporateTaxRate(
                                     taxProperties.getCorporateTaxRate()
                             )
+
                             .locked(false)
                             .build()
             );

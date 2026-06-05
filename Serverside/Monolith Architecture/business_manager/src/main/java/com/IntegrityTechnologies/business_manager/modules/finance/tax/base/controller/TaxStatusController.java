@@ -56,7 +56,6 @@ public class TaxStatusController {
                     null,
                     null,
                     null,
-                    lastFiling,
                     false
             );
         }
@@ -65,7 +64,6 @@ public class TaxStatusController {
                 state.isVatEnabled(),
                 state.getVatRate(),
                 state.getCorporateTaxRate(),
-                state.getVatCreditTreatment(),
                 lastFiling,
                 state.isLocked()
         );

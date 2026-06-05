@@ -23,8 +23,8 @@ public class BranchMapper {
                 .location(branch.getLocation())
                 .deleted(branch.isDeleted())
                 .createdAt(branch.getCreatedAt())
-                .enforceGeofence(branch.getEnforceGeofence())
-                .enforceDevice(branch.getEnforceDevice())
+                .email(branch.getEmail())
+                .phone(branch.getPhone())
                 .build();
     }
 
@@ -45,6 +45,7 @@ public class BranchMapper {
                 .radiusMeters(branch.getRadiusMeters())
                 .enforceGeofence(branch.getEnforceGeofence())
                 .enforceDevice(branch.getEnforceDevice())
+                .maxActiveSessionsPerUser(branch.getMaxActiveSessionsPerUser())
                 .rollcallStartTime(branch.getRollcallStartTime())
                 .rollcallGraceMinutes(branch.getRollcallGraceMinutes())
                 .logoutTime(branch.getLogoutTime())

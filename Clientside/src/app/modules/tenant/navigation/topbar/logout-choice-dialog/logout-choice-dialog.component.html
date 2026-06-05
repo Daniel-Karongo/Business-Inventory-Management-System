@@ -1,127 +1,188 @@
 <div class="dialog-shell">
 
+  <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
   <div class="header">
 
-    <div class="title">
-      Active Sessions
+    <div class="header-icon">
+      <mat-icon>
+        devices
+      </mat-icon>
     </div>
 
-    <div class="subtitle">
-      Manage your active sessions
-      across devices.
+    <div class="header-content">
+
+      <div class="title">
+        Active Sessions
+      </div>
+
+      <div class="subtitle">
+        Manage your active sessions across devices and locations.
+      </div>
+
     </div>
 
   </div>
 
-  <div class="loading" *ngIf="loading">
+  <!-- =====================================================
+         CONTENT
+    ====================================================== -->
 
-    Loading sessions...
+  <div class="content">
+
+    <div *ngIf="loading" class="loading">
+
+      Loading sessions...
+
+    </div>
+
+    <ng-container *ngIf="!loading">
+
+      <!-- CURRENT SESSION -->
+
+      <div *ngIf="currentSession" class="current-session-section">
+
+        <div class="section-title">
+          Current Session
+        </div>
+
+        <div class="current-card">
+
+          <div class="current-top">
+
+            <div>
+
+              <div class="device-name">
+                {{ currentSession.deviceName }}
+              </div>
+
+              <div class="device-subtitle">
+                This device is currently being used.
+              </div>
+
+            </div>
+
+            <div class="current-badge">
+              Active
+            </div>
+
+          </div>
+
+          <div class="session-grid">
+
+            <div class="info">
+              <div class="label">Branch</div>
+              <div class="value">
+                {{ currentSession.branchName }}
+              </div>
+            </div>
+
+            <div class="info">
+              <div class="label">Browser</div>
+              <div class="value">
+                {{ currentSession.browserName }}
+              </div>
+            </div>
+
+            <div class="info">
+              <div class="label">Operating System</div>
+              <div class="value">
+                {{ currentSession.osName }}
+              </div>
+            </div>
+
+            <div class="info">
+              <div class="label">IP Address</div>
+              <div class="value">
+                {{ currentSession.ipAddress }}
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- OTHER SESSIONS -->
+
+      <div *ngIf="otherSessions.length" class="other-session-section">
+
+        <div class="section-title">
+          Other Active Sessions
+        </div>
+
+        <div class="session-card" *ngFor="let session of otherSessions">
+
+          <div class="card-header">
+
+            <div>
+
+              <div class="device-name">
+                {{ session.deviceName }}
+              </div>
+
+              <div class="device-subtitle">
+                {{ session.loginTime | date:'medium' }}
+              </div>
+
+            </div>
+
+          </div>
+
+          <div class="session-grid">
+
+            <div class="info">
+              <div class="label">Branch</div>
+              <div class="value">
+                {{ session.branchName }}
+              </div>
+            </div>
+
+            <div class="info">
+              <div class="label">Browser</div>
+              <div class="value">
+                {{ session.browserName }}
+              </div>
+            </div>
+
+            <div class="info">
+              <div class="label">Operating System</div>
+              <div class="value">
+                {{ session.osName }}
+              </div>
+            </div>
+
+            <div class="info">
+              <div class="label">IP Address</div>
+              <div class="value">
+                {{ session.ipAddress }}
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div *ngIf="sessions.length === 1" class="empty-state">
+
+        No additional active sessions detected.
+
+      </div>
+
+    </ng-container>
 
   </div>
 
-  <ng-container *ngIf="!loading">
+  <!-- =====================================================
+         FOOTER
+    ====================================================== -->
 
-    <div class="empty-state" *ngIf="sessions.length === 1">
-
-      Only your current session is active.
-
-    </div>
-
-    <div class="section" *ngIf="currentSession">
-
-      <div class="section-title">
-
-        Current Session
-
-      </div>
-
-      <div class="session-card current">
-
-        <div class="device">
-
-          {{ currentSession.deviceName }}
-
-        </div>
-
-        <div class="meta">
-
-          {{ currentSession.branchName }}
-
-        </div>
-
-        <div class="meta">
-
-          {{ currentSession.browserName }}
-          /
-          {{ currentSession.osName }}
-
-        </div>
-
-        <div class="meta">
-
-          {{ currentSession.ipAddress }}
-
-        </div>
-
-      </div>
-
-    </div>
-
-    <div class="section" *ngIf="otherSessions.length">
-
-      <div class="section-title">
-
-        Other Active Sessions
-
-      </div>
-
-      <div class="session-card" *ngFor="
-          let session
-          of otherSessions
-        ">
-
-        <div class="device">
-
-          {{ session.deviceName }}
-
-        </div>
-
-        <div class="meta">
-
-          {{ session.branchName }}
-
-        </div>
-
-        <div class="meta">
-
-          {{ session.browserName }}
-          /
-          {{ session.osName }}
-
-        </div>
-
-        <div class="meta">
-
-          {{ session.ipAddress }}
-
-        </div>
-
-        <div class="meta">
-
-          {{
-          session.loginTime
-          | date:'medium'
-          }}
-
-        </div>
-
-      </div>
-
-    </div>
-
-  </ng-container>
-
-  <div class="actions">
+  <div class="footer">
 
     <button mat-stroked-button (click)="logoutCurrent()">
 

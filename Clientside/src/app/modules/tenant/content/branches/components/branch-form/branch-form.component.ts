@@ -113,7 +113,10 @@ export class BranchFormComponent implements OnInit {
                 this.initial.phone ?? '',
 
             email:
-                this.initial.email ?? ''
+                this.initial.email ?? '',
+
+            maxActiveSessionsPerUser:
+                this.initial.maxActiveSessionsPerUser ?? 4
         });
     }
 
@@ -156,6 +159,13 @@ export class BranchFormComponent implements OnInit {
                 [
                     Validators.email,
                     Validators.maxLength(120)
+                ]
+            ],
+
+            maxActiveSessionsPerUser: [
+                4,
+                [
+                    Validators.min(1)
                 ]
             ]
         });

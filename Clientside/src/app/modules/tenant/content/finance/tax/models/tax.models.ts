@@ -2,10 +2,6 @@ export interface TaxStatus {
     vatEnabled: boolean;
     vatRate: number;
     corporateTaxRate: number;
-    vatCreditTreatment:
-    | 'CARRY_FORWARD'
-    | 'REFUND'
-    | 'BOTH';
     lastAccrualDate: string | null;
     locked: boolean;
 }
@@ -20,10 +16,6 @@ export interface TaxSystemState {
     pricesVatInclusive: boolean;
     vatRate: number;
     corporateTaxRate: number;
-    vatCreditTreatment:
-    | 'CARRY_FORWARD'
-    | 'REFUND'
-    | 'BOTH';
     locked: boolean;
     lockedAt?: string | null;
     branchId: string;

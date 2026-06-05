@@ -646,6 +646,11 @@ body.dark .enterprise-dialog .mat-mdc-dialog-surface {
   scrollbar-width: thin;
 }
 
+.enterprise-dialog .mat-mdc-dialog-content {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* =========================================================
    ENTERPRISE DIALOG MOBILE FIXES
 ========================================================= */

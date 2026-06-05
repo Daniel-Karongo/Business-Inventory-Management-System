@@ -117,7 +117,9 @@ export class BranchSecurityComponent
 
     enforceGeofence: [false],
 
-    enforceDevice: [false]
+    enforceDevice: [false],
+
+    maxActiveSessionsPerUser: [4]
   });
 
   ngOnInit(): void {
@@ -140,10 +142,9 @@ export class BranchSecurityComponent
             latitude: branch.latitude,
             longitude: branch.longitude,
             radiusMeters: branch.radiusMeters,
-            enforceGeofence:
-              branch.enforceGeofence,
-            enforceDevice:
-              branch.enforceDevice
+            enforceGeofence: branch.enforceGeofence,
+            enforceDevice: branch.enforceDevice,
+            maxActiveSessionsPerUser: branch.maxActiveSessionsPerUser
           });
 
           this.loading = false;
@@ -241,7 +242,10 @@ export class BranchSecurityComponent
         this.form.getRawValue().enforceGeofence,
 
       enforceDevice:
-        this.form.getRawValue().enforceDevice
+        this.form.getRawValue().enforceDevice,
+
+      maxActiveSessionsPerUser:
+        this.form.getRawValue().maxActiveSessionsPerUser
     };
 
     this.branchService
@@ -260,12 +264,10 @@ export class BranchSecurityComponent
           this.form.patchValue({
             latitude: branch.latitude,
             longitude: branch.longitude,
-            radiusMeters:
-              branch.radiusMeters,
-            enforceGeofence:
-              branch.enforceGeofence,
-            enforceDevice:
-              branch.enforceDevice
+            radiusMeters: branch.radiusMeters,
+            enforceGeofence: branch.enforceGeofence,
+            enforceDevice: branch.enforceDevice,
+            maxActiveSessionsPerUser: branch.maxActiveSessionsPerUser
           });
 
           this.form.markAsPristine();

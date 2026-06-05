@@ -1,10 +1,11 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.tax.base.model;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.model.BusinessTaxMode;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.model.enums.VatCreditTreatment;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.BranchAwareEntity;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
@@ -32,11 +33,6 @@ public class TaxSystemState extends BranchAwareEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private BusinessTaxMode taxMode;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private VatCreditTreatment vatCreditTreatment =
-            VatCreditTreatment.CARRY_FORWARD;
 
     @Column(nullable = false)
     private boolean vatEnabled;

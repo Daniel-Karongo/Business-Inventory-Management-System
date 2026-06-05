@@ -76,6 +76,12 @@
   color: var(--active);
 }
 
+.bulk-error {
+  color: #dc2626;
+  font-size: .85rem;
+  font-weight: 600;
+}
+
 .cancel-selection {
   margin-left: auto;
 }
@@ -121,27 +127,31 @@
 
 .branch-grid {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 
-  grid-template-columns: 1fr;
+  grid-template-columns:
+    repeat(auto-fill,
+      minmax(min(100%, 320px),
+        1fr));
 }
 
-@media (min-width: 640px) {
-
-  .branch-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.branch-grid.compact {
+  grid-template-columns:
+    repeat(auto-fill,
+      minmax(min(100%, 260px),
+        1fr));
 }
 
-@media (min-width: 1024px) {
+.branch-grid.comfortable {
+  grid-template-columns:
+    repeat(auto-fill,
+      minmax(min(100%, 340px),
+        1fr));
+}
 
-  .branch-grid.compact {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .branch-grid.comfortable {
-    grid-template-columns: repeat(3, 1fr);
-  }
+.branch-grid {
+  width: 100%;
+  min-width: 0;
 }
 
 /* =========================================================
@@ -153,21 +163,52 @@
 
   display: flex;
   flex-direction: column;
-  gap: 14px;
 
-  padding: 14px;
+  gap: 16px;
 
-  border-radius: 12px;
+  padding: 18px;
+
+  border-radius: 14px;
 
   border: 1px solid var(--border);
 
   background: var(--surface);
 
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, .05);
+
   transition:
-    transform 140ms ease,
-    box-shadow 140ms ease,
-    border-color 140ms ease,
-    background-color 140ms ease;
+    transform .15s ease,
+    box-shadow .15s ease,
+    border-color .15s ease;
+
+  overflow: hidden;
+
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.branch-card::before {
+  content: '';
+
+  position: absolute;
+
+  left: 0;
+  top: 0;
+  bottom: 0;
+
+  width: 4px;
+
+  background: #2563eb;
+
+  opacity: 0;
+
+  transition: opacity .15s ease;
+}
+
+.branch-card:hover::before {
+  opacity: 1;
 }
 
 .branch-card:hover {
@@ -190,28 +231,11 @@
   opacity: 0.82;
 }
 
-/* =========================================================
-   CARD STATUS OVERLAY
-========================================================= */
-
-.status-overlay {
-  position: absolute;
-
-  top: 10px;
-  right: 10px;
-
-  padding: 3px 8px;
-
-  border-radius: 999px;
-
-  font-size: 10px;
-  font-weight: 700;
-
-  letter-spacing: 0.4px;
-
-  color: #991b1b;
-
-  background: #fee2e2;
+.branch-card.deleted::before {
+  opacity: 1;
+  background: linear-gradient(to bottom,
+      #ef4444,
+      #dc2626);
 }
 
 /* =========================================================
@@ -272,24 +296,63 @@
   font-size: 16px;
 }
 
-.card-indicators {
+.contact-grid {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  min-width: 0;
+
+  color: var(--text-secondary);
+}
+
+.contact-item mat-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+
+  flex-shrink: 0;
+
+  color: var(--text-secondary);
+}
+
+.contact-value {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-
   margin-top: auto;
+
+  padding-top: 12px;
+
+  border-top: 1px solid var(--border);
+
+  display: flex;
+  justify-content: flex-start;
 }
 
 .created-date {
-  font-size: 0.72rem;
+  font-size: .75rem;
+  font-weight: 500;
+
   color: var(--text-secondary);
+}
+
+.card-content,
+.contact-grid,
+.contact-item,
+.card-title-group {
+  min-width: 0;
 }
 
 /* =========================================================
@@ -299,24 +362,87 @@
 .card-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
 }
 
 .card-actions button {
-  opacity: 0.78;
-
-  transition:
-    opacity 120ms ease,
-    transform 120ms ease;
-}
-
-.branch-card:hover .card-actions button {
+  min-width: auto;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
   opacity: 1;
+  font-size: 13px;
+  font-weight: 500;
+  background: transparent;
+  border: 1px solid transparent;
+  transition:
+    background-color .15s ease,
+    border-color .15s ease,
+    transform .15s ease;
 }
 
 .card-actions button:hover {
   transform: translateY(-1px);
+}
+
+.card-actions button mat-icon {
+  margin-right: 6px;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.card-actions button:not([color="warn"]) {
+  color: #2563eb;
+}
+
+.card-actions button:not([color="warn"]):hover {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.15);
+}
+
+.card-actions button[color="warn"] {
+  color: #dc2626;
+}
+
+.card-actions button[color="warn"]:hover {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.15);
+}
+
+.card-actions button[disabled] {
+  opacity: 0.45;
+  background: transparent;
+  border-color: transparent;
+}
+
+.card-actions button.restore-btn {
+  color: #16a34a;
+}
+
+.card-actions button.restore-btn:hover {
+  background: rgba(22, 163, 74, 0.08);
+  border-color: rgba(22, 163, 74, 0.15);
+}
+
+.card-actions button.restore-btn mat-icon {
+  color: #16a34a;
+}
+
+.card-actions button.hard-delete-btn {
+  color: #dc2626;
+}
+
+.card-actions button.hard-delete-btn:hover {
+  background: rgba(220, 38, 38, .08);
+  border-color: rgba(220, 38, 38, .15);
+}
+
+.card-actions button.hard-delete-btn mat-icon {
+  color: #dc2626;
 }
 
 /* =========================================================
@@ -328,65 +454,27 @@
   align-items: center;
   justify-content: center;
 
-  min-width: 72px;
-
-  padding: 4px 10px;
+  height: 28px;
+  padding: 0 12px;
 
   border-radius: 999px;
 
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 
-  background: var(--status-active-bg);
+  background: #e8f5ec;
+  color: #15803d;
 
-  color: var(--status-active-text);
+  border: 1px solid rgba(21, 128, 61, 0.12);
+
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .status-pill.deleted {
-  background: var(--status-disabled-bg);
-
-  color: var(--status-disabled-text);
-}
-
-/* =========================================================
-   INDICATORS
-========================================================= */
-
-.indicator-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.indicator-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  padding: 3px 8px;
-
-  border-radius: 999px;
-
-  font-size: 11px;
-  font-weight: 600;
-
-  border: 1px solid var(--border);
-
-  color: var(--text-secondary);
-
-  background: transparent;
-}
-
-.indicator-chip.active {
-  background: rgba(59, 130, 246, 0.12);
-
-  border-color: rgba(59, 130, 246, 0.22);
-
-  color: #2563eb;
-}
-
-body.dark .indicator-chip.active {
-  color: #93c5fd;
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: rgba(185, 28, 28, 0.12);
 }
 
 /* =========================================================
@@ -526,6 +614,30 @@ table {
   transform: translateY(-1px);
 }
 
+.restore-icon-btn {
+  color: #16a34a !important;
+}
+
+.restore-icon-btn:hover {
+  background: rgba(22, 163, 74, 0.08) !important;
+}
+
+.restore-icon-btn mat-icon {
+  color: #16a34a !important;
+}
+
+.hard-delete-icon-btn {
+  color: #dc2626 !important;
+}
+
+.hard-delete-icon-btn:hover {
+  background: rgba(220, 38, 38, 0.08) !important;
+}
+
+.hard-delete-icon-btn mat-icon {
+  color: #dc2626 !important;
+}
+
 /* =========================================================
    ROW SELECTION
 ========================================================= */
@@ -630,6 +742,7 @@ table {
   .bulk-bar {
     flex-direction: column;
     align-items: stretch;
+    margin-bottom: 10px;
   }
 
   .cancel-selection {
@@ -645,8 +758,21 @@ table {
   }
 
   .card-top {
-    flex-direction: column;
+    display: flex;
+    flex-direction: row;
     align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .card-title-group {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .status-pill {
+    flex-shrink: 0;
+    align-self: flex-start;
   }
 
   .card-footer {
@@ -711,5 +837,25 @@ table {
 
   table {
     min-width: 900px;
+  }
+}
+
+@media (max-width: 480px) {
+  .branch-card {
+    padding: 10px;
+  }
+
+  .card-actions {
+    gap: 4px;
+  }
+
+  .card-actions button {
+    padding: 0 8px;
+    font-size: 12px;
+  }
+
+  .status-pill {
+    padding: 0 8px;
+    font-size: 11px;
   }
 }

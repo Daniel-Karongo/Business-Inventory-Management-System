@@ -29,6 +29,8 @@ public class BranchFormDTO {
 
     private Boolean enforceDevice;
 
+    private Integer maxActiveSessionsPerUser;
+
     private LocalTime rollcallStartTime;
 
     private Integer rollcallGraceMinutes;

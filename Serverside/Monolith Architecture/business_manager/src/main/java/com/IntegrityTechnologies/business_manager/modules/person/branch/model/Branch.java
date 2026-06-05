@@ -66,6 +66,10 @@ public class Branch extends TenantAwareEntity {
     @Builder.Default
     private Boolean enforceDevice = true;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer maxActiveSessionsPerUser = 4;
+
     /* ========================================
        RELATIONS
     ======================================== */

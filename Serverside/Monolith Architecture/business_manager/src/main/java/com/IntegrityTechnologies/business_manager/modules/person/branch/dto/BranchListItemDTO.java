@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -20,9 +21,9 @@ public class BranchListItemDTO {
 
     private Boolean deleted;
 
-    private Boolean enforceGeofence;
+    private String phone;
 
-    private Boolean enforceDevice;
+    private String email;
 
     private LocalDateTime createdAt;
 }

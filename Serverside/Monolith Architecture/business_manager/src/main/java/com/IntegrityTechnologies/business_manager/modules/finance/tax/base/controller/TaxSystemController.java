@@ -5,7 +5,6 @@ import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.confi
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.model.TaxSystemState;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.repository.TaxSystemStateRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.service.TaxSystemStateService;
-import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.model.enums.VatCreditTreatment;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantAdminOnly;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
@@ -32,7 +31,6 @@ public class TaxSystemController {
             @RequestParam boolean vatEnabled,
             @RequestParam BigDecimal vatRate,
             @RequestParam BigDecimal corporateTaxRate,
-            @RequestParam VatCreditTreatment vatCreditTreatment,
             @RequestParam UUID branchId
     ) {
 
@@ -49,7 +47,6 @@ public class TaxSystemController {
                                         .vatEnabled(defaults.isVatEnabled())
                                         .vatRate(defaults.getVatRate())
                                         .corporateTaxRate(defaults.getCorporateTaxRate())
-                                        .vatCreditTreatment(VatCreditTreatment.CARRY_FORWARD)
                                         .locked(false)
                                         .build()
                         );
@@ -61,7 +58,6 @@ public class TaxSystemController {
         state.setVatEnabled(vatEnabled);
         state.setVatRate(vatRate);
         state.setCorporateTaxRate(corporateTaxRate);
-        state.setVatCreditTreatment(vatCreditTreatment);
 
         TaxSystemState saved = repository.save(state);
 
@@ -70,8 +66,7 @@ public class TaxSystemController {
                 "TAX_CONFIGURATION_CHANGED",
                 SecurityUtils.currentUsername(),
                 "VAT enabled=" + vatEnabled +
-                        ", VAT rate=" + vatRate +
-                        ", credit treatment=" + vatCreditTreatment
+                        ", VAT rate=" + vatRate
         );
 
         return saved;

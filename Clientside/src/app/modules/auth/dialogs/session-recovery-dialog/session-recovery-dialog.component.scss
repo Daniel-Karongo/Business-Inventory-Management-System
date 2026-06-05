@@ -3,89 +3,189 @@
 }
 
 .dialog-shell {
-    width: min(900px, 95vw);
+    width: min(960px, 95vw);
+    display: flex;
+    flex-direction: column;
+    max-height: 88vh;
 }
 
+/* =====================================================
+   HEADER
+===================================================== */
+
 .header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+
     padding: 24px;
+
     border-bottom: 1px solid var(--border);
+
+    flex-shrink: 0;
+}
+
+.header-icon {
+    width: 48px;
+    height: 48px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background: rgba(59, 130, 246, .12);
+    color: #2563eb;
+}
+
+.header-icon mat-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+}
+
+.header-content {
+    flex: 1;
 }
 
 .title {
-    font-size: 1.25rem;
+    font-size: 1.3rem;
     font-weight: 700;
 }
 
 .subtitle {
     margin-top: 8px;
     color: var(--text-secondary);
+    line-height: 1.5;
 }
 
-.sessions {
-    max-height: 60vh;
-    overflow: auto;
+/* =====================================================
+   CONTENT
+===================================================== */
+
+.content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+
     padding: 20px;
 }
 
 .session-card {
+    background: var(--surface);
 
     border: 1px solid var(--border);
+    border-radius: 14px;
 
-    border-radius: 12px;
+    padding: 18px;
 
-    padding: 16px;
+    margin-bottom: 16px;
 
-    margin-bottom: 14px;
-
-    background: var(--surface);
+    transition:
+        border-color .15s ease,
+        transform .15s ease,
+        box-shadow .15s ease;
 }
 
-.card-top {
+.session-card:hover {
+    transform: translateY(-2px);
 
+    border-color: rgba(59, 130, 246, .35);
+
+    box-shadow:
+        0 8px 20px rgba(0, 0, 0, .08);
+}
+
+/* =====================================================
+   CARD HEADER
+===================================================== */
+
+.card-header {
     display: flex;
-
     justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
 
-    align-items: center;
-
-    margin-bottom: 12px;
+    margin-bottom: 18px;
 }
 
-.device {
-
-    font-weight: 600;
-
-    font-size: 0.95rem;
+.device-section {
+    min-width: 0;
 }
 
-.details {
+.device-name {
+    font-size: .95rem;
+    font-weight: 700;
+}
 
+.device-subtitle {
+    margin-top: 4px;
+    font-size: .8rem;
+    color: var(--text-secondary);
+}
+
+/* =====================================================
+   GRID
+===================================================== */
+
+.session-grid {
     display: grid;
 
     grid-template-columns:
         repeat(auto-fit, minmax(220px, 1fr));
 
-    gap: 8px;
-
-    font-size: 0.85rem;
+    gap: 16px;
 }
 
-.footer {
+.info {
+    min-width: 0;
+}
 
-    border-top: 1px solid var(--border);
+.label {
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+
+    text-transform: uppercase;
+    letter-spacing: .4px;
+
+    margin-bottom: 4px;
+}
+
+.value {
+    font-size: .9rem;
+    word-break: break-word;
+}
+
+/* =====================================================
+   FOOTER
+===================================================== */
+
+.footer {
+    flex-shrink: 0;
+
+    display: flex;
+    justify-content: flex-end;
+
+    gap: 12px;
 
     padding: 20px;
 
-    display: flex;
+    border-top: 1px solid var(--border);
 
-    justify-content: flex-end;
+    background: var(--surface);
+
+    position: sticky;
+    bottom: 0;
 }
 
+/* =====================================================
+   SPINNER
+===================================================== */
+
 .spin {
-
-    animation:
-        spin .9s linear infinite;
-
+    animation: spin .9s linear infinite;
 }
 
 @keyframes spin {
@@ -97,5 +197,46 @@
     to {
         transform: rotate(360deg);
     }
+}
 
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 768px) {
+
+    .dialog-shell {
+        width: 100%;
+        max-height: 90vh;
+    }
+
+    .header {
+        padding: 18px;
+    }
+
+    .content {
+        padding: 14px;
+    }
+
+    .card-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .card-header button {
+        width: 100%;
+    }
+
+    .session-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .footer {
+        padding: 16px;
+    }
+
+    .footer button {
+        width: 100%;
+    }
 }

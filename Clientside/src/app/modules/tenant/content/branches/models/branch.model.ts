@@ -13,12 +13,8 @@ export interface BranchListItemDTO {
   location?: string;
   deleted: boolean;
   createdAt?: string;
-  enforceGeofence?: boolean;
-  enforceDevice?: boolean;
-  notificationConfigured?: boolean;
-  smsConfigured?: boolean;
-  emailConfigured?: boolean;
-  mpesaConfigured?: boolean;
+  email: string;
+  phone: string;
 }
 
 /* =========================================================
@@ -39,6 +35,7 @@ export interface BranchDetailsDTO {
   radiusMeters?: number;
   enforceGeofence?: boolean;
   enforceDevice?: boolean;
+  maxActiveSessionsPerUser: number;
   rollcallStartTime?: string;
   rollcallGraceMinutes?: number;
   logoutTime?: string;
@@ -62,6 +59,7 @@ export interface BranchFormDTO {
   radiusMeters?: number | null;
   enforceGeofence?: boolean;
   enforceDevice?: boolean;
+  maxActiveSessionsPerUser: number;
   rollcallStartTime?: string | null;
   rollcallGraceMinutes?: number | null;
   logoutTime?: string | null;
@@ -78,6 +76,7 @@ export interface BranchSecuritySettingsDTO {
   radiusMeters?: number | null;
   enforceGeofence: boolean;
   enforceDevice: boolean;
+  maxActiveSessionsPerUser: number;
 }
 
 /* =========================================================
