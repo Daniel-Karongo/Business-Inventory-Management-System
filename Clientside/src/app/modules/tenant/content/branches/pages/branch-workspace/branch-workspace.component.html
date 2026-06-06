@@ -13,6 +13,27 @@
             ====================================================== -->
 
             <div class="workspace-header-main">
+                <div class="workspace-logo clickable" *ngIf="branch" (click)="openLogoOrUpload()">
+                    <img *ngIf="logoObjectUrl; else defaultLogo" [src]="logoObjectUrl" alt="Branch Logo">
+
+                    <ng-template #defaultLogo>
+                        <div class="workspace-logo-placeholder">
+                            <div class="logo-upload-overlay">
+                                <mat-icon>
+                                    upload
+                                </mat-icon>
+
+                                <span>
+                                    Upload Document
+                                </span>
+                            </div>
+
+                            <mat-icon>
+                                business
+                            </mat-icon>
+                        </div>
+                    </ng-template>
+                </div>
 
                 <!-- BREADCRUMB -->
 

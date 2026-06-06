@@ -107,6 +107,14 @@ public class FileStorageService {
         return dir;
     }
 
+    public Path branchDocumentsRoot(UUID branchId) {
+        Path dir = branchRoot(branchId)
+                .resolve(".branch-documents")
+                .normalize();
+        createAndSecure(dir);
+        return dir;
+    }
+
     public Path supplierRoot(UUID branchId) {
         return moduleRoot(branchId, ".suppliers");
     }

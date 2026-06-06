@@ -83,4 +83,12 @@ export const UserImageAdapter = (
   entityLabel: 'Document',
 
   uploadMode: 'document',
+  descriptionOptions: [
+    'ID',
+    'Passport',
+    'Signature',
+    'CV',
+    'Contract',
+    'Other'
+  ],
 });

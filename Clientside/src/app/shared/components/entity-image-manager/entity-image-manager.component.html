@@ -186,10 +186,11 @@
                 </button>
 
                 <button *ngIf="adapter.setProfileThumbnail" mat-icon-button [disabled]="makingPrimary"
-                    (click)="$event.stopPropagation(); makePrimary(img)" matTooltip="Use as thumbnail">
+                    (click)="$event.stopPropagation(); makePrimary(img)"
+                    [matTooltip]="adapter.allowLogo ? 'Set as Branch Logo' : 'Use as thumbnail' ">
 
                     <mat-icon>
-                        account_circle
+                        star
                     </mat-icon>
 
                 </button>

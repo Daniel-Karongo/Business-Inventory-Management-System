@@ -24,7 +24,9 @@ import {
   BranchSecuritySettingsDTO,
   BranchSmsSettingsDTO,
   BranchSmsSettingsResponseDTO,
-  BranchTableState
+  BranchTableState,
+  BranchDocumentDTO,
+  BranchDocumentAuditDTO
 } from '../models/branch.model';
 
 import { ApiResponse } from '../../../../../core/models/api-response.model';
@@ -460,5 +462,126 @@ export class BranchService {
     }
 
     return payload;
+  }
+
+  listDocuments(
+    branchId: string
+  ): Observable<BranchDocumentDTO[]> {
+    return this.http.get<BranchDocumentDTO[]>(
+      `${this.base}/${branchId}/documents`
+    );
+  }
+
+  listDocumentAudits(
+    branchId: string
+  ): Observable<BranchDocumentAuditDTO[]> {
+    return this.http.get<BranchDocumentAuditDTO[]>(
+      `${this.base}/${branchId}/documents/audits`
+    );
+  }
+
+  downloadDocument(
+    branchId: string,
+    fileName: string,
+  ): Observable<Blob> {
+    return this.http.get(
+      `${this.base}/${branchId}/documents/${encodeURIComponent(fileName)}`,
+      {
+        responseType: 'blob'
+      }
+    );
+  }
+
+  uploadDocuments(
+    branchId: string,
+    files: {
+      file: File;
+      description: string;
+      documentType?: string;
+    }[]
+  ): Observable<any> {
+    const form = new FormData();
+
+    files.forEach((f, index) => {
+      form.append(
+        `files[${index}].file`,
+        f.file
+      );
+
+      form.append(
+        `files[${index}].description`,
+        f.description ?? ''
+      );
+
+      form.append(
+        `files[${index}].documentType`,
+        f.documentType ?? 'OTHER'
+      );
+    });
+
+    return this.http.patch(
+      `${this.base}/${branchId}/documents`,
+      form
+    );
+  }
+
+  updateDocumentDescription(
+    branchId: string,
+    fileName: string,
+    description: string
+  ): Observable<any> {
+    return this.http.patch(
+      `${this.base}/${branchId}/documents/${encodeURIComponent(fileName)}/description`,
+      {
+        description
+      }
+    );
+  }
+
+  setBranchLogo(
+    branchId: string,
+    fileName: string
+  ): Observable<any> {
+    return this.http.patch(
+      `${this.base}/${branchId}/documents/${encodeURIComponent(fileName)}/logo`,
+      {}
+    );
+  }
+
+  softDeleteDocument(
+    branchId: string,
+    fileName: string,
+    reason?: string | null
+  ): Observable<any> {
+    return this.http.delete(
+      `${this.base}/${branchId}/documents/${encodeURIComponent(fileName)}/soft`,
+      {
+        body: reason
+      }
+    );
+  }
+
+  restoreDocument(
+    branchId: string,
+    fileName: string,
+    reason?: string | null
+  ): Observable<any> {
+    return this.http.patch(
+      `${this.base}/${branchId}/documents/${encodeURIComponent(fileName)}/restore`,
+      reason ?? null
+    );
+  }
+
+  hardDeleteDocument(
+    branchId: string,
+    fileName: string,
+    reason?: string | null
+  ): Observable<any> {
+    return this.http.delete(
+      `${this.base}/${branchId}/documents/${encodeURIComponent(fileName)}/hard`,
+      {
+        body: reason ?? null
+      }
+    );
   }
 }

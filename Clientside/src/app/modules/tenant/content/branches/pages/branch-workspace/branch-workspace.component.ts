@@ -1,6 +1,8 @@
 import {
     Component,
-    OnInit
+    OnDestroy,
+    OnInit,
+    ViewChild
 } from '@angular/core';
 
 import {
@@ -40,6 +42,12 @@ import {
 import {
     BranchDetailsDTO
 } from '../../models/branch.model';
+import { Subject, takeUntil } from 'rxjs';
+import { BranchWorkspaceStateService } from '../../services/branch-workspace-state.service';
+import { environment } from '../../../../../../../environments/environment';
+import { EntityImageManagerComponent } from '../../../../../../shared/components/entity-image-manager/entity-image-manager.component';
+import { FileViewerDialog } from '../../../../../../shared/components/file-viewer/file-viewer.component';
+import { MatDialog } from '@angular/material/dialog';
 
 @Component({
     standalone: true,
@@ -55,7 +63,10 @@ import {
     templateUrl: './branch-workspace.component.html',
     styleUrls: ['./branch-workspace.component.scss']
 })
-export class BranchWorkspaceComponent implements OnInit {
+export class BranchWorkspaceComponent implements OnInit, OnDestroy {
+
+    @ViewChild(EntityImageManagerComponent)
+    private imageManager?: EntityImageManagerComponent;
 
     branch?: BranchDetailsDTO;
 
@@ -63,12 +74,24 @@ export class BranchWorkspaceComponent implements OnInit {
 
     isMobile = false;
 
+    private readonly destroy$ =
+        new Subject<void>();
+
+    logoObjectUrl?: string;
+
     readonly tabs = [
         {
             label: 'Overview',
             route: 'overview',
             icon: 'visibility'
         },
+
+        {
+            label: 'Documents',
+            route: 'images',
+            icon: 'folder'
+        },
+
         {
             label: 'Security',
             route: 'security',
@@ -110,7 +133,9 @@ export class BranchWorkspaceComponent implements OnInit {
         private route: ActivatedRoute,
         private router: Router,
         private branchService: BranchService,
-        private breakpointObserver: BreakpointObserver
+        private breakpointObserver: BreakpointObserver,
+        private workspaceState: BranchWorkspaceStateService,
+        private dialog: MatDialog
     ) { }
 
     ngOnInit(): void {
@@ -133,20 +158,137 @@ export class BranchWorkspaceComponent implements OnInit {
             return;
         }
 
+        this.loadBranch(id);
+
+        this.workspaceState.branch$
+            .pipe(
+                takeUntil(this.destroy$)
+            )
+            .subscribe(branch => {
+                if (branch) {
+                    this.branch = branch;
+                    this.loadLogo(branch);
+                }
+            });
+    }
+
+    ngOnDestroy(): void {
+        if (this.logoObjectUrl) {
+            URL.revokeObjectURL(this.logoObjectUrl);
+        }
+
+        this.destroy$.next();
+        this.destroy$.complete();
+    }
+
+    private loadBranch(
+        id: string
+    ): void {
         this.branchService
             .getById(id)
             .subscribe({
                 next: branch => {
-
                     this.branch = branch;
 
+                    this.loadLogo(branch);
+
                     this.loading = false;
+
+                    this.workspaceState.setBranch(branch);
                 },
                 error: () => {
-
                     this.loading = false;
                 }
             });
+    }
+
+    private loadLogo(
+        branch: BranchDetailsDTO
+    ): void {
+        if (!branch.logoUrl) {
+            this.logoObjectUrl = undefined;
+            return;
+        }
+
+        const fileName =
+            decodeURIComponent(
+                branch.logoUrl.substring(
+                    branch.logoUrl.lastIndexOf('/') + 1
+                )
+            );
+
+        this.branchService
+            .downloadDocument(
+                branch.id,
+                fileName
+            )
+            .subscribe({
+                next: blob => {
+
+                    if (this.logoObjectUrl) {
+                        URL.revokeObjectURL(
+                            this.logoObjectUrl
+                        );
+                    }
+
+                    this.logoObjectUrl =
+                        URL.createObjectURL(blob);
+                },
+                error: () => {
+                    this.logoObjectUrl =
+                        undefined;
+                }
+            });
+    }
+
+    openLogo(): void {
+        if (!this.logoObjectUrl || !this.branch) {
+            return;
+        }
+
+        this.dialog.open(
+            FileViewerDialog,
+            {
+                panelClass: 'enterprise-dialog',
+                width: '90vw',
+                maxWidth: '90vw',
+                height: '90vh',
+                maxHeight: '90vh',
+                data: {
+                    preview: {
+                        src: this.logoObjectUrl,
+                        name: 'Branch Logo',
+                        type: 'image'
+                    }
+                }
+            }
+        );
+    }
+
+    openLogoOrUpload(): void {
+
+        if (this.logoObjectUrl) {
+            this.openLogo();
+            return;
+        }
+
+        const currentUrl =
+            this.router.url;
+
+        if (!currentUrl.endsWith('/images')) {
+
+            this.router.navigate(
+                ['images'],
+                {
+                    relativeTo: this.route
+                }
+            );
+        }
+
+        setTimeout(() => {
+            this.workspaceState
+                .openUploadDialog();
+        }, 250);
     }
 
     isActive(
@@ -188,5 +330,13 @@ export class BranchWorkspaceComponent implements OnInit {
         return this.branch.deleted
             ? 'Deleted'
             : 'Active';
+    }
+
+    get logoUrl(): string | null {
+        if (!this.branch?.logoUrl) {
+            return null;
+        }
+
+        return `${environment.apiUrl}${this.branch.logoUrl}`;
     }
 }

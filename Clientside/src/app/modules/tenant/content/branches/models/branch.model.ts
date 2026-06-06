@@ -42,6 +42,31 @@ export interface BranchDetailsDTO {
   deleted?: boolean;
   createdAt?: string;
   users?: MinimalUserDTO[];
+  logoUrl?: string;
+}
+
+export interface BranchDocumentDTO {
+  id: string;
+  fileName: string;
+  url: string;
+  description?: string;
+  documentType: string;
+  logo: boolean;
+  deleted: boolean;
+  uploadedAt?: string;
+  deletedAt?: string;
+  image: boolean;
+  pdf: boolean;
+}
+
+export interface BranchDocumentAuditDTO {
+  id: string;
+  fileName: string;
+  action: string;
+  reason?: string;
+  performedById?: string;
+  performedByUsername: string;
+  timestamp: string;
 }
 
 export enum BranchDeletionMode {

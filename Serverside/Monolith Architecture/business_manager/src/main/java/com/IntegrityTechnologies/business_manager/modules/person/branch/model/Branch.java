@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.person.branch.model;
 
 import com.IntegrityTechnologies.business_manager.modules.person.branch.deletion.BranchDeletionMode;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.document.model.BranchDocument;
 import com.IntegrityTechnologies.business_manager.modules.person.user.model.UserBranch;
 import com.IntegrityTechnologies.business_manager.modules.platform.tenant.model.TenantAwareEntity;
 import jakarta.persistence.*;
@@ -9,9 +10,7 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.LocalTime;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 @Table(

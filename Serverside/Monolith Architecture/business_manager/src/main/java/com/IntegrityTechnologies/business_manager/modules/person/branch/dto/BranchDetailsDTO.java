@@ -48,4 +48,6 @@ public class BranchDetailsDTO {
     private LocalDateTime createdAt;
 
     private Set<MinimalUserDTO> users;
+
+    private String logoUrl;
 }

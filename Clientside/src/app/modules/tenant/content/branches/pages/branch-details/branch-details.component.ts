@@ -19,6 +19,7 @@ import { BranchService } from '../../services/branch.service';
 import {
   BranchDetailsDTO
 } from '../../models/branch.model';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   standalone: true,
@@ -26,7 +27,8 @@ import {
   imports: [
     CommonModule,
     RouterModule,
-    WorkflowCardComponent
+    WorkflowCardComponent,
+    MatIconModule
   ],
   templateUrl: './branch-details.component.html',
   styleUrls: ['./branch-details.component.scss']

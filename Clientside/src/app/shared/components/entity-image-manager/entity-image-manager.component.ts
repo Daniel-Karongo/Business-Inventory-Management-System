@@ -77,7 +77,11 @@ export interface EntityImageAdapter {
 
   uploadImages(
     id: string,
-    files: { file: File; description: string }[]
+    files: {
+      file: File;
+      description: string;
+      documentType?: string;
+    }[]
   ): Observable<any>;
 
   setProfileThumbnail?(
@@ -118,6 +122,8 @@ export interface EntityImageAdapter {
   supportsDescription?: boolean;
   entityLabel?: string;
   uploadMode?: 'image' | 'document';
+  allowLogo?: boolean;
+  descriptionOptions?: string[];
 }
 
 @Component({
@@ -468,8 +474,12 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
         data: {
           uploadMode:
             this.adapter.uploadMode ?? 'image',
+
           supportsDescription:
-            this.adapter.supportsDescription ?? false
+            this.adapter.supportsDescription ?? false,
+
+          descriptionOptions:
+            this.adapter.descriptionOptions ?? []
         }
       }
     )
@@ -553,7 +563,8 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
     const payload =
       files.map(file => ({
         file,
-        description: ''
+        description: '',
+        documentType: 'OTHER'
       }));
 
     const beforeCount =
@@ -801,7 +812,7 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
         const action$ = restoring
           ? this.adapter.restoreImage(
             this.entityId,
-            img.id ?? img.fileName,
+            img.fileName,
             reason
           )
           : this.adapter.softDeleteImage(

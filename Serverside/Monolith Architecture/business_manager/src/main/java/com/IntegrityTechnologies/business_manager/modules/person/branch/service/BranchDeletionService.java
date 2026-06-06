@@ -14,6 +14,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.dom
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.domain.PurchaseInvoiceLine;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.model.SupplierPayment;
 import com.IntegrityTechnologies.business_manager.modules.finance.payment.mpesa.model.MpesaTransaction;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.document.model.BranchDocument;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.document.model.BranchDocumentAudit;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model.Rollcall;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model.RollcallAudit;
 import com.IntegrityTechnologies.business_manager.modules.person.system.rollcall.model.UserSession;
@@ -634,6 +636,18 @@ public class BranchDeletionService {
                 branchId
         );
 
+        bulk.hardDelete(
+                BranchDocumentAudit.class,
+                tenantId,
+                branchId
+        );
+
+        bulk.hardDelete(
+                BranchDocument.class,
+                tenantId,
+                branchId
+        );
+
         /*
          * Filesystem
          */
@@ -661,6 +675,17 @@ public class BranchDeletionService {
         /*
          * Branch configuration.
          */
+        bulk.branchDelete(
+                BranchDocument.class,
+                tenantId,
+                branchId
+        );
+
+        bulk.branchDelete(
+                BranchDocumentAudit.class,
+                tenantId,
+                branchId
+        );
 
         bulk.branchDelete(
                 BranchNotificationSettings.class,
@@ -1367,6 +1392,18 @@ public class BranchDeletionService {
 
         bulk.branchRestore(
                 BranchMpesaSettings.class,
+                tenantId,
+                branchId
+        );
+
+        bulk.branchRestore(
+                BranchDocument.class,
+                tenantId,
+                branchId
+        );
+
+        bulk.branchRestore(
+                BranchDocumentAudit.class,
                 tenantId,
                 branchId
         );

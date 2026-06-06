@@ -51,6 +51,7 @@ import {
 import {
   BranchAuditsComponent
 } from './pages/branch-audits/branch-audits.component';
+import { BranchDocumentsComponent } from './pages/branch-documents/branch-documents.component';
 
 export const BRANCH_ROUTES: Routes = [
   {
@@ -102,6 +103,11 @@ export const BRANCH_ROUTES: Routes = [
             path: '',
             pathMatch: 'full',
             redirectTo: 'overview'
+          },
+
+          {
+            path: 'images',
+            component: BranchDocumentsComponent
           },
 
           {

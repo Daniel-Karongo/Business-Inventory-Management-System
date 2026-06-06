@@ -1,12 +1,7 @@
 export interface ImageUploadDialogData {
-
-  uploadMode:
-  'image'
-  | 'document';
-
-  supportsDescription:
-  boolean;
-
+  uploadMode: 'image' | 'document';
+  supportsDescription: boolean;
+  descriptionOptions: string[];
 }
 
 import { CommonModule } from '@angular/common';
@@ -39,10 +34,10 @@ import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 })
 export class ImageUploadDialogComponent {
 
+  documentTypeOptions?: string[];
+
   file?: File;
   previewUrl?: string;
-
-  descriptionOptions = ['ID', 'Passport', 'Signature', 'CV', 'Other'];
 
   fg!: FormGroup;
 
@@ -50,6 +45,7 @@ export class ImageUploadDialogComponent {
 
   readonly supportsDescription: boolean;
   readonly uploadMode: 'image' | 'document';
+  readonly descriptionOptions: string[];
 
   constructor(
     private dialogRef:
@@ -67,9 +63,20 @@ export class ImageUploadDialogComponent {
     this.uploadMode =
       data?.uploadMode ?? 'image';
 
+    this.descriptionOptions =
+      data.descriptionOptions?.length
+        ? data.descriptionOptions
+        : ['Other'];
+
+    type: [
+      this.descriptionOptions[0]
+    ]
+
     this.fg =
       this.fb.group({
-        type: ['ID'],
+        type: [
+          this.descriptionOptions[0] ?? 'Other'
+        ],
         custom: ['']
       });
 

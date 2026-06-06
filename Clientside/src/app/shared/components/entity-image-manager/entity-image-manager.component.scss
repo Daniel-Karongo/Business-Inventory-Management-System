@@ -987,4 +987,8 @@ body.dark .audit-row:hover {
   .empty-actions button {
     width: 100%;
   }
+
+  :host {
+    padding: 5px;
+  }
 }

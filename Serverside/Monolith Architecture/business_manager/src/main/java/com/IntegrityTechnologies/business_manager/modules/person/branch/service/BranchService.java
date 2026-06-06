@@ -12,6 +12,8 @@ import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.confi
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.model.TaxSystemState;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.repository.TaxSystemStateRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.deletion.BranchDeletionMode;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.document.model.BranchDocument;
+import com.IntegrityTechnologies.business_manager.modules.person.branch.document.repository.BranchDocumentRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.mapper.BranchMapper;
 import com.IntegrityTechnologies.business_manager.modules.person.branch.model.Branch;
@@ -73,6 +75,7 @@ public class BranchService {
 
     private final BranchNotificationSettingsSeeder notificationSettingsSeeder;
     private final BranchDeletionService branchDeletionService;
+    private final BranchDocumentRepository branchDocumentRepository;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -219,9 +222,21 @@ public class BranchService {
                         .map(UserBranch::getUser)
                         .collect(Collectors.toSet());
 
+        String logoUrl =
+                branchDocumentRepository
+                        .findByTenantIdAndBranchIdAndLogoTrueAndDeletedFalse(
+                                tenantId(),
+                                branch.getId()
+                        )
+                        .map(
+                                BranchDocument::getFilePath
+                        )
+                        .orElse(null);
+
         return BranchMapper.toDetailsDTO(
                 branch,
-                users
+                users,
+                logoUrl
         );
     }
 

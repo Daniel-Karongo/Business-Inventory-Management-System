@@ -30,9 +30,9 @@ public class BranchMapper {
 
     public BranchDetailsDTO toDetailsDTO(
             Branch branch,
-            Set<User> users
+            Set<User> users,
+            String logoUrl
     ) {
-
         return BranchDetailsDTO.builder()
                 .id(branch.getId())
                 .branchCode(branch.getBranchCode())
@@ -51,6 +51,7 @@ public class BranchMapper {
                 .logoutTime(branch.getLogoutTime())
                 .deleted(branch.isDeleted())
                 .createdAt(branch.getCreatedAt())
+                .logoUrl(logoUrl)
                 .users(
                         users.stream()
                                 .map(MinimalUserDTO::from)
