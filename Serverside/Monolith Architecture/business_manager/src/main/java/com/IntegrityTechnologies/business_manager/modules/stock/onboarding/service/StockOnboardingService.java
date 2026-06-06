@@ -1,6 +1,13 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.onboarding.service;
 
 import com.IntegrityTechnologies.business_manager.config.caffeine.CacheInvalidationService;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.Account;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.AutoFundingService;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.OperationalExpensePostingService;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.dto.ProcessSupplierPaymentRequest;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.enums.SupplierPaymentMethod;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.service.SupplierPaymentProcessingService;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.config.TaxProperties;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.dto.VatBreakdown;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.service.VatCalculationService;
@@ -39,6 +46,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -61,6 +69,10 @@ public class StockOnboardingService {
     private final ReceiveAndInvoiceService receiveAndInvoiceService;
     private final TaxProperties taxProperties;
     private final VatCalculationService vatCalculationService;
+    private final AutoFundingService autoFundingService;
+    private final OperationalExpensePostingService operationalExpensePostingService;
+    private final SupplierPaymentProcessingService supplierPaymentProcessingService;
+    private final AccountRepository accountRepository;
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -70,6 +82,7 @@ public class StockOnboardingService {
     public StockOnboardingResponse onboard(StockOnboardingRequest req) {
 
         validateRequest(req);
+        validateFundingAccountPaymentMethod(req);
         ensureExplicitBasePackaging(req);
 
         if (req.getBranchId() == null) {
@@ -124,8 +137,52 @@ public class StockOnboardingService {
                 receiveReq
         );
 
+        orchestration.setAccountingDate(
+                req.getAccountingDate()
+        );
+
+        BigDecimal supplierTotal =
+                Boolean.TRUE.equals(
+                        req.getAutoPaySuppliers()
+                )
+                        ? totalSupplierCost(req)
+                        : BigDecimal.ZERO;
+
+        BigDecimal expenseTotal =
+                Boolean.TRUE.equals(
+                        req.getAutoPayOperationalExpenses()
+                )
+                        ? totalOperationalExpenses(req)
+                        : BigDecimal.ZERO;
+
+        BigDecimal requiredFunding =
+                supplierTotal.add(
+                        expenseTotal
+                );
+
+        if (
+                requiredFunding.compareTo(BigDecimal.ZERO) > 0
+        ) {
+            autoFundingService.ensureFundingAvailable(
+                    req.getBranchId(),
+                    req.getFundingAccountId(),
+                    requiredFunding,
+                    req.getAccountingDate()
+            );
+        }
+
         receiveAndInvoiceService.execute(
                 orchestration
+        );
+
+        autoPaySuppliers(
+                req,
+                product,
+                packagingMap
+        );
+
+        postOperationalExpenses(
+                req
         );
 
         long totalUnits = receiveReq.getSuppliers().stream()
@@ -154,6 +211,7 @@ public class StockOnboardingService {
     ) {
 
         validateRequest(req);
+        validateFundingAccountPaymentMethod(req);
 
         Product existingProduct = null;
 
@@ -939,6 +997,162 @@ public class StockOnboardingService {
         return r;
     }
 
+    private BigDecimal totalSupplierCost(
+            StockOnboardingRequest req
+    ) {
+
+        BigDecimal total =
+                BigDecimal.ZERO;
+
+        for (var supplier : req.getSuppliers()) {
+
+            total =
+                    total.add(
+                            supplier.getUnitCost()
+                                    .multiply(
+                                            BigDecimal.valueOf(
+                                                    supplier.getUnitsSupplied()
+                                            )
+                                    )
+                    );
+        }
+
+        return total;
+    }
+
+    private BigDecimal totalOperationalExpenses(
+            StockOnboardingRequest req
+    ) {
+
+        if (req.getOperationalExpenses() == null) {
+            return BigDecimal.ZERO;
+        }
+
+        return req.getOperationalExpenses()
+                .stream()
+                .map(
+                        StockOnboardingRequest
+                                .OperationalExpenseInput::getAmount
+                )
+                .reduce(
+                        BigDecimal.ZERO,
+                        BigDecimal::add
+                );
+    }
+
+    private void autoPaySuppliers(
+            StockOnboardingRequest req,
+            Product product,
+            Map<String, ProductVariantPackaging> packagingMap
+    ) {
+
+        if (!Boolean.TRUE.equals(
+                req.getAutoPaySuppliers()
+        )) {
+            return;
+        }
+
+        Map<UUID, BigDecimal> supplierTotals =
+                new LinkedHashMap<>();
+
+        Category category =
+                product.getCategory();
+
+        for (var supplierLine : req.getSuppliers()) {
+
+            UUID supplierId =
+                    resolveSupplier(
+                            supplierLine,
+                            category,
+                            req.getBranchId()
+                    );
+
+            BigDecimal lineTotal =
+                    supplierLine.getUnitCost()
+                            .multiply(
+                                    BigDecimal.valueOf(
+                                            supplierLine.getUnitsSupplied()
+                                    )
+                            );
+
+            supplierTotals.merge(
+                    supplierId,
+                    lineTotal,
+                    BigDecimal::add
+            );
+        }
+
+        for (var entry : supplierTotals.entrySet()) {
+
+            ProcessSupplierPaymentRequest payment =
+                    new ProcessSupplierPaymentRequest();
+
+            payment.setBranchId(
+                    req.getBranchId()
+            );
+
+            payment.setSupplierId(
+                    entry.getKey()
+            );
+
+            payment.setFundingAccountId(
+                    req.getFundingAccountId()
+            );
+
+            payment.setAmount(
+                    entry.getValue()
+            );
+
+            payment.setMethod(
+                    req.getSupplierPaymentMethod()
+            );
+
+            payment.setReference(
+                    req.getReference()
+            );
+
+            payment.setPaymentDate(
+                    req.getAccountingDate()
+            );
+
+            payment.setAutoPost(true);
+
+            payment.setAutoAllocate(true);
+
+            supplierPaymentProcessingService.process(
+                    payment
+            );
+        }
+    }
+
+    private void postOperationalExpenses(
+            StockOnboardingRequest req
+    ) {
+
+        if (!Boolean.TRUE.equals(
+                req.getAutoPayOperationalExpenses()
+        )) {
+            return;
+        }
+
+        if (req.getOperationalExpenses() == null) {
+            return;
+        }
+
+        for (var expense : req.getOperationalExpenses()) {
+
+            operationalExpensePostingService.postExpense(
+                    req.getBranchId(),
+                    req.getFundingAccountId(),
+                    expense.getExpenseAccountId(),
+                    req.getReference(),
+                    expense.getDescription(),
+                    expense.getAmount(),
+                    req.getAccountingDate()
+            );
+        }
+    }
+
     private String normalize(String s) {
         return s.trim().toLowerCase();
     }
@@ -978,6 +1192,12 @@ public class StockOnboardingService {
 
             throw new IllegalArgumentException(
                     "Pricing is required"
+            );
+        }
+
+        if (req.getAccountingDate() == null) {
+            throw new IllegalArgumentException(
+                    "accountingDate is required"
             );
         }
 
@@ -1075,6 +1295,64 @@ public class StockOnboardingService {
         Set<String> supplierReceiptKeys =
                 new HashSet<>();
 
+        if (Boolean.TRUE.equals(req.getAutoPaySuppliers())) {
+
+            if (req.getFundingAccountId() == null) {
+                throw new IllegalArgumentException(
+                        "fundingAccountId is required when autoPaySuppliers=true"
+                );
+            }
+        }
+
+        if (Boolean.TRUE.equals(req.getAutoPaySuppliers())) {
+
+            if (req.getFundingAccountId() == null) {
+                throw new IllegalArgumentException(
+                        "fundingAccountId is required when autoPaySuppliers=true"
+                );
+            }
+
+            if (req.getSupplierPaymentMethod() == null) {
+                throw new IllegalArgumentException(
+                        "supplierPaymentMethod is required when autoPaySuppliers=true"
+                );
+            }
+        }
+
+        if (req.getOperationalExpenses() != null) {
+
+            if (req.getOperationalExpenses() != null) {
+                for (var expense : req.getOperationalExpenses()) {
+
+                    if (expense.getDescription() == null
+                            || expense.getDescription().isBlank()) {
+                        throw new IllegalArgumentException(
+                                "Operational expense description is required"
+                        );
+                    }
+
+                    if (expense.getAmount() == null
+                            || expense.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                        throw new IllegalArgumentException(
+                                "Operational expense amount must be > 0"
+                        );
+                    }
+
+                    if (
+                            Boolean.TRUE.equals(
+                                    req.getAutoPayOperationalExpenses()
+                            )
+                                    &&
+                                    expense.getExpenseAccountId() == null
+                    ) {
+                        throw new IllegalArgumentException(
+                                "expenseAccountId is required for auto-paid operational expenses"
+                        );
+                    }
+                }
+            }
+        }
+
         for (var s : req.getSuppliers()) {
 
             if (s.getSupplierId() == null
@@ -1144,6 +1422,51 @@ public class StockOnboardingService {
                         "Duplicate supplier receipt line detected"
                 );
             }
+        }
+    }
+
+    private void validateFundingAccountPaymentMethod(
+            StockOnboardingRequest req
+    ) {
+        if (!Boolean.TRUE.equals(
+                req.getAutoPaySuppliers()
+        )) {
+            return;
+        }
+
+        Account fundingAccount =
+                accountRepository
+                        .findByTenantIdAndBranchIdAndId(
+                                tenantId(),
+                                req.getBranchId(),
+                                req.getFundingAccountId()
+                        )
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Funding account not found"
+                                )
+                        );
+
+        String role =
+                fundingAccount.getRole();
+
+        boolean valid =
+                ("CASH".equals(role)
+                        && req.getSupplierPaymentMethod()
+                        == SupplierPaymentMethod.CASH)
+                        ||
+                        ("BANK".equals(role)
+                                && req.getSupplierPaymentMethod()
+                                == SupplierPaymentMethod.BANK)
+                        ||
+                        ("MPESA".equals(role)
+                                && req.getSupplierPaymentMethod()
+                                == SupplierPaymentMethod.MPESA);
+
+        if (!valid) {
+            throw new IllegalArgumentException(
+                    "Funding account role and supplier payment method do not match"
+            );
         }
     }
 }

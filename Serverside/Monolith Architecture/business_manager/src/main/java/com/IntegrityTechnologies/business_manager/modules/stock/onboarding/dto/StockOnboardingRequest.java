@@ -1,8 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.enums.SupplierPaymentMethod;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -49,6 +51,22 @@ public class StockOnboardingRequest {
     private UUID branchId;
     private String reference;
     private String note;
+    private LocalDate accountingDate;
+
+    /* =====================================================
+       OPTIONAL OPERATIONAL EXPENSES
+    ===================================================== */
+
+    private List<OperationalExpenseInput> operationalExpenses;
+
+    /* =====================================================
+       AUTO PAYMENT
+    ===================================================== */
+
+    private Boolean autoPaySuppliers;
+    private SupplierPaymentMethod supplierPaymentMethod;
+    private Boolean autoPayOperationalExpenses;
+    private UUID fundingAccountId;
 
     /* =====================================================
        PACKAGING INPUT
@@ -84,5 +102,19 @@ public class StockOnboardingRequest {
         private String packagingName;
         private Boolean vatInclusive;
         private BigDecimal vatRate;
+    }
+
+    /* =====================================================
+   OPERATIONAL EXPENSE INPUT
+===================================================== */
+
+    @Data
+    public static class OperationalExpenseInput {
+
+        private UUID expenseAccountId;
+
+        private String description;
+
+        private BigDecimal amount;
     }
 }

@@ -185,12 +185,15 @@ public class ReceiveAndInvoiceService {
                     stock.getBranchId()
             );
 
+            LocalDate accountingDate =
+                    request.getAccountingDate();
+
             invoice.setInvoiceDate(
-                    LocalDate.now()
+                    accountingDate
             );
 
             invoice.setDueDate(
-                    LocalDate.now().plusDays(30)
+                    accountingDate.plusDays(30)
             );
 
             invoice.setSupplierId(
