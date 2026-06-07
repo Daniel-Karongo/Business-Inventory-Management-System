@@ -3,7 +3,8 @@ import { Injectable } from '@angular/core';
 import {
     OnboardingPackagingDraft,
     OnboardingPricingDraft,
-    OnboardingSupplierEntry
+    OnboardingSupplierEntry,
+    StockOnboardingState
 } from '../models/onboarding.models';
 
 @Injectable({
@@ -171,6 +172,110 @@ export class StockOnboardingValidatorService {
 
         return errors;
 
+    }
+
+    validateAccountingAndPayments(
+        state: StockOnboardingState
+    ): string[] {
+
+        const errors: string[] = [];
+
+        if (
+            !state.accountingDate
+        ) {
+            errors.push(
+                'Accounting date is required.'
+            );
+        }
+
+        if (
+            state.autoPaySuppliers &&
+            !state.suppliers.length
+        ) {
+
+            errors.push(
+                'Supplier auto payment requires supplier entries.'
+            );
+
+        }
+
+        if (
+            state.autoPayOperationalExpenses &&
+            !state.operationalExpenses.length
+        ) {
+
+            errors.push(
+                'Expense auto payment requires at least one operational expense.'
+            );
+
+        }
+        
+        for (
+            const expense
+            of state.operationalExpenses
+        ) {
+
+            if (
+                !expense.expenseAccountId
+            ) {
+                errors.push(
+                    'Expense account is required.'
+                );
+            }
+
+            if (
+                !expense.description?.trim()
+            ) {
+                errors.push(
+                    'Expense description is required.'
+                );
+            }
+
+            if (
+                !expense.amount ||
+                expense.amount <= 0
+            ) {
+                errors.push(
+                    'Expense amount must be greater than zero.'
+                );
+            }
+        }
+
+        if (
+            state.autoPaySuppliers
+        ) {
+
+            if (
+                !state.supplierPaymentMethod
+            ) {
+                errors.push(
+                    'Supplier payment method is required.'
+                );
+            }
+
+            if (
+                !state.fundingAccountId
+            ) {
+                errors.push(
+                    'Funding account is required for supplier auto payment.'
+                );
+            }
+        }
+
+        if (
+            state.autoPayOperationalExpenses
+        ) {
+
+            if (
+                !state.fundingAccountId
+            ) {
+                errors.push(
+                    'Funding account is required for expense auto payment.'
+                );
+            }
+        }
+
+        return errors;
     }
 
 }

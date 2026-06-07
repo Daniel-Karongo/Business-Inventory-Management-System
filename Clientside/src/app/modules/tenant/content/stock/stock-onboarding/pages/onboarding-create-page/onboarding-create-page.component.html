@@ -66,7 +66,7 @@
 
                         <app-onboarding-product-step [style.display]="state().currentStep === 0 ? 'block' : 'none'"
                             [mode]="state().mode" [draft]="state().productDraft" [branchId]="state().branchId"
-                            (modeChange)="facade.setMode($event)" (draftChange)="facade.setProductDraft($event)">
+                            (modeChange)="facade.setMode($event)" (productSelected)="facade.setSelectedProduct($event)" (draftChange)="facade.setProductDraft($event)">
                         </app-onboarding-product-step>
 
                         <!-- VARIANT -->
@@ -98,7 +98,7 @@
                         <!-- REVIEW -->
 
                         <app-onboarding-review-step [style.display]="state().currentStep === 5 ? 'block' : 'none'"
-                            [state]="state()">
+                            [state]="state()" (stateChange)="facade.updateReviewState($event)">
                         </app-onboarding-review-step>
 
                     </app-workflow-card>

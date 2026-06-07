@@ -35,32 +35,34 @@ public interface AccountBalanceRepository
 
     @Modifying
     @Query(value = """
-                INSERT INTO account_balances
-                (
-                    tenant_id,
-                    account_id,
-                    branch_id,
-                    balance,
-                    deleted,
-                    created_at,
-                    updated_at,
-                    version
-                )
-                VALUES
-                (
-                    :tenantId,
-                    :accountId,
-                    :branchId,
-                    :delta,
-                    false,
-                    NOW(),
-                    NOW(),
-                    0
-                )
-                ON DUPLICATE KEY UPDATE
-                    balance = balance + VALUES(balance),
-                    updated_at = NOW(),
-                    version = version + 1
+            INSERT INTO account_balances
+            (
+                tenant_id,
+                account_id,
+                branch_id,
+                balance,
+                deleted,
+                branch_deleted,
+                created_at,
+                updated_at,
+                version
+            )
+            VALUES
+            (
+                :tenantId,
+                :accountId,
+                :branchId,
+                :delta,
+                false,
+                false,
+                NOW(),
+                NOW(),
+                0
+            )
+            ON DUPLICATE KEY UPDATE
+                balance = balance + VALUES(balance),
+                updated_at = NOW(),
+                version = version + 1
             """, nativeQuery = true)
     void applyDelta(
             @Param("tenantId") UUID tenantId,

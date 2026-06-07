@@ -14,7 +14,6 @@ export const initialOnboardingState:
     branchId: null,
 
     selectedProductId: null,
-
     selectedVariantId: null,
 
     productDraft: {
@@ -36,6 +35,21 @@ export const initialOnboardingState:
     pricing: [],
 
     suppliers: [],
+
+    accountingDate:
+        new Date()
+            .toISOString()
+            .substring(0, 10),
+
+    operationalExpenses: [],
+
+    autoPaySuppliers: false,
+
+    supplierPaymentMethod: null,
+
+    autoPayOperationalExpenses: false,
+
+    fundingAccountId: null,
 
     notes: null,
 

@@ -1,6 +1,7 @@
 <div class="review-shell">
 
     <!-- PRODUCT -->
+
     <div class="review-section">
 
         <div class="section-title">
@@ -12,19 +13,14 @@
             <div class="review-item">
                 <span>Name</span>
                 <strong>
-                    {{
-                    state.productDraft.name
-                    }}
+                    {{ state.productDraft.name }}
                 </strong>
             </div>
 
             <div class="review-item">
                 <span>Variant</span>
                 <strong>
-                    {{
-                    state.variantDraft
-                    .classification
-                    }}
+                    {{ state.variantDraft.classification }}
                 </strong>
             </div>
 
@@ -33,6 +29,7 @@
     </div>
 
     <!-- PACKAGING -->
+
     <div class="review-section">
 
         <div class="section-title">
@@ -47,16 +44,16 @@
                 ">
 
                 <div>
-                    {{
-                    packaging.name
-                    }}
+                    {{ packaging.name }}
                 </div>
 
                 <strong>
+                    {{ packaging.unitQuantity }}
                     {{
-                    packaging.unitQuantity
+                    packaging.unitQuantity === 1
+                    ? 'unit'
+                    : 'units'
                     }}
-                    units
                 </strong>
 
             </div>
@@ -66,6 +63,7 @@
     </div>
 
     <!-- SUPPLIERS -->
+
     <div class="review-section">
 
         <div class="section-title">
@@ -77,7 +75,9 @@
             <table class="supplier-table">
 
                 <thead>
+
                     <tr>
+
                         <th>Supplier</th>
                         <th>Packaging</th>
                         <th>Units</th>
@@ -85,7 +85,9 @@
                         <th>VAT Inclusive</th>
                         <th>VAT Rate</th>
                         <th>Total</th>
+
                     </tr>
+
                 </thead>
 
                 <tbody>
@@ -96,31 +98,50 @@
                         ">
 
                         <td>
-                            {{ supplier.supplierName || supplier.supplierId }}
+                            {{ getSupplierName(supplier) }}
                         </td>
 
                         <td>
-                            {{ getPackagingName(supplier.packagingTempId) }}
+                            {{
+                            getPackagingName(
+                            supplier.packagingTempId
+                            )
+                            }}
                         </td>
 
                         <td>
-                            {{ supplier.unitsSupplied }}
+                            {{
+                            supplier.unitsSupplied
+                            }}
                         </td>
 
                         <td>
-                            {{ supplier.unitCost | number:'1.2-2' }}
+                            {{
+                            supplier.unitCost
+                            | number:'1.2-2'
+                            }}
                         </td>
 
                         <td>
-                            {{ supplier.vatInclusive ? 'Yes' : 'No' }}
+                            {{
+                            supplier.vatInclusive
+                            ? 'Yes'
+                            : 'No'
+                            }}
                         </td>
 
                         <td>
-                            {{ supplier.vatRate }}%
+                            {{
+                            supplier.vatRate
+                            }}%
                         </td>
 
                         <td>
-                            {{ supplier.unitsSupplied * supplier.unitCost | number:'1.2-2' }}
+                            {{
+                            supplier.unitsSupplied *
+                            supplier.unitCost
+                            | number:'1.2-2'
+                            }}
                         </td>
 
                     </tr>
@@ -133,7 +154,352 @@
 
     </div>
 
+    <!-- EXPENSES -->
+
+    <div class="review-section">
+
+        <div class="section-title">
+            Operational Expenses
+        </div>
+
+        <div class="expense-row" *ngFor="
+                let expense
+                of state.operationalExpenses;
+                let i = index
+            ">
+
+            <ng-container *ngIf="expenseAccounts.length === 1; else accountSelector">
+
+                <mat-form-field appearance="fill">
+
+                    <mat-label>
+                        Expense Account
+                    </mat-label>
+
+                    <input matInput readonly [value]="getReadonlyExpenseAccountLabel()">
+
+                    <mat-hint *ngIf="getDisplayedExpenseAccount(expense.expenseAccountId) as account">
+
+                        Current Balance:
+                        {{
+                        account.balance
+                        | number:'1.2-2'
+                        }}
+
+                    </mat-hint>
+                </mat-form-field>
+
+            </ng-container>
+
+            <ng-template #accountSelector>
+
+                <mat-form-field appearance="fill">
+
+                    <mat-label>
+                        Expense Account
+                    </mat-label>
+
+                    <mat-select [(ngModel)]="expense.expenseAccountId" (selectionChange)="emit()">
+
+                        <mat-option *ngFor="let account of expenseAccounts" [value]="account.id">
+
+                            {{ account.code }}
+                            -
+                            {{ account.name }}
+                            (
+                            {{ account.balance | number:'1.2-2' }}
+                            )
+
+                        </mat-option>
+
+                    </mat-select>
+
+                </mat-form-field>
+
+            </ng-template>
+
+            <mat-form-field appearance="fill">
+
+                <mat-label>
+                    Description
+                </mat-label>
+
+                <input matInput [(ngModel)]="expense.description" (blur)="emit()">
+
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+
+                <mat-label>
+                    Amount
+                </mat-label>
+
+                <input matInput type="number" [(ngModel)]="
+                        expense.amount
+                    " (blur)="emit()">
+
+            </mat-form-field>
+
+            <button mat-stroked-button color="warn" type="button" (click)="
+                    removeExpense(i)
+                ">
+
+                Remove
+
+            </button>
+
+        </div>
+
+        <button mat-flat-button color="primary" type="button" (click)="addExpense()">
+
+            Add Expense
+
+        </button>
+
+    </div>
+
+    <!-- ACCOUNTING -->
+
+    <div class="review-section">
+
+        <div class="section-title">
+            Accounting & Payments
+        </div>
+
+        <div class="review-grid">
+
+            <mat-form-field appearance="fill">
+
+                <mat-label>
+                    Accounting Date
+                </mat-label>
+
+                <input matInput [matDatepicker]="picker" [(ngModel)]="state.accountingDate" (dateChange)="emit()">
+
+                <mat-datepicker-toggle matSuffix [for]="picker">
+                </mat-datepicker-toggle>
+
+                <mat-datepicker #picker>
+                </mat-datepicker>
+
+            </mat-form-field>
+
+        </div>
+
+        <div class="payment-options">
+
+            <mat-checkbox [(ngModel)]="
+                    state.autoPaySuppliers
+                " (ngModelChange)="emit()">
+
+                Auto Pay Suppliers
+
+            </mat-checkbox>
+
+            <mat-checkbox [(ngModel)]="
+                    state.autoPayOperationalExpenses
+                " (ngModelChange)="emit()">
+
+                Auto Pay Operational Expenses
+
+            </mat-checkbox>
+
+        </div>
+
+        <div class="review-grid" *ngIf="
+                state.autoPaySuppliers
+            ">
+
+            <mat-form-field appearance="fill">
+
+                <mat-label>
+                    Supplier Payment Method
+                </mat-label>
+
+                <mat-select [(ngModel)]="
+                        state.supplierPaymentMethod
+                    " (selectionChange)="emit()">
+
+                    <mat-option value="CASH">
+                        Cash
+                    </mat-option>
+
+                    <mat-option value="BANK">
+                        Bank
+                    </mat-option>
+
+                    <mat-option value="MPESA">
+                        MPesa
+                    </mat-option>
+
+                </mat-select>
+
+            </mat-form-field>
+
+        </div>
+
+        <div class="review-grid" *ngIf="
+                state.autoPaySuppliers ||
+                state.autoPayOperationalExpenses
+            ">
+
+            <mat-form-field appearance="fill">
+
+                <mat-label>
+                    Funding Account
+                </mat-label>
+
+                <mat-select [(ngModel)]="state.fundingAccountId" (selectionChange)="emit()">
+
+                    <mat-select-trigger>
+
+                        {{
+                        selectedFundingAccount?.code
+                        }}
+                        -
+                        {{
+                        selectedFundingAccount?.name
+                        }}
+                        (
+                        {{
+                        selectedFundingAccount?.balance
+                        | number:'1.2-2'
+                        }}
+                        )
+
+                    </mat-select-trigger>
+
+                    <mat-option *ngFor="let account of fundingAccounts" [value]="account.id">
+
+                        {{ account.code }}
+                        -
+                        {{ account.name }}
+                        (
+                        {{ account.balance | number:'1.2-2' }}
+                        )
+
+                    </mat-option>
+
+                </mat-select>
+
+            </mat-form-field>
+
+            <div class="funding-account-summary" *ngIf="selectedFundingAccount">
+
+                <div class="funding-metric">
+
+                    <span>
+                        Funding Account
+                    </span>
+
+                    <strong>
+                        {{ selectedFundingAccount.name }}
+                    </strong>
+
+                    <small>
+                        Balance:
+                        {{
+                        selectedFundingAccount.balance
+                        | number:'1.2-2'
+                        }}
+                    </small>
+
+                </div>
+
+                <div class="funding-metric">
+
+                    <span>
+                        Account Type
+                    </span>
+
+                    <strong>
+                        {{
+                        selectedFundingAccount.role
+                        }}
+                    </strong>
+
+                </div>
+
+                <div class="funding-metric">
+
+                    <span>
+                        Available Balance
+                    </span>
+
+                    <strong>
+                        {{
+                        selectedFundingAccount.balance
+                        | number:'1.2-2'
+                        }}
+                    </strong>
+
+                </div>
+
+                <div class="funding-metric">
+
+                    <span>
+                        Required Funding
+                    </span>
+
+                    <strong>
+                        {{
+                        totalFundingRequired
+                        | number:'1.2-2'
+                        }}
+                    </strong>
+
+                </div>
+
+                <div class="funding-metric" *ngIf="!requiresAutoFunding">
+
+                    <span>
+                        Remaining Balance
+                    </span>
+
+                    <strong>
+                        {{
+                        fundingSurplus
+                        | number:'1.2-2'
+                        }}
+                    </strong>
+
+                </div>
+
+                <div class="funding-metric warning" *ngIf="requiresAutoFunding">
+
+                    <span>
+                        Auto Funding Required
+                    </span>
+
+                    <strong>
+                        {{
+                        fundingShortfall
+                        | number:'1.2-2'
+                        }}
+                    </strong>
+
+                </div>
+
+            </div>
+
+            <div class="auto-funding-banner" *ngIf="requiresAutoFunding">
+
+                Funding account balance is insufficient.
+
+                Owner Equity will automatically fund
+
+                {{ fundingShortfall | number:'1.2-2' }}
+
+                before supplier and expense payments are posted.
+
+            </div>
+
+        </div>
+
+    </div>
+
     <!-- TOTALS -->
+
     <div class="review-section">
 
         <div class="section-title">
@@ -143,24 +509,38 @@
         <div class="review-grid">
 
             <div class="review-item">
+
                 <span>Total Units</span>
 
                 <strong>
-                    {{
-                    totalUnits
-                    }}
+                    {{ totalUnits }}
                 </strong>
+
             </div>
 
             <div class="review-item">
                 <span>Inventory Value</span>
+                <strong>{{ totalInventoryValue | number:'1.2-2' }}</strong>
+            </div>
 
-                <strong>
-                    {{
-                    totalValue
-                    | number:'1.2-2'
-                    }}
-                </strong>
+            <div class="review-item">
+                <span>Operational Expenses</span>
+                <strong>{{ totalOperationalExpenses | number:'1.2-2' }}</strong>
+            </div>
+
+            <div class="review-item">
+                <span>Supplier Auto Funding</span>
+                <strong>{{ supplierFundingRequired | number:'1.2-2' }}</strong>
+            </div>
+
+            <div class="review-item">
+                <span>Expense Auto Funding</span>
+                <strong>{{ expenseFundingRequired | number:'1.2-2' }}</strong>
+            </div>
+
+            <div class="review-item">
+                <span>Total Auto Funding Required</span>
+                <strong>{{ totalFundingRequired | number:'1.2-2' }}</strong>
             </div>
 
         </div>

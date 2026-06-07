@@ -154,7 +154,10 @@ export class OnboardingSupplierStepComponent implements OnInit, OnChanges {
                     row?.supplierName ?? ''
                 ],
                 packagingTempId: [
-                    row?.packagingTempId ?? '',
+                    row?.packagingTempId ?? 
+                    (
+                        this.packagings.length === 1 ? this.packagings[0].tempId : ''
+                    ),
                     Validators.required
                 ],
                 unitsSupplied: [

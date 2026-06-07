@@ -4,6 +4,13 @@
     gap: 24px;
 }
 
+.review-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
 .review-section {
     border:
         1px solid var(--border);
@@ -43,9 +50,13 @@
 }
 
 .review-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    // display: flex;
+    // align-items: center;
+    // justify-content: space-between;
     gap: 16px;
     padding-bottom: 12px;
     border-bottom:
@@ -60,7 +71,7 @@
 .supplier-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 900px;
+    min-width: 700px;
 }
 
 .supplier-table th,
@@ -76,6 +87,127 @@
     font-size: 12px;
     font-weight: 700;
     opacity: 0.75;
+}
+
+.payment-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    margin: 20px 0;
+}
+
+.expense-row {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(auto-fit,
+            minmax(240px, 1fr));
+
+    gap: 16px;
+
+    align-items: start;
+
+    margin-bottom: 16px;
+}
+
+.expense-row mat-form-field {
+    width: 100%;
+}
+
+.expense-row button {
+
+    min-height: 56px;
+
+    align-self: stretch;
+}
+
+.funding-account-summary {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit,
+            minmax(180px, 1fr));
+
+    gap: 16px;
+
+    padding: 16px;
+
+    border: 1px solid var(--border);
+
+    border-radius: 12px;
+
+    background:
+        var(--surface);
+}
+
+.funding-metric {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 6px;
+}
+
+.funding-metric span {
+
+    font-size: 12px;
+
+    opacity: 0.7;
+}
+
+.warning strong {
+    color:
+        var(--warn-color,
+            #d32f2f);
+}
+
+.auto-funding-banner {
+
+    margin-top: 16px;
+
+    padding: 16px;
+
+    border-radius: 12px;
+
+    border:
+        1px solid rgba(211,
+            47,
+            47,
+            0.25);
+
+    background:
+        rgba(211,
+            47,
+            47,
+            0.08);
+
+    font-size: 14px;
+
+    line-height: 1.5;
+
+}
+
+@media (max-width: 768px) {
+
+    .funding-account-summary {
+
+        grid-template-columns:
+            1fr;
+    }
+
+}
+
+@media (max-width: 1024px) {
+
+    .expense-row {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
 }
 
 @media (max-width: 768px) {

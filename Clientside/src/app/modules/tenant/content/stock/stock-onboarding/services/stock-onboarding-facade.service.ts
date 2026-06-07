@@ -15,10 +15,13 @@ import { OnboardingState } from '../state/onboarding.state';
 
 import {
     OnboardingMode,
+    OnboardingOperationalExpense,
     OnboardingPackagingDraft,
     OnboardingPricingDraft,
     OnboardingSupplierEntry,
-    OnboardingVariantDraft
+    OnboardingVariantDraft,
+    StockOnboardingState,
+    SupplierPaymentMethod
 } from '../models/onboarding.models';
 
 import {
@@ -108,7 +111,22 @@ export class StockOnboardingFacadeService {
         );
 
     setMode(mode: OnboardingMode) {
+
+        if (mode === 'NEW_PRODUCT') {
+
+            this.patch({
+
+                mode,
+
+                selectedProductId: null
+
+            });
+
+            return;
+        }
+
         this.patch({ mode });
+
     }
 
     setCurrentStep(currentStep: number) {
@@ -120,9 +138,32 @@ export class StockOnboardingFacadeService {
     }
 
     setSelectedProduct(
-        selectedProductId: string | null
+        product: {
+            id: string;
+            name?: string;
+            description?: string;
+        } | null
     ) {
-        this.patch({ selectedProductId });
+
+        this.patch({
+
+            selectedProductId:
+                product?.id ?? null,
+
+            productDraft: {
+
+                ...this.state().productDraft,
+
+                name:
+                    product?.name ?? '',
+
+                description:
+                    product?.description ?? ''
+
+            }
+
+        });
+
     }
 
     setVariantDraft(
@@ -230,6 +271,112 @@ export class StockOnboardingFacadeService {
                         Number(row.vatRate ?? 0)
                 }))
         });
+    }
+
+    setAccountingDate(
+        accountingDate: string | null
+    ) {
+        this.patch({
+            accountingDate
+        });
+    }
+
+    setOperationalExpenses(
+        operationalExpenses:
+            OnboardingOperationalExpense[]
+    ) {
+        this.patch({
+            operationalExpenses
+        });
+    }
+
+    setAutoPaySuppliers(
+        autoPaySuppliers: boolean
+    ) {
+        this.patch({
+            autoPaySuppliers
+        });
+    }
+
+    setSupplierPaymentMethod(
+        supplierPaymentMethod:
+            SupplierPaymentMethod | null
+    ) {
+        this.patch({
+            supplierPaymentMethod
+        });
+    }
+
+    setAutoPayOperationalExpenses(
+        autoPayOperationalExpenses:
+            boolean
+    ) {
+        this.patch({
+            autoPayOperationalExpenses
+        });
+    }
+
+    setFundingAccount(
+        fundingAccountId:
+            string | null
+    ) {
+        this.patch({
+            fundingAccountId
+        });
+    }
+
+    updateReviewState(
+        reviewState:
+            Partial<StockOnboardingState>
+    ) {
+
+        const patch:
+            Partial<StockOnboardingState> = {};
+
+        if (
+            reviewState.accountingDate !== undefined
+        ) {
+            patch.accountingDate =
+                reviewState.accountingDate;
+        }
+
+        if (
+            reviewState.operationalExpenses !== undefined
+        ) {
+            patch.operationalExpenses =
+                reviewState.operationalExpenses;
+        }
+
+        if (
+            reviewState.autoPaySuppliers !== undefined
+        ) {
+            patch.autoPaySuppliers =
+                reviewState.autoPaySuppliers;
+        }
+
+        if (
+            reviewState.supplierPaymentMethod !== undefined
+        ) {
+            patch.supplierPaymentMethod =
+                reviewState.supplierPaymentMethod;
+        }
+
+        if (
+            reviewState.autoPayOperationalExpenses !== undefined
+        ) {
+            patch.autoPayOperationalExpenses =
+                reviewState.autoPayOperationalExpenses;
+        }
+
+        if (
+            reviewState.fundingAccountId !== undefined
+        ) {
+            patch.fundingAccountId =
+                reviewState.fundingAccountId;
+        }
+
+        this.patch(patch);
+
     }
 
     nextStep() {
@@ -341,7 +488,9 @@ export class StockOnboardingFacadeService {
     ): string[] {
 
         const {
+            mode,
             branchId,
+            selectedProductId,
             productDraft,
             variantDraft,
             packagings,
@@ -351,11 +500,30 @@ export class StockOnboardingFacadeService {
 
         switch (step) {
 
-            case 0:
+            case 0: {
 
                 const productErrors: string[] = [];
 
-                if (!productDraft.name?.trim()) {
+                if (
+                    mode === 'EXISTING_PRODUCT'
+                ) {
+
+                    if (
+                        !selectedProductId
+                    ) {
+
+                        productErrors.push(
+                            'Please select a product.'
+                        );
+
+                    }
+
+                    return productErrors;
+                }
+
+                if (
+                    !productDraft.name?.trim()
+                ) {
 
                     productErrors.push(
                         'Product name is required.'
@@ -383,6 +551,7 @@ export class StockOnboardingFacadeService {
                 }
 
                 return productErrors;
+            }
 
             case 1:
 
@@ -415,8 +584,13 @@ export class StockOnboardingFacadeService {
                         suppliers
                     );
 
-            default:
+            case 5:
+                return this.validator
+                    .validateAccountingAndPayments(
+                        this.state()
+                    );
 
+            default:
                 return [];
 
         }
@@ -456,6 +630,21 @@ export class StockOnboardingFacadeService {
             pricing: [],
 
             suppliers: [],
+
+            accountingDate:
+                new Date()
+                    .toISOString()
+                    .substring(0, 10),
+
+            operationalExpenses: [],
+
+            autoPaySuppliers: false,
+
+            supplierPaymentMethod: null,
+
+            autoPayOperationalExpenses: false,
+
+            fundingAccountId: null,
 
             notes: null,
 
@@ -502,7 +691,7 @@ export class StockOnboardingFacadeService {
                     );
 
                     this.router.navigate([
-                        '/app/inventory'
+                        '/app/stock'
                     ]);
 
                 },

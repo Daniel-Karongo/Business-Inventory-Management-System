@@ -48,6 +48,17 @@ export interface OnboardingSupplierEntry {
     vatRate: number;
 }
 
+export type SupplierPaymentMethod =
+    | 'CASH'
+    | 'BANK'
+    | 'MPESA';
+
+export interface OnboardingOperationalExpense {
+    expenseAccountId: string;
+    description: string;
+    amount: number;
+}
+
 export interface StockOnboardingState {
     currentStep: number;
 
@@ -56,11 +67,9 @@ export interface StockOnboardingState {
     branchId: string | null;
 
     selectedProductId: string | null;
-
     selectedVariantId: string | null;
 
     productDraft: OnboardingProductDraft;
-
     variantDraft: OnboardingVariantDraft;
 
     packagings: OnboardingPackagingDraft[];
@@ -68,6 +77,18 @@ export interface StockOnboardingState {
     pricing: OnboardingPricingDraft[];
 
     suppliers: OnboardingSupplierEntry[];
+
+    accountingDate: string | null;
+
+    operationalExpenses: OnboardingOperationalExpense[];
+
+    autoPaySuppliers: boolean;
+
+    supplierPaymentMethod: SupplierPaymentMethod | null;
+
+    autoPayOperationalExpenses: boolean;
+
+    fundingAccountId: string | null;
 
     notes?: string | null;
 

@@ -12,6 +12,10 @@ import {
     BulkRequest
 } from '../../../../../../shared/models/bulk-import.model';
 
+import {
+    OperationalExpenseInput
+} from '../../models/stock-onboarding.model';
+
 @Injectable({
     providedIn: 'root'
 })
@@ -152,7 +156,39 @@ export class StockOnboardingBuilderService {
                                 supplier.vatRate
                         };
 
-                    })
+                    }),
+
+            accountingDate:
+                state.accountingDate!,
+
+            operationalExpenses:
+                state.operationalExpenses
+                    .map(
+                        expense => ({
+                            expenseAccountId:
+                                expense.expenseAccountId,
+
+                            description:
+                                expense.description,
+
+                            amount:
+                                expense.amount
+                        })
+                    ),
+
+            autoPaySuppliers:
+                state.autoPaySuppliers,
+
+            supplierPaymentMethod:
+                state.supplierPaymentMethod
+                ?? undefined,
+
+            autoPayOperationalExpenses:
+                state.autoPayOperationalExpenses,
+
+            fundingAccountId:
+                state.fundingAccountId
+                ?? undefined
 
         };
 

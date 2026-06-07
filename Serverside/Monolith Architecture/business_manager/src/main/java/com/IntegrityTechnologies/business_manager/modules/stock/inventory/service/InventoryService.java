@@ -115,6 +115,11 @@ public class InventoryService {
 
         return assertNotDuplicateOrIgnore(() -> {
 
+            if (req.getAccountingDate() == null)
+                throw new IllegalArgumentException(
+                        "accountingDate is required"
+                );
+
             branchTenantGuard.validate(req.getBranchId());
 
             periodGuardService.validateOpenPeriod(

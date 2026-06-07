@@ -25,6 +25,12 @@ public class PeriodGuardService {
             throw new IllegalStateException("BranchId required for period validation");
         }
 
+        if (date == null) {
+            throw new IllegalArgumentException(
+                    "Accounting date is required"
+            );
+        }
+
         branchTenantGuard.validate(branchId);
 
         UUID tenantId = TenantContext.getTenantId();

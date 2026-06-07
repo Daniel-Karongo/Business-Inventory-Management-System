@@ -176,6 +176,10 @@ public class ReceiveAndInvoiceService {
                     stock.getNote()
             );
 
+            supplierReceipt.setAccountingDate(
+                    stock.getAccountingDate()
+            );
+
             supplierReceipt.setReference(
                     orchestrationKey
                             + "::SUPPLIER::"
