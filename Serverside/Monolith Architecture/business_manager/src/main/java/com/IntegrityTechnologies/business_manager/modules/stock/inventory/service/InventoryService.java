@@ -47,6 +47,7 @@ import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuar
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.persistence.OptimisticLockException;
+
 import java.util.Collections;
 
 import lombok.RequiredArgsConstructor;
@@ -117,7 +118,7 @@ public class InventoryService {
             branchTenantGuard.validate(req.getBranchId());
 
             periodGuardService.validateOpenPeriod(
-                    LocalDate.now(),
+                    req.getAccountingDate(),
                     req.getBranchId()
             );
 
@@ -132,6 +133,10 @@ public class InventoryService {
 
             if (req.getSuppliers() == null || req.getSuppliers().isEmpty())
                 throw new IllegalArgumentException("At least one supplier must be provided");
+            if (req.getAccountingDate() == null)
+                throw new IllegalArgumentException(
+                        "accountingDate is required"
+                );
 
             // -------------------------------------------------------------
             // 1. RESOLVE PRODUCT + BRANCH
@@ -376,7 +381,7 @@ public class InventoryService {
                 );
 
                 receipt.setReceiptDate(
-                        LocalDate.now()
+                        req.getAccountingDate()
                 );
 
                 receipt.setSupplierReference(
@@ -580,6 +585,7 @@ public class InventoryService {
                             .tenantId(tenantId())
                             .branchId(branch.getId())
                             .reference(req.getReference())
+                            .accountingDate(req.getAccountingDate())
                             .description(
                                     "Inventory receipt into GRNI"
                             )

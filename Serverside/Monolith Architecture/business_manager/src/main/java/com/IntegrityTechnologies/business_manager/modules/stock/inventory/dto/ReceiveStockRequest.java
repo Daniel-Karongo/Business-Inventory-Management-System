@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -17,4 +18,5 @@ public class ReceiveStockRequest {
     private List<SupplierUnit> suppliers;
     private String reference;
     private String note;
+    private LocalDate accountingDate;
 }

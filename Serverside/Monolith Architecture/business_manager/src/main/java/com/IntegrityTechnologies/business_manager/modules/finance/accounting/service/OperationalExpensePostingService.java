@@ -27,7 +27,8 @@ public class OperationalExpensePostingService {
             String reference,
             String description,
             BigDecimal amount,
-            LocalDate accountingDate
+            LocalDate accountingDate,
+            int expenseIndex
     ) {
 
         if (
@@ -40,13 +41,45 @@ public class OperationalExpensePostingService {
         UUID tenantId =
                 TenantContext.getTenantId();
 
+        UUID sourceId =
+                UUID.nameUUIDFromBytes(
+                        (
+                                "STOCK_EXPENSE:" +
+                                        branchId +
+                                        ":" +
+                                        reference +
+                                        ":" +
+                                        expenseIndex
+                        ).getBytes()
+                );
+
+        if (
+                accountingFacade.isAlreadyPosted(
+                        "STOCK_ONBOARDING_EXPENSE",
+                        sourceId
+                )
+        ) {
+            return;
+        }
+
         accountingFacade.post(
                 AccountingEvent.builder()
-                        .eventId(UUID.randomUUID())
+                        .eventId(
+                                UUID.nameUUIDFromBytes(
+                                        (
+                                                "STOCK_EXPENSE_EVENT:" +
+                                                        branchId +
+                                                        ":" +
+                                                        reference +
+                                                        ":" +
+                                                        expenseIndex
+                                        ).getBytes()
+                                )
+                        )
                         .tenantId(tenantId)
                         .branchId(branchId)
                         .sourceModule("STOCK_ONBOARDING_EXPENSE")
-                        .sourceId(UUID.randomUUID())
+                        .sourceId(sourceId)
                         .reference(reference)
                         .description(description)
                         .performedBy("SYSTEM")

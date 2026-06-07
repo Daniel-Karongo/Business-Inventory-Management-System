@@ -219,13 +219,38 @@ public class ApAllocationService {
                 request.getBranchId()
         );
 
-        List<PurchaseInvoice> invoices =
-                invoiceRepository.findByTenantIdAndBranchIdAndSupplier_IdAndOutstandingAmountGreaterThanAndReversedFalseAndCancelledFalseOrderByDueDateAscDocumentDateAsc(
-                                TenantContext.getTenantId(),
-                                request.getBranchId(),
-                                request.getSupplierId(),
-                                BigDecimal.ZERO
-                        );
+        List<PurchaseInvoice> invoices;
+
+        if (request.getTargetInvoiceIds() != null && !request.getTargetInvoiceIds().isEmpty()) {
+
+            invoices =
+                    request.getTargetInvoiceIds()
+                            .stream()
+                            .map(id ->
+                                    invoiceRepository
+                                            .findLockedByTenantIdAndBranchIdAndId(
+                                                    TenantContext.getTenantId(),
+                                                    request.getBranchId(),
+                                                    id
+                                            )
+                                            .orElseThrow()
+                            )
+                            .filter(i ->
+                                    i.getOutstandingAmount()
+                                            .compareTo(BigDecimal.ZERO) > 0
+                            )
+                            .toList();
+
+        } else {
+
+            invoices =
+                    invoiceRepository.findByTenantIdAndBranchIdAndSupplier_IdAndOutstandingAmountGreaterThanAndReversedFalseAndCancelledFalseOrderByDueDateAscDocumentDateAsc(
+                            TenantContext.getTenantId(),
+                            request.getBranchId(),
+                            request.getSupplierId(),
+                            BigDecimal.ZERO
+                    );
+        }
 
         BigDecimal remaining =
                 request.getAmount();
@@ -332,13 +357,42 @@ public class ApAllocationService {
             );
         }
 
-        List<PurchaseInvoice> invoices =
-                invoiceRepository.findByTenantIdAndBranchIdAndSupplier_IdAndOutstandingAmountGreaterThanAndReversedFalseAndCancelledFalseOrderByDueDateAscDocumentDateAsc(
-                        TenantContext.getTenantId(),
-                        request.getBranchId(),
-                        request.getSupplierId(),
-                        BigDecimal.ZERO
-                );
+        List<PurchaseInvoice> invoices;
+
+        if (
+                request.getTargetInvoiceIds() != null
+                        &&
+                        !request.getTargetInvoiceIds().isEmpty()
+        ) {
+
+            invoices =
+                    request.getTargetInvoiceIds()
+                            .stream()
+                            .map(id ->
+                                    invoiceRepository
+                                            .findLockedByTenantIdAndBranchIdAndId(
+                                                    TenantContext.getTenantId(),
+                                                    request.getBranchId(),
+                                                    id
+                                            )
+                                            .orElseThrow()
+                            )
+                            .filter(i ->
+                                    i.getOutstandingAmount()
+                                            .compareTo(BigDecimal.ZERO) > 0
+                            )
+                            .toList();
+
+        } else {
+
+            invoices =
+                    invoiceRepository.findByTenantIdAndBranchIdAndSupplier_IdAndOutstandingAmountGreaterThanAndReversedFalseAndCancelledFalseOrderByDueDateAscDocumentDateAsc(
+                            TenantContext.getTenantId(),
+                            request.getBranchId(),
+                            request.getSupplierId(),
+                            BigDecimal.ZERO
+                    );
+        }
 
         BigDecimal remaining =
                 request.getAmount();

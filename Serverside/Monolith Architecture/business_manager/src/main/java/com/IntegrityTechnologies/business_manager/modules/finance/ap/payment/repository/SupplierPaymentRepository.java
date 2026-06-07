@@ -18,13 +18,13 @@ public interface SupplierPaymentRepository
         extends JpaRepository<SupplierPayment, UUID>,
         JpaSpecificationExecutor<SupplierPayment> {
 
-    List<SupplierPayment>
-    findByTenantIdAndBranchIdAndSupplierIdAndReversedFalseOrderByPaymentDateDesc(
+    Optional<SupplierPayment>
+    findByTenantIdAndBranchIdAndSupplierIdAndReference(
             UUID tenantId,
             UUID branchId,
-            UUID supplierId
+            UUID supplierId,
+            String reference
     );
-
     Page<SupplierPayment>
     findByTenantIdAndBranchIdOrderByPaidAtDesc(
             UUID tenantId,

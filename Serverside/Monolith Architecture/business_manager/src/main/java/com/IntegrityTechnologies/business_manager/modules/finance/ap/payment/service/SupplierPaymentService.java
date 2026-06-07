@@ -30,6 +30,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -67,6 +68,21 @@ public class SupplierPaymentService {
         branchTenantGuard.validate(
                 request.getBranchId()
         );
+
+        Optional<SupplierPayment> existing =
+                repository
+                        .findByTenantIdAndBranchIdAndSupplierIdAndReference(
+                                tenantId(),
+                                request.getBranchId(),
+                                request.getSupplierId(),
+                                request.getReference()
+                        );
+
+        if (existing.isPresent()) {
+            return mapper.toResponse(
+                    existing.get()
+            );
+        }
 
         validateFundingAccount(request);
 

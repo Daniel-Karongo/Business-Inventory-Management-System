@@ -54,6 +54,15 @@ import java.util.UUID;
                                 "branch_id",
                                 "document_number"
                         }
+                ),
+                @UniqueConstraint(
+                        name = "uk_supplier_payment_reference",
+                        columnNames = {
+                                "tenant_id",
+                                "branch_id",
+                                "supplier_id",
+                                "reference"
+                        }
                 )
         }
 )

@@ -68,6 +68,10 @@ public class SupplierPaymentProcessingService {
                         current.getUnappliedAmount()
                 );
 
+                auto.setTargetInvoiceIds(
+                        request.getTargetInvoiceIds()
+                );
+
                 allocationService.autoAllocate(
                         auto
                 );

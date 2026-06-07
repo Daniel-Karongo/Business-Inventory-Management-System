@@ -15,6 +15,7 @@ import com.IntegrityTechnologies.business_manager.modules.person.supplier.model.
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.repository.SupplierRepository;
 import com.IntegrityTechnologies.business_manager.modules.person.supplier.service.SupplierService;
 import com.IntegrityTechnologies.business_manager.modules.procurement.matching.dto.ReceiveAndInvoiceRequest;
+import com.IntegrityTechnologies.business_manager.modules.procurement.matching.dto.ReceiveAndInvoiceResult;
 import com.IntegrityTechnologies.business_manager.modules.procurement.matching.service.ReceiveAndInvoiceService;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.model.Category;
 import com.IntegrityTechnologies.business_manager.modules.stock.category.repository.CategoryRepository;
@@ -110,9 +111,6 @@ public class StockOnboardingService {
         Map<String, ProductVariantPackaging> packagingMap =
                 resolvePackagings(variantId, req);
 
-        ProductVariantPackaging basePackaging =
-                packagingService.getBasePackaging(variantId);
-
         // =====================================================
         // 4. PRICING (UPSERT)
         // =====================================================
@@ -167,18 +165,20 @@ public class StockOnboardingService {
                     req.getBranchId(),
                     req.getFundingAccountId(),
                     requiredFunding,
-                    req.getAccountingDate()
+                    req.getAccountingDate(),
+                    req.getReference()
             );
         }
 
-        receiveAndInvoiceService.execute(
-                orchestration
-        );
+        ReceiveAndInvoiceResult result =
+                receiveAndInvoiceService.execute(
+                        orchestration
+                );
 
         autoPaySuppliers(
                 req,
                 product,
-                packagingMap
+                result.getSupplierInvoiceIds()
         );
 
         postOperationalExpenses(
@@ -420,10 +420,10 @@ public class StockOnboardingService {
 
         Optional<Product> existing =
                 productRepository.findByNameForUpdate(
-                                tenantId(),
-                                req.getBranchId(),
-                                normalizedProductName
-                        );
+                        tenantId(),
+                        req.getBranchId(),
+                        normalizedProductName
+                );
 
         if (existing.isPresent()) {
             return existing.get();
@@ -933,6 +933,10 @@ public class StockOnboardingService {
 
         r.setNote(req.getNote());
 
+        r.setAccountingDate(
+                req.getAccountingDate()
+        );
+
         List<SupplierUnit> supplierUnits =
                 new ArrayList<>();
 
@@ -1043,7 +1047,7 @@ public class StockOnboardingService {
     private void autoPaySuppliers(
             StockOnboardingRequest req,
             Product product,
-            Map<String, ProductVariantPackaging> packagingMap
+            Map<UUID, List<UUID>> supplierInvoiceIds
     ) {
 
         if (!Boolean.TRUE.equals(
@@ -1109,10 +1113,18 @@ public class StockOnboardingService {
 
             payment.setReference(
                     req.getReference()
+                            + "::SUPPLIER::"
+                            + entry.getKey()
             );
 
             payment.setPaymentDate(
                     req.getAccountingDate()
+            );
+
+            payment.setTargetInvoiceIds(
+                    supplierInvoiceIds.get(
+                            entry.getKey()
+                    )
             );
 
             payment.setAutoPost(true);
@@ -1128,7 +1140,6 @@ public class StockOnboardingService {
     private void postOperationalExpenses(
             StockOnboardingRequest req
     ) {
-
         if (!Boolean.TRUE.equals(
                 req.getAutoPayOperationalExpenses()
         )) {
@@ -1139,6 +1150,8 @@ public class StockOnboardingService {
             return;
         }
 
+        int index = 0;
+
         for (var expense : req.getOperationalExpenses()) {
 
             operationalExpensePostingService.postExpense(
@@ -1148,7 +1161,8 @@ public class StockOnboardingService {
                     req.getReference(),
                     expense.getDescription(),
                     expense.getAmount(),
-                    req.getAccountingDate()
+                    req.getAccountingDate(),
+                    index++
             );
         }
     }
@@ -1199,6 +1213,18 @@ public class StockOnboardingService {
             throw new IllegalArgumentException(
                     "accountingDate is required"
             );
+        }
+
+        if (
+                Boolean.TRUE.equals(
+                        req.getAutoPayOperationalExpenses()
+                )
+        ) {
+            if (req.getFundingAccountId() == null) {
+                throw new IllegalArgumentException(
+                        "fundingAccountId is required when autoPayOperationalExpenses=true"
+                );
+            }
         }
 
         Set<String> packagingNames = new HashSet<>();
@@ -1302,15 +1328,6 @@ public class StockOnboardingService {
                         "fundingAccountId is required when autoPaySuppliers=true"
                 );
             }
-        }
-
-        if (Boolean.TRUE.equals(req.getAutoPaySuppliers())) {
-
-            if (req.getFundingAccountId() == null) {
-                throw new IllegalArgumentException(
-                        "fundingAccountId is required when autoPaySuppliers=true"
-                );
-            }
 
             if (req.getSupplierPaymentMethod() == null) {
                 throw new IllegalArgumentException(
@@ -1321,34 +1338,32 @@ public class StockOnboardingService {
 
         if (req.getOperationalExpenses() != null) {
 
-            if (req.getOperationalExpenses() != null) {
-                for (var expense : req.getOperationalExpenses()) {
+            for (var expense : req.getOperationalExpenses()) {
 
-                    if (expense.getDescription() == null
-                            || expense.getDescription().isBlank()) {
-                        throw new IllegalArgumentException(
-                                "Operational expense description is required"
-                        );
-                    }
+                if (expense.getDescription() == null
+                        || expense.getDescription().isBlank()) {
+                    throw new IllegalArgumentException(
+                            "Operational expense description is required"
+                    );
+                }
 
-                    if (expense.getAmount() == null
-                            || expense.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-                        throw new IllegalArgumentException(
-                                "Operational expense amount must be > 0"
-                        );
-                    }
+                if (expense.getAmount() == null
+                        || expense.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                    throw new IllegalArgumentException(
+                            "Operational expense amount must be > 0"
+                    );
+                }
 
-                    if (
-                            Boolean.TRUE.equals(
-                                    req.getAutoPayOperationalExpenses()
-                            )
-                                    &&
-                                    expense.getExpenseAccountId() == null
-                    ) {
-                        throw new IllegalArgumentException(
-                                "expenseAccountId is required for auto-paid operational expenses"
-                        );
-                    }
+                if (
+                        Boolean.TRUE.equals(
+                                req.getAutoPayOperationalExpenses()
+                        )
+                                &&
+                                expense.getExpenseAccountId() == null
+                ) {
+                    throw new IllegalArgumentException(
+                            "expenseAccountId is required for auto-paid operational expenses"
+                    );
                 }
             }
         }

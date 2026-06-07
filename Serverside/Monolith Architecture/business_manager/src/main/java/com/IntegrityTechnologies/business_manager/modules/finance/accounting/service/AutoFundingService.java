@@ -30,7 +30,8 @@ public class AutoFundingService {
             UUID branchId,
             UUID fundingAccountId,
             BigDecimal requiredAmount,
-            LocalDate accountingDate
+            LocalDate accountingDate,
+            String reference
     ) {
 
         if (
@@ -42,6 +43,27 @@ public class AutoFundingService {
 
         UUID tenantId =
                 TenantContext.getTenantId();
+
+        UUID sourceId =
+                UUID.nameUUIDFromBytes(
+                        (
+                                "AUTO_FUNDING:" +
+                                        branchId +
+                                        ":" +
+                                        fundingAccountId +
+                                        ":" +
+                                        reference
+                        ).getBytes()
+                );
+
+        if (
+                accountingFacade.isAlreadyPosted(
+                        "AUTO_FUNDING",
+                        sourceId
+                )
+        ) {
+            return BigDecimal.ZERO;
+        }
 
         BigDecimal currentBalance =
                 accountBalanceRepository
@@ -72,7 +94,16 @@ public class AutoFundingService {
         accountingFacade.post(
                 AccountingEvent.builder()
                         .eventId(
-                                UUID.randomUUID()
+                                UUID.nameUUIDFromBytes(
+                                        (
+                                                "AUTO_FUNDING_EVENT:" +
+                                                        branchId +
+                                                        ":" +
+                                                        fundingAccountId +
+                                                        ":" +
+                                                        reference
+                                        ).getBytes()
+                                )
                         )
                         .tenantId(
                                 tenantId
@@ -84,7 +115,7 @@ public class AutoFundingService {
                                 "AUTO_FUNDING"
                         )
                         .sourceId(
-                                UUID.randomUUID()
+                                sourceId
                         )
                         .reference(
                                 "AUTO-FUND-" + fundingAccountId

@@ -1,12 +1,15 @@
 package com.IntegrityTechnologies.business_manager.modules.procurement.matching.controller;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.ap.invoice.dto.PurchaseInvoiceResponse;
 import com.IntegrityTechnologies.business_manager.modules.platform.security.annotation.TenantManagerOnly;
 import com.IntegrityTechnologies.business_manager.modules.procurement.matching.dto.ReceiveAndInvoiceRequest;
+import com.IntegrityTechnologies.business_manager.modules.procurement.matching.dto.ReceiveAndInvoiceResult;
 import com.IntegrityTechnologies.business_manager.modules.procurement.matching.service.ReceiveAndInvoiceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/procurement/receive-and-invoice")
@@ -18,7 +21,7 @@ public class ReceiveAndInvoiceController {
             service;
 
     @PostMapping
-    public PurchaseInvoiceResponse execute(
+    public ReceiveAndInvoiceResult execute(
             @Valid
             @RequestBody
             ReceiveAndInvoiceRequest request

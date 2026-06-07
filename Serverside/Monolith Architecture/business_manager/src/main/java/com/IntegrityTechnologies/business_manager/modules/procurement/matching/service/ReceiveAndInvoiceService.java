@@ -12,6 +12,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.dto.Va
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.service.VatCalculationService;
 import com.IntegrityTechnologies.business_manager.modules.procurement.matching.dto.MatchInvoiceToReceiptsRequest;
 import com.IntegrityTechnologies.business_manager.modules.procurement.matching.dto.ReceiveAndInvoiceRequest;
+import com.IntegrityTechnologies.business_manager.modules.procurement.matching.dto.ReceiveAndInvoiceResult;
 import com.IntegrityTechnologies.business_manager.modules.procurement.receipt.repository.GoodsReceiptRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.ReceiveStockRequest;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.dto.SupplierUnit;
@@ -44,7 +45,7 @@ public class ReceiveAndInvoiceService {
 
     @Transactional
     @SuppressWarnings("unchecked")
-    public PurchaseInvoiceResponse execute(
+    public ReceiveAndInvoiceResult execute(
             ReceiveAndInvoiceRequest request
     ) {
 
@@ -80,6 +81,9 @@ public class ReceiveAndInvoiceService {
                                 )
                         );
 
+        Map<UUID, List<UUID>> supplierInvoiceIds =
+                new LinkedHashMap<>();
+
         PurchaseInvoiceResponse lastInvoice = null;
 
         /*
@@ -112,6 +116,35 @@ public class ReceiveAndInvoiceService {
                             .isPresent();
 
             if (receiptAlreadyExists) {
+
+                Optional<PurchaseInvoice> existingInvoice =
+                        invoiceRepository
+                                .findByTenantIdAndBranchIdAndSupplierInvoiceNumber(
+                                        TenantContext.getTenantId(),
+                                        stock.getBranchId(),
+                                        "AUTO-GRN-"
+                                                + orchestrationKey
+                                                + "-"
+                                                + supplierId
+                                );
+
+                if (existingInvoice.isPresent()) {
+
+                    supplierInvoiceIds
+                            .computeIfAbsent(
+                                    supplierId,
+                                    k -> new ArrayList<>()
+                            )
+                            .add(
+                                    existingInvoice.get().getId()
+                            );
+
+                    lastInvoice =
+                            invoiceMapper.toResponse(
+                                    existingInvoice.get()
+                            );
+                }
+
                 continue;
             }
 
@@ -305,6 +338,13 @@ public class ReceiveAndInvoiceService {
 
             if (existingInvoice.isPresent()) {
 
+                supplierInvoiceIds.computeIfAbsent(
+                        supplierId,
+                        k -> new ArrayList<>()
+                ).add(
+                        existingInvoice.get().getId()
+                );
+
                 lastInvoice =
                         invoiceMapper.toResponse(
                                 existingInvoice.get()
@@ -315,6 +355,13 @@ public class ReceiveAndInvoiceService {
             
             PurchaseInvoiceResponse created =
                     invoiceService.create(invoice);
+
+            supplierInvoiceIds.computeIfAbsent(
+                    supplierId,
+                    k -> new ArrayList<>()
+            ).add(
+                    created.getId()
+            );
 
             /*
              * ---------------------------------------------
@@ -366,7 +413,12 @@ public class ReceiveAndInvoiceService {
             lastInvoice = created;
         }
 
-        return lastInvoice;
+        return ReceiveAndInvoiceResult
+                .builder()
+                .supplierInvoiceIds(
+                        supplierInvoiceIds
+                )
+                .build();
     }
 
     private String deterministicReceiptNumber(
