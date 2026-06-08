@@ -16,9 +16,7 @@ import java.math.BigDecimal;
 public class SupplierPaymentProcessingService {
 
     private final SupplierPaymentService paymentService;
-
     private final SupplierPaymentPostingService postingService;
-
     private final ApAllocationService allocationService;
 
     @Transactional

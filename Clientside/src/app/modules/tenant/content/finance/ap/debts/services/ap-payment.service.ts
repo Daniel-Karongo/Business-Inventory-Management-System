@@ -23,6 +23,7 @@ import {
 } from '../models/create-supplier-payment-request.model';
 import { FundingAccount } from '../models/funding-account.model';
 import { SupplierPaymentDetailsDto } from '../models/supplier-payment-details.model';
+import { BulkSupplierPaymentRequest, BulkSupplierPaymentResult } from '../models/bulk-supplier-payment.model';
 
 @Injectable({
     providedIn: 'root'
@@ -240,4 +241,20 @@ export class ApPaymentService {
             () => new Error(message)
         );
     };
+
+    bulkProcess(
+        request: BulkSupplierPaymentRequest
+    ): Observable<BulkSupplierPaymentResult[]> {
+
+        return this.http.post<
+            BulkSupplierPaymentResult[]
+        >(
+            `${this.baseUrl}/bulk`,
+            request
+        ).pipe(
+            catchError(
+                this.handleError
+            )
+        );
+    }
 }

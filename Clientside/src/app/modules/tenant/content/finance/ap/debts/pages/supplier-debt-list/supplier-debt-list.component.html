@@ -68,6 +68,36 @@
 
         </div>
 
+        <div class="view-actions">
+
+            <button mat-icon-button matTooltip="Table View" [class.active-view]="viewMode === 'table'"
+                (click)="setViewMode('table')">
+
+                <mat-icon>
+                    table_rows
+                </mat-icon>
+
+            </button>
+
+            <button mat-icon-button matTooltip="Grid View" [class.active-view]="viewMode === 'grid'"
+                (click)="setViewMode('grid')">
+
+                <mat-icon>
+                    grid_view
+                </mat-icon>
+
+            </button>
+
+            <button mat-icon-button matTooltip="Toggle Density" (click)="toggleDensity()">
+
+                <mat-icon>
+                    density_medium
+                </mat-icon>
+
+            </button>
+
+        </div>
+
     </div>
 
     <!-- CONTENT -->
@@ -128,6 +158,33 @@
 
         </div>
 
+        <div *ngIf="hasSelection" class="bulk-toolbar">
+
+            <div class="bulk-info">
+
+                <mat-icon>
+                    check_circle
+                </mat-icon>
+
+                <span>
+                    {{ selectedSupplierIds.size }}
+                    {{ isSingleSelection ? 'supplier selected' : 'suppliers selected' }}
+                </span>
+
+            </div>
+
+            <button mat-flat-button color="primary" (click)="openBulkPayment()">
+
+                <mat-icon>
+                    payments
+                </mat-icon>
+
+                {{ isSingleSelection ? 'Pay Supplier' : 'Pay Suppliers' }}
+
+            </button>
+
+        </div>
+
         <!-- EMPTY -->
 
         <app-workflow-card *ngIf="!loading && rows.length === 0">
@@ -148,11 +205,20 @@
 
         <!-- MOBILE -->
 
-        <div *ngIf="!loading" class="mobile-list">
+        <div *ngIf="!loading && viewMode === 'grid'" class="mobile-list" [class.compact]="density === 'compact'">
 
-            <app-workflow-card *ngFor="let row of rows" class="mobile-card" (click)="openWorkspace(row)">
+            <app-workflow-card *ngFor="let row of rows" class="mobile-card"
+                [class.selected]="isSelected(row.supplierId)" (click)="toggleSelection(row)">
 
                 <div class="mobile-top">
+
+                    <div class="selection-indicator" *ngIf="isSelected(row.supplierId)">
+
+                        <mat-icon>
+                            check_circle
+                        </mat-icon>
+
+                    </div>
 
                     <div>
 
@@ -163,7 +229,7 @@
                         <div class="supplier-meta">
 
                             {{ row.openBills }}
-                            open bills
+                            {{ billLabel(row.openBills) }}
 
                             <span *ngIf="row.oldestDueDate">
                                 • oldest due
@@ -247,17 +313,50 @@
 
                 </div>
 
+                <div class="mobile-actions">
+
+                    <button mat-icon-button color="primary" matTooltip="Pay Supplier"
+                        (click)="$event.stopPropagation(); paySupplier(row)">
+                        <mat-icon>
+                            payments
+                        </mat-icon>
+                    </button>
+
+                    <button mat-icon-button matTooltip="Open Workspace"
+                        (click)="$event.stopPropagation(); openWorkspace(row)">
+                        <mat-icon>
+                            dashboard_customize
+                        </mat-icon>
+                    </button>
+
+                </div>
+
             </app-workflow-card>
 
         </div>
 
         <!-- TABLE -->
 
-        <app-workflow-card class="desktop-table" *ngIf="!loading">
+        <app-workflow-card class="desktop-table" *ngIf="!loading && viewMode === 'table'">
 
             <div class="table-wrapper">
 
-                <table mat-table [dataSource]="rows">
+                <table mat-table [dataSource]="rows" [class.compact-table]="density === 'compact'">
+
+                    <ng-container matColumnDef="select">
+
+                        <th mat-header-cell *matHeaderCellDef>
+                        </th>
+
+                        <td mat-cell *matCellDef="let row">
+
+                            <mat-checkbox [checked]="isSelected(row.supplierId)" (click)="$event.stopPropagation()"
+                                (change)="toggleSelection(row)">
+                            </mat-checkbox>
+
+                        </td>
+
+                    </ng-container>
 
                     <!-- SUPPLIER -->
 
@@ -408,8 +507,22 @@
 
                         <td mat-cell *matCellDef="let row">
 
-                            <button mat-flat-button color="primary" (click)="openWorkspace(row)">
-                                Workspace
+                            <button mat-icon-button color="primary" matTooltip="Pay Supplier"
+                                (click)="$event.stopPropagation(); paySupplier(row)">
+
+                                <mat-icon>
+                                    payments
+                                </mat-icon>
+
+                            </button>
+
+                            <button mat-icon-button matTooltip="Open Workspace"
+                                (click)="$event.stopPropagation(); openWorkspace(row)">
+
+                                <mat-icon>
+                                    dashboard_customize
+                                </mat-icon>
+
                             </button>
 
                         </td>
@@ -418,10 +531,9 @@
 
                     <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
 
-                    <tr mat-row *matRowDef="
-              let row;
-              columns: displayedColumns
-            " class="clickable-row" (click)="openWorkspace(row)"></tr>
+                    <tr mat-row *matRowDef="let row;columns: displayedColumns" class="clickable-row"
+                        [class.selected-row]="isSelected(row.supplierId)" (click)="toggleSelection(row)">
+                    </tr>
 
                 </table>
 

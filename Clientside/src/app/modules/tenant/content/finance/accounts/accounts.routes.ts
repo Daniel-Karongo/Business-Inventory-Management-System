@@ -17,11 +17,11 @@ export const ACCOUNTS_ROUTES: Routes = [
     canMatch: [roleAtLeast('MANAGER')],
     children: [
 
-      {
-        path: '',
-        pathMatch: 'full',
-        redirectTo: 'chart'
-      },
+      // {
+      //   path: '',
+      //   pathMatch: 'full',
+      //   redirectTo: 'chart'
+      // },
 
       { path: '', component: AccountsDashboardComponent },
 

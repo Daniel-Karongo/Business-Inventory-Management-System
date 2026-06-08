@@ -1,20 +1,19 @@
 import { CommonModule } from '@angular/common';
 import { Component, Inject, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { finalize, switchMap, of } from 'rxjs';
+import { finalize } from 'rxjs';
 
 import { FundingAccount } from '../../models/funding-account.model';
 import { ApPaymentService } from '../../services/ap-payment.service';
-import { ApAllocationService } from '../../services/ap-allocation.service';
 
 @Component({
   selector: 'app-create-payment-dialog',
@@ -39,7 +38,6 @@ export class CreatePaymentDialogComponent {
 
   private fb = inject(FormBuilder);
   private payments = inject(ApPaymentService);
-  private allocations = inject(ApAllocationService);
   private snack = inject(MatSnackBar);
 
   loading = false;

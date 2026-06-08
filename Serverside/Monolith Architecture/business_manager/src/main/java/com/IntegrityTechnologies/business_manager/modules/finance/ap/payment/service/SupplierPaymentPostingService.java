@@ -6,7 +6,7 @@ import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.ap.allocation.repository.SupplierPaymentAllocationRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.AutoFundingService;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.allocation.service.ApAllocationService;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.dto.SupplierPaymentResponse;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.enums.SupplierPaymentStatus;
@@ -31,16 +31,12 @@ import java.util.UUID;
 public class SupplierPaymentPostingService {
 
     private final SupplierPaymentService paymentService;
-
     private final SupplierPaymentRepository repository;
-
     private final SupplierPaymentMapper mapper;
-
     private final AccountingFacade accountingFacade;
-
     private final AccountingAccounts accountingAccounts;
     private final JournalEntryRepository journalEntryRepository;
-    private final SupplierPaymentAllocationRepository allocationRepository;
+    private final AutoFundingService autoFundingService;
     private final ApAllocationService allocationService;
 
     @Transactional
@@ -86,6 +82,14 @@ public class SupplierPaymentPostingService {
                                         + payment.getId()
                         ).getBytes()
                 );
+
+        autoFundingService.ensureFundingAvailable(
+                branchId,
+                payment.getFundingAccountId(),
+                payment.getAmount(),
+                payment.getPaymentDate(),
+                payment.getDocumentNumber()
+        );
 
         if (accountingFacade.isAlreadyPosted(
                 "SUPPLIER_PAYMENT",

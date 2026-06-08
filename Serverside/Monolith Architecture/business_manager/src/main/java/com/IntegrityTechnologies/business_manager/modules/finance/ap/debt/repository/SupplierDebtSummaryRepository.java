@@ -9,9 +9,77 @@ import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface SupplierDebtSummaryRepository extends Repository<PurchaseInvoice, UUID> {
+
+    @Query("""
+            SELECT
+                pi.supplier.id AS supplierId,
+                pi.supplier.name AS supplierName,
+                COALESCE(SUM(pi.outstandingAmount), 0) AS totalOutstanding,
+                COALESCE(SUM(
+                    CASE
+                        WHEN pi.dueDate < :today
+                        THEN pi.outstandingAmount
+                        ELSE 0
+                    END
+                ), 0) AS overdueAmount,
+                COALESCE((
+                    SELECT SUM(sp.unappliedAmount)
+                    FROM SupplierPayment sp
+                    WHERE sp.tenantId = :tenantId
+                    AND sp.branchId = :branchId
+                    AND sp.supplierId = :supplierId
+                    AND sp.reversed = false
+                ), 0) AS unappliedPayments,
+                (
+                    COALESCE(SUM(pi.outstandingAmount), 0)
+                    -
+                    COALESCE((
+                        SELECT SUM(sp.unappliedAmount)
+                        FROM SupplierPayment sp
+                        WHERE sp.tenantId = :tenantId
+                        AND sp.branchId = :branchId
+                        AND sp.supplierId = :supplierId
+                        AND sp.reversed = false
+                    ), 0)
+                ) AS netPayable,
+                COUNT(pi.id) AS openBills,
+                SUM(
+                    CASE
+                        WHEN pi.dueDate < :today
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS overdueBills,
+                MIN(pi.dueDate) AS oldestDueDate,
+                (
+                    SELECT MAX(sp.paymentDate)
+                    FROM SupplierPayment sp
+                    WHERE sp.tenantId = :tenantId
+                    AND sp.branchId = :branchId
+                    AND sp.supplierId = :supplierId
+                    AND sp.reversed = false
+                ) AS lastPaymentDate
+            FROM PurchaseInvoice pi
+            WHERE pi.tenantId = :tenantId
+            AND pi.branchId = :branchId
+            AND pi.supplier.id = :supplierId
+            AND pi.reversed = false
+            AND pi.cancelled = false
+            AND pi.outstandingAmount > 0
+            GROUP BY
+                pi.supplier.id,
+                pi.supplier.name
+            """)
+    Optional<SupplierDebtSummaryProjection> findSupplierDebtSummary(
+            UUID tenantId,
+            UUID branchId,
+            UUID supplierId,
+            LocalDate today
+    );
 
     @Query("""
                 SELECT

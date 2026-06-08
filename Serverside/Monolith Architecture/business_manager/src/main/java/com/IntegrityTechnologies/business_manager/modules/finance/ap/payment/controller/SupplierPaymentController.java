@@ -3,6 +3,7 @@ package com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.co
 import com.IntegrityTechnologies.business_manager.config.response.PageWrapper;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.dto.*;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.enums.SupplierPaymentStatus;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.service.BulkSupplierPaymentService;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.service.SupplierPaymentPostingService;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.service.SupplierPaymentProcessingService;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.service.SupplierPaymentService;
@@ -23,7 +24,7 @@ import java.util.UUID;
 public class SupplierPaymentController {
 
     private final SupplierPaymentService service;
-
+    private final BulkSupplierPaymentService bulkPaymentService;
     private final SupplierPaymentPostingService postingService;
     private final SupplierPaymentProcessingService processingService;
 
@@ -54,6 +55,17 @@ public class SupplierPaymentController {
             ProcessSupplierPaymentRequest request
     ) {
         return processingService.process(request);
+    }
+
+    @PostMapping("/bulk")
+    public List<BulkSupplierPaymentResult> bulkPay(
+            @Valid
+            @RequestBody
+            BulkSupplierPaymentRequest request
+    ) {
+        return bulkPaymentService.process(
+                request
+        );
     }
 
     @PostMapping("/{paymentId}/reverse")

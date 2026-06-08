@@ -1,0 +1,186 @@
+<div class="dialog">
+    <div class="header">
+        <div>
+            <div class="title">
+                Supplier Payment
+            </div>
+
+            <div class="subtitle">
+                Process payments for selected supplier(s)
+            </div>
+        </div>
+
+        <button mat-icon-button mat-dialog-close matTooltip="Close">
+            <mat-icon>close</mat-icon>
+        </button>
+    </div>
+
+    <div class="summary">
+        <div class="summary-card">
+            <div class="label">
+                Suppliers
+            </div>
+
+            <div class="value">
+                {{ supplierCount }}
+            </div>
+        </div>
+
+        <div class="summary-card primary">
+            <div class="label">
+                Total Payment
+            </div>
+
+            <div class="value">
+                {{ totalAmount | currency:'KES ' }}
+            </div>
+        </div>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+
+        <mat-form-field appearance="fill">
+            <mat-label>
+                Funding Account
+            </mat-label>
+
+            <mat-select formControlName="fundingAccountId">
+
+                <mat-option *ngFor="let account of accounts" [value]="account.id">
+
+                    {{ displayAccount(account) }}
+
+                </mat-option>
+
+            </mat-select>
+        </mat-form-field>
+
+        <div class="funding-info" [class.warning]="requiresAutoFunding">
+
+            <mat-icon>
+                account_balance
+            </mat-icon>
+
+            <div class="funding-content">
+
+                <div class="funding-title">
+
+                    Funding Protection Enabled
+
+                </div>
+
+                <div class="funding-text">
+
+                    Supplier payments are protected by automatic funding.
+
+                    If the selected funding account does not have
+                    sufficient balance, the system will automatically
+                    fund it from the Owner's Capital (Equity) account
+                    before processing the payments.
+
+                </div>
+
+                <div *ngIf="requiresAutoFunding" class="funding-warning">
+
+                    Additional funding required:
+                    <strong>
+                        {{
+                        fundingShortfall
+                        | currency:'KES '
+                        }}
+                    </strong>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="method-card">
+
+            <div class="info-block">
+
+                <div class="label">
+                    Payment Method
+                </div>
+
+                <div class="method">
+                    {{ derivedMethod }}
+                </div>
+
+            </div>
+
+            <div class="info-block">
+
+                <div class="label">
+                    Available Balance
+                </div>
+
+                <div class="method">
+                    {{ selectedBalance | currency:'KES ' }}
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="grid-2">
+
+            <mat-form-field appearance="fill">
+
+                <mat-label>
+                    Payment Date
+                </mat-label>
+
+                <input matInput [matDatepicker]="picker" formControlName="paymentDate">
+
+                <mat-datepicker-toggle matSuffix [for]="picker">
+                </mat-datepicker-toggle>
+
+                <mat-datepicker #picker>
+                </mat-datepicker>
+
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+
+                <mat-label>
+                    Reference
+                </mat-label>
+
+                <input matInput formControlName="reference">
+
+            </mat-form-field>
+
+        </div>
+
+        <mat-checkbox formControlName="autoAllocate">
+            Auto Allocate Payments
+        </mat-checkbox>
+
+        <div class="actions">
+
+            <button mat-stroked-button type="button" mat-dialog-close>
+
+                Cancel
+
+            </button>
+
+            <button mat-flat-button color="primary" type="submit" [disabled]="loading || form.invalid">
+
+                <mat-icon>
+                    payments
+                </mat-icon>
+
+                {{
+                loading
+                ? 'Processing...'
+                : 'Pay Suppliers'
+                }}
+
+            </button>
+
+        </div>
+
+    </form>
+</div>

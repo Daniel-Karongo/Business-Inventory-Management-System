@@ -70,6 +70,12 @@ import {
 import { WorkflowShellComponent } from '../../../../../../../../shared/layout/workflow-shell/workflow-shell.component';
 import { WorkflowCardComponent } from '../../../../../../../../shared/layout/workflow-card/workflow-card.component';
 import { PageQuery } from '../../../../../../../../core/models/page-query.model';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDialog } from '@angular/material/dialog';
+import { BulkSupplierPaymentDialogComponent } from '../../components/bulk-supplier-payment-dialog/bulk-supplier-payment-dialog.component';
+import { BranchContextService } from '../../../../../../../../core/services/branch-context.service';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
     selector: 'app-supplier-debt-list',
@@ -78,10 +84,10 @@ import { PageQuery } from '../../../../../../../../core/models/page-query.model'
         CommonModule,
         ReactiveFormsModule,
         RouterModule,
-
+        MatCheckboxModule,
         CurrencyPipe,
         DatePipe,
-
+        MatTooltipModule,
         WorkflowShellComponent,
         WorkflowCardComponent,
 
@@ -109,6 +115,26 @@ export class SupplierDebtListComponent
     private route =
         inject(ActivatedRoute);
 
+    private dialog =
+        inject(MatDialog);
+
+    private branchContext = inject(BranchContextService);
+
+    private snack =
+        inject(MatSnackBar);
+
+    viewMode: 'table' | 'grid' =
+        localStorage.getItem(
+            'ap-supplier-view'
+        ) as any || 'table';
+
+    density:
+        'comfortable'
+        | 'compact' =
+        localStorage.getItem(
+            'ap-supplier-density'
+        ) as any || 'comfortable';
+
     loading = false;
 
     rows: SupplierDebtSummary[] = [];
@@ -120,6 +146,7 @@ export class SupplierDebtListComponent
     highRiskSuppliers = 0;
 
     displayedColumns = [
+        'select',
         'supplier',
         'outstanding',
         'overdue',
@@ -134,6 +161,9 @@ export class SupplierDebtListComponent
         sortBy: 'overdueAmount',
         direction: 'desc'
     };
+
+    selectedSupplierIds =
+        new Set<string>();
 
     readonly searchControl =
         new FormControl('', {
@@ -187,6 +217,143 @@ export class SupplierDebtListComponent
             });
 
         this.load();
+    }
+
+    get hasSelection(): boolean {
+        return this.selectedSupplierIds.size > 0;
+    }
+
+    get selectedRows(): SupplierDebtSummary[] {
+        return this.rows.filter(
+            r =>
+                this.selectedSupplierIds.has(
+                    r.supplierId
+                )
+        );
+    }
+
+    get isSingleSelection(): boolean {
+
+        return this.selectedSupplierIds.size === 1;
+
+    }
+
+    billLabel(
+        count: number
+    ): string {
+
+        return count === 1
+            ? 'open bill'
+            : 'open bills';
+    }
+
+    isSelected(
+        supplierId: string
+    ): boolean {
+
+        return this.selectedSupplierIds.has(
+            supplierId
+        );
+    }
+
+    setViewMode(
+        mode: 'table' | 'grid'
+    ): void {
+
+        this.viewMode = mode;
+
+        localStorage.setItem(
+            'ap-supplier-view',
+            mode
+        );
+    }
+
+    toggleDensity(): void {
+
+        this.density =
+            this.density === 'comfortable'
+                ? 'compact'
+                : 'comfortable';
+
+        localStorage.setItem(
+            'ap-supplier-density',
+            this.density
+        );
+    }
+
+    toggleSelection(
+        row: SupplierDebtSummary
+    ): void {
+
+        if (
+            this.selectedSupplierIds.has(
+                row.supplierId
+            )
+        ) {
+
+            this.selectedSupplierIds.delete(
+                row.supplierId
+            );
+
+            return;
+        }
+
+        this.selectedSupplierIds.add(
+            row.supplierId
+        );
+    }
+
+    paySupplier(
+        row: SupplierDebtSummary
+    ): void {
+
+        this.selectedSupplierIds.clear();
+
+        this.selectedSupplierIds.add(
+            row.supplierId
+        );
+
+        this.openBulkPayment();
+    }
+
+    openBulkPayment(): void {
+
+        const branchId =
+            this.branchContext
+                .currentBranch;
+
+        if (!branchId) {
+            return;
+        }
+
+        this.dialog.open(
+            BulkSupplierPaymentDialogComponent,
+            {
+                panelClass: "enterprise-dialog",
+                width: '720px',
+                data: {
+                    branchId,
+                    suppliers:
+                        this.selectedRows
+                }
+            }
+        )
+            .afterClosed()
+            .subscribe(
+                refreshed => {
+
+                    if (refreshed) {
+
+                        this.selectedSupplierIds.clear();
+
+                        this.success(
+                            'Supplier payments processed successfully'
+                        );
+
+                        this.load();
+                    }
+                }
+            );
     }
 
     private restoreQuery(): void {
@@ -259,21 +426,31 @@ export class SupplierDebtListComponent
                     this.loading = false
                 )
             )
-            .subscribe(res => {
+            .subscribe({
+                next: res => {
 
-                this.rows = res.content;
+                    this.rows = res.content;
 
-                this.total = res.totalElements;
+                    this.total = res.totalElements;
 
-                this.overdueSuppliers =
-                    this.rows.filter(
-                        row => row.hasOverdue
-                    ).length;
+                    this.overdueSuppliers =
+                        this.rows.filter(
+                            row => row.hasOverdue
+                        ).length;
 
-                this.highRiskSuppliers =
-                    this.rows.filter(
-                        row => row.riskLevel === 'HIGH'
-                    ).length;
+                    this.highRiskSuppliers =
+                        this.rows.filter(
+                            row => row.riskLevel === 'HIGH'
+                        ).length;
+                },
+                error: err => {
+
+                    this.failure(
+                        err?.message
+                        || 'Failed to load supplier debt'
+                    );
+
+                }
             });
     }
 
@@ -341,5 +518,37 @@ export class SupplierDebtListComponent
             default:
                 return 'risk-clear';
         }
+    }
+
+    private success(
+        message: string
+    ): void {
+
+        this.snack.open(
+            message,
+            'Close',
+            {
+                duration: 5000,
+                panelClass: [
+                    'snackbar-success'
+                ]
+            }
+        );
+    }
+
+    private failure(
+        message: string
+    ): void {
+
+        this.snack.open(
+            message,
+            'Close',
+            {
+                duration: 8000,
+                panelClass: [
+                    'snackbar-error'
+                ]
+            }
+        );
     }
 }
