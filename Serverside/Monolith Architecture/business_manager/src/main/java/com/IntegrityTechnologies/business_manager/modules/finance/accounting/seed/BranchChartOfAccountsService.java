@@ -35,6 +35,8 @@ public class BranchChartOfAccountsService {
 
         seed(tenantId, branchId, "2050", "Goods Received Not Invoiced", AccountType.LIABILITY, "GOODS_RECEIVED_NOT_INVOICED" );
 
+        seed(tenantId, branchId, "2250", "Operational Expense Payable", AccountType.LIABILITY, "OPERATIONAL_EXPENSE_PAYABLE" );
+
         seed(tenantId, branchId, "2300", "Branch Clearing", AccountType.LIABILITY, "BRANCH_CLEARING");
         seed(tenantId, branchId, "2400", "Corporate Tax Payable", AccountType.LIABILITY, "CORPORATE_TAX_PAYABLE");
 

@@ -117,4 +117,9 @@ public interface JournalEntryRepository extends JpaRepository<JournalEntry, UUID
             UUID tenantId,
             UUID id
     );
+
+    Optional<JournalEntry> findByTenantIdAndAccountingEventId(
+            UUID tenantId,
+            UUID accountingEventId
+    );
 }

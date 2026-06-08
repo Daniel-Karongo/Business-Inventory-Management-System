@@ -21,10 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -39,17 +36,22 @@ public class AccountingFacade {
     private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional
-    public void post(AccountingEvent event) {
+    public JournalEntry post(AccountingEvent event) {
 
         UUID tenantId = TenantContext.getTenantId();
 
         if (event.getEventId() == null)
             throw new IllegalArgumentException("EventId required");
 
-        if (journalRepo.existsByTenantIdAndAccountingEventId(
-                tenantId,
-                event.getEventId()
-        )) return;
+        Optional<JournalEntry> existing =
+                journalRepo.findByTenantIdAndAccountingEventId(
+                        tenantId,
+                        event.getEventId()
+                );
+
+        if (existing.isPresent()) {
+            return existing.get();
+        }
 
         if (event.getBranchId() == null)
             throw new IllegalStateException("BranchId required");
@@ -108,24 +110,27 @@ public class AccountingFacade {
 
         policy.validate(ledger);
 
+        JournalEntry postedJournal;
+
         try {
 
-            postingService.post(
-                    journal,
-                    ledger,
-                    event.getPerformedBy()
-            );
+            postedJournal =
+                    postingService.post(
+                            journal,
+                            ledger,
+                            event.getPerformedBy()
+                    );
 
         } catch (DataIntegrityViolationException ex) {
 
-            boolean alreadyPosted =
-                    journalRepo.existsByTenantIdAndAccountingEventId(
+            Optional<JournalEntry> existingJournal =
+                    journalRepo.findByTenantIdAndAccountingEventId(
                             tenantId,
                             event.getEventId()
                     );
 
-            if (alreadyPosted) {
-                return;
+            if (existingJournal.isPresent()) {
+                return existingJournal.get();
             }
 
             throw ex;
@@ -137,6 +142,7 @@ public class AccountingFacade {
                         event.getBranchId()
                 )
         );
+        return postedJournal;
     }
 
     @Transactional

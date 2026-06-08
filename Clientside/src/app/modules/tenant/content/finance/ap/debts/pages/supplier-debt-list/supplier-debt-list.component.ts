@@ -330,7 +330,9 @@ export class SupplierDebtListComponent
             BulkSupplierPaymentDialogComponent,
             {
                 panelClass: "enterprise-dialog",
-                width: '720px',
+                width: '800px',
+                maxWidth: '96vw',
+                height: 'auto',
                 data: {
                     branchId,
                     suppliers:

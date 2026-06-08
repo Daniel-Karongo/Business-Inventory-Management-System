@@ -1,7 +1,9 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.service;
 
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingEvent;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.api.AccountingFacade;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
@@ -18,9 +20,72 @@ import java.util.UUID;
 public class OperationalExpensePostingService {
 
     private final AccountingFacade accountingFacade;
+    private final AccountingAccounts accountingAccounts;
 
     @Transactional
-    public void postExpense(
+    public UUID postAccrualExpense(
+            UUID branchId,
+            UUID expenseAccountId,
+            String reference,
+            String description,
+            BigDecimal amount,
+            LocalDate accountingDate,
+            UUID sourceId
+    ) {
+
+        UUID tenantId =
+                TenantContext.getTenantId();
+
+        UUID payableAccountId =
+                accountingAccounts.get(
+                        tenantId,
+                        branchId,
+                        "OPERATIONAL_EXPENSE_PAYABLE"
+                );
+
+        UUID eventId =
+                UUID.nameUUIDFromBytes(
+                        (
+                                "OP_EXP_ACCRUAL:"
+                                        + sourceId
+                        ).getBytes()
+                );
+
+        JournalEntry journal =
+                accountingFacade.post(
+                        AccountingEvent.builder()
+                                .eventId(eventId)
+                                .tenantId(tenantId)
+                                .branchId(branchId)
+                                .sourceModule("OPERATIONAL_EXPENSE")
+                                .sourceId(sourceId)
+                                .reference(reference)
+                                .description(description)
+                                .performedBy("SYSTEM")
+                                .accountingDate(accountingDate)
+                                .entries(
+                                        List.of(
+                                                AccountingEvent.Entry.builder()
+                                                        .accountId(expenseAccountId)
+                                                        .direction(EntryDirection.DEBIT)
+                                                        .amount(amount)
+                                                        .build(),
+
+                                                AccountingEvent.Entry.builder()
+                                                        .accountId(payableAccountId)
+                                                        .direction(EntryDirection.CREDIT)
+                                                        .amount(amount)
+                                                        .build()
+                                        )
+                                )
+                                .build()
+                );
+
+        return journal.getId();
+    }
+
+    @Transactional
+    public UUID postPaidExpense(
             UUID branchId,
             UUID fundingAccountId,
             UUID expenseAccountId,
@@ -28,86 +93,111 @@ public class OperationalExpensePostingService {
             String description,
             BigDecimal amount,
             LocalDate accountingDate,
-            int expenseIndex
+            UUID sourceId
     ) {
-
-        if (
-                amount == null
-                        || amount.compareTo(BigDecimal.ZERO) <= 0
-        ) {
-            return;
-        }
 
         UUID tenantId =
                 TenantContext.getTenantId();
 
-        UUID sourceId =
+        UUID eventId =
                 UUID.nameUUIDFromBytes(
                         (
-                                "STOCK_EXPENSE:" +
-                                        branchId +
-                                        ":" +
-                                        reference +
-                                        ":" +
-                                        expenseIndex
+                                "OP_EXP_PAID:"
+                                        + sourceId
                         ).getBytes()
                 );
 
-        if (
-                accountingFacade.isAlreadyPosted(
-                        "STOCK_ONBOARDING_EXPENSE",
-                        sourceId
-                )
-        ) {
-            return;
-        }
+        JournalEntry journal =
+                accountingFacade.post(
+                        AccountingEvent.builder()
+                                .eventId(eventId)
+                                .tenantId(tenantId)
+                                .branchId(branchId)
+                                .sourceModule("OPERATIONAL_EXPENSE")
+                                .sourceId(sourceId)
+                                .reference(reference)
+                                .description(description)
+                                .performedBy("SYSTEM")
+                                .accountingDate(accountingDate)
+                                .entries(
+                                        List.of(
+                                                AccountingEvent.Entry.builder()
+                                                        .accountId(expenseAccountId)
+                                                        .direction(EntryDirection.DEBIT)
+                                                        .amount(amount)
+                                                        .build(),
 
-        accountingFacade.post(
-                AccountingEvent.builder()
-                        .eventId(
-                                UUID.nameUUIDFromBytes(
-                                        (
-                                                "STOCK_EXPENSE_EVENT:" +
-                                                        branchId +
-                                                        ":" +
-                                                        reference +
-                                                        ":" +
-                                                        expenseIndex
-                                        ).getBytes()
+                                                AccountingEvent.Entry.builder()
+                                                        .accountId(fundingAccountId)
+                                                        .direction(EntryDirection.CREDIT)
+                                                        .amount(amount)
+                                                        .build()
+                                        )
                                 )
-                        )
-                        .tenantId(tenantId)
-                        .branchId(branchId)
-                        .sourceModule("STOCK_ONBOARDING_EXPENSE")
-                        .sourceId(sourceId)
-                        .reference(reference)
-                        .description(description)
-                        .performedBy("SYSTEM")
-                        .accountingDate(accountingDate)
-                        .entries(
-                                List.of(
-                                        AccountingEvent.Entry.builder()
-                                                .accountId(
-                                                        expenseAccountId
-                                                )
-                                                .direction(
-                                                        EntryDirection.DEBIT
-                                                )
-                                                .amount(amount)
-                                                .build(),
+                                .build()
+                );
 
-                                        AccountingEvent.Entry.builder()
-                                                .accountId(
-                                                        fundingAccountId
-                                                )
-                                                .direction(
-                                                        EntryDirection.CREDIT
-                                                )
-                                                .amount(amount)
-                                                .build()
+        return journal.getId();
+    }
+
+    @Transactional
+    public UUID postSettlement(
+            UUID branchId,
+            UUID fundingAccountId,
+            BigDecimal amount,
+            LocalDate settlementDate,
+            UUID sourceId,
+            String reference
+    ) {
+
+        UUID tenantId =
+                TenantContext.getTenantId();
+
+        UUID payableAccountId =
+                accountingAccounts.get(
+                        tenantId,
+                        branchId,
+                        "OPERATIONAL_EXPENSE_PAYABLE"
+                );
+
+        UUID eventId =
+                UUID.nameUUIDFromBytes(
+                        (
+                                "OP_EXP_SETTLEMENT:"
+                                        + sourceId
+                        ).getBytes()
+                );
+
+        JournalEntry journal =
+                accountingFacade.post(
+                        AccountingEvent.builder()
+                                .eventId(eventId)
+                                .tenantId(tenantId)
+                                .branchId(branchId)
+                                .sourceModule("OPERATIONAL_EXPENSE_SETTLEMENT")
+                                .sourceId(sourceId)
+                                .reference(reference)
+                                .description("Operational expense settlement")
+                                .performedBy("SYSTEM")
+                                .accountingDate(settlementDate)
+                                .entries(
+                                        List.of(
+                                                AccountingEvent.Entry.builder()
+                                                        .accountId(payableAccountId)
+                                                        .direction(EntryDirection.DEBIT)
+                                                        .amount(amount)
+                                                        .build(),
+
+                                                AccountingEvent.Entry.builder()
+                                                        .accountId(fundingAccountId)
+                                                        .direction(EntryDirection.CREDIT)
+                                                        .amount(amount)
+                                                        .build()
+                                        )
                                 )
-                        )
-                        .build()
-        );
+                                .build()
+                );
+
+        return journal.getId();
     }
 }

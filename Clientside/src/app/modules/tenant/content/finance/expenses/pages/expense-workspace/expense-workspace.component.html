@@ -1,0 +1,545 @@
+<app-workflow-shell>
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <div workflow-header>
+
+        <div class="header">
+
+            <div class="header-left">
+
+                <button mat-icon-button (click)="back()">
+
+                    <mat-icon>
+                        arrow_back
+                    </mat-icon>
+
+                </button>
+
+                <div>
+
+                    <div class="title">
+                        {{ workspace?.description }}
+                    </div>
+
+                    <div class="subtitle">
+                        Operational Expense Workspace
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="header-actions">
+
+                <div *ngIf="expense" class="status-chip" [ngClass]="statusClass(expense.status)">
+
+                    {{ expense.status }}
+
+                </div>
+
+                <button *ngIf="expense && expense.status !== 'SETTLED' && expense.status !== 'REVERSED'" mat-flat-button
+                    color="primary" (click)="openSettlementDialog()">
+
+                    <mat-icon>
+                        payments
+                    </mat-icon>
+
+                    Settle Expense
+
+                </button>
+
+                <button *ngIf="
+                        expense &&
+                        expense.status !== 'REVERSED'
+                    " mat-stroked-button color="warn" [disabled]="reversingExpense" (click)="reverseExpense()">
+
+                    <mat-icon>
+                        undo
+                    </mat-icon>
+
+                    {{
+                    reversingExpense
+                    ? 'Reversing...'
+                    : 'Reverse Expense'
+                    }}
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- =====================================================
+         CONTENT
+    ====================================================== -->
+
+    <div workflow-content>
+
+        <!-- =====================================================
+             LOADING
+        ====================================================== -->
+
+        <div *ngIf="loading" class="loading-grid">
+
+            <app-workflow-card *ngFor="let item of [1,2,3,4]">
+
+                <div class="loading-card"></div>
+
+            </app-workflow-card>
+
+        </div>
+
+        <ng-container *ngIf="workspace && expense">
+
+            <!-- =====================================================
+                 SUMMARY
+            ====================================================== -->
+
+            <div class="summary-grid">
+
+                <app-workflow-card>
+
+                    <div class="summary-card">
+
+                        <div class="summary-label">
+                            Expense Amount
+                        </div>
+
+                        <div class="summary-value">
+
+                            {{
+                            expense.amount
+                            | currency:'KES '
+                            }}
+
+                        </div>
+
+                    </div>
+
+                </app-workflow-card>
+
+                <app-workflow-card>
+
+                    <div class="summary-card">
+
+                        <div class="summary-label">
+                            Settled Amount
+                        </div>
+
+                        <div class="summary-value success">
+
+                            {{
+                            expense.settledAmount
+                            | currency:'KES '
+                            }}
+
+                        </div>
+
+                    </div>
+
+                </app-workflow-card>
+
+                <app-workflow-card>
+
+                    <div class="summary-card">
+
+                        <div class="summary-label">
+                            Outstanding
+                        </div>
+
+                        <div class="summary-value danger">
+
+                            {{
+                            outstandingAmount
+                            | currency:'KES '
+                            }}
+
+                        </div>
+
+                    </div>
+
+                </app-workflow-card>
+
+                <app-workflow-card>
+
+                    <div class="summary-card">
+
+                        <div class="summary-label">
+                            Settlements
+                        </div>
+
+                        <div class="summary-value">
+
+                            {{
+                            workspace.settlements.length
+                            }}
+
+                        </div>
+
+                    </div>
+
+                </app-workflow-card>
+
+            </div>
+
+            <!-- =====================================================
+                 EXPENSE DETAILS
+            ====================================================== -->
+
+            <app-workflow-card>
+
+                <div class="details-grid">
+
+                    <div class="detail-item">
+
+                        <span>
+                            Description
+                        </span>
+
+                        <strong>
+                            {{ workspace.description }}
+                        </strong>
+
+                    </div>
+
+                    <div class="detail-item">
+
+                        <span>
+                            Expense Account
+                        </span>
+
+                        <strong>
+                            {{ workspace.expenseAccountName }}
+                        </strong>
+
+                    </div>
+
+                    <div class="detail-item">
+
+                        <span>
+                            Accounting Date
+                        </span>
+
+                        <strong>
+
+                            {{
+                            expense.accountingDate
+                            | date:'dd MMM yyyy'
+                            }}
+
+                        </strong>
+
+                    </div>
+
+                    <div class="detail-item">
+
+                        <span>
+                            Status
+                        </span>
+
+                        <div class="status-chip" [ngClass]="statusClass(expense.status)">
+
+                            {{ expense.status }}
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </app-workflow-card>
+
+            <!-- =====================================================
+                 TABS
+            ====================================================== -->
+
+            <mat-tab-group dynamicHeight>
+
+                <!-- =====================================================
+                     SETTLEMENTS
+                ====================================================== -->
+
+                <mat-tab label="Settlements">
+
+                    <app-workflow-card>
+
+                        <div *ngIf="
+                                !workspace.settlements.length
+                            " class="empty-state">
+
+                            <mat-icon>
+                                account_balance_wallet
+                            </mat-icon>
+
+                            <div class="empty-title">
+                                No settlements recorded
+                            </div>
+
+                        </div>
+
+                        <div *ngIf="workspace.settlements.length" class="settlement-summary">
+
+                            <div class="settlement-stat">
+
+                                <span>
+                                    Total Settlements
+                                </span>
+
+                                <strong>
+                                    {{ workspace.settlements.length }}
+                                </strong>
+
+                            </div>
+
+                            <div class="settlement-stat">
+
+                                <span>
+                                    Active Settlements
+                                </span>
+
+                                <strong class="success">
+
+                                    {{ activeSettlementCount }}
+
+                                </strong>
+
+                            </div>
+
+                            <div class="settlement-stat">
+
+                                <span>
+                                    Reversed
+                                </span>
+
+                                <strong class="danger">
+
+                                    {{ reversedSettlementCount }}
+
+                                </strong>
+
+                            </div>
+
+                            <div class="settlement-stat">
+
+                                <span>
+                                    Active Value
+                                </span>
+
+                                <strong class="success">
+
+                                    {{
+                                    activeSettlementTotal
+                                    | currency:'KES '
+                                    }}
+
+                                </strong>
+
+                            </div>
+
+                            <div class="settlement-stat">
+
+                                <span>
+                                    Reversed Value
+                                </span>
+
+                                <strong class="danger">
+
+                                    {{
+                                    reversedSettlementTotal
+                                    | currency:'KES '
+                                    }}
+
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+                        <div *ngIf="
+                                workspace.settlements.length
+                            " class="table-wrapper">
+
+                            <table mat-table class="workspace-table" [dataSource]="workspace.settlements">
+
+                                <!-- DATE -->
+
+                                <ng-container matColumnDef="date">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+
+                                        Settlement Date
+
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        {{
+                                        row.settlementDate
+                                        | date:'dd MMM yyyy'
+                                        }}
+
+                                    </td>
+
+                                </ng-container>
+
+                                <!-- REFERENCE -->
+
+                                <ng-container matColumnDef="reference">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+
+                                        Reference
+
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        {{
+                                        row.reference
+                                        || '-'
+                                        }}
+
+                                    </td>
+
+                                </ng-container>
+
+                                <!-- AMOUNT -->
+
+                                <ng-container matColumnDef="amount">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+
+                                        Amount
+
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        <strong>
+
+                                            {{
+                                            row.amount
+                                            | currency:'KES '
+                                            }}
+
+                                        </strong>
+
+                                    </td>
+
+                                </ng-container>
+
+                                <!-- STATUS -->
+
+                                <ng-container matColumnDef="status">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+
+                                        Status
+
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        <div class="status-chip" [ngClass]="
+                                                row.reversed
+                                                    ? 'badge-danger'
+                                                    : 'badge-success'
+                                            ">
+
+                                            {{
+                                            row.reversed
+                                            ? 'REVERSED'
+                                            : 'ACTIVE'
+                                            }}
+
+                                        </div>
+
+                                    </td>
+
+                                </ng-container>
+
+                                <!-- ACTIONS -->
+
+                                <ng-container matColumnDef="actions">
+
+                                    <th mat-header-cell *matHeaderCellDef>
+
+                                        Actions
+
+                                    </th>
+
+                                    <td mat-cell *matCellDef="let row">
+
+                                        <button *ngIf="!row.reversed" mat-stroked-button color="warn" [disabled]="
+                                                reversingSettlements.has(
+                                                    row.id
+                                                )
+                                            " (click)="reverseSettlement(row)">
+
+                                            {{
+                                            reversingSettlements.has(
+                                            row.id
+                                            )
+                                            ? 'Reversing...'
+                                            : 'Reverse'
+                                            }}
+
+                                        </button>
+
+                                    </td>
+
+                                </ng-container>
+
+                                <tr mat-header-row *matHeaderRowDef="settlementColumns">
+                                </tr>
+
+                                <tr mat-row *matRowDef="
+                                        let row;
+                                        columns: settlementColumns
+                                    " [class.reversed-row]="row.reversed">
+                                </tr>
+
+                            </table>
+
+                        </div>
+
+                    </app-workflow-card>
+
+                </mat-tab>
+
+                <!-- =====================================================
+                     TIMELINE
+                ====================================================== -->
+
+                <mat-tab label="Timeline">
+
+                    <app-workflow-card>
+
+                        <div class="empty-state">
+
+                            <mat-icon>
+                                schedule
+                            </mat-icon>
+
+                            <div class="empty-title">
+                                Timeline support coming next phase
+                            </div>
+
+                        </div>
+
+                    </app-workflow-card>
+
+                </mat-tab>
+
+            </mat-tab-group>
+
+        </ng-container>
+
+    </div>
+
+</app-workflow-shell>

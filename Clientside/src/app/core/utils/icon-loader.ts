@@ -29,6 +29,7 @@ export class IconLoader {
       'budget',
       'tax',
       'payments',
+      'expenses',
       'devices',
       'security',
       'sessions',

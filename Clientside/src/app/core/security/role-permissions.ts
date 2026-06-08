@@ -13,6 +13,7 @@ export type Feature =
   | 'branches'
   | 'accounts'
   | 'ap'
+  | 'expenses'
   | 'finance'
   | 'devices'
   | 'security'
@@ -59,6 +60,7 @@ export const ROLE_PERMISSIONS: Record<string, Feature[]> = {
     'branches',
     'accounts',
     'ap',
+    'expenses',
     'finance',
     'security',
     'sessions',
@@ -78,6 +80,7 @@ export const ROLE_PERMISSIONS: Record<string, Feature[]> = {
     'customers',
     'users',
     'branches',
+    'expenses',
     'finance',
     'security',
     'sessions',

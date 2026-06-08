@@ -1,0 +1,590 @@
+<app-workflow-shell>
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <div workflow-header>
+
+        <div class="header">
+
+            <div>
+
+                <div class="title">
+                    Operational Expenses
+                </div>
+
+                <div class="subtitle">
+                    Manage expense accruals, settlements and reversals
+                </div>
+
+            </div>
+
+            <button mat-flat-button color="primary" (click)="createExpense()">
+
+                <mat-icon>
+                    add
+                </mat-icon>
+
+                New Expense
+
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- =====================================================
+         TOOLBAR
+    ====================================================== -->
+
+    <div workflow-toolbar>
+
+        <div class="toolbar">
+
+            <mat-form-field appearance="fill" class="search-field">
+
+                <mat-label>
+                    Search expenses
+                </mat-label>
+
+                <input matInput [formControl]="searchControl">
+
+                <mat-icon matSuffix>
+                    search
+                </mat-icon>
+
+            </mat-form-field>
+
+            <mat-form-field appearance="fill" class="filter-field">
+
+                <mat-label>
+                    Status
+                </mat-label>
+
+                <mat-select [formControl]="statusControl">
+
+                    <mat-option value="ALL">
+                        All
+                    </mat-option>
+
+                    <mat-option value="OPEN">
+                        Open
+                    </mat-option>
+
+                    <mat-option value="PARTIALLY_SETTLED">
+                        Partially Settled
+                    </mat-option>
+
+                    <mat-option value="SETTLED">
+                        Settled
+                    </mat-option>
+
+                    <mat-option value="REVERSED">
+                        Reversed
+                    </mat-option>
+
+                </mat-select>
+
+            </mat-form-field>
+
+        </div>
+
+        <div class="view-actions">
+
+            <button mat-icon-button matTooltip="Table View" [class.active-view]="viewMode === 'table'"
+                (click)="setViewMode('table')">
+
+                <mat-icon>
+                    table_rows
+                </mat-icon>
+
+            </button>
+
+            <button mat-icon-button matTooltip="Grid View" [class.active-view]="viewMode === 'grid'"
+                (click)="setViewMode('grid')">
+
+                <mat-icon>
+                    grid_view
+                </mat-icon>
+
+            </button>
+
+            <button mat-icon-button matTooltip="Toggle Density" (click)="toggleDensity()">
+
+                <mat-icon>
+                    density_medium
+                </mat-icon>
+
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- =====================================================
+         CONTENT
+    ====================================================== -->
+
+    <div workflow-content>
+
+        <!-- =====================================================
+             SUMMARY
+        ====================================================== -->
+
+        <div class="summary-grid">
+
+            <app-workflow-card>
+
+                <div class="summary-card">
+
+                    <div class="summary-label">
+                        Expenses
+                    </div>
+
+                    <div class="summary-value">
+                        {{ total }}
+                    </div>
+
+                </div>
+
+            </app-workflow-card>
+
+            <app-workflow-card>
+
+                <div class="summary-card">
+
+                    <div class="summary-label">
+                        Selected
+                    </div>
+
+                    <div class="summary-value">
+                        {{ selectedExpenseIds.size }}
+                    </div>
+
+                </div>
+
+            </app-workflow-card>
+
+            <app-workflow-card>
+
+                <div class="summary-card">
+
+                    <div class="summary-label">
+                        Open
+                    </div>
+
+                    <div class="summary-value danger">
+
+                        {{ openCount }}
+
+                    </div>
+
+                </div>
+
+            </app-workflow-card>
+
+            <app-workflow-card>
+
+                <div class="summary-card">
+
+                    <div class="summary-label">
+                        Settled
+                    </div>
+
+                    <div class="summary-value success">
+
+                        {{ settledCount }}
+
+                    </div>
+
+                </div>
+
+            </app-workflow-card>
+
+        </div>
+
+        <!-- =====================================================
+             BULK TOOLBAR
+        ====================================================== -->
+
+        <div *ngIf="hasSelection" class="bulk-toolbar">
+
+            <div class="bulk-info">
+
+                <mat-icon>
+                    check_circle
+                </mat-icon>
+
+                <span>
+
+                    {{ selectedExpenseIds.size }}
+
+                    {{
+                    selectedExpenseIds.size === 1
+                    ? 'expense selected'
+                    : 'expenses selected'
+                    }}
+
+                </span>
+
+            </div>
+
+            <button mat-flat-button color="primary" (click)="bulkSettle()">
+
+                <mat-icon>
+                    payments
+                </mat-icon>
+
+                Bulk Settle
+
+            </button>
+
+        </div>
+
+        <!-- =====================================================
+             EMPTY STATE
+        ====================================================== -->
+
+        <app-workflow-card *ngIf="
+                !loading
+                &&
+                rows.length === 0
+            ">
+
+            <div class="empty-state">
+
+                <mat-icon>
+                    receipt_long
+                </mat-icon>
+
+                <div class="empty-title">
+                    No expenses found
+                </div>
+
+            </div>
+
+        </app-workflow-card>
+
+        <!-- =====================================================
+             MOBILE GRID
+        ====================================================== -->
+
+        <div *ngIf="
+                !loading
+                &&
+                viewMode === 'grid'
+            " class="mobile-list" [class.compact]="density === 'compact'">
+
+            <app-workflow-card *ngFor="let row of rows" class="mobile-card" [class.selected]="isSelected(row.id)"
+                (click)="toggleSelection(row)">
+
+                <div class="mobile-top">
+
+                    <div>
+
+                        <div class="expense-title">
+                            {{ row.description }}
+                        </div>
+
+                        <div class="expense-meta">
+
+                            {{
+                            row.accountingDate
+                            | date:'dd MMM yyyy'
+                            }}
+
+                        </div>
+
+                    </div>
+
+                    <div class="status-chip" [ngClass]="statusClass(row.status)">
+
+                        {{ row.status }}
+
+                    </div>
+
+                </div>
+
+                <div class="financial-grid">
+
+                    <div>
+
+                        <span>
+                            Amount
+                        </span>
+
+                        <strong>
+
+                            {{
+                            row.amount
+                            | currency:'KES '
+                            }}
+
+                        </strong>
+
+                    </div>
+
+                    <div>
+
+                        <span>
+                            Settled
+                        </span>
+
+                        <strong>
+
+                            {{
+                            row.settledAmount
+                            | currency:'KES '
+                            }}
+
+                        </strong>
+
+                    </div>
+
+                    <div>
+
+                        <span>
+                            Outstanding
+                        </span>
+
+                        <strong class="danger">
+
+                            {{
+                            outstanding(row)
+                            | currency:'KES '
+                            }}
+
+                        </strong>
+
+                    </div>
+
+                </div>
+
+                <div class="mobile-actions">
+
+                    <button mat-icon-button color="primary" (click)="
+                            $event.stopPropagation();
+                            openWorkspace(row)
+                        ">
+
+                        <mat-icon>
+                            dashboard_customize
+                        </mat-icon>
+
+                    </button>
+
+                </div>
+
+            </app-workflow-card>
+
+        </div>
+
+        <!-- =====================================================
+             TABLE
+        ====================================================== -->
+
+        <app-workflow-card *ngIf="
+                !loading
+                &&
+                viewMode === 'table'
+            " class="desktop-table">
+
+            <div class="table-wrapper">
+
+                <table mat-table [dataSource]="rows" [class.compact-table]="density === 'compact'">
+
+                    <!-- SELECT -->
+
+                    <ng-container matColumnDef="select">
+
+                        <th mat-header-cell *matHeaderCellDef>
+                        </th>
+
+                        <td mat-cell *matCellDef="let row">
+
+                            <mat-checkbox [checked]="isSelected(row.id)" (click)="$event.stopPropagation()"
+                                (change)="toggleSelection(row)">
+                            </mat-checkbox>
+
+                        </td>
+
+                    </ng-container>
+
+                    <!-- DATE -->
+
+                    <ng-container matColumnDef="date">
+
+                        <th mat-header-cell *matHeaderCellDef>
+
+                            Date
+
+                        </th>
+
+                        <td mat-cell *matCellDef="let row">
+
+                            {{
+                            row.accountingDate
+                            | date:'dd MMM yyyy'
+                            }}
+
+                        </td>
+
+                    </ng-container>
+
+                    <!-- DESCRIPTION -->
+
+                    <ng-container matColumnDef="description">
+
+                        <th mat-header-cell *matHeaderCellDef>
+
+                            Description
+
+                        </th>
+
+                        <td mat-cell *matCellDef="let row">
+
+                            <div class="expense-cell">
+
+                                <div class="expense-name">
+                                    {{ row.description }}
+                                </div>
+
+                            </div>
+
+                        </td>
+
+                    </ng-container>
+
+                    <!-- STATUS -->
+
+                    <ng-container matColumnDef="status">
+
+                        <th mat-header-cell *matHeaderCellDef>
+
+                            Status
+
+                        </th>
+
+                        <td mat-cell *matCellDef="let row">
+
+                            <div class="status-chip" [ngClass]="statusClass(row.status)">
+
+                                {{ row.status }}
+
+                            </div>
+
+                        </td>
+
+                    </ng-container>
+
+                    <!-- AMOUNT -->
+
+                    <ng-container matColumnDef="amount">
+
+                        <th mat-header-cell *matHeaderCellDef>
+
+                            Amount
+
+                        </th>
+
+                        <td mat-cell *matCellDef="let row">
+
+                            {{
+                            row.amount
+                            | currency:'KES '
+                            }}
+
+                        </td>
+
+                    </ng-container>
+
+                    <!-- SETTLED -->
+
+                    <ng-container matColumnDef="settled">
+
+                        <th mat-header-cell *matHeaderCellDef>
+
+                            Settled
+
+                        </th>
+
+                        <td mat-cell *matCellDef="let row">
+
+                            {{
+                            row.settledAmount
+                            | currency:'KES '
+                            }}
+
+                        </td>
+
+                    </ng-container>
+
+                    <!-- ACTIONS -->
+
+                    <ng-container matColumnDef="actions">
+
+                        <th mat-header-cell *matHeaderCellDef>
+                        </th>
+
+                        <td mat-cell *matCellDef="let row">
+
+                            <button mat-icon-button color="primary" (click)="openWorkspace(row)">
+
+                                <mat-icon>
+                                    dashboard_customize
+                                </mat-icon>
+
+                            </button>
+
+                        </td>
+
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns">
+                    </tr>
+
+                    <tr mat-row *matRowDef="
+                            let row;
+                            columns: displayedColumns
+                        " class="clickable-row" [class.selected-row]="isSelected(row.id)"
+                        (click)="toggleSelection(row)">
+                    </tr>
+
+                </table>
+
+            </div>
+
+        </app-workflow-card>
+
+        <!-- =====================================================
+             LOADING
+        ====================================================== -->
+
+        <div *ngIf="loading" class="loading-grid">
+
+            <app-workflow-card *ngFor="let item of [1,2,3,4,5,6]">
+
+                <div class="loading-card">
+                </div>
+
+            </app-workflow-card>
+
+        </div>
+
+        <!-- =====================================================
+             PAGINATION
+        ====================================================== -->
+
+        <mat-paginator *ngIf="
+                !loading
+                &&
+                rows.length
+            " [length]="total" [pageIndex]="page" [pageSize]="size" [pageSizeOptions]="[10,20,50,100]"
+            (page)="changePage($event)">
+
+        </mat-paginator>
+
+    </div>
+
+</app-workflow-shell>

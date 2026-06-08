@@ -4,7 +4,8 @@ import com.IntegrityTechnologies.business_manager.config.caffeine.CacheInvalidat
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.Account;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.AutoFundingService;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.OperationalExpensePostingService;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.expense.dto.CreateOperationalExpenseRequest;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.expense.service.OperationalExpenseService;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.dto.ProcessSupplierPaymentRequest;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.enums.SupplierPaymentMethod;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.service.SupplierPaymentProcessingService;
@@ -47,7 +48,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -71,7 +71,7 @@ public class StockOnboardingService {
     private final TaxProperties taxProperties;
     private final VatCalculationService vatCalculationService;
     private final AutoFundingService autoFundingService;
-    private final OperationalExpensePostingService operationalExpensePostingService;
+    private final OperationalExpenseService operationalExpenseService;
     private final SupplierPaymentProcessingService supplierPaymentProcessingService;
     private final AccountRepository accountRepository;
 
@@ -181,7 +181,7 @@ public class StockOnboardingService {
                 result.getSupplierInvoiceIds()
         );
 
-        postOperationalExpenses(
+        processOperationalExpenses(
                 req
         );
 
@@ -1137,14 +1137,9 @@ public class StockOnboardingService {
         }
     }
 
-    private void postOperationalExpenses(
+    private void processOperationalExpenses(
             StockOnboardingRequest req
     ) {
-        if (!Boolean.TRUE.equals(
-                req.getAutoPayOperationalExpenses()
-        )) {
-            return;
-        }
 
         if (req.getOperationalExpenses() == null) {
             return;
@@ -1154,16 +1149,64 @@ public class StockOnboardingService {
 
         for (var expense : req.getOperationalExpenses()) {
 
-            operationalExpensePostingService.postExpense(
-                    req.getBranchId(),
-                    req.getFundingAccountId(),
-                    expense.getExpenseAccountId(),
-                    req.getReference(),
-                    expense.getDescription(),
-                    expense.getAmount(),
-                    req.getAccountingDate(),
-                    index++
+            CreateOperationalExpenseRequest create =
+                    new CreateOperationalExpenseRequest();
+
+            create.setBranchId(
+                    req.getBranchId()
             );
+
+            create.setExpenseAccountId(
+                    expense.getExpenseAccountId()
+            );
+
+            create.setFundingAccountId(
+                    req.getFundingAccountId()
+            );
+
+            create.setDescription(
+                    expense.getDescription()
+            );
+
+            create.setAmount(
+                    expense.getAmount()
+            );
+
+            create.setAccountingDate(
+                    req.getAccountingDate()
+            );
+
+            create.setAutoPay(
+                    Boolean.TRUE.equals(
+                            req.getAutoPayOperationalExpenses()
+                    )
+            );
+
+            create.setReference(
+                    req.getReference()
+                            + "::EXPENSE::"
+                            + index
+            );
+
+            create.setSourceModule(
+                    "STOCK_ONBOARDING"
+            );
+
+            create.setSourceId(
+                    UUID.nameUUIDFromBytes(
+                            (
+                                    req.getReference()
+                                            + "::EXPENSE::"
+                                            + index
+                            ).getBytes()
+                    )
+            );
+
+            operationalExpenseService.createExpense(
+                    create
+            );
+
+            index++;
         }
     }
 
@@ -1354,15 +1397,9 @@ public class StockOnboardingService {
                     );
                 }
 
-                if (
-                        Boolean.TRUE.equals(
-                                req.getAutoPayOperationalExpenses()
-                        )
-                                &&
-                                expense.getExpenseAccountId() == null
-                ) {
+                if (expense.getExpenseAccountId() == null) {
                     throw new IllegalArgumentException(
-                            "expenseAccountId is required for auto-paid operational expenses"
+                            "expenseAccountId is required"
                     );
                 }
             }

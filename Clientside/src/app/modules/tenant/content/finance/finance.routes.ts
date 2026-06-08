@@ -11,7 +11,6 @@ export const FINANCE_ROUTES: Routes = [
         pathMatch: 'full',
         redirectTo: 'accounting'
       },
-
       {
         path: 'accounting',
         loadChildren: () =>
@@ -29,6 +28,12 @@ export const FINANCE_ROUTES: Routes = [
         loadChildren: () =>
           import('./ap/ap.routes')
             .then(m => m.AP_ROUTES)
+      },
+      {
+        path: 'expenses',
+        loadChildren: () =>
+          import('./expenses/expense.routes')
+            .then(m => m.EXPENSE_ROUTES)
       }
     ]
   }
