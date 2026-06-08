@@ -10,7 +10,6 @@ export interface UserBulkRow {
   emails?: string;
   phones?: string;
   branchCode?: string;
-  position?: string;
 }
 
 export const USER_BULK_IMPORT_CONFIG: BulkImportConfig<
@@ -35,7 +34,6 @@ export const USER_BULK_IMPORT_CONFIG: BulkImportConfig<
     'emails',
     'phones',
     'branchCode',
-    'position'
   ],
 
   fields: [
@@ -45,7 +43,6 @@ export const USER_BULK_IMPORT_CONFIG: BulkImportConfig<
     { name: 'emails' },
     { name: 'phones' },
     { name: 'branchCode' },
-    { name: 'position', defaultValue: 'member' }
   ],
 
   previewColumns: [
@@ -64,7 +61,6 @@ export const USER_BULK_IMPORT_CONFIG: BulkImportConfig<
     { header: 'emails', key: 'emails', width: 32 },
     { header: 'phones', key: 'phones', width: 22, format: 'text' },
     { header: 'branchCode', key: 'branchCode', width: 14 },
-    { header: 'position', key: 'position', width: 12 }
   ],
 
   exampleRow: {
@@ -74,13 +70,11 @@ export const USER_BULK_IMPORT_CONFIG: BulkImportConfig<
     emails: 'jdoe@company.com',
     phones: '0712345678',
     branchCode: 'MAIN',
-    position: 'member'
   },
 
   emptyRow: {
     password: '1234',
     role: 'EMPLOYEE',
-    position: 'member'
   },
 
   emptyRowCount: 200,
@@ -98,7 +92,6 @@ export const USER_BULK_IMPORT_CONFIG: BulkImportConfig<
       emailAddresses: row.emails ? [row.emails] : [],
       phoneNumbers: row.phones ? [row.phones] : [],
       branchCode: row.branchCode || null,
-      position: row.position
     };
   },
 

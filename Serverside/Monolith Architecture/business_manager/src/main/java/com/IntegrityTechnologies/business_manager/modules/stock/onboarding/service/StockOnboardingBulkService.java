@@ -115,6 +115,9 @@ public class StockOnboardingBulkService {
         Set<String> seenRows =
                 new HashSet<>();
 
+        List<StockOnboardingRequest> validatedRows =
+                new ArrayList<>();
+
         /*
          * =====================================================
          * PHASE 1 — PREVALIDATION ONLY
@@ -213,6 +216,8 @@ public class StockOnboardingBulkService {
                                 preview.getVatAmount()
                         );
 
+                validatedRows.add(row);
+
             } catch (Exception ex) {
 
                 result.addError(
@@ -279,10 +284,8 @@ public class StockOnboardingBulkService {
          * =====================================================
          */
 
-        for (StockOnboardingRequest row : request.getItems()) {
-
+        for (StockOnboardingRequest row : validatedRows) {
             onboardingService.onboard(row);
-
             entityManager.flush();
             entityManager.clear();
         }

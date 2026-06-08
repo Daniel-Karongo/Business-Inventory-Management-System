@@ -1,5 +1,6 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.sales.base.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -10,6 +11,7 @@ import java.util.UUID;
  * Rows are grouped into sales using receiptNo (client-side only).
  */
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class SaleBulkRow {
 
     /** Client-side grouping key (NOT persisted) */

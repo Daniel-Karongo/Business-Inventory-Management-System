@@ -251,6 +251,7 @@ public class UserBulkService {
                                 .phoneNumbers(phones)
                                 .branchCode(branchCode)
                                 .branchIds(List.of(branch.getId()))
+                                .primaryBranchId(branch.getId())
                                 .build();
 
                 prepared.add(dto);

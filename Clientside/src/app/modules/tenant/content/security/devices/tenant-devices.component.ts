@@ -25,6 +25,9 @@ import { forkJoin } from 'rxjs';
 import { DeviceAuditDialogComponent } from '../../../../../shared/components/device-audit-dialog/device-audit-dialog.component';
 import { RenameDeviceDialogComponent } from '../../../../../shared/components/rename-device-dialog/rename-device-dialog.component';
 import { PageShellComponent } from '../../../../../shared/layout/page-shell/page-shell.component';
+import { AuthService } from '../../../../auth/services/auth.service';
+import { BranchListItemDTO } from '../../branches/models/branch.model';
+import { MatSelectModule } from '@angular/material/select';
 
 @Component({
   standalone: true,
@@ -42,7 +45,8 @@ import { PageShellComponent } from '../../../../../shared/layout/page-shell/page
     MatIconModule,
     MatTooltipModule,
     MatButtonToggleModule,
-    MatCheckboxModule
+    MatCheckboxModule,
+    MatSelectModule
   ],
   templateUrl: './tenant-devices.component.html',
   styleUrls: ['./tenant-devices.component.scss']
@@ -51,6 +55,7 @@ export class TenantDevicesComponent implements OnInit {
 
   private api = inject(DeviceApiService);
   private branchCtx = inject(BranchContextService);
+  private auth = inject(AuthService);
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
 
@@ -60,6 +65,10 @@ export class TenantDevicesComponent implements OnInit {
   devices: DeviceDTO[] = [];
   filtered: DeviceDTO[] = [];
   paged: DeviceDTO[] = [];
+
+  branches: BranchListItemDTO[] = [];
+  selectedBranchId: string | null = null;
+  showBranchSelector = false;
 
   searchTerm = '';
   statusFilter = 'ALL';
@@ -95,13 +104,19 @@ export class TenantDevicesComponent implements OnInit {
   ngOnInit() {
 
     const savedView =
-      localStorage.getItem('devices.viewMode');
+      localStorage.getItem(
+        'devices.viewMode'
+      );
 
     const savedMode =
-      localStorage.getItem('devices.mode');
+      localStorage.getItem(
+        'devices.mode'
+      );
 
     const compact =
-      localStorage.getItem('devices.compact');
+      localStorage.getItem(
+        'devices.compact'
+      );
 
     if (
       savedView === 'table' ||
@@ -118,11 +133,43 @@ export class TenantDevicesComponent implements OnInit {
     }
 
     if (compact === 'true') {
+
       this.compactView = true;
-      this.size = this.compactView ? 25 : 10;
+
+      this.size =
+        this.compactView
+          ? 25
+          : 10;
     }
 
-    this.load();
+    this.branchCtx.branches$
+      .subscribe(branches => {
+
+        this.branches = branches;
+
+        this.showBranchSelector =
+          branches.length > 1;
+      });
+
+    this.branchCtx.branch$
+      .subscribe(branchId => {
+
+        this.selectedBranchId =
+          branchId;
+
+        this.load();
+      });
+  }
+
+  onBranchChanged() {
+
+    if (!this.selectedBranchId) {
+      return;
+    }
+
+    this.branchCtx.setBranch(
+      this.selectedBranchId
+    );
   }
 
   get allVisibleSelected(): boolean {
@@ -188,7 +235,7 @@ export class TenantDevicesComponent implements OnInit {
     });
 
     this.api.list(
-      this.branchCtx.currentBranch
+      this.selectedBranchId
     ).subscribe({
       next: data => {
         this.devices = data;

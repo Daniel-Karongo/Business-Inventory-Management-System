@@ -85,36 +85,54 @@
   <!-- TOOLBAR -->
   <div page-toolbar class="inventory-toolbar">
 
+    <mat-form-field *ngIf="showBranchSelector" appearance="fill" class="branch-selector">
+
+      <mat-label>
+        Branch
+      </mat-label>
+
+      <mat-select [(ngModel)]="selectedBranchId" (selectionChange)="onBranchChanged()">
+
+        <mat-option *ngFor="let branch of branches" [value]="branch.id">
+
+          {{ branch.name }}
+
+        </mat-option>
+
+      </mat-select>
+
+    </mat-form-field>
+
     <mat-form-field appearance="fill" class="search-field">
-        <mat-label>Search Devices</mat-label>
+      <mat-label>Search Devices</mat-label>
 
-        <input matInput [(ngModel)]="searchTerm" (input)="applySearch()">
+      <input matInput [(ngModel)]="searchTerm" (input)="applySearch()">
 
-        <button matSuffix mat-icon-button *ngIf="searchTerm" (click)="searchTerm=''; applySearch()">
-          <mat-icon>close</mat-icon>
-        </button>
+      <button matSuffix mat-icon-button *ngIf="searchTerm" (click)="searchTerm=''; applySearch()">
+        <mat-icon>close</mat-icon>
+      </button>
 
-      </mat-form-field>
+    </mat-form-field>
 
-      <mat-button-toggle-group class="status-segment" [(ngModel)]="statusFilter" (change)="applySearch()">
+    <mat-button-toggle-group class="status-segment" [(ngModel)]="statusFilter" (change)="applySearch()">
 
-        <mat-button-toggle value="ALL">
-          All
-        </mat-button-toggle>
+      <mat-button-toggle value="ALL">
+        All
+      </mat-button-toggle>
 
-        <mat-button-toggle value="APPROVED">
-          Approved
-        </mat-button-toggle>
+      <mat-button-toggle value="APPROVED">
+        Approved
+      </mat-button-toggle>
 
-        <mat-button-toggle value="PENDING">
-          Pending
-        </mat-button-toggle>
+      <mat-button-toggle value="PENDING">
+        Pending
+      </mat-button-toggle>
 
-        <mat-button-toggle value="REJECTED">
-          Rejected
-        </mat-button-toggle>
+      <mat-button-toggle value="REJECTED">
+        Rejected
+      </mat-button-toggle>
 
-      </mat-button-toggle-group>
+    </mat-button-toggle-group>
 
   </div>
 
@@ -310,5 +328,3 @@
   </div>
 
 </app-page-shell>
-
-

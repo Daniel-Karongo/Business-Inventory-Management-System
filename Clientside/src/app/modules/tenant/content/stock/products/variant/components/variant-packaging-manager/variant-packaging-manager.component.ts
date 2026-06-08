@@ -61,9 +61,10 @@ export class VariantPackagingManagerComponent {
             PackagingFormComponent,
             {
                 width: 'min(640px, 96vw)',
-                maxWidth: '96vw',
+                maxWidth: '95vw',
                 panelClass: 'enterprise-dialog',
-                autoFocus: false
+                autoFocus: false,
+                data: {}
             }
         );
 
@@ -73,8 +74,10 @@ export class VariantPackagingManagerComponent {
 
             this.service.create({
                 variantId: this.variantId,
+                branchId: this.branchId,
                 ...payload
             }).subscribe({
+
                 next: () => {
 
                     this.snackbar.open(
@@ -86,6 +89,18 @@ export class VariantPackagingManagerComponent {
                     );
 
                     this.refreshRequested.emit();
+                },
+
+                error: err => {
+
+                    this.snackbar.open(
+                        err?.error?.message
+                        ?? 'Failed to create packaging',
+                        'Close',
+                        {
+                            duration: 7000
+                        }
+                    );
                 }
             });
         });
@@ -113,7 +128,10 @@ export class VariantPackagingManagerComponent {
 
             this.service.update(
                 packaging.packagingId,
-                payload
+                {
+                    branchId: this.branchId,
+                    ...payload
+                }
             ).subscribe({
                 next: () => {
                     this.snackbar.open(
@@ -123,6 +141,14 @@ export class VariantPackagingManagerComponent {
                     );
 
                     this.refreshRequested.emit();
+                },
+                error: err => {
+                    this.snackbar.open(
+                        err?.error?.message
+                        ?? 'Failed to update packaging',
+                        'Close',
+                        { duration: 7000 }
+                    );
                 }
             });
         });

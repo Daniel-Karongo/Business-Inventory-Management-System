@@ -7,6 +7,7 @@ import {
 import { CommonModule } from '@angular/common';
 
 import {
+    FormsModule,
     ReactiveFormsModule
 } from '@angular/forms';
 
@@ -64,6 +65,12 @@ import {
 } from '../../../../branches/services/branch.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
+import { FundingAccount } from '../../../../finance/ap/debts/models/funding-account.model';
+import { Account } from '../../../../finance/accounts/models/account.models';
+import { AccountsService } from '../../../../finance/accounts/services/accounts.service';
+import { ApPaymentService } from '../../../../finance/ap/debts/services/ap-payment.service';
+import { MatSelectModule } from '@angular/material/select';
+import { MatOptionModule } from '@angular/material/core';
 
 @Component({
     standalone: true,
@@ -88,7 +95,10 @@ import { Router } from '@angular/router';
         MatInputModule,
         MatIconModule,
         MatPaginatorModule,
-        MatTooltipModule
+        MatTooltipModule,
+        MatSelectModule,
+        MatOptionModule,
+        FormsModule
     ]
 })
 export class
@@ -104,6 +114,16 @@ export class
         STOCK_ONBOARDING_BULK_IMPORT_CONFIG;
 
     private branchMap =
+        new Map<string, string>();
+
+    fundingAccounts: FundingAccount[] = [];
+
+    expenseAccounts: Account[] = [];
+
+    private fundingAccountMap =
+        new Map<string, string>();
+
+    private expenseAccountMap =
         new Map<string, string>();
 
     /* ========================================================
@@ -123,6 +143,30 @@ export class
 
     pagedIndexes: number[] = [];
 
+    accountingDate =
+        new Date()
+            .toISOString()
+            .substring(0, 10);
+
+    autoPaySuppliers = false;
+
+    supplierPaymentMethod:
+        'CASH'
+        | 'BANK'
+        | 'MPESA'
+        | null = null;
+
+    autoPayOperationalExpenses = false;
+
+    fundingAccountId:
+        string | null = null;
+
+    operationalExpenses: {
+        expenseAccountId: string;
+        description: string;
+        amount: number;
+    }[] = [];
+
     constructor(
         private onboardingService:
             StockOnboardingService,
@@ -134,6 +178,12 @@ export class
             >,
         private branchService:
             BranchService,
+
+        private accountsService:
+            AccountsService,
+
+        private paymentService:
+            ApPaymentService,
         private cdr:
             ChangeDetectorRef,
         private router:
@@ -177,6 +227,10 @@ export class
 
             });
 
+        this.loadFundingAccounts();
+
+        this.loadExpenseAccounts();
+
     }
 
     /* ========================================================
@@ -204,6 +258,285 @@ export class
 
         return this.currentPage * this.pageSize;
 
+    }
+
+    get totalUnits(): number {
+        return this.rows.controls.reduce(
+            (sum, row) =>
+                sum +
+                Number(
+                    row.value.unitsSupplied || 0
+                ),
+            0
+        );
+    }
+
+    get totalInventoryValue(): number {
+        return this.rows.controls.reduce(
+            (sum, row) =>
+                sum +
+                (
+                    Number(
+                        row.value.unitsSupplied || 0
+                    ) *
+                    Number(
+                        row.value.unitCost || 0
+                    )
+                ),
+            0
+        );
+    }
+
+    get totalOperationalExpenses(): number {
+        return this.operationalExpenses.reduce(
+            (sum, expense) =>
+                sum +
+                Number(
+                    expense.amount || 0
+                ),
+            0
+        );
+    }
+
+    get supplierFundingRequired(): number {
+        return this.autoPaySuppliers
+            ? this.totalInventoryValue
+            : 0;
+    }
+
+    get expenseFundingRequired(): number {
+        return this.autoPayOperationalExpenses
+            ? this.totalOperationalExpenses
+            : 0;
+    }
+
+    get totalFundingRequired(): number {
+        return (
+            this.supplierFundingRequired +
+            this.expenseFundingRequired
+        );
+    }
+
+    get selectedFundingAccount():
+        FundingAccount | null {
+
+        return (
+            this.fundingAccounts.find(
+                account =>
+                    account.id ===
+                    this.fundingAccountId
+            ) || null
+        );
+    }
+
+    get fundingShortfall(): number {
+        const balance =
+            this.selectedFundingAccount
+                ?.balance ?? 0;
+
+        return Math.max(
+            0,
+            this.totalFundingRequired -
+            balance
+        );
+    }
+
+    get fundingSurplus(): number {
+        const balance =
+            this.selectedFundingAccount
+                ?.balance ?? 0;
+
+        return Math.max(
+            0,
+            balance -
+            this.totalFundingRequired
+        );
+    }
+
+    get requiresAutoFunding(): boolean {
+        return this.fundingShortfall > 0;
+    }
+
+    get totalDistinctProducts(): number {
+
+        const products =
+            new Set<string>();
+
+        this.rows.controls.forEach(
+            row => {
+
+                const value =
+                    String(
+                        row.value.productName || ''
+                    )
+                        .trim()
+                        .toUpperCase();
+
+                if (value) {
+                    products.add(value);
+                }
+            }
+        );
+
+        return products.size;
+    }
+
+    get totalDistinctVariants(): number {
+
+        const variants =
+            new Set<string>();
+
+        this.rows.controls.forEach(
+            row => {
+
+                const value = [
+                    row.value.productName,
+                    row.value.classification
+                ]
+                    .join('||')
+                    .trim()
+                    .toUpperCase();
+
+                variants.add(value);
+            }
+        );
+
+        return variants.size;
+    }
+
+    get totalDistinctSuppliers(): number {
+
+        const suppliers =
+            new Set<string>();
+
+        this.rows.controls.forEach(
+            row => {
+
+                const value =
+                    String(
+                        row.value.supplierName || ''
+                    )
+                        .trim()
+                        .toUpperCase();
+
+                if (value) {
+                    suppliers.add(value);
+                }
+            }
+        );
+
+        return suppliers.size;
+    }
+
+    get totalDistinctBranches(): number {
+
+        const branches =
+            new Set<string>();
+
+        this.rows.controls.forEach(
+            row => {
+
+                const value =
+                    String(
+                        row.value.branchCode || ''
+                    )
+                        .trim()
+                        .toUpperCase();
+
+                if (value) {
+                    branches.add(value);
+                }
+            }
+        );
+
+        return branches.size;
+    }
+
+    get previewSupplierFunding(): number {
+
+        return this.autoPaySuppliers
+            ? this.totalInventoryValue
+            : 0;
+    }
+
+    get previewExpenseFunding(): number {
+
+        return this.autoPayOperationalExpenses
+            ? this.totalOperationalExpenses
+            : 0;
+    }
+
+    get previewFundingTotal(): number {
+
+        return (
+            this.previewSupplierFunding +
+            this.previewExpenseFunding
+        );
+    }
+
+    get estimatedVatAmount(): number {
+
+        return this.rows.controls.reduce(
+            (sum, row) => {
+
+                const units =
+                    Number(
+                        row.value.unitsSupplied || 0
+                    );
+
+                const cost =
+                    Number(
+                        row.value.unitCost || 0
+                    );
+
+                const vatRate =
+                    Number(
+                        row.value.vatRate || 0
+                    );
+
+                const vatInclusive =
+                    this.parseBoolean(
+                        row.value.vatInclusive
+                    );
+
+                const lineTotal =
+                    units * cost;
+
+                if (!vatInclusive) {
+
+                    return (
+                        sum +
+                        (
+                            lineTotal *
+                            vatRate /
+                            100
+                        )
+                    );
+                }
+
+                const vat =
+                    lineTotal -
+                    (
+                        lineTotal /
+                        (
+                            1 +
+                            vatRate / 100
+                        )
+                    );
+
+                return sum + vat;
+
+            },
+            0
+        );
+    }
+
+    get estimatedNetCost(): number {
+
+        return (
+            this.totalInventoryValue -
+            this.estimatedVatAmount
+        );
     }
 
     trackByRowIndex(
@@ -396,6 +729,211 @@ export class
         }
 
         return branchId;
+
+    }
+
+    private loadFundingAccounts() {
+
+        this.paymentService
+            .fundingAccounts()
+            .subscribe(accounts => {
+
+                this.fundingAccounts = accounts;
+
+                if (
+                    !this.supplierPaymentMethod &&
+                    !this.fundingAccountId
+                ) {
+                    const cashAccount =
+                        accounts.find(account =>
+                            account.name?.toUpperCase().includes('CASH')
+                            ||
+                            account.code?.toUpperCase().includes('CASH')
+                        );
+
+                    if (cashAccount) {
+                        this.fundingAccountId =
+                            cashAccount.id;
+
+                        this.supplierPaymentMethod =
+                            'CASH';
+                    }
+                }
+
+                this.fundingAccountMap.clear();
+
+                accounts.forEach(account => {
+
+                    this.fundingAccountMap.set(
+                        account.code
+                            .trim()
+                            .toUpperCase(),
+                        account.id
+                    );
+
+                });
+
+            });
+
+    }
+
+    private findFundingAccountByKeyword(
+        keyword: string
+    ): FundingAccount | undefined {
+        return this.fundingAccounts.find(account =>
+            account.name?.toUpperCase().includes(keyword)
+            ||
+            account.code?.toUpperCase().includes(keyword)
+        );
+    }
+
+    onSupplierMethodChanged(): void {
+
+        if (!this.supplierPaymentMethod) {
+            return;
+        }
+
+        let account: FundingAccount | undefined;
+
+        switch (this.supplierPaymentMethod) {
+
+            case 'CASH':
+                account =
+                    this.findFundingAccountByKeyword('CASH');
+                break;
+
+            case 'BANK':
+                account =
+                    this.findFundingAccountByKeyword('BANK');
+                break;
+
+            case 'MPESA':
+                account =
+                    this.findFundingAccountByKeyword('MPESA')
+                    ??
+                    this.findFundingAccountByKeyword('M-PESA');
+                break;
+        }
+
+        if (account) {
+            this.fundingAccountId = account.id;
+        }
+    }
+
+    onFundingAccountChanged(): void {
+
+        const account =
+            this.fundingAccounts.find(
+                a => a.id === this.fundingAccountId
+            );
+
+        if (!account) {
+            return;
+        }
+
+        const text = [
+            account.code,
+            account.name
+        ]
+            .join(' ')
+            .toUpperCase();
+
+        if (text.includes('MPESA') || text.includes('M-PESA')) {
+
+            this.supplierPaymentMethod = 'MPESA';
+            return;
+        }
+
+        if (text.includes('BANK')) {
+
+            this.supplierPaymentMethod = 'BANK';
+            return;
+        }
+
+        if (text.includes('CASH')) {
+
+            this.supplierPaymentMethod = 'CASH';
+            return;
+        }
+    }
+
+    private loadExpenseAccounts() {
+
+        this.accountsService
+            .list({
+                page: 0,
+                size: 1000
+            })
+            .subscribe(result => {
+
+                this.expenseAccounts =
+                    result.content
+                        .filter(account =>
+                            account.type === 'EXPENSE'
+                            &&
+                            account.role !== 'COGS'
+                            &&
+                            account.role !== 'CORPORATE_TAX_EXPENSE'
+                        );
+
+                if (
+                    this.expenseAccounts.length === 1
+                ) {
+
+                    const account =
+                        this.expenseAccounts[0];
+
+                    this.operationalExpenses =
+                        this.operationalExpenses.map(
+                            expense => ({
+                                ...expense,
+                                expenseAccountId:
+                                    account.id
+                            })
+                        );
+                }
+
+                this.expenseAccountMap.clear();
+
+                this.expenseAccounts
+                    .forEach(account => {
+
+                        this.expenseAccountMap.set(
+                            account.code
+                                .trim()
+                                .toUpperCase(),
+                            account.id
+                        );
+
+                    });
+
+            });
+
+    }
+
+    addOperationalExpense() {
+
+        const defaultAccountId =
+            this.expenseAccounts.length === 1
+                ? this.expenseAccounts[0].id
+                : '';
+
+        this.operationalExpenses.push({
+            expenseAccountId:
+                defaultAccountId,
+            description: '',
+            amount: 0
+        });
+    }
+
+    removeOperationalExpense(
+        index: number
+    ) {
+
+        this.operationalExpenses.splice(
+            index,
+            1
+        );
 
     }
 
@@ -653,8 +1191,29 @@ export class
             suppliers:
                 Array.from(
                     supplierMap.values()
-                )
+                ),
 
+            accountingDate:
+                this.accountingDate,
+
+            operationalExpenses:
+                structuredClone(
+                    this.operationalExpenses
+                ),
+
+            autoPaySuppliers:
+                this.autoPaySuppliers,
+
+            supplierPaymentMethod:
+                this.supplierPaymentMethod
+                ?? undefined,
+
+            autoPayOperationalExpenses:
+                this.autoPayOperationalExpenses,
+
+            fundingAccountId:
+                this.fundingAccountId
+                ?? undefined
         };
 
     }
@@ -949,7 +1508,7 @@ export class
                     this.dialogRef.close(true);
 
                     await this.router.navigate([
-                        'app/inventory'
+                        'app/stock'
                     ]);
                 },
 

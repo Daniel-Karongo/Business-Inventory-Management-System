@@ -4,7 +4,6 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.dto.ProductPriceDTO;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.dto.UpdatePriceRequest;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.ProductPrice;
-import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.service.PricingEngineService;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.service.ProductPriceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -16,8 +15,6 @@ import java.util.UUID;
 @RequestMapping("/api/product-variants/pricing")
 @RequiredArgsConstructor
 public class PricingController {
-
-    private final PricingEngineService pricingEngine;
 
     private final ProductPriceService service;
 

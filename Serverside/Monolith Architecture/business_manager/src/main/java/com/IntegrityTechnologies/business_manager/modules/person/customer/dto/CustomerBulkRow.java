@@ -2,11 +2,13 @@ package com.IntegrityTechnologies.business_manager.modules.person.customer.dto;
 
 import com.IntegrityTechnologies.business_manager.modules.person.customer.model.CustomerType;
 import com.IntegrityTechnologies.business_manager.modules.person.customer.model.Gender;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 import java.util.List;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class CustomerBulkRow {
 
     private String name;

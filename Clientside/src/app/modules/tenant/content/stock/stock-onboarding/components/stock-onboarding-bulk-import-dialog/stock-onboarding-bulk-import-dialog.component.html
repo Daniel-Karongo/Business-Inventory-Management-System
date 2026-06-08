@@ -43,6 +43,493 @@
 
             </div>
 
+            <div bulk-options class="bulk-accounting-options">
+
+                <!-- =====================================================
+         LIVE BULK SUMMARY
+    ====================================================== -->
+
+                <div class="bulk-summary-grid">
+
+                    <div class="summary-card">
+                        <div class="summary-label">
+                            Products
+                        </div>
+                        <div class="summary-value">
+                            {{ totalDistinctProducts }}
+                        </div>
+                    </div>
+
+                    <div class="summary-card">
+                        <div class="summary-label">
+                            Variants
+                        </div>
+                        <div class="summary-value">
+                            {{ totalDistinctVariants }}
+                        </div>
+                    </div>
+
+                    <div class="summary-card">
+                        <div class="summary-label">
+                            Suppliers
+                        </div>
+                        <div class="summary-value">
+                            {{ totalDistinctSuppliers }}
+                        </div>
+                    </div>
+
+                    <div class="summary-card">
+                        <div class="summary-label">
+                            Branches
+                        </div>
+                        <div class="summary-value">
+                            {{ totalDistinctBranches }}
+                        </div>
+                    </div>
+
+                    <div class="summary-card">
+                        <div class="summary-label">
+                            Total Units
+                        </div>
+                        <div class="summary-value">
+                            {{ totalUnits }}
+                        </div>
+                    </div>
+
+                    <div class="summary-card">
+                        <div class="summary-label">
+                            Inventory Value
+                        </div>
+                        <div class="summary-value">
+                            {{ totalInventoryValue | number:'1.2-2' }}
+                        </div>
+                    </div>
+
+                    <div class="summary-card">
+
+                        <div class="summary-label">
+                            Funding Required
+                        </div>
+
+                        <div class="summary-value">
+
+                            {{
+                            previewFundingTotal
+                            | number:'1.2-2'
+                            }}
+
+                        </div>
+
+                    </div>
+
+                    <div class="summary-card">
+
+                        <div class="summary-label">
+                            Net Cost
+                        </div>
+
+                        <div class="summary-value">
+
+                            {{
+                            estimatedNetCost
+                            | number:'1.2-2'
+                            }}
+
+                        </div>
+
+                    </div>
+
+                    <div class="summary-card">
+
+                        <div class="summary-label">
+                            VAT
+                        </div>
+
+                        <div class="summary-value">
+
+                            {{
+                            estimatedVatAmount
+                            | number:'1.2-2'
+                            }}
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="expenses-date-funding">
+
+                    <!-- =====================================================
+                        ACCOUNTING
+                    ====================================================== -->
+
+                    <div class="grid-3">
+
+                        <mat-form-field>
+                            <mat-label>
+                                Accounting Date
+                            </mat-label>
+
+                            <input matInput type="date" [(ngModel)]="accountingDate"
+                                [ngModelOptions]="{ standalone: true }">
+                        </mat-form-field>
+
+                        <mat-form-field appearance="fill">
+                            <mat-label>
+                                Supplier Payment Method
+                            </mat-label>
+
+                            <mat-select [(ngModel)]="supplierPaymentMethod" [ngModelOptions]="{ standalone: true }"
+                                (selectionChange)="onSupplierMethodChanged()" panelClass="bulk-select-panel">
+
+                                <mat-option value="CASH">
+                                    💵 Cash
+                                </mat-option>
+
+                                <mat-option value="BANK">
+                                    🏦 Bank
+                                </mat-option>
+
+                                <mat-option value="MPESA">
+                                    📱 M-Pesa
+                                </mat-option>
+
+                            </mat-select>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="fill">
+                            <mat-label>
+                                Funding Account
+                            </mat-label>
+
+                            <mat-select [(ngModel)]="fundingAccountId" [ngModelOptions]="{ standalone: true }"
+                                (selectionChange)="onFundingAccountChanged()" panelClass="bulk-select-panel">
+
+                                <mat-option *ngFor="let account of fundingAccounts" [value]="account.id">
+
+                                    <div class="account-option">
+                                        <div class="account-name">
+                                            {{ account.code }} - {{ account.name }}
+                                        </div>
+
+                                        <div class="account-balance">
+                                            ( {{ account.balance | number:'1.2-2' }} )
+                                        </div>
+                                    </div>
+
+                                </mat-option>
+
+                            </mat-select>
+                        </mat-form-field>
+
+                    </div>
+
+
+                    <!-- =====================================================
+                        OPERATIONAL EXPENSES
+                    ====================================================== -->
+
+                    <div class="operational-expenses">
+
+                        <div class="expense-header">
+
+                            <strong>
+                                Operational Expenses
+                            </strong>
+
+                            <button mat-stroked-button type="button" (click)="addOperationalExpense()">
+
+                                Add Expense
+
+                            </button>
+
+                        </div>
+
+                        <div class="expense-row" *ngFor="let expense of operationalExpenses; let i = index">
+
+                            <mat-form-field appearance="fill">
+
+                                <mat-label>
+                                    Expense Account
+                                </mat-label>
+
+                                <mat-select [(ngModel)]="expense.expenseAccountId"
+                                    [ngModelOptions]="{ standalone:true }" panelClass="bulk-select-panel">
+
+                                    <mat-option value="">
+                                        Select
+                                    </mat-option>
+
+                                    <mat-option *ngFor="let account of expenseAccounts" [value]="account.id">
+
+                                        <div class="account-option">
+
+                                            <div class="account-name">
+                                                {{ account.code }} - {{ account.name }}
+                                            </div>
+
+                                            <div class="account-balance">
+                                                {{ account.balance | number:'1.2-2' }}
+                                            </div>
+
+                                        </div>
+
+                                    </mat-option>
+
+                                </mat-select>
+
+                            </mat-form-field>
+
+                            <mat-form-field>
+                                <mat-label>Description</mat-label>
+
+                                <input matInput [(ngModel)]="expense.description"
+                                    [ngModelOptions]="{ standalone:true }">
+                            </mat-form-field>
+
+                            <mat-form-field>
+                                <mat-label>Amount</mat-label>
+
+                                <input matInput type="number" [(ngModel)]="expense.amount"
+                                    [ngModelOptions]="{ standalone:true }">
+                            </mat-form-field>
+
+                            <button mat-icon-button color="warn" type="button" (click)="removeOperationalExpense(i)" matTooltip="Remove expense">
+
+                                <mat-icon>delete</mat-icon>
+
+                            </button>
+
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- =====================================================
+                    PAYMENT OPTIONS
+                ====================================================== -->
+
+                <div class="payment-options">
+
+                    <mat-checkbox [(ngModel)]="autoPaySuppliers" [ngModelOptions]="{ standalone: true }">
+
+                        Auto Pay Suppliers
+
+                    </mat-checkbox>
+
+                    <mat-checkbox [(ngModel)]="autoPayOperationalExpenses" [ngModelOptions]="{ standalone: true }">
+
+                        Auto Pay Operational Expenses
+
+                    </mat-checkbox>
+
+                </div>
+
+                <!-- =====================================================
+         FUNDING ANALYSIS
+    ====================================================== -->
+
+                <div class="funding-account-summary" *ngIf="selectedFundingAccount">
+
+                    <div class="funding-metric">
+
+                        <span>
+                            Funding Account
+                        </span>
+
+                        <strong>
+                            {{ selectedFundingAccount.name }}
+                        </strong>
+
+                        <small>
+
+                            Balance:
+
+                            {{
+                            selectedFundingAccount.balance
+                            | number:'1.2-2'
+                            }}
+
+                        </small>
+
+                    </div>
+
+                    <div class="funding-metric">
+
+                        <span>
+                            Account Type
+                        </span>
+
+                        <strong>
+                            {{ selectedFundingAccount.role }}
+                        </strong>
+
+                    </div>
+
+                    <div class="funding-metric">
+
+                        <span>
+                            Inventory Funding
+                        </span>
+
+                        <strong>
+
+                            {{
+                            supplierFundingRequired
+                            | number:'1.2-2'
+                            }}
+
+                        </strong>
+
+                    </div>
+
+                    <div class="funding-metric">
+
+                        <span>
+                            Expense Funding
+                        </span>
+
+                        <strong>
+
+                            {{
+                            expenseFundingRequired
+                            | number:'1.2-2'
+                            }}
+
+                        </strong>
+
+                    </div>
+
+                    <div class="funding-metric">
+
+                        <span>
+                            Total Funding
+                        </span>
+
+                        <strong>
+
+                            {{
+                            totalFundingRequired
+                            | number:'1.2-2'
+                            }}
+
+                        </strong>
+
+                    </div>
+
+                    <div class="funding-metric" *ngIf="!requiresAutoFunding">
+
+                        <span>
+                            Remaining Balance
+                        </span>
+
+                        <strong>
+
+                            {{
+                            fundingSurplus
+                            | number:'1.2-2'
+                            }}
+
+                        </strong>
+
+                    </div>
+
+                    <div class="funding-metric warning" *ngIf="requiresAutoFunding">
+
+                        <span>
+                            Auto Funding Required
+                        </span>
+
+                        <strong>
+
+                            {{
+                            fundingShortfall
+                            | number:'1.2-2'
+                            }}
+
+                        </strong>
+
+                    </div>
+
+                </div>
+
+                <!-- =====================================================
+                    AUTO FUNDING WARNING
+                ====================================================== -->
+
+                <div class="auto-funding-banner" *ngIf="requiresAutoFunding">
+
+                    Funding account balance is insufficient.
+
+                    Owner Equity will automatically fund
+
+                    {{
+                    fundingShortfall
+                    | number:'1.2-2'
+                    }}
+
+                    before supplier and expense
+                    payments are posted.
+
+                </div>
+
+
+                <!-- =====================================================
+                    GRAND TOTALS
+                ====================================================== -->
+
+                <div class="bulk-totals-grid">
+
+                    <div class="total-card">
+
+                        <span>
+                            Inventory Value
+                        </span>
+
+                        <strong>
+                            {{
+                            totalInventoryValue
+                            | number:'1.2-2'
+                            }}
+                        </strong>
+
+                    </div>
+
+                    <div class="total-card">
+
+                        <span>
+                            Operational Expenses
+                        </span>
+
+                        <strong>
+                            {{
+                            totalOperationalExpenses
+                            | number:'1.2-2'
+                            }}
+                        </strong>
+
+                    </div>
+
+                    <div class="total-card">
+
+                        <span>
+                            Total Funding Required
+                        </span>
+
+                        <strong>
+                            {{
+                            totalFundingRequired
+                            | number:'1.2-2'
+                            }}
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </div>
+
             <mat-paginator [length]="rowCount" [pageIndex]="currentPage" [pageSize]="pageSize"
                 [pageSizeOptions]="pageSizeOptions" [showFirstLastButtons]="true" (page)="onPageChange($event)">
             </mat-paginator>

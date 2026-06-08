@@ -2128,7 +2128,7 @@ export class StockListComponent
                         string | null = null;
 
                     const currentBranch =
-                        this.branchContext.currentBranchId();
+                        this.branchContext.currentBranch;
 
                     if (currentBranch) {
 

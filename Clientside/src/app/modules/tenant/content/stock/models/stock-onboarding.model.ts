@@ -87,20 +87,31 @@ export interface StockOnboardingBulkPreviewRow {
   variantId?: string;
   classification?: string;
   branchId: string;
+
   totalUnits: number;
-  totalCost: number;
+
+  grossCost: number;
+  netCost: number;
+  vatAmount: number;
+
   existingProduct: boolean;
   existingVariant: boolean;
   categoryCreated: boolean;
+
   suppliersCreated: number;
+
   packagingCount: number;
   pricingCount: number;
 }
 
 export interface StockOnboardingBulkPreviewResult {
   rows: StockOnboardingBulkPreviewRow[];
+
   totalUnits: number;
-  totalCost: number;
+
+  grossCost: number;
+  netCost: number;
+  vatAmount: number;
 }
 
 export interface SupplierPreviewLine {

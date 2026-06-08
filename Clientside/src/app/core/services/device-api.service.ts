@@ -70,6 +70,9 @@ export class DeviceApiService {
       ? `${environment.apiUrl}${this.tenantDevices.list(branchId)}`
       : `${environment.apiUrl}/admin/devices`;
 
+    console.log("Hello");
+    console.log(url);
+
     return this.http.get<DeviceDTO[]>(url);
   }
 

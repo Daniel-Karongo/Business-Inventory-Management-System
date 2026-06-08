@@ -127,38 +127,57 @@ export const
         ],
 
         previewColumns: [
+
             {
                 key: 'productName',
                 label: 'Product'
             },
+
             {
                 key: 'classification',
                 label: 'Variant'
             },
+
             {
                 key: 'totalUnits',
                 label: 'Units'
             },
+
             {
                 key: 'grossCost',
-                label: 'Gross Cost'
+                label: 'Inventory Value'
             },
-            {
-                key: 'netCost',
-                label: 'Net Cost'
-            },
+
             {
                 key: 'vatAmount',
-                label: 'VAT Amount'
+                label: 'VAT'
             },
+
+            {
+                key: 'packagingCount',
+                label: 'Packagings'
+            },
+
+            {
+                key: 'pricingCount',
+                label: 'Prices'
+            },
+
+            {
+                key: 'suppliersCreated',
+                label: 'New Suppliers'
+            },
+
             {
                 key: 'existingProduct',
                 label: 'Existing Product'
             },
+
             {
-                key: 'suppliersCreated',
-                label: 'New Suppliers'
+                key: 'existingVariant',
+                label: 'Existing Variant'
             }
+
         ],
 
         excelSheetName:

@@ -217,7 +217,7 @@
 
               <div class="card-title-group">
 
-                <div class="card-title">
+                <div class="card-title clickable" (click)="view(branch); $event.stopPropagation()">
 
                   {{ branch.name }}
 
@@ -431,7 +431,7 @@
 
             <td mat-cell *matCellDef="let branch">
 
-              <span class="branch-code">
+              <span class="branch-code clickable" (click)="view(branch); $event.stopPropagation()">
 
                 {{ branch.branchCode }}
 
@@ -465,7 +465,7 @@
 
               <div class="branch-name-cell">
 
-                <div class="branch-name">
+                <div class="branch-name clickable" (click)="view(branch); $event.stopPropagation()">
 
                   {{ branch.name }}
 

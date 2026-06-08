@@ -2,24 +2,46 @@ import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { AuthService } from '../../modules/auth/services/auth.service';
 import { BranchListItemDTO } from '../../modules/tenant/content/branches/models/branch.model';
+import { BranchService } from '../../modules/tenant/content/branches/services/branch.service';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class BranchContextService {
 
   private auth = inject(AuthService);
+  private branchService = inject(BranchService);
 
-  private readonly STORAGE_KEY = 'active_branch_id';
+  private readonly STORAGE_KEY =
+    'active_branch_id';
 
-  private branchSubject = new BehaviorSubject<string | null>(null);
-  branch$ = this.branchSubject.asObservable();
+  private readonly branchSubject =
+    new BehaviorSubject<string | null>(null);
+
+  readonly branch$ =
+    this.branchSubject.asObservable();
 
   private readonly branchesSubject =
-    new BehaviorSubject<
-      BranchListItemDTO[]
-    >([]);
+    new BehaviorSubject<BranchListItemDTO[]>([]);
 
   readonly branches$ =
     this.branchesSubject.asObservable();
+
+  constructor() {
+
+    const authBranch =
+      this.auth
+        .getSnapshot()
+        ?.branchId
+      ?? null;
+
+    this.branchSubject.next(
+      authBranch
+    );
+
+    this.refreshBranches();
+
+  }
 
   setBranches(
     branches: BranchListItemDTO[]
@@ -28,56 +50,88 @@ export class BranchContextService {
     this.branchesSubject.next(
       branches
     );
+
+    const current =
+      this.branchSubject.value;
+
+    if (
+      current &&
+      branches.some(
+        b => b.id === current
+      )
+    ) {
+      return;
+    }
+
+    const authBranch =
+      this.auth
+        .getSnapshot()
+        ?.branchId
+      ?? null;
+
+    this.branchSubject.next(
+      authBranch
+    );
+
+    if (authBranch) {
+
+      localStorage.setItem(
+        this.STORAGE_KEY,
+        authBranch
+      );
+
+    }
   }
 
-  constructor() {
-    const saved = localStorage.getItem(this.STORAGE_KEY);
-
-    const authBranch = this.auth.getSnapshot()?.branchId ?? null;
-
-    this.branchSubject.next(saved ?? authBranch);
-
-    // ✅ CRITICAL: react to auth changes (login, refresh)
-    this.auth.getCurrentUser().subscribe(user => {
-      if (!user) return;
-
-      const current = this.branchSubject.value;
-
-      // if nothing selected yet → fallback to auth
-      if (!current) {
-        this.branchSubject.next(user.branchId);
-      }
-    });
+  get branches(): BranchListItemDTO[] {
+    return this.branchesSubject.value;
   }
 
   get currentBranch(): string | null {
     return this.branchSubject.value;
   }
 
-  currentBranchId(): string | null {
-    return this.branchSubject.value;
+  setBranch(
+    branchId: string
+  ): void {
+
+    localStorage.setItem(
+      this.STORAGE_KEY,
+      branchId
+    );
+
+    this.branchSubject.next(
+      branchId
+    );
   }
 
-  setBranch(branchId: string | null) {
+  resetToAuthBranch(): void {
 
-    const role = this.auth.getSnapshot()?.role;
+    const authBranch =
+      this.auth
+        .getSnapshot()
+        ?.branchId;
 
-    // Employees cannot override branch
-    if (role === 'EMPLOYEE') {
-      return;
-    }
+    localStorage.removeItem(
+      this.STORAGE_KEY
+    );
 
-    if (branchId) {
-      localStorage.setItem(this.STORAGE_KEY, branchId);
-    } else {
-      localStorage.removeItem(this.STORAGE_KEY);
-    }
-
-    this.branchSubject.next(branchId);
+    this.branchSubject.next(
+      authBranch ?? null
+    );
   }
 
-  resetToAuthBranch() {
-    const authBranch = this.auth.getSnapshot()?.branchId ?? null;
-    this.branchSubject.next(authBranch);
+  refreshBranches(): void {
+
+    this.branchService
+      .getAllLegacy()
+      .subscribe(branches => {
+
+        this.setBranches(
+          branches
+        );
+
+      });
+
   }
 }

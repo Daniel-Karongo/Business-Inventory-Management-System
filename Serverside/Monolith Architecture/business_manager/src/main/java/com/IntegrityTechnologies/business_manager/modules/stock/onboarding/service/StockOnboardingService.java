@@ -1443,9 +1443,7 @@ public class StockOnboardingService {
     private void validateFundingAccountPaymentMethod(
             StockOnboardingRequest req
     ) {
-        if (!Boolean.TRUE.equals(
-                req.getAutoPaySuppliers()
-        )) {
+        if (!Boolean.TRUE.equals(req.getAutoPaySuppliers()) && !Boolean.TRUE.equals(req.getAutoPayOperationalExpenses())) {
             return;
         }
 

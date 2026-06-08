@@ -48,7 +48,7 @@ export class PackagingFormComponent {
         public data: {
             packaging?: PackagingDTO;
             editMode?: boolean;
-        }
+        } | null
     ) {
         this.form = this.fb.group({
             name: ['', [Validators.required, Validators.maxLength(100)]],
@@ -57,7 +57,7 @@ export class PackagingFormComponent {
                 [Validators.required, Validators.min(1)]
             ]
         });
-        
+
         if (data?.packaging) {
 
             this.form.patchValue({

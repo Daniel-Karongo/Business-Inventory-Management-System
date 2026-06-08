@@ -33,6 +33,7 @@ import {
 
 import { UserService } from '../../../users/services/user/user.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { BranchContextService } from '../../../../../../core/services/branch-context.service';
 
 @Component({
   standalone: true,
@@ -58,7 +59,8 @@ export class BranchCreateComponent implements OnInit {
     private router: Router,
     private branchService: BranchService,
     private userService: UserService,
-    private snackbar: MatSnackBar
+    private snackbar: MatSnackBar,
+    private branchContext: BranchContextService
   ) { }
 
   ngOnInit() {
@@ -92,6 +94,9 @@ export class BranchCreateComponent implements OnInit {
       )
       .subscribe({
         next: () => {
+
+          this.branchContext
+            .refreshBranches();
 
           this.snackbar.open(
             'Branch created successfully',

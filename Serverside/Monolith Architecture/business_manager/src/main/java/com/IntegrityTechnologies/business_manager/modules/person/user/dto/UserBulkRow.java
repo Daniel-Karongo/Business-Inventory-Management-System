@@ -1,10 +1,12 @@
 package com.IntegrityTechnologies.business_manager.modules.person.user.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 import java.util.List;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class UserBulkRow {
 
     private String username;

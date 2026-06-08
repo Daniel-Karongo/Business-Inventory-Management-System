@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -100,6 +101,26 @@ public class ProductPriceService {
             Long minQty
     ) {
 
+        boolean exists =
+                priceRepo
+                        .findByProductVariantIdAndPackagingIdAndDeletedFalse(
+                                variantId,
+                                packagingId
+                        )
+                        .stream()
+                        .anyMatch(x ->
+                                Objects.equals(
+                                        x.getMinQuantity(),
+                                        minQty
+                                )
+                        );
+
+        if (exists) {
+            throw new IllegalArgumentException(
+                    "Pricing already exists for this packaging and quantity."
+            );
+        }
+
         validatePriceAgainstCost(
                 branchId,
                 variantId,
@@ -124,7 +145,10 @@ public class ProductPriceService {
                 variantId
         );
 
-        return priceRepo.save(p);
+        ProductPrice saved = priceRepo.saveAndFlush(p);
+
+        return priceRepo.findDetailedById(saved.getId())
+                .orElseThrow();
     }
 
     @Transactional
@@ -159,7 +183,10 @@ public class ProductPriceService {
                 p.getProductVariant().getId()
         );
 
-        return priceRepo.save(p);
+        ProductPrice saved = priceRepo.saveAndFlush(p);
+
+        return priceRepo.findDetailedById(saved.getId())
+                .orElseThrow();
     }
 
     public void validatePriceAgainstCost(

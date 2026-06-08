@@ -130,7 +130,7 @@ export class TaxAdministrationComponent
                     this.branches = branches;
 
                     const current =
-                        this.branchContext.currentBranchId();
+                        this.branchContext.currentBranch;
 
                     this.selectedBranchId =
                         current

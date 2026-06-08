@@ -95,7 +95,6 @@ export class VariantPricingManagerComponent {
                 ...payload
             }).subscribe({
                 next: () => {
-
                     this.snackbar.open(
                         'Pricing created',
                         'Close',
@@ -103,6 +102,15 @@ export class VariantPricingManagerComponent {
                     );
 
                     this.refreshRequested.emit();
+                },
+
+                error: err => {
+                    this.snackbar.open(
+                        err?.error?.message
+                        ?? 'Failed to create pricing',
+                        'Close',
+                        { duration: 7000 }
+                    );
                 }
             });
         });
@@ -142,6 +150,15 @@ export class VariantPricingManagerComponent {
                     );
 
                     this.refreshRequested.emit();
+                },
+
+                error: err => {
+                    this.snackbar.open(
+                        err?.error?.message
+                        ?? 'Failed to create pricing',
+                        'Close',
+                        { duration: 7000 }
+                    );
                 }
             });
         });
@@ -159,6 +176,15 @@ export class VariantPricingManagerComponent {
                 );
 
                 this.refreshRequested.emit();
+            },
+
+            error: err => {
+                this.snackbar.open(
+                    err?.error?.message
+                    ?? 'Failed to create pricing',
+                    'Close',
+                    { duration: 7000 }
+                );
             }
         });
     }

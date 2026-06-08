@@ -7,6 +7,7 @@ import {
 import { CommonModule } from '@angular/common';
 
 import {
+  Router,
   RouterModule
 } from '@angular/router';
 
@@ -59,6 +60,7 @@ import { BranchBulkImportDialogComponent } from '../../components/branch-bulk-im
 
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { PageShellComponent } from '../../../../../../shared/layout/page-shell/page-shell.component';
+import { BranchContextService } from '../../../../../../core/services/branch-context.service';
 
 @Component({
   standalone: true,
@@ -149,7 +151,9 @@ export class BranchListComponent implements OnInit {
     private branchService: BranchService,
     private dialog: MatDialog,
     private breakpoint: BreakpointObserver,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private router: Router,
+    private branchContext: BranchContextService
   ) { }
 
   /* =========================================================
@@ -361,6 +365,11 @@ export class BranchListComponent implements OnInit {
     this.selectedIds.clear();
   }
 
+  view(branch: BranchListItemDTO) {
+    this.router.navigate(['/app/branches', branch.id]);
+  }
+
+
   get bulkState(): 'none' | 'active' | 'deleted' | 'mixed' {
 
     if (this.selectedIds.size === 0) {
@@ -517,6 +526,9 @@ export class BranchListComponent implements OnInit {
                 `${ids.length} branch(es) deleted successfully.`
               );
 
+              this.branchContext
+                .refreshBranches();
+
               this.load(false);
             },
 
@@ -550,6 +562,9 @@ export class BranchListComponent implements OnInit {
           this.showSuccess(
             `${ids.length} branch(es) restored successfully.`
           );
+
+          this.branchContext
+            .refreshBranches();
 
           this.load(false);
         },
@@ -635,6 +650,9 @@ export class BranchListComponent implements OnInit {
                 `${ids.length} branch(es) permanently deleted.`
               );
 
+              this.branchContext
+                .refreshBranches();
+
               this.load(false);
             },
 
@@ -671,6 +689,9 @@ export class BranchListComponent implements OnInit {
           this.showSuccess(
             'Branch import completed successfully.'
           );
+
+          this.branchContext
+            .refreshBranches();
 
           this.load(false);
         }
@@ -801,6 +822,9 @@ export class BranchListComponent implements OnInit {
                 `"${branch.name}" deleted successfully.`
               );
 
+              this.branchContext
+                .refreshBranches();
+
               this.load(false);
             },
 
@@ -872,6 +896,9 @@ export class BranchListComponent implements OnInit {
                 `"${branch.name}" permanently deleted.`
               );
 
+              this.branchContext
+                .refreshBranches();
+
               this.load(false);
             },
 
@@ -905,6 +932,9 @@ export class BranchListComponent implements OnInit {
           this.showSuccess(
             `"${branch.name}" restored successfully.`
           );
+
+          this.branchContext
+            .refreshBranches();
 
           this.load(false);
         },

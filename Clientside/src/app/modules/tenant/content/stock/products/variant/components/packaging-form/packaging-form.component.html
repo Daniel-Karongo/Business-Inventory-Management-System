@@ -3,7 +3,7 @@
     <div class="dialog-header">
 
         <div class="header-title">
-            {{ data.editMode ? 'Edit Packaging' : 'Create Packaging' }}
+            {{ data?.editMode ? 'Edit Packaging' : 'Create Packaging' }}
         </div>
 
         <div class="header-subtitle">
@@ -18,7 +18,7 @@
 
             <div class="form-grid">
 
-                <mat-form-field appearance="outline">
+                <mat-form-field appearance="fill">
 
                     <mat-label>
                         Packaging Name
@@ -28,7 +28,7 @@
 
                 </mat-form-field>
 
-                <mat-form-field appearance="outline">
+                <mat-form-field appearance="fill">
 
                     <mat-label>
                         Units Per Packaging
@@ -40,7 +40,7 @@
 
             </div>
 
-            <div class="warning-panel" *ngIf="data.packaging?.isBaseUnit">
+            <div class="warning-panel" *ngIf="data?.packaging?.isBaseUnit">
 
                 <div class="warning-title">
                     Base Packaging

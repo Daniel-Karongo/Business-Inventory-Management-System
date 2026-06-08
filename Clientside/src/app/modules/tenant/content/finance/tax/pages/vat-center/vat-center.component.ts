@@ -270,7 +270,7 @@ export class VatCenterComponent
             branches ?? [];
 
           const current =
-            this.branchContext.currentBranchId();
+            this.branchContext.currentBranch;
 
           this.selectedBranchId =
             current

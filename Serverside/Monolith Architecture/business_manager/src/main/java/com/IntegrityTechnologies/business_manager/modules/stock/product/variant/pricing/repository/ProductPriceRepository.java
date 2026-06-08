@@ -3,12 +3,25 @@ package com.IntegrityTechnologies.business_manager.modules.stock.product.variant
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.ProductPrice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ProductPriceRepository
         extends JpaRepository<ProductPrice, UUID> {
+
+    @Query("""
+                SELECT p
+                FROM ProductPrice p
+                JOIN FETCH p.packaging pkg
+                JOIN FETCH p.productVariant pv
+                WHERE p.id = :id
+            """)
+    Optional<ProductPrice> findDetailedById(
+            @Param("id") UUID id
+    );
 
     @Query("""
             SELECT p

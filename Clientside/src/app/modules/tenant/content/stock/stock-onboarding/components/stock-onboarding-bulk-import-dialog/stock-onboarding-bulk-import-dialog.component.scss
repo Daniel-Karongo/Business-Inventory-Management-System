@@ -151,6 +151,182 @@ mat-form-field {
 
 }
 
+.bulk-accounting-options {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+}
+
+.expenses-date-funding {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 15px;
+    margin-bottom: 15px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+}
+
+.operational-expenses {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.expense-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.expense-row {
+    display: grid;
+    grid-template-columns:
+        2fr 2fr 1fr auto;
+    gap: 12px;
+    align-items: center;
+}
+
+/* =========================================================
+   PAYMENT METHOD DROPDOWNS
+========================================================= */
+
+.account-option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 16px;
+}
+
+.account-name {
+    font-weight: 600;
+}
+
+.account-balance {
+    font-size: 12px;
+    opacity: .7;
+}
+
+::ng-deep .bulk-select-panel {
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+::ng-deep .bulk-select-panel .mat-mdc-option {
+    min-height: 52px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+::ng-deep .bulk-select-panel .mat-mdc-option:hover {
+    background: rgba(25, 118, 210, 0.08);
+}
+
+::ng-deep .bulk-select-panel .mdc-list-item--selected {
+    background: rgba(25, 118, 210, 0.12);
+}
+
+.bulk-summary-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit,
+            minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.summary-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    background: var(--surface);
+}
+
+.summary-label {
+    font-size: 12px;
+    opacity: .7;
+}
+
+.summary-value {
+    font-size: 22px;
+    font-weight: 700;
+    margin-top: 6px;
+}
+
+.payment-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+
+.bulk-totals-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit,
+            minmax(240px, 1fr));
+    gap: 16px;
+}
+
+.total-card {
+    padding: 18px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.total-card span {
+    font-size: 12px;
+    opacity: .7;
+}
+
+.total-card strong {
+    font-size: 22px;
+}
+
+.funding-account-summary {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit,
+            minmax(180px, 1fr));
+    gap: 16px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.funding-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.funding-metric span {
+    font-size: 12px;
+    opacity: .7;
+}
+
+.warning strong {
+    color: #d32f2f;
+}
+
+.auto-funding-banner {
+    padding: 16px;
+    border-radius: 12px;
+    background:
+        rgba(211, 47, 47, .08);
+    border:
+        1px solid rgba(211, 47, 47, .25);
+}
+
 @media (max-width: 768px) {
 
     ::ng-deep .mat-mdc-paginator-container {
