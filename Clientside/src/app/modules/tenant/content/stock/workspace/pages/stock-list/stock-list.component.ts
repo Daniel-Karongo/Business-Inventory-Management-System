@@ -342,63 +342,90 @@ export class StockListComponent
             {
                 id: 'variant',
                 label: 'Variant',
-                sortable: true,
+                sortable: false,
                 value: x =>
                     x.variantName
             },
             {
                 id: 'variantSku',
                 label: 'SKU',
-                sortable: true,
+                sortable: false,
                 value: x =>
                     x.sku
             },
             {
                 id: 'branch',
                 label: 'Branch',
-                sortable: true,
+                sortable: false,
                 value: x =>
                     x.branchName
             },
             {
                 id: 'onHand',
                 label: 'On Hand',
-                sortable: true,
+                sortable: false,
                 value: x =>
                     x.quantityOnHand
             },
             {
                 id: 'reserved',
                 label: 'Reserved',
-                sortable: true,
+                sortable: false,
                 value: x =>
                     x.quantityReserved
             },
             {
                 id: 'available',
                 label: 'Available',
-                sortable: true,
+                sortable: false,
                 value: x =>
                     x.quantityAvailable
             },
             {
                 id: 'batches',
                 label: 'Batches',
-                sortable: true,
+                sortable: false,
                 value: x =>
                     x.batchCount
             },
             {
                 id: 'value',
                 label: 'Value',
-                sortable: true,
+                sortable: false,
                 value: x =>
                     x.inventoryValue
             },
             {
+                id: 'avgCost',
+                label: 'Avg Cost',
+                sortable: false,
+                value: x =>
+                    x.averageCost
+            },
+            {
+                id: 'fifoCost',
+                label: 'FIFO Cost',
+                sortable: false,
+                value: x =>
+                    x.projectedNextSaleCost
+            },
+            {
+                id: 'sellingPrice',
+                label: 'Selling Price',
+                sortable: false,
+                value: x => x.sellingPrice
+            },
+            {
+                id: 'margin',
+                label: 'Margin',
+                sortable: false,
+                value: x =>
+                    x.projectedMarginPercent
+            },
+            {
                 id: 'updated',
                 label: 'Updated',
-                sortable: true,
+                sortable: false,
                 value: x =>
                     x.updatedAt
             }
@@ -593,21 +620,15 @@ export class StockListComponent
             this.keyword$.value?.trim();
 
         if (keyword) {
-
             return `No products match "${keyword}" in ${branchName}.`;
-
         }
 
         if (supplierName) {
-
             return `No products found for supplier "${supplierName}" in ${branchName}.`;
-
         }
 
         if (categoryName) {
-
             return `No products found in category "${categoryName}" for ${branchName}.`;
-
         }
 
         return `No products currently exist in ${branchName}.`;
@@ -650,7 +671,11 @@ export class StockListComponent
                     'reserved',
                     'available',
                     'batches',
-                    'value'
+                    'value',
+                    'avgCost',
+                    'fifoCost',
+                    'sellingPrice',
+                    'margin'
                 ].includes(column.id) &&
                 !hasInventory
             ) {

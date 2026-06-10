@@ -55,9 +55,27 @@ export interface StockWorkspaceRow {
    suppliers?: SupplierMinimalDTO[];
 
    averageCost?: number;
+
+   /**
+    * FIFO next-sale cost
+    */
+   projectedNextSaleCost?: number;
+
    sellingPrice?: number;
 
    inventoryValue?: number;
+
+   /**
+    * Average cost margin
+    */
+   marginAmount?: number;
+   marginPercent?: number;
+
+   /**
+    * FIFO projected margin
+    */
+   projectedMarginAmount?: number;
+   projectedMarginPercent?: number;
 
    /* =========================================================
       INVENTORY

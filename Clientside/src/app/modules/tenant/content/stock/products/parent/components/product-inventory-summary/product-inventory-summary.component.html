@@ -52,6 +52,21 @@
 
             </div>
 
+            <div class="metric-card">
+
+                <div class="metric-label">
+                    Projected Margin
+                </div>
+
+                <div class="metric-value">
+                    {{
+                    averageMargin()
+                    | number:'1.2-2'
+                    }}%
+                </div>
+
+            </div>
+
         </div>
 
     </div>
@@ -99,7 +114,7 @@
                     </div>
 
                     <div class="variant-sku">
-                        SKU: {{ row.productVariantSKU || '—' }}
+                        SKU: {{ row.productVariantSku || '—' }}
                     </div>
 
                 </div>
@@ -127,7 +142,7 @@
                 </mat-icon>
 
                 <span>
-                    {{ row.branchId }}
+                    {{ row.branchName }}
                 </span>
 
             </div>
@@ -199,6 +214,42 @@
                 <div class="metric-tile">
 
                     <div class="tile-label">
+                        FIFO Cost
+                    </div>
+
+                    <div class="tile-value">
+                        {{ row.projectedNextSaleCost || 0 | number:'1.2-2' }}
+                    </div>
+
+                </div>
+
+                <div class="metric-tile">
+
+                    <div class="tile-label">
+                        Sell Price
+                    </div>
+
+                    <div class="tile-value">
+                        {{ row.sellingPrice || 0 | number:'1.2-2' }}
+                    </div>
+
+                </div>
+
+                <div class="metric-tile">
+
+                    <div class="tile-label">
+                        Margin
+                    </div>
+
+                    <div class="tile-value" [class.negative]="(row.projectedMarginPercent ?? 0) < 0">
+                        {{ row.projectedMarginPercent || 0 | number:'1.2-2' }}%
+                    </div>
+
+                </div>
+
+                <div class="metric-tile">
+
+                    <div class="tile-label">
                         Value
                     </div>
 
@@ -214,11 +265,11 @@
 
             <div class="card-footer">
 
-                <div class="last-updated" *ngIf="row.lastUpdatedAt">
+                <div class="last-updated" *ngIf="row.updatedAt">
 
                     Updated
 
-                    {{ row.lastUpdatedAt | date:'medium' }}
+                    {{ row.updatedAt | date:'medium' }}
 
                 </div>
 

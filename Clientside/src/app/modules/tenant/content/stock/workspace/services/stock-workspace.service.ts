@@ -583,8 +583,26 @@ export class StockWorkspaceService {
       averageCost:
         inventory.averageCost,
 
+      projectedNextSaleCost:
+        inventory.projectedNextSaleCost,
+
+      sellingPrice:
+        inventory.sellingPrice,
+
       inventoryValue:
         inventory.inventoryValue,
+
+      marginAmount:
+        inventory.marginAmount,
+
+      marginPercent:
+        inventory.marginPercent,
+
+      projectedMarginAmount:
+        inventory.projectedMarginAmount,
+
+      projectedMarginPercent:
+        inventory.projectedMarginPercent,
 
       batchCount:
         inventory.batchCount,

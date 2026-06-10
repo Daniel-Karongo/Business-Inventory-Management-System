@@ -47,9 +47,6 @@ import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuar
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import jakarta.persistence.OptimisticLockException;
-
-import java.util.Collections;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -94,7 +91,6 @@ public class InventoryService {
     private final ProductVariantPackagingRepository packagingRepository;
     private final InventoryValuationService valuationService;
     private final InventoryValuationEngine valuationEngine;
-    private final TenantInventorySettingsService settingsService;
     private final StockEngine stockEngine;
     private final GoodsReceiptRepository goodsReceiptRepository;
     private final VatCalculationService vatCalculationService;
@@ -1153,6 +1149,8 @@ public class InventoryService {
         Product product =
                 variant.getProduct();
 
+        Branch branch = requireBranch(branchId);
+
         long reserved =
                 stockEngine.reservedQuantity(
                         productVariantId,
@@ -1228,11 +1226,50 @@ public class InventoryService {
         BigDecimal inventoryValue =
                 totalBatchValue;
 
-        BigDecimal marginAmount =
-                null;
+        /* ============================================
+           COST VIEWS
+           ============================================ */
 
-        BigDecimal marginPercent =
-                null;
+        BigDecimal averageCost =
+                item.getAverageCost();
+
+        BigDecimal projectedNextSaleCost =
+                averageCost;
+
+        try {
+
+            AllocationResult allocation =
+                    stockEngine.previewAllocation(
+                            productVariantId,
+                            branchId,
+                            1,
+                            null
+                    );
+
+            if (
+                    allocation != null
+                            && allocation.getTotalCost() != null
+            ) {
+                projectedNextSaleCost =
+                        allocation.getTotalCost();
+            }
+
+        } catch (Exception ignored) {
+        }
+
+        /* ============================================
+           AVERAGE COST MARGIN
+           ============================================ */
+
+        BigDecimal marginAmount = null;
+        BigDecimal marginPercent = null;
+
+        /* ============================================
+            FIFO PROJECTED MARGIN
+        ============================================ */
+
+        BigDecimal projectedMarginAmount = null;
+        BigDecimal projectedMarginPercent = null;
 
         if (
                 sellingPrice != null
@@ -1241,11 +1278,29 @@ public class InventoryService {
 
             marginAmount =
                     sellingPrice.subtract(
-                            item.getAverageCost()
+                            averageCost
                     );
 
             marginPercent =
                     marginAmount
+                            .divide(
+                                    sellingPrice,
+                                    4,
+                                    RoundingMode.HALF_UP
+                            )
+                            .multiply(
+                                    BigDecimal.valueOf(
+                                            100
+                                    )
+                            );
+
+            projectedMarginAmount =
+                    sellingPrice.subtract(
+                            projectedNextSaleCost
+                    );
+
+            projectedMarginPercent =
+                    projectedMarginAmount
                             .divide(
                                     sellingPrice,
                                     4,
@@ -1313,6 +1368,8 @@ public class InventoryService {
                                 branchId
                         )
 
+                        .branchName(branch.getName())
+
                         .quantityOnHand(
                                 item.getQuantityOnHand()
                         )
@@ -1324,12 +1381,14 @@ public class InventoryService {
                         )
 
                         .averageCost(
-                                item.getAverageCost()
+                                averageCost
+                        )
+                        .projectedNextSaleCost(
+                                projectedNextSaleCost
                         )
                         .inventoryValue(
                                 inventoryValue
                         )
-
                         .sellingPrice(
                                 sellingPrice
                         )
@@ -1338,6 +1397,12 @@ public class InventoryService {
                         )
                         .marginPercent(
                                 marginPercent
+                        )
+                        .projectedMarginAmount(
+                                projectedMarginAmount
+                        )
+                        .projectedMarginPercent(
+                                projectedMarginPercent
                         )
 
                         .batchCount(
@@ -1471,20 +1536,54 @@ public class InventoryService {
         return new ApiResponse("success", "Inventory for product " + productId.toString() + " across branches", res);
     }
 
-    public ApiResponse getProductStockInBranch(UUID productId, UUID branchId) {
+    @Transactional(readOnly = true)
+    public ApiResponse getProductStockInBranch(
+            UUID productId,
+            UUID branchId
+    ) {
+        branchTenantGuard.validate(branchId);
+
         List<InventoryItem> items =
                 inventoryItemRepository.findByProductScoped(
                                 tenantId(),
                                 productId
-                        ).stream()
+                        )
+                        .stream()
                         .filter(i -> branchId.equals(i.getBranchId()))
                         .toList();
 
-        List<InventoryResponse> res = new ArrayList<>();
-        for (InventoryItem it : items) {
-            res.add(buildResponse(it));
+        if (items.isEmpty()) {
+            return new ApiResponse(
+                    "success",
+                    "Inventory for product " + productId + " in branch " + branchId,
+                    List.of()
+            );
         }
-        return new ApiResponse("success", "Inventory for product " + productId.toString() + " in branch " + branchId, res);
+
+        List<InventoryWorkspaceResponse> result =
+                new ArrayList<>();
+
+        for (InventoryItem item : items) {
+
+            ApiResponse response =
+                    getInventoryForVariantBranch(
+                            item.getProductVariantId(),
+                            branchId
+                    );
+
+            if (
+                    response != null &&
+                            response.getData() instanceof InventoryWorkspaceResponse workspace
+            ) {
+                result.add(workspace);
+            }
+        }
+
+        return new ApiResponse(
+                "success",
+                "Inventory for product " + productId + " in branch " + branchId,
+                result
+        );
     }
 
     public ApiResponse getLowStock(Long threshold, Pageable pageable) {
@@ -1992,6 +2091,100 @@ public class InventoryService {
             long available
     ) {
 
+        BigDecimal averageCost =
+                item.getAverageCost();
+
+        BigDecimal projectedNextSaleCost =
+                averageCost;
+
+        try {
+
+            AllocationResult allocation =
+                    stockEngine.previewAllocation(
+                            item.getProductVariantId(),
+                            item.getBranchId(),
+                            1,
+                            null
+                    );
+
+            if (
+                    allocation != null &&
+                            allocation.getTotalCost() != null
+            ) {
+                projectedNextSaleCost =
+                        allocation.getTotalCost();
+            }
+
+        } catch (Exception ignored) {
+        }
+
+        BigDecimal sellingPrice = null;
+
+        ProductVariantPackaging basePackaging =
+                packagingRepository
+                        .findByProductVariantIdAndIsBaseUnitTrueAndDeletedFalse(
+                                item.getProductVariantId()
+                        );
+
+        if (basePackaging != null) {
+
+            sellingPrice =
+                    productPriceRepository
+                            .findByProductVariantIdAndPackagingIdAndDeletedFalse(
+                                    item.getProductVariantId(),
+                                    basePackaging.getId()
+                            )
+                            .stream()
+                            .filter(p -> p.getMinQuantity() == 1)
+                            .map(ProductPrice::getPrice)
+                            .findFirst()
+                            .orElse(null);
+        }
+
+        BigDecimal marginAmount = null;
+        BigDecimal marginPercent = null;
+
+        BigDecimal projectedMarginAmount = null;
+        BigDecimal projectedMarginPercent = null;
+
+        if (
+                sellingPrice != null &&
+                        sellingPrice.compareTo(BigDecimal.ZERO) > 0
+        ) {
+
+            marginAmount =
+                    sellingPrice.subtract(
+                            averageCost
+                    );
+
+            marginPercent =
+                    marginAmount
+                            .divide(
+                                    sellingPrice,
+                                    4,
+                                    RoundingMode.HALF_UP
+                            )
+                            .multiply(
+                                    BigDecimal.valueOf(100)
+                            );
+
+            projectedMarginAmount =
+                    sellingPrice.subtract(
+                            projectedNextSaleCost
+                    );
+
+            projectedMarginPercent =
+                    projectedMarginAmount
+                            .divide(
+                                    sellingPrice,
+                                    4,
+                                    RoundingMode.HALF_UP
+                            )
+                            .multiply(
+                                    BigDecimal.valueOf(100)
+                            );
+        }
+
         return InventoryResponse.builder()
                 .productId(item.getProductId())
                 .productName(item.getProductName())
@@ -2002,10 +2195,20 @@ public class InventoryService {
                 .productVariantSKU(item.getProductVariantSku())
 
                 .branchId(item.getBranchId())
+                .branchName(item.getBranchName())
 
-                .averageCost(item.getAverageCost())
+                .averageCost(averageCost)
+                .projectedNextSaleCost(projectedNextSaleCost)
+
+                .sellingPrice(sellingPrice)
+
+                .marginAmount(marginAmount)
+                .marginPercent(marginPercent)
+
+                .projectedMarginAmount(projectedMarginAmount)
+                .projectedMarginPercent(projectedMarginPercent)
+
                 .quantityOnHand(item.getQuantityOnHand())
-
                 .quantityReserved(reserved)
                 .quantityAvailable(available)
 

@@ -32,6 +32,7 @@ public class InventoryWorkspaceResponse {
     ========================== */
 
     private UUID branchId;
+    private String branchName;
 
     /* ==========================
        STOCK
@@ -45,7 +46,18 @@ public class InventoryWorkspaceResponse {
        COSTING
     ========================== */
 
+    /**
+     * Weighted-average inventory cost.
+     * Used for valuation/reporting.
+     */
     private BigDecimal averageCost;
+
+    /**
+     * Cost of the next FIFO unit expected
+     * to be consumed if sold now.
+     */
+    private BigDecimal projectedNextSaleCost;
+
     private BigDecimal inventoryValue;
 
     /* ==========================
@@ -53,8 +65,18 @@ public class InventoryWorkspaceResponse {
     ========================== */
 
     private BigDecimal sellingPrice;
+
+    /**
+     * Legacy average-cost margin.
+     */
     private BigDecimal marginAmount;
     private BigDecimal marginPercent;
+
+    /**
+     * FIFO-based projected margin.
+     */
+    private BigDecimal projectedMarginAmount;
+    private BigDecimal projectedMarginPercent;
 
     /* ==========================
        BATCHES

@@ -52,15 +52,10 @@
     ====================================================== -->
 
     <div class="toolbar-summary" *ngIf="!filtersVisible">
-
         Filters hidden
-
         <button mat-button (click)="toggleToolbar()">
-
             Show
-
         </button>
-
     </div>
 
     <div page-toolbar class="workspace-toolbar" [class.collapsed]="!filtersVisible">
@@ -151,8 +146,8 @@
     <div page-content [class.loading-surface]="loading">
 
         <!-- =====================================================
-     LOADING STATE
-===================================================== -->
+            LOADING STATE
+        ===================================================== -->
         <div *ngIf="loading" class="workspace-loading">
             <div class="progress-block">
                 <mat-icon class="spin">
@@ -180,11 +175,8 @@
                 </mat-icon>
 
                 <span>
-
                     {{ selectedIds.size }}
-
                     selected
-
                 </span>
 
             </div>
@@ -264,9 +256,7 @@
 
                             <mat-icon *ngIf="column.sortable" class="sort-icon">
 
-                                {{
-                                getSortIcon(column)
-                                }}
+                                {{ getSortIcon(column) }}
 
                             </mat-icon>
 
@@ -300,11 +290,7 @@
 
                                     <div class="expand-icon-wrapper">
                                         <mat-icon *ngIf="!row.loadingChildren">
-                                            {{
-                                            expanded(row)
-                                            ? 'expand_more'
-                                            : 'chevron_right'
-                                            }}
+                                            {{ expanded(row) ? 'expand_more' : 'chevron_right' }}
                                         </mat-icon>
 
                                         <mat-icon *ngIf="row.loadingChildren" class="spin">
@@ -382,25 +368,19 @@
 
                                                         <ng-container *ngSwitchCase="'PRODUCT'">
 
-                                                            {{
-                                                            row.productName
-                                                            }}
+                                                            {{ row.productName }}
 
                                                         </ng-container>
 
                                                         <ng-container *ngSwitchCase="'VARIANT'">
 
-                                                            {{
-                                                            row.variantName
-                                                            }}
+                                                            {{ row.variantName }}
 
                                                         </ng-container>
 
                                                         <ng-container *ngSwitchCase="'INVENTORY'">
 
-                                                            {{
-                                                            row.branchName
-                                                            }}
+                                                            {{ row.branchName }}
 
                                                         </ng-container>
 
@@ -414,15 +394,11 @@
 
                                                         <ng-container *ngSwitchCase="'PRODUCT'">
 
-                                                            {{
-                                                            row.categoryName
-                                                            }}
+                                                            {{ row.categoryName }}
 
                                                             •
 
-                                                            {{
-                                                            row.totalVariants
-                                                            }}
+                                                            {{ row.totalVariants }}
 
                                                             variants
 
@@ -432,17 +408,13 @@
 
                                                             SKU:
 
-                                                            {{
-                                                            row.sku || '-'
-                                                            }}
+                                                            {{ row.sku || '-' }}
 
                                                         </ng-container>
 
                                                         <ng-container *ngSwitchCase="'INVENTORY'">
 
-                                                            {{
-                                                            row.quantityReserved
-                                                            }}
+                                                            {{ row.quantityReserved }}
 
                                                             reserved
 
@@ -475,15 +447,11 @@
                                 <ng-container [ngSwitch]="row.type">
 
                                     <span *ngSwitchCase="'VARIANT'">
-                                        {{
-                                        row.variantName
-                                        }}
+                                        {{ row.variantName }}
                                     </span>
 
                                     <span *ngSwitchCase="'INVENTORY'">
-                                        {{
-                                        row.variantName
-                                        }}
+                                        {{ row.variantName }}
                                     </span>
 
                                     <span *ngSwitchDefault>
@@ -495,16 +463,12 @@
 
                             <!-- SKU -->
                             <ng-container *ngIf="column.id === 'variantSku'">
-                                {{
-                                row.sku || '-'
-                                }}
+                                {{ row.sku || '-' }}
                             </ng-container>
 
                             <!-- BRANCH -->
                             <ng-container *ngIf="column.id === 'branch'">
-                                {{
-                                row.branchName || '-'
-                                }}
+                                {{ row.branchName || '-' }}
                             </ng-container>
 
                             <!-- ON HAND -->
@@ -538,6 +502,44 @@
                             <!-- VALUE -->
                             <ng-container *ngIf="column.id === 'value'">
                                 {{ (row.inventoryValue ?? 0) | number:'1.2-2' }}
+                            </ng-container>
+
+                            <ng-container *ngIf="column.id === 'avgCost'">
+
+                                <ng-container *ngIf="row.type === 'INVENTORY'">
+
+                                    {{ (row.averageCost ?? 0) | number:'1.2-2' }}
+
+                                </ng-container>
+
+                            </ng-container>
+
+                            <ng-container *ngIf="column.id === 'fifoCost'">
+
+                                <ng-container *ngIf="row.type === 'INVENTORY'">
+
+                                    {{ (row.projectedNextSaleCost ?? 0) | number:'1.2-2' }}
+
+                                </ng-container>
+
+                            </ng-container>
+
+                            <ng-container *ngIf="column.id === 'sellingPrice'">
+                                <ng-container *ngIf="row.type === 'INVENTORY'">
+                                    {{ (row.sellingPrice ?? 0) | number:'1.2-2' }}
+                                </ng-container>
+                            </ng-container>
+
+                            <ng-container *ngIf="column.id === 'margin'">
+
+                                <ng-container *ngIf="row.type === 'INVENTORY'">
+
+                                    <span [class.negative-margin]="(row.projectedMarginPercent ?? 0) < 0">
+                                        {{ (row.projectedMarginPercent ?? 0) | number:'1.2-2' }}%
+                                    </span>
+
+                                </ng-container>
+
                             </ng-container>
 
                             <!-- UPDATED -->
@@ -608,11 +610,7 @@
                                     (click)="toggleProductStatus(row); $event.stopPropagation()">
 
                                     <mat-icon>
-                                        {{
-                                        row.deleted
-                                        ? 'toggle_off'
-                                        : 'toggle_on'
-                                        }}
+                                        {{ row.deleted ? 'toggle_off' : 'toggle_on' }}
                                     </mat-icon>
 
                                 </button>
@@ -709,11 +707,7 @@
                                     [matTooltip]="row.deleted ? 'Restore Variant' : 'Disable Variant'"
                                     (click)=" toggleVariantStatus(row); $event.stopPropagation()">
                                     <mat-icon>
-                                        {{
-                                        row.deleted
-                                        ? 'toggle_off'
-                                        : 'toggle_on'
-                                        }}
+                                        {{ row.deleted ? 'toggle_off' : 'toggle_on' }}
                                     </mat-icon>
                                 </button>
 
@@ -781,30 +775,14 @@
 
                         <div class="card-header-row">
 
-                            <div class="entity-chip" [ngClass]="{
-            product: item.type === 'PRODUCT',
-            variant: item.type === 'VARIANT',
-            inventory: item.type === 'INVENTORY'
-        }">
+                            <div class="entity-chip" [ngClass]="{product: item.type === 'PRODUCT', variant: item.type === 'VARIANT', inventory: item.type === 'INVENTORY'}">
 
                                 <mat-icon>
-                                    {{
-                                    item.type === 'PRODUCT'
-                                    ? 'inventory_2'
-                                    : item.type === 'VARIANT'
-                                    ? 'category'
-                                    : 'warehouse'
-                                    }}
+                                    {{ item.type === 'PRODUCT' ? 'inventory_2' : item.type === 'VARIANT' ? 'category' : 'warehouse' }}
                                 </mat-icon>
 
                                 <span>
-                                    {{
-                                    item.type === 'PRODUCT'
-                                    ? 'Product'
-                                    : item.type === 'VARIANT'
-                                    ? 'Variant'
-                                    : 'Inventory'
-                                    }}
+                                    {{ item.type === 'PRODUCT' ? 'Product' : item.type === 'VARIANT' ? 'Variant' : 'Inventory' }}
                                 </span>
 
                             </div>
@@ -819,17 +797,10 @@
                                     Low
                                 </div>
 
-                                <button *ngIf="expandable(item)" mat-icon-button class="card-expand-btn" (click)="
-                toggleExpanded(item);
-                $event.stopPropagation()
-            ">
+                                <button *ngIf="expandable(item)" mat-icon-button class="card-expand-btn" (click)="toggleExpanded(item); $event.stopPropagation()">
 
                                     <mat-icon *ngIf="!item.loadingChildren">
-                                        {{
-                                        item.expanded
-                                        ? 'expand_more'
-                                        : 'chevron_right'
-                                        }}
+                                        {{ item.expanded ? 'expand_more' : 'chevron_right' }}
                                     </mat-icon>
 
                                     <mat-icon *ngIf="item.loadingChildren" class="spin">
@@ -850,26 +821,14 @@
 
                             <div class="card-thumbnail-wrapper">
 
-                                <img *ngIf="
-                thumbnailForRow(item) as thumb;
-                else mobileNoThumb
-            " [src]="thumb" class="card-thumbnail clickable-thumbnail" alt="thumbnail" (click)="
-                openThumbnail(item);
-                $event.stopPropagation()
-            ">
+                                <img *ngIf="thumbnailForRow(item) as thumb; else mobileNoThumb" [src]="thumb" class="card-thumbnail clickable-thumbnail" alt="thumbnail" (click)="openThumbnail(item); $event.stopPropagation()">
 
                                 <ng-template #mobileNoThumb>
 
                                     <div class="card-thumbnail-placeholder">
 
                                         <mat-icon>
-                                            {{
-                                            item.type === 'PRODUCT'
-                                            ? 'inventory_2'
-                                            : item.type === 'VARIANT'
-                                            ? 'category'
-                                            : 'warehouse'
-                                            }}
+                                            {{ item.type === 'PRODUCT' ? 'inventory_2' : item.type === 'VARIANT' ? 'category' : 'warehouse' }}
                                         </mat-icon>
 
                                     </div>
@@ -882,13 +841,7 @@
 
                                 <div class="card-title">
 
-                                    {{
-                                    item.type === 'PRODUCT'
-                                    ? item.productName
-                                    : item.type === 'VARIANT'
-                                    ? item.variantName
-                                    : item.branchName
-                                    }}
+                                    {{ item.type === 'PRODUCT' ? item.productName : item.type === 'VARIANT' ? item.variantName : item.branchName }}
 
                                 </div>
 
@@ -968,7 +921,6 @@
                                     <div class="metric-label">
                                         Available
                                     </div>
-
                                     <div class="metric-value">
                                         {{ item.quantityAvailable ?? 0 }}
                                     </div>
@@ -978,7 +930,6 @@
                                     <div class="metric-label">
                                         Reserved
                                     </div>
-
                                     <div class="metric-value">
                                         {{ item.quantityReserved ?? 0 }}
                                     </div>
@@ -986,14 +937,47 @@
 
                                 <div class="metric">
                                     <div class="metric-label">
-                                        Value
+                                        Avg Cost
+                                    </div>
+                                    <div class="metric-value">
+                                        {{ (item.averageCost ?? 0) | number:'1.2-2' }}
+                                    </div>
+                                </div>
+
+                                <div class="metric">
+                                    <div class="metric-label">
+                                        FIFO Cost
+                                    </div>
+                                    <div class="metric-value">
+                                        {{ (item.projectedNextSaleCost ?? 0) | number:'1.2-2' }}
+                                    </div>
+                                </div>
+
+                                <div class="metric">
+                                    <div class="metric-label">
+                                        Selling Price.
                                     </div>
 
                                     <div class="metric-value">
-                                        {{
-                                        (item.inventoryValue ?? 0)
-                                        | number:'1.0-0'
-                                        }}
+                                        {{ (item.sellingPrice ?? 0) | number:'1.2-2' }}
+                                    </div>
+                                </div>
+
+                                <div class="metric">
+                                    <div class="metric-label">
+                                        Margin
+                                    </div>
+                                    <div class="metric-value">
+                                        {{ (item.projectedMarginPercent ?? 0) | number:'1.2-2' }}%
+                                    </div>
+                                </div>
+
+                                <div class="metric">
+                                    <div class="metric-label">
+                                        Value
+                                    </div>
+                                    <div class="metric-value">
+                                        {{ (item.inventoryValue ?? 0) | number:'1.0-0' }}
                                     </div>
                                 </div>
 

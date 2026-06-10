@@ -5,9 +5,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 
-import { InventoryResponse } from '../../../../models/inventory-response.model';
-import { Product } from '../../../../models/product.model';
 import { InventoryService } from '../../../../inventory/services/inventory.service';
+import { InventoryResponse, InventoryWorkspaceResponse } from '../../../../models/inventory-response.model';
+import { Product } from '../../../../models/product.model';
 
 @Component({
     selector: 'app-product-inventory-summary',
@@ -28,7 +28,7 @@ export class ProductInventorySummaryComponent implements OnChanges {
 
     loading = true;
 
-    rows: InventoryResponse[] = [];
+    rows: InventoryWorkspaceResponse[] = [];
 
     constructor(
         private inventoryService: InventoryService,
@@ -36,26 +36,42 @@ export class ProductInventorySummaryComponent implements OnChanges {
     ) { }
 
     ngOnChanges(): void {
-        if (!this.product?.id) return;
+        if (!this.product?.id || !this.product?.branchId) {
+            this.rows = [];
+            return;
+        }
 
         this.loading = true;
 
-        this.inventoryService.getAll().subscribe({
-            next: res => {
-                this.rows =
-                    (res.content ?? [])
-                        .filter(x => x.productId === this.product.id);
-
-                this.loading = false;
-            },
-            error: () => {
-                this.rows = [];
-                this.loading = false;
-            }
-        });
+        this.inventoryService
+            .getProductInBranch(
+                this.product.id,
+                this.product.branchId
+            )
+            .subscribe({
+                next: rows => {
+                    this.rows = rows ?? [];
+                    this.loading = false;
+                },
+                error: () => {
+                    this.rows = [];
+                    this.loading = false;
+                }
+            });
     }
 
-    available(row: InventoryResponse): number {
+    averageMargin(): number {
+
+        return this.rows.reduce(
+            (sum, r) =>
+                sum +
+                (r.projectedMarginPercent ?? 0),
+            0
+        ) / Math.max(this.rows.length, 1);
+
+    }
+
+    available(row: InventoryWorkspaceResponse): number {
         return (
             row.quantityOnHand -
             row.quantityReserved
@@ -83,7 +99,7 @@ export class ProductInventorySummaryComponent implements OnChanges {
         );
     }
 
-    openTransactions(row: InventoryResponse) {
+    openTransactions(row: InventoryWorkspaceResponse) {
         this.router.navigate(
             ['/app/stock/inventory', row.productVariantId],
             {
@@ -94,7 +110,7 @@ export class ProductInventorySummaryComponent implements OnChanges {
         );
     }
 
-    createSale(row: InventoryResponse) {
+    createSale(row: InventoryWorkspaceResponse) {
         this.router.navigate(
             ['/app/sales/new'],
             {

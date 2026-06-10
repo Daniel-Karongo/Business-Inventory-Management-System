@@ -210,6 +210,7 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
                     v.sku as productVariantSku,
 
                     i.branchId as branchId,
+                    b.name as branchName,
                     i.quantityOnHand as quantityOnHand,
                     i.averageCost as averageCost,
                     i.lastUpdatedAt as lastUpdatedAt
@@ -219,6 +220,8 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
                     ON v.id = i.productVariantId
                 JOIN Product p
                     ON p.id = v.product.id
+                JOIN Branch b
+                    ON b.id = i.branchId
 
                 WHERE i.id = :inventoryId
             """)
@@ -239,15 +242,18 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
                     v.sku as productVariantSku,
 
                     i.branchId as branchId,
+                    b.name as branchName,
                     i.quantityOnHand as quantityOnHand,
                     i.averageCost as averageCost,
                     i.lastUpdatedAt as lastUpdatedAt
 
                 FROM InventoryItem i
-                JOIN ProductVariant v
-                    ON v.id = i.productVariantId
-                JOIN Product p
-                    ON p.id = v.product.id
+              JOIN ProductVariant v
+                  ON v.id = i.productVariantId
+              JOIN Product p
+                  ON p.id = v.product.id
+              JOIN Branch b
+                  ON b.id = i.branchId
 
                 WHERE i.tenantId = :tenantId
                   AND i.deleted = false

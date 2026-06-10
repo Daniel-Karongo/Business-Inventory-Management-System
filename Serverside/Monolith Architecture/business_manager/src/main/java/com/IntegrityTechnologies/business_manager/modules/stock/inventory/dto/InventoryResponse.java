@@ -9,19 +9,38 @@ import java.util.UUID;
 @Data
 @Builder
 public class InventoryResponse {
+
     private UUID productId;
     private String productName;
     private String productSKU;
+
     private UUID productVariantId;
     private String productClassification;
     private String productVariantSKU;
+
     private UUID branchId;
+    private String branchName;
+
     private BigDecimal averageCost;
+
+    private BigDecimal projectedNextSaleCost;
+
+    private BigDecimal sellingPrice;
+
+    private BigDecimal marginAmount;
+    private BigDecimal marginPercent;
+
+    private BigDecimal projectedMarginAmount;
+    private BigDecimal projectedMarginPercent;
+
     private Long quantityOnHand;
     private Long quantityReserved;
     private Long quantityAvailable;
+
     private String lastUpdatedAt;
+
     private Integer batchCount;
     private String oldestBatchDate;
+
     private BigDecimal totalRemainingBatchValue;
 }

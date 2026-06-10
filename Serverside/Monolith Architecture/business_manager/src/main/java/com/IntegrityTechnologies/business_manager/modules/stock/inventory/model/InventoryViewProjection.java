@@ -7,18 +7,15 @@ import java.util.UUID;
 public interface InventoryViewProjection {
 
     UUID getProductId();
-
     String getProductName();
-
     String getProductSku();
 
     UUID getProductVariantId();
-
     String getProductClassification();
-
     String getProductVariantSku();
 
     UUID getBranchId();
+    String getBranchName();
 
     Long getQuantityOnHand();
 

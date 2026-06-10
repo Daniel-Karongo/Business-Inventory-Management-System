@@ -139,8 +139,7 @@ export class InventoryService {
 
     getProductAcrossBranches(
         productId: string
-    ) {
-
+    ): Observable<InventoryResponse[]> {
         return this.http
             .get<ApiResponse>(
                 this.api +
@@ -148,26 +147,31 @@ export class InventoryService {
                     .productAcrossBranches(productId)
             )
             .pipe(
-                map(res => res.data)
+                map(
+                    res =>
+                        (res.data as InventoryResponse[])
+                        ?? []
+                )
             );
     }
 
     getProductInBranch(
         productId: string,
         branchId: string
-    ) {
-
+    ): Observable<InventoryWorkspaceResponse[]> {
         return this.http
             .get<ApiResponse>(
                 this.api +
-                this.endpoints.inventory
-                    .productInBranch(
-                        productId,
-                        branchId
-                    )
+                this.endpoints.inventory.productInBranch(
+                    productId,
+                    branchId
+                )
             )
             .pipe(
-                map(res => res.data)
+                map(
+                    res =>
+                        res?.data?.data ?? []
+                )
             );
     }
 
