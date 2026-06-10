@@ -1,10 +1,10 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.engine;
 
+import com.IntegrityTechnologies.business_manager.config.kafka.OutboxEventWriter;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.JournalEntry;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.LedgerEntry;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
-import com.IntegrityTechnologies.business_manager.config.kafka.OutboxEventWriter;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.governance.AccountingSystemStateService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.JournalEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.security.JournalHashUtil;
@@ -93,9 +93,11 @@ public class LedgerPostingService {
         List<LedgerEntryDTO> payloadEntries =
                 entries.stream()
                         .map(e -> new LedgerEntryDTO(
-                                e.getAccount().getId(),
-                                e.getDirection(),
-                                e.getAmount()
+                                        e.getAccount().getId(),
+                                        e.getAccount().getType(),
+                                        e.getAccount().getRole(),
+                                        e.getDirection(),
+                                        e.getAmount()
                         ))
                         .toList();
 

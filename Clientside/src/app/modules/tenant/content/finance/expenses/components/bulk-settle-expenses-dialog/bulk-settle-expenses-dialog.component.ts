@@ -102,7 +102,7 @@ export class BulkSettleExpensesDialogComponent implements OnInit {
                 },
                 error: err => {
                     this.snack.open(
-                        err?.message || 'Bulk settlement failed',
+                        err?.error.message || 'Bulk settlement failed',
                         'Close',
                         { duration: 6000 }
                     );
@@ -120,10 +120,34 @@ export class BulkSettleExpensesDialogComponent implements OnInit {
                 finalize(() => this.loading = false)
             )
             .subscribe({
-                next: accounts => this.fundingAccounts = accounts,
+                next: accounts => {
+
+                    this.fundingAccounts = accounts;
+
+                    if (!accounts.length) {
+                        return;
+                    }
+
+                    const preferred =
+                        accounts.find(a =>
+                            (a.role || '')
+                                .toUpperCase()
+                                .includes('CASH')
+                        )
+                        ?? accounts.find(a =>
+                            (a.role || '')
+                                .toUpperCase()
+                                .includes('BANK')
+                        )
+                        ?? accounts[0];
+
+                    this.form.patchValue({
+                        fundingAccountId: preferred.id
+                    });
+                },
                 error: err => {
                     this.snack.open(
-                        err?.message || 'Failed to load funding accounts',
+                        err?.error.message || 'Failed to load funding accounts',
                         'Close',
                         { duration: 6000 }
                     );

@@ -157,10 +157,17 @@ public class OperationalExpenseService {
         );
 
         if (request.isAutoPay()) {
-
             validateFundingAccount(
                     request.getBranchId(),
                     request.getFundingAccountId()
+            );
+
+            autoFundingService.ensureFundingAvailable(
+                    request.getBranchId(),
+                    request.getFundingAccountId(),
+                    request.getAmount(),
+                    request.getAccountingDate(),
+                    request.getReference()
             );
         }
         UUID accountingJournalId;

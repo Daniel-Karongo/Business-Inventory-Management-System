@@ -2,8 +2,8 @@ package com.IntegrityTechnologies.business_manager.modules.finance.accounting.pr
 
 import com.IntegrityTechnologies.business_manager.config.kafka.ProcessedKafkaEventRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
@@ -88,10 +88,32 @@ public class BalanceProjectionConsumer {
 
         for (LedgerEntryDTO entry : event.entries()) {
 
-            BigDecimal delta =
-                    entry.direction() == EntryDirection.DEBIT
-                            ? entry.amount()
-                            : entry.amount().negate();
+            BigDecimal delta;
+
+            switch (entry.accountType()) {
+
+                case ASSET, EXPENSE -> {
+
+                    delta =
+                            entry.direction() == EntryDirection.DEBIT
+                                    ? entry.amount()
+                                    : entry.amount().negate();
+                }
+
+                case LIABILITY, EQUITY, INCOME -> {
+
+                    delta =
+                            entry.direction() == EntryDirection.CREDIT
+                                    ? entry.amount()
+                                    : entry.amount().negate();
+                }
+
+                default ->
+                        throw new IllegalStateException(
+                                "Unsupported account type: "
+                                        + entry.accountType()
+                        );
+            }
 
             balanceRepo.applyDelta(
                     event.tenantId(),

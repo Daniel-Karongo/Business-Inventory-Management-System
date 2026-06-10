@@ -95,7 +95,31 @@ export class CreatePaymentDialogComponent {
       .fundingAccounts()
       .pipe(finalize(() => this.loading = false))
       .subscribe({
-        next: res => this.accounts = res,
+        next: res => {
+
+          this.accounts = res;
+
+          if (!this.accounts.length) {
+            return;
+          }
+
+          const preferred =
+            this.accounts.find(a =>
+              (a.role || '')
+                .toUpperCase()
+                .includes('CASH')
+            )
+            ?? this.accounts.find(a =>
+              (a.role || '')
+                .toUpperCase()
+                .includes('BANK')
+            )
+            ?? this.accounts[0];
+
+          this.form.patchValue({
+            fundingAccountId: preferred.id
+          });
+        },
         error: err => this.error(err)
       });
   }

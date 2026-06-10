@@ -148,7 +148,7 @@ export class
             .toISOString()
             .substring(0, 10);
 
-    autoPaySuppliers = false;
+    autoPaySuppliers = true;
 
     supplierPaymentMethod:
         'CASH'
@@ -156,7 +156,7 @@ export class
         | 'MPESA'
         | null = null;
 
-    autoPayOperationalExpenses = false;
+    autoPayOperationalExpenses = true;
 
     fundingAccountId:
         string | null = null;
@@ -296,6 +296,18 @@ export class
                 ),
             0
         );
+    }
+
+    get requiresFundingAccount(): boolean {
+
+        return (
+            this.totalFundingRequired > 0
+        );
+
+    }
+
+    get hasFundingAccounts(): boolean {
+        return this.fundingAccounts.length > 0;
     }
 
     get supplierFundingRequired(): number {
@@ -942,15 +954,10 @@ export class
     ======================================================== */
 
     private buildGroupedPayload() {
-
         const grouped =
             new Map<string, any[]>();
 
-        for (
-            const row
-            of this.rows.controls
-        ) {
-
+        for (const row of this.rows.controls) {
             const value =
                 row.value;
 
@@ -964,46 +971,56 @@ export class
                     ?.toUpperCase()
             ].join('||');
 
-            if (
-                !grouped.has(key)
-            ) {
-
+            if (!grouped.has(key)) {
                 grouped.set(
                     key,
                     []
                 );
-
             }
 
             grouped
                 .get(key)!
                 .push(value);
-
         }
 
-        return {
+        const onboardingRows =
+            Array.from(
+                grouped.values()
+            ).map(
+                rows =>
+                    this.buildGroupedItem(
+                        rows
+                    )
+            );
 
-            items:
-                Array.from(
-                    grouped.values()
-                )
-                    .map(
-                        rows =>
-                            this.buildGroupedItem(
-                                rows
-                            )
-                    ),
+        return {
+            items: [
+                {
+                    rows:
+                        onboardingRows,
+
+                    operationalExpenses:
+                        structuredClone(
+                            this.operationalExpenses
+                        ),
+
+                    autoPayOperationalExpenses:
+                        this.autoPayOperationalExpenses,
+
+                    fundingAccountId:
+                        this.fundingAccountId
+                        ?? undefined
+                }
+            ],
 
             options: {
-
                 dryRun:
-                    this.form.value
-                        .dryRun
+                    this.form.value.dryRun,
 
+                skipDuplicates:
+                    true
             }
-
         };
-
     }
 
     private buildGroupedItem(
@@ -1196,11 +1213,6 @@ export class
             accountingDate:
                 this.accountingDate,
 
-            operationalExpenses:
-                structuredClone(
-                    this.operationalExpenses
-                ),
-
             autoPaySuppliers:
                 this.autoPaySuppliers,
 
@@ -1208,12 +1220,10 @@ export class
                 this.supplierPaymentMethod
                 ?? undefined,
 
-            autoPayOperationalExpenses:
-                this.autoPayOperationalExpenses,
-
             fundingAccountId:
-                this.fundingAccountId
-                ?? undefined
+                this.autoPaySuppliers
+                    ? this.fundingAccountId ?? undefined
+                    : undefined
         };
 
     }
@@ -1420,6 +1430,22 @@ export class
         if (
             this.form.invalid
         ) {
+            return;
+        }
+
+        if (
+            this.requiresFundingAccount &&
+            !this.fundingAccountId
+        ) {
+
+            this.snackbar.open(
+                'Funding account is required when supplier payments or operational expenses require funding.',
+                'Close',
+                {
+                    duration: 5000
+                }
+            );
+
             return;
         }
 

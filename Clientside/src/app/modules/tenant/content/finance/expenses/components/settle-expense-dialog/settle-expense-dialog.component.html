@@ -1,147 +1,139 @@
-<h2 mat-dialog-title>
-    Settle Expense
-</h2>
+<div class="dialog-shell">
 
-<mat-dialog-content>
-
-    <div class="expense-summary">
-
-        <div class="summary-card">
-
-            <div class="label">
-                Expense
+    <div class="dialog-header">
+        <div>
+            <div class="dialog-title">
+                Settle Expense
             </div>
 
-            <div class="description">
-                {{ data.description }}
+            <div class="dialog-subtitle">
+                Record payment against an operational expense
+            </div>
+        </div>
+    </div>
+
+    <div class="dialog-content">
+
+        <div class="expense-summary">
+
+            <div class="summary-card expense-card">
+                <div class="label">
+                    Expense Description
+                </div>
+
+                <div class="description">
+                    {{ data.description }}
+                </div>
             </div>
 
+            <div class="summary-grid">
+
+                <div class="summary-card">
+                    <div class="label">
+                        Original Amount
+                    </div>
+
+                    <div class="value">
+                        {{ data.amount | currency:'KES ' }}
+                    </div>
+                </div>
+
+                <div class="summary-card">
+                    <div class="label">
+                        Already Settled
+                    </div>
+
+                    <div class="value success">
+                        {{ data.settledAmount | currency:'KES ' }}
+                    </div>
+                </div>
+
+                <div class="summary-card">
+                    <div class="label">
+                        Outstanding Balance
+                    </div>
+
+                    <div class="value danger">
+                        {{ data.outstandingAmount | currency:'KES ' }}
+                    </div>
+                </div>
+
+            </div>
         </div>
 
-        <div class="summary-grid">
+        <form [formGroup]="form" class="form-grid">
 
-            <div class="summary-item">
+            <mat-form-field appearance="fill">
+                <mat-label>
+                    Funding Account
+                </mat-label>
 
-                <div class="label">
-                    Amount
+                <mat-select formControlName="fundingAccountId">
+                    <mat-option *ngFor="let account of fundingAccounts" [value]="account.id">
+
+                        {{ account.code }}
+                        -
+                        {{ account.name }}
+
+                    </mat-option>
+                </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="fill">
+                <mat-label>
+                    Settlement Amount
+                </mat-label>
+
+                <input matInput type="number" formControlName="amount">
+            </mat-form-field>
+
+            <div *ngIf="selectedAccount" class="account-balance">
+
+                <div class="balance-label">
+                    Available Balance
                 </div>
 
-                <div class="value">
-                    {{ data.amount | currency:'KES ' }}
+                <div class="balance-value">
+                    {{ selectedAccount.balance | currency:'KES ' }}
                 </div>
 
             </div>
 
-            <div class="summary-item">
+            <mat-form-field appearance="fill">
+                <mat-label>
+                    Settlement Date
+                </mat-label>
 
-                <div class="label">
-                    Settled
-                </div>
+                <input matInput type="date" formControlName="settlementDate">
+            </mat-form-field>
 
-                <div class="value success">
-                    {{ data.settledAmount | currency:'KES ' }}
-                </div>
+            <mat-form-field appearance="fill" class="full-width">
 
-            </div>
+                <mat-label>
+                    Reference
+                </mat-label>
 
-            <div class="summary-item">
+                <input matInput formControlName="reference">
+            </mat-form-field>
 
-                <div class="label">
-                    Outstanding
-                </div>
-
-                <div class="value danger">
-                    {{ data.outstandingAmount | currency:'KES ' }}
-                </div>
-
-            </div>
-
-        </div>
+        </form>
 
     </div>
 
-    <form [formGroup]="form" class="form-grid">
+    <div class="dialog-actions">
 
-        <mat-form-field appearance="fill">
+        <button mat-stroked-button mat-dialog-close>
 
-            <mat-label>
-                Funding Account
-            </mat-label>
+            Cancel
 
-            <mat-select formControlName="fundingAccountId">
+        </button>
 
-                <mat-option *ngFor="let account of fundingAccounts" [value]="account.id">
+        <button mat-flat-button color="primary" [disabled]="saving" (click)="submit()">
 
-                    {{ account.code }}
-                    -
-                    {{ account.name }}
+            {{ saving ? 'Processing...' : 'Settle Expense' }}
 
-                </mat-option>
+        </button>
 
-            </mat-select>
+    </div>
 
-        </mat-form-field>
-
-        <div *ngIf="selectedAccount" class="account-balance">
-
-            Available Balance
-
-            <strong>
-                {{ selectedAccount.balance | currency:'KES ' }}
-            </strong>
-
-        </div>
-
-        <mat-form-field appearance="fill">
-
-            <mat-label>
-                Settlement Amount
-            </mat-label>
-
-            <input matInput type="number" formControlName="amount">
-
-        </mat-form-field>
-
-        <mat-form-field appearance="fill">
-
-            <mat-label>
-                Settlement Date
-            </mat-label>
-
-            <input matInput type="date" formControlName="settlementDate">
-
-        </mat-form-field>
-
-        <mat-form-field appearance="fill" class="full-width">
-
-            <mat-label>
-                Reference
-            </mat-label>
-
-            <input matInput formControlName="reference">
-
-        </mat-form-field>
-
-    </form>
-
-</mat-dialog-content>
-
-<mat-dialog-actions align="end">
-
-    <button mat-stroked-button mat-dialog-close>
-
-        Cancel
-
-    </button>
-
-    <button mat-flat-button color="primary" [disabled]="saving" (click)="submit()">
-
-        {{
-        saving
-        ? 'Processing...'
-        : 'Settle Expense'
-        }}
-
-    </button>
-
-</mat-dialog-actions>
+</div>

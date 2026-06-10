@@ -1,7 +1,5 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.events;
 
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;

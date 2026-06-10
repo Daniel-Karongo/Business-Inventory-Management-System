@@ -208,12 +208,26 @@ export class ExpenseWorkspaceComponent implements OnInit {
             {
                 width: '520px',
                 maxWidth: '95vw',
+                panelClass: 'enterprise-dialog',
                 data: {
                     title: 'Reverse Expense',
+                    action: 'DELETE',
                     message: 'Reverse this expense?',
                     confirmText: 'Reverse',
                     requireReason: true,
-                    allowCustomReason: true
+                    allowCustomReason: true,
+                    reasons: [
+                        'Duplicate expense entry',
+                        'Incorrect amount recorded',
+                        'Wrong expense account selected',
+                        'Expense entered in error',
+                        'Expense belongs to another transaction',
+                        'Expense no longer applicable',
+                        'Source document cancelled',
+                        'Supplier transaction reversed',
+                        'Correction of accounting error',
+                        'Management approval withdrawn'
+                    ]
                 }
             }
         )
@@ -269,12 +283,25 @@ export class ExpenseWorkspaceComponent implements OnInit {
             {
                 width: '520px',
                 maxWidth: '95vw',
+                panelClass: 'enterprise-dialog',
                 data: {
                     title: 'Reverse Settlement',
                     message: 'Reverse settlement?',
                     confirmText: 'Reverse',
                     requireReason: true,
-                    allowCustomReason: true
+                    allowCustomReason: true,
+                    reasons: [
+                        'Duplicate settlement',
+                        'Incorrect settlement amount',
+                        'Wrong funding account used',
+                        'Settlement posted in error',
+                        'Bank transaction failed',
+                        'Cheque dishonoured',
+                        'Payment reversed by bank',
+                        'Settlement allocated incorrectly',
+                        'Correction of accounting error',
+                        'Management approval withdrawn'
+                    ]
                 }
             }
         )

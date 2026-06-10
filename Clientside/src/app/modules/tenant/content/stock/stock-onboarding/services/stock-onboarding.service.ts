@@ -9,6 +9,7 @@ import { ApiResponse } from '../../../../../../core/models/api-response.model';
 import { environment } from '../../../../../../../environments/environment';
 
 import {
+    BulkStockOnboardingRequest,
     StockOnboardingBulkPreviewResult,
     StockOnboardingRequest,
     StockOnboardingResponse
@@ -45,7 +46,7 @@ export class StockOnboardingService
     bulkCreate(
         payload:
             BulkRequest<
-                StockOnboardingRequest
+                BulkStockOnboardingRequest
             >
     ) {
 
@@ -67,7 +68,7 @@ export class StockOnboardingService
     previewBulk(
         payload:
             BulkRequest<
-                StockOnboardingRequest
+                BulkStockOnboardingRequest
             >
     ) {
 

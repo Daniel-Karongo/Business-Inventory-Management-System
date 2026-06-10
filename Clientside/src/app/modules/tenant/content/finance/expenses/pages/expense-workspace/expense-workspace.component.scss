@@ -3,38 +3,103 @@
 }
 
 /* =========================================================
-   HEADER
+   WORKSPACE HEADER
 ========================================================= */
 
-.header {
+.workspace-header {
+
     display: flex;
+    flex-direction: column;
+    gap: 18px;
+
+    padding: 4px 0;
+}
+
+.workspace-header-top {
+
+    display: flex;
+    align-items: flex-start;
     justify-content: space-between;
-    align-items: center;
-    gap: 16px;
+    gap: 24px;
 }
 
-.header-left {
+.workspace-title-group {
+
     display: flex;
-    align-items: center;
-    gap: 12px;
+    align-items: flex-start;
+    gap: 14px;
+
+    min-width: 0;
 }
 
-.header-actions {
+.back-button {
+
+    margin-top: -4px;
+    flex-shrink: 0;
+}
+
+.workspace-title {
+
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+
+    color: var(--text-primary);
+}
+
+.workspace-subtitle {
+
+    margin-top: 6px;
+
+    color: var(--text-secondary);
+
+    font-size: .92rem;
+
+    letter-spacing: .02em;
+}
+
+.workspace-header-bottom {
+    align-self: flex-end;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
+
     flex-wrap: wrap;
 }
 
-.title {
-    font-size: 1.3rem;
-    font-weight: 700;
+.workspace-header-bottom button {
+
+    min-width: 180px;
 }
 
-.subtitle {
-    margin-top: 4px;
-    color: var(--text-secondary);
-    font-size: .9rem;
+/* =========================================================
+   STATUS
+========================================================= */
+
+.status-chip {
+
+    align-self: flex-end;
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    height: 34px;
+
+    padding: 0 14px;
+
+    border-radius: 999px;
+
+    font-size: .72rem;
+    font-weight: 700;
+
+    letter-spacing: .04em;
+
+    text-transform: uppercase;
+
+    white-space: nowrap;
+
+    flex-shrink: 0;
 }
 
 /* =========================================================
@@ -264,23 +329,34 @@
 
 @media (max-width: 768px) {
 
-    .header {
+    .workspace-header-top {
+
         flex-direction: column;
         align-items: stretch;
+        gap: 12px;
     }
 
-    .header-actions {
-        width: 100%;
+    .workspace-title {
+
+        font-size: 1.25rem;
+    }
+
+    .workspace-header-bottom {
+
         display: grid;
         grid-template-columns: 1fr;
+        gap: 10px;
     }
 
-    .header-actions button {
+    .workspace-header-bottom button {
+
         width: 100%;
+        min-width: unset;
     }
 
-    .workspace-table {
-        min-width: 640px;
+    .status-chip {
+
+        align-self: flex-start;
     }
 
     .summary-value {

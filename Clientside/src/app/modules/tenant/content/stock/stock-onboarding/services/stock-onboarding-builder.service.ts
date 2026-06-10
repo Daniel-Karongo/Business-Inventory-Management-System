@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 
 import {
+    BulkStockOnboardingRequest,
     StockOnboardingRequest
 } from '../../models/stock-onboarding.model';
 
@@ -11,10 +12,6 @@ import {
 import {
     BulkRequest
 } from '../../../../../../shared/models/bulk-import.model';
-
-import {
-    OperationalExpenseInput
-} from '../../models/stock-onboarding.model';
 
 @Injectable({
     providedIn: 'root'
@@ -219,12 +216,44 @@ export class StockOnboardingBuilderService {
     buildBulk(
         states: StockOnboardingState[],
         dryRun = false
-    ): BulkRequest<StockOnboardingRequest> {
+    ): BulkRequest<BulkStockOnboardingRequest> {
+
+        const rows =
+            states.map(
+                state => this.build(state)
+            );
+
+        const firstState =
+            states[0];
 
         return {
-            items: states.map(
-                state => this.build(state)
-            ),
+            items: [
+                {
+                    rows,
+
+                    operationalExpenses:
+                        firstState?.operationalExpenses
+                            ?.map(expense => ({
+                                expenseAccountId:
+                                    expense.expenseAccountId,
+
+                                description:
+                                    expense.description,
+
+                                amount:
+                                    expense.amount
+                            })) ?? [],
+
+                    autoPayOperationalExpenses:
+                        firstState?.autoPayOperationalExpenses
+                        ?? false,
+
+                    fundingAccountId:
+                        firstState?.fundingAccountId
+                        ?? undefined
+                }
+            ],
+
             options: {
                 dryRun
             }

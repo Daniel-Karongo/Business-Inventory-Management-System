@@ -23,7 +23,8 @@ import {
 import {
     debounceTime,
     distinctUntilChanged,
-    finalize
+    finalize,
+    forkJoin
 } from 'rxjs';
 
 import {
@@ -92,6 +93,8 @@ import {
 } from '../../components/create-expense-dialog/create-expense-dialog.component';
 import { WorkflowShellComponent } from '../../../../../../../shared/layout/workflow-shell/workflow-shell.component';
 import { WorkflowCardComponent } from '../../../../../../../shared/layout/workflow-card/workflow-card.component';
+import { SettleExpenseDialogComponent } from '../../components/settle-expense-dialog/settle-expense-dialog.component';
+import { ReasonDialogComponent } from '../../../../../../../shared/components/reason-dialog/reason-dialog.component';
 
 @Component({
     selector: 'app-operational-expense-list',
@@ -229,6 +232,90 @@ export class OperationalExpenseListComponent
             );
 
         this.load();
+    }
+
+    get canBulkReverseSelection(): boolean {
+
+        if (
+            this.selectedRows.length === 0
+        ) {
+            return false;
+        }
+
+        return this.selectedRows.every(
+            x => x.status !== 'REVERSED'
+        );
+    }
+
+    canSettle(
+        row: OperationalExpense
+    ): boolean {
+
+        return (
+            row.status === 'OPEN'
+            ||
+            row.status === 'PARTIALLY_SETTLED'
+        );
+    }
+
+    canReverse(
+        row: OperationalExpense
+    ): boolean {
+
+        return (
+            row.status !== 'REVERSED'
+        );
+    }
+
+    get selectedSettleEligibleRows():
+        OperationalExpense[] {
+
+        return this.selectedRows.filter(
+            x =>
+                x.status === 'OPEN'
+                ||
+                x.status === 'PARTIALLY_SETTLED'
+        );
+    }
+
+    get hasMixedSelection(): boolean {
+
+        if (
+            this.selectedRows.length <= 1
+        ) {
+            return false;
+        }
+
+        const statuses =
+            new Set(
+                this.selectedRows.map(
+                    x => x.status
+                )
+            );
+
+        return statuses.size > 1;
+    }
+
+    get canBulkSettleSelection(): boolean {
+
+        if (
+            this.selectedRows.length === 0
+        ) {
+            return false;
+        }
+
+        if (
+            this.hasMixedSelection
+        ) {
+            return false;
+        }
+
+        return this.selectedRows.every(
+            x =>
+                x.status === 'OPEN'
+                ||
+                x.status === 'PARTIALLY_SETTLED'
+        );
     }
 
     get openCount(): number {
@@ -413,6 +500,195 @@ export class OperationalExpenseListComponent
                     );
                 }
             );
+    }
+
+    reverseExpense(
+        row: OperationalExpense
+    ): void {
+
+        this.dialog.open(
+            ReasonDialogComponent,
+            {
+                width: '520px',
+                maxWidth: '95vw',
+                panelClass: 'enterprise-dialog',
+                data: {
+                    title: 'Reverse Expense',
+                    action: 'DELETE',
+                    message: 'Reverse this expense?',
+                    confirmText: 'Reverse',
+                    requireReason: true,
+                    allowCustomReason: true,
+                    reasons: [
+                        'Duplicate expense entry',
+                        'Incorrect amount recorded',
+                        'Wrong expense account selected',
+                        'Expense entered in error',
+                        'Expense belongs to another transaction',
+                        'Expense no longer applicable',
+                        'Source document cancelled',
+                        'Supplier transaction reversed',
+                        'Correction of accounting error',
+                        'Management approval withdrawn'
+                    ]
+                }
+            }
+        )
+            .afterClosed()
+            .subscribe(result => {
+
+                if (!result?.confirmed) {
+                    return;
+                }
+
+                this.loading = true;
+
+                this.service
+                    .reverseExpense(
+                        row.id,
+                        result.reason
+                    )
+                    .pipe(
+                        finalize(
+                            () =>
+                                this.loading = false
+                        )
+                    )
+                    .subscribe({
+                        next: () => {
+
+                            this.snack.open(
+                                'Expense reversed',
+                                'Close',
+                                {
+                                    duration: 3000
+                                }
+                            );
+
+                            this.load();
+                        }
+                    });
+            });
+    }
+
+    openSettlementDialog(
+        row: OperationalExpense
+    ): void {
+
+        const outstanding =
+            row.amount -
+            row.settledAmount;
+
+        this.dialog.open(
+            SettleExpenseDialogComponent,
+            {
+                width: '720px',
+                maxWidth: '96vw',
+                maxHeight: '92vh',
+                height: 'auto',
+                autoFocus: false,
+                panelClass: 'enterprise-dialog',
+                data: {
+                    expenseId: row.id,
+                    description: row.description,
+                    amount: row.amount,
+                    settledAmount: row.settledAmount,
+                    outstandingAmount: outstanding
+                }
+            }
+        )
+            .afterClosed()
+            .subscribe(refresh => {
+
+                if (!refresh) {
+                    return;
+                }
+
+                this.load();
+
+                this.snack.open(
+                    'Expense settled successfully',
+                    'Close',
+                    {
+                        duration: 3000
+                    }
+                );
+            });
+    }
+
+    bulkReverse(): void {
+
+        this.dialog.open(
+            ReasonDialogComponent,
+            {
+                width: '520px',
+                maxWidth: '95vw',
+                panelClass: 'enterprise-dialog',
+                data: {
+                    title: 'Reverse Expenses',
+                    action: 'DELETE',
+                    message:
+                        `Reverse ${this.selectedRows.length} selected expense(s)?`,
+                    confirmText: 'Reverse',
+                    requireReason: true,
+                    allowCustomReason: true,
+                    reasons: [
+                        'Duplicate expense entry',
+                        'Incorrect amount recorded',
+                        'Wrong expense account selected',
+                        'Expense entered in error',
+                        'Expense belongs to another transaction',
+                        'Expense no longer applicable',
+                        'Source document cancelled',
+                        'Supplier transaction reversed',
+                        'Correction of accounting error',
+                        'Management approval withdrawn'
+                    ]
+                }
+            }
+        )
+            .afterClosed()
+            .subscribe(result => {
+
+                if (!result?.confirmed) {
+                    return;
+                }
+
+                this.loading = true;
+
+                const requests =
+                    this.selectedRows.map(
+                        row =>
+                            this.service.reverseExpense(
+                                row.id,
+                                result.reason
+                            )
+                    );
+
+                forkJoin(requests)
+                    .pipe(
+                        finalize(
+                            () =>
+                                this.loading = false
+                        )
+                    )
+                    .subscribe({
+                        next: () => {
+
+                            this.selectedExpenseIds.clear();
+
+                            this.snack.open(
+                                'Expenses reversed',
+                                'Close',
+                                {
+                                    duration: 3000
+                                }
+                            );
+
+                            this.load();
+                        }
+                    });
+            });
     }
 
     bulkSettle(): void {

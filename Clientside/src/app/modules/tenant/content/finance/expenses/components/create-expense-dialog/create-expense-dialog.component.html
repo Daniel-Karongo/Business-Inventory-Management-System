@@ -1,157 +1,166 @@
-<h2 mat-dialog-title>
-    Create Operational Expense
-</h2>
+<div class="dialog-shell">
 
-<mat-dialog-content>
+    <div class="dialog-header">
 
-    <div class="mode-panel">
+        <div>
 
-        <div class="mode-title">
-            Posting Mode
-        </div>
+            <div class="dialog-title">
+                Create Operational Expense
+            </div>
 
-        <mat-checkbox formControlName="autoPay" [formGroup]="form">
-
-            Pay Immediately
-
-        </mat-checkbox>
-
-        <div class="mode-description">
-
-            {{
-            form.controls.autoPay.value
-            ? 'Expense will be posted and settled immediately.'
-            : 'Expense will be accrued and settled later.'
-            }}
+            <div class="dialog-subtitle">
+                Record operational expenses and optionally settle them immediately
+            </div>
 
         </div>
 
     </div>
 
-    <form [formGroup]="form" class="form-grid">
+    <div class="dialog-content">
 
-        <mat-form-field appearance="fill" class="full-width">
+        <form [formGroup]="form" class="form-content">
 
-            <mat-label>
-                Expense Account
-            </mat-label>
+            <div class="mode-panel">
 
-            <mat-select formControlName="expenseAccountId">
+                <div class="mode-header">
 
-                <mat-option *ngFor="let account of expenseAccounts" [value]="account.id">
+                    <div>
 
-                    {{ account.code }}
-                    -
-                    {{ account.name }}
+                        <div class="mode-title">
+                            Posting Mode
+                        </div>
 
-                </mat-option>
+                        <div class="mode-description">
+                            {{ form.controls.autoPay.value ? 'Expense will be posted and settled immediately.' :
+                            'Expense will be accrued and settled later.' }}
+                        </div>
 
-            </mat-select>
+                    </div>
 
-        </mat-form-field>
+                    <mat-checkbox formControlName="autoPay">
 
-        <mat-form-field appearance="fill" class="full-width">
+                        Pay Immediately
 
-            <mat-label>
-                Description
-            </mat-label>
-
-            <textarea matInput rows="3" formControlName="description">
-            </textarea>
-
-        </mat-form-field>
-
-        <mat-form-field appearance="fill">
-
-            <mat-label>
-                Amount
-            </mat-label>
-
-            <input matInput type="number" formControlName="amount">
-
-        </mat-form-field>
-
-        <mat-form-field appearance="fill">
-
-            <mat-label>
-                Accounting Date
-            </mat-label>
-
-            <input matInput type="date" formControlName="accountingDate">
-
-        </mat-form-field>
-
-        <ng-container *ngIf="form.controls.autoPay.value">
-
-            <mat-form-field appearance="fill" class="full-width">
-
-                <mat-label>
-                    Funding Account
-                </mat-label>
-
-                <mat-select formControlName="fundingAccountId">
-
-                    <mat-option *ngFor="let account of fundingAccounts" [value]="account.id">
-
-                        {{ account.code }}
-                        -
-                        {{ account.name }}
-
-                    </mat-option>
-
-                </mat-select>
-
-            </mat-form-field>
-
-            <div *ngIf="selectedFundingAccount" class="funding-card">
-
-                <div class="funding-label">
-                    Available Balance
-                </div>
-
-                <div class="funding-balance">
-
-                    {{
-                    selectedFundingAccount.balance
-                    | currency:'KES '
-                    }}
+                    </mat-checkbox>
 
                 </div>
 
             </div>
 
-        </ng-container>
+            <div class="form-grid">
 
-        <mat-form-field appearance="fill" class="full-width">
+                <mat-form-field appearance="fill" class="full-width">
 
-            <mat-label>
-                Reference
-            </mat-label>
+                    <mat-label>
+                        Expense Account
+                    </mat-label>
 
-            <input matInput formControlName="reference">
+                    <mat-select formControlName="expenseAccountId">
 
-        </mat-form-field>
+                        <mat-option *ngFor="let account of expenseAccounts" [value]="account.id">
 
-    </form>
+                            {{ account.code }} - {{ account.name }}
 
-</mat-dialog-content>
+                        </mat-option>
 
-<mat-dialog-actions align="end">
+                    </mat-select>
 
-    <button mat-stroked-button mat-dialog-close>
+                </mat-form-field>
 
-        Cancel
+                <mat-form-field appearance="fill" class="full-width">
 
-    </button>
+                    <mat-label>
+                        Description
+                    </mat-label>
 
-    <button mat-flat-button color="primary" [disabled]="saving" (click)="submit()">
+                    <textarea matInput rows="4" formControlName="description"></textarea>
 
-        {{
-        saving
-        ? 'Creating...'
-        : 'Create Expense'
-        }}
+                </mat-form-field>
 
-    </button>
+                <mat-form-field appearance="fill">
 
-</mat-dialog-actions>
+                    <mat-label>
+                        Amount
+                    </mat-label>
+
+                    <input matInput type="number" formControlName="amount">
+
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+
+                    <mat-label>
+                        Accounting Date
+                    </mat-label>
+
+                    <input matInput type="date" formControlName="accountingDate">
+
+                </mat-form-field>
+
+                <ng-container *ngIf="form.controls.autoPay.value">
+
+                    <mat-form-field appearance="fill" class="full-width">
+
+                        <mat-label>
+                            Funding Account
+                        </mat-label>
+
+                        <mat-select formControlName="fundingAccountId">
+
+                            <mat-option *ngFor="let account of fundingAccounts" [value]="account.id">
+
+                                {{ account.code }} - {{ account.name }}
+
+                            </mat-option>
+
+                        </mat-select>
+
+                    </mat-form-field>
+
+                    <div *ngIf="selectedFundingAccount" class="funding-card">
+
+                        <div class="funding-label">
+                            Available Balance
+                        </div>
+
+                        <div class="funding-balance">
+                            {{ selectedFundingAccount.balance | currency:'KES ' }}
+                        </div>
+
+                    </div>
+
+                </ng-container>
+
+                <mat-form-field appearance="fill" class="full-width">
+
+                    <mat-label>
+                        Reference
+                    </mat-label>
+
+                    <input matInput formControlName="reference">
+
+                </mat-form-field>
+
+            </div>
+
+        </form>
+
+    </div>
+
+    <div class="dialog-actions">
+
+        <button mat-stroked-button type="button" mat-dialog-close>
+
+            Cancel
+
+        </button>
+
+        <button mat-flat-button color="primary" type="button" [disabled]="saving" (click)="submit()">
+
+            {{ saving ? 'Creating...' : 'Create Expense' }}
+
+        </button>
+
+    </div>
+
+</div>

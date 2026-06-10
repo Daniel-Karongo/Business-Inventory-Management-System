@@ -203,7 +203,7 @@
                                 Funding Account
                             </mat-label>
 
-                            <mat-select [(ngModel)]="fundingAccountId" [ngModelOptions]="{ standalone: true }"
+                            <mat-select [required]="requiresFundingAccount" [(ngModel)]="fundingAccountId" [ngModelOptions]="{ standalone: true }"
                                 (selectionChange)="onFundingAccountChanged()" panelClass="bulk-select-panel">
 
                                 <mat-option *ngFor="let account of fundingAccounts" [value]="account.id">
@@ -214,7 +214,7 @@
                                         </div>
 
                                         <div class="account-balance">
-                                            ( {{ account.balance | number:'1.2-2' }} )
+                                           ( ({{ account.balance | number:'1.2-2' }}) )
                                         </div>
                                     </div>
 
@@ -270,7 +270,7 @@
                                             </div>
 
                                             <div class="account-balance">
-                                                {{ account.balance | number:'1.2-2' }}
+                                               ( {{ account.balance | number:'1.2-2' }} )
                                             </div>
 
                                         </div>
@@ -295,7 +295,8 @@
                                     [ngModelOptions]="{ standalone:true }">
                             </mat-form-field>
 
-                            <button mat-icon-button color="warn" type="button" (click)="removeOperationalExpense(i)" matTooltip="Remove expense">
+                            <button mat-icon-button color="warn" type="button" (click)="removeOperationalExpense(i)"
+                                matTooltip="Remove expense">
 
                                 <mat-icon>delete</mat-icon>
 
@@ -312,13 +313,13 @@
 
                 <div class="payment-options">
 
-                    <mat-checkbox [(ngModel)]="autoPaySuppliers" [ngModelOptions]="{ standalone: true }">
+                    <mat-checkbox [disabled]="!hasFundingAccounts" [(ngModel)]="autoPaySuppliers" [ngModelOptions]="{ standalone: true }">
 
                         Auto Pay Suppliers
 
                     </mat-checkbox>
 
-                    <mat-checkbox [(ngModel)]="autoPayOperationalExpenses" [ngModelOptions]="{ standalone: true }">
+                    <mat-checkbox [disabled]="!hasFundingAccounts" [(ngModel)]="autoPayOperationalExpenses" [ngModelOptions]="{ standalone: true }">
 
                         Auto Pay Operational Expenses
 
@@ -327,8 +328,8 @@
                 </div>
 
                 <!-- =====================================================
-         FUNDING ANALYSIS
-    ====================================================== -->
+                    FUNDING ANALYSIS
+                ====================================================== -->
 
                 <div class="funding-account-summary" *ngIf="selectedFundingAccount">
 
@@ -346,10 +347,7 @@
 
                             Balance:
 
-                            {{
-                            selectedFundingAccount.balance
-                            | number:'1.2-2'
-                            }}
+                            {{ selectedFundingAccount.balance | number:'1.2-2' }}
 
                         </small>
 
@@ -375,10 +373,7 @@
 
                         <strong>
 
-                            {{
-                            supplierFundingRequired
-                            | number:'1.2-2'
-                            }}
+                            {{ supplierFundingRequired | number:'1.2-2' }}
 
                         </strong>
 
@@ -392,10 +387,7 @@
 
                         <strong>
 
-                            {{
-                            expenseFundingRequired
-                            | number:'1.2-2'
-                            }}
+                            {{ expenseFundingRequired | number:'1.2-2' }}
 
                         </strong>
 
@@ -409,10 +401,7 @@
 
                         <strong>
 
-                            {{
-                            totalFundingRequired
-                            | number:'1.2-2'
-                            }}
+                            {{ totalFundingRequired | number:'1.2-2' }}
 
                         </strong>
 
@@ -426,10 +415,7 @@
 
                         <strong>
 
-                            {{
-                            fundingSurplus
-                            | number:'1.2-2'
-                            }}
+                            {{ fundingSurplus | number:'1.2-2' }}
 
                         </strong>
 
@@ -443,10 +429,7 @@
 
                         <strong>
 
-                            {{
-                            fundingShortfall
-                            | number:'1.2-2'
-                            }}
+                            {{ fundingShortfall | number:'1.2-2' }}
 
                         </strong>
 
@@ -464,10 +447,7 @@
 
                     Owner Equity will automatically fund
 
-                    {{
-                    fundingShortfall
-                    | number:'1.2-2'
-                    }}
+                    {{ fundingShortfall | number:'1.2-2' }}
 
                     before supplier and expense
                     payments are posted.
@@ -488,10 +468,7 @@
                         </span>
 
                         <strong>
-                            {{
-                            totalInventoryValue
-                            | number:'1.2-2'
-                            }}
+                            {{ totalInventoryValue | number:'1.2-2' }}
                         </strong>
 
                     </div>
@@ -503,10 +480,7 @@
                         </span>
 
                         <strong>
-                            {{
-                            totalOperationalExpenses
-                            | number:'1.2-2'
-                            }}
+                            {{ totalOperationalExpenses | number:'1.2-2' }}
                         </strong>
 
                     </div>
@@ -518,10 +492,7 @@
                         </span>
 
                         <strong>
-                            {{
-                            totalFundingRequired
-                            | number:'1.2-2'
-                            }}
+                            {{ totalFundingRequired | number:'1.2-2' }}
                         </strong>
 
                     </div>

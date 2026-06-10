@@ -6,33 +6,33 @@
 
     <div workflow-header>
 
-        <div class="header">
+        <div class="workspace-header">
 
-            <div class="header-left">
+            <div class="workspace-header-top">
 
-                <button mat-icon-button (click)="back()">
+                <div class="workspace-title-group">
 
-                    <mat-icon>
-                        arrow_back
-                    </mat-icon>
+                    <button mat-icon-button class="back-button" (click)="back()">
 
-                </button>
+                        <mat-icon>
+                            arrow_back
+                        </mat-icon>
 
-                <div>
+                    </button>
 
-                    <div class="title">
-                        {{ workspace?.description }}
-                    </div>
+                    <div>
 
-                    <div class="subtitle">
-                        Operational Expense Workspace
+                        <div class="workspace-title">
+                            {{ workspace?.description }}
+                        </div>
+
+                        <div class="workspace-subtitle">
+                            Operational Expense Workspace
+                        </div>
+
                     </div>
 
                 </div>
-
-            </div>
-
-            <div class="header-actions">
 
                 <div *ngIf="expense" class="status-chip" [ngClass]="statusClass(expense.status)">
 
@@ -40,8 +40,15 @@
 
                 </div>
 
-                <button *ngIf="expense && expense.status !== 'SETTLED' && expense.status !== 'REVERSED'" mat-flat-button
-                    color="primary" (click)="openSettlementDialog()">
+            </div>
+
+            <div class="workspace-header-bottom">
+
+                <button *ngIf="
+                    expense &&
+                    expense.status !== 'SETTLED' &&
+                    expense.status !== 'REVERSED'
+                " mat-flat-button color="primary" (click)="openSettlementDialog()">
 
                     <mat-icon>
                         payments
@@ -52,9 +59,9 @@
                 </button>
 
                 <button *ngIf="
-                        expense &&
-                        expense.status !== 'REVERSED'
-                    " mat-stroked-button color="warn" [disabled]="reversingExpense" (click)="reverseExpense()">
+                    expense &&
+                    expense.status !== 'REVERSED'
+                " mat-stroked-button color="warn" [disabled]="reversingExpense" (click)="reverseExpense()">
 
                     <mat-icon>
                         undo

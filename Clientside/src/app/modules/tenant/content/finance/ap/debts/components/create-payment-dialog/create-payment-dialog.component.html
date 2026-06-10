@@ -1,62 +1,85 @@
-<div class="dialog">
+<div class="dialog-shell">
 
-    <div class="header">
+    <div class="dialog-header">
+
         <div>
-            <div class="title">Supplier Payment</div>
-            <div class="subtitle">Capture and allocate supplier payment</div>
+            <div class="dialog-title">
+                Supplier Payment
+            </div>
+
+            <div class="dialog-subtitle">
+                Capture and allocate supplier payment
+            </div>
         </div>
 
         <button mat-icon-button mat-dialog-close [disabled]="loading">
-            <mat-icon>close</mat-icon>
+
+            <mat-icon>
+                close
+            </mat-icon>
+
         </button>
+
     </div>
 
-    <form [formGroup]="form" (ngSubmit)="submit()">
+    <div class="dialog-content">
 
-        <div class="grid">
+        <form [formGroup]="form" (ngSubmit)="submit()">
 
-            <mat-form-field appearance="fill">
-                <mat-label>Funding Account</mat-label>
+            <div class="form-grid">
 
-                <mat-select formControlName="fundingAccountId">
+                <mat-form-field appearance="fill">
 
-                    <mat-option *ngFor="let a of accounts" [value]="a.id" [disabled]="!a.active">
-                        {{ a.code }} — {{ a.name }}
-                        —
-                        {{
-                        a.balance
-                        | currency:'KES '
-                        }}
-                    </mat-option>
+                    <mat-label>
+                        Funding Account
+                    </mat-label>
 
-                </mat-select>
-            </mat-form-field>
+                    <mat-select formControlName="fundingAccountId">
 
-            <div class="method-preview" [class.insufficient]="insufficientFunds">
+                        <mat-option *ngFor="let a of accounts" [value]="a.id" [disabled]="!a.active">
 
-                <div>
+                            {{ a.code }}
+                            —
+                            {{ a.name }}
+                            —
+                            {{
+                            a.balance
+                            | currency:'KES '
+                            }}
 
-                    <div class="method-label">
-                        Payment Method
+                        </mat-option>
+
+                    </mat-select>
+
+                </mat-form-field>
+
+                <div class="account-preview" [class.insufficient]="insufficientFunds">
+
+                    <div class="preview-item">
+
+                        <div class="preview-label">
+                            Payment Method
+                        </div>
+
+                        <div class="preview-value">
+                            {{ derivedMethod }}
+                        </div>
+
                     </div>
 
-                    <div class="method-value">
-                        {{ derivedMethod }}
-                    </div>
+                    <div class="preview-item">
 
-                </div>
+                        <div class="preview-label">
+                            Available Balance
+                        </div>
 
-                <div class="balance-block">
+                        <div class="preview-value">
+                            {{
+                            selectedBalance
+                            | currency:'KES '
+                            }}
+                        </div>
 
-                    <div class="method-label">
-                        Available Balance
-                    </div>
-
-                    <div class="balance-value">
-                        {{
-                        selectedBalance
-                        | currency:'KES '
-                        }}
                     </div>
 
                 </div>
@@ -64,64 +87,94 @@
             </div>
 
             <div *ngIf="insufficientFunds" class="balance-warning">
-                Payment exceeds available account balance
+
+                Payment exceeds available account balance.
+
             </div>
 
-            <mat-form-field appearance="fill">
-                <mat-label>Amount</mat-label>
+            <div class="form-grid">
 
-                <input matInput type="number" formControlName="amount">
+                <mat-form-field appearance="fill">
+
+                    <mat-label>
+                        Amount
+                    </mat-label>
+
+                    <input matInput type="number" formControlName="amount">
+
+                </mat-form-field>
+
+                <mat-form-field appearance="fill">
+
+                    <mat-label>
+                        Payment Date
+                    </mat-label>
+
+                    <input matInput [matDatepicker]="picker" formControlName="paymentDate">
+
+                    <mat-datepicker-toggle matSuffix [for]="picker">
+                    </mat-datepicker-toggle>
+
+                    <mat-datepicker #picker>
+                    </mat-datepicker>
+
+                </mat-form-field>
+
+            </div>
+
+            <mat-form-field appearance="fill" class="full-width">
+
+                <mat-label>
+                    Reference
+                </mat-label>
+
+                <input matInput formControlName="reference">
+
             </mat-form-field>
 
-            <mat-form-field appearance="fill">
-                <mat-label>Payment Date</mat-label>
+            <div class="options-panel">
 
-                <input matInput [matDatepicker]="picker" formControlName="paymentDate">
+                <mat-checkbox formControlName="autoPost">
 
-                <mat-datepicker-toggle matSuffix [for]="picker" />
+                    Auto Post
 
-                <mat-datepicker #picker />
-            </mat-form-field>
+                </mat-checkbox>
 
-        </div>
+                <mat-checkbox formControlName="autoAllocate">
 
-        <mat-form-field appearance="fill" class="full">
-            <mat-label>Reference</mat-label>
+                    Auto Allocate
 
-            <input matInput formControlName="reference">
-        </mat-form-field>
+                </mat-checkbox>
 
-        <div class="checks">
+            </div>
 
-            <mat-checkbox formControlName="autoPost">
-                Auto Post
-            </mat-checkbox>
+        </form>
 
-            <mat-checkbox formControlName="autoAllocate">
-                Auto Allocate
-            </mat-checkbox>
+    </div>
 
-        </div>
+    <div class="dialog-actions">
 
-        <div class="actions">
+        <button mat-stroked-button type="button" mat-dialog-close [disabled]="loading">
 
-            <button mat-stroked-button type="button" mat-dialog-close [disabled]="loading">
-                Cancel
-            </button>
+            Cancel
 
-            <button mat-flat-button color="primary" type="submit"
-                [disabled]="loading || form.invalid || insufficientFunds">
+        </button>
 
-                <mat-icon *ngIf="!loading">
-                    payments
-                </mat-icon>
+        <button mat-flat-button color="primary" type="submit" (click)="submit()"
+            [disabled]="loading || form.invalid || insufficientFunds">
 
-                {{ loading ? 'Processing...' : 'Process Payment' }}
+            <mat-icon *ngIf="!loading">
+                payments
+            </mat-icon>
 
-            </button>
+            {{
+            loading
+            ? 'Processing...'
+            : 'Process Payment'
+            }}
 
-        </div>
+        </button>
 
-    </form>
+    </div>
 
 </div>

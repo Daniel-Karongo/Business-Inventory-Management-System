@@ -1,13 +1,14 @@
 package com.IntegrityTechnologies.business_manager.modules.finance.accounting.replay;
 
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.LedgerEntry;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.LedgerEntryDTO;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountBalanceRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.LedgerEntryRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.corporate_tax.repository.CorporateTaxLedgerProjectionRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.repository.VatLedgerProjectionRepository;
-import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
+import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
@@ -28,6 +29,7 @@ public class FinancialProjectionReplayService {
     private final BranchTenantGuard branchTenantGuard;
     private final VatLedgerProjectionRepository vatProjectionRepository;
     private final CorporateTaxLedgerProjectionRepository corporateProjectionRepository;
+    private final AccountBalanceRepository accountBalanceRepository;
 
     @Transactional
     public void replayBranch(UUID branchId) {
@@ -35,6 +37,11 @@ public class FinancialProjectionReplayService {
         branchTenantGuard.validate(branchId);
 
         UUID tenantId = TenantContext.getTenantId();
+
+        accountBalanceRepository.deleteBranchBalances(
+                tenantId,
+                branchId
+        );
 
         vatProjectionRepository.deleteByTenantIdAndBranchId(
                 tenantId,
@@ -77,6 +84,8 @@ public class FinancialProjectionReplayService {
                         group.stream()
                                 .map(e -> new LedgerEntryDTO(
                                         e.getAccount().getId(),
+                                        e.getAccount().getType(),
+                                        e.getAccount().getRole(),
                                         e.getDirection(),
                                         e.getAmount()
                                 ))

@@ -57,7 +57,7 @@ export class CreateExpenseDialogComponent implements OnInit {
             new Date().toISOString().substring(0, 10),
             Validators.required
         ],
-        autoPay: [false],
+        autoPay: [true],
         reference: ['']
     });
 
@@ -178,7 +178,17 @@ export class CreateExpenseDialogComponent implements OnInit {
                             )
                             .filter(a =>
                                 a.role !== 'CORPORATE_TAX_EXPENSE'
+                            )
+                            .filter(a =>
+                                a.role !== 'COGS'
                             );
+
+                    if (this.expenseAccounts.length === 1) {
+                        this.form.patchValue({
+                            expenseAccountId:
+                                this.expenseAccounts[0].id
+                        });
+                    }
                 }
             });
     }
@@ -195,8 +205,31 @@ export class CreateExpenseDialogComponent implements OnInit {
                 )
             )
             .subscribe({
-                next: accounts =>
-                    this.fundingAccounts = accounts
+                next: accounts => {
+
+                    this.fundingAccounts = accounts;
+
+                    if (!accounts.length) {
+                        return;
+                    }
+
+                    const preferred =
+                        accounts.find(a =>
+                            (a.role || '')
+                                .toUpperCase()
+                                .includes('CASH')
+                        )
+                        ?? accounts.find(a =>
+                            (a.role || '')
+                                .toUpperCase()
+                                .includes('BANK')
+                        )
+                        ?? accounts[0];
+
+                    this.form.patchValue({
+                        fundingAccountId: preferred.id
+                    });
+                }
             });
     }
 

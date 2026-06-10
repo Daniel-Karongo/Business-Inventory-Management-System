@@ -2,7 +2,7 @@ package com.IntegrityTechnologies.business_manager.modules.stock.onboarding.cont
 
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
 import com.IntegrityTechnologies.business_manager.config.response.ApiResponse;
-import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingRequest;
+import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.BulkStockOnboardingRequest;
 import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.service.StockOnboardingBulkService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,9 +20,8 @@ public class StockOnboardingBulkController {
     @PostMapping
     public ApiResponse bulkOnboard(
             @RequestBody
-            BulkRequest<StockOnboardingRequest> request
+            BulkRequest<BulkStockOnboardingRequest> request
     ) {
-
         return new ApiResponse(
                 "success",
                 "Bulk onboarding processed",

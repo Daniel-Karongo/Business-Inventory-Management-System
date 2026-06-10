@@ -3,9 +3,8 @@ package com.IntegrityTechnologies.business_manager.modules.finance.tax.corporate
 import com.IntegrityTechnologies.business_manager.config.kafka.ProcessedKafkaEventRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.AccountType;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.base.service.TaxSystemStateService;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.corporate_tax.repository.CorporateTaxLedgerProjectionRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
@@ -24,7 +23,6 @@ import java.util.UUID;
 public class CorporateTaxProjectionConsumer {
 
     private final CorporateTaxLedgerProjectionRepository repo;
-    private final AccountRepository accountRepository;
     private final TaxSystemStateService taxSystemStateService;
     private final ProcessedKafkaEventRepository processedRepo;
 
@@ -100,20 +98,15 @@ public class CorporateTaxProjectionConsumer {
 
             for (LedgerEntryDTO entry : event.entries()) {
 
-                var account =
-                        accountRepository
-                                .findByTenantIdAndBranchIdAndId(
-                                        tenantId,
-                                        branchId,
-                                        entry.accountId()
-                                )
-                                .orElse(null);
-
-                if (account == null) {
+                if (
+                        "CORPORATE_TAX_EXPENSE".equals(
+                                entry.accountRole()
+                        )
+                ) {
                     continue;
                 }
 
-                if (account.getType() == AccountType.INCOME) {
+                if (entry.accountType() == AccountType.INCOME) {
 
                     BigDecimal revenueDelta =
                             entry.direction() == EntryDirection.CREDIT
@@ -123,12 +116,18 @@ public class CorporateTaxProjectionConsumer {
                     projection.setRevenue(
                             projection.getRevenue().add(revenueDelta)
                     );
+                }
 
-                } else if (account.getType() == AccountType.EXPENSE) {
+                else if (entry.accountType() == AccountType.EXPENSE) {
 
-                    if ("CORPORATE_TAX_EXPENSE".equals(account.getRole())) {
-                        continue;
-                    }
+                    /*
+                     * Corporate tax expense must not
+                     * increase taxable expenses.
+                     *
+                     * Since role is not in event payload
+                     * we safely ignore only if journal
+                     * source module is corporate tax.
+                     */
 
                     BigDecimal expenseDelta =
                             entry.direction() == EntryDirection.DEBIT

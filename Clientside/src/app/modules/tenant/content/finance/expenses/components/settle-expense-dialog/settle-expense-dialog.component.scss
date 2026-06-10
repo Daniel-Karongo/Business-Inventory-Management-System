@@ -1,62 +1,114 @@
 :host {
     display: block;
     width: 100%;
+    max-height: 100%;
 }
 
-mat-dialog-content {
-    display: block;
-    overflow: visible !important;
-    max-height: none !important;
-    padding-right: 4px;
+.dialog-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 88vh;
+    min-height: 0;
 }
 
-mat-dialog-actions {
+.dialog-header {
+    flex-shrink: 0;
+    padding: 24px 24px 18px;
+    border-bottom: 1px solid var(--border);
+
+    background:
+        linear-gradient(180deg,
+            rgba(59, 130, 246, 0.06),
+            transparent);
+}
+
+.dialog-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.dialog-subtitle {
+    margin-top: 6px;
+    color: var(--text-secondary);
+    font-size: .875rem;
+}
+
+.dialog-content {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    padding: 24px;
+
+    min-height: 0;
+}
+
+.dialog-actions {
     flex-shrink: 0;
 
-    background: var(--surface);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+
+    padding: 18px 24px;
 
     border-top: 1px solid var(--border);
-
-    padding-top: 12px;
+    background: var(--surface);
 }
 
 .expense-summary {
-    margin-bottom: 20px;
-}
-
-.summary-card {
-    padding: 16px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    margin-bottom: 16px;
-}
-
-.description {
-    margin-top: 6px;
-    font-size: 1rem;
-    font-weight: 600;
+    margin-bottom: 24px;
 }
 
 .summary-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
+    grid-template-columns:
+        repeat(auto-fit, minmax(220px, 1fr));
+
+    gap: 16px;
 }
 
-.summary-item {
-    padding: 14px;
-    border-radius: 12px;
+.summary-card {
+    padding: 18px;
+    border-radius: 14px;
     border: 1px solid var(--border);
+
+    background:
+        linear-gradient(180deg,
+            rgba(255, 255, 255, .02),
+            transparent);
+}
+
+.expense-card {
+    margin-bottom: 16px;
 }
 
 .label {
     font-size: .75rem;
     color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.description {
+    margin-top: 8px;
+
+    font-size: .95rem;
+    line-height: 1.6;
+
+    word-break: break-word;
+    white-space: pre-wrap;
+
+    max-height: 180px;
+    overflow-y: auto;
 }
 
 .value {
-    margin-top: 6px;
-    font-size: 1.1rem;
+    margin-top: 10px;
+
+    font-size: 1.25rem;
     font-weight: 700;
 }
 
@@ -70,8 +122,10 @@ mat-dialog-actions {
 
 .form-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 18px;
 }
 
 .full-width {
@@ -80,21 +134,59 @@ mat-dialog-actions {
 
 .account-balance {
     grid-column: 1 / -1;
-    padding: 12px 14px;
-    border-radius: 10px;
-    background: rgba(34, 197, 94, .08);
-    border: 1px solid rgba(34, 197, 94, .12);
+
+    padding: 16px;
+    border-radius: 14px;
+
+    background:
+        rgba(34, 197, 94, .08);
+
+    border:
+        1px solid rgba(34, 197, 94, .18);
 }
 
-.account-balance strong {
-    display: block;
-    margin-top: 4px;
+.balance-label {
+    font-size: .75rem;
+    color: var(--text-secondary);
+}
+
+.balance-value {
+    margin-top: 6px;
+
+    font-size: 1.1rem;
+    font-weight: 700;
+
+    color: #16a34a;
+}
+
+mat-form-field {
+    width: 100%;
 }
 
 @media (max-width: 768px) {
+
+    .dialog-header {
+        padding: 18px;
+    }
+
+    .dialog-content {
+        padding: 18px;
+    }
+
+    .dialog-actions {
+        padding: 16px 18px;
+        flex-direction: column-reverse;
+    }
+
+    .dialog-actions button {
+        width: 100%;
+    }
 
     .form-grid {
         grid-template-columns: 1fr;
     }
 
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
 }

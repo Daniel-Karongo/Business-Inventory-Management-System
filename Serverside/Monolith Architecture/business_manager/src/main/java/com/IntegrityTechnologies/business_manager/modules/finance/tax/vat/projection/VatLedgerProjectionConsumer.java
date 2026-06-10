@@ -3,8 +3,8 @@ package com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.proje
 import com.IntegrityTechnologies.business_manager.config.kafka.ProcessedKafkaEventRepository;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.adapters.AccountingAccounts;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.enums.EntryDirection;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.dto.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.JournalPostedEvent;
+import com.IntegrityTechnologies.business_manager.modules.finance.accounting.events.LedgerEntryDTO;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.model.VatLedgerProjection;
 import com.IntegrityTechnologies.business_manager.modules.finance.tax.vat.repository.VatLedgerProjectionRepository;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;

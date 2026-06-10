@@ -143,6 +143,24 @@
     font-weight: 600;
 }
 
+.bulk-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.bulk-warning {
+    font-size: 13px;
+    color: var(--warn-color, #ef4444);
+    font-weight: 500;
+}
+
+.row-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
 /* =========================================================
    TABLE
 ========================================================= */

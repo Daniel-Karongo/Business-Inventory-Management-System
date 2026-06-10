@@ -3,20 +3,19 @@ package com.IntegrityTechnologies.business_manager.modules.stock.onboarding.serv
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkOptions;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkRequest;
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkResult;
-import com.IntegrityTechnologies.business_manager.exception.ExpectedConcurrencyException;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.expense.dto.CreateOperationalExpenseRequest;
+import com.IntegrityTechnologies.business_manager.modules.finance.ap.expense.service.OperationalExpenseService;
 import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.time.LocalDate;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -24,15 +23,10 @@ public class StockOnboardingBulkService {
 
     private final StockOnboardingService onboardingService;
     private final StockOnboardingValidationService validationService;
+    private final OperationalExpenseService operationalExpenseService;
 
     @PersistenceContext
     private EntityManager entityManager;
-
-    public StockOnboardingResponse executeRow(
-            StockOnboardingRequest row
-    ) {
-        return onboardingService.onboard(row);
-    }
 
     private String dedupeKey(
             StockOnboardingRequest row
@@ -83,14 +77,31 @@ public class StockOnboardingBulkService {
 
     @Transactional
     public BulkResult<StockOnboardingBulkPreviewResult> bulkOnboard(
-            BulkRequest<StockOnboardingRequest> request
+            BulkRequest<BulkStockOnboardingRequest> request
     ) {
 
         BulkResult<StockOnboardingBulkPreviewResult> result =
                 new BulkResult<>();
 
         if (request == null
-                || request.getItems() == null) {
+                || request.getItems() == null
+                || request.getItems().isEmpty()) {
+            return result;
+        }
+
+        if (request.getItems().size() != 1) {
+            throw new IllegalArgumentException(
+                    "Exactly one bulk payload is expected"
+            );
+        }
+
+        BulkStockOnboardingRequest payload =
+                request.getItems().get(0);
+
+        List<StockOnboardingRequest> rows =
+                payload.getRows();
+
+        if (rows == null || rows.isEmpty()) {
             return result;
         }
 
@@ -100,7 +111,7 @@ public class StockOnboardingBulkService {
                         : new BulkOptions();
 
         result.setTotal(
-                request.getItems().size()
+                rows.size()
         );
 
         List<StockOnboardingBulkPreviewRow> previewRows =
@@ -124,12 +135,12 @@ public class StockOnboardingBulkService {
          * =====================================================
          */
 
-        for (int i = 0; i < request.getItems().size(); i++) {
+        for (int i = 0; i < rows.size(); i++) {
 
             int rowNumber = i + 1;
 
             StockOnboardingRequest row =
-                    request.getItems().get(i);
+                    rows.get(i);
 
             try {
 
@@ -285,10 +296,18 @@ public class StockOnboardingBulkService {
          */
 
         for (StockOnboardingRequest row : validatedRows) {
-            onboardingService.onboard(row);
+
+            onboardingService.onboard(
+                    stripExpenses(row)
+            );
+
             entityManager.flush();
             entityManager.clear();
         }
+
+        processBulkExpenses(
+                payload
+        );
 
         result.setSuccess(
                 result.getTotal() - result.getFailed()
@@ -306,5 +325,114 @@ public class StockOnboardingBulkService {
         );
 
         return result;
+    }
+
+    private StockOnboardingRequest stripExpenses(
+            StockOnboardingRequest source
+    ) {
+        StockOnboardingRequest copy =
+                new StockOnboardingRequest();
+
+        BeanUtils.copyProperties(
+                source,
+                copy
+        );
+
+        copy.setOperationalExpenses(null);
+        copy.setAutoPayOperationalExpenses(false);
+
+        return copy;
+    }
+
+    private void processBulkExpenses(
+            BulkStockOnboardingRequest payload
+    ) {
+        if (
+                payload.getOperationalExpenses() == null
+                        || payload.getOperationalExpenses().isEmpty()
+        ) {
+            return;
+        }
+
+        UUID branchId = null;
+        LocalDate accountingDate = null;
+
+        if (
+                payload.getRows() != null
+                        && !payload.getRows().isEmpty()
+        ) {
+            branchId =
+                    payload.getRows()
+                            .get(0)
+                            .getBranchId();
+
+            accountingDate =
+                    payload.getRows()
+                            .get(0)
+                            .getAccountingDate();
+        }
+
+        int index = 0;
+
+        for (var expense :
+                payload.getOperationalExpenses()) {
+
+            CreateOperationalExpenseRequest create =
+                    new CreateOperationalExpenseRequest();
+
+            create.setBranchId(
+                    branchId
+            );
+
+            create.setExpenseAccountId(
+                    expense.getExpenseAccountId()
+            );
+
+            create.setFundingAccountId(
+                    payload.getFundingAccountId()
+            );
+
+            create.setDescription(
+                    expense.getDescription()
+            );
+
+            create.setAmount(
+                    expense.getAmount()
+            );
+
+            create.setAccountingDate(
+                    accountingDate
+            );
+
+            create.setAutoPay(
+                    Boolean.TRUE.equals(
+                            payload.getAutoPayOperationalExpenses()
+                    )
+            );
+
+            create.setReference(
+                    "BULK-EXPENSE-" + index
+            );
+
+            create.setSourceModule(
+                    "BULK_STOCK_ONBOARDING"
+            );
+
+            create.setSourceId(
+                    UUID.nameUUIDFromBytes(
+                            (
+                                    "BULK-EXPENSE-"
+                                            + index
+                            ).getBytes()
+                    )
+            );
+
+            operationalExpenseService
+                    .createExpense(
+                            create
+                    );
+
+            index++;
+        }
     }
 }

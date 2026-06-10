@@ -60,7 +60,7 @@ export class SettleExpenseDialogComponent implements OnInit {
             description: string;
             amount: number;
             settledAmount: number;
-            outstandingAmount: number;
+            outstandingAmount: number
         }
     ) { }
 
@@ -106,7 +106,7 @@ export class SettleExpenseDialogComponent implements OnInit {
                     this.dialogRef.close(true);
                 },
                 error: err => {
-                    this.snack.open(err?.message || 'Settlement failed', 'Close', { duration: 6000 });
+                    this.snack.open(err?.error.message || 'Settlement failed', 'Close', { duration: 6000 });
                 }
             });
     }
@@ -121,7 +121,31 @@ export class SettleExpenseDialogComponent implements OnInit {
                 finalize(() => this.loading = false)
             )
             .subscribe({
-                next: accounts => this.fundingAccounts = accounts,
+                next: accounts => {
+
+                    this.fundingAccounts = accounts;
+
+                    if (!accounts.length) {
+                        return;
+                    }
+
+                    const preferred =
+                        accounts.find(a =>
+                            (a.role || '')
+                                .toUpperCase()
+                                .includes('CASH')
+                        )
+                        ?? accounts.find(a =>
+                            (a.role || '')
+                                .toUpperCase()
+                                .includes('BANK')
+                        )
+                        ?? accounts[0];
+
+                    this.form.patchValue({
+                        fundingAccountId: preferred.id
+                    });
+                },
                 error: err => {
                     this.snack.open(
                         err?.message || 'Failed to load funding accounts',

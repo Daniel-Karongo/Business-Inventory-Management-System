@@ -3,7 +3,6 @@ package com.IntegrityTechnologies.business_manager.modules.stock.onboarding.serv
 import com.IntegrityTechnologies.business_manager.config.caffeine.CacheInvalidationService;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.domain.Account;
 import com.IntegrityTechnologies.business_manager.modules.finance.accounting.repository.AccountRepository;
-import com.IntegrityTechnologies.business_manager.modules.finance.accounting.service.AutoFundingService;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.expense.dto.CreateOperationalExpenseRequest;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.expense.service.OperationalExpenseService;
 import com.IntegrityTechnologies.business_manager.modules.finance.ap.payment.dto.ProcessSupplierPaymentRequest;
@@ -70,7 +69,6 @@ public class StockOnboardingService {
     private final ReceiveAndInvoiceService receiveAndInvoiceService;
     private final TaxProperties taxProperties;
     private final VatCalculationService vatCalculationService;
-    private final AutoFundingService autoFundingService;
     private final OperationalExpenseService operationalExpenseService;
     private final SupplierPaymentProcessingService supplierPaymentProcessingService;
     private final AccountRepository accountRepository;
@@ -139,36 +137,36 @@ public class StockOnboardingService {
                 req.getAccountingDate()
         );
 
-        BigDecimal supplierTotal =
-                Boolean.TRUE.equals(
-                        req.getAutoPaySuppliers()
-                )
-                        ? totalSupplierCost(req)
-                        : BigDecimal.ZERO;
-
-        BigDecimal expenseTotal =
-                Boolean.TRUE.equals(
-                        req.getAutoPayOperationalExpenses()
-                )
-                        ? totalOperationalExpenses(req)
-                        : BigDecimal.ZERO;
-
-        BigDecimal requiredFunding =
-                supplierTotal.add(
-                        expenseTotal
-                );
-
-        if (
-                requiredFunding.compareTo(BigDecimal.ZERO) > 0
-        ) {
-            autoFundingService.ensureFundingAvailable(
-                    req.getBranchId(),
-                    req.getFundingAccountId(),
-                    requiredFunding,
-                    req.getAccountingDate(),
-                    req.getReference()
-            );
-        }
+//        BigDecimal supplierTotal =
+//                Boolean.TRUE.equals(
+//                        req.getAutoPaySuppliers()
+//                )
+//                        ? totalSupplierCost(req)
+//                        : BigDecimal.ZERO;
+//
+//        BigDecimal expenseTotal =
+//                Boolean.TRUE.equals(
+//                        req.getAutoPayOperationalExpenses()
+//                )
+//                        ? totalOperationalExpenses(req)
+//                        : BigDecimal.ZERO;
+//
+//        BigDecimal requiredFunding =
+//                supplierTotal.add(
+//                        expenseTotal
+//                );
+//
+//        if (
+//                requiredFunding.compareTo(BigDecimal.ZERO) > 0
+//        ) {
+//            autoFundingService.ensureFundingAvailable(
+//                    req.getBranchId(),
+//                    req.getFundingAccountId(),
+//                    requiredFunding,
+//                    req.getAccountingDate(),
+//                    req.getReference()
+//            );
+//        }
 
         ReceiveAndInvoiceResult result =
                 receiveAndInvoiceService.execute(
@@ -999,49 +997,6 @@ public class StockOnboardingService {
         r.setSuppliers(supplierUnits);
 
         return r;
-    }
-
-    private BigDecimal totalSupplierCost(
-            StockOnboardingRequest req
-    ) {
-
-        BigDecimal total =
-                BigDecimal.ZERO;
-
-        for (var supplier : req.getSuppliers()) {
-
-            total =
-                    total.add(
-                            supplier.getUnitCost()
-                                    .multiply(
-                                            BigDecimal.valueOf(
-                                                    supplier.getUnitsSupplied()
-                                            )
-                                    )
-                    );
-        }
-
-        return total;
-    }
-
-    private BigDecimal totalOperationalExpenses(
-            StockOnboardingRequest req
-    ) {
-
-        if (req.getOperationalExpenses() == null) {
-            return BigDecimal.ZERO;
-        }
-
-        return req.getOperationalExpenses()
-                .stream()
-                .map(
-                        StockOnboardingRequest
-                                .OperationalExpenseInput::getAmount
-                )
-                .reduce(
-                        BigDecimal.ZERO,
-                        BigDecimal::add
-                );
     }
 
     private void autoPaySuppliers(

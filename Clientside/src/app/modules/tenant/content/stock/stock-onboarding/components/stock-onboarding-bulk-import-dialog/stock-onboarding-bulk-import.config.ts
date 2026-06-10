@@ -5,6 +5,7 @@ import {
     BulkRequest
 } from '../../../../../../../shared/models/bulk-import.model';
 import {
+    BulkStockOnboardingRequest,
     StockOnboardingRequest
 } from '../../../models/stock-onboarding.model';
 
