@@ -77,6 +77,7 @@ import {
     debounceTime,
     distinctUntilChanged,
     filter,
+    finalize,
     of,
     switchMap,
     tap
@@ -2139,15 +2140,25 @@ export class StockListComponent
        LOADERS
     ========================================================= */
 
-    private loadSupportingData() {
+
+
+    private loadSupportingData(): void {
+
+        this.loading = true;
 
         this.branchService
             .getAllLegacy()
+            .pipe(
+                finalize(() => {
+                    this.loading = false;
+                })
+            )
             .subscribe({
+
                 next: branches => {
 
                     this.branches =
-                        branches;
+                        branches ?? [];
 
                     let selectedBranchId:
                         string | null = null;
@@ -2161,11 +2172,12 @@ export class StockListComponent
                             currentBranch;
 
                     } else if (
-                        branches.length === 1
+                        this.branches.length === 1
                     ) {
 
                         selectedBranchId =
-                            branches[0].id;
+                            this.branches[0].id;
+
                     }
 
                     if (selectedBranchId) {
@@ -2185,11 +2197,12 @@ export class StockListComponent
                         this.branchId$.next(
                             selectedBranchId
                         );
+
                     }
 
                     this.workspace
                         .setBranches(
-                            branches.map(
+                            this.branches.map(
                                 branch => ({
                                     id:
                                         branch.id,
@@ -2198,8 +2211,24 @@ export class StockListComponent
                                 })
                             )
                         );
+
+                },
+
+                error: err => {
+
+                    this.rows = [];
+
+                    this.total = 0;
+
+                    console.error(
+                        'Failed to load branches',
+                        err
+                    );
+
                 }
+
             });
+
     }
 
     private reload() {

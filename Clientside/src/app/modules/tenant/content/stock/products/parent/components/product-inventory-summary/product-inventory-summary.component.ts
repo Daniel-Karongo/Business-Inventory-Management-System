@@ -1,13 +1,38 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, OnChanges } from '@angular/core';
+import {
+    Component,
+    Input,
+    OnChanges
+} from '@angular/core';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+
 import { Router } from '@angular/router';
 
-import { InventoryService } from '../../../../inventory/services/inventory.service';
-import { InventoryResponse, InventoryWorkspaceResponse } from '../../../../models/inventory-response.model';
-import { Product } from '../../../../models/product.model';
+import { MatDialog } from '@angular/material/dialog';
+
+import { InventoryService }
+    from '../../../../inventory/services/inventory.service';
+
+import {
+    InventoryResponse,
+    InventoryWorkspaceResponse
+} from '../../../../models/inventory-response.model';
+
+import { Product }
+    from '../../../../models/product.model';
+
+import { ReceiveStockDialogComponent }
+    from '../../../../inventory/components/receive-stock-dialog/receive-stock-dialog.component';
+
+import { TransferStockDialogComponent }
+    from '../../../../inventory/components/transfer-stock-dialog/transfer-stock-dialog.component';
+
+import { AdjustStockDialogComponent }
+    from '../../../../inventory/components/adjust-stock-dialog/adjust-stock-dialog.component';
+import { BranchContextService } from '../../../../../../../../core/services/branch-context.service';
 
 @Component({
     selector: 'app-product-inventory-summary',
@@ -32,7 +57,9 @@ export class ProductInventorySummaryComponent implements OnChanges {
 
     constructor(
         private inventoryService: InventoryService,
-        private router: Router
+        private router: Router,
+        private dialog: MatDialog,
+        private branchContext: BranchContextService
     ) { }
 
     ngOnChanges(): void {
@@ -58,6 +85,10 @@ export class ProductInventorySummaryComponent implements OnChanges {
                     this.loading = false;
                 }
             });
+    }
+
+    get canTransferStock(): boolean {
+        return this.branchContext.branches.length > 1;
     }
 
     averageMargin(): number {
@@ -124,5 +155,144 @@ export class ProductInventorySummaryComponent implements OnChanges {
                 }
             }
         );
+    }
+
+    receiveStock(
+        row: InventoryWorkspaceResponse
+    ): void {
+
+        const ref =
+            this.dialog.open(
+                ReceiveStockDialogComponent,
+                {
+                    width: '720px',
+                    maxWidth: '95vw',
+                    data: {
+                        productId:
+                            row.productId,
+
+                        productName:
+                            row.productName,
+
+                        productVariantId:
+                            row.productVariantId,
+
+                        classification:
+                            row.productClassification,
+
+                        branchId:
+                            row.branchId,
+
+                        branchName:
+                            row.branchName
+                    }
+                }
+            );
+
+        ref.afterClosed()
+            .subscribe(success => {
+
+                if (success) {
+
+                    this.ngOnChanges();
+
+                }
+
+            });
+
+    }
+
+    transferStock(
+        row: InventoryWorkspaceResponse
+    ): void {
+
+        const ref =
+            this.dialog.open(
+                TransferStockDialogComponent,
+                {
+                    width: '720px',
+                    maxWidth: '95vw',
+
+                    data: {
+
+                        productVariantId:
+                            row.productVariantId,
+
+                        productName:
+                            row.productName,
+
+                        classification:
+                            row.productClassification,
+
+                        fromBranchId:
+                            row.branchId,
+
+                        fromBranchName:
+                            row.branchName,
+
+                        available:
+                            row.quantityAvailable,
+
+                        averageCost:
+                            row.averageCost
+                    }
+                }
+            );
+
+        ref.afterClosed()
+            .subscribe(success => {
+
+                if (success) {
+
+                    this.ngOnChanges();
+
+                }
+
+            });
+
+    }
+
+    adjustStock(
+        row: InventoryWorkspaceResponse
+    ): void {
+
+        const ref =
+            this.dialog.open(
+                AdjustStockDialogComponent,
+                {
+                    width: '560px',
+                    maxWidth: '95vw',
+
+                    data: {
+
+                        productVariantId:
+                            row.productVariantId,
+
+                        productName:
+                            row.productName,
+
+                        classification:
+                            row.productClassification,
+
+                        branchId:
+                            row.branchId,
+
+                        branchName:
+                            row.branchName
+                    }
+                }
+            );
+
+        ref.afterClosed()
+            .subscribe(success => {
+
+                if (success) {
+
+                    this.ngOnChanges();
+
+                }
+
+            });
+
     }
 }

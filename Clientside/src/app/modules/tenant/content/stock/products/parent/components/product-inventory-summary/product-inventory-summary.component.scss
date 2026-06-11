@@ -283,6 +283,31 @@
     flex-wrap: wrap;
 }
 
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.actions button {
+
+    color: var(--text-secondary);
+
+    transition:
+        color 150ms ease,
+        transform 150ms ease;
+
+}
+
+.actions button:hover {
+
+    color: var(--active);
+
+    transform: translateY(-1px);
+
+}
+
 /* =========================================================
    EMPTY
 ========================================================= */
@@ -389,11 +414,6 @@
     }
 
     .actions {
-        flex-direction: column;
+        justify-content: center;
     }
-
-    .actions button {
-        width: 100%;
-    }
-
 }

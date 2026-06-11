@@ -1,6 +1,7 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   ApplicationConfig,
+  ErrorHandler,
   inject, isDevMode,
   provideAppInitializer,
   provideZoneChangeDetection
@@ -26,6 +27,7 @@ import { APP_DATE_FORMATS } from './core/services/date-formats';
 import { TenantBrandingService } from './core/services/tenant-branding.service';
 import { IconLoader } from './core/utils/icon-loader';
 import { AuthService } from './modules/auth/services/auth.service';
+import { GlobalErrorHandler } from './core/interceptors/global-error-handler.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -72,6 +74,11 @@ export const appConfig: ApplicationConfig = {
       branding.loadLogo();
     }),
 
+    {
+      provide: ErrorHandler,
+      useClass: GlobalErrorHandler
+    },
+    
     DatePipe
   ]
 };

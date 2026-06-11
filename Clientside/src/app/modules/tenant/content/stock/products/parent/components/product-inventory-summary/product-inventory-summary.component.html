@@ -275,23 +275,44 @@
 
                 <div class="actions">
 
-                    <button mat-stroked-button (click)="createSale(row)">
+                    <button mat-icon-button matTooltip="Create Sale" (click)="createSale(row)">
 
                         <mat-icon>
                             point_of_sale
                         </mat-icon>
 
-                        Sell
+                    </button>
+
+                    <button mat-icon-button matTooltip="Receive Stock" (click)="receiveStock(row)">
+
+                        <mat-icon>
+                            add_circle
+                        </mat-icon>
 
                     </button>
 
-                    <button mat-stroked-button (click)="openTransactions(row)">
+                    <button *ngIf="canTransferStock" mat-icon-button matTooltip="Transfer Stock"
+                        (click)="transferStock(row)">
+
+                        <mat-icon>
+                            swap_horiz
+                        </mat-icon>
+
+                    </button>
+
+                    <button mat-icon-button matTooltip="Adjust Stock" (click)="adjustStock(row)">
+
+                        <mat-icon>
+                            tune
+                        </mat-icon>
+
+                    </button>
+
+                    <button mat-icon-button matTooltip="View Transactions" (click)="openTransactions(row)">
 
                         <mat-icon>
                             history
                         </mat-icon>
-
-                        Transactions
 
                     </button>
 

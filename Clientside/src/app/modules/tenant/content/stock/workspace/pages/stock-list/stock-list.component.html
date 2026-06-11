@@ -641,7 +641,7 @@
 
                                 </button>
 
-                                <button mat-icon-button matTooltip="Transfer stock"
+                                <button *ngIf="showBranchFilter" mat-icon-button matTooltip="Transfer stock"
                                     (click)="openTransferDialog(row); $event.stopPropagation()">
 
                                     <mat-icon>
@@ -775,14 +775,17 @@
 
                         <div class="card-header-row">
 
-                            <div class="entity-chip" [ngClass]="{product: item.type === 'PRODUCT', variant: item.type === 'VARIANT', inventory: item.type === 'INVENTORY'}">
+                            <div class="entity-chip"
+                                [ngClass]="{product: item.type === 'PRODUCT', variant: item.type === 'VARIANT', inventory: item.type === 'INVENTORY'}">
 
                                 <mat-icon>
-                                    {{ item.type === 'PRODUCT' ? 'inventory_2' : item.type === 'VARIANT' ? 'category' : 'warehouse' }}
+                                    {{ item.type === 'PRODUCT' ? 'inventory_2' : item.type === 'VARIANT' ? 'category' :
+                                    'warehouse' }}
                                 </mat-icon>
 
                                 <span>
-                                    {{ item.type === 'PRODUCT' ? 'Product' : item.type === 'VARIANT' ? 'Variant' : 'Inventory' }}
+                                    {{ item.type === 'PRODUCT' ? 'Product' : item.type === 'VARIANT' ? 'Variant' :
+                                    'Inventory' }}
                                 </span>
 
                             </div>
@@ -797,7 +800,8 @@
                                     Low
                                 </div>
 
-                                <button *ngIf="expandable(item)" mat-icon-button class="card-expand-btn" (click)="toggleExpanded(item); $event.stopPropagation()">
+                                <button *ngIf="expandable(item)" mat-icon-button class="card-expand-btn"
+                                    (click)="toggleExpanded(item); $event.stopPropagation()">
 
                                     <mat-icon *ngIf="!item.loadingChildren">
                                         {{ item.expanded ? 'expand_more' : 'chevron_right' }}
@@ -821,14 +825,17 @@
 
                             <div class="card-thumbnail-wrapper">
 
-                                <img *ngIf="thumbnailForRow(item) as thumb; else mobileNoThumb" [src]="thumb" class="card-thumbnail clickable-thumbnail" alt="thumbnail" (click)="openThumbnail(item); $event.stopPropagation()">
+                                <img *ngIf="thumbnailForRow(item) as thumb; else mobileNoThumb" [src]="thumb"
+                                    class="card-thumbnail clickable-thumbnail" alt="thumbnail"
+                                    (click)="openThumbnail(item); $event.stopPropagation()">
 
                                 <ng-template #mobileNoThumb>
 
                                     <div class="card-thumbnail-placeholder">
 
                                         <mat-icon>
-                                            {{ item.type === 'PRODUCT' ? 'inventory_2' : item.type === 'VARIANT' ? 'category' : 'warehouse' }}
+                                            {{ item.type === 'PRODUCT' ? 'inventory_2' : item.type === 'VARIANT' ?
+                                            'category' : 'warehouse' }}
                                         </mat-icon>
 
                                     </div>
@@ -841,7 +848,8 @@
 
                                 <div class="card-title">
 
-                                    {{ item.type === 'PRODUCT' ? item.productName : item.type === 'VARIANT' ? item.variantName : item.branchName }}
+                                    {{ item.type === 'PRODUCT' ? item.productName : item.type === 'VARIANT' ?
+                                    item.variantName : item.branchName }}
 
                                 </div>
 
@@ -1033,11 +1041,7 @@
                                     (click)="toggleProductStatus(item); $event.stopPropagation()">
 
                                     <mat-icon>
-                                        {{
-                                        item.deleted
-                                        ? 'toggle_off'
-                                        : 'toggle_on'
-                                        }}
+                                        {{ item.deleted ? 'toggle_off' : 'toggle_on' }}
                                     </mat-icon>
 
                                 </button>
@@ -1066,7 +1070,7 @@
 
                                 </button>
 
-                                <button mat-icon-button matTooltip="Transfer stock"
+                                <button *ngIf="showBranchFilter" mat-icon-button matTooltip="Transfer stock"
                                     (click)="openTransferDialog(item); $event.stopPropagation()">
 
                                     <mat-icon>
