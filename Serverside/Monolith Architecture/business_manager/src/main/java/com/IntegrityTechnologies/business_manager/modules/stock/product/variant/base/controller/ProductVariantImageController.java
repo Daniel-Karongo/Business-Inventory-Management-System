@@ -47,6 +47,17 @@ public class ProductVariantImageController {
         );
     }
 
+    @GetMapping("/thumbnails/shared/{fileName:.+}")
+    public ResponseEntity<Resource> getSharedThumbnail(
+            @RequestParam UUID branchId,
+            @PathVariable String fileName
+    ) {
+        return service.getSharedThumbnail(
+                branchId,
+                fileName
+        );
+    }
+
     @GetMapping("/{variantId}/images/{fileName:.+}")
     public ResponseEntity<Resource> getVariantImage(
             @RequestParam UUID branchId,

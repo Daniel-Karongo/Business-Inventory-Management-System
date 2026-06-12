@@ -361,6 +361,23 @@ export class ProductVariantService
     );
   }
 
+  getSharedThumbnailBlob(
+    fileName: string,
+    branchId?: string
+  ) {
+    return this.http.get(
+      `${this.api}/product-variants/thumbnails/shared/${fileName}`,
+      {
+        params: {
+          branchId:
+            branchId ??
+            this.branchContext.currentBranch!
+        },
+        responseType: 'blob'
+      }
+    );
+  }
+
   downloadImagesZip(
     variantId: string,
     overrideBranchId?: string

@@ -20,6 +20,13 @@
                     <mat-icon>format_line_spacing</mat-icon>
                 </button>
 
+                <button mat-icon-button [class.active]="showThumbnails" matTooltip="Show thumbnails"
+                    (click)="toggleThumbnails()">
+                    <mat-icon>
+                        {{ showThumbnails ? 'image' : 'hide_image' }}
+                    </mat-icon>
+                </button>
+
                 <button mat-icon-button class="toolbar-toggle" (click)="toggleToolbar()" matTooltip="Filters">
                     <mat-icon>tune</mat-icon>
                 </button>
@@ -137,6 +144,26 @@
 
         </mat-form-field>
 
+        <mat-form-field appearance="fill">
+            <mat-label>Status</mat-label>
+
+            <mat-select [value]="filterType" (selectionChange)="setFilterType($event.value)">
+
+                <mat-option value="ACTIVE">
+                    Active
+                </mat-option>
+
+                <mat-option value="DELETED">
+                    Deleted
+                </mat-option>
+
+                <mat-option value="ALL">
+                    All
+                </mat-option>
+
+            </mat-select>
+        </mat-form-field>
+
     </div>
 
     <!-- =====================================================
@@ -168,7 +195,19 @@
 
         <div *ngIf="selectedIds.size" class="bulk-toolbar">
 
-            <div class="bulk-left">
+            <div *ngIf="bulkValidationError" class="bulk-error-banner">
+
+                <mat-icon>
+                    warning
+                </mat-icon>
+
+                <span>
+                    {{ bulkValidationError }}
+                </span>
+
+            </div>
+
+            <div class="bulk-left" *ngIf="!bulkValidationError">
 
                 <mat-icon>
                     check_circle
@@ -176,20 +215,40 @@
 
                 <span>
                     {{ selectedIds.size }}
-                    selected
+                    {{ selectedEntityLabel }}
                 </span>
 
             </div>
 
-            <div class="bulk-actions">
+            <div class="bulk-actions" *ngIf="!bulkValidationError">
 
-                <button mat-stroked-button color="warn" (click)="bulkDelete()">
+                <button *ngIf="canBulkSoftDelete()" mat-stroked-button color="warn" (click)="bulkDelete()">
 
                     <mat-icon>
                         delete
                     </mat-icon>
 
                     Delete
+
+                </button>
+
+                <button *ngIf="canBulkRestore()" mat-stroked-button color="primary" (click)="bulkRestore()">
+
+                    <mat-icon>
+                        restore
+                    </mat-icon>
+
+                    Restore
+
+                </button>
+
+                <button *ngIf="canBulkHardDelete()" mat-stroked-button color="warn" (click)="bulkHardDelete()">
+
+                    <mat-icon>
+                        delete_forever
+                    </mat-icon>
+
+                    Hard Delete
 
                 </button>
 
@@ -207,7 +266,7 @@
            TABLE VIEW
         ====================================================== -->
 
-        <div *ngIf="viewMode === 'table' && !isMobile" class="explorer-table-wrapper"
+        <div *ngIf="effectiveViewMode === 'table'" class="explorer-table-wrapper"
             [class.compact]="density === 'compact'" [class.comfortable]="density === 'comfortable'">
 
             <table mat-table [dataSource]="rows" class="w-full">
@@ -231,9 +290,8 @@
 
                     <td mat-cell *matCellDef="let row" class="actions-cell">
 
-                        <mat-checkbox (click)="$event.stopPropagation()" [checked]="isSelected(row)"
-                            (change)="toggleSelection(row)">
-
+                        <mat-checkbox *ngIf="isSelectable(row)" (click)="$event.stopPropagation()"
+                            [checked]="isSelected(row)" (change)="toggleSelection(row)">
                         </mat-checkbox>
 
                     </td>
@@ -318,42 +376,29 @@
 
                                             <!-- THUMBNAIL -->
 
-                                            <div class="thumbnail-wrapper">
+                                            <div *ngIf="showThumbnails" class="thumbnail-wrapper"
+                                                [appLazyThumbnail]="true" (visible)="ensureThumbnailLoaded(row)">
 
-                                                <img *ngIf="
-                                                        thumbnailForRow(row) as thumb;
-                                                        else noThumb
-                                                    " [src]="thumb" alt="thumbnail"
-                                                    class="thumbnail clickable-thumbnail" (click)="
-                                                        openThumbnail(row); 
-                                                        $event.stopPropagation()">
+                                                <img *ngIf="thumbnailForRow(row) as thumb;else noThumb" [src]="thumb"
+                                                    alt="thumbnail" class="thumbnail clickable-thumbnail"
+                                                    (click)="openThumbnail(row); $event.stopPropagation()">
 
                                                 <ng-template #noThumb>
-
                                                     <div class="thumbnail-placeholder">
-
                                                         <mat-icon>
-
                                                             <ng-container [ngSwitch]="row.type">
-
                                                                 <ng-container *ngSwitchCase="'PRODUCT'">
                                                                     inventory_2
                                                                 </ng-container>
-
                                                                 <ng-container *ngSwitchCase="'VARIANT'">
                                                                     category
                                                                 </ng-container>
-
                                                                 <ng-container *ngSwitchCase="'INVENTORY'">
                                                                     warehouse
                                                                 </ng-container>
-
                                                             </ng-container>
-
                                                         </mat-icon>
-
                                                     </div>
-
                                                 </ng-template>
 
                                             </div>
@@ -362,30 +407,56 @@
 
                                             <div class="product-cell">
 
-                                                <div class="product-name">
+                                                <div class="product-name-row">
+                                                    <div class="product-name">
 
-                                                    <ng-container [ngSwitch]="row.type">
+                                                        <ng-container [ngSwitch]="row.type">
 
-                                                        <ng-container *ngSwitchCase="'PRODUCT'">
+                                                            <ng-container *ngSwitchCase="'PRODUCT'">
 
-                                                            {{ row.productName }}
+                                                                <a class="entity-link"
+                                                                    [routerLink]="['/app/stock', row.productId]"
+                                                                    (click)="$event.stopPropagation()">
+
+                                                                    {{ row.productName }}
+
+                                                                </a>
+
+                                                            </ng-container>
+
+                                                            <ng-container *ngSwitchCase="'VARIANT'">
+
+                                                                <a class="entity-link"
+                                                                    [routerLink]="['/app/stock', row.productId]"
+                                                                    (click)="$event.stopPropagation()">
+
+                                                                    {{ row.variantName }}
+
+                                                                </a>
+
+                                                            </ng-container>
+
+                                                            <ng-container *ngSwitchCase="'INVENTORY'">
+
+                                                                <a class="entity-link"
+                                                                    [routerLink]="['/app/stock', row.productId]"
+                                                                    (click)="$event.stopPropagation()">
+
+                                                                    {{ row.productName }}
+
+                                                                </a>
+
+                                                            </ng-container>
 
                                                         </ng-container>
 
-                                                        <ng-container *ngSwitchCase="'VARIANT'">
+                                                    </div>
 
-                                                            {{ row.variantName }}
+                                                    <span *ngIf="row.deleted" class="deleted-pill">
 
-                                                        </ng-container>
+                                                        Deleted
 
-                                                        <ng-container *ngSwitchCase="'INVENTORY'">
-
-                                                            {{ row.branchName }}
-
-                                                        </ng-container>
-
-                                                    </ng-container>
-
+                                                    </span>
                                                 </div>
 
                                                 <div class="product-category">
@@ -394,22 +465,29 @@
 
                                                         <ng-container *ngSwitchCase="'PRODUCT'">
 
-                                                            {{ row.categoryName }}
+                                                            SKU:
+                                                            {{ row.productSku || '-' }}
+
+                                                            <span *ngIf="row.categoryName">
+                                                                •
+                                                                {{ row.categoryName }}
+                                                            </span>
 
                                                             •
 
                                                             {{ row.totalVariants }}
-
                                                             variants
 
                                                         </ng-container>
 
                                                         <ng-container *ngSwitchCase="'VARIANT'">
-
                                                             SKU:
-
                                                             {{ row.sku || '-' }}
 
+                                                            <span *ngIf="inventoryKnownMissing(row)"
+                                                                class="no-stock-chip">
+                                                                • No inventory
+                                                            </span>
                                                         </ng-container>
 
                                                         <ng-container *ngSwitchCase="'INVENTORY'">
@@ -445,23 +523,24 @@
                             <!-- VARIANT -->
                             <ng-container *ngIf="column.id === 'variant'">
                                 <ng-container [ngSwitch]="row.type">
-
                                     <span *ngSwitchCase="'VARIANT'">
                                         {{ row.variantName }}
                                     </span>
-
                                     <span *ngSwitchCase="'INVENTORY'">
                                         {{ row.variantName }}
                                     </span>
-
                                     <span *ngSwitchDefault>
                                         -
                                     </span>
-
                                 </ng-container>
                             </ng-container>
 
-                            <!-- SKU -->
+                            <!-- PRODUCT SKU -->
+                            <ng-container *ngIf="column.id === 'productSku'">
+                                {{ row.productSku || '-' }}
+                            </ng-container>
+
+                            <!-- VARIANT SKU -->
                             <ng-container *ngIf="column.id === 'variantSku'">
                                 {{ row.sku || '-' }}
                             </ng-container>
@@ -587,8 +666,8 @@
                                     </mat-icon>
                                 </button>
 
-                                <button mat-icon-button [disabled]="row.deleted" matTooltip="View Product"
-                                    [routerLink]="['/app/stock', row.productId]" [state]="{ deleted: row.deleted }">
+                                <button mat-icon-button matTooltip="View Product" (click)="$event.stopPropagation()"
+                                    [routerLink]="['/app/stock', row.productId]">
 
                                     <mat-icon>
                                         visibility
@@ -597,6 +676,7 @@
                                 </button>
 
                                 <button mat-icon-button [disabled]="row.deleted" matTooltip="Edit Product"
+                                    (click)="$event.stopPropagation()"
                                     [routerLink]="['/app/stock', row.productId, 'edit']"
                                     [state]="{ deleted: row.deleted }">
 
@@ -611,6 +691,15 @@
 
                                     <mat-icon>
                                         {{ row.deleted ? 'toggle_off' : 'toggle_on' }}
+                                    </mat-icon>
+
+                                </button>
+
+                                <button *ngIf="row.deleted" mat-icon-button color="warn" matTooltip="Hard Delete"
+                                    (click)="hardDeleteProduct(row); $event.stopPropagation()">
+
+                                    <mat-icon>
+                                        delete_forever
                                     </mat-icon>
 
                                 </button>
@@ -683,6 +772,16 @@
                                     </mat-icon>
                                 </button>
 
+                                <button *ngIf="inventoryKnownMissing(row)" mat-icon-button color="primary"
+                                    matTooltip="Receive Initial Stock"
+                                    (click)="receiveInitialStockForVariant(row); $event.stopPropagation()">
+
+                                    <mat-icon>
+                                        inventory_2
+                                    </mat-icon>
+
+                                </button>
+
                                 <button mat-icon-button matTooltip="View Variant Details"
                                     (click)="viewVariant(row); $event.stopPropagation()">
                                     <mat-icon>visibility</mat-icon>
@@ -716,6 +815,15 @@
                                     <mat-icon>restore</mat-icon>
                                 </button>
 
+                                <button *ngIf="row.deleted" mat-icon-button color="warn" matTooltip="Hard Delete"
+                                    (click)="hardDeleteVariant(row); $event.stopPropagation()">
+
+                                    <mat-icon>
+                                        delete_forever
+                                    </mat-icon>
+
+                                </button>
+
                             </ng-container>
 
                         </div>
@@ -734,9 +842,10 @@
                 <tr mat-row *matRowDef="
                         let row;
                         columns: displayedColumns;
-                    " class="explorer-row" [class.selected]="isSelected(row)" [class.deleted]="rowDeleted(row)"
-                    [class.clickable]="true" [class.level-0]="rowLevelValue(row) === 0"
-                    [class.level-1]="rowLevelValue(row) === 1" [class.level-2]="rowLevelValue(row) === 2">
+                    " class="explorer-row" (click)="isSelectable(row) && toggleSelection(row)"
+                    [class.selected]="isSelected(row)" [class.deleted]="rowDeleted(row)" [class.clickable]="true"
+                    [class.level-0]="rowLevelValue(row) === 0" [class.level-1]="rowLevelValue(row) === 1"
+                    [class.level-2]="rowLevelValue(row) === 2">
 
                 </tr>
 
@@ -748,10 +857,7 @@
            MOBILE / GRID VIEW
         ====================================================== -->
 
-        <div *ngIf="
-                viewMode === 'grid' ||
-                isMobile
-            " class="explorer-grid" [class.compact]="density === 'compact'"
+        <div *ngIf="effectiveViewMode === 'grid'" class="explorer-grid" [class.compact]="density === 'compact'"
             [class.comfortable]="density === 'comfortable'">
 
             <ng-container *ngFor="
@@ -759,21 +865,34 @@
                     trackBy: trackById
                 ">
 
-                <div class="projected-card-wrapper" [class.selected]="isSelected(item)"
-                    [class.deleted]="rowDeleted(item)">
+                <div class="projected-card-wrapper" (click)="isSelectable(item) && toggleSelection(item)"
+                    [class.selected]="isSelected(item)" [class.deleted]="rowDeleted(item)">
 
-                    <div class="stock-card" [class.expandable]="item.hasChildren" [class.expanded]="item.expanded"
-                        [ngClass]="{
+                    <div class="stock-card" [class.show-thumbnails]="showThumbnails"
+                        [class.expandable]="item.hasChildren" [class.expanded]="item.expanded" [ngClass]="{
                             product: item.type === 'PRODUCT',
                             variant: item.type === 'VARIANT',
                             inventory: item.type === 'INVENTORY'
                         }">
+
+                        <div *ngIf="isSelected(item)" class="selection-indicator">
+
+                            <mat-icon>
+                                check_circle
+                            </mat-icon>
+
+                        </div>
 
                         <!-- =====================================================
                              HIERARCHY HEADER
                         ====================================================== -->
 
                         <div class="card-header-row">
+
+                            <mat-checkbox *ngIf="isSelectable(item)" class="card-selection-checkbox"
+                                [checked]="isSelected(item)" (click)="$event.stopPropagation()"
+                                (change)="toggleSelection(item)">
+                            </mat-checkbox>
 
                             <div class="entity-chip"
                                 [ngClass]="{product: item.type === 'PRODUCT', variant: item.type === 'VARIANT', inventory: item.type === 'INVENTORY'}">
@@ -791,6 +910,12 @@
                             </div>
 
                             <div class="card-header-actions">
+
+                                <div *ngIf="item.deleted" class="status-pill deleted">
+
+                                    Deleted
+
+                                </div>
 
                                 <div *ngIf="item.outOfStock" class="status-pill danger">
                                     Out
@@ -823,33 +948,48 @@
 
                         <div class="card-top">
 
-                            <div class="card-thumbnail-wrapper">
+                            <ng-container *ngIf="showThumbnails; else gridNoThumbnailMode">
+                                <div class="card-thumbnail-wrapper" [appLazyThumbnail]="true"
+                                    (visible)="ensureThumbnailLoaded(item)">
 
-                                <img *ngIf="thumbnailForRow(item) as thumb; else mobileNoThumb" [src]="thumb"
-                                    class="card-thumbnail clickable-thumbnail" alt="thumbnail"
-                                    (click)="openThumbnail(item); $event.stopPropagation()">
+                                    <img *ngIf="thumbnailForRow(item) as thumb; else mobileNoThumb" [src]="thumb"
+                                        class="card-thumbnail clickable-thumbnail" alt="thumbnail"
+                                        (click)="openThumbnail(item); $event.stopPropagation()">
 
-                                <ng-template #mobileNoThumb>
+                                    <ng-template #mobileNoThumb>
+                                        <div class="card-thumbnail-placeholder">
+                                            <mat-icon>
+                                                {{
+                                                item.type === 'PRODUCT'
+                                                ? 'inventory_2'
+                                                : item.type === 'VARIANT'
+                                                ? 'category'
+                                                : 'warehouse'
+                                                }}
+                                            </mat-icon>
+                                        </div>
+                                    </ng-template>
+                                </div>
+                            </ng-container>
 
-                                    <div class="card-thumbnail-placeholder">
-
-                                        <mat-icon>
-                                            {{ item.type === 'PRODUCT' ? 'inventory_2' : item.type === 'VARIANT' ?
-                                            'category' : 'warehouse' }}
-                                        </mat-icon>
-
-                                    </div>
-
-                                </ng-template>
-
-                            </div>
+                            <ng-template #gridNoThumbnailMode></ng-template>
 
                             <div class="card-main">
 
                                 <div class="card-title">
 
-                                    {{ item.type === 'PRODUCT' ? item.productName : item.type === 'VARIANT' ?
-                                    item.variantName : item.branchName }}
+                                    <a class="entity-link" [routerLink]="['/app/stock', item.productId]"
+                                        (click)="$event.stopPropagation()">
+
+                                        {{
+                                        item.type === 'PRODUCT'
+                                        ? item.productName
+                                        : item.type === 'VARIANT'
+                                        ? item.variantName
+                                        : item.productName
+                                        }}
+
+                                    </a>
 
                                 </div>
 
@@ -859,13 +999,23 @@
 
                                         <ng-container *ngSwitchCase="'PRODUCT'">
 
-                                            {{ item.categoryName || 'Uncategorised' }}
+                                            SKU:
+                                            {{ item.productSku || '-' }}
+
+                                            <span *ngIf="item.categoryName">
+                                                •
+                                                {{ item.categoryName }}
+                                            </span>
 
                                         </ng-container>
 
                                         <ng-container *ngSwitchCase="'VARIANT'">
 
                                             {{ item.sku || 'No SKU' }}
+
+                                            <span *ngIf="inventoryKnownMissing(item)" class="no-stock-chip">
+                                                • No inventory
+                                            </span>
 
                                         </ng-container>
 
@@ -1019,7 +1169,7 @@
                                     </mat-icon>
                                 </button>
 
-                                <button mat-icon-button [disabled]="item.deleted" matTooltip="View Product"
+                                <button mat-icon-button matTooltip="View Product" (click)="$event.stopPropagation()"
                                     [routerLink]="['/app/stock', item.productId]">
 
                                     <mat-icon>
@@ -1029,6 +1179,7 @@
                                 </button>
 
                                 <button mat-icon-button [disabled]="item.deleted" matTooltip="Edit Product"
+                                    (click)="$event.stopPropagation()"
                                     [routerLink]="['/app/stock', item.productId, 'edit']">
 
                                     <mat-icon>
@@ -1042,6 +1193,15 @@
 
                                     <mat-icon>
                                         {{ item.deleted ? 'toggle_off' : 'toggle_on' }}
+                                    </mat-icon>
+
+                                </button>
+
+                                <button *ngIf="item.deleted" mat-icon-button color="warn" matTooltip="Hard Delete"
+                                    (click)="hardDeleteProduct(item); $event.stopPropagation()">
+
+                                    <mat-icon>
+                                        delete_forever
                                     </mat-icon>
 
                                 </button>
@@ -1110,6 +1270,16 @@
                                     </mat-icon>
                                 </button>
 
+                                <button *ngIf="inventoryKnownMissing(item)" mat-icon-button color="primary"
+                                    matTooltip="Receive Initial Stock"
+                                    (click)="receiveInitialStockForVariant(item); $event.stopPropagation()">
+
+                                    <mat-icon>
+                                        inventory_2
+                                    </mat-icon>
+
+                                </button>
+
                                 <button mat-icon-button matTooltip="View Variant Details"
                                     (click)="viewVariant(item); $event.stopPropagation()">
                                     <mat-icon>visibility</mat-icon>
@@ -1134,12 +1304,23 @@
                                     [matTooltip]="item.deleted ? 'Restore Variant' : 'Disable Variant'"
                                     (click)=" toggleVariantStatus(item); $event.stopPropagation()">
                                     <mat-icon>
-                                        {{
-                                        item.deleted
-                                        ? 'toggle_off'
-                                        : 'toggle_on'
-                                        }}
+                                        {{ item.deleted ? 'toggle_off' : 'toggle_on' }}
                                     </mat-icon>
+                                </button>
+
+                                <button *ngIf="item.deleted" mat-icon-button color="primary"
+                                    matTooltip="Restore Variant"
+                                    (click)="restoreVariant(item); $event.stopPropagation()">
+                                    <mat-icon>restore</mat-icon>
+                                </button>
+
+                                <button *ngIf="item.deleted" mat-icon-button color="warn" matTooltip="Hard Delete"
+                                    (click)="hardDeleteVariant(item); $event.stopPropagation()">
+
+                                    <mat-icon>
+                                        delete_forever
+                                    </mat-icon>
+
                                 </button>
 
                             </ng-container>

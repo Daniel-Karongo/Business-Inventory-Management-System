@@ -1,7 +1,9 @@
 import {
   Component,
   Input,
-  OnInit
+  OnChanges,
+  OnInit,
+  SimpleChanges
 } from '@angular/core';
 
 import {
@@ -79,7 +81,7 @@ import { ReasonDialogComponent } from '../../../../../../../../shared/components
   ]
 })
 export class VariantSummaryComponent
-  implements OnInit {
+  implements OnInit, OnChanges {
 
   @Input({ required: true })
   product!: Product;
@@ -101,6 +103,18 @@ export class VariantSummaryComponent
 
   ngOnInit(): void {
     this.load();
+  }
+
+  ngOnChanges(
+    changes: SimpleChanges
+  ): void {
+
+    if (
+      changes['product'] &&
+      !changes['product'].firstChange
+    ) {
+      this.load();
+    }
   }
 
   load(): void {

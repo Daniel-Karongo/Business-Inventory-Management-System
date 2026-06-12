@@ -8,10 +8,9 @@ import { BranchContextService } from '../../../../../../../core/services/branch-
 import { BulkResult } from '../../../../../../../shared/models/bulk-import.model';
 import {
   Product,
-  ProductCreateDTO,
   ProductImage,
   ProductImageAudit,
-  ProductUpdateDTO
+  StockWorkspaceProduct
 } from '../../../models/product.model';
 
 @Injectable({ providedIn: 'root' })
@@ -51,22 +50,17 @@ export class ProductService extends BaseApiService {
     branchId?: string;
     categoryIds?: number[];
     categoryId?: number;
-    name?: string;
-    description?: string;
     keyword?: string;
-    minPrice?: number;
-    maxPrice?: number;
     deleted?: boolean;
-    includeDeleted?: boolean;
     page?: number;
     size?: number;
     sortBy?: string;
     direction?: 'asc' | 'desc';
-    minSuppliers?: number;
-    maxSuppliers?: number;
     supplierId?: string;
   }) {
-    return this.get<PageWrapper<Product>>(
+    return this.get<
+      PageWrapper<StockWorkspaceProduct>
+    >(
       this.endpoints.search.base,
       {
         ...params,
@@ -77,7 +71,7 @@ export class ProductService extends BaseApiService {
 
   getById(
     id: string,
-    deleted?: boolean,
+    deleted?: boolean | null,
     overrideBranchId?: string
   ) {
     return this.get<ApiResponse<Product>>(
@@ -443,6 +437,21 @@ export class ProductService extends BaseApiService {
           branchId: this.resolveBranch(overrideBranchId),
           deleted
         }),
+        responseType: 'blob'
+      }
+    );
+  }
+
+  getSharedThumbnailBlob(
+    fileName: string,
+    branchId: string
+  ) {
+    return this.http.get(
+      `${this.api}/products/images/shared/${fileName}`,
+      {
+        params: {
+          branchId
+        },
         responseType: 'blob'
       }
     );

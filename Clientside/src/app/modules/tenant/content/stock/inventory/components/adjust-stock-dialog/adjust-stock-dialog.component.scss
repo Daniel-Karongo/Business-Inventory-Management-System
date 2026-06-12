@@ -1,36 +1,242 @@
-.dialog-title {
+:host {
+  display: block;
+  height: 100%;
+}
+
+/* ======================================================
+   SHELL
+====================================================== */
+
+.dialog-shell {
+  display: flex;
+  flex-direction: column;
+
+  height: 100%;
+  min-height: 0;
+
+  overflow: hidden;
+}
+
+/* ======================================================
+   HEADER
+====================================================== */
+
+.dialog-header {
+  flex: 0 0 auto;
+
+  padding: 24px;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.title-block h2 {
+  margin: 0;
+
+  font-size: 1.2rem;
   font-weight: 600;
 }
 
-.dialog-body {
+.subtitle {
+  margin-top: 4px;
+
+  color: var(--text-secondary);
+  font-size: .85rem;
+}
+
+/* ======================================================
+   CONTENT
+====================================================== */
+
+.dialog-content {
+  flex: 1 1 auto;
+
+  min-height: 0;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  padding: 24px !important;
+
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ======================================================
+   CARDS
+====================================================== */
+
+.context-card,
+.section-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.context-card {
+  padding: 18px;
+}
+
+.context-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.context-title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.context-meta {
+  margin-top: 4px;
+
+  color: var(--text-secondary);
+  font-size: .85rem;
+}
+
+.context-badge {
+  padding: 6px 10px;
+
+  border-radius: 999px;
+
+  background: rgba(220, 38, 38, .08);
+  color: #dc2626;
+
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.section-card {
+  padding: 18px;
+
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
 
-.context-card {
-  padding: 14px 16px;
-  border-radius: 8px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+.section-title {
+  font-size: .8rem;
+  font-weight: 700;
 
-  .product {
-    font-weight: 600;
-  }
+  text-transform: uppercase;
 
-  .meta {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-  }
+  color: var(--text-secondary);
 }
+
+/* ======================================================
+   GRID
+====================================================== */
 
 .grid-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 18px;
+
+  align-items: start;
 }
 
+.grid-2>* {
+  width: 100%;
+  min-width: 0;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+/* ======================================================
+   TIP
+====================================================== */
+
+.adjustment-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  padding: 14px;
+
+  border-radius: 12px;
+
+  background: rgba(0, 122, 255, .06);
+  border: 1px solid rgba(0, 122, 255, .12);
+}
+
+.adjustment-tip mat-icon {
+  width: 18px;
+  height: 18px;
+
+  font-size: 18px;
+
+  margin-top: 1px;
+
+  color: #007aff;
+
+  flex-shrink: 0;
+}
+
+.tip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tip-title {
+  font-size: .8rem;
+  font-weight: 600;
+
+  color: var(--text-primary);
+}
+
+.tip-text {
+  font-size: .85rem;
+  line-height: 1.45;
+
+  color: var(--text-secondary);
+}
+
+/* ======================================================
+   FOOTER
+====================================================== */
+
 .dialog-footer {
-  padding-top: 10px;
+  flex: 0 0 auto;
+
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+
+  padding: 18px 24px;
+
   border-top: 1px solid var(--border);
+
+  background: var(--surface);
+}
+
+/* ======================================================
+   MOBILE
+====================================================== */
+
+@media (max-width: 768px) {
+
+  .dialog-content {
+    padding: 16px !important;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .context-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dialog-footer {
+    padding: 16px;
+  }
 }

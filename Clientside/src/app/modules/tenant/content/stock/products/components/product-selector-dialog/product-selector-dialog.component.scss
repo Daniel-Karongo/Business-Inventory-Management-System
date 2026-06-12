@@ -1,0 +1,528 @@
+/* =========================================================
+   ROOT
+========================================================= */
+
+.selector-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  max-height: 90vh;
+  background: var(--surface);
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 20px 24px;
+
+  border-bottom: 1px solid var(--border);
+
+  flex-shrink: 0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.header-left h2 {
+  margin: 0;
+
+  font-size: 1.05rem;
+  font-weight: 600;
+
+  color: var(--text-primary);
+}
+
+.selection-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 84px;
+
+  padding: 4px 10px;
+
+  border-radius: 999px;
+
+  background:
+    rgba(0, 122, 255, 0.10);
+
+  color:
+    #007aff;
+
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  min-width: 320px;
+}
+
+.search-field {
+  width: 100%;
+  max-width: 600px;
+}
+
+/* =========================================================
+   LOADING
+========================================================= */
+
+.loading-bar {
+  height: 2px;
+  width: 100%;
+
+  position: relative;
+
+  overflow: hidden;
+
+  background: var(--border);
+
+  flex-shrink: 0;
+}
+
+.loading-bar::after {
+  content: '';
+
+  position: absolute;
+
+  top: 0;
+  left: -40%;
+
+  width: 40%;
+  height: 100%;
+
+  background: var(--active);
+
+  animation:
+    loading-slide 1.2s linear infinite;
+}
+
+@keyframes loading-slide {
+
+  0% {
+    left: -40%;
+  }
+
+  100% {
+    left: 100%;
+  }
+}
+
+/* =========================================================
+   TABLE
+========================================================= */
+
+.table-shell {
+  flex: 1;
+  min-height: 0;
+
+  overflow: auto;
+
+  border-bottom:
+    1px solid var(--border);
+}
+
+.selector-table {
+  width: 100%;
+  min-width: 900px;
+  --row-height: 52px;
+}
+
+/* =========================================================
+   STICKY HEADER
+========================================================= */
+
+.mat-mdc-header-row {
+  position: sticky;
+  top: 0;
+
+  z-index: 20;
+
+  background:
+    var(--surface);
+}
+
+.mat-mdc-header-cell {
+  background:
+    var(--surface);
+
+  font-size: 0.82rem;
+  font-weight: 600;
+
+  color:
+    var(--text-secondary);
+
+  border-bottom:
+    1px solid var(--border);
+}
+
+/* =========================================================
+   ROWS
+========================================================= */
+
+.mat-mdc-row {
+  cursor: pointer;
+
+  transition:
+    background-color 120ms ease,
+    transform 120ms ease;
+}
+
+.mat-mdc-row:hover {
+  background:
+    var(--surface-hover);
+}
+
+.row-selected {
+  background:
+    rgba(0, 122, 255, 0.08) !important;
+
+  border-left:
+    4px solid #007aff;
+}
+
+body.dark .row-selected {
+  background:
+    rgba(59, 130, 246, 0.12) !important;
+}
+
+.mat-mdc-cell,
+.mat-mdc-header-cell {
+  padding:
+    6px 12px;
+}
+
+.mat-mdc-row {
+  height: 52px;
+}
+
+.mat-mdc-header-row {
+  height: 44px;
+}
+
+/* =========================================================
+   COLUMNS
+========================================================= */
+
+.select-col {
+  width: 56px;
+  max-width: 56px;
+}
+
+.thumbnail-col {
+  width: 78px;
+  max-width: 78px;
+}
+
+.actions-col {
+  width: 72px;
+  max-width: 72px;
+}
+
+/* =========================================================
+   THUMBNAIL
+========================================================= */
+
+.thumbnail {
+  width: 40px;
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  background:
+    var(--surface-hover);
+
+  border:
+    1px solid var(--border);
+
+  overflow: hidden;
+
+  cursor: pointer;
+
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease;
+}
+
+.thumbnail:hover {
+  transform: scale(1.04);
+
+  border-color:
+    var(--active);
+}
+
+.thumbnail img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+
+  display: block;
+}
+
+.thumbnail mat-icon {
+  color:
+    var(--text-secondary);
+
+  font-size: 16px;
+
+  width: 16px;
+  height: 16px;
+}
+
+/* =========================================================
+   NAME
+========================================================= */
+
+.name-cell {
+  display: flex;
+  flex-direction: column;
+
+  min-width: 0;
+}
+
+.product-name {
+  font-weight: 600;
+
+  color:
+    var(--text-primary);
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-meta {
+  display: none;
+
+  margin-top: 2px;
+
+  font-size: 0.75rem;
+
+  color:
+    var(--text-secondary);
+}
+
+/* =========================================================
+   SORTABLE
+========================================================= */
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sort-icon {
+  font-size: 18px !important;
+
+  width: 18px !important;
+  height: 18px !important;
+
+  opacity: 0.65;
+
+  transition:
+    transform 120ms ease,
+    opacity 120ms ease;
+}
+
+.sortable:hover .sort-icon {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+/* =========================================================
+   PAGINATOR
+========================================================= */
+
+mat-paginator {
+  flex-shrink: 0;
+
+  border-bottom:
+    1px solid var(--border);
+
+  background:
+    var(--surface);
+}
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+
+  gap: 10px;
+
+  padding:
+    16px 24px;
+
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+.empty-state {
+  padding: 48px 24px;
+
+  text-align: center;
+
+  color:
+    var(--text-secondary);
+}
+
+.empty-state mat-icon {
+  width: 40px;
+  height: 40px;
+
+  font-size: 40px;
+
+  margin-bottom: 10px;
+}
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+body.dark .thumbnail {
+  background:
+    rgba(255, 255, 255, 0.03);
+
+  border-color:
+    rgba(255, 255, 255, 0.08);
+}
+
+body.dark .mat-mdc-header-row,
+body.dark .mat-mdc-header-cell {
+  background:
+    #161a22;
+}
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 1024px) {
+
+  .selector-header {
+    padding:
+      16px 18px;
+  }
+
+  .dialog-footer {
+    padding:
+      14px 18px;
+  }
+
+  .selector-table {
+    min-width: 760px;
+  }
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+  .selector-header {
+    flex-direction: column;
+    align-items: stretch;
+
+    gap: 12px;
+  }
+
+  .header-right {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .search-field {
+    max-width: none;
+  }
+
+  .selector-table {
+    min-width: 620px;
+  }
+
+  .mobile-meta {
+    display: block;
+  }
+
+  .dialog-footer {
+    position: sticky;
+    bottom: 0;
+
+    background:
+      var(--surface);
+
+    border-top:
+      1px solid var(--border);
+
+    z-index: 10;
+  }
+}
+
+/* =========================================================
+   SMALL MOBILE
+========================================================= */
+
+@media (max-width: 480px) {
+
+  .selector-header {
+    padding:
+      14px;
+  }
+
+  .dialog-footer {
+    padding:
+      14px;
+  }
+
+  .header-left {
+    flex-wrap: wrap;
+  }
+
+  .selection-pill {
+    min-width: auto;
+  }
+
+  .thumbnail {
+    width: 42px;
+    height: 42px;
+  }
+
+  .mat-mdc-cell,
+  .mat-mdc-header-cell {
+    padding:
+      10px;
+  }
+}

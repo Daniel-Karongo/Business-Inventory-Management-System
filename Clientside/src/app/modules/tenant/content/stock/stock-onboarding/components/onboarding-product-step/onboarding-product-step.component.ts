@@ -57,7 +57,7 @@ import {
     BranchMinimalDTO
 } from '../../../../branches/models/branch.model';
 
-import { ProductSelectorDialogComponent } from '../../../../sales/dialogs/product-selector-dialog/product-selector-dialog.component';
+import { ProductSelectorDialogComponent } from '../../../products/components/product-selector-dialog/product-selector-dialog.component';
 import { CategoryService } from '../../../categories/services/category.service';
 import { Category } from '../../../categories/models/category.model';
 import { BranchContextService } from '../../../../../../../core/services/branch-context.service';

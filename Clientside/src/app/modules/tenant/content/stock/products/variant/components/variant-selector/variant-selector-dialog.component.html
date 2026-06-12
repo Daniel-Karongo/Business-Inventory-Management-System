@@ -1,0 +1,80 @@
+<div class="selector-shell">
+
+    <div class="selector-header">
+        <div class="header-content">
+            <div class="title-row">
+                <h2>Select Variant</h2>
+
+                <div class="count-pill">
+                    {{ filteredVariants.length }}
+                    Variant{{ filteredVariants.length === 1 ? '' : 's' }}
+                </div>
+            </div>
+
+            <div class="product-name">
+                {{ data.productName }}
+            </div>
+        </div>
+    </div>
+
+    <div class="search-section">
+        <mat-form-field appearance="fill" class="search-field">
+            <mat-label>Search variants</mat-label>
+
+            <input matInput [formControl]="search" placeholder="Classification, SKU..." />
+
+            <mat-icon matSuffix>
+                search
+            </mat-icon>
+        </mat-form-field>
+    </div>
+
+    <div class="variants-scroll" *ngIf="filteredVariants.length">
+
+        <button type="button" *ngFor="let variant of filteredVariants" class="variant-card" (click)="select(variant)">
+
+            <div class="variant-content">
+
+                <div class="variant-top">
+                    <div class="variant-name">
+                        {{ variant.classification }}
+                    </div>
+
+                    <mat-icon>
+                        chevron_right
+                    </mat-icon>
+                </div>
+
+                <div *ngIf="variant.sku" class="variant-sku">
+                    SKU: {{ variant.sku }}
+                </div>
+
+            </div>
+
+        </button>
+
+    </div>
+
+    <div *ngIf="!filteredVariants.length" class="empty-state">
+
+        <mat-icon>
+            category
+        </mat-icon>
+
+        <div class="empty-title">
+            No Variants Found
+        </div>
+
+        <div class="empty-subtitle">
+            Try adjusting your search.
+        </div>
+
+    </div>
+
+    <div class="dialog-footer">
+        <button mat-stroked-button (click)="cancel()">
+            Cancel
+        </button>
+    </div>
+
+</div>

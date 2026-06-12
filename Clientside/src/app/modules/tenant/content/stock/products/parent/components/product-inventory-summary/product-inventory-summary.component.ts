@@ -33,6 +33,8 @@ import { TransferStockDialogComponent }
 import { AdjustStockDialogComponent }
     from '../../../../inventory/components/adjust-stock-dialog/adjust-stock-dialog.component';
 import { BranchContextService } from '../../../../../../../../core/services/branch-context.service';
+import { ProductVariant } from '../../../../models/product-variant.model';
+import { VariantSelectorDialogComponent } from '../../../variant/components/variant-selector/variant-selector-dialog.component';
 
 @Component({
     selector: 'app-product-inventory-summary',
@@ -167,6 +169,7 @@ export class ProductInventorySummaryComponent implements OnChanges {
                 {
                     width: '720px',
                     maxWidth: '95vw',
+                    panelClass: 'enterprise-dialog',
                     data: {
                         productId:
                             row.productId,
@@ -210,9 +213,9 @@ export class ProductInventorySummaryComponent implements OnChanges {
             this.dialog.open(
                 TransferStockDialogComponent,
                 {
-                    width: '720px',
-                    maxWidth: '95vw',
-
+                    panelClass: 'enterprise-dialog',
+                    width: '900px',
+                    maxHeight: '92vh',
                     data: {
 
                         productVariantId:
@@ -260,9 +263,10 @@ export class ProductInventorySummaryComponent implements OnChanges {
             this.dialog.open(
                 AdjustStockDialogComponent,
                 {
-                    width: '560px',
-                    maxWidth: '95vw',
-
+                    panelClass: 'enterprise-dialog',
+                    width: '600px',
+                    maxHeight: '92vh',
+                    height: '92vh',
                     data: {
 
                         productVariantId:
@@ -294,5 +298,99 @@ export class ProductInventorySummaryComponent implements OnChanges {
 
             });
 
+    }
+
+    createVariant(): void {
+        this.router.navigate(
+            ['/app/stock', this.product.id, 'edit']
+        );
+    }
+
+    receiveInitialStock(): void {
+
+        if (!this.product.variants?.length) {
+            return;
+        }
+
+        if (this.product.variants.length === 1) {
+
+            this.openReceiveDialog(
+                this.product.variants[0]
+            );
+
+            return;
+        }
+
+        const ref =
+            this.dialog.open(
+                VariantSelectorDialogComponent,
+                {
+                    width: '640px',
+                    maxWidth: '95vw',
+                    panelClass: 'enterprise-dialog',
+                    data: {
+                        productName:
+                            this.product.name,
+                        variants:
+                            this.product.variants
+                                .filter(v => !v.deleted)
+                    }
+                }
+            );
+
+        ref.afterClosed()
+            .subscribe(
+                (variant?: ProductVariant) => {
+
+                    if (!variant) {
+                        return;
+                    }
+
+                    this.openReceiveDialog(
+                        variant
+                    );
+
+                }
+            );
+    }
+
+    private openReceiveDialog(
+        variant: ProductVariant
+    ): void {
+
+        const ref =
+            this.dialog.open(
+                ReceiveStockDialogComponent,
+                {
+                    width: '720px',
+                    maxWidth: '95vw',
+                    panelClass: 'enterprise-dialog',
+                    data: {
+                        productId:
+                            this.product.id,
+
+                        productName:
+                            this.product.name,
+
+                        productVariantId:
+                            variant.id,
+
+                        classification:
+                            variant.classification,
+
+                        branchId:
+                            this.product.branchId
+                    }
+                }
+            );
+
+        ref.afterClosed()
+            .subscribe(success => {
+
+                if (success) {
+                    this.ngOnChanges();
+                }
+
+            });
     }
 }

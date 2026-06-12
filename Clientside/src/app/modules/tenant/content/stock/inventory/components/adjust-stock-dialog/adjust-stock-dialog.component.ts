@@ -7,6 +7,7 @@ import { ReactiveFormsModule, FormBuilder, Validators, FormGroup } from '@angula
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { InventoryService } from '../../services/inventory.service';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-adjust-stock-dialog',
@@ -16,7 +17,8 @@ import { InventoryService } from '../../services/inventory.service';
     MatDialogModule,
     MatButtonModule,
     MatInputModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    MatIconModule
   ],
   templateUrl: './adjust-stock-dialog.component.html',
   styleUrls: ['./adjust-stock-dialog.component.scss']

@@ -7,12 +7,19 @@ import {
 } from '@angular/common';
 
 import {
+    ChangeDetectionStrategy,
+    ChangeDetectorRef,
     Component,
+    DestroyRef,
     OnInit,
     TemplateRef,
     ViewChild,
-    inject
+    inject,
 } from '@angular/core';
+
+import {
+    takeUntilDestroyed
+} from '@angular/core/rxjs-interop';
 
 import {
     FormsModule
@@ -137,22 +144,24 @@ import {
     FileViewerDialog
 } from '../../../../../../../shared/components/file-viewer/file-viewer.component';
 
+import { BranchContextService } from '../../../../../../../core/services/branch-context.service';
 import { EntityImageManagerComponent } from '../../../../../../../shared/components/entity-image-manager/entity-image-manager.component';
-import { ProductSelectorDialogComponent } from '../../../../sales/dialogs/product-selector-dialog/product-selector-dialog.component';
+import { ReasonDialogComponent } from '../../../../../../../shared/components/reason-dialog/reason-dialog.component';
+import { LazyThumbnailDirective } from '../../../../../../../shared/directives/lazy-thumbnail.directive';
+import { ProductSelectorDialogComponent } from '../../../products/components/product-selector-dialog/product-selector-dialog.component';
 import { AdjustStockDialogComponent } from '../../../inventory/components/adjust-stock-dialog/adjust-stock-dialog.component';
 import { InventoryBulkImportDialogComponent } from '../../../inventory/components/inventory-bulk-import-dialog/inventory-bulk-import-dialog.component';
 import { ReceiveNewProductDialogComponent } from '../../../inventory/components/receive-new-product-dialog/receive-new-product-dialog.component';
 import { ReceiveStockDialogComponent } from '../../../inventory/components/receive-stock-dialog/receive-stock-dialog.component';
 import { TransferStockDialogComponent } from '../../../inventory/components/transfer-stock-dialog/transfer-stock-dialog.component';
 import { Product } from '../../../models/product.model';
+import { ProductImageAdapter } from '../../../products/parent/services/product-image.adapter';
 import { VariantBarcodeDialogComponent } from '../../../products/variant/components/variant-barcode/variant-barcode-dialog.component';
 import { VariantDetailsDialogComponent } from '../../../products/variant/components/variant-details/variant-details-dialog.component';
 import { VariantFormComponent } from '../../../products/variant/components/variant-form/variant-form.component';
 import { ProductVariantImageAdapter } from '../../../products/variant/services/product-variant-image.adapter';
-import { ProductImageAdapter } from '../../../products/parent/services/product-image.adapter';
 import { ProductVariantService } from '../../../products/variant/services/product-variant.service';
-import { ReasonDialogComponent } from '../../../../../../../shared/components/reason-dialog/reason-dialog.component';
-import { BranchContextService } from '../../../../../../../core/services/branch-context.service';
+import { ThumbnailCacheService } from '../../services/thumbnails-cache.service';
 
 @Component({
     selector: 'app-stock-list',
@@ -172,8 +181,10 @@ import { BranchContextService } from '../../../../../../../core/services/branch-
         MatInputModule,
         MatSelectModule,
         MatDialogModule,
-        MatSnackBarModule
+        MatSnackBarModule,
+        LazyThumbnailDirective
     ],
+    changeDetection: ChangeDetectionStrategy.OnPush,
     templateUrl:
         './stock-list.component.html',
     styleUrls: [
@@ -182,6 +193,8 @@ import { BranchContextService } from '../../../../../../../core/services/branch-
 })
 export class StockListComponent
     implements OnInit {
+
+    private cdr = inject(ChangeDetectorRef);
 
     private workspace =
         inject(StockWorkspaceService);
@@ -198,8 +211,14 @@ export class StockListComponent
     private supplierService =
         inject(SupplierService);
 
+    private thumbnailCache =
+        inject(ThumbnailCacheService);
+
     private router =
         inject(Router);
+
+    private destroyRef =
+        inject(DestroyRef);
 
     private productService =
         inject(ProductService);
@@ -222,7 +241,8 @@ export class StockListComponent
        UI
     ========================================================= */
 
-    loading = true;
+    loadingBranches = false;
+    loadingWorkspace = false;
 
     isMobile = false;
 
@@ -236,9 +256,14 @@ export class StockListComponent
         StockWorkspaceDensity =
         'compact';
 
+    private readonly STORAGE_KEY =
+        'stock_workspace_preferences';
+
     selectedBranchId: string | null = null;
 
     private lastEmptySearchKey = '';
+
+    showThumbnails = this.loadThumbnailPreference();
 
     /* =========================================================
        DATA
@@ -257,30 +282,6 @@ export class StockListComponent
 
     suppliers:
         SupplierMinimalDTO[] = [];
-
-    private variantThumbnails =
-        new Map<string, string>();
-
-    private variantImages =
-        new Map<string, string>();
-
-    private thumbnails =
-        new Map<string, string>();
-
-    private productImages =
-        new Map<string, string>();
-
-    private variantThumbnailLoading =
-        new Set<string>();
-
-    private productThumbnailLoading =
-        new Set<string>();
-
-    private productImageLoading =
-        new Set<string>();
-
-    private variantImageLoading =
-        new Set<string>();
 
     /* =========================================================
        FILTERS
@@ -320,12 +321,26 @@ export class StockListComponent
             'asc' | 'desc'
         >('desc');
 
+    filterType:
+        'ACTIVE' | 'DELETED' | 'ALL' =
+        'ACTIVE';
+
+    private filterType$ =
+        new BehaviorSubject<
+            'ACTIVE' | 'DELETED' | 'ALL'
+        >('ACTIVE');
+
+    private refresh$ = new BehaviorSubject<void>(undefined);
+
     /* =========================================================
        SELECTION
     ========================================================= */
 
     selectedIds =
         new Set<string>();
+
+    bulkValidationError:
+        string | null = null;
 
     /* =========================================================
        TABLE CONFIG
@@ -337,22 +352,25 @@ export class StockListComponent
                 id: 'product',
                 label: 'Product',
                 sortable: true,
-                value: x =>
-                    x.productName
+                value: x => x.productName
+            },
+            {
+                id: 'productSku',
+                label: 'Product SKU',
+                sortable: true,
+                value: x => x.productSku
             },
             {
                 id: 'variant',
                 label: 'Variant',
                 sortable: false,
-                value: x =>
-                    x.variantName
+                value: x => x.variantName
             },
             {
                 id: 'variantSku',
-                label: 'SKU',
+                label: 'Variant SKU',
                 sortable: false,
-                value: x =>
-                    x.sku
+                value: x => x.sku
             },
             {
                 id: 'branch',
@@ -459,18 +477,21 @@ export class StockListComponent
 
     ngOnInit(): void {
 
+        this.loadPreferences();
+
         this.breakpoint
             .observe([
                 '(max-width: 640px)'
             ])
+            .pipe(
+                takeUntilDestroyed(
+                    this.destroyRef
+                )
+            )
             .subscribe(result => {
+                this.isMobile = result.matches;
 
-                this.isMobile =
-                    result.matches;
-
-                if (this.isMobile) {
-                    this.viewMode = 'grid';
-                }
+                this.cdr.markForCheck();
             });
 
         this.loadSupportingData();
@@ -478,16 +499,17 @@ export class StockListComponent
         combineLatest([
             this.page$,
             this.size$,
-            this.keyword$
-                .pipe(
-                    debounceTime(350),
-                    distinctUntilChanged()
-                ),
+            this.keyword$.pipe(
+                debounceTime(350),
+                distinctUntilChanged()
+            ),
             this.branchId$,
             this.categoryId$,
             this.supplierId$,
             this.sortField$,
-            this.sortDirection$
+            this.sortDirection$,
+            this.filterType$,
+            this.refresh$
         ])
             .pipe(
 
@@ -501,7 +523,8 @@ export class StockListComponent
 
                 tap(() => {
 
-                    this.loading = true;
+                    this.loadingWorkspace = true;
+
                     this.rows = [];
                     this.total = 0;
 
@@ -515,9 +538,11 @@ export class StockListComponent
                     categoryId,
                     supplierId,
                     sortBy,
-                    direction
+                    direction,
+                    filterType
                 ]) => {
                     return this.workspace.search({
+                        filter: filterType,
                         page,
                         size,
                         keyword,
@@ -556,25 +581,20 @@ export class StockListComponent
                     );
                 })
             )
+            .pipe(
+                takeUntilDestroyed(
+                    this.destroyRef
+                )
+            )
             .subscribe(result => {
 
-                this.rows =
-                    result.content;
+                this.rows = result.content;
+                this.total = result.totalElements;
 
-                this.total =
-                    result.totalElements;
+                this.loadingWorkspace = false;
 
-                this.loadThumbnails();
+                this.cdr.markForCheck();
 
-                this.loading =
-                    false;
-
-                /*
-                 * Only show a snackbar when a filter/search
-                 * produced no results.
-                 *
-                 * Don't annoy users when a branch is simply empty.
-                 */
                 if (
                     result.totalElements === 0 &&
                     (
@@ -598,6 +618,29 @@ export class StockListComponent
     /* =========================================================
        DISPLAYED COLUMNS
     ========================================================= */
+
+    get loading(): boolean {
+        return this.loadingBranches || this.loadingWorkspace;
+    }
+
+    get selectedEntityLabel(): string {
+        const type = this.selectedType();
+
+        switch (type) {
+            case 'PRODUCT':
+                return this.selectedIds.size === 1
+                    ? 'product selected'
+                    : 'products selected';
+
+            case 'VARIANT':
+                return this.selectedIds.size === 1
+                    ? 'variant selected'
+                    : 'variants selected';
+
+            default:
+                return 'selected';
+        }
+    }
 
     get emptyStateMessage(): string {
 
@@ -656,8 +699,9 @@ export class StockListComponent
                VARIANT-LEVEL COLUMNS
             ========================================= */
             if (
-                ['variant', 'variantSku'].includes(column.id) &&
-                !hasVariants
+                ['variant', 'variantSku']
+                    .includes(column.id)
+                && !hasVariants
             ) {
                 continue;
             }
@@ -770,25 +814,13 @@ export class StockListComponent
                     ...this.workspace.getVisibleRows()
                 ];
 
-                /*
-                 * Product expanded:
-                 * hydrate thumbnails only for newly visible variants.
-                 */
                 if (row.type === 'PRODUCT') {
-
-                    for (const visibleRow of this.rows) {
-
-                        if (
-                            visibleRow.parentId === row.id &&
-                            visibleRow.type === 'VARIANT' &&
-                            visibleRow.variantId
-                        ) {
-                            this.loadVariantThumbnail(
-                                visibleRow.variantId
-                            );
-                        }
-                    }
+                    this.rows = [
+                        ...this.workspace.getVisibleRows()
+                    ];
                 }
+
+                this.cdr.markForCheck();
             });
     };
 
@@ -834,6 +866,19 @@ export class StockListComponent
     /* =========================================================
        FILTERS
     ========================================================= */
+
+    setFilterType(
+        value:
+            'ACTIVE'
+            | 'DELETED'
+            | 'ALL'
+    ) {
+        this.page$.next(0);
+        this.filterType = value;
+        this.filterType$.next(
+            value
+        );
+    }
 
     setSearch(
         value: string
@@ -997,19 +1042,19 @@ export class StockListComponent
     }
 
     triggerSort(
-        column:
-            StockWorkspaceColumn<StockWorkspaceRow>
+        column: StockWorkspaceColumn<StockWorkspaceRow>
     ) {
 
-        if (
-            !column.sortable
-        ) {
+        if (!column.sortable) {
             return;
         }
 
-        this.sort(
-            column.id
-        );
+        const field =
+            column.id === 'productSku'
+                ? 'sku'
+                : column.id;
+
+        this.sort(field);
     }
 
     getSortIcon(
@@ -1051,22 +1096,66 @@ export class StockListComponent
        VIEW
     ========================================================= */
 
-    setView(
-        mode:
-            StockWorkspaceViewMode
-    ) {
+    get effectiveViewMode(): StockWorkspaceViewMode {
+        return this.isMobile
+            ? 'grid'
+            : this.viewMode;
+    }
 
-        this.viewMode =
-            mode;
+    setView(
+        mode: StockWorkspaceViewMode
+    ) {
+        this.viewMode = mode;
+        this.savePreferences();
     }
 
     toggleDensity() {
-
         this.density =
-            this.density
-                === 'compact'
+            this.density === 'compact'
                 ? 'comfortable'
                 : 'compact';
+
+        this.savePreferences();
+    }
+
+    private savePreferences(): void {
+        localStorage.setItem(
+            this.STORAGE_KEY,
+            JSON.stringify({
+                viewMode: this.viewMode,
+                density: this.density,
+                showThumbnails: this.showThumbnails
+            })
+        );
+    }
+
+    private loadPreferences(): void {
+        const raw =
+            localStorage.getItem(
+                this.STORAGE_KEY
+            );
+
+        if (!raw) {
+            return;
+        }
+
+        try {
+            const prefs = JSON.parse(raw);
+
+            this.viewMode =
+                prefs.viewMode ??
+                this.viewMode;
+
+            this.density =
+                prefs.density ??
+                this.density;
+
+            this.showThumbnails =
+                prefs.showThumbnails ??
+                this.showThumbnails;
+        } catch {
+            // ignore corrupted preference data
+        }
     }
 
     /* =========================================================
@@ -1076,6 +1165,14 @@ export class StockListComponent
     toggleSelection(
         row: StockWorkspaceRow
     ) {
+
+        if (
+            !this.isSelectable(
+                row
+            )
+        ) {
+            return;
+        }
 
         const id =
             this.rowId(
@@ -1097,12 +1194,15 @@ export class StockListComponent
             this.selectedIds.add(
                 id
             );
+
         }
 
         this.selectedIds =
             new Set(
                 this.selectedIds
             );
+
+        this.validateBulkSelection();
     }
 
     toggleAll() {
@@ -1165,6 +1265,72 @@ export class StockListComponent
             new Set(
                 this.selectedIds
             );
+
+        this.bulkValidationError =
+            null;
+    }
+
+    private validateBulkSelection(): void {
+
+        const selectedRows =
+            this.rows.filter(
+                row =>
+                    this.selectedIds.has(
+                        this.rowId(
+                            row
+                        )
+                    )
+            );
+
+        if (
+            selectedRows.length <= 1
+        ) {
+
+            this.bulkValidationError =
+                null;
+
+            return;
+        }
+
+        const first =
+            selectedRows[0];
+
+        const mixedTypes =
+            selectedRows.some(
+                row =>
+                    row.type !==
+                    first.type
+            );
+
+        if (
+            mixedTypes
+        ) {
+
+            this.bulkValidationError =
+                'Bulk actions require all selected rows to be the same type.';
+
+            return;
+        }
+
+        const mixedStatuses =
+            selectedRows.some(
+                row =>
+                    !!row.deleted !==
+                    !!first.deleted
+            );
+
+        if (
+            mixedStatuses
+        ) {
+
+            this.bulkValidationError =
+                'Bulk actions require all selected rows to have the same status.';
+
+            return;
+        }
+
+        this.bulkValidationError =
+            null;
     }
 
     allSelected():
@@ -1201,59 +1367,379 @@ export class StockListComponent
         );
     }
 
+    hasInventory(
+        row: StockWorkspaceRow
+    ): boolean {
+
+        return row.hasInventory === true;
+
+    }
+
+    inventoryKnownMissing(
+        row: StockWorkspaceRow
+    ): boolean {
+
+        return row.hasInventory === false;
+
+    }
+
     /* =========================================================
        BULK ACTIONS
     ========================================================= */
 
     bulkDelete() {
-
-        const ids =
-
-            this.selectableRows()
-
-                .filter(
-                    row =>
-                        this.selectedIds.has(
-                            this.rowId(
-                                row
-                            )
-                        )
-                )
-
-                .map(
-                    row =>
-                        row.productId
-                )
-
-                .filter(
-                    Boolean
-                )
-
-                .filter((
-                    id,
-                    index,
-                    self
-                ) =>
-                    self.indexOf(id)
-                    === index
-                );
-
-        if (
-            !ids.length
-        ) {
+        if (this.bulkValidationError) {
+            this.snackBar.open(
+                this.bulkValidationError,
+                'Close',
+                {
+                    duration: 4000
+                }
+            );
             return;
         }
 
-        this.productService
-            .bulkSoftDelete(
-                ids
-            )
-            .subscribe(() => {
+        const rows = this.getSelectedRows();
 
-                this.clearSelection();
+        if (!rows.length) {
+            return;
+        }
 
-                this.reload();
-            });
+        const type = rows[0].type;
+
+        if (type === 'PRODUCT') {
+            const ids = rows.map(row => row.productId);
+
+            this.productService
+                .bulkSoftDelete(ids)
+                .subscribe({
+                    next: () => {
+                        this.snackBar.open(
+                            'Products deleted',
+                            'Close',
+                            {
+                                duration: 3000
+                            }
+                        );
+
+                        this.clearSelection();
+                        this.reload();
+                    },
+                    error: err => {
+                        const message =
+                            err?.error?.message
+                            || err?.error
+                            || 'Bulk delete failed';
+
+                        this.snackBar.open(
+                            message,
+                            'Close',
+                            {
+                                duration: 5000
+                            }
+                        );
+                    }
+                });
+
+            return;
+        }
+
+        const variantIds =
+            rows
+                .map(row => row.variantId)
+                .filter(Boolean) as string[];
+
+        let completed = 0;
+        let failed = false;
+
+        for (const id of variantIds) {
+            this.variantService
+                .remove(id)
+                .subscribe({
+                    next: () => {
+                        completed++;
+
+                        if (
+                            completed === variantIds.length
+                        ) {
+                            this.snackBar.open(
+                                'Variants deleted',
+                                'Close',
+                                {
+                                    duration: 3000
+                                }
+                            );
+
+                            this.clearSelection();
+                            this.reload();
+                        }
+                    },
+                    error: err => {
+                        if (failed) {
+                            return;
+                        }
+
+                        failed = true;
+
+                        const message =
+                            err?.error?.message
+                            || err?.error
+                            || 'Bulk delete failed';
+
+                        this.snackBar.open(
+                            message,
+                            'Close',
+                            {
+                                duration: 5000
+                            }
+                        );
+                    }
+                });
+        }
+    }
+
+    bulkRestore() {
+        if (this.bulkValidationError) {
+            this.snackBar.open(
+                this.bulkValidationError,
+                'Close',
+                {
+                    duration: 4000
+                }
+            );
+            return;
+        }
+
+        const rows = this.getSelectedRows();
+
+        if (!rows.length) {
+            return;
+        }
+
+        const type = rows[0].type;
+
+        if (type === 'PRODUCT') {
+            const ids =
+                rows.map(
+                    row => row.productId
+                );
+
+            this.productService
+                .bulkRestore(ids)
+                .subscribe({
+                    next: () => {
+                        this.snackBar.open(
+                            'Products restored',
+                            'Close',
+                            {
+                                duration: 3000
+                            }
+                        );
+
+                        this.clearSelection();
+                        this.reload();
+                    },
+                    error: err => {
+                        const message =
+                            err?.error?.message
+                            || err?.error
+                            || 'Restore failed';
+
+                        this.snackBar.open(
+                            message,
+                            'Close',
+                            {
+                                duration: 5000
+                            }
+                        );
+                    }
+                });
+
+            return;
+        }
+
+        const variantIds =
+            rows
+                .map(row => row.variantId)
+                .filter(Boolean) as string[];
+
+        let completed = 0;
+        let failed = false;
+
+        for (const id of variantIds) {
+            this.variantService
+                .restore(id)
+                .subscribe({
+                    next: () => {
+                        completed++;
+
+                        if (
+                            completed === variantIds.length
+                        ) {
+                            this.snackBar.open(
+                                'Variants restored',
+                                'Close',
+                                {
+                                    duration: 3000
+                                }
+                            );
+
+                            this.clearSelection();
+                            this.reload();
+                        }
+                    },
+                    error: err => {
+                        if (failed) {
+                            return;
+                        }
+
+                        failed = true;
+
+                        const message =
+                            err?.error?.message
+                            || err?.error
+                            || 'Restore failed';
+
+                        this.snackBar.open(
+                            message,
+                            'Close',
+                            {
+                                duration: 5000
+                            }
+                        );
+                    }
+                });
+        }
+    }
+
+    bulkHardDelete() {
+        if (this.bulkValidationError) {
+            this.snackBar.open(
+                this.bulkValidationError,
+                'Close',
+                {
+                    duration: 4000
+                }
+            );
+            return;
+        }
+
+        const rows = this.getSelectedRows();
+
+        if (!rows.length) {
+            return;
+        }
+
+        const hasActive =
+            rows.some(
+                row => !row.deleted
+            );
+
+        if (hasActive) {
+            this.snackBar.open(
+                'Hard delete is only allowed for deleted items.',
+                'Close',
+                {
+                    duration: 5000
+                }
+            );
+            return;
+        }
+
+        const type = rows[0].type;
+
+        if (type === 'PRODUCT') {
+            const ids =
+                rows.map(
+                    row => row.productId
+                );
+
+            this.productService
+                .bulkHardDelete(ids)
+                .subscribe({
+                    next: () => {
+                        this.snackBar.open(
+                            'Products permanently deleted',
+                            'Close',
+                            {
+                                duration: 3000
+                            }
+                        );
+
+                        this.clearSelection();
+                        this.reload();
+                    },
+                    error: err => {
+                        const message =
+                            err?.error?.message
+                            || err?.error
+                            || 'Hard delete failed';
+
+                        this.snackBar.open(
+                            message,
+                            'Close',
+                            {
+                                duration: 5000
+                            }
+                        );
+                    }
+                });
+
+            return;
+        }
+
+        const variantIds =
+            rows
+                .map(row => row.variantId)
+                .filter(Boolean) as string[];
+
+        let completed = 0;
+        let failed = false;
+
+        for (const id of variantIds) {
+            this.variantService
+                .hardDelete(id)
+                .subscribe({
+                    next: () => {
+                        completed++;
+
+                        if (
+                            completed === variantIds.length
+                        ) {
+                            this.snackBar.open(
+                                'Variants permanently deleted',
+                                'Close',
+                                {
+                                    duration: 3000
+                                }
+                            );
+
+                            this.clearSelection();
+                            this.reload();
+                        }
+                    },
+                    error: err => {
+                        if (failed) {
+                            return;
+                        }
+
+                        failed = true;
+
+                        const message =
+                            err?.error?.message
+                            || err?.error
+                            || 'Hard delete failed';
+
+                        this.snackBar.open(
+                            message,
+                            'Close',
+                            {
+                                duration: 5000
+                            }
+                        );
+                    }
+                });
+        }
     }
 
     /* =========================================================
@@ -1299,12 +1785,17 @@ export class StockListComponent
     }
 
     selectableRows() {
-
         return this.rows.filter(
             x =>
-                x.type
-                === 'PRODUCT'
+                x.type !==
+                'INVENTORY'
         );
+    }
+
+    isSelectable(
+        row: StockWorkspaceRow
+    ): boolean {
+        return row.type !== 'INVENTORY';
     }
 
     /* =========================================================
@@ -1334,32 +1825,119 @@ export class StockListComponent
     }
 
     deleteProduct(
-        row:
-            StockWorkspaceRow
+        row: StockWorkspaceRow
     ) {
 
         this.productService
             .softDelete(
                 row.productId
             )
-            .subscribe(() => {
+            .subscribe({
+                next: () => {
 
-                this.reload();
+                    this.snackBar.open(
+                        'Product deleted',
+                        'Close',
+                        {
+                            duration: 3000
+                        }
+                    );
+
+                    this.reload();
+                },
+                error: err => {
+
+                    const message =
+                        err?.error?.message
+                        || err?.error
+                        || 'Delete failed';
+
+                    this.snackBar.open(
+                        message,
+                        'Close',
+                        {
+                            duration: 5000
+                        }
+                    );
+                }
             });
     }
 
     restoreProduct(
-        row:
-            StockWorkspaceRow
+        row: StockWorkspaceRow
     ) {
 
         this.productService
             .restore(
                 row.productId
             )
-            .subscribe(() => {
+            .subscribe({
+                next: () => {
 
-                this.reload();
+                    this.snackBar.open(
+                        'Product restored',
+                        'Close',
+                        {
+                            duration: 3000
+                        }
+                    );
+
+                    this.reload();
+                },
+                error: err => {
+
+                    const message =
+                        err?.error?.message
+                        || err?.error
+                        || 'Restore failed';
+
+                    this.snackBar.open(
+                        message,
+                        'Close',
+                        {
+                            duration: 5000
+                        }
+                    );
+                }
+            });
+    }
+
+    hardDeleteProduct(
+        row: StockWorkspaceRow
+    ) {
+
+        this.productService
+            .hardDelete(
+                row.productId
+            )
+            .subscribe({
+                next: () => {
+
+                    this.snackBar.open(
+                        'Product permanently deleted',
+                        'Close',
+                        {
+                            duration: 3000
+                        }
+                    );
+
+                    this.reload();
+                },
+                error: err => {
+
+                    const message =
+                        err?.error?.message
+                        || err?.error
+                        || 'Hard delete failed';
+
+                    this.snackBar.open(
+                        message,
+                        'Close',
+                        {
+                            duration: 5000
+                        }
+                    );
+                }
             });
     }
 
@@ -1408,8 +1986,7 @@ export class StockListComponent
                     width: '90vw',
                     maxWidth: '1000px',
                     height: '85vh',
-                    panelClass:
-                        'responsive-dialog'
+                    panelClass: 'enterprise-dialog',
                 }
             );
 
@@ -1429,8 +2006,10 @@ export class StockListComponent
                     this.dialog.open(
                         ReceiveNewProductDialogComponent,
                         {
-                            width: '600px',
-
+                            width: '90vw',
+                            maxWidth: '1000px',
+                            height: '85vh',
+                            panelClass: 'enterprise-dialog',
                             data:
                                 products
                         }
@@ -1700,49 +2279,20 @@ export class StockListComponent
 
         adapter.onChange = () => {
 
-            const thumb =
-                this.variantThumbnails.get(
+            this.thumbnailCache
+                .removeVariant(
                     row.variantId!
                 );
 
-            if (thumb) {
-                URL.revokeObjectURL(
-                    thumb
-                );
-            }
-
-            const image =
-                this.variantImages.get(
+            this.thumbnailCache
+                .finishVariantLoad(
                     row.variantId!
                 );
 
-            if (image) {
-                URL.revokeObjectURL(
-                    image
-                );
-            }
-
-            this.variantThumbnails.delete(
-                row.variantId!
-            );
-
-            this.variantImages.delete(
-                row.variantId!
-            );
-
-            this.variantThumbnailLoading.delete(
-                row.variantId!
-            );
-
-            this.variantImageLoading.delete(
-                row.variantId!
-            );
-
-            this.loadVariantThumbnail(
-                row.variantId!
-            );
+            this.reload();
 
             this.rows = [...this.rows];
+            this.cdr.markForCheck();
         };
 
         adapter.onThumbnailUpdated =
@@ -1982,6 +2532,51 @@ export class StockListComponent
             });
     }
 
+    hardDeleteVariant(
+        row: StockWorkspaceRow
+    ) {
+
+        if (
+            !row.variantId
+        ) {
+            return;
+        }
+
+        this.variantService
+            .hardDelete(
+                row.variantId
+            )
+            .subscribe({
+                next: () => {
+
+                    this.snackBar.open(
+                        'Variant permanently deleted',
+                        'Close',
+                        {
+                            duration: 3000
+                        }
+                    );
+
+                    this.reload();
+                },
+                error: err => {
+
+                    const message =
+                        err?.error?.message
+                        || err?.error
+                        || 'Hard delete failed';
+
+                    this.snackBar.open(
+                        message,
+                        'Close',
+                        {
+                            duration: 5000
+                        }
+                    );
+                }
+            });
+    }
+
     createSaleFromInventory(
         row: StockWorkspaceRow
     ) {
@@ -2006,6 +2601,47 @@ export class StockListComponent
         this.adjust(row);
     }
 
+    receiveInitialStockForVariant(
+        row: StockWorkspaceRow
+    ): void {
+        if (!row.variantId) {
+            return;
+        }
+
+        const ref =
+            this.dialog.open(
+                ReceiveStockDialogComponent,
+                {
+                    width: '720px',
+                    maxWidth: '95vw',
+                    panelClass: 'enterprise-dialog',
+                    data: {
+                        productId:
+                            row.productId,
+                        productName:
+                            row.productName,
+                        productVariantId:
+                            row.variantId,
+                        classification:
+                            row.variantName,
+                        branchId:
+                            this.branchId$.value,
+                        branchName:
+                            this.branches.find(
+                                b => b.id === this.branchId$.value
+                            )?.name
+                    }
+                }
+            );
+
+        ref.afterClosed()
+            .subscribe(success => {
+                if (success) {
+                    this.reload();
+                }
+            });
+    }
+
     receive(
         row: StockWorkspaceRow
     ) {
@@ -2016,7 +2652,7 @@ export class StockListComponent
                 {
                     width: '720px',
                     maxWidth: '95vw',
-
+                    panelClass: 'enterprise-dialog',
                     data: {
                         productId:
                             row.productId,
@@ -2060,7 +2696,7 @@ export class StockListComponent
                     maxWidth: '95vw',
 
                     disableClose: false,
-
+                    panelClass: 'enterprise-dialog',
                     data: {
                         productVariantId:
                             row.variantId,
@@ -2107,7 +2743,7 @@ export class StockListComponent
                     maxWidth: '95vw',
 
                     disableClose: false,
-
+                    panelClass: 'enterprise-dialog',
                     data: {
                         productVariantId:
                             row.variantId,
@@ -2144,13 +2780,14 @@ export class StockListComponent
 
     private loadSupportingData(): void {
 
-        this.loading = true;
+        this.loadingBranches = true;
 
         this.branchService
             .getAllLegacy()
             .pipe(
                 finalize(() => {
-                    this.loading = false;
+                    this.loadingBranches = false;
+                    this.cdr.detectChanges();
                 })
             )
             .subscribe({
@@ -2216,8 +2853,9 @@ export class StockListComponent
 
                 error: err => {
 
-                    this.rows = [];
+                    this.loadingBranches = false;
 
+                    this.rows = [];
                     this.total = 0;
 
                     console.error(
@@ -2225,17 +2863,96 @@ export class StockListComponent
                         err
                     );
 
+                    this.cdr.detectChanges();
                 }
 
             });
 
     }
 
-    private reload() {
+    private getSelectedRows():
+        StockWorkspaceRow[] {
 
-        this.page$.next(
-            this.page$.value
+        return this.rows.filter(
+            row =>
+                this.selectedIds.has(
+                    this.rowId(
+                        row
+                    )
+                )
         );
+    }
+
+    private selectedType():
+        'PRODUCT'
+        | 'VARIANT'
+        | null {
+
+        const rows =
+            this.getSelectedRows();
+
+        if (
+            !rows.length
+        ) {
+            return null;
+        }
+
+        return rows[0]
+            .type as
+            'PRODUCT'
+            | 'VARIANT';
+    }
+
+    canBulkRestore():
+        boolean {
+
+        const rows =
+            this.getSelectedRows();
+
+        return (
+            rows.length > 0
+            &&
+            rows.every(
+                row =>
+                    !!row.deleted
+            )
+        );
+    }
+
+    canBulkHardDelete():
+        boolean {
+
+        const rows =
+            this.getSelectedRows();
+
+        return (
+            rows.length > 0
+            &&
+            rows.every(
+                row =>
+                    !!row.deleted
+            )
+        );
+    }
+
+    canBulkSoftDelete():
+        boolean {
+
+        const rows =
+            this.getSelectedRows();
+
+        return (
+            rows.length > 0
+            &&
+            rows.every(
+                row =>
+                    !row.deleted
+            )
+        );
+    }
+
+    private reload(): void {
+        this.refresh$.next();
     }
 
     /* =========================================================
@@ -2247,403 +2964,205 @@ export class StockListComponent
     ): SafeUrl | null {
 
         if (
-            row.variantId &&
-            this.variantThumbnails.has(
-                row.variantId
-            )
+            row.variantId
         ) {
-            return (
-                this.variantThumbnails.get(
+
+            const variant =
+                this.thumbnailCache.peekVariant(
                     row.variantId
-                ) ?? null
-            );
+                );
+
+            if (variant) {
+                return variant;
+            }
         }
 
         return (
-            this.thumbnails.get(
+            this.thumbnailCache.peekProduct(
                 row.productId
-            ) ?? null
+            )
+            ?? null
         );
     }
 
-    private loadThumbnails() {
+    ensureThumbnailLoaded(
+        row: StockWorkspaceRow
+    ): void {
 
-        const productIds =
-            new Set<string>();
-
-        const variantIds =
-            new Set<string>();
-
-        for (
-            const row of this.rows
-        ) {
-
-            if (row.productId) {
-                productIds.add(
-                    row.productId
-                );
-            }
-
-            if (row.variantId) {
-                variantIds.add(
-                    row.variantId
-                );
-            }
+        if (!this.showThumbnails) {
+            return;
         }
 
-        /* =====================================
-           PRODUCT THUMBNAILS
-        ===================================== */
+        /*
+         * Variant thumbnail
+         * (actual variant image)
+         */
+        if (
+            row.variantId &&
+            row.type === 'VARIANT' &&
+            row.thumbnailFileName
+        ) {
+            this.loadVariantThumbnail(
+                row
+            );
+            return;
+        }
 
-        for (const productId of productIds) {
+        /*
+         * Inventory inherits
+         * from variant/product
+         */
+        if (
+            row.type === 'INVENTORY'
+            &&
+            row.thumbnailFileName
+        ) {
 
             if (
-                this.thumbnails.has(productId) ||
-                this.productThumbnailLoading.has(productId)
+                row.variantId
             ) {
-                continue;
+                this.loadVariantThumbnail(
+                    {
+                        ...row,
+                        type: 'VARIANT'
+                    }
+                );
             }
 
-            this.productThumbnailLoading.add(productId);
+            return;
+        }
+
+        /*
+         * Product thumbnail
+         */
+        if (
+            row.productId &&
+            row.thumbnailFileName
+        ) {
+
+            if (
+                this.thumbnailCache.peekProduct(
+                    row.productId
+                )
+            ) {
+                return;
+            }
+
+            if (
+                !this.thumbnailCache.beginProductLoad(
+                    row.productId
+                )
+            ) {
+                return;
+            }
 
             this.productService
-                .getThumbnailBlob(
-                    productId,
+                .getSharedThumbnailBlob(
+                    row.thumbnailFileName,
                     this.branchServiceBranchId()
+                )
+                .pipe(
+                    takeUntilDestroyed(
+                        this.destroyRef
+                    )
                 )
                 .subscribe({
                     next: blob => {
 
-                        this.thumbnails.set(
-                            productId,
-                            URL.createObjectURL(blob)
-                        );
+                        this.thumbnailCache
+                            .setProduct(
+                                row.productId,
+                                URL.createObjectURL(
+                                    blob
+                                )
+                            );
 
-                        this.productThumbnailLoading.delete(
-                            productId
-                        );
+                        this.thumbnailCache
+                            .finishProductLoad(
+                                row.productId
+                            );
+
+                        this.rows = [
+                            ...this.rows
+                        ];
+
+                        this.cdr.markForCheck();
                     },
                     error: () => {
 
-                        const existing =
-                            this.thumbnails.get(
-                                productId
+                        this.thumbnailCache
+                            .finishProductLoad(
+                                row.productId
                             );
-
-                        if (existing) {
-                            URL.revokeObjectURL(
-                                existing
-                            );
-                        }
-
-                        this.thumbnails.delete(
-                            productId
-                        );
-
-                        this.productThumbnailLoading.delete(
-                            productId
-                        );
-
-                        this.rows = [...this.rows];
                     }
                 });
-
-            if (
-                this.productImages.has(productId) ||
-                this.productImageLoading.has(productId)
-            ) {
-                continue;
-            }
-
-            this.productImageLoading.add(productId);
-
-            this.productService
-                .getImages(
-                    productId,
-                    false,
-                    this.branchServiceBranchId()
-                )
-                .subscribe({
-
-                    next: images => {
-
-                        const image =
-                            images?.find(
-                                img => img.primaryImage
-                            )
-                            ??
-                            images?.find(
-                                img => !img.deleted
-                            );
-
-                        if (!image) {
-
-                            const existingImage =
-                                this.productImages.get(
-                                    productId
-                                );
-
-                            if (existingImage) {
-                                URL.revokeObjectURL(
-                                    existingImage
-                                );
-                            }
-
-                            const existingThumb =
-                                this.thumbnails.get(
-                                    productId
-                                );
-
-                            if (existingThumb) {
-                                URL.revokeObjectURL(
-                                    existingThumb
-                                );
-                            }
-
-                            this.productImages.delete(
-                                productId
-                            );
-
-                            this.thumbnails.delete(
-                                productId
-                            );
-
-                            this.productImageLoading.delete(
-                                productId
-                            );
-
-                            this.productThumbnailLoading.delete(
-                                productId
-                            );
-
-                            this.rows = [...this.rows];
-
-                            return;
-                        }
-
-                        this.productService
-                            .getImageBlob(
-                                productId,
-                                image.fileName,
-                                this.branchServiceBranchId(),
-                                Date.now()
-                            )
-                            .subscribe({
-
-                                next: blob => {
-
-                                    const existing =
-                                        this.productImages.get(
-                                            productId
-                                        );
-
-                                    if (existing) {
-                                        URL.revokeObjectURL(
-                                            existing
-                                        );
-                                    }
-
-                                    this.productImages.set(
-                                        productId,
-                                        URL.createObjectURL(
-                                            blob
-                                        )
-                                    );
-
-                                    this.productImageLoading.delete(
-                                        productId
-                                    );
-                                },
-
-                                error: () => {
-
-                                    this.productImageLoading.delete(
-                                        productId
-                                    );
-                                }
-                            });
-                    },
-
-                    error: () => {
-
-                        this.productImageLoading.delete(
-                            productId
-                        );
-                    }
-
-                });
-        }
-
-        /* =====================================
-           VARIANT THUMBNAILS
-        ===================================== */
-
-        for (const variantId of variantIds) {
-
-            this.loadVariantThumbnail(
-                variantId
-            );
         }
     }
 
     private loadVariantThumbnail(
-        variantId: string
+        row: StockWorkspaceRow
     ): void {
 
         if (
-            this.variantThumbnails.has(
-                variantId
-            ) ||
-            this.variantThumbnailLoading.has(
-                variantId
+            !row.variantId ||
+            !row.thumbnailFileName
+        ) {
+            return;
+        }
+
+        const variantId = row.variantId;
+
+        if (
+            this.thumbnailCache.peekVariant(
+                row.variantId
             )
         ) {
             return;
         }
 
-        this.variantThumbnailLoading.add(
-            variantId
-        );
+        if (
+            !this.thumbnailCache
+                .beginVariantLoad(
+                    variantId
+                )
+        ) {
+            return;
+        }
 
         this.variantService
-            .getAllImages(
-                variantId
+            .getSharedThumbnailBlob(
+                row.thumbnailFileName
+            )
+            .pipe(
+                takeUntilDestroyed(
+                    this.destroyRef
+                )
             )
             .subscribe({
-                next: images => {
+                next: blob => {
 
-                    const img =
-                        images?.find(
-                            x => !x.deleted
-                        );
-
-                    if (!img) {
-
-                        const thumb =
-                            this.variantThumbnails.get(
-                                variantId
-                            );
-
-                        if (thumb) {
-                            URL.revokeObjectURL(
-                                thumb
-                            );
-                        }
-
-                        const image =
-                            this.variantImages.get(
-                                variantId
-                            );
-
-                        if (image) {
-                            URL.revokeObjectURL(
-                                image
-                            );
-                        }
-
-                        this.variantThumbnails.delete(
-                            variantId
-                        );
-
-                        this.variantImages.delete(
-                            variantId
-                        );
-
-                        this.variantThumbnailLoading.delete(
-                            variantId
-                        );
-
-                        this.variantImageLoading.delete(
-                            variantId
-                        );
-
-                        this.rows = [...this.rows];
-
-                        return;
-                    }
-
-                    const thumbnailFileName =
-                        img.thumbnailUrl
-                            .split('/')
-                            .pop();
-
-                    if (
-                        thumbnailFileName
-                    ) {
-
-                        this.variantService
-                            .getThumbnailBlob(
-                                variantId,
-                                thumbnailFileName
-                            )
-                            .subscribe({
-                                next: blob => {
-
-                                    const existing =
-                                        this.variantThumbnails.get(
-                                            variantId
-                                        );
-
-                                    if (existing) {
-                                        URL.revokeObjectURL(
-                                            existing
-                                        );
-                                    }
-
-                                    this.variantThumbnails.set(
-                                        variantId,
-                                        URL.createObjectURL(
-                                            blob
-                                        )
-                                    );
-
-                                    this.variantThumbnailLoading.delete(
-                                        variantId
-                                    );
-
-                                    this.rows =
-                                        [...this.rows];
-                                },
-                                error: () => {
-                                    this.variantThumbnailLoading.delete(
-                                        variantId
-                                    );
-                                }
-                            });
-                    }
-
-                    this.variantService
-                        .getImageBlob(
+                    this.thumbnailCache
+                        .setVariant(
                             variantId,
-                            img.fileName
-                        )
-                        .subscribe({
-                            next: blob => {
+                            URL.createObjectURL(
+                                blob
+                            )
+                        );
 
-                                const existing =
-                                    this.variantImages.get(
-                                        variantId
-                                    );
+                    this.thumbnailCache
+                        .finishVariantLoad(
+                            variantId
+                        );
 
-                                if (existing) {
-                                    URL.revokeObjectURL(
-                                        existing
-                                    );
-                                }
-
-                                this.variantImages.set(
-                                    variantId,
-                                    URL.createObjectURL(
-                                        blob
-                                    )
-                                );
-                            }
-                        });
+                    this.rows = [...this.rows];
+                    this.cdr.markForCheck();
                 },
                 error: () => {
-                    this.variantThumbnailLoading.delete(
-                        variantId
-                    );
+
+                    this.thumbnailCache
+                        .finishVariantLoad(
+                            variantId
+                        );
                 }
             });
     }
@@ -2663,109 +3182,172 @@ export class StockListComponent
     ): SafeUrl | null {
 
         return (
-
-            this.thumbnails.get(
-                productId
-            )
-
+            this.thumbnailCache
+                .getProduct(
+                    productId
+                )
             ?? null
         );
     }
 
+    private loadThumbnailPreference(): boolean {
+        const stored =
+            localStorage.getItem(
+                'stock.showThumbnails'
+            );
+
+        if (stored !== null) {
+            return stored === 'true';
+        }
+
+        const connection =
+            (navigator as any)?.connection;
+
+        const effectiveType =
+            connection?.effectiveType;
+
+        if (
+            effectiveType === 'slow-2g' ||
+            effectiveType === '2g'
+        ) {
+            return false;
+        }
+
+        return true;
+    }
+
+    toggleThumbnails(): void {
+        this.showThumbnails =
+            !this.showThumbnails;
+
+        localStorage.setItem(
+            'stock.showThumbnails',
+            String(this.showThumbnails)
+        );
+
+        this.rows = [...this.rows];
+        this.cdr.markForCheck();
+
+        if (this.showThumbnails) {
+            queueMicrotask(() => {
+                for (const row of this.rows) {
+                    this.ensureThumbnailLoaded(row);
+                }
+            });
+        }
+    }
+
+    private clearThumbnailCaches(): void {
+
+        this.thumbnailCache.clear();
+
+        this.rows = [...this.rows];
+        this.cdr.markForCheck();
+    }
+
     openThumbnail(
         row: StockWorkspaceRow
-    ) {
-
-        let image: string | null = null;
-
+    ): void {
         if (
             row.variantId &&
-            this.variantImages.has(row.variantId)
+            row.primaryImageFileName
         ) {
-            image =
-                this.variantImages.get(
-                    row.variantId
-                ) ?? null;
-        }
 
-        if (
-            !image &&
-            this.productImages.has(
-                row.productId
-            )
-        ) {
-            image =
-                this.productImages.get(
-                    row.productId
-                ) ?? null;
-        }
+            this.variantService
+                .getImageBlob(
+                    row.variantId,
+                    row.primaryImageFileName
+                )
+                .pipe(
+                    takeUntilDestroyed(
+                        this.destroyRef
+                    )
+                )
+                .subscribe(blob => {
 
-        if (!image) {
+                    this.openImageViewer(
+                        blob,
+                        row.variantName
+                        ?? row.productName
+                    );
+                });
+
             return;
         }
 
-        this.dialog.open(
-            FileViewerDialog,
-            {
-                panelClass:
-                    'enterprise-dialog',
-                width: '90vw',
-                maxWidth: '90vw',
-                height: '90vh',
-                maxHeight: '90vh',
-                data: {
-                    preview: {
-                        src: image,
-                        name:
-                            row.variantName
-                            ?? row.productName,
-                        type: 'image'
+        if (
+            row.productId &&
+            row.primaryImageFileName
+        ) {
+
+            this.productService
+                .getImageBlob(
+                    row.productId,
+                    row.primaryImageFileName,
+                    this.branchServiceBranchId()
+                )
+                .pipe(
+                    takeUntilDestroyed(
+                        this.destroyRef
+                    )
+                )
+                .subscribe(blob => {
+
+                    this.openImageViewer(
+                        blob,
+                        row.productName
+                    );
+                });
+        }
+    }
+
+    private openImageViewer(
+        blob: Blob,
+        name: string
+    ): void {
+        const url =
+            URL.createObjectURL(blob);
+
+        const dialogRef =
+            this.dialog.open(
+                FileViewerDialog,
+                {
+                    panelClass: 'enterprise-dialog',
+                    width: '90vw',
+                    maxWidth: '90vw',
+                    height: '90vh',
+                    maxHeight: '90vh',
+                    data: {
+                        preview: {
+                            src: url,
+                            name,
+                            type: 'image'
+                        }
                     }
                 }
-            }
-        );
+            );
+
+        dialogRef
+            .afterClosed()
+            .subscribe(() => {
+                URL.revokeObjectURL(
+                    url
+                );
+            });
     }
 
     public invalidateProductImageCache(
         productId: string
     ): void {
 
-        const thumb =
-            this.thumbnails.get(
+        this.thumbnailCache
+            .removeProduct(
                 productId
             );
 
-        if (thumb) {
-            URL.revokeObjectURL(
-                thumb as string
-            );
-        }
-
-        const image =
-            this.productImages.get(
+        this.thumbnailCache
+            .finishProductLoad(
                 productId
             );
-
-        if (image) {
-            URL.revokeObjectURL(
-                image
-            );
-        }
-
-        this.thumbnails.delete(
-            productId
-        );
-
-        this.productImages.delete(
-            productId
-        );
-
-        this.productThumbnailLoading.delete(
-            productId
-        );
-
-        this.productImageLoading.delete(
-            productId
-        );
     }
 }

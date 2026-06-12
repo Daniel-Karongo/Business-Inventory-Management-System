@@ -16,6 +16,127 @@ import java.util.UUID;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpecificationExecutor<Product> {
 
+    @Query(
+            value = """
+                    SELECT
+                        p.id as id,
+                        p.name as name,
+                        p.sku as sku,
+                        p.deleted as deleted,
+                        p.createdAt as createdAt,
+                        p.updatedAt as updatedAt,
+                        c.id as categoryId,
+                        c.name as categoryName,
+                        primaryImage.thumbnailFileName as thumbnailFileName,
+                        primaryImage.fileName as primaryImageFileName,
+                        COUNT(DISTINCT v.id) as variantCount
+                    FROM Product p
+                    LEFT JOIN p.category c
+                    LEFT JOIN p.variants v
+                    LEFT JOIN p.suppliers ps
+                    LEFT JOIN p.images primaryImage
+                        ON primaryImage.primaryImage = true
+                       AND primaryImage.deleted = false
+                    WHERE p.tenantId = :tenantId
+                      AND p.branchId = :branchId
+
+                      AND (
+                            :deleted IS NULL
+                            OR p.deleted = :deleted
+                      )
+
+                      AND (
+                            :categoryId IS NULL
+                            OR c.id = :categoryId
+                      )
+
+                      AND (
+                            :supplierId IS NULL
+                            OR ps.supplier.id = :supplierId
+                      )
+
+                      AND (
+                            :keyword IS NULL
+                            OR :keyword = ''
+                            OR LOWER(p.name)
+                                LIKE LOWER(
+                                    CONCAT('%', :keyword, '%')
+                                )
+                            OR LOWER(
+                                    COALESCE(
+                                        p.sku,
+                                        ''
+                                    )
+                               )
+                                LIKE LOWER(
+                                    CONCAT('%', :keyword, '%')
+                                )
+                      )
+                    GROUP BY
+                          p.id,
+                          p.name,
+                          p.sku,
+                          p.deleted,
+                          p.createdAt,
+                          p.updatedAt,
+                          c.id,
+                          c.name,
+                          primaryImage.thumbnailFileName,
+                          primaryImage.fileName
+                    """,
+            countQuery = """
+                    SELECT COUNT(DISTINCT p.id)
+                    FROM Product p
+                    LEFT JOIN p.category c
+                    LEFT JOIN p.suppliers ps
+                    WHERE p.tenantId = :tenantId
+                      AND p.branchId = :branchId
+
+                      AND (
+                            :deleted IS NULL
+                            OR p.deleted = :deleted
+                      )
+
+                      AND (
+                            :categoryId IS NULL
+                            OR c.id = :categoryId
+                      )
+
+                      AND (
+                            :supplierId IS NULL
+                            OR ps.supplier.id = :supplierId
+                      )
+
+                      AND (
+                            :keyword IS NULL
+                            OR :keyword = ''
+                            OR LOWER(p.name)
+                                LIKE LOWER(
+                                    CONCAT('%', :keyword, '%')
+                                )
+                            OR LOWER(
+                                    COALESCE(
+                                        p.sku,
+                                        ''
+                                    )
+                               )
+                                LIKE LOWER(
+                                    CONCAT('%', :keyword, '%')
+                                )
+                      )
+                    """
+    )
+    Page<StockWorkspaceProductProjection>
+    findWorkspaceProducts(
+            UUID tenantId,
+            UUID branchId,
+            Long categoryId,
+            UUID supplierId,
+            String keyword,
+            Boolean deleted,
+            Pageable pageable
+    );
+
     @Override
     @EntityGraph(attributePaths = {
             "category"
@@ -36,6 +157,13 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
     boolean existsByTenantIdAndBranchIdAndNameIgnoreCase(UUID tenantId, UUID branchId, String name);
 
     boolean existsByTenantIdAndBranchIdAndSku(UUID tenantId, UUID branchId, String sku);
+
+    boolean existsByTenantIdAndBranchIdAndSkuAndIdNot(
+            UUID tenantId,
+            UUID branchId,
+            String sku,
+            UUID id
+    );
 
     Optional<Product> findByTenantIdAndBranchIdAndSku(UUID tenantId, UUID branchId, String sku);
 
@@ -98,7 +226,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
 
     @Modifying
     @Query(value = """
-                DELETE FROM products_suppliers
+                DELETE FROM product_suppliers
                 WHERE product_id = :productId
             """, nativeQuery = true)
     void detachSuppliers(@Param("productId") UUID productId);

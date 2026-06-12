@@ -5,6 +5,19 @@ export interface SupplierMinimalDTO {
   name: string;
 }
 
+export interface StockWorkspaceProduct {
+    id: string;
+    name: string;
+    sku?: string;
+    categoryId?: number;
+    categoryName?: string;
+    thumbnailFileName?: string;
+    primaryImageFileName?: string;
+    deleted: boolean;
+    updatedAt?: string;
+    variantCount: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -15,6 +28,7 @@ export interface Product {
   minimumProfit?: number;
   variants: ProductVariant[];
   imageUrls: string[];
+  primaryImageFileName?: string;
   thumbnail?: string | null;
   categoryId?: number;
   categoryName?: string;

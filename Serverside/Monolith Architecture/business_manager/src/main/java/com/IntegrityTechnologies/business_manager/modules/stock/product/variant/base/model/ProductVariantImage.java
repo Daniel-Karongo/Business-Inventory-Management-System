@@ -55,6 +55,10 @@ public class ProductVariantImage extends BranchAwareEntity {
 
     private String thumbnailFileName;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean primaryImage = false;
+
     @Column(name = "content_hash", length = 64, nullable = false)
     private String contentHash;
 

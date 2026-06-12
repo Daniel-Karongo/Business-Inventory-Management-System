@@ -32,6 +32,7 @@ public interface ProductMapper {
             expression = "java(mapVariants(product.getVariants()))")
     @Mapping(target = "updatedAt",
             expression = "java(product.getUpdatedAt() != null ? product.getUpdatedAt() : product.getCreatedAt())")
+    @Mapping(target = "primaryImageFileName", expression = "java(extractPrimaryImageFileName(product.getImages()))")
     ProductDTO toDTO(Product product);
 
     /* =========================================================
@@ -142,5 +143,20 @@ public interface ProductMapper {
                                 .build()
                 )
                 .toList();
+    }
+
+    default String extractPrimaryImageFileName(
+            Set<ProductImage> images
+    ) {
+        if (images == null || images.isEmpty()) {
+            return null;
+        }
+
+        return images.stream()
+                .filter(i -> !Boolean.TRUE.equals(i.isDeleted()))
+                .filter(i -> Boolean.TRUE.equals(i.getPrimaryImage()))
+                .map(ProductImage::getFileName)
+                .findFirst()
+                .orElse(null);
     }
 }

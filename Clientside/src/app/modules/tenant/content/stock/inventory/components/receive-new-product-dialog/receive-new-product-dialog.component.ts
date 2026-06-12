@@ -18,6 +18,8 @@ import { BranchService } from '../../../../branches/services/branch.service';
 import { SupplierMinimalDTO } from '../../../../suppliers/models/supplier.model';
 import { BranchMinimalDTO } from '../../../../branches/models/branch.model';
 import { Product } from '../../../models/product.model';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 
 @Component({
   selector: 'app-receive-new-product-dialog',
@@ -30,7 +32,9 @@ import { Product } from '../../../models/product.model';
     MatInputModule,
     MatSelectModule,
     MatFormFieldModule,
-    MatIconModule
+    MatIconModule,
+    MatDatepickerModule,
+    MatNativeDateModule
   ],
   templateUrl: './receive-new-product-dialog.component.html',
   styleUrls: ['./receive-new-product-dialog.component.scss']
@@ -67,6 +71,11 @@ export class ReceiveNewProductDialogComponent implements OnInit {
       newVariantSku: [''],
 
       sellingPrice: [null],
+
+      accountingDate: [
+        new Date(),
+        Validators.required
+      ],
 
       supplierId: ['', Validators.required],
       unitsSupplied: [1, [Validators.required, Validators.min(1)]],
@@ -119,6 +128,9 @@ export class ReceiveNewProductDialogComponent implements OnInit {
 
     this.loading = true;
 
+    const accountingDate: Date =
+      this.form.value.accountingDate;
+
     const payload = {
       productId: this.product.id,
       branchId: this.form.value.branchId,
@@ -128,6 +140,7 @@ export class ReceiveNewProductDialogComponent implements OnInit {
       newVariantSku: this.form.value.newVariantSku,
 
       sellingPrice: this.form.value.sellingPrice,
+      accountingDate: accountingDate.toISOString().split('T')[0],
 
       reference: this.form.value.reference,
       note: this.form.value.note,

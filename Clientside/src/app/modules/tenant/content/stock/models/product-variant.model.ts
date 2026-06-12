@@ -9,6 +9,8 @@ export interface ProductVariant {
   barcode?: string;
   barcodeImagePath?: string;
   imageUrls?: string[];
+  thumbnailFileName?: string;
+  primaryImageFileName?: string;
   deleted?: boolean;
 }
 

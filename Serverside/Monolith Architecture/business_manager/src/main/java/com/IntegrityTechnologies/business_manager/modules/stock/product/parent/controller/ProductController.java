@@ -147,8 +147,8 @@ public class ProductController {
             @RequestParam(required = false) String reason
     ) {
         productService.softDeleteProduct(
-                branchId,
                 id,
+                branchId,
                 reason
         );
         return new ApiResponse("success", "Product soft deleted", null);
@@ -204,14 +204,6 @@ public class ProductController {
             @RequestParam(required = false) Boolean deleted
     ) throws IOException {
         return productService.downloadProductImagesZip(branchId, id, deleted);
-    }
-
-    @GetMapping("/{id}/thumbnail")
-    public ResponseEntity<Resource> thumbnail(
-            @PathVariable UUID id,
-            @RequestParam UUID branchId
-    ) {
-        return productService.getProductThumbnail(branchId, id);
     }
 
     /* ===================== AUDITS ===================== */

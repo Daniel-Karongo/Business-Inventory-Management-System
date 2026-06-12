@@ -17,10 +17,13 @@ import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -227,33 +230,42 @@ public class ProductImageService {
 
         try {
 
-            String detected =
-                    Files.probeContentType(
-                            path
-                    );
+            String etag =
+                    "\"" +
+                            Files.getLastModifiedTime(path)
+                                    .toMillis()
+                            + "\"";
 
-            if (detected != null) {
+            String ifNoneMatch =
+                    RequestContextHolder
+                            .currentRequestAttributes()
+                            instanceof ServletRequestAttributes attrs
+                            ? attrs.getRequest()
+                            .getHeader(HttpHeaders.IF_NONE_MATCH)
+                            : null;
 
-                mediaType =
-                        MediaType.parseMediaType(
-                                detected
-                        );
+            if (etag.equals(ifNoneMatch)) {
+                return ResponseEntity
+                        .status(HttpStatus.NOT_MODIFIED)
+                        .eTag(etag)
+                        .build();
             }
 
-        } catch (Exception ignored) {
-        }
+            return ResponseEntity.ok()
+                    .eTag(etag)
+                    .contentType(mediaType)
+                    .header(
+                            HttpHeaders.CACHE_CONTROL,
+                            "public, max-age=86400"
+                    )
+                    .body(resource);
 
-        return ResponseEntity.ok()
-                .contentType(
-                        mediaType
-                )
-                .header(
-                        HttpHeaders.CACHE_CONTROL,
-                        "public, max-age=86400"
-                )
-                .body(
-                        resource
-                );
+        } catch (IOException e) {
+            throw new RuntimeException(
+                    "Failed to read image",
+                    e
+            );
+        }
     }
 
     private String getExtension(String filename) {

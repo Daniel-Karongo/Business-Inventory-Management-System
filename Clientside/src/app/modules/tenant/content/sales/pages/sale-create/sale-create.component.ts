@@ -157,7 +157,7 @@ import {
 
 import {
   ProductSelectorDialogComponent
-} from '../../dialogs/product-selector-dialog/product-selector-dialog.component';
+} from '../../../stock/products/components/product-selector-dialog/product-selector-dialog.component';
 
 import {
   BarcodeService
@@ -496,43 +496,62 @@ export class SaleCreateComponent implements OnInit {
             response.variants.content
               .filter(
                 v =>
-                  v.productId
-                  === productId
+                  v.productId === productId
               );
 
           this.variantMap[index] =
             variants;
 
-          if (
-            variants.length !== 1
-          ) {
+          if (variants.length !== 1) {
             return;
           }
 
           const variant =
             variants[0];
 
-          row.patchValue({
+          this.packagingMap[index] =
+            variant.packagings ?? [];
 
+          row.patchValue({
             productVariantId:
               variant.variantId
           });
 
-          this.packagingMap[index] =
-            variant.packagings;
-
           if (
-            variant.packagings
-              ?.length === 1
+            variant.packagings?.length !== 1
           ) {
-
-            row.patchValue({
-
-              packagingId:
-                variant.packagings[0]
-                  .packagingId
-            });
+            return;
           }
+
+          const packagingId =
+            variant.packagings[0]
+              .packagingId;
+
+          const duplicateIndex =
+            this.findDuplicateVariantPackaging(
+              variant.variantId,
+              packagingId,
+              index
+            );
+
+          if (duplicateIndex !== -1) {
+
+            this.removeLine(index);
+
+            this.snackBar.open(
+              `${row.value.productName} is already in the sale.`,
+              'Close',
+              {
+                duration: 4000
+              }
+            );
+
+            return;
+          }
+
+          row.patchValue({
+            packagingId
+          });
         }
       });
   }
@@ -690,6 +709,47 @@ export class SaleCreateComponent implements OnInit {
     }
 
     this.setupPreviewPipeline(index);
+  }
+
+  private createAdditionalRow(): number {
+
+    const emptyIndex =
+      this.items.controls.findIndex(
+        c => !c.value.productId
+      );
+
+    if (emptyIndex !== -1) {
+      return emptyIndex;
+    }
+
+    this.addLine();
+
+    return this.items.length - 1;
+  }
+
+  private findDuplicateVariantPackaging(
+    variantId: string,
+    packagingId: string,
+    excludeIndex: number
+  ): number {
+
+    return this.items.controls.findIndex(
+      (control, index) => {
+
+        if (index === excludeIndex) {
+          return false;
+        }
+
+        const value =
+          control.getRawValue();
+
+        return (
+          value.productVariantId === variantId
+          &&
+          value.packagingId === packagingId
+        );
+      }
+    );
   }
 
   removeLine(index: number): void {
@@ -906,7 +966,12 @@ export class SaleCreateComponent implements OnInit {
         width: '90vw',
         maxWidth: '1200px',
         height: '90vh',
-        panelClass: 'responsive-dialog'
+        panelClass: 'enterprise-dialog',
+        data: {
+          branchId:
+            this.branchContext.currentBranch
+            ?? this.defaultBranchId
+        }
       }
     )
       .afterClosed()
@@ -916,9 +981,15 @@ export class SaleCreateComponent implements OnInit {
           return;
         }
 
-        products.forEach(product => {
+        products.forEach((product, index) => {
+
+          const targetRow =
+            index === 0
+              ? rowIndex
+              : this.createAdditionalRow();
+
           this.patchProductIntoRow(
-            rowIndex,
+            targetRow,
             product
           );
         });
@@ -933,11 +1004,18 @@ export class SaleCreateComponent implements OnInit {
     const row =
       this.items.at(index);
 
-    row.patchValue({
+    row.reset({
       productId: product.id,
       productName: product.name,
       productVariantId: null,
-      packagingId: null
+      packagingId: null,
+      branchId:
+        row.value.branchId ??
+        this.defaultBranchId,
+      quantity: 1,
+      batchSelections: null,
+      requestedUnitPrice: null,
+      overrideReason: null
     });
 
     this.resolveSellables(
@@ -976,39 +1054,54 @@ export class SaleCreateComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
+
         next: response => {
 
           const variants =
             response.variants.content
-              .filter(v =>
-                v.productId === value.productId
+              .filter(
+                v =>
+                  v.productId === value.productId
               );
 
-          this.variantMap[index] = variants;
+          this.variantMap[index] =
+            variants;
 
-          if (variants.length === 1) {
-
-            const variant =
-              variants[0];
-
-            row.patchValue({
-              productVariantId:
-                variant.variantId
-            });
-
-            this.packagingMap[index] =
-              variant.packagings;
-
-            if (
-              variant.packagings.length === 1
-            ) {
-              row.patchValue({
-                packagingId:
-                  variant.packagings[0]
-                    .packagingId
-              });
-            }
+          if (variants.length !== 1) {
+            return;
           }
+
+          const variant = variants[0];
+
+          row.patchValue({
+            productVariantId:
+              variant.variantId
+          });
+
+          this.packagingMap[index] =
+            variant.packagings;
+
+          if (
+            variant.packagings?.length === 1
+          ) {
+            row.patchValue({
+              packagingId:
+                variant.packagings[0]
+                  .packagingId
+            });
+          }
+        },
+
+        error: error => {
+
+          this.snackBar.open(
+            error?.error?.message ??
+            'Unable to load product.',
+            'Close',
+            {
+              duration: 5000
+            }
+          );
         }
       });
   }

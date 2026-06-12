@@ -11,16 +11,48 @@ import java.util.*;
 @Repository
 public interface ProductImageRepository extends JpaRepository<ProductImage, UUID> {
 
+    @Query("""
+             SELECT pi.fileName
+             FROM ProductImage pi
+             WHERE pi.product.id = :productId
+               AND pi.product.tenantId = :tenantId
+               AND pi.product.branchId = :branchId
+               AND pi.product.deleted = false
+               AND pi.deleted = false
+               AND pi.primaryImage = true
+            """)
+    Optional<String> findPrimaryImageFilename(
+            UUID tenantId,
+            UUID branchId,
+            UUID productId
+    );
+
+    @Query("""
+                SELECT pi.thumbnailFileName
+                FROM ProductImage pi
+                WHERE pi.product.id = :productId
+                  AND pi.product.tenantId = :tenantId
+                  AND pi.product.branchId = :branchId
+                  AND pi.product.deleted = false
+                  AND pi.deleted = false
+                  AND pi.primaryImage = true
+            """)
+    Optional<String> findPrimaryThumbnailFilename(
+            UUID tenantId,
+            UUID branchId,
+            UUID productId
+    );
+
     List<ProductImage> findByTenantIdAndBranchIdAndProduct_Id(UUID tenantId, UUID branchId, UUID productId);
 
     @Modifying
     @Query("""
-        update ProductImage i
-        set i.deleted = true
-        where i.product.id = :productId
-          and i.tenantId = :tenantId
-          and i.branchId = :branchId
-    """)
+                update ProductImage i
+                set i.deleted = true
+                where i.product.id = :productId
+                  and i.tenantId = :tenantId
+                  and i.branchId = :branchId
+            """)
     void softDeleteByProductId(
             @Param("productId") UUID productId,
             @Param("tenantId") UUID tenantId,
@@ -29,13 +61,13 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, UUID
 
     @Modifying
     @Query("""
-        update ProductImage i
-        set i.deleted = false
-        where i.product.id = :productId
-          and i.deletedIndependently = false
-          and i.tenantId = :tenantId
-          and i.branchId = :branchId
-    """)
+                update ProductImage i
+                set i.deleted = false
+                where i.product.id = :productId
+                  and i.deletedIndependently = false
+                  and i.tenantId = :tenantId
+                  and i.branchId = :branchId
+            """)
     void restoreByProductId(
             @Param("productId") UUID productId,
             @Param("tenantId") UUID tenantId,
@@ -44,11 +76,11 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, UUID
 
     @Modifying
     @Query("""
-        delete from ProductImage i
-        where i.product.id = :productId
-          and i.tenantId = :tenantId
-          and i.branchId = :branchId
-    """)
+                delete from ProductImage i
+                where i.product.id = :productId
+                  and i.tenantId = :tenantId
+                  and i.branchId = :branchId
+            """)
     void deleteByProductId(
             @Param("productId") UUID productId,
             @Param("tenantId") UUID tenantId,
@@ -69,11 +101,11 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, UUID
     );
 
     @Query("""
-        SELECT p.id as productId, i.filePath as filePath
-        FROM Product p
-        LEFT JOIN p.images i
-        WHERE p.tenantId = :tenantId
-        AND p.branchId = :branchId
-    """)
+                SELECT p.id as productId, i.filePath as filePath
+                FROM Product p
+                LEFT JOIN p.images i
+                WHERE p.tenantId = :tenantId
+                AND p.branchId = :branchId
+            """)
     List<ProductImageProjection> findAllImagePaths(UUID tenantId, UUID branchId);
 }

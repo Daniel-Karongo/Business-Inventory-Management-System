@@ -107,6 +107,12 @@ export class ProductDetailsComponent
   @ViewChild(EntityImageManagerComponent)
   private imageManager?: EntityImageManagerComponent;
 
+  @ViewChild(VariantSummaryComponent)
+  private variantSummary?: VariantSummaryComponent;
+
+  @ViewChild(ProductAuditsComponent)
+  private audits?: ProductAuditsComponent;
+
   product?: Product;
 
   loading = true;
@@ -199,35 +205,33 @@ export class ProductDetailsComponent
     const id =
       this.route.snapshot.paramMap.get('id');
 
-    const deleted =
-      history.state?.deleted === true;
-
     if (!id) {
-      this.router.navigate(
-        ['/app/stock']
-      );
+      this.router.navigate(['/app/stock']);
       return;
     }
 
     this.productService
-      .getById(
-        id,
-        deleted
-      )
+      .getById(id, false)
       .subscribe({
         next: product => {
-
-          this.product =
-            product;
-
+          this.product = product;
           this.loading = false;
-
           this.loadThumbnail();
         },
-        error: () =>
-          this.router.navigate(
-            ['/app/stock']
-          )
+        error: () => {
+          this.productService
+            .getById(id, true)
+            .subscribe({
+              next: product => {
+                this.product = product;
+                this.loading = false;
+                this.loadThumbnail();
+              },
+              error: () => {
+                this.router.navigate(['/app/stock']);
+              }
+            });
+        }
       });
   }
 
@@ -345,29 +349,25 @@ export class ProductDetailsComponent
   }
 
   private reloadProduct(): void {
-
     if (!this.product?.id) {
       return;
     }
 
-    const deleted =
-      history.state?.deleted === true;
-
     this.productService
-      .getById(
-        this.product.id,
-        deleted
-      )
+      .getById(this.product.id, null)
       .subscribe({
         next: product => {
-
           this.product = product;
 
           this.loadThumbnail();
+
+          this.variantSummary?.load();
+          this.imageManager?.reload();
+          this.audits?.reload();
         }
       });
   }
-
+  
   selectTab(
     tab:
       | 'overview'
@@ -426,9 +426,8 @@ export class ProductDetailsComponent
           )
           .subscribe({
             next: () => {
-
-              this.product!.deleted = true;
-
+              this.processing = false;
+              this.reloadProduct();
               this.processing = false;
 
               this.snackbar.open(
@@ -492,9 +491,8 @@ export class ProductDetailsComponent
           )
           .subscribe({
             next: () => {
-
-              this.product!.deleted = false;
-
+              this.processing = false;
+              this.reloadProduct();
               this.processing = false;
 
               this.snackbar.open(

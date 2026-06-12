@@ -23,6 +23,7 @@ public class ProductCreateDTO {
     private String name;
 
     private String description;
+    private String sku;
 
     @NotNull(message = "The category is required.")
     private Long categoryId;

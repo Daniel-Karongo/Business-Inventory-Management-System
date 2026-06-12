@@ -4,5 +4,6 @@ public record VariantImageDTO(
         String fileName,
         String url,
         String thumbnailUrl,
+        boolean primaryImage,
         boolean deleted
 ) {}

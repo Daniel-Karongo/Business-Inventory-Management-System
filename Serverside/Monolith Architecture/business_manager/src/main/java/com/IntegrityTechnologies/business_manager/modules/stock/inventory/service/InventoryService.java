@@ -43,6 +43,7 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.repository.ProductVariantPackagingRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.model.ProductPrice;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.repository.ProductPriceRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.service.ProductPriceService;
 import com.IntegrityTechnologies.business_manager.security.util.BranchTenantGuard;
 import com.IntegrityTechnologies.business_manager.security.util.SecurityUtils;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
@@ -94,9 +95,9 @@ public class InventoryService {
     private final StockEngine stockEngine;
     private final GoodsReceiptRepository goodsReceiptRepository;
     private final VatCalculationService vatCalculationService;
+    private final ProductPriceService priceService;
 
     private static final int MAX_RETRIES = 5;
-
 
     private UUID tenantId() {
         return TenantContext.getTenantId();
@@ -160,11 +161,16 @@ public class InventoryService {
                     requireVariant(req.getProductVariantId());
 
             ProductVariantPackaging basePackaging =
-                    requireBasePackaging(variant.getId());
+                    ensureBasePackagingExists(
+                            variant.getId(),
+                            branch.getId()
+                    );
 
-            validatePricingExists(
+            ensureLegacyPricingExists(
                     variant.getId(),
-                    basePackaging.getId()
+                    basePackaging.getId(),
+                    branch.getId(),
+                    req.getSellingPrice()
             );
 
             // -------------------------------------------------------------
@@ -915,18 +921,14 @@ public class InventoryService {
     private ApiResponse processAdjustStockVariant(AdjustStockRequest req) {
         return assertNotDuplicateOrIgnore(() -> {
 
-            final UUID tenantId = tenantId();
-
             ProductVariant variant =
                     requireVariant(req.getProductVariantId());
 
             ProductVariantPackaging basePackaging =
-                    requireBasePackaging(variant.getId());
-
-            validatePricingExists(
-                    variant.getId(),
-                    basePackaging.getId()
-            );
+                    ensureBasePackagingExists(
+                            variant.getId(),
+                            req.getBranchId()
+                    );
 
             Branch branch =
                     requireBranch(req.getBranchId());
@@ -2274,16 +2276,88 @@ public class InventoryService {
         return packaging;
     }
 
+    private ProductVariantPackaging ensureBasePackagingExists(
+            UUID variantId,
+            UUID branchId
+    ) {
+        ProductVariantPackaging existing =
+                packagingRepository
+                        .findByProductVariantIdAndIsBaseUnitTrueAndDeletedFalse(
+                                variantId
+                        );
+
+        if (existing != null) {
+            return existing;
+        }
+
+        ProductVariant variant =
+                requireVariant(variantId);
+
+        ProductVariantPackaging created =
+                ProductVariantPackaging.builder()
+                        .productVariant(variant)
+                        .tenantId(tenantId())
+                        .branchId(branchId)
+                        .name("Piece")
+                        .unitsPerPackaging(1L)
+                        .isBaseUnit(true)
+                        .deleted(false)
+                        .build();
+
+        return packagingRepository.save(created);
+    }
+
+    private void ensureLegacyPricingExists(
+            UUID variantId,
+            UUID packagingId,
+            UUID branchId,
+            BigDecimal sellingPrice
+    ) {
+        boolean hasPricing =
+                !productPriceRepository
+                        .findApplicablePrices(
+                                variantId,
+                                packagingId,
+                                tenantId(),
+                                branchId,
+                                1L
+                        )
+                        .isEmpty();
+
+        if (hasPricing) {
+            return;
+        }
+
+        if (sellingPrice == null
+                || sellingPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(
+                    "sellingPrice is required because pricing does not exist"
+            );
+        }
+
+        priceService.createPrice(
+                branchId,
+                variantId,
+                packagingId,
+                sellingPrice,
+                1L
+        );
+    }
+
     private void validatePricingExists(
             UUID variantId,
-            UUID packagingId
+            UUID packagingId,
+            UUID branchId
     ) {
 
         boolean hasPricing =
                 !productPriceRepository
-                        .findByProductVariantIdAndPackagingIdAndDeletedFalse(
+                        .findApplicablePrices(
                                 variantId,
-                                packagingId
+                                packagingId,
+                                tenantId(),
+                                branchId,
+                                1L
                         )
                         .isEmpty();
 
@@ -2477,18 +2551,5 @@ public class InventoryService {
                                         reference
                         ).getBytes(StandardCharsets.UTF_8)
                 );
-    }
-
-    @Transactional(readOnly = true)
-    public BigDecimal getAverageCost(UUID variantId, UUID branchId) {
-
-        return inventoryItemRepository
-                .findByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
-                        variantId,
-                        tenantId(),
-                        branchId
-                )
-                .map(InventoryItem::getAverageCost)
-                .orElse(BigDecimal.ZERO);
     }
 }

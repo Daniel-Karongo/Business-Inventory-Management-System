@@ -1,6 +1,7 @@
 package com.IntegrityTechnologies.business_manager.modules.stock.onboarding.service;
 
 import com.IntegrityTechnologies.business_manager.config.bulk.BulkError;
+import com.IntegrityTechnologies.business_manager.modules.platform.tenant.entity.Tenant;
 import com.IntegrityTechnologies.business_manager.modules.stock.inventory.service.InventoryService;
 import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingRequest;
 import com.IntegrityTechnologies.business_manager.modules.stock.onboarding.dto.StockOnboardingRowValidationResult;
@@ -8,6 +9,7 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.m
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.pricing.service.InventoryCostService;
 import com.IntegrityTechnologies.business_manager.security.util.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,11 +22,15 @@ import java.util.*;
 @RequiredArgsConstructor
 public class StockOnboardingValidationService {
 
-    private final InventoryService inventoryService;
+    private final InventoryCostService inventoryCostService;
 
     private final ProductRepository productRepository;
 
     private final ProductVariantRepository variantRepo;
+
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
 
     public StockOnboardingRowValidationResult validate(
             int rowNumber,
@@ -77,11 +83,11 @@ public class StockOnboardingValidationService {
 
         if (variantId != null) {
 
-            avgCost =
-                    inventoryService.getAverageCost(
-                            variantId,
-                            req.getBranchId()
-                    );
+            avgCost = inventoryCostService.getAverageCost(
+                    tenantId(),
+                    variantId,
+                    req.getBranchId()
+            );
         }
 
         /*

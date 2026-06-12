@@ -13,7 +13,10 @@ import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.m
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariant;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.parent.repository.ProductRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariantAudit;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.model.ProductVariantImage;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantAuditRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantImageRepository;
+import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.VariantThumbnailProjection;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.model.ProductVariantPackaging;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.packaging.repository.ProductVariantPackagingRepository;
 import com.IntegrityTechnologies.business_manager.modules.stock.product.variant.base.repository.ProductVariantRepository;
@@ -26,20 +29,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ProductVariantService {
     /**
      * IMPORTANT DOMAIN NOTE:
-     *
+     * <p>
      * ProductVariant is NOT directly sellable.
-     *
+     * <p>
      * Sellable = Variant + Packaging + Pricing + Adjustments
-     *
+     * <p>
      * Do NOT use ProductVariant as a source of pricing or stock decisions.
      * Always use SellableResolverService.
      */
@@ -56,8 +59,11 @@ public class ProductVariantService {
     private final OutboxEventWriter outboxEventWriter;
     private final ProductVariantImageService imageService;
     private final ProductVariantAuditRepository auditRepo;
+    private final ProductVariantImageRepository productVariantImageRepository;
 
-    private UUID tenantId() { return TenantContext.getTenantId(); }
+    private UUID tenantId() {
+        return TenantContext.getTenantId();
+    }
 
     @Transactional(readOnly = true)
     public ProductVariant getEntityIncludingDeleted(
@@ -213,12 +219,38 @@ public class ProductVariantService {
             UUID branchId,
             UUID id
     ) {
-        return mapper.toDTO(
+        ProductVariant variant =
                 getEntityIncludingDeleted(
                         branchId,
                         id
-                )
+                );
+
+        ProductVariantDTO dto =
+                mapper.toDTO(
+                        variant
+                );
+
+        dto.setThumbnailFileName(
+                productVariantImageRepository
+                        .findPrimaryThumbnailFilename(
+                                tenantId(),
+                                branchId,
+                                id
+                        )
+                        .orElse(null)
         );
+
+        dto.setPrimaryImageFileName(
+                productVariantImageRepository
+                        .findPrimaryImageFilename(
+                                tenantId(),
+                                branchId,
+                                id
+                        )
+                        .orElse(null)
+        );
+
+        return dto;
     }
 
     @Transactional(readOnly = true)
@@ -232,41 +264,80 @@ public class ProductVariantService {
 
         switch (filter) {
 
-            case DELETED ->
-                    variants =
-                            variantRepo.findByTenantIdAndBranchIdAndProduct_IdAndDeletedTrue(
-                                    tenantId(),
-                                    branchId,
-                                    productId
-                            );
+            case DELETED -> variants =
+                    variantRepo.findByTenantIdAndBranchIdAndProduct_IdAndDeletedTrue(
+                            tenantId(),
+                            branchId,
+                            productId
+                    );
 
-            case ALL ->
-                    variants =
-                            variantRepo.findAllForProduct(
-                                    tenantId(),
-                                    branchId,
-                                    productId
-                            );
+            case ALL -> variants =
+                    variantRepo.findAllForProduct(
+                            tenantId(),
+                            branchId,
+                            productId
+                    );
 
-            case ACTIVE ->
-                    variants =
-                            variantRepo.findActiveForProduct(
-                                    tenantId(),
-                                    branchId,
-                                    productId
-                            );
+            case ACTIVE -> variants =
+                    variantRepo.findActiveForProduct(
+                            tenantId(),
+                            branchId,
+                            productId
+                    );
 
-            default ->
-                    variants =
-                            variantRepo.findDeletedForProduct(
-                                    tenantId(),
-                                    branchId,
-                                    productId
-                            );
+            default -> variants =
+                    variantRepo.findDeletedForProduct(
+                            tenantId(),
+                            branchId,
+                            productId
+                    );
         }
 
+        List<ProductVariantImage> primaryImages =
+                productVariantImageRepository
+                        .findPrimaryImagesForVariants(
+                                variants.stream()
+                                        .map(ProductVariant::getId)
+                                        .toList(),
+                                tenantId(),
+                                branchId
+                        );
+
+        Map<UUID, ProductVariantImage> primaryImageMap =
+                primaryImages.stream()
+                        .collect(
+                                Collectors.toMap(
+                                        img -> img.getVariant().getId(),
+                                        Function.identity()
+                                )
+                        );
+
         return variants.stream()
-                .map(mapper::toDTO)
+                .map(variant -> {
+
+                    ProductVariantDTO dto =
+                            mapper.toDTO(
+                                    variant
+                            );
+
+                    ProductVariantImage primary =
+                            primaryImageMap.get(
+                                    variant.getId()
+                            );
+
+                    if (primary != null) {
+
+                        dto.setThumbnailFileName(
+                                primary.getThumbnailFileName()
+                        );
+
+                        dto.setPrimaryImageFileName(
+                                primary.getFileName()
+                        );
+                    }
+
+                    return dto;
+                })
                 .toList();
     }
 
@@ -398,9 +469,8 @@ public class ProductVariantService {
             String reason
     ) {
         ProductVariant variant =
-                variantRepo.findByIdSafe(
+                variantRepo.findByIdIncludingDeleted(
                         variantId,
-                        true,
                         tenantId(),
                         branchId
                 ).orElseThrow(
@@ -408,6 +478,12 @@ public class ProductVariantService {
                                 "Variant not found"
                         )
                 );
+
+        if (variant.getProduct().isDeleted()) {
+            throw new IllegalStateException(
+                    "Cannot restore variant because the parent product is deleted."
+            );
+        }
 
         variant.setDeleted(false);
 
@@ -438,6 +514,21 @@ public class ProductVariantService {
                 variant,
                 "RESTORE",
                 reason
+        );
+
+        cacheInvalidationService.evictVariantSearch(
+                tenantId(),
+                branchId
+        );
+
+        cacheInvalidationService.evictPricingByVariant(
+                tenantId(),
+                variantId
+        );
+
+        cacheInvalidationService.evictPackaging(
+                tenantId(),
+                variantId
         );
     }
 
@@ -472,7 +563,7 @@ public class ProductVariantService {
         if (hasReservations || hasConsumptions) {
             throw new IllegalStateException("Cannot delete variant with stock history");
         }
-        
+
         boolean hasInventory =
                 inventoryItemRepository.existsByProductVariantIdAndTenantIdAndBranchIdAndDeletedFalse(
                         variantId,

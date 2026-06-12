@@ -12,6 +12,8 @@ import { SupplierMinimalDTO } from '../../../../suppliers/models/supplier.model'
 import { SupplierService } from '../../../../suppliers/services/supplier.service';
 import { MatOption, MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 
 @Component({
   selector: 'app-receive-stock-dialog',
@@ -24,7 +26,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
     MatFormFieldModule,
     MatSelectModule,
     ReactiveFormsModule,
-    MatIconModule
+    MatIconModule,
+    MatDatepickerModule,
+    MatNativeDateModule
   ],
   templateUrl: './receive-stock-dialog.component.html',
   styleUrls: ['./receive-stock-dialog.component.scss']
@@ -49,9 +53,14 @@ export class ReceiveStockDialogComponent {
       reference: ['', Validators.required],
       note: [''],
 
-      variantMode: ['EXISTING', Validators.required], // 👈 NEW
-      classification: [''],                           // 👈 NEW
-      newVariantSku: [''],                            // 👈 NEW
+      accountingDate: [
+        new Date(),
+        Validators.required
+      ],
+
+      variantMode: ['EXISTING', Validators.required],
+      classification: [''],
+      newVariantSku: [''],
 
       sellingPrice: [null],
 
@@ -100,11 +109,19 @@ export class ReceiveStockDialogComponent {
 
     this.loading = true;
 
+    const accountingDate: Date =
+      this.form.value.accountingDate;
+
     const payload: any = {
       productId: this.data.productId,
       branchId: this.data.branchId,
+
       reference: this.form.value.reference,
       note: this.form.value.note,
+
+      accountingDate:
+        accountingDate.toISOString().split('T')[0],
+
       sellingPrice: this.form.value.sellingPrice,
       suppliers: this.form.value.suppliers
     };
@@ -121,9 +138,25 @@ export class ReceiveStockDialogComponent {
         this.snackbar.open('Stock received successfully', 'Close', { duration: 2500 });
         this.dialogRef.close(true);
       },
-      error: () => {
+      error: err => {
+
         this.loading = false;
-        this.snackbar.open('Failed to receive stock', 'Close', { duration: 3000 });
+
+        const message =
+          err?.error?.message ??
+          err?.error ??
+          err?.message ??
+          'Failed to receive stock';
+
+        this.snackbar.open(
+          message,
+          'Close',
+          {
+            duration: 6000
+          }
+        );
+
+        console.error(err);
       }
     });
   }

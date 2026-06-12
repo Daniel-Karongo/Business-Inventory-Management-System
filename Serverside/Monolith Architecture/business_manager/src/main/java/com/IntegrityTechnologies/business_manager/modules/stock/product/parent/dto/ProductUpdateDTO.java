@@ -30,7 +30,5 @@ public class ProductUpdateDTO {
 
     private List<UUID> supplierIds;
 
-    private UUID branchId;
-
     private List<ProductVariantUpdateDTO> variants;
 }

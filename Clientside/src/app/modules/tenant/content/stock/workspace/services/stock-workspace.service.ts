@@ -4,12 +4,10 @@ import {
 } from '@angular/core';
 
 import {
-  BehaviorSubject,
   Observable,
-  forkJoin,
+  catchError,
   map,
   of,
-  switchMap,
   tap
 } from 'rxjs';
 
@@ -18,7 +16,8 @@ import {
 } from '../../products/parent/services/product.service';
 
 import {
-  ProductVariantService
+  ProductVariantService,
+  VariantFilterType
 } from '../../products/variant/services/product-variant.service';
 
 import {
@@ -26,7 +25,8 @@ import {
 } from '../../inventory/services/inventory.service';
 
 import {
-  Product
+  Product,
+  StockWorkspaceProduct
 } from '../../models/product.model';
 
 import {
@@ -34,7 +34,6 @@ import {
 } from '../../models/product-variant.model';
 
 import {
-  InventoryResponse,
   InventoryWorkspaceResponse
 } from '../../models/inventory-response.model';
 
@@ -46,10 +45,10 @@ import {
   StockWorkspaceResult
 } from '../models/stock-workspace-result.model';
 
+import { MatSnackBar } from '@angular/material/snack-bar';
 import {
   StockWorkspaceRow
 } from '../models/stock-item.model';
-import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Injectable({
   providedIn: 'root'
@@ -78,6 +77,12 @@ export class StockWorkspaceService {
   private rows =
     new Map<string, StockWorkspaceRow>();
 
+  private childrenByParent =
+    new Map<
+      string,
+      StockWorkspaceRow[]
+    >();
+
   private rootIds: string[] = [];
 
   private expandedRows =
@@ -85,6 +90,10 @@ export class StockWorkspaceService {
 
   private activeBranchId?:
     string;
+
+  private variantFilter:
+    VariantFilterType =
+    'ACTIVE';
 
   /* =========================================================
      SEARCH
@@ -103,6 +112,9 @@ export class StockWorkspaceService {
     this.activeBranchId =
       query.branchId;
 
+    this.variantFilter =
+      query.filter ?? 'ACTIVE';
+
     return this.productService.search({
       branchId: query.branchId,
       page: query.page,
@@ -110,7 +122,12 @@ export class StockWorkspaceService {
       keyword: query.keyword,
       categoryId: query.categoryId,
       supplierId: query.supplierId,
-      deleted: query.deleted,
+      deleted:
+        query.filter === 'ACTIVE'
+          ? false
+          : query.filter === 'DELETED'
+            ? true
+            : undefined,
       sortBy: query.sortBy,
       direction: query.direction
     })
@@ -129,8 +146,10 @@ export class StockWorkspaceService {
           this.rows.clear();
           this.rootIds = [];
           this.expandedRows.clear();
+          this.childrenByParent.clear();
 
-          const products =
+          const products:
+            StockWorkspaceProduct[] =
             page.content ?? [];
 
           for (
@@ -170,6 +189,31 @@ export class StockWorkspaceService {
   /* =========================================================
      EXPANSION
   ========================================================= */
+
+  private addChild(
+    parentId: string,
+    row: StockWorkspaceRow
+  ): void {
+
+    let children =
+      this.childrenByParent.get(
+        parentId
+      );
+
+    if (!children) {
+
+      children = [];
+
+      this.childrenByParent.set(
+        parentId,
+        children
+      );
+    }
+
+    children.push(
+      row
+    );
+  }
 
   toggleExpanded(
     row: StockWorkspaceRow
@@ -259,7 +303,7 @@ export class StockWorkspaceService {
           ) {
 
             this.snackBar.open(
-              'No inventory exists for this variant in the selected branch.',
+              'No inventory exists for this variant in the selected branch. Click on the "Receive Initial Stock" to do just that',
               'Close',
               {
                 duration: 4000
@@ -286,7 +330,7 @@ export class StockWorkspaceService {
     return this.variantService
       .forProduct(
         productRow.productId,
-        'ACTIVE',
+        this.variantFilter,
         this.activeBranchId
       )
       .pipe(
@@ -299,26 +343,18 @@ export class StockWorkspaceService {
 
             const row =
               this.buildVariantRow(
-                {
-                  id:
-                    productRow.productId,
-                  name:
-                    productRow.productName,
-                  deleted:
-                    !!productRow.deleted,
-                  updatedAt:
-                    productRow.updatedAt,
-                  variants: [],
-                  imageUrls: [],
-                  suppliers:
-                    productRow.suppliers ?? []
-                } as Product,
+                productRow,
                 variant,
                 productRow.id
               );
 
             this.rows.set(
               row.id,
+              row
+            );
+
+            this.addChild(
+              productRow.id,
               row
             );
           }
@@ -343,6 +379,14 @@ export class StockWorkspaceService {
 
           }
         }),
+
+        catchError(error => {
+          productRow.loadingChildren = false;
+          productRow.childrenLoaded = true;
+          productRow.hasChildren = false;
+          return of(void 0);
+        }),
+
         map(() => void 0)
       );
   }
@@ -369,7 +413,27 @@ export class StockWorkspaceService {
       `inventory_${variantRow.variantId}_${this.activeBranchId}`;
 
     // Remove any stale inventory row previously attached
-    this.rows.delete(inventoryRowId);
+    this.rows.delete(
+      inventoryRowId
+    );
+
+    const existingChildren =
+      this.childrenByParent.get(
+        variantRow.id
+      );
+
+    if (
+      existingChildren
+    ) {
+      this.childrenByParent.set(
+        variantRow.id,
+        existingChildren.filter(
+          child =>
+            child.id !==
+            inventoryRowId
+        )
+      );
+    }
 
     return this.inventoryService
       .getVariantStock(
@@ -392,17 +456,39 @@ export class StockWorkspaceService {
               row
             );
 
+            this.addChild(
+              variantRow.id,
+              row
+            );
+
             variantRow.hasChildren = true;
+
+            variantRow.hasInventory = true;
 
           } else {
 
             variantRow.hasChildren = false;
 
+            variantRow.hasInventory = false;
           }
 
           variantRow.childrenLoaded = true;
           variantRow.loadingChildren = false;
         }),
+
+        catchError(error => {
+
+          variantRow.loadingChildren = false;
+
+          variantRow.childrenLoaded = true;
+
+          variantRow.hasChildren = false;
+
+          variantRow.hasInventory = false;
+
+          return of(void 0);
+        }),
+
         map(() => void 0)
       );
   }
@@ -412,7 +498,7 @@ export class StockWorkspaceService {
   ========================================================= */
 
   private buildProductRow(
-    product: Product
+    product: StockWorkspaceProduct
   ): StockWorkspaceRow {
 
     return {
@@ -441,8 +527,13 @@ export class StockWorkspaceService {
       productName:
         product.name,
 
-      thumbnail:
-        product.thumbnail,
+      productSku: product.sku,
+
+      thumbnailFileName:
+        product.thumbnailFileName,
+
+      primaryImageFileName:
+        product.primaryImageFileName,
 
       categoryId:
         product.categoryId,
@@ -450,11 +541,10 @@ export class StockWorkspaceService {
       categoryName:
         product.categoryName,
 
-      suppliers:
-        product.suppliers,
+      suppliers: [],
 
       totalVariants:
-        product.variants?.length ?? 0,
+        product.variantCount,
 
       deleted:
         product.deleted,
@@ -469,7 +559,7 @@ export class StockWorkspaceService {
   ========================================================= */
 
   private buildVariantRow(
-    product: Product,
+    product: StockWorkspaceRow,
     variant: ProductVariant,
     parentId: string
   ): StockWorkspaceRow {
@@ -487,26 +577,42 @@ export class StockWorkspaceService {
 
       expanded: false,
 
-      hasChildren:
-        true,
+      hasChildren: true,
 
-      childrenLoaded:
-        false,
+      /**
+       * undefined = inventory not yet checked
+       */
+      hasInventory: undefined,
+
+      childrenLoaded: false,
 
       loadingChildren:
         false,
 
       productId:
-        product.id,
+        product.productId,
 
       productName:
-        product.name,
+        product.productName,
+
+      productSku:
+        product.productSku,
 
       variantId:
         variant.id,
 
       variantName:
         variant.classification,
+
+      thumbnailFileName:
+        variant.thumbnailFileName
+        ??
+        product.thumbnailFileName,
+
+      primaryImageFileName:
+        variant.primaryImageFileName
+        ??
+        product.primaryImageFileName,
 
       sku:
         variant.sku,
@@ -515,7 +621,7 @@ export class StockWorkspaceService {
         variant.barcode,
 
       deleted:
-        product.deleted,
+        variant.deleted,
 
       updatedAt:
         product.updatedAt
@@ -551,6 +657,9 @@ export class StockWorkspaceService {
       productName:
         variantRow.productName,
 
+      productSku:
+        variantRow.productSku,
+
       variantId:
         variantRow.variantId,
 
@@ -562,6 +671,12 @@ export class StockWorkspaceService {
 
       barcode:
         variantRow.barcode,
+
+      thumbnailFileName:
+        variantRow.thumbnailFileName,
+
+      primaryImageFileName:
+        variantRow.primaryImageFileName,
 
       branchId:
         inventory.branchId,
@@ -627,13 +742,9 @@ export class StockWorkspaceService {
     ) => {
 
       const children =
-        [
-          ...this.rows.values()
-        ]
-          .filter(
-            x =>
-              x.parentId === parentId
-          );
+        this.childrenByParent.get(
+          parentId
+        ) ?? [];
 
       for (
         const child

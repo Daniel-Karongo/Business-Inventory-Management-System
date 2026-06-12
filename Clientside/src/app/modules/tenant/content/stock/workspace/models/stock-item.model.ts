@@ -8,6 +8,7 @@ export type StockWorkspaceRowType =
    | 'INVENTORY';
 
 export interface StockWorkspaceRow {
+
    /* =========================================================
       IDENTITY
    ========================================================= */
@@ -24,12 +25,19 @@ export interface StockWorkspaceRow {
    /* =========================================================
       PRODUCT
    ========================================================= */
+
    productId: string;
+
    productName: string;
 
-   thumbnail?: string | null;
+   productSku?: string;
+
+   thumbnailFileName?: string;
+
+   primaryImageFileName?: string;
 
    categoryId?: number;
+
    categoryName?: string;
 
    deleted?: boolean;
@@ -37,49 +45,51 @@ export interface StockWorkspaceRow {
    /* =========================================================
       VARIANT
    ========================================================= */
+
    variantId?: string;
    variantName?: string;
 
    sku?: string;
    barcode?: string;
 
+   /**
+    * undefined = inventory not checked yet
+    * true      = inventory exists
+    * false     = inventory checked and none exists
+    */
+   hasInventory?: boolean;
+
    /* =========================================================
       BRANCH
    ========================================================= */
+
    branchId?: string;
    branchName?: string;
 
    /* =========================================================
       COMMERCIAL
    ========================================================= */
+
    suppliers?: SupplierMinimalDTO[];
 
    averageCost?: number;
 
-   /**
-    * FIFO next-sale cost
-    */
    projectedNextSaleCost?: number;
 
    sellingPrice?: number;
 
    inventoryValue?: number;
 
-   /**
-    * Average cost margin
-    */
    marginAmount?: number;
    marginPercent?: number;
 
-   /**
-    * FIFO projected margin
-    */
    projectedMarginAmount?: number;
    projectedMarginPercent?: number;
 
    /* =========================================================
       INVENTORY
    ========================================================= */
+
    quantityOnHand?: number;
    quantityReserved?: number;
    quantityAvailable?: number;
@@ -89,12 +99,14 @@ export interface StockWorkspaceRow {
    /* =========================================================
       AGGREGATES
    ========================================================= */
+
    totalVariants?: number;
    totalBranches?: number;
 
    /* =========================================================
       STATUS
    ========================================================= */
+
    lowStock?: boolean;
    outOfStock?: boolean;
 

@@ -13,6 +13,7 @@ public class ProductVariantDTO {
 
     private UUID id;
     private UUID productId;
+
     private String productName;
     private String classification;
 
@@ -21,8 +22,10 @@ public class ProductVariantDTO {
 
     private String sku;
     private String barcode;
-
     private String barcodeImagePath;
+
+    private String thumbnailFileName;
+    private String primaryImageFileName;
 
     private List<String> imageUrls;
 

@@ -1,46 +1,212 @@
-.dialog-title {
-  font-weight: 600;
-  letter-spacing: 0.3px;
+:host {
+  display: block;
+
+  height: 92vh;
+  max-height: 92vh;
+
+  overflow: hidden;
 }
 
-.dialog-body {
+/* ====================================================== */
+
+.dialog-shell {
+  height: 100%;
+  max-height: 100%;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+}
+
+/* ====================================================== */
+
+.dialog-header {
+  flex: 0 0 auto;
+
+  padding: 24px;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.title-block h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: .85rem;
+}
+
+/* ====================================================== */
+/* THIS IS THE IMPORTANT PART */
+/* ====================================================== */
+
+.dialog-content {
+
+  flex: 1 1 auto;
+
+  min-height: 0;
+  max-height: 100%;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  padding: 24px !important;
+
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  box-sizing: border-box;
+}
+
+/* ====================================================== */
+
+.context-card,
+.section-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.context-card {
+  padding: 18px;
+}
+
+.context-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.context-title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.context-meta {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: .85rem;
+}
+
+.context-badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+
+  background: rgba(255, 149, 0, .1);
+  color: #ff9500;
+
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.availability-row {
+  margin-top: 18px;
+  padding-top: 18px;
+
+  border-top: 1px solid var(--border);
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.availability-label {
+  color: var(--text-secondary);
+  font-size: .85rem;
+}
+
+.availability-value {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.section-card {
+  padding: 18px;
+
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
 
-.context-card {
-  padding: 14px 16px;
-  border-radius: 8px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-
-  .product {
-    font-weight: 600;
-  }
-
-  .meta {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-  }
-
-  .available {
-    margin-top: 6px;
-    font-size: 0.85rem;
-  }
+.section-title {
+  font-size: .8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
 }
 
-.form-grid {
+.grid-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-
-  .full {
-    grid-column: 1 / -1;
-  }
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
 }
+
+.grid-2>* {
+  width: 100%;
+  min-width: 0;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* ====================================================== */
+/* FIXED FOOTER */
+/* ====================================================== */
 
 .dialog-footer {
-  padding-top: 10px;
+
+  flex: 0 0 auto;
+
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+
+  padding: 18px 24px;
+
   border-top: 1px solid var(--border);
+
+  background: var(--surface);
+
+  position: relative;
+  z-index: 10;
+}
+
+/* ====================================================== */
+
+@media (max-width:768px) {
+
+  :host {
+    height: 94vh;
+    max-height: 94vh;
+  }
+
+  .dialog-content {
+    padding: 16px !important;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .context-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dialog-footer {
+    padding: 16px;
+  }
 }

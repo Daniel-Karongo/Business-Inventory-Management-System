@@ -45,24 +45,25 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.coyote.BadRequestException;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -128,71 +129,105 @@ public class ProductService {
                 .toList();
     }
 
+    private String mapWorkspaceSortField(
+            String sortBy
+    ) {
+        return switch (
+                sortBy == null
+                        ? "updatedAt"
+                        : sortBy
+                ) {
+            case "name" -> "name";
+            case "sku" -> "sku";
+            case "deleted" -> "deleted";
+            case "updatedAt" -> "updatedAt";
 
-    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
-            "id",
-            "name",
-            "sku",
-            "createdAt",
-            "updatedAt",      // ✅ ADD
-            "category.name",
-            "variantCount",
-            "deleted"
-    );
+            default ->
+                    "updatedAt";
+        };
+    }
 
     @Transactional(readOnly = true)
-    public Page<ProductDTO> getProductsAdvanced(
+    public Page<StockWorkspaceProductDTO> getProductsAdvanced(
             UUID branchId,
             List<Long> categoryIds,
-            String name,
-            String description,
             String keyword,
-            BigDecimal minPrice,
-            BigDecimal maxPrice,
             Boolean deleted,
             int page,
             int size,
             String sortBy,
             String direction,
-            boolean includeDeleted,
-            Integer minSuppliers,
-            Integer maxSuppliers,
-            UUID supplierId) throws BadRequestException {
+            UUID supplierId
+    ) {
+        Sort.Direction sortDirection =
+                "asc".equalsIgnoreCase(
+                        direction
+                )
+                        ? Sort.Direction.ASC
+                        : Sort.Direction.DESC;
 
-        if (sortBy == null || sortBy.isBlank()) {
-            sortBy = "id";
-        }
-
-        if (branchId == null) {
-            throw new BadRequestException(
-                    "Branch is required"
-            );
-        }
-
-        Pageable pageable = PageRequest.of(page, size);
-
-        Specification<Product> spec =
-                ProductSpecification.filterProducts(
-                        tenantId(),
-                        branchId,
-                        categoryIds,
-                        name,
-                        description,
-                        keyword,
-                        minPrice,
-                        maxPrice,
-                        deleted,
-                        includeDeleted,
-                        sortBy,
-                        direction,
-                        minSuppliers,
-                        maxSuppliers,
-                        supplierId
+        Pageable pageable =
+                PageRequest.of(
+                        page,
+                        size,
+                        Sort.by(
+                                sortDirection,
+                                mapWorkspaceSortField(
+                                        sortBy
+                                )
+                        )
                 );
 
         return productRepository
-                .findAll(spec, pageable)
-                .map(productMapper::toDTO);
+                .findWorkspaceProducts(
+                        tenantId(),
+                        branchId,
+                        categoryIds != null &&
+                                !categoryIds.isEmpty()
+                                ? categoryIds.get(0)
+                                : null,
+                        supplierId,
+                        keyword,
+                        deleted,
+                        pageable
+                )
+                .map(
+                        p ->
+                                StockWorkspaceProductDTO.builder()
+                                        .id(
+                                                p.getId()
+                                        )
+                                        .name(
+                                                p.getName()
+                                        )
+                                        .sku(
+                                                p.getSku()
+                                        )
+                                        .categoryId(
+                                                p.getCategoryId()
+                                        )
+                                        .categoryName(
+                                                p.getCategoryName()
+                                        )
+                                        .thumbnailFileName(
+                                                p.getThumbnailFileName()
+                                        )
+                                        .primaryImageFileName(
+                                                p.getPrimaryImageFileName()
+                                        )
+                                        .deleted(
+                                                p.getDeleted()
+                                        )
+                                        .updatedAt(
+                                                p.getUpdatedAt() != null
+                                                        ? p.getUpdatedAt()
+                                                        : p.getCreatedAt()
+                                        )
+                                        .variantCount(
+                                                p.getVariantCount()
+                                        )
+                                        .build()
+                );
     }
 
     @Transactional(readOnly = true)
@@ -582,8 +617,6 @@ public class ProductService {
         ProductUpdateDTO productDto =
                 dto.getProduct();
 
-        productDto.setBranchId(branchId);
-
         productDto.setVariants(
                 dto.getVariants()
         );
@@ -591,7 +624,8 @@ public class ProductService {
         ProductDTO updated =
                 updateProduct(
                         productId,
-                        productDto
+                        productDto,
+                        branchId
                 );
 
         Product product =
@@ -626,18 +660,18 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductDTO updateProduct(UUID id, ProductUpdateDTO dto) throws IOException {
+    public ProductDTO updateProduct(UUID id, ProductUpdateDTO dto, UUID branchId) throws IOException {
 
-        Product product = getProductOrThrow(id, dto.getBranchId());
+        Product product = getProductOrThrow(id, branchId);
 
-        validateUpdateDTOUniqueness(id, dto);
+        validateUpdateDTOUniqueness(id, dto, branchId);
 
         List<ProductAudit> audits = new ArrayList<>();
 
-        updateBasicFields(product, dto, audits);
-        updateCategory(product, dto, audits);
-        updateSuppliers(product, dto, audits);
-        syncVariants(product, dto, audits);
+        updateBasicFields(product, dto, audits, branchId);
+        updateCategory(product, dto, audits, branchId);
+        updateSuppliers(product, dto, audits, branchId);
+        syncVariants(product, dto, audits, branchId);
         updatePricing(product, dto, audits);
 
         product.setUpdatedAt(LocalDateTime.now());
@@ -653,7 +687,8 @@ public class ProductService {
 
     private void updateBasicFields(Product product,
                                    ProductUpdateDTO dto,
-                                   List<ProductAudit> audits) {
+                                   List<ProductAudit> audits,
+                                   UUID branchId) {
 
         /* NAME */
         if (dto.getName() != null && !dto.getName().equals(product.getName())) {
@@ -672,21 +707,39 @@ public class ProductService {
         }
 
         /* SKU */
-        if (dto.getSku() != null && !dto.getSku().equals(product.getSku())) {
+        if (dto.getSku() != null &&
+                !dto.getSku().equals(product.getSku())) {
 
-            if (productRepository.existsByTenantIdAndBranchIdAndSku(
-                    tenantId(), dto.getBranchId(), dto.getSku())) {
-                throw new IllegalArgumentException("SKU already exists");
+            if (productRepository
+                    .existsByTenantIdAndBranchIdAndSkuAndIdNot(
+                            tenantId(),
+                            branchId,
+                            dto.getSku(),
+                            product.getId()
+                    )) {
+
+                throw new IllegalArgumentException(
+                        "SKU already exists: " + dto.getSku()
+                );
             }
 
-            audits.add(auditForField(product, "sku", product.getSku(), dto.getSku()));
+            audits.add(
+                    auditForField(
+                            product,
+                            "sku",
+                            product.getSku(),
+                            dto.getSku()
+                    )
+            );
+
             product.setSku(dto.getSku());
         }
     }
 
     private void updateCategory(Product product,
                                 ProductUpdateDTO dto,
-                                List<ProductAudit> audits) {
+                                List<ProductAudit> audits,
+                                UUID branchId) {
 
         if (dto.getCategoryId() == null) return;
 
@@ -699,7 +752,7 @@ public class ProductService {
                 dto.getCategoryId(),
                 false,
                 tenantId(),
-                dto.getBranchId()
+                branchId
         ).orElseThrow(() -> new IllegalArgumentException("Invalid categoryId"));
 
         audits.add(auditForField(
@@ -715,7 +768,8 @@ public class ProductService {
     private void updateSuppliers(
             Product product,
             ProductUpdateDTO dto,
-            List<ProductAudit> audits
+            List<ProductAudit> audits,
+            UUID branchId
     ) {
 
         if (dto.getSupplierIds() == null) {
@@ -726,7 +780,7 @@ public class ProductService {
                 supplierRepository.findAllByIdsSafe(
                         dto.getSupplierIds(),
                         tenantId(),
-                        dto.getBranchId()
+                        branchId
                 );
 
         String oldSuppliers =
@@ -765,8 +819,6 @@ public class ProductService {
 
         productRepository.saveAndFlush(product);
 
-        UUID branchId = product.getBranchId();
-
         Set<ProductSupplier> replacements =
                 suppliers.stream()
                         .map(supplier ->
@@ -791,14 +843,13 @@ public class ProductService {
     private void syncVariants(
             Product product,
             ProductUpdateDTO dto,
-            List<ProductAudit> audits
+            List<ProductAudit> audits,
+            UUID branchId
     ) {
 
         if (dto.getVariants() == null) {
             return;
         }
-
-        UUID branchId = dto.getBranchId();
 
         List<ProductVariant> existingVariants =
                 productVariantRepository
@@ -961,13 +1012,13 @@ public class ProductService {
         }
     }
 
-    private void validateUpdateDTOUniqueness(UUID productId, ProductUpdateDTO dto) {
+    private void validateUpdateDTOUniqueness(UUID productId, ProductUpdateDTO dto, UUID branchId) {
 
         if (dto.getName() != null) {
 
             productRepository.findByTenantIdAndBranchIdAndNameIgnoreCase(
                     tenantId(),
-                    dto.getBranchId(),
+                    branchId,
                     dto.getName()
             ).ifPresent(existing -> {
                 if (!existing.getId().equals(productId)) {
@@ -1053,7 +1104,7 @@ public class ProductService {
 
         if (Boolean.TRUE.equals(product.isDeleted())) {
             throw new IllegalStateException(
-                    "Cannot restore image of a deleted product"
+                    "You cannot restore images belonging to a deleted product. Restore the product first."
             );
         }
 
@@ -1325,8 +1376,8 @@ public class ProductService {
     ) {
         for (UUID id : ids) {
             softDeleteProduct(
-                    branchId,
                     id,
+                    branchId,
                     reason
             );
         }
@@ -1527,8 +1578,8 @@ public class ProductService {
         }
     }
 
-/* =========================================================
-    PRIVATE HELPERS
+    /* =========================================================
+        PRIVATE HELPERS
     ========================================================= */
 
     private Product getProductOrThrow(
@@ -2016,48 +2067,78 @@ public class ProductService {
         return zipFile;
     }
 
-    public ResponseEntity<Resource> getProductThumbnail(UUID branchId, UUID id) {
+    @Transactional(readOnly = true)
+    public ResponseEntity<Resource> getProductThumbnail(
+            UUID branchId,
+            UUID productId
+    ) {
 
-        Product product = productRepository
-                .findByIdAndTenantIdAndBranchIdAndDeletedFalse(
-                        id,
-                        tenantId(),
-                        branchId
-                )
-                .orElseThrow(() -> new ProductNotFoundException("Product not found"));
+        Optional<String> thumbnail =
+                productImageRepository
+                        .findPrimaryThumbnailFilename(
+                                tenantId(),
+                                branchId,
+                                productId
+                        );
 
-        if (product.getImages() == null || product.getImages().isEmpty()) {
+        if (thumbnail.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
-        ProductImage primary = product.getImages().stream()
-                .filter(img -> !Boolean.TRUE.equals(img.isDeleted()))
-                .filter(img -> Boolean.TRUE.equals(img.getPrimaryImage()))
-                .findFirst()
-                .orElseGet(() ->
-                        product.getImages().stream()
-                                .filter(img -> !Boolean.TRUE.equals(img.isDeleted()))
-                                .findFirst()
-                                .orElse(null)
-                );
-
-        if (primary == null || primary.getThumbnailFileName() == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        Path path = fileStorageService.productSharedRoot(branchId)
-                .resolve(primary.getThumbnailFileName());
+        Path path =
+                fileStorageService
+                        .productSharedRoot(branchId)
+                        .resolve(
+                                thumbnail.get()
+                        );
 
         if (!Files.exists(path)) {
             return ResponseEntity.notFound().build();
         }
 
-        Resource resource = new FileSystemResource(path.toFile());
+        try {
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.IMAGE_JPEG)  // ✅ RESTORED
-                .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400") // ✅ RESTORED
-                .body(resource);
+            String etag =
+                    "\"" +
+                            Files.getLastModifiedTime(path)
+                                    .toMillis()
+                            + "\"";
+
+            String ifNoneMatch =
+                    RequestContextHolder
+                            .currentRequestAttributes()
+                            instanceof ServletRequestAttributes attrs
+                            ? attrs.getRequest()
+                            .getHeader(HttpHeaders.IF_NONE_MATCH)
+                            : null;
+
+            if (etag.equals(ifNoneMatch)) {
+                return ResponseEntity
+                        .status(HttpStatus.NOT_MODIFIED)
+                        .eTag(etag)
+                        .build();
+            }
+
+            Resource resource =
+                    new FileSystemResource(
+                            path.toFile()
+                    );
+
+            return ResponseEntity.ok()
+                    .eTag(etag)
+                    .contentType(MediaType.IMAGE_JPEG)
+                    .header(
+                            HttpHeaders.CACHE_CONTROL,
+                            "public, max-age=86400"
+                    )
+                    .body(resource);
+
+        } catch (IOException e) {
+            throw new RuntimeException(
+                    "Failed to read thumbnail",
+                    e
+            );
+        }
     }
 
 

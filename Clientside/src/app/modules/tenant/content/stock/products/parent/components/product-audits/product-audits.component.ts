@@ -1,7 +1,9 @@
 import {
   Component,
   Input,
-  OnInit
+  OnChanges,
+  OnInit,
+  SimpleChanges
 } from '@angular/core';
 
 import {
@@ -49,7 +51,7 @@ import {
   ]
 })
 export class ProductAuditsComponent
-  implements OnInit {
+  implements OnInit, OnChanges {
 
   @Input({
     required: true
@@ -97,6 +99,21 @@ export class ProductAuditsComponent
             false;
         }
       });
+  }
+
+  ngOnChanges(
+    changes: SimpleChanges
+  ): void {
+    if (
+      changes['productId'] &&
+      !changes['productId'].firstChange
+    ) {
+      this.loadAudits();
+    }
+  }
+
+  public reload(): void {
+    this.loadAudits();
   }
 
   trackAudit(

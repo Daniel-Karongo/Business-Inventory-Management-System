@@ -295,6 +295,10 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
     });
   }
 
+  public reload(): void {
+    this.loadAll();
+  }
+
   selectFile(fileName: string) {
     this.selectedFile =
       this.selectedFile === fileName ? 'ALL' : fileName;
@@ -809,10 +813,13 @@ export class EntityImageManagerComponent implements OnInit, OnChanges {
 
         const reason = result.reason ?? null;
 
+        const restoreKey =
+          img.id ?? img.fileName;
+
         const action$ = restoring
           ? this.adapter.restoreImage(
             this.entityId,
-            img.fileName,
+            restoreKey,
             reason
           )
           : this.adapter.softDeleteImage(

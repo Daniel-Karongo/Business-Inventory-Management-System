@@ -626,33 +626,17 @@ export class ProductFormComponent implements OnInit, OnDestroy {
     }
 
     const payload = {
-
       product: {
-
-        branchId:
-          this.form.getRawValue().branchId,
-
-        name:
-          this.form.value.name,
-
-        description:
-          this.form.value.description,
-
-        categoryId:
-          this.form.value.categoryId,
-
-        supplierIds:
-          this.form.value.supplierIds,
-
+        name: this.form.value.name,
+        description: this.form.value.description,
+        categoryId: this.form.value.categoryId,
+        supplierIds: this.form.value.supplierIds,
         sku:
-          this.form.value.sku,
-
-        minimumPercentageProfit:
-          this.form.value.minimumPercentageProfit,
-
-        minimumProfit:
-          this.form.value.minimumProfit
-
+          this.form.value.sku?.trim()
+            ? this.form.value.sku.trim()
+            : null,
+        minimumPercentageProfit: this.form.value.minimumPercentageProfit,
+        minimumProfit: this.form.value.minimumProfit
       },
 
       variants:
@@ -664,7 +648,10 @@ export class ProductFormComponent implements OnInit, OnDestroy {
               return {
                 id: v.id,
                 classification: v.classification,
-                sku: v.sku,
+                sku:
+                  v.sku?.trim()
+                    ? v.sku.trim()
+                    : null,
                 minimumPercentageProfit:
                   v.minimumPercentageProfit,
                 minimumProfit:

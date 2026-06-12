@@ -27,7 +27,7 @@ public class ProductPriceService {
 
     private final ProductPriceRepository priceRepo;
     private final CacheInvalidationService cacheInvalidationService;
-    private final InventoryService inventoryService;
+    private final InventoryCostService inventoryCostService;
 
     @PersistenceContext
     private EntityManager em;
@@ -196,7 +196,8 @@ public class ProductPriceService {
     ) {
 
         BigDecimal avgCost =
-                inventoryService.getAverageCost(
+                inventoryCostService.getAverageCost(
+                        tenantId(),
                         variantId,
                         branchId
                 );

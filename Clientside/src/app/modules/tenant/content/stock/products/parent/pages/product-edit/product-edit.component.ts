@@ -382,18 +382,25 @@ export class ProductEditComponent
             }
           );
 
-          this.loadProduct();
+          this.router.navigate([
+            '/app/stock',
+            this.productId
+          ]);
         },
 
-        error: () => {
-
+        error: err => {
           this.saving = false;
 
+          const message =
+            err?.error?.message ??
+            err?.message ??
+            'Update failed';
+
           this.snackbar.open(
-            'Update failed',
+            message,
             'Close',
             {
-              duration: 3000
+              duration: 5000
             }
           );
         }

@@ -82,19 +82,46 @@
     <!-- EMPTY -->
 
     <div *ngIf="!loading && !rows.length" class="empty-card">
-
-        <mat-icon>
-            inventory
-        </mat-icon>
+        <div class="empty-icon">
+            <mat-icon>
+                inventory
+            </mat-icon>
+        </div>
 
         <div class="empty-title">
             No Inventory Found
         </div>
 
-        <div class="empty-description">
-            This product currently has no inventory records.
+        <div class="empty-description" *ngIf="!product.variants?.length">
+            This product has no variants yet.
+            Create a variant before receiving stock.
         </div>
 
+        <div class="empty-description" *ngIf="product.variants?.length">
+            Variants exist but no stock has been received.
+        </div>
+
+        <div class="empty-actions">
+
+            <button *ngIf="!product.variants?.length" mat-flat-button color="primary" (click)="createVariant()">
+
+                <mat-icon>
+                    add
+                </mat-icon>
+
+                Create Variant
+            </button>
+
+            <button *ngIf="product.variants?.length" mat-flat-button color="primary" (click)="receiveInitialStock()">
+
+                <mat-icon>
+                    inventory_2
+                </mat-icon>
+
+                Receive Initial Stock
+            </button>
+
+        </div>
     </div>
 
     <!-- INVENTORY -->

@@ -16,6 +16,7 @@ export interface ReceiveStockRequest {
     suppliers: SupplierUnit[];
     reference?: string;
     note?: string;
+    accountingDate: string;
 }
 
 export interface TransferStockRequest {

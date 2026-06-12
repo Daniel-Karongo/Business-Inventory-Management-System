@@ -165,8 +165,18 @@ public class ProductVariantImageService {
             }
         }
 
-        ProductVariantImage savedImage = imageRepo.save(
-                ProductVariantImage.builder()
+        boolean hasPrimary =
+                imageRepo.findPrimaryImageFilename(
+                                tenantId(),
+                                branchId,
+                                variant.getId()
+                        )
+                        .isPresent();
+
+        ProductVariantImage savedImage =
+                imageRepo.save(
+                        ProductVariantImage.builder()
+                                .primaryImage(!hasPrimary)
                         .variant(variant)
                         .fileName(fileName)
                         .thumbnailFileName(thumbnailName)
@@ -191,10 +201,7 @@ public class ProductVariantImageService {
             String reason
     ) {
 
-        getVariant(
-                branchId,
-                variantId
-        );
+        getVariant(branchId, variantId);
 
         ProductVariantImage image =
                 imageRepo.findByTenantIdAndBranchIdAndVariant_IdAndFileNameAndDeletedFalse(
@@ -203,17 +210,35 @@ public class ProductVariantImageService {
                                 variantId,
                                 fileName
                         )
-                        .orElseThrow(
-                                () ->
-                                        new EntityNotFoundException(
-                                                "Image not found"
-                                        )
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Image not found"
+                                )
                         );
 
+        boolean wasPrimary =
+                Boolean.TRUE.equals(
+                        image.getPrimaryImage()
+                );
+
         image.setDeleted(true);
+        image.setPrimaryImage(false);
 
         imageRepo.save(image);
-        audit(image, "SOFT_DELETE", reason);
+
+        if (wasPrimary) {
+            promoteReplacementPrimary(
+                    branchId,
+                    variantId,
+                    image.getId()
+            );
+        }
+
+        audit(
+                image,
+                "SOFT_DELETE",
+                reason
+        );
     }
 
     @Transactional
@@ -271,16 +296,32 @@ public class ProductVariantImageService {
                                 variantId,
                                 fileName
                         )
-                        .orElseThrow(
-                                () ->
-                                        new EntityNotFoundException(
-                                                "Image not found"
-                                        )
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Image not found"
+                                )
                         );
 
-        String hash = image.getContentHash();
+        boolean wasPrimary =
+                Boolean.TRUE.equals(
+                        image.getPrimaryImage()
+                );
+
+        String hash =
+                image.getContentHash();
+
+        UUID imageId =
+                image.getId();
 
         imageRepo.delete(image);
+
+        if (wasPrimary) {
+            promoteReplacementPrimary(
+                    branchId,
+                    variantId,
+                    imageId
+            );
+        }
 
         long remaining =
                 imageRepo
@@ -291,15 +332,45 @@ public class ProductVariantImageService {
                         );
 
         if (remaining == 0) {
-
             deletePhysicalFiles(
                     branchId,
                     image
             );
-
         }
 
-        audit(image, "HARD_DELETE", reason);
+        audit(
+                image,
+                "HARD_DELETE",
+                reason
+        );
+    }
+
+    private void promoteReplacementPrimary(
+            UUID branchId,
+            UUID variantId,
+            UUID deletedImageId
+    ) {
+
+        List<ProductVariantImage> candidates =
+                imageRepo.findReplacementCandidates(
+                        tenantId(),
+                        branchId,
+                        variantId,
+                        deletedImageId
+                );
+
+        if (candidates.isEmpty()) {
+            return;
+        }
+
+        ProductVariantImage replacement =
+                candidates.get(0);
+
+        replacement.setPrimaryImage(true);
+
+        imageRepo.save(
+                replacement
+        );
     }
 
     @Transactional
@@ -375,6 +446,9 @@ public class ProductVariantImageService {
                                         + variantId
                                         + "/thumbnails/"
                                         + img.getThumbnailFileName(),
+                                Boolean.TRUE.equals(
+                                        img.getPrimaryImage()
+                                ),
                                 img.isDeleted()
                         )
                 )
@@ -388,19 +462,12 @@ public class ProductVariantImageService {
     ) {
 
         ProductVariantImage image =
-                imageRepo
-                        .findByTenantIdAndBranchIdAndVariant_IdAndDeletedFalse(
+                imageRepo.findByTenantIdAndBranchIdAndVariant_IdAndThumbnailFileNameAndDeletedFalse(
                                 tenantId(),
                                 branchId,
-                                variantId
+                                variantId,
+                                fileName
                         )
-                        .stream()
-                        .filter(i ->
-                                fileName.equals(
-                                        i.getThumbnailFileName()
-                                )
-                        )
-                        .findFirst()
                         .orElseThrow(
                                 () ->
                                         new ResponseStatusException(
@@ -485,6 +552,49 @@ public class ProductVariantImageService {
                 .body(
                         new FileSystemResource(path)
                 );
+    }
+
+    @Transactional(readOnly = true)
+    public ResponseEntity<Resource> getSharedThumbnail(
+            UUID branchId,
+            String fileName
+    ) {
+
+        Path file =
+                sharedDir(branchId)
+                        .resolve(fileName);
+
+        if (!Files.exists(file)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        try {
+
+            String etag =
+                    "\"" +
+                            Files.getLastModifiedTime(file)
+                                    .toMillis()
+                            + "\"";
+
+            Resource resource =
+                    new FileSystemResource(
+                            file
+                    );
+
+            return ResponseEntity.ok()
+                    .eTag(etag)
+                    .header(
+                            HttpHeaders.CACHE_CONTROL,
+                            "public,max-age=86400"
+                    )
+                    .contentType(
+                            MediaType.IMAGE_JPEG
+                    )
+                    .body(resource);
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public ResponseEntity<Resource> downloadZipResponse(UUID branchId, UUID variantId) throws IOException {

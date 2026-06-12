@@ -1,50 +1,111 @@
-<h2 mat-dialog-title class="dialog-title">Adjust Stock</h2>
+<div class="dialog-shell">
 
-<mat-dialog-content [formGroup]="form" class="dialog-body">
+  <div class="dialog-header">
 
-  <!-- Context -->
-  <div class="context-card">
-    <div class="product">{{ data.productName }}</div>
-    <div class="meta">
-      {{ data.classification }} • {{ data.branchName }}
+    <div class="title-block">
+      <h2>Adjust Stock</h2>
+
+      <div class="subtitle">
+        Manual inventory correction
+      </div>
     </div>
-  </div>
-
-  <div class="grid-2">
-
-    <mat-form-field appearance="fill">
-      <mat-label>Quantity Delta</mat-label>
-      <input matInput type="number" formControlName="quantityDelta">
-      <mat-hint>Use positive or negative values</mat-hint>
-    </mat-form-field>
-
-    <mat-form-field appearance="fill" *ngIf="form.value.quantityDelta > 0">
-      <mat-label>Unit Cost (for new batch)</mat-label>
-      <input matInput type="number" formControlName="unitCost">
-      <mat-hint>
-        Required when adding stock (creates new cost layer)
-      </mat-hint>
-    </mat-form-field>
-
-    <mat-form-field appearance="fill">
-      <mat-label>Reason</mat-label>
-      <input matInput formControlName="reason">
-    </mat-form-field>
 
   </div>
 
-  <mat-form-field appearance="fill">
-    <mat-label>Reference</mat-label>
-    <input matInput formControlName="reference">
-  </mat-form-field>
+  <mat-dialog-content [formGroup]="form" class="dialog-content">
 
-</mat-dialog-content>
+    <div class="context-card">
 
-<mat-dialog-actions align="end" class="dialog-footer">
-  <button mat-button (click)="close()">Cancel</button>
-  <button mat-flat-button color="warn" [disabled]="loading || form.invalid" (click)="submit()">
-    Adjust Stock
-  </button>
-</mat-dialog-actions>
+      <div class="context-top">
 
+        <div>
 
+          <div class="context-title">
+            {{ data.productName }}
+          </div>
+
+          <div class="context-meta">
+            {{ data.classification }} • {{ data.branchName }}
+          </div>
+
+        </div>
+
+        <div class="context-badge">
+          Stock Adjustment
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="section-card">
+
+      <div class="section-title">
+        Adjustment Details
+      </div>
+
+      <div class="grid-2">
+
+        <mat-form-field appearance="fill">
+          <mat-label>Quantity Delta</mat-label>
+          <input matInput type="number" formControlName="quantityDelta" />
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Reason</mat-label>
+          <input matInput formControlName="reason" />
+        </mat-form-field>
+
+      </div>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Reference</mat-label>
+
+        <input matInput formControlName="reference" />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" *ngIf="form.value.quantityDelta > 0">
+
+        <mat-label>Unit Cost</mat-label>
+
+        <input matInput type="number" formControlName="unitCost" />
+
+      </mat-form-field>
+
+      <div class="adjustment-tip" *ngIf="form.value.quantityDelta">
+
+        <mat-icon>
+          info
+        </mat-icon>
+
+        <div class="tip-content">
+
+          <div class="tip-title">
+            Inventory Impact
+          </div>
+
+          <div class="tip-text">
+            Positive values add stock. Negative values remove stock.
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </mat-dialog-content>
+
+  <div class="dialog-footer">
+
+    <button mat-stroked-button (click)="close()">
+      Cancel
+    </button>
+
+    <button mat-flat-button [disabled]="loading || form.invalid" (click)="submit()">
+      Adjust Stock
+    </button>
+
+  </div>
+
+</div>
